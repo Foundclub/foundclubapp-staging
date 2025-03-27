@@ -1,0 +1,70 @@
+default_platform(:android)
+
+android_directory = File.expand_path("..", Dir.pwd)
+android_firebase_app_id = 'TO_REPLACE'
+keystore_password = ENV['ANDROID_KEYSTORE_PASSWORD']
+key_password = ENV['ANDROID_KEY_PASSWORD']
+timestamp = ENV['TIMESTAMP']
+versionName = ENV['GIT_TAG']
+
+platform :android do
+  lane :build do |options|
+
+    gradle(
+      task: "app:bundle",
+      build_type: "Release",
+      project_dir: android_directory,
+      properties: {
+        "RELEASE_STORE_PASSWORD" => keystore_password,
+        "RELEASE_KEY_PASSWORD" => key_password,
+        "versionCode" => timestamp,
+        "versionName" => versionName,
+      },
+      print_command: false,
+      flags: "--stacktrace --scan"
+    )
+  end
+
+  lane :deploy_firebase do
+  end
+
+  lane :deploy_build do
+
+    versionName = "staging"
+    build
+    release = firebase_app_distribution(
+      app: android_firebase_app_id,
+      service_credentials_file: File.expand_path("./private-key.json", android_directory),
+      groups: "ZOL",
+      android_artifact_type: "AAB",
+      android_artifact_path: "#{android_directory}/app/build/outputs/bundle/release/app-release.aab",
+      debug: true,
+      )
+
+  end
+
+  lane :deploy_version_rc do
+
+    build
+    release = firebase_app_distribution(
+      app: android_firebase_app_id,
+      service_credentials_file: File.expand_path("./private-key.json", android_directory),
+      groups: "ZOL, clients",
+      android_artifact_type: "AAB",
+      android_artifact_path: "#{android_directory}/app/build/outputs/bundle/release/app-release.aab",
+      debug: true,
+      )
+
+  end
+
+  lane :deploy_version do
+
+    build
+    upload_to_play_store(
+      track: 'alpha'
+    )
+
+  end
+
+
+end

@@ -1,0 +1,4 @@
+git_url("git@gitlab.com:zolteam/fastlane/certificates.git")
+git_branch("TO_REPLACE")
+git_full_name("ios-dev")
+git_user_email("ios-dev@zol.fr")

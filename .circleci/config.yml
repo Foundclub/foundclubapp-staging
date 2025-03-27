@@ -1,0 +1,269 @@
+# .circleci/config.yml
+
+version: 2.1
+
+orbs:
+  ruby: circleci/ruby@2.1.3
+  node: circleci/node@5.2.0
+
+commands:
+  generate_env:
+    steps:
+      - run: bash env_generator.sh
+
+  ios_build:
+    parameters:
+      fastlane-lane:
+        type: string
+        default: ios deploy_build
+    steps:
+      - generate_env
+      - add_ssh_keys: # THEN set the *new* SSH key for gitlab.
+          fingerprints:
+            - "SHA256:yq4j8vrgqFMWbseNEYZV3G0gTuOsO7Qq0OJpHuGKfZU"
+      - node/install:
+          install-yarn: false
+          node-version: "20"
+      - run: node --version
+      - run:
+          name: bundle install
+          command: cd ios && bundle install
+      - run:
+          name: firebase_service_account
+          command: |
+            echo $FIREBASE_SERVICE_ACCOUNT > "./ios/private-key.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="./private-key.json"
+      - run:
+          name: fastlane env
+          command: cd ios && bundle exec fastlane env
+      - run:
+          name: npm
+          command: npm install
+      - restore_cache:
+          name: Restore pods cache
+          key: 1-pods-{{ checksum "ios/Podfile.lock" }}
+      - run:
+          name: fastlane
+          command: cd ios && bundle exec pod install --deployment && bundle exec fastlane << parameters.fastlane-lane >>
+
+      - store_artifacts:
+          path: /Users/distiller/project/ios/output/goodwill.ipa
+
+      - save_cache:
+          name: Save pods cache
+          key: 1-pods-{{ checksum "ios/Podfile.lock" }}
+          paths:
+            - ./ios/Pods
+
+  android_build:
+    parameters:
+      fastlane-lane:
+        type: string
+        default: android deploy_build
+    steps:
+      - generate_env
+      - node/install:
+          install-yarn: false
+          node-version: "20"
+      - run: npm install
+      - run:
+          name: firebase_service_account
+          command: |
+            echo $FIREBASE_SERVICE_ACCOUNT > "./android/private-key.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="./private-key.json"
+      - run:
+          name: Install Ninja
+          command: |
+            sudo apt-get update && sudo apt-get install -y ninja-build
+      - run:
+          name: Install CMake
+          command: |
+            wget https://github.com/Kitware/CMake/releases/download/v3.23.2/cmake-3.23.2-Linux-x86_64.tar.gz
+            tar -xzvf cmake-3.23.2-Linux-x86_64.tar.gz -C $HOME
+            export PATH=$HOME/ninja:$HOME/cmake-3.23.2-Linux-x86_64/bin:$PATH
+      - run:
+          name: Set CMake and Ninja Paths
+          command: |
+            export PATH=$HOME/ninja:$HOME/cmake-3.23.2-Linux-x86_64/bin:$PATH
+      - run:
+          name: bundle install
+          command: cd android && sudo bundle install
+      - run:
+          no_output_timeout: 30m
+          name: Run fastlane android
+          command: cd android && export TIMESTAMP=$(date +"%s") && fastlane << parameters.fastlane-lane >>
+
+      - store_artifacts:
+          path: /home/circleci/project/android/app/build/outputs/bundle/release/app-release.aab
+
+
+jobs:
+  ios-staging:
+    macos:
+      xcode: "16.2.0"
+    environment:
+      FL_OUTPUT_DIR: output
+      TIMESTAMP: $(date +"%s")
+      ENV: staging
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - ios_build:
+          fastlane-lane: "ios deploy_build"
+
+
+  android-staging:
+    docker:
+      - image: cimg/android:2024.11
+    resource_class: xlarge
+    environment:
+      FL_OUTPUT_DIR: output
+      ENV: staging
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - android_build:
+          fastlane-lane: "android deploy_build"
+
+
+  ios-tag-rc:
+    macos:
+      xcode: "16.2.0"
+    environment:
+      FL_OUTPUT_DIR: output
+      TIMESTAMP: $(date +"%s")
+      ENV: preprod
+      GIT_TAG: << pipeline.git.tag >>
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - ios_build:
+          fastlane-lane: "ios deploy_version_rc"
+      - store_artifacts:
+          path: ios/output
+      - store_test_results:
+          path: ios/output/scan
+
+  android-tag-rc:
+    docker:
+      - image: cimg/android:2024.11
+    resource_class: xlarge
+    environment:
+      ENV: preprod
+      FL_OUTPUT_DIR: output
+      GIT_TAG: << pipeline.git.tag >>
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - android_build:
+          fastlane-lane: "android deploy_version_rc"
+
+  ios-tag:
+    macos:
+      xcode: "16.2.0"
+    environment:
+      FL_OUTPUT_DIR: output
+      TIMESTAMP: $(date +"%s")
+      GIT_TAG: << pipeline.git.tag >>
+      ENV: prod
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - ios_build:
+          fastlane-lane: "ios deploy_version_release"
+
+  android-tag:
+    docker:
+      - image: cimg/android:2024.11
+    resource_class: xlarge
+    environment:
+      FL_OUTPUT_DIR: output
+      GIT_TAG: << pipeline.git.tag >>
+      ENV: prod
+    shell: /bin/bash --login -o pipefail
+    steps:
+      - checkout
+      - android_build:
+          fastlane-lane: "android deploy_version"
+
+workflows:
+  staging:
+    jobs:
+      - hold:
+          type: approval
+          filters:
+            branches:
+              only:
+                - develop
+            tags:
+              ignore: /.*/
+      - ios-staging:
+          requires:
+            - hold
+          filters:
+            branches:
+              only:
+                - develop
+            tags:
+              ignore: /.*/
+      - android-staging:
+          requires:
+            - hold
+          filters:
+            branches:
+              only:
+                - develop
+            tags:
+              ignore: /.*/
+
+  tag-release-candidate:
+    jobs:
+      - hold:
+          type: approval
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)-rc$/
+            branches:
+              ignore: /.*/
+      - ios-tag-rc:
+          requires:
+            - hold
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)-rc$/
+            branches:
+              ignore: /.*/
+      - android-tag-rc:
+          requires:
+            - hold
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)-rc$/
+            branches:
+              ignore: /.*/
+
+  tag-release:
+    jobs:
+      - hold:
+          type: approval
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)$/
+            branches:
+              ignore: /.*/
+      - ios-tag:
+          requires:
+            - hold
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)$/
+            branches:
+              ignore: /.*/
+      - android-tag:
+          filters:
+            tags:
+              only: /^([0-9]+)\.([0-9]+)\.([0-9]+)$/
+            branches:
+              ignore: /.*/
+          requires:
+            - hold

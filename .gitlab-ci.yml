@@ -1,0 +1,44 @@
+---
+image: node:20-alpine
+stages:
+  - install_deps
+  - Quality
+
+
+# Jobs
+.quality:
+  stage: Quality
+  only:
+    - merge_requests
+    - develop
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  cache:
+    - key:
+        files:
+          - package-lock.json
+      paths:
+        - .npm/
+    - policy: pull
+
+
+linter:
+  extends: .quality
+  script:
+    - npm run lint
+  cache:
+      policy: pull-push # We override the policy for one job
+
+
+jest-tests:
+  extends: .quality
+  script:
+    - npm run test --passWithNoTests --ci
+
+
+
+type:
+  extends: .quality
+  script:
+    - npm run type-check
+
