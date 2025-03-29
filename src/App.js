@@ -9,7 +9,7 @@ import { AppProvider } from './store/appContext';
 // navigation components
 import AppNavigator from './navigation/appNavigator';
 // views
-import ErrorScreen from './views/EXAMPLE-Error';
+import ErrorScreen from './views/Error';
 
 Sentry.init({
   dsn: '',

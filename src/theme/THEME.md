@@ -98,7 +98,8 @@ You can add colors in `app` > `res` > `values` > `colors.xml`
 
 ## Add custom fonts
 - Check that your font file name is the same as its postscript name (without this it won't work on IOS)
-- Add yours fonts in the `./assets/fonts` folder
+- Add yours fonts in the `./assets/fonts` folder and make sure the path to this folder is filled in react-native.config.js file.
+```javascript
 - Run
 ```bash
 npx react-native-asset

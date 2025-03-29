@@ -11,7 +11,7 @@ import useTheme from '../../../theme/themeContext';
  */
 function Loader({ size = 'small', color = null }) {
   const { Colors } = useTheme();
-  return <ActivityIndicator size={size} color={color || Colors.primaryViolet} />;
+  return <ActivityIndicator size={size} color={color || Colors.primary500} />;
 }
 
 export default Loader;

@@ -31,7 +31,7 @@ import getButtonStyle from './components/buttonStyle';
  */
 
 /**
- * @typedef {Record<ColorNames, import('react-native').ViewStyle>} StyleWithColors
+ * @typedef {Record<ColorNames, import('react-native').StyleProp<any>>} StyleWithColors
  */
 
 /**
@@ -85,7 +85,7 @@ import getButtonStyle from './components/buttonStyle';
 
 /**
  * @typedef {StaticStyle & {
- * borderColor: StyleWithColors, backgroundColor : StyleWithColors
+ * borderColor: StyleWithColors, backgroundColor : StyleWithColors, tintColor : StyleWithColors
  * } & NavigationStyle & ButtonComponentStyle
  * } ApplicationStyle
  */

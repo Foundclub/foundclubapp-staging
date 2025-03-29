@@ -8,29 +8,29 @@ export default (colors) => ({
   darkNavigationTheme: {
     dark: true,
     colors: {
-      background: colors.neutral252,
-      primary: colors.primaryViolet,
-      card: colors.neutral252,
-      text: colors.neutralFFF,
-      border: colors.neutral252,
-      notification: colors.primaryViolet,
+      background: colors.primary900,
+      primary: colors.primary500,
+      card: colors.primary900,
+      text: colors.neutral00,
+      border: colors.primary500,
+      notification: colors.primary500,
     },
     fonts: {
       regular: {
-        fontFamily: 'HankenGrotesk-Regular',
+        fontFamily: 'Montserrat-Regular',
         fontWeight: 'normal',
       },
       medium: {
-        fontFamily: 'HankenGrotesk-Regular',
+        fontFamily: 'Montserrat-Regular',
         fontWeight: 'normal',
       },
       bold: {
-        fontFamily: 'HankenGrotesk-Bold',
-        fontWeight: 'bold',
+        fontFamily: 'Montserrat-Bold',
+        fontWeight: 'normal',
       },
       heavy: {
-        fontFamily: 'HankenGrotesk-Bold',
-        fontWeight: 'bold',
+        fontFamily: 'Montserrat-Black',
+        fontWeight: 'normal',
       },
     },
   },
@@ -46,20 +46,20 @@ export default (colors) => ({
     },
     fonts: {
       regular: {
-        fontFamily: 'HankenGrotesk-Regular',
+        fontFamily: 'Montserrat-Regular',
         fontWeight: 'normal',
       },
       medium: {
-        fontFamily: 'HankenGrotesk-Regular',
+        fontFamily: 'Montserrat-Regular',
         fontWeight: 'normal',
       },
       bold: {
-        fontFamily: 'HankenGrotesk-Bold',
-        fontWeight: 'bold',
+        fontFamily: 'Montserrat-Bold',
+        fontWeight: 'normal',
       },
       heavy: {
-        fontFamily: 'HankenGrotesk-Bold',
-        fontWeight: 'bold',
+        fontFamily: 'Montserrat-Black',
+        fontWeight: 'normal',
       },
     },
   },

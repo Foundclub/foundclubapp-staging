@@ -1,117 +1,45 @@
-import { Appearance } from 'react-native';
-
 export const colors = {
+  error100: '#ffe1e7',
+  error500: '#ff284f',
+  error700: '#d02544',
+
+  neutral00: '#ffffff',
+  neutral50: '#f1f2f2',
+  neutral100: '#e5e6e6',
+  neutral200: '#d3d4d4',
+  neutral300: '#adb1b2',
+  neutral500: '#777c7e',
+  neutral700: '#474b4c',
+  neutral800: '#242526',
+  neutral900: '#0c0c0d',
+
+  primary100: '#e6f7fe',
+  primary200: '#99e1fb',
+  primary500: '#01b3f4',
+  primary700: '#173844',
+  primary900: '#001218',
+
+  success100: '#d4fcf0',
+  success500: '#27d6a3',
+  success700: '#399379',
+
   transparent: 'transparent',
-  primaryDarkBlue: {
-    dark: '#210266',
-    light: '#210266',
-  },
-  primaryBlue: {
-    dark: '#3D3C9A',
-    light: '#3D3C9A',
-  },
-  primaryLightBlue: {
-    dark: '#536DFE',
-    light: '#536DFE',
-  },
-  primaryDarkViolet: {
-    dark: '#592DAB',
-    light: '#592DAB',
-  },
-  primaryViolet: {
-    dark: '#922BE7',
-    light: '#922BE7',
-  },
-  primaryOrange: {
-    dark: '#FF6128',
-    light: '#FF6128',
-  },
-  primaryYellow: {
-    dark: '#FFE036',
-    light: '#FFE036',
-  },
-  primaryGreen: {
-    dark: '#1BE2A8',
-    light: '#1BE2A8',
-  },
-  neutral252: {
-    dark: '#252C3D',
-    light: '#252C3D',
-  },
-  neutral515: {
-    dark: '#515664',
-    light: '#515664',
-  },
-  neutral7C8: {
-    dark: '#7C808B',
-    light: '#7C808B',
-  },
-  neutralB3B: {
-    dark: '#B3B6BC',
-    light: '#B3B6BC',
-  },
-  neutralD3D: {
-    dark: '#D3D5D8',
-    light: '#D3D5D8',
-  },
-  neutralF4F: {
-    dark: '#F4F4F5',
-    light: '#F4F4F5',
-  },
-  neutralFFF: {
-    dark: '#FFFFFF',
-    light: '#FFFFFF',
-  },
-  error700: {
-    dark: '#E5254B',
-    light: '#E5254B',
-  },
-  error500: {
-    dark: '#E5254B',
-    light: '#E5254B',
-  },
-  error100: {
-    dark: '#FDEDF0',
-    light: '#FDEDF0',
-  },
-  success700: {
-    dark: '#399379',
-    light: '#399379',
-  },
-  success500: {
-    dark: '#65C3A8',
-    light: '#65C3A8',
-  },
-  success100: {
-    dark: '#E9F6F3',
-    light: '#E9F6F3',
-  },
 };
 
 /**
  * Get the colors for the current theme
- * @param {import('./types').ColorScheme} [theme] - The theme
  * @returns {import('./types').Colors} - The colors
  */
-const getThemeColors = (theme = null) => {
-  const scheme = theme || Appearance.getColorScheme();
+const getThemeColors = () => {
   /**
    * @type {import('./types').Colors}
    */
   // @ts-expect-error because we can't use typescript as type to define the accumulator
   const initialAcc = {};
-  return Object.entries(colors).reduce((acc, [key, value]) => {
-    if (typeof value === 'object' && 'dark' in value && 'light' in value) {
-      return {
-        ...acc,
-        [key]: value[scheme],
-      };
-    }
-    return {
-      ...acc,
-      [key]: value,
-    };
-  }, initialAcc);
+  return Object.entries(colors).reduce((acc, [key, value]) => ({
+    ...acc,
+    [key]: value,
+  }), initialAcc);
 };
 
 export default getThemeColors;

@@ -6,23 +6,9 @@ export default {
     + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
   },
-  signin: {
-    title: 'Me connecter',
-    fields: {
-      username: 'Nom d\'utilisateur',
-      password: 'Mot de passe',
-    },
-    actions: {
-      login: 'Me connecter',
-      forgotPassword: 'Mot de passe oublié ?',
-    },
-  },
   errorPage: {
     title: 'Oups !',
     subtitle: 'Une erreur est survenue.',
     action: 'Recharger la page',
-  },
-  home: {
-    todoOf: 'La TODO de',
   },
 };

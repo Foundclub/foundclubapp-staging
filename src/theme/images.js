@@ -2,11 +2,12 @@
 import { Appearance } from 'react-native';
 
 export const images = {
-  logo: {
-    dark: require('../assets/pictures/zol-coeur-blanc.png'),
-    light: require('../assets/pictures/zol-coeur-noir.png'),
-  },
-  caretLeft: require('../assets/icons/caretLeft.png'),
+  // pictures
+  bg1: require('../assets/pictures/bg-1.png'),
+  bg2: require('../assets/pictures/bg-2.png'),
+  logo: require('../assets/pictures/logo.png'),
+  // icon
+  chevronDown: require('../assets/icons/chevron-down.png'),
 };
 
 /**

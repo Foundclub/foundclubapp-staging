@@ -26,6 +26,28 @@ const backgroundColors = (colors) => {
 };
 
 /**
+ * Generate classes defining tint color for every colors defined : [colorName]Tint
+ * @param {import('./types').Colors} colors - The colors object.
+ * @returns {import('./types').StyleWithColors} - The generated classes.
+ */
+const tintColors = (colors) => {
+  /**
+   * @type {import('./types').StyleWithColors}}
+   */
+  // @ts-ignore
+  const initialAcc = {};
+  return Object.entries(colors).reduce(
+    (acc, [key, value]) => ({
+      ...acc,
+      [key]: {
+        tintColor: value,
+      },
+    }),
+    initialAcc,
+  );
+};
+
+/**
  * Generate classes defining border color for every colors defined : [colorName]Border
  * @param {import('./types').Colors} colors - The colors object.
  * @returns {import('./types').StyleWithColors} - The generated classes.
@@ -59,6 +81,10 @@ const borderStyles = /** @type {const} */ ({
 });
 
 export const staticStyle = {
+  // custom
+  separator: {
+    height: 1,
+  },
   // Border radius
   borderRadius2: {
     borderRadius: 2,
@@ -78,12 +104,6 @@ export const staticStyle = {
   // Border Width
   borderWidth1: {
     borderWidth: 1,
-  },
-  borderTopWidth1: {
-    borderTopWidth: 1,
-  },
-  borderWidth1Half: {
-    borderWidth: 1.5,
   },
   borderWidth2: {
     borderWidth: 2,
@@ -122,30 +142,20 @@ export const staticStyle = {
     height: 24,
     resizeMode: resizeModes.contain,
   },
-  icon28: {
-    width: 28,
-    height: 28,
-    resizeMode: resizeModes.contain,
-  },
-  icon32: {
-    width: 32,
-    height: 32,
-    resizeMode: resizeModes.contain,
-  },
-  icon44: {
-    width: 44,
-    height: 44,
-    resizeMode: resizeModes.cover,
-  },
-  dashedSeparator: {
-    borderStyle: borderStyles.dashed,
-    borderWidth: 1,
-    margin: -2,
-    marginBottom: 0,
-    height: 3,
-  },
   // Shadows
-  cardShadow: {
+  shadow100: {
+    // iOS shadow
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 5,
+      height: 5,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    // Android shadow
+    elevation: 5,
+  },
+  shadow200: {
     // iOS shadow
     shadowColor: '#000000',
     shadowOffset: {
@@ -156,6 +166,18 @@ export const staticStyle = {
     shadowRadius: 20,
     // Android shadow
     elevation: 10,
+  },
+  shadow300: {
+    // iOS shadow
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 5,
+      height: 5,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    // Android shadow
+    elevation: 20,
   },
 };
 
@@ -169,5 +191,6 @@ export default (colors) => ({
   ...ButtonStyle(colors),
   borderColor: borderColor(colors),
   backgroundColor: backgroundColors(colors),
+  tintColor: tintColors(colors),
   ...staticStyle,
 });

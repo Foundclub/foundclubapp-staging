@@ -19,7 +19,7 @@ import { useAppContext } from '../store/appContext';
  */
 const getThemeFn = (scheme = null, defaultScheme = null) => {
   const schemeToUse = scheme || defaultScheme;
-  const colors = generateColors(schemeToUse);
+  const colors = generateColors();
   const images = generateImages(schemeToUse);
   return {
     scheme: schemeToUse,

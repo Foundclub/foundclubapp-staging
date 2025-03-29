@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RouteNames } from '../routeNames';
 import { commonOptions } from '../commonOptions';
 // screens
-import Home from '../../views/EXAMPLE-Home';
+import Home from '../../views/Home';
 
 const Stack = createStackNavigator();
 

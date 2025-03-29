@@ -1,8 +1,7 @@
-import { StatusBar, View } from 'react-native';
+import { ImageBackground } from 'react-native';
+import { useContext } from 'react';
 // Hooks
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
-import { useContext, useEffect } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import useTheme from '../../theme/themeContext';
@@ -11,20 +10,19 @@ import useTheme from '../../theme/themeContext';
  * The ScreenContainer component is a template for all screens in the application.
  * @param {object} props
  * @param {import('react').ReactNode} props.children
+ * @param {'bg1' | 'bg2'} [props.bgImage]
  * @param {Array<import('react-native').ViewStyle>} [props.style]
- * @param {'light' | 'dark'} [props.scheme]
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
   children,
   style = [],
-  scheme = 'dark',
+  bgImage = 'bg1',
 }) {
   // hooks
   const {
-    Alignments, Spaces, ApplicationStyle, Colors, changeTheme,
+    Alignments, Spaces, ApplicationStyle, Images,
   } = useTheme();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useContext(BottomTabBarHeightContext);
@@ -34,30 +32,19 @@ function ScreenContainer({
     paddingTop: headerHeight > 0 ? 0 : insets.top,
   };
 
-  // lifecycle
-  useEffect(() => {
-    // As react-navigation doesn't re-render tab main screen,
-    // we need to force refresh the statusbar color with
-    // a listener on the focus state of the screen
-    const unsubscribe = navigation.addListener('focus', () => {
-      changeTheme(scheme);
-      StatusBar.setBarStyle(scheme === 'light' ? 'dark-content' : 'light-content');
-    });
-    return unsubscribe;
-  }, [navigation, changeTheme, scheme, Colors]);
-
   return (
-    <View
+    <ImageBackground
+      source={Images[bgImage]}
       style={[
         Alignments.fill,
-        Spaces.paddingHorizontal[24],
-        ApplicationStyle.backgroundColor.neutral252,
+        Spaces.padding[24],
+        ApplicationStyle.backgroundColor.neutral900,
         containerSpaces,
         ...style,
       ]}
     >
       {children}
-    </View>
+    </ImageBackground>
   );
 }
 

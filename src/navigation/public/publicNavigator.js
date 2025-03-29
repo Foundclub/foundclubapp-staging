@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RouteNames } from '../routeNames';
 import { commonOptions } from '../commonOptions';
 // components
-import Login from '../../views/EXAMPLE-Login';
+import Login from '../../views/Login';
 
 const Stack = createStackNavigator();
 
