@@ -1,7 +1,7 @@
 default_platform(:android)
 
 android_directory = File.expand_path("..", Dir.pwd)
-android_firebase_app_id = 'TO_REPLACE'
+android_firebase_app_id = '1:353491626274:android:db0b7408be4cda293edd7b'
 keystore_password = ENV['ANDROID_KEYSTORE_PASSWORD']
 key_password = ENV['ANDROID_KEY_PASSWORD']
 timestamp = ENV['TIMESTAMP']
