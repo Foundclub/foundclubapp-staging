@@ -1,31 +1,30 @@
 import { View } from 'react-native';
-import SkeletonLoader from '../../atoms/skeletonLoader/SkeletonLoader';
-import ErrorWrapper from '../../atoms/errorWrapper/ErrorWrapper';
+
+import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 /**
  * Content wrapper component that handles loading and error states.
  * @param {object} props
  * @param {import('react').ReactNode} props.children
  * @param {boolean} props.isLoading
- * @param {boolean} props.isError
  * @param {string} [props.error]
  * @param {string} [props.backgroundColor]
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @returns {import('react').ReactElement}
  */
 function WithDataWrapper({
-  children,
-  isLoading,
-  isError,
-  error,
   backgroundColor,
+  children,
+  error,
+  isLoading,
   wrapperStyle,
 }) {
   if (isLoading) {
     return (
       <SkeletonLoader
-        isActive
         backgroundColor={backgroundColor}
+        isActive
         wrapperStyle={wrapperStyle}
       >
         {children}
@@ -33,11 +32,11 @@ function WithDataWrapper({
     );
   }
 
-  if (isError) {
+  if (error) {
     return (
       <ErrorWrapper
-        wrapperStyle={wrapperStyle}
         error={error}
+        wrapperStyle={wrapperStyle}
       >
         {children}
       </ErrorWrapper>

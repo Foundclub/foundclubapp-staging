@@ -1,6 +1,9 @@
+// @ts-nocheck
+
 import Reactotron, { trackGlobalErrors } from 'reactotron-react-native';
 import mmkvPlugin from 'reactotron-react-native-mmkv';
-import { storage } from './src/store/appContext';
+
+import { storage } from '@/store/appContext';
 
 Reactotron.configure({}) // controls connection & communication settings
   .use(mmkvPlugin({ storage }))

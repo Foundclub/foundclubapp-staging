@@ -1,4 +1,4 @@
-import { cloneElement, Children } from 'react';
+import { Children, cloneElement } from 'react';
 
 const ELEMENTS_TO_EXCLUDE = [
   'View',

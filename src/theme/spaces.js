@@ -5,35 +5,35 @@ export const screenHeight = Dimensions.get('window').height;
 
 export const sizes = {
   0: 0,
-  4: 4,
-  8: 8,
   12: 12,
+  128: 128,
   16: 16,
+  160: 160,
   24: 24,
   32: 32,
+  4: 4,
   40: 40,
   64: 64,
+  8: 8,
   80: 80,
-  128: 128,
-  160: 160,
 };
 
 export const types = {
-  marginHorizontal: 'marginHorizontal',
-  marginVertical: 'marginVertical',
-  marginTop: 'marginTop',
+  gap: 'gap',
   margin: 'margin',
   marginBottom: 'marginBottom',
-  marginRight: 'marginRight',
+  marginHorizontal: 'marginHorizontal',
   marginLeft: 'marginLeft',
+  marginRight: 'marginRight',
+  marginTop: 'marginTop',
+  marginVertical: 'marginVertical',
   padding: 'padding',
-  paddingHorizontal: 'paddingHorizontal',
-  paddingVertical: 'paddingVertical',
-  paddingTop: 'paddingTop',
   paddingBottom: 'paddingBottom',
-  paddingRight: 'paddingRight',
+  paddingHorizontal: 'paddingHorizontal',
   paddingLeft: 'paddingLeft',
-  gap: 'gap',
+  paddingRight: 'paddingRight',
+  paddingTop: 'paddingTop',
+  paddingVertical: 'paddingVertical',
 };
 
 /**

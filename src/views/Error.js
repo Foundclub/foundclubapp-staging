@@ -1,20 +1,21 @@
-import {
-  Image, Text, View,
-  NativeModules,
-} from 'react-native';
 import { useTranslation } from 'react-i18next';
-// hooks
-import useTheme from '../theme/themeContext';
-// components
-import Button from '../components/atoms/button/Button';
+import {
+  Image, NativeModules, Text,
+  View,
+} from 'react-native';
+
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
 
 /**
- * HomeScreen component.
- * @returns {React.ReactElement} HomeScreen component.
+ * Error screen component displayed when an unrecoverable app error occurs.
+ * Provides information about the error and allows users to reload the app.
+ * @returns {import('react').ReactElement} Error screen component
  */
 function ErrorScreen() {
   const {
-    Alignments, Fonts, Images, ApplicationStyle, Spaces,
+    Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
 
@@ -23,9 +24,9 @@ function ErrorScreen() {
    * @type {import('react-native').ImageStyle}
    */
   const imageStyle = {
-    width: 270,
     height: 33,
     resizeMode: 'contain',
+    width: 270,
   };
 
   // handlers
@@ -64,10 +65,10 @@ function ErrorScreen() {
         ]}
       >
         <Button
-          variant="Primary"
           onPress={handleReloadApp}
-          title={t('errorPage.action')}
           style={Alignments.fullWidth}
+          title={t('errorPage.action')}
+          variant="Primary"
         />
       </View>
     </View>

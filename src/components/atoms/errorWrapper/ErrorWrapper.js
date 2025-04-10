@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { View, Text } from 'react-native';
-// hooks
-import useTheme from '../../../theme/themeContext';
-// utils
-import { getErrorMessage } from '../../../utils/errors/displayError';
+import { Text, View } from 'react-native';
+// Hooks
+import useTheme from '@/theme/themeContext';
+// Utils
+import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
  * Error wrapper component.
@@ -16,10 +16,10 @@ import { getErrorMessage } from '../../../utils/errors/displayError';
 function ErrorWrapper({ children, error, wrapperStyle = [] }) {
   // hooks
   const {
-    ApplicationStyle, Alignments, Fonts, Spaces,
+    Alignments, ApplicationStyle, Fonts,
   } = useTheme();
 
-  const [childrenDimensions, setChildrenDimensions] = useState({ width: 0, height: 0 });
+  const [childrenDimensions, setChildrenDimensions] = useState({ height: 0, width: 0 });
 
   /**
    * Handle children layout event.
@@ -27,14 +27,14 @@ function ErrorWrapper({ children, error, wrapperStyle = [] }) {
    * @returns {void}
    */
   const onChildrenLayout = (event) => {
-    const { width, height } = event.nativeEvent.layout;
-    setChildrenDimensions({ width, height });
+    const { height, width } = event.nativeEvent.layout;
+    setChildrenDimensions({ height, width });
   };
 
   return (
     <View
-      style={wrapperStyle}
       onLayout={onChildrenLayout}
+      style={wrapperStyle}
     >
       {children}
       {error && (
@@ -45,10 +45,14 @@ function ErrorWrapper({ children, error, wrapperStyle = [] }) {
           childrenDimensions,
           ApplicationStyle.backgroundColor.error100,
           ApplicationStyle.borderRadius8,
-          Spaces.padding[24],
         ]}
         >
-          <Text style={[Fonts.p1, Fonts.error700]}>
+          <Text
+            style={[Fonts.p1,
+              Fonts.error700,
+              { width: childrenDimensions.width - 48 },
+            ]}
+          >
             {getErrorMessage(error)}
           </Text>
         </View>

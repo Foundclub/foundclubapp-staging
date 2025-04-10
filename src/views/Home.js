@@ -1,30 +1,55 @@
-import { Text } from 'react-native';
-// hooks
-import useTheme from '../theme/themeContext';
-import { useAuth } from '../domains/EXAMPLE-auth/EXAMPLE-useAuth';
-// components
-import ScreenContainer from '../components/templates/ScreenContainer';
-import Button from '../components/atoms/button/Button';
+import { Image, Text, View } from 'react-native';
+
+import { useAuth } from '@/domains/auth/useAuth';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 /**
- * Home screen component.
- * @returns {import('react').ReactElement}
+ * Main home screen component displayed after authentication and onboarding.
+ * Shows user content and provides access to core app features.
+ * @returns {import('react').ReactElement} Home screen component
  */
 function Home() {
   // hooks
   const {
-    Fonts, Spaces,
+    Alignments, Fonts, Images, Spaces,
   } = useTheme();
-  const { logout } = useAuth();
+  const { logoutMutation } = useAuth();
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <ScreenContainer
-      style={[Spaces.paddingVertical[24]]}
+      bgImage="bg2"
+      contentContainerStyle={[
+        Alignments.column,
+        Alignments.fill,
+        Spaces.gap[24],
+      ]}
     >
-      <Text style={[Fonts.h1, Fonts.neutral00]}>
-        HOME
-      </Text>
-      <Button variant="Primary" title="Logout" onPress={logout} />
+      {/* header */}
+      <View style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween]}
+      >
+        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <ProfileButton />
+      </View>
+      <View>
+        <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+          Titre
+        </Text>
+        <Text style={[Fonts.p1, Fonts.neutral00]}>
+          Sous titre
+        </Text>
+      </View>
+      <Button onPress={handleLogout} title="Logout" variant="Primary" />
     </ScreenContainer>
   );
 }

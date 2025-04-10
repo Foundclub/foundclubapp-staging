@@ -1,12 +1,10 @@
-/* eslint-disable import/no-unresolved */
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const {
-  wrapWithReanimatedMetroConfig,
-} = require('react-native-reanimated/metro-config');
-
 const {
   withSentryConfig,
 } = require('@sentry/react-native/metro');
+const {
+  wrapWithReanimatedMetroConfig,
+} = require('react-native-reanimated/metro-config');
 
 /**
  * Metro configuration

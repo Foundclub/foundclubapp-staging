@@ -1,0 +1,97 @@
+import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Text, View } from 'react-native';
+
+import { USER_SECTIONS } from '@/domains/auth/authUseCases';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import TabButton from '@/components/atoms/tabButton/TabButton';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetMe } from '@/services/auth/authQueries';
+import { updateMe } from '@/services/auth/authService';
+
+/**
+ * Team section selection screen component. Allows users to select their team section (male/female).
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
+ * @returns {import('react').ReactElement} User section screen component
+ */
+function UserSection({ navigation, route }) {
+  // hooks
+  const { data: userData } = useGetMe();
+  // local state
+  const [section, setSection] = useState(userData?.section || '');
+  const {
+    Alignments, Fonts, Spaces,
+  } = useTheme();
+  const { t } = useTranslation();
+
+  const updateUserMutation = useMutation({
+    mutationFn: updateMe,
+    onSuccess: () => {
+      navigation.navigate(route.params?.nextRoute || RouteNames.UserBirthdate);
+    },
+  });
+
+  const handleNext = () => {
+    if (section && userData) {
+      updateUserMutation.mutate(Object.assign(userData, { section }));
+    }
+  };
+
+  /**
+   * Handle the selection of the user section
+   * @param {string} selectedSection
+   */
+  const handleSelection = (selectedSection) => {
+    setSection((currentSection) => (selectedSection === currentSection ? '' : selectedSection));
+  };
+
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[
+        Spaces.paddingVertical[24],
+        Alignments.justifySpaceBetween,
+        Alignments.column,
+        Alignments.fill,
+      ]}
+    >
+      <View style={[Spaces.gap[40]]}>
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+            {t('profile.titles.section')}
+          </Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>
+            {t('profile.subtitles.section')}
+          </Text>
+        </View>
+        <View style={[Spaces.gap[24]]}>
+          <TabButton
+            isActive={section === USER_SECTIONS.female}
+            onPress={() => handleSelection(USER_SECTIONS.female)}
+            title={t('profile.fields.sections.female')}
+          />
+          <TabButton
+            isActive={section === USER_SECTIONS.male}
+            onPress={() => handleSelection(USER_SECTIONS.male)}
+            title={t('profile.fields.sections.male')}
+          />
+
+        </View>
+      </View>
+      <Button
+        disabled={!section}
+        onPress={handleNext}
+        title={t('profile.actions.save')}
+        variant="Primary"
+      />
+    </ScreenContainer>
+  );
+}
+
+export default UserSection;

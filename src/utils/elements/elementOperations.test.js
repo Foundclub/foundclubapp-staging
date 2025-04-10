@@ -1,8 +1,9 @@
-import { Text, View, ScrollView } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+
 import {
   addBackgroundOnDeepTextChildren,
   capitalizedValue,
-} from './elementOperations';
+} from '@/utils/elements/elementOperations';
 
 describe('addBackgroundOnDeepTextChildren', () => {
   it('should add background color to each element except View ones', () => {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "353491626274",
+    "project_id": "found-club",
+    "storage_bucket": "found-club.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353491626274:android:db0b7408be4cda293edd7b",
+        "android_client_info": {
+          "package_name": "com.foundclub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1MgrC39gTnWk66juWsJBND4hQd_sJmNA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

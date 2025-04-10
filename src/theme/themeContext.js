@@ -1,15 +1,14 @@
 import {
-  useState, createContext, useContext, useMemo, useCallback,
+  createContext, useCallback, useContext, useMemo, useState,
 } from 'react';
-// style
-import generateColors from './colors';
-import generateFonts from './fonts';
-import generateApplicationStyle from './applicationStyle';
-import generateImages from './images';
-import Spaces from './spaces';
-import Alignments from './alignements';
-// hooks
-import { useAppContext } from '../store/appContext';
+
+import { useAppContext } from '@/store/appContext';
+import Alignments from '@/theme/alignements';
+import generateApplicationStyle from '@/theme/applicationStyle';
+import generateColors from '@/theme/colors';
+import generateFonts from '@/theme/fonts';
+import generateImages from '@/theme/images';
+import Spaces from '@/theme/spaces';
 
 /**
  * Get theme function.
@@ -22,13 +21,13 @@ const getThemeFn = (scheme = null, defaultScheme = null) => {
   const colors = generateColors();
   const images = generateImages(schemeToUse);
   return {
-    scheme: schemeToUse,
-    Colors: colors,
-    Fonts: generateFonts(colors),
-    Spaces,
     Alignments,
     ApplicationStyle: generateApplicationStyle(colors),
+    Colors: colors,
+    Fonts: generateFonts(colors),
     Images: images,
+    scheme: schemeToUse,
+    Spaces,
   };
 };
 
@@ -67,12 +66,12 @@ export function ThemeProvider({ children }) {
      */
     (newScheme = null) => {
       const schemeToChange = newScheme || defaultScheme;
-      appDispatch({ type: 'SET_THEME', payload: schemeToChange });
+      appDispatch({ payload: schemeToChange, type: 'SET_THEME' });
       setTheme(getThemeFn(schemeToChange));
     }, [defaultScheme, setTheme, appDispatch]);
 
   const contextValue = useMemo(
-    () => ({ theme, changeTheme, scheme: theme.scheme }),
+    () => ({ changeTheme, scheme: theme.scheme, theme }),
     [theme, changeTheme],
   );
 
@@ -93,7 +92,7 @@ export function ThemeProvider({ children }) {
  * @inheritdoc
  */
 const useTheme = () => {
-  const { theme, changeTheme, scheme } = useContext(ThemeContext);
+  const { changeTheme, scheme, theme } = useContext(ThemeContext);
   return { ...theme, changeTheme, scheme };
 };
 

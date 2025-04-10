@@ -5,9 +5,19 @@ export const images = {
   // pictures
   bg1: require('../assets/pictures/bg-1.png'),
   bg2: require('../assets/pictures/bg-2.png'),
+  bg3: require('../assets/pictures/bg-3.png'),
   logo: require('../assets/pictures/logo.png'),
+  roundAvatar: require('../assets/pictures/avatar-round.png'),
   // icon
+  arrowLeft: require('../assets/icons/arrowLeft.png'),
+  arrowRight: require('../assets/icons/arrowRight.png'),
+  camera: require('../assets/icons/camera.png'),
+  check: require('../assets/icons/check.png'),
   chevronDown: require('../assets/icons/chevron-down.png'),
+  close: require('../assets/icons/close.png'),
+  edit: require('../assets/icons/edit.png'),
+  plus: require('../assets/icons/plus.png'),
+  search: require('../assets/icons/search.png'),
 };
 
 /**
@@ -23,7 +33,7 @@ const getThemeImages = (theme = null) => {
   // @ts-expect-error because we can't use typescript as type to define the accumulator
   const initialAcc = {};
   return Object.entries(images).reduce((acc, [key, value]) => {
-    if (typeof value === 'object' && 'dark' in value && 'light' in value) {
+    if (scheme && typeof value === 'object' && 'dark' in value && 'light' in value) {
       return {
         ...acc,
         [key]: value[scheme],

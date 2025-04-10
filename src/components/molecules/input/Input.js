@@ -1,16 +1,18 @@
 import { forwardRef, useEffect, useState } from 'react';
 import {
-  TextInput, View, Text, Image,
-  TouchableOpacity,
+  Image, Platform, Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
-// hooks
-import useTheme from '../../../theme/themeContext';
+
+import useTheme from '@/theme/themeContext';
 
 /**
  * @typedef {object} InputAdditionalProps
  * @property {string} [label]
  * @property {import('react-native').ViewStyle
  * | Array<import('react-native').ViewStyle>} [wrapperStyle]
+ * @property {import('react-native').ViewStyle
+ * | Array<import('react-native').ViewStyle>} [labelStyle]
  * @property {import('react-native').ImageStyle
  * | Array<import('react-native').ImageStyle>} [iconStyle]
  * @property {import('react').RefObject<import('react-native').TextInput>} [reference]
@@ -33,7 +35,7 @@ const Input = forwardRef(
    * Input component.
    * @param {Omit<import('react-native').TextInputProps, 'onBlur' | 'onFocus'>
    *  & InputAdditionalProps} props
-   * @param {React.RefObject<TextInput>} ref
+   * @param {React.ForwardedRef<TextInput>} ref
    * @returns {React.ReactElement}
    */
   (props, ref) => {
@@ -43,7 +45,7 @@ const Input = forwardRef(
     );
     // hooks
     const {
-      Colors, Fonts, Alignments, ApplicationStyle, Spaces, Images,
+      Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
     } = useTheme();
 
     // methods
@@ -71,23 +73,25 @@ const Input = forwardRef(
 
     return (
       <View style={[Spaces.gap[8]]}>
-        <View style={[Alignments.fill, Spaces.gap[12], props.wrapperStyle]}>
+        <View style={[Spaces.gap[12], props.wrapperStyle]}>
           <Text style={[
             Fonts.p3Bold,
             Fonts[mainColor],
-            props.style,
+            props.labelStyle,
           ]}
           >
             {props.label}
           </Text>
-          <View style={[
-            Alignments.fill,
-            Alignments.row,
-            Spaces.paddingHorizontal[16],
-            Spaces.gap[16],
-          ]}
-          >
-            {
+          <View>
+            <View style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.paddingHorizontal[16],
+              Spaces.gap[16],
+              Platform.OS === 'ios' ? Spaces.paddingBottom[12] : Spaces.paddingBottom[0],
+            ]}
+            >
+              {
             props.icon
               ? (
                 <Image
@@ -99,37 +103,38 @@ const Input = forwardRef(
               )
               : null
           }
-            <TextInput
-              style={[
-                Fonts.p1,
-                Fonts.neutral00,
-                Alignments.fill,
-                props.style,
-              ]}
-              placeholderTextColor={Colors.neutral500}
-              selectionColor={Colors.primary500}
-              cursorColor={Colors.primary500}
-              ref={ref}
-              readOnly={props.readOnly}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onEndEditing={handleBlur}
-              inputMode={props.inputMode || 'text'}
-              enterKeyHint={props.enterKeyHint}
-              onSubmitEditing={props.onSubmitEditing}
-              keyboardType={props.keyboardType}
-              secureTextEntry={props.secureTextEntry}
-              textAlignVertical={props.textAlignVertical}
-              maxLength={props.maxLength}
-              multiline={props.multiline}
-              numberOfLines={props.numberOfLines}
-              placeholder={props.placeholder}
-              onChangeText={props.onChangeText}
-              value={props.value}
-              autoFocus={props.autoFocus}
-              editable={props.editable}
-            />
-            {
+              <TextInput
+                autoFocus={props.autoFocus}
+                cursorColor={Colors.primary500}
+                editable={props.editable}
+                enterKeyHint={props.enterKeyHint}
+                inputMode={props.inputMode || 'text'}
+                keyboardType={props.keyboardType}
+                maxLength={props.maxLength}
+                multiline={props.multiline}
+                numberOfLines={props.numberOfLines}
+                onBlur={handleBlur}
+                onChangeText={props.onChangeText}
+                onEndEditing={handleBlur}
+                onFocus={handleFocus}
+                onSubmitEditing={props.onSubmitEditing}
+                placeholder={props.placeholder}
+                placeholderTextColor={Colors.neutral500}
+                readOnly={props.readOnly}
+                ref={ref}
+                secureTextEntry={props.secureTextEntry}
+                selectionColor={Colors.primary500}
+                showSoftInputOnFocus={props.showSoftInputOnFocus}
+                style={[
+                  Fonts.p1,
+                  props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
+                  Alignments.fill,
+                  props.style,
+                ]}
+                textAlignVertical={props.textAlignVertical}
+                value={props.value}
+              />
+              {
               props.iconBottom
                 ? (
                   <TouchableOpacity onPress={props.onBottomIconPress}>
@@ -143,16 +148,17 @@ const Input = forwardRef(
                 )
                 : null
             }
+            </View>
+            <View style={[
+              Alignments.fullWidth,
+              ApplicationStyle.backgroundColor[mainColor],
+              ApplicationStyle.separator,
+            ]}
+            />
           </View>
-          <View style={[
-            Alignments.fullWidth,
-            ApplicationStyle.backgroundColor[mainColor],
-            ApplicationStyle.separator,
-          ]}
-          />
         </View>
         {
-          props.error ? (
+          props.error && props.error !== ' ' ? (
             <Text style={[
               Fonts.p2,
               Fonts.error700,
