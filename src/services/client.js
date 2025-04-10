@@ -1,8 +1,7 @@
-/* eslint-disable no-underscore-dangle */
 import axios from 'axios';
-// Utils
-import { getAuthTokens } from '../domains/EXAMPLE-auth/EXAMPLE-authUseCases';
-import { storage } from '../store/appContext';
+
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { storage } from '@/store/appContext';
 
 const instance = axios.create({
   baseURL: process.env.API_URL,
@@ -15,11 +14,11 @@ const instance = axios.create({
  * @returns {import('axios').InternalAxiosRequestConfig} The axios config with the token.
  */
 const onRequest = (axiosConfig) => {
-  const token = getAuthTokens()?.accessToken;
+  const token = getAuthTokens()?.token;
   const newConfig = { ...axiosConfig };
 
   // add current phone locale to the headers
-  newConfig.headers.locale = 'fr';
+  // newConfig.headers.locale = 'fr';
 
   if (token) {
     newConfig.headers.Authorization = `Bearer ${token}`;
@@ -35,35 +34,10 @@ const onRequest = (axiosConfig) => {
  * @returns {Promise<import('axios')
  * .AxiosResponse|import('axios').AxiosError>} The axios response or error.
  */
-const refreshAccessToken = async (axiosError) => {
-  const originalRequest = axiosError.config;
-
+const resetAuth = async (axiosError) => {
   if (axiosError.response
     && axiosError.response.status === 401
-    && !originalRequest._retry
-    && originalRequest.url !== '/login'
-    && originalRequest.url !== '/token/refresh'
   ) {
-    originalRequest._retry = true;
-
-    try {
-      const response = await instance.post(
-        '/token/refresh',
-        { refresh_token: getAuthTokens().refreshToken },
-      );
-      const newAccessToken = response.data.token;
-      storage.set('auth', JSON.stringify(response.data));
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      return axios(originalRequest);
-    } catch (refreshError) {
-      // eslint-disable-next-line no-console
-      console.error('Unable to refresh token:', refreshError);
-      storage.delete('auth');
-    }
-  }
-  if (axiosError.response
-    && axiosError.response.status === 401
-    && originalRequest.url === '/token/refresh') {
     storage.delete('auth');
   }
 
@@ -76,7 +50,7 @@ const refreshAccessToken = async (axiosError) => {
  * & { config: { _retry?: boolean; }; }} error - The axios error.
  * @returns {Promise<any>} The axios response.
  */
-const onRejected = (error) => refreshAccessToken(error);
+const onRejected = (error) => resetAuth(error);
 // const onRejected = (error) => Promise.reject(error?.response?.data);
 
 instance.interceptors.request.use(onRequest);

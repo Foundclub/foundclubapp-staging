@@ -3,7 +3,7 @@
  * @type {{ [key: number]: boolean }}
  */
 export const ignoredApiStatusCodes = {
-  // 401: true, // Example
+  401: true,
 };
 
 /**

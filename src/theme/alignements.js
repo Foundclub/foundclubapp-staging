@@ -6,17 +6,17 @@ export const directions = /** @type {const} */ ({
 });
 
 export const positions = /** @type {const} */ ({
-  center: 'center',
-  end: 'flex-end',
-  start: 'flex-start',
-  stretch: 'stretch',
+  absolute: 'absolute',
   around: 'space-around',
   between: 'space-between',
-  absolute: 'absolute',
-  relative: 'relative',
-  static: 'static',
-  wrap: 'wrap',
+  center: 'center',
+  end: 'flex-end',
   nowrap: 'nowrap',
+  relative: 'relative',
+  start: 'flex-start',
+  static: 'static',
+  stretch: 'stretch',
+  wrap: 'wrap',
   wrapReverse: 'wrap-reverse',
 });
 
@@ -26,8 +26,8 @@ export const dimensions = /** @type {const} */ ({
 
 export const overflows = /** @type {const} */ ({
   hidden: 'hidden',
-  visible: 'visible',
   scroll: 'scroll',
+  visible: 'visible',
 });
 
 /**
@@ -62,11 +62,11 @@ const alignements = {
     alignItems: positions.stretch,
   },
   // align-self
-  selfStretch: {
-    alignSelf: positions.stretch,
-  },
   selfCenter: {
     alignSelf: positions.center,
+  },
+  selfStretch: {
+    alignSelf: positions.stretch,
   },
   // justify-content
   justifyCenter: {
@@ -100,15 +100,15 @@ const alignements = {
     justifyContent: positions.between,
   },
   // Size
+  fullHeight: {
+    height: dimensions.fullPercent,
+  },
   fullSize: {
     height: dimensions.fullPercent,
     width: dimensions.fullPercent,
   },
   fullWidth: {
     width: dimensions.fullPercent,
-  },
-  fullHeight: {
-    height: dimensions.fullPercent,
   },
   // transform
   mirror: {
@@ -121,31 +121,31 @@ const alignements = {
     transform: [{ rotate: '-90deg' }],
   },
   // position
-  relative: {
-    position: positions.relative,
-  },
   absolute: {
     position: positions.absolute,
+  },
+  relative: {
+    position: positions.relative,
   },
   static: {
     position: positions.static,
   },
   // wrap
-  wrap: {
-    flexWrap: positions.wrap,
-  },
   noWrap: {
     flexWrap: positions.nowrap,
+  },
+  wrap: {
+    flexWrap: positions.wrap,
   },
   // overflow
   overflowHidden: {
     overflow: overflows.hidden,
   },
-  overflowVisible: {
-    overflow: overflows.visible,
-  },
   overflowScroll: {
     overflow: overflows.scroll,
+  },
+  overflowVisible: {
+    overflow: overflows.visible,
   },
 };
 

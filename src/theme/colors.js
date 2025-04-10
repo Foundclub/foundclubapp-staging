@@ -4,10 +4,10 @@ export const colors = {
   error700: '#d02544',
 
   neutral00: '#ffffff',
-  neutral50: '#f1f2f2',
   neutral100: '#e5e6e6',
   neutral200: '#d3d4d4',
   neutral300: '#adb1b2',
+  neutral50: '#f1f2f2',
   neutral500: '#777c7e',
   neutral700: '#474b4c',
   neutral800: '#242526',

@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-vars */
-import { colors } from './colors';
-import { sizes, staticFontStyle } from './fonts';
-import { sizes as spaces, types } from './spaces';
-import { images } from './images';
-import { staticStyle } from './applicationStyle';
-import getButtonStyle from './components/buttonStyle';
+import { staticStyle } from '@/theme/applicationStyle';
+import { colors } from '@/theme/colors';
+import getButtonStyle from '@/theme/components/buttonStyle';
+import { sizes, staticFontStyle } from '@/theme/fonts';
+import { images } from '@/theme/images';
+import { sizes as spaces, types } from '@/theme/spaces';
 
 /**
  * @typedef {typeof colors} AllColors

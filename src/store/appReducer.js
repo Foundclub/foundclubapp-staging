@@ -4,18 +4,20 @@
  */
 export default function appReducer(state, action) {
   switch (action.type) {
-    // AUTH REDUCERS
+    case 'DELETE_AUTHENTICATION': {
+      return { ...state, auth: undefined };
+    }
     case 'SET_AUTHENTICATION': {
       return { ...state, auth: action.payload };
     }
-    case 'SET_THEME': {
-      return { ...state, theme: action.payload };
-    }
-    case 'DELETE_AUTHENTICATION': {
-      return { ...state, auth: null, fcmToken: null };
-    }
     case 'SET_FCM_TOKEN': {
       return { ...state, fcmToken: action.payload };
+    }
+    case 'SET_ONBOARDING_VIEWS': {
+      return { ...state, onboardingViews: action.payload };
+    }
+    case 'SET_THEME': {
+      return { ...state, theme: action.payload };
     }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`);

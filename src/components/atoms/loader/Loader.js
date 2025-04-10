@@ -1,6 +1,6 @@
 import { ActivityIndicator } from 'react-native';
-// hooks
-import useTheme from '../../../theme/themeContext';
+// Hooks
+import useTheme from '@/theme/themeContext';
 
 /**
  * Small loader component.
@@ -9,9 +9,9 @@ import useTheme from '../../../theme/themeContext';
  * @param {string} [props.color]
  * @returns {import('react').ReactElement}
  */
-function Loader({ size = 'small', color = null }) {
+function Loader({ color = undefined, size = 'small' }) {
   const { Colors } = useTheme();
-  return <ActivityIndicator size={size} color={color || Colors.primary500} />;
+  return <ActivityIndicator color={color || Colors.primary500} size={size} />;
 }
 
 export default Loader;

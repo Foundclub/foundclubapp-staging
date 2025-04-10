@@ -1,10 +1,10 @@
 import {
-  TouchableOpacity, Text, Image, View,
+  Image, Text, TouchableOpacity, View,
 } from 'react-native';
-// hooks
-import useTheme from '../../../theme/themeContext';
-// components
-import Loader from '../loader/Loader';
+// Hooks
+import useTheme from '@/theme/themeContext';
+// Components
+import Loader from '@/components/atoms/loader/Loader';
 
 /**
  * Button component.
@@ -14,31 +14,29 @@ import Loader from '../loader/Loader';
  * @param {string} [props.title]
  * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' } props.variant
  * @param {import('react-native').ViewStyle} [props.style]
- * @param {string} [props.loaderColor]
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]
  * @param {'before' | 'after'} [props.iconPosition]
  * @param {(event: import('react-native').GestureResponderEvent) => void} [props.onPress]
  * @returns {import('react').ReactElement}
  */
 function Button({
-  isLoading,
   disabled,
-  title,
-  variant,
-  style,
-  loaderColor,
   icon,
   iconPosition,
+  isLoading,
   onPress,
+  style,
+  title,
+  variant,
 }) {
   const {
-    ApplicationStyle, Images, Alignments, Spaces, Fonts,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
 
   const imageStyle = {
-    width: 16,
     aspectRatio: 1,
     tintColor: ApplicationStyle[`buttonText${variant}`].color,
+    width: 16,
   };
 
   return (
@@ -52,7 +50,7 @@ function Button({
         style,
       ]}
     >
-      {isLoading ? <Loader color={loaderColor} />
+      {isLoading ? <Loader color={Colors.primary100} />
         : (
           <View
             style={[

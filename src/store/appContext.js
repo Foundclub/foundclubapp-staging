@@ -1,11 +1,11 @@
-import React, { useReducer, useContext, useEffect } from 'react';
-// Reducer
+import React, { useContext, useEffect, useReducer } from 'react';
 import { MMKV } from 'react-native-mmkv';
-import appReducer from './appReducer';
+
+import appReducer from '@/store/appReducer';
 
 const AppStateContext = React.createContext(/** @type {Store} */ ({}));
 const AppDispatchContext = React
-  .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload: any; }>} */ ({}));
+  .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */ ({}));
 
 export const storage = new MMKV();
 
@@ -14,9 +14,10 @@ export const storage = new MMKV();
  * @type {Store}
  */
 const initStore = {
-  auth: storage.contains('auth') ? JSON.parse(storage.getString('auth')) : null,
-  theme: storage.contains('theme') ? storage.getString('theme') : null,
-  fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : null,
+  auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
+  fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
+  onboardingViews: [],
+  theme: storage.contains('theme') ? storage.getString('theme') : undefined,
 };
 
 /**
@@ -25,7 +26,7 @@ const initStore = {
  * @param {any} newValue - The value to set in local storage.
  */
 const setPersistantState = (key, newValue) => {
-  if (newValue && newValue !== 'null') {
+  if (newValue && newValue !== 'undefined') {
     storage.set(key, newValue);
   } else {
     storage.delete(key);
@@ -83,8 +84,8 @@ function AppProvider({ children }) {
 const useAppContext = () => [useContext(AppStateContext), useContext(AppDispatchContext)];
 
 export {
+  AppDispatchContext,
   AppProvider,
   AppStateContext,
-  AppDispatchContext,
   useAppContext,
 };

@@ -1,4 +1,4 @@
-import { lightenColor } from './colorsOperations';
+import { lightenColor } from '@/utils/colors/colorsOperations';
 
 describe('lightenColor', () => {
   it('should lighten the color by the specified amount', () => {

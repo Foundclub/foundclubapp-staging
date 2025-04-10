@@ -1,10 +1,15 @@
 import { CardStyleInterpolators } from '@react-navigation/stack';
 
+import Header from '@/components/atoms/header/Header';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+
 export const commonOptions = {
-  headerShown: true,
-  headerBackTitleVisible: false,
-  title: '',
-  // headerBackImage: () => <HeaderBackButton />,
-  headerShadowVisible: false,
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+  headerBackImage: () => <HeaderBackButton />,
+  headerBackTitleVisible: false,
+  headerShadowVisible: false,
+  headerShown: true,
+  headerTitle: () => <Header />,
+  headerTransparent: true,
+  title: '',
 };

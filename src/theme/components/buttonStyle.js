@@ -1,10 +1,10 @@
-import { positions } from '../alignements';
+import { positions } from '@/theme/alignements';
 
 const buttonCommonStyle = {
+  alignItems: positions.center,
   borderRadius: 47,
   height: 47,
   justifyContent: positions.center,
-  alignItems: positions.center,
 };
 
 /**
@@ -13,51 +13,51 @@ const buttonCommonStyle = {
  * @inheritdoc
  */
 const getStyle = (colors) => ({
-  buttonTextSmall: {
-    fontSize: 14,
-  },
-  buttonIcon: {
-    paddingHorizontal: 12,
-    borderRadius: 100,
-  },
   buttonDisabled: {
     opacity: 0.5,
   },
-
+  buttonIcon: {
+    borderRadius: 100,
+    paddingHorizontal: 12,
+  },
   buttonPrimary: {
     ...buttonCommonStyle,
     backgroundColor: colors.primary500,
-  },
-  buttonTextPrimary: {
-    color: colors.primary900,
   },
 
   buttonPrimaryLight: {
     ...buttonCommonStyle,
     backgroundColor: colors.primary200,
   },
-  buttonTextPrimaryLight: {
-    color: colors.primary900,
-  },
-
   buttonSecondary: {
     ...buttonCommonStyle,
     backgroundColor: 'transparent',
-    borderWidth: 1,
     borderColor: colors.primary500,
-  },
-  buttonTextSecondary: {
-    color: colors.primary500,
+    borderWidth: 1,
   },
 
   buttonSecondaryLight: {
     ...buttonCommonStyle,
     backgroundColor: 'transparent',
-    borderWidth: 1,
     borderColor: colors.primary200,
+    borderWidth: 1,
   },
+  buttonTextPrimary: {
+    color: colors.primary900,
+  },
+
+  buttonTextPrimaryLight: {
+    color: colors.primary900,
+  },
+  buttonTextSecondary: {
+    color: colors.primary500,
+  },
+
   buttonTextSecondaryLight: {
     color: colors.primary200,
+  },
+  buttonTextSmall: {
+    fontSize: 14,
   },
 });
 

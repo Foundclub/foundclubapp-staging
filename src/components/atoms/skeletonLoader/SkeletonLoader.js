@@ -1,4 +1,7 @@
+import MaskedView from '@react-native-masked-view/masked-view';
 import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Reanimated, {
   interpolate,
   useAnimatedStyle,
@@ -6,14 +9,11 @@ import Reanimated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { View, StyleSheet } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-// hooks
-import MaskedView from '@react-native-masked-view/masked-view';
-import useTheme from '../../../theme/themeContext';
-// utils
-import { lightenColor } from '../../../utils/colors/colorsOperations';
-import { addBackgroundOnDeepTextChildren } from '../../../utils/elements/elementOperations';
+
+import useTheme from '@/theme/themeContext';
+
+import { lightenColor } from '@/utils/colors/colorsOperations';
+import { addBackgroundOnDeepTextChildren } from '@/utils/elements/elementOperations';
 
 /**
  * Skeleton loader component.
@@ -25,14 +25,14 @@ import { addBackgroundOnDeepTextChildren } from '../../../utils/elements/element
  * @returns {import('react').ReactElement}
  */
 function SkeletonLoader({
-  children,
   backgroundColor = '#808080',
+  children,
   isActive,
   wrapperStyle = [],
 }) {
   // local state
 
-  const [layout, setLayout] = useState(/** @type {{width: number, height: number}} */(null));
+  const [layout, setLayout] = useState(/** @type {{width: number, height: number} | null} */(null));
   // reanimated variables
   const shared = useSharedValue(0);
   // hooks
@@ -65,8 +65,8 @@ function SkeletonLoader({
 
   return !layout || !isActive ? (
     <View
-      style={wrapperStyle}
       onLayout={(event) => setLayout(event.nativeEvent.layout)}
+      style={wrapperStyle}
     >
       {children}
     </View>
@@ -74,8 +74,8 @@ function SkeletonLoader({
     <MaskedView
       maskElement={<View style={wrapperStyle}>{clones}</View>}
       style={{
-        width: layout.width,
         height: layout.height,
+        width: layout.width,
       }}
     >
       <View
@@ -87,15 +87,15 @@ function SkeletonLoader({
       />
       <Reanimated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
         <MaskedView
-          style={StyleSheet.absoluteFill}
           maskElement={(
             <LinearGradient
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
               colors={['transparent', 'black', 'transparent']}
+              end={{ x: 1, y: 0 }}
+              start={{ x: 0, y: 0 }}
+              style={StyleSheet.absoluteFill}
             />
           )}
+          style={StyleSheet.absoluteFill}
         >
           <View
             style={[

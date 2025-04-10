@@ -1,9 +1,10 @@
 import { createStackNavigator } from '@react-navigation/stack';
-// constants
-import { RouteNames } from '../routeNames';
-import { commonOptions } from '../commonOptions';
-// components
-import Login from '../../views/Login';
+
+import Login from '@/views/Login';
+import Register from '@/views/Register';
+
+import { commonOptions } from '@/navigation/commonOptions';
+import { RouteNames } from '@/navigation/routeNames';
 
 const Stack = createStackNavigator();
 
@@ -13,11 +14,14 @@ const Stack = createStackNavigator();
  */
 function PublicNavigator() {
   return (
-    <Stack.Navigator screenOptions={commonOptions} id={undefined}>
+    <Stack.Navigator id={undefined} screenOptions={commonOptions}>
       <Stack.Screen
-        name={RouteNames.Login}
         component={Login}
-        options={{ headerShown: false }}
+        name={RouteNames.Login}
+      />
+      <Stack.Screen
+        component={Register}
+        name={RouteNames.Register}
       />
     </Stack.Navigator>
   );

@@ -1,33 +1,44 @@
-import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-// Navigators
-import PublicNavigator from './public/publicNavigator';
-import PrivateNavigator from './private/PrivateNavigator';
-// hooks
-import useTheme from '../theme/themeContext';
-import { useAppContext } from '../store/appContext';
+import { useRef } from 'react';
+import { StatusBar } from 'react-native';
+
+import { useAppContext } from '@/store/appContext';
+import useTheme from '@/theme/themeContext';
+
+import PrivateNavigator from '@/navigation/private/PrivateNavigator';
+import PublicNavigator from '@/navigation/public/publicNavigator';
 
 /**
  * AppNavigator component.
+ * @param {object} props - Props object.
+ * @param {{registerNavigationContainer:
+ * (containerRef: any) => void}} props.navigationIntegration - Sentry navigation integration.
  * @returns {import('react').ReactElement} AppNavigator component.
  */
-function AppNavigator() {
+function AppNavigator({ navigationIntegration }) {
   // hooks
   const [{ auth }] = useAppContext();
-  const { Colors, ApplicationStyle, scheme } = useTheme();
+  const { ApplicationStyle, Colors, scheme } = useTheme();
+  const containerRef = useRef(null);
 
   const navigationTheme = scheme === 'dark'
     ? ApplicationStyle.darkNavigationTheme
     : ApplicationStyle.lightNavigationTheme;
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      onReady={() => {
+        navigationIntegration.registerNavigationContainer(containerRef);
+      }}
+      ref={containerRef}
+      theme={navigationTheme}
+    >
       <StatusBar
+        backgroundColor={Colors.transparent}
         barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
         translucent
-        backgroundColor={Colors.transparent}
       />
-      {auth?.accessToken ? <PrivateNavigator /> : <PublicNavigator />}
+      {auth?.token ? <PrivateNavigator /> : <PublicNavigator />}
     </NavigationContainer>
   );
 }

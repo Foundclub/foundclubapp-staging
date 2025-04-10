@@ -1,5 +1,5 @@
-import NavigationStyle from './components/navigationStyle';
-import ButtonStyle from './components/buttonStyle';
+import ButtonStyle from '@/theme/components/buttonStyle';
+import NavigationStyle from '@/theme/components/navigationStyle';
 
 /**
  * Generate classes defining background color for every colors defined : [colorName]Background
@@ -75,9 +75,9 @@ export const resizeModes = /** @type {const} */ ({
 });
 
 const borderStyles = /** @type {const} */ ({
-  solid: 'solid',
-  dotted: 'dotted',
   dashed: 'dashed',
+  dotted: 'dotted',
+  solid: 'solid',
 });
 
 export const staticStyle = {
@@ -86,69 +86,93 @@ export const staticStyle = {
     height: 1,
   },
   // Border radius
-  borderRadius2: {
-    borderRadius: 2,
+  borderRadius100: {
+    borderRadius: 100,
   },
-  borderRadius8: {
-    borderRadius: 8,
+  borderRadius12: {
+    borderRadius: 12,
   },
   borderRadius16: {
     borderRadius: 16,
   },
+  borderRadius2: {
+    borderRadius: 2,
+  },
+  borderRadius24: {
+    borderRadius: 24,
+  },
   borderRadius32: {
     borderRadius: 32,
   },
-  borderRadius100: {
-    borderRadius: 100,
+  borderRadius8: {
+    borderRadius: 8,
   },
   // Border Width
   borderWidth1: {
     borderWidth: 1,
   },
+  borderWidth1Half: {
+    borderWidth: 1.5,
+  },
   borderWidth2: {
     borderWidth: 2,
   },
   // border style
-  borderStyleSolid: {
-    borderStyle: borderStyles.solid,
+  borderStyleDashed: {
+    borderStyle: borderStyles.dashed,
   },
   borderStyleDotted: {
     borderStyle: borderStyles.dotted,
   },
-  borderStyleDashed: {
-    borderStyle: borderStyles.dashed,
+  borderStyleSolid: {
+    borderStyle: borderStyles.solid,
   },
   // Opacities
-  opacityVisible: {
-    opacity: 1,
-  },
   opacityHalfVisible: {
     opacity: 0.5,
-  },
-  opacityQuarterVisible: {
-    opacity: 0.25,
   },
   opacityHidden: {
     opacity: 0,
   },
+  opacityQuarterVisible: {
+    opacity: 0.25,
+  },
+  opacityVisible: {
+    opacity: 1,
+  },
   // icons
+  icon16: {
+    height: 16,
+    resizeMode: resizeModes.contain,
+    width: 16,
+  },
   icon20: {
-    width: 20,
     height: 20,
     resizeMode: resizeModes.contain,
+    width: 20,
   },
   icon24: {
-    width: 24,
     height: 24,
     resizeMode: resizeModes.contain,
+    width: 24,
+  },
+  icon28: {
+    height: 28,
+    resizeMode: resizeModes.contain,
+    width: 28,
+  },
+  icon48: {
+    height: 48,
+    resizeMode: resizeModes.contain,
+    width: 48,
   },
   // Shadows
   shadow100: {
     // iOS shadow
     shadowColor: '#000000',
     shadowOffset: {
-      width: 5,
       height: 5,
+      width: 5,
     },
     shadowOpacity: 0.05,
     shadowRadius: 20,
@@ -159,8 +183,8 @@ export const staticStyle = {
     // iOS shadow
     shadowColor: '#000000',
     shadowOffset: {
-      width: 5,
       height: 5,
+      width: 5,
     },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -171,8 +195,8 @@ export const staticStyle = {
     // iOS shadow
     shadowColor: '#000000',
     shadowOffset: {
-      width: 5,
       height: 5,
+      width: 5,
     },
     shadowOpacity: 0.5,
     shadowRadius: 20,
@@ -189,8 +213,8 @@ export const staticStyle = {
 export default (colors) => ({
   ...NavigationStyle(colors),
   ...ButtonStyle(colors),
-  borderColor: borderColor(colors),
   backgroundColor: backgroundColors(colors),
+  borderColor: borderColor(colors),
   tintColor: tintColors(colors),
   ...staticStyle,
 });
