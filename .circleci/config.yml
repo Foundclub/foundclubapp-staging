@@ -46,8 +46,10 @@ commands:
           name: fastlane
           command: cd ios && bundle exec pod install --deployment && bundle exec fastlane << parameters.fastlane-lane >>
 
+      # Store only the IPA file
       - store_artifacts:
-          path: /Users/distiller/project/ios/output/goodwill.ipa
+          path: ios/output/foundclub.ipa
+          destination: foundclub.ipa
 
       - save_cache:
           name: Save pods cache
@@ -93,8 +95,10 @@ commands:
           name: Run fastlane android
           command: cd android && export TIMESTAMP=$(date +"%s") && fastlane << parameters.fastlane-lane >>
 
+      # Store only the AAB file
       - store_artifacts:
-          path: /home/circleci/project/android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          destination: app-release.aab
 
 
 jobs:
@@ -139,10 +143,10 @@ jobs:
       - checkout
       - ios_build:
           fastlane-lane: "ios deploy_version_rc"
+      # Store only the IPA file
       - store_artifacts:
-          path: ios/output
-      - store_test_results:
-          path: ios/output/scan
+          path: ios/output/foundclub.ipa
+          destination: foundclub-rc.ipa
 
   android-tag-rc:
     docker:
@@ -171,6 +175,11 @@ jobs:
       - checkout
       - ios_build:
           fastlane-lane: "ios deploy_version_release"
+      # Store only the IPA file
+      - store_artifacts:
+          path: ios/output/foundclub.ipa
+          destination: foundclub-prod.ipa
+
 
   android-tag:
     docker:
@@ -194,7 +203,7 @@ workflows:
           filters:
             branches:
               only:
-                - develop
+                - main
             tags:
               ignore: /.*/
       - ios-staging:
@@ -203,7 +212,7 @@ workflows:
           filters:
             branches:
               only:
-                - develop
+                - main
             tags:
               ignore: /.*/
       - android-staging:
@@ -212,7 +221,7 @@ workflows:
           filters:
             branches:
               only:
-                - develop
+                - main
             tags:
               ignore: /.*/
 
