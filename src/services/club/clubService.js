@@ -202,11 +202,11 @@ export const getClubById = async (id) => {
           activites: {
             populate: '*',
           },
+          members: {
+            populate: '*',
+          },
           sponsor: {
             populate: 'logo',
-          },
-          users: {
-            populate: '*',
           },
         },
       },
