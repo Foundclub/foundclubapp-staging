@@ -118,7 +118,7 @@ function BottomModal({
         style={[
           Spaces.paddingHorizontal[24],
           Spaces.paddingVertical[40],
-          { maxHeight: Dimensions.get('screen').height * 0.6 },
+          { maxHeight: Dimensions.get('screen').height * 0.7 },
           contentContainerStyle,
         ]}
       >

@@ -4,6 +4,7 @@
  * @property {string} [fcmToken] - The Firebase Cloud Messaging token.
  * @property {string} [theme] - The current theme.
  * @property {string[]} [onboardingViews] - The list of onboarding views to show.
+ * @property {ClubFilters} [clubFilters] - The filters for the club.
  */
 
 /**
@@ -16,7 +17,8 @@
 
 /**
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
- * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'} AppContextTypes
+ * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
+ * | 'SET_CLUB_FILTERS'} AppContextTypes
  */
 
 /**
@@ -36,4 +38,13 @@
  * @callback AppContextDispatch
  * @param {Action} action The action to be performed.
  * @returns {void}
+ */
+
+/**
+ * @typedef {object} ClubFilters
+ * @property {string} name
+ * @property {string} geohash
+ * @property {string} activity
+ * @property {{label: string, value: string}} city
+ * @property {number} radius
  */

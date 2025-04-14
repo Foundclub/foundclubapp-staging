@@ -1,9 +1,7 @@
 import { Image, Text, View } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -17,11 +15,6 @@ function Home() {
   const {
     Alignments, Fonts, Images, Spaces,
   } = useTheme();
-  const { logoutMutation } = useAuth();
-
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
 
   return (
     <ScreenContainer
@@ -34,6 +27,7 @@ function Home() {
     >
       {/* header */}
       <View style={[
+        Spaces.marginTop[16],
         Alignments.row,
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
@@ -49,7 +43,6 @@ function Home() {
           Sous titre
         </Text>
       </View>
-      <Button onPress={handleLogout} title="Logout" variant="Primary" />
     </ScreenContainer>
   );
 }

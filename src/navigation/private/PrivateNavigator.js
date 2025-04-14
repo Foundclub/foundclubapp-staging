@@ -1,10 +1,15 @@
 import { createStackNavigator } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
+import AddCoach from '@/views/club/AddCoach';
+import ClubDetails from '@/views/club/ClubDetails';
+import ClubFilters from '@/views/club/ClubFilters';
+import ClubList from '@/views/club/ClubList';
 import Home from '@/views/Home';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
@@ -12,8 +17,8 @@ import UserName from '@/views/onboarding/UserName';
 import UserSection from '@/views/onboarding/UserSection';
 import UserType from '@/views/onboarding/UserType';
 import Welcome from '@/views/onboarding/Welcome';
-import Profile from '@/views/Profile';
-import ProfileEdit from '@/views/ProfileEdit';
+import Profile from '@/views/profile/Profile';
+import ProfileEdit from '@/views/profile/ProfileEdit';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -26,9 +31,12 @@ const Stack = createStackNavigator();
  * @returns {import('react').ReactElement | null} PrivateNavigator component.
  */
 function PrivateNavigator() {
+  // hooks
   const { Fonts, Spaces } = useTheme();
   const { onboardingViews } = useAuth();
+  const { t } = useTranslation();
 
+  // methods
   /**
    * Get the step number based on the current route name.
    * @param {string} routeName
@@ -44,6 +52,8 @@ function PrivateNavigator() {
    * @returns {number} Total steps
    */
   const getTotalSteps = () => onboardingViews?.length || 0;
+
+  // renderers
 
   /**
    * Render the stepper component.
@@ -103,7 +113,39 @@ function PrivateNavigator() {
         name={RouteNames.ProfileEdit}
         options={{
           ...commonOptions,
-          headerTitle: 'Modifier mes informations',
+          headerTitle: t('profile.titles.edit'),
+        }}
+      />
+      <Stack.Screen
+        component={AddCoach}
+        name={RouteNames.AddCoach}
+        options={{
+          ...commonOptions,
+          headerTitle: t('addCoach.titles.main'),
+        }}
+      />
+      <Stack.Screen
+        component={ClubList}
+        name={RouteNames.ClubList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('clubList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={ClubFilters}
+        name={RouteNames.ClubFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={ClubDetails}
+        name={RouteNames.Club}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
         }}
       />
       {onboardingViews?.includes(RouteNames.UserType) && (

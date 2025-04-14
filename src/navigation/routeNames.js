@@ -1,4 +1,8 @@
 export const RouteNames = /** @type {const} */ ({
+  AddCoach: 'AddCoach',
+  Club: 'Club',
+  ClubFilters: 'ClubFilters',
+  ClubList: 'ClubList',
   Home: 'Home',
   Login: 'Login',
   Profile: 'Profile',

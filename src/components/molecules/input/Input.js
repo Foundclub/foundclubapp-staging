@@ -97,7 +97,7 @@ const Input = forwardRef(
                 <Image
                   source={Images[props.icon]}
                   style={[ApplicationStyle.icon24,
-                    ApplicationStyle.tintColor.neutral00,
+                    ApplicationStyle.tintColor[mainColor],
                     props.iconStyle]}
                 />
               )

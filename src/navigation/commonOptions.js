@@ -6,7 +6,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 export const commonOptions = {
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
   headerBackImage: () => <HeaderBackButton />,
-  headerBackTitleVisible: false,
+  headerBackTitle: '',
   headerShadowVisible: false,
   headerShown: true,
   headerTitle: () => <Header />,

@@ -166,6 +166,18 @@ export const staticStyle = {
     resizeMode: resizeModes.contain,
     width: 48,
   },
+  roundIcon40: {
+    borderRadius: 40,
+    height: 40,
+    resizeMode: resizeModes.cover,
+    width: 40,
+  },
+  roundIcon55: {
+    borderRadius: 55,
+    height: 55,
+    resizeMode: resizeModes.cover,
+    width: 55,
+  },
   // Shadows
   shadow100: {
     // iOS shadow

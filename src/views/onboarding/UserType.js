@@ -25,7 +25,7 @@ function UserType({ navigation, route }) {
   const { data: userData } = useGetMe();
   // local state
   const [type, setType] = useState(
-    /** @type {USER_TYPES[keyof USER_TYPES] | ""} */(userData?.type || USER_TYPES.player),
+    /** @type {USER_TYPES[keyof USER_TYPES] | ""} */(userData?.role || USER_TYPES.player),
   );
   // hooks
   const {

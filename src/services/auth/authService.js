@@ -17,7 +17,7 @@ const userSchema = Joi.object({
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   section: Joi.string().valid('female', 'male').allow(null).optional(),
-  type: Joi.string().valid('Entraineur', 'new', 'Joueur', 'Dirigeant').required(),
+  // type: Joi.string().valid('Entraineur', 'new', 'Joueur', 'Dirigeant').required(),
 }).required();
 
 /**
@@ -55,8 +55,8 @@ export const login = async ({ code, confirm }) => {
     const result = await client.post('/firebase-auth/login', { idToken });
 
     const schema = Joi.object({
+      data: Joi.object().required(),
       jwt: Joi.string().required(),
-      user: Joi.object().required(),
     }).required();
     await schema.validateAsync(result.data, { allowUnknown: true });
 
@@ -109,12 +109,8 @@ export const updateMe = async (userData) => {
     // Handle avatar file separately
     if (userDataCopy.avatar && typeof userDataCopy.avatar === 'object') {
       const fileToUpload = {
-        // @ts-expect-error because of react native image type
-
         name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
-        // @ts-expect-error because of react native image type
         type: userDataCopy.avatar.mime,
-        // @ts-expect-error because of react native image type
         uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
       };
       // @ts-expect-error because of react native image type

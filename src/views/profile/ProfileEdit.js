@@ -4,10 +4,9 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, KeyboardAvoidingView, Platform, TouchableOpacity, View,
+  KeyboardAvoidingView, Platform, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import ImagePicker from 'react-native-image-crop-picker';
 
 import { formatBirthdateToDisplay, formatBirthdateToSend, USER_SECTIONS } from '@/domains/auth/authUseCases';
 import { Joi } from '@/theme/strings';
@@ -15,8 +14,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMe } from '@/services/auth/authQueries';
@@ -47,14 +46,18 @@ const profileSchema = Joi.object({
  * @returns {import('react').ReactElement} Profile edit screen component
  */
 function ProfileEdit({ navigation }) {
+  // hooks
   const {
-    Alignments, ApplicationStyle, Images, Spaces,
+    Alignments, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  // @ts-expect-error because avatar can come from local path image
-  const [avatar, setAvatar] = useState(userData?.avatar?.url || undefined);
+
+  // local state
+  const [avatar, setAvatar] = useState(
+    /** @type {Avatar | undefined} */
+    (userData?.avatar?.url ? { url: userData.avatar.url } : undefined),
+  );
 
   const sectionOptions = [
     { label: t('profile.fields.sections.female'), value: USER_SECTIONS.female },
@@ -77,6 +80,7 @@ function ProfileEdit({ navigation }) {
     defaultValues: {
       ...defaultValues,
       ...userData,
+      birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
     },
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
@@ -95,36 +99,6 @@ function ProfileEdit({ navigation }) {
         avatar,
         birthdate: formatBirthdateToSend(data.birthdate),
       });
-    }
-  };
-
-  const takePicture = async () => {
-    try {
-      const image = await ImagePicker.openCamera({
-        cropping: true,
-        height: 300,
-        includeBase64: true,
-        width: 300,
-      });
-      setAvatar(image);
-      setIsModalVisible(false);
-    } catch (error) {
-      // Handle error silently
-    }
-  };
-
-  const selectFromGallery = async () => {
-    try {
-      const image = await ImagePicker.openPicker({
-        cropping: true,
-        height: 300,
-        includeBase64: true,
-        width: 300,
-      });
-      setAvatar(image);
-      setIsModalVisible(false);
-    } catch (error) {
-      // Handle error silently
     }
   };
 
@@ -147,50 +121,11 @@ function ProfileEdit({ navigation }) {
         >
           <View style={[Alignments.fill, Spaces.gap[24]]}>
             <View style={[Alignments.row, Spaces.marginVertical[24]]}>
-              <View style={[
-                ApplicationStyle.backgroundColor.neutral00,
-                ApplicationStyle.borderRadius24,
-                Alignments.relative,
-                Alignments.alignCenter,
-                Alignments.justifyCenter,
-                { height: 110, width: 110 },
-              ]}
-              >
-                {avatar
-                  ? (
-                    <Image
-                      source={{ uri: typeof avatar === 'string' ? avatar : avatar.path }}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        { height: 110, width: 110 }]}
-                    />
-                  ) : (
-                    <Image
-                      source={Images.camera}
-                      style={[
-                        ApplicationStyle.icon48,
-                        Spaces.margin[24],
-                        ApplicationStyle.tintColor.primary500]}
-                    />
-                  )}
-                <TouchableOpacity
-                  onPress={() => setIsModalVisible(true)}
-                  style={[
-                    Alignments.absolute,
-                    ApplicationStyle.backgroundColor.primary500,
-                    ApplicationStyle.borderRadius32,
-                    Spaces.padding[12],
-                    { right: -12, top: -12 },
-                  ]}
-                >
-                  <Image
-                    source={Images.plus}
-                    style={[
-                      ApplicationStyle.icon16,
-                      ApplicationStyle.tintColor.neutral900]}
-                  />
-                </TouchableOpacity>
-              </View>
+              <SelectAvatar
+                currentAvatar={avatar}
+                onAvatarSelected={setAvatar}
+                size={110}
+              />
             </View>
 
             <Controller
@@ -309,28 +244,6 @@ function ProfileEdit({ navigation }) {
           title={t('profile.actions.save')}
           variant="Primary"
         />
-
-        <BottomModal
-          close={() => { setIsModalVisible(false); }}
-          isVisible={isModalVisible}
-        >
-          <View style={[
-            Spaces.paddingTop[32],
-            Spaces.gap[24],
-          ]}
-          >
-            <Button
-              onPress={takePicture}
-              title={t('common.actions.photoFromCamera')}
-              variant="SecondaryLight"
-            />
-            <Button
-              onPress={selectFromGallery}
-              title={t('common.actions.photoFromGallery')}
-              variant="SecondaryLight"
-            />
-          </View>
-        </BottomModal>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );

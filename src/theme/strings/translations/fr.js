@@ -1,10 +1,84 @@
 export default {
+  addCoach: {
+    actions: {
+      save: 'Ajouter',
+    },
+    fields: {
+      birthdate: {
+        label: 'Date de naissance',
+        placeholder: 'JJ/MM/AAAA',
+      },
+      firstname: {
+        label: 'Prénom',
+        placeholder: 'Luc',
+      },
+      lastname: {
+        label: 'Nom',
+        placeholder: 'Harne',
+      },
+      phoneNumber: {
+        label: 'Numéro de téléphone',
+        placeholder: '+33612345678',
+      },
+    },
+    subtitles: {
+      avatar: "Ajoutez une photo de profil pour que l'on puisse reconnaître l'entraîneur·e facilement.",
+      birthdate: "Renseignez la date de naissance de l'entraîneur·e.",
+      name: "Renseignez le nom et prénom de l'entraîneur·e.",
+    },
+    titles: {
+      avatar: 'Une photo de profil ?',
+      birthdate: 'Quelle est sa date de naissance ?',
+      main: 'Ajouter un·e entraîneur·e',
+      name: "Comment s'appelle l'entraîneur·e ?",
+    },
+  },
   APIerrors: {
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
     schemaMismatch: 'Un problème est survenu lors de la récupération des informations.'
     + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
     title: 'Erreur',
+  },
+  clubDetails: {
+    actions: {
+      handleCoachs: 'Gérer les entraîneurs',
+    },
+    titles: {
+      activities: 'Activités',
+      coachs: 'Nos entraîneur·e·s',
+      sponsors: 'Nos partenaires',
+      teams: 'Équipes',
+    },
+  },
+  clubFilters: {
+    actions: {
+      apply: 'Appliquer les filtres',
+      clear: 'Effacer les filtres',
+    },
+    fields: {
+      activity: {
+        label: 'Activité',
+        placeholder: 'Basketball',
+      },
+      city: {
+        label: 'Ville',
+        placeholder: 'Marseille',
+      },
+      radius: {
+        label: 'Dans un rayon autour de : ',
+      },
+    },
+  },
+  clubList: {
+    actions: {
+      createClub: 'Ajouter mon club',
+    },
+    fields: {
+      search: 'Rechercher',
+    },
+    noData: 'Aucun club ne correspond à la recherche.',
+    title: 'Trouver mon club ',
   },
   common: {
     actions: {
@@ -33,7 +107,7 @@ export default {
     },
     or: 'ou',
     subtitle: 'Renseigne ton numéro de téléphone.',
-    title: 'Connecte toi',
+    title: 'Connecte-toi',
   },
   modals: {
     actions: {
@@ -60,6 +134,7 @@ export default {
   profile: {
     actions: {
       edit: 'Modifier mon profil',
+      findClub: 'Trouver mon club',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       save: 'Continuer',
@@ -90,9 +165,9 @@ export default {
         male: 'Masculine',
       },
       types: {
-        coach: 'Entraîneur',
-        player: 'Joueur',
-        president: 'Dirigeant',
+        coach: 'Entraîneur·e',
+        player: 'Joueur·se',
+        president: 'Dirigeant·e',
       },
     },
     subtitles: {
@@ -105,6 +180,7 @@ export default {
     titles: {
       avatar: 'Une photo de profil ?',
       birthdate: 'Quelle est ta date de naissance ?',
+      edit: 'Modifier mes informations',
       name: "Comment t'appelles-tu ?",
       profile: 'Mon compte',
       section: 'Dans quelle section évolues-tu ?',
@@ -134,7 +210,7 @@ export default {
         regular: 'et progresse dans ta carrière sportive.',
       },
       info: {
-        bold: '📢 Reste informé',
+        bold: '📢 Reste informé·e',
         regular: ' des nouveautés grâce aux notifications',
       },
       register: {
@@ -146,7 +222,7 @@ export default {
         regular: ' des clubs et des évènements près de chez toi.',
       },
     },
-    subtitle: 'Prêt à trouver ton club et évoluer dans le sport ?',
-    title: 'Bienvenu sur',
+    subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
+    title: 'Bienvenu·e sur',
   },
 };

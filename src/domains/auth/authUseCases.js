@@ -31,10 +31,10 @@ export const getAuthTokens = () => {
  * @returns {string[]} Array of route names representing the onboarding flow
  */
 export const getOnboardingViews = ({
-  avatar, birthdate, firstname, lastname, section, type,
+  avatar, birthdate, firstname, lastname, role, section,
 }) => {
   const baseViews = (() => {
-    switch (type) {
+    switch (role.name) {
       case USER_TYPES.coach:
         return [
           RouteNames.UserName,
@@ -74,7 +74,7 @@ export const getOnboardingViews = ({
     if (view === RouteNames.UserSection && section) return false;
     if (view === RouteNames.UserBirthdate && birthdate) return false;
     if (view === RouteNames.UserAvatar && avatar) return false;
-    if (view === RouteNames.UserType && type !== 'new') return false;
+    if (view === RouteNames.UserType && role.name !== 'Authenticated') return false;
     return true;
   });
   return filteredViews?.length > 1 ? filteredViews : [RouteNames.Home];
