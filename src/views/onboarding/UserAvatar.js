@@ -1,13 +1,18 @@
+import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetMe } from '@/services/auth/authQueries';
+import { updateMe } from '@/services/auth/authService';
 
 /**
  * User avatar selection screen component
@@ -26,9 +31,19 @@ function UserAvatar({ navigation, route }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { data: userData } = useGetMe();
+
+  const updateUserMutation = useMutation({
+    mutationFn: updateMe,
+    onSuccess: () => {
+      navigation.navigate(route.params?.nextRoute || RouteNames.UserName);
+    },
+  });
 
   const handleNext = () => {
-    navigation.navigate(route.params?.nextRoute || RouteNames.Welcome);
+    if (avatar && userData) {
+      updateUserMutation.mutate(Object.assign(userData, { avatar }));
+    }
   };
 
   return (
@@ -61,6 +76,12 @@ function UserAvatar({ navigation, route }) {
       </View>
 
       <View style={[Spaces.gap[16]]}>
+        <Button
+          disabled={!avatar?.path}
+          onPress={handleNext}
+          title={t('profile.actions.save')}
+          variant="Primary"
+        />
         <TouchableOpacity
           onPress={handleNext}
           style={[Alignments.alignCenter]}

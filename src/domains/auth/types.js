@@ -10,7 +10,7 @@
  * @property {Avatar} [avatar]
  * @property {string} [birthdate]
  * @property {'female' | 'male'} [section]
- * @property {object} [club]
+ * @property {Club} [club]
  */
 
 /**
@@ -20,4 +20,5 @@
 /**
  * @typedef {object} Role
  * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant'} name
+ * @property {string} documentId
  */

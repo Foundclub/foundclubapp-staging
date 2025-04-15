@@ -2,9 +2,9 @@ import { storage } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-export const USER_TYPES = /** @type {const} */({
+export const USER_ROLES = /** @type {const} */({
   coach: 'Entraineur',
-  new: 'new',
+  new: 'Authenticated',
   player: 'Joueur',
   president: 'Dirigeant',
 });
@@ -35,7 +35,7 @@ export const getOnboardingViews = ({
 }) => {
   const baseViews = (() => {
     switch (role.name) {
-      case USER_TYPES.coach:
+      case USER_ROLES.coach:
         return [
           RouteNames.UserName,
           RouteNames.UserSection,
@@ -43,23 +43,22 @@ export const getOnboardingViews = ({
           RouteNames.UserAvatar,
           RouteNames.Welcome,
         ];
-      case USER_TYPES.player:
+      case USER_ROLES.player:
         return [
           RouteNames.UserName,
           RouteNames.UserBirthdate,
           RouteNames.UserAvatar,
           RouteNames.Welcome,
         ];
-      case USER_TYPES.president:
+      case USER_ROLES.president:
         return [
           RouteNames.UserName,
-          RouteNames.UserBirthdate,
           RouteNames.UserAvatar,
           RouteNames.Welcome,
         ];
       default:
         return [
-          RouteNames.UserType,
+          RouteNames.UserRole,
           RouteNames.UserName,
           RouteNames.UserSection,
           RouteNames.UserBirthdate,
@@ -74,10 +73,50 @@ export const getOnboardingViews = ({
     if (view === RouteNames.UserSection && section) return false;
     if (view === RouteNames.UserBirthdate && birthdate) return false;
     if (view === RouteNames.UserAvatar && avatar) return false;
-    if (view === RouteNames.UserType && role.name !== 'Authenticated') return false;
+    if (view === RouteNames.UserRole && role.name !== 'Authenticated') return false;
     return true;
   });
   return filteredViews?.length > 1 ? filteredViews : [RouteNames.Home];
+};
+
+/**
+ * Get the fields to display in the profile based on user role
+ * @param {Role} role - The user role
+ * @returns {string[]} Array of field names to display
+ */
+export const profileFieldToDisplay = (role) => {
+  switch (role.name) {
+    case USER_ROLES.coach:
+      return [
+        'firstname',
+        'lastname',
+        'section',
+        'birthdate',
+        'avatar',
+      ];
+    case USER_ROLES.player:
+      return [
+        'firstname',
+        'lastname',
+        'birthdate',
+        'avatar',
+      ];
+    case USER_ROLES.president:
+      return [
+        'firstname',
+        'lastname',
+        'avatar',
+      ];
+    default:
+      return [
+        RouteNames.UserRole,
+        'firstname',
+        'lastname',
+        'section',
+        'birthdate',
+        'avatar',
+      ];
+  }
 };
 
 /**

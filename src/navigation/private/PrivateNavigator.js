@@ -1,4 +1,5 @@
 import { createStackNavigator } from '@react-navigation/stack';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -14,8 +15,8 @@ import Home from '@/views/Home';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserName from '@/views/onboarding/UserName';
+import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
-import UserType from '@/views/onboarding/UserType';
 import Welcome from '@/views/onboarding/Welcome';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
@@ -84,10 +85,10 @@ function PrivateNavigator() {
    * @param {string} currentRoute
    * @returns {string|undefined} Next route name or undefined if it's the last route
    */
-  const getNextRoute = (currentRoute) => {
+  const getNextRoute = useCallback((/** @type {string} */currentRoute) => {
     const currentIndex = onboardingViews?.indexOf(currentRoute);
     return onboardingViews?.[currentIndex + 1];
-  };
+  }, [onboardingViews]);
 
   return onboardingViews?.length ? (
     <Stack.Navigator
@@ -148,17 +149,17 @@ function PrivateNavigator() {
           headerTitle: '',
         }}
       />
-      {onboardingViews?.includes(RouteNames.UserType) && (
+      {onboardingViews?.includes(RouteNames.UserRole) && (
         <Stack.Screen
           component={UserType}
           initialParams={{
-            nextRoute: getNextRoute(RouteNames.UserType),
+            nextRoute: getNextRoute(RouteNames.UserRole),
           }}
-          name={RouteNames.UserType}
+          name={RouteNames.UserRole}
           options={{
             ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserType),
-            headerTitle: () => renderStepper(RouteNames.UserType),
+            headerRight: () => renderStepperIndicator(RouteNames.UserRole),
+            headerTitle: () => renderStepper(RouteNames.UserRole),
           }}
         />
       )}

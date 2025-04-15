@@ -11,7 +11,7 @@ export const RouteNames = /** @type {const} */ ({
   UserAvatar: 'UserAvatar',
   UserBirthdate: 'UserBirthdate',
   UserName: 'UserName',
+  UserRole: 'UserRole',
   UserSection: 'UserSection',
-  UserType: 'UserType',
   Welcome: 'Welcome',
 });

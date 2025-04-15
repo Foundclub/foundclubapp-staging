@@ -42,7 +42,26 @@ export default {
   },
   clubDetails: {
     actions: {
-      handleCoachs: 'Gérer les entraîneurs',
+      delete: 'Supprimer',
+    },
+    alerts: {
+      deleteTrainer: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Supprimer',
+        },
+        description: 'Le compte ne sera pas supprimé mais l\'entraineur·e ne sera plus lié au club. Êtes-vous sûr·e de vouloir continuer ?',
+        title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e.',
+      },
+      inviteTrainer: {
+        message: 'Bonjour {{coachName}} !'
+        + '\nVous avez été désigné comme entraineur·e dans le club {{clubName}}.'
+        + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
+        + ' et commencer à gérer vos équipes et vos évènements.'
+        + '\nIOS : {{appStoreUrl}}'
+        + '\nAndroid : {{googlePlayUrl}}',
+        title: 'Bienvenue sur Found Club !',
+      },
     },
     titles: {
       activities: 'Activités',
@@ -83,7 +102,7 @@ export default {
   common: {
     actions: {
       photoFromCamera: 'Prendre une photo',
-      photoFromGallery: 'Choisir une photo depuis la gallerie',
+      photoFromGallery: 'Choisir depuis la gallerie',
     },
     messages: {
       noData: 'Aucune donnée disponible',

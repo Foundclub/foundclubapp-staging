@@ -26,7 +26,6 @@ function TeamShield({ initials, isSmall = false }) {
       <Image
         source={Images.shield}
         style={{
-          aspectRatio: 1,
           height: size,
           width: size,
         }}

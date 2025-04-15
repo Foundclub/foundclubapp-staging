@@ -48,7 +48,7 @@ function Button({
       onPress={onPress}
       style={[
         ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
-        !title && ApplicationStyle.buttonIcon,
+        !title && ApplicationStyle[`buttonIcon${isOption ? 'Option' : ''}`],
         disabled && ApplicationStyle.buttonDisabled,
         style,
       ]}

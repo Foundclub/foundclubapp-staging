@@ -1,4 +1,4 @@
-import { getAuthTokens, getOnboardingViews, USER_TYPES } from '@/domains/auth/authUseCases';
+import { getAuthTokens, getOnboardingViews, USER_ROLES } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -41,7 +41,7 @@ describe('authUseCases', () => {
     it('should return complete flow for new user', () => {
       const views = getOnboardingViews({ role: { name: 'Authenticated' } });
       expect(views).toEqual([
-        RouteNames.UserType,
+        RouteNames.UserRole,
         RouteNames.UserName,
         RouteNames.UserSection,
         RouteNames.UserBirthdate,
@@ -51,7 +51,7 @@ describe('authUseCases', () => {
     });
 
     it('should return coach-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_TYPES.coach } });
+      const views = getOnboardingViews({ role: { name: USER_ROLES.coach } });
       expect(views).toEqual([
         RouteNames.UserName,
         RouteNames.UserSection,
@@ -62,7 +62,7 @@ describe('authUseCases', () => {
     });
 
     it('should return player-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_TYPES.player } });
+      const views = getOnboardingViews({ role: { name: USER_ROLES.player } });
       expect(views).toEqual([
         RouteNames.UserName,
         RouteNames.UserBirthdate,
@@ -72,10 +72,9 @@ describe('authUseCases', () => {
     });
 
     it('should return president-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_TYPES.president } });
+      const views = getOnboardingViews({ role: { name: USER_ROLES.president } });
       expect(views).toEqual([
         RouteNames.UserName,
-        RouteNames.UserBirthdate,
         RouteNames.UserAvatar,
         RouteNames.Welcome,
       ]);
@@ -87,7 +86,7 @@ describe('authUseCases', () => {
         birthdate: '1990-01-01',
         firstname: 'John',
         lastname: 'Doe',
-        role: { name: USER_TYPES.coach },
+        role: { name: USER_ROLES.coach },
         section: 'male',
       });
       expect(views).toEqual([RouteNames.Home]);
@@ -97,7 +96,7 @@ describe('authUseCases', () => {
       const views = getOnboardingViews({
         firstname: 'John',
         lastname: 'Doe',
-        role: { name: USER_TYPES.coach },
+        role: { name: USER_ROLES.coach },
       });
       expect(views).toEqual([
         RouteNames.UserSection,
@@ -109,7 +108,7 @@ describe('authUseCases', () => {
 
     it('should skip section step when section is provided', () => {
       const views = getOnboardingViews({
-        role: { name: USER_TYPES.coach },
+        role: { name: USER_ROLES.coach },
         section: 'male',
       });
       expect(views).toEqual([
@@ -123,7 +122,7 @@ describe('authUseCases', () => {
     it('should skip birthdate step when birthdate is provided', () => {
       const views = getOnboardingViews({
         birthdate: '1990-01-01',
-        role: { name: USER_TYPES.coach },
+        role: { name: USER_ROLES.coach },
       });
       expect(views).toEqual([
         RouteNames.UserName,
@@ -136,7 +135,7 @@ describe('authUseCases', () => {
     it('should skip avatar step when avatar is provided', () => {
       const views = getOnboardingViews({
         avatar: 'avatar.jpg',
-        role: { name: USER_TYPES.coach },
+        role: { name: USER_ROLES.coach },
       });
       expect(views).toEqual([
         RouteNames.UserName,

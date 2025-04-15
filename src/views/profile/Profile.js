@@ -1,13 +1,17 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, RefreshControl, Text, View,
+  Image, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { useAuth } from '@/domains/auth/useAuth';
+import { getClubInitials } from '@/domains/club/clubUseCase';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -38,6 +42,18 @@ function Profile({ navigation }) {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+
+  const handleOpenClub = () => {
+    navigation.navigate(RouteNames.Club, {
+      clubId: userData?.club?.documentId,
+    });
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchUserData();
+    }, [refetchUserData]),
+  );
 
   return (
     <ScreenContainer
@@ -96,7 +112,9 @@ function Profile({ navigation }) {
             {userData?.firstname && userData?.lastname && (
             <View style={[
               { maxWidth: '70%' },
-              Spaces.gap[12],
+              Alignments.justifyStart,
+              Alignments.alignStart,
+              Spaces.gap[24],
             ]}
             >
               <Text
@@ -109,8 +127,32 @@ function Profile({ navigation }) {
                 {`${userData.firstname} ${userData.lastname?.toUpperCase()}`}
               </Text>
               {userData.club
-              // TODO: display club shield
-                ? null
+                ? (
+                  <TouchableOpacity
+                    onPress={handleOpenClub}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[16],
+                      { marginTop: -10, maxWidth: '85%' }]}
+                  >
+                    <TeamShield
+                      initials={
+                        userData?.club?.name
+                          ? getClubInitials(userData.club?.name) : ''
+}
+                      isSmall
+                    />
+                    <View style={[
+                      { height: 40, width: 1 },
+                      ApplicationStyle.backgroundColor.neutral300,
+                    ]}
+                    />
+                    <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
+                      {userData?.club?.name}
+                    </Text>
+                  </TouchableOpacity>
+                )
                 : (
                   <Button
                     isOption

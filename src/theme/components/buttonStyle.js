@@ -5,6 +5,7 @@ const buttonCommonStyle = {
   borderRadius: 47,
   height: 47,
   justifyContent: positions.center,
+  paddingHorizontal: 16,
 };
 
 const buttonOptionStyle = {
@@ -12,6 +13,7 @@ const buttonOptionStyle = {
   borderRadius: 12,
   height: 39,
   justifyContent: positions.center,
+  paddingHorizontal: 16,
 };
 
 /**
@@ -28,6 +30,12 @@ const getStyle = (colors) => ({
     height: 47,
     padding: 0,
     width: 47,
+  },
+  buttonIconOption: {
+    borderRadius: 12,
+    height: 39,
+    padding: 0,
+    width: 39,
   },
   buttonPrimary: {
     ...buttonCommonStyle,

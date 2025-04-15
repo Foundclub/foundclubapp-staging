@@ -9,6 +9,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { formatBirthdateToDisplay, formatBirthdateToSend, USER_SECTIONS } from '@/domains/auth/authUseCases';
+import { useAuth } from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -32,7 +33,7 @@ const defaultValues = {
 };
 
 const profileSchema = Joi.object({
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/),
+  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   documentId: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().required(),
   lastname: Joi.string().required(),
@@ -52,6 +53,7 @@ function ProfileEdit({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const { profileFields } = useAuth();
 
   // local state
   const [avatar, setAvatar] = useState(
@@ -97,7 +99,7 @@ function ProfileEdit({ navigation }) {
         ...userData,
         ...data,
         avatar,
-        birthdate: formatBirthdateToSend(data.birthdate),
+        birthdate: formatBirthdateToSend(data.birthdate || ''),
       });
     }
   };
@@ -149,97 +151,106 @@ function ProfileEdit({ navigation }) {
                 />
               )}
             />
-            <Controller
-              control={control}
-              name="firstname"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint="next"
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.firstname.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  onSubmitEditing={() => setFocus('lastname')}
-                  placeholder={t('profile.fields.firstname.placeholder')}
-                  ref={ref}
-                  value={value}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="lastname"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint="next"
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.lastname.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  onSubmitEditing={() => setFocus('birthdate')}
-                  placeholder={t('profile.fields.lastname.placeholder')}
-                  ref={ref}
-                  value={value}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="birthdate"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  enterKeyHint="done"
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  inputMode="numeric"
-                  keyboardType="number-pad"
-                  label={t('profile.fields.birthdate.label')}
-                  maxLength={10}
-                  onBlur={onBlur}
-                  onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
-                  placeholder="JJ/MM/AAAA"
-                  ref={ref}
-                  value={value}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="section"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.section.label')}
-                  onBlur={onBlur}
-                  options={sectionOptions}
-                  placeholder={t('profile.fields.section.placeholder')}
-                  ref={ref}
-                  setValue={
+            {profileFields.includes('firstname') ? (
+              <Controller
+                control={control}
+                name="firstname"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="next"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('profile.fields.firstname.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    onSubmitEditing={() => setFocus('lastname')}
+                    placeholder={t('profile.fields.firstname.placeholder')}
+                    ref={ref}
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+            {profileFields?.includes('lastname') ? (
+              <Controller
+                control={control}
+                name="lastname"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="next"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('profile.fields.lastname.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    onSubmitEditing={() => setFocus('birthdate')}
+                    placeholder={t('profile.fields.lastname.placeholder')}
+                    ref={ref}
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+            {profileFields?.includes('birthdate') ? (
+              <Controller
+                control={control}
+                name="birthdate"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="done"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    inputMode="numeric"
+                    keyboardType="number-pad"
+                    label={t('profile.fields.birthdate.label')}
+                    maxLength={10}
+                    onBlur={onBlur}
+                    onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
+                    placeholder="JJ/MM/AAAA"
+                    ref={ref}
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+            {profileFields?.includes('section') ? (
+              <Controller
+                control={control}
+                name="section"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <AutocompleteSelect
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('profile.fields.section.label')}
+                    onBlur={onBlur}
+                    options={sectionOptions}
+                    placeholder={t('profile.fields.section.placeholder')}
+                    ref={ref}
+                    setValue={
                     (/** @type {{value: string, label: string}} */option) => { onChange(option?.label || ''); }
                   }
-                  value={value}
-                />
-              )}
-            />
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
           </View>
         </ScrollView>
 
         <Button
+          isLoading={updateUserMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
           title={t('profile.actions.save')}
           variant="Primary"

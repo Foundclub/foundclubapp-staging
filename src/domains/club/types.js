@@ -13,7 +13,7 @@
  * @property {Array<Sponsor>} [sponsor] - Sponsors associated with the club (repeatable component)
  * @property {number} maxTeamNumber - Maximum number of teams allowed (required, default: 0)
  * @property {string} [geohash] - Geohash representation of the club's location (optional)
- * @property {User[]} [users] - Users associated with the club (optional)
+ * @property {User[]} [members] - Users associated with the club (optional)
  */
 
 /**
