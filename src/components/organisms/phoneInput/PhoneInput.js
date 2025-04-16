@@ -28,7 +28,7 @@ const PhoneInput = forwardRef(
   /**
    * Phone input component.
    * @param {object} props - The props of the component.
-   * @param {string} props.value - The value of the input.
+   * @param {string | undefined} props.value - The value of the input.
    * @param {Function} props.onChange - The function to call on change.
    * @param {Function} props.onBlur - The function to call on blur.
    * @param {string} [props.error] - The error of the input.
@@ -58,7 +58,7 @@ const PhoneInput = forwardRef(
 
     const formattedValue = useMemo(() => {
       try {
-        const phoneNumber = parsePhoneNumberFromString(value);
+        const phoneNumber = parsePhoneNumberFromString(value || '');
         if (phoneNumber?.country) {
           const newDialCode = `+${getCountryCallingCode(phoneNumber.country)}`;
           const foundDialCode = DIAL_CODES.find(({ value: code }) => code === newDialCode);
@@ -70,6 +70,20 @@ const PhoneInput = forwardRef(
         return value;
       }
     }, [value]);
+
+    /**
+     * Handle the change of the dial code
+     * @param {string} val
+     * @returns {string | undefined}
+     */
+    const getInternationalValue = (val) => {
+      try {
+        const phoneNumber = parsePhoneNumberFromString(val || '');
+        return phoneNumber?.number;
+      } catch (e) {
+        return value;
+      }
+    };
 
     return (
       <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignStart]}>
@@ -96,7 +110,7 @@ const PhoneInput = forwardRef(
               left: -DIALCODE_WIDTH,
             }}
             onBlur={onBlur}
-            onChangeText={(val) => onChange(`${dialCode?.value}${val}`)}
+            onChangeText={(val) => onChange(getInternationalValue(`${dialCode?.value}${val}`))}
             placeholder={t('login.fields.phoneNumber.placeholder')}
             ref={ref}
             value={formattedValue}

@@ -28,7 +28,6 @@ function ProfileButton() {
       ]}
     >
       <Image
-        // @ts-expect-error
         source={userData?.avatar ? { uri: userData.avatar?.url } : Images.roundAvatar}
         style={[
           ApplicationStyle.borderRadius24,

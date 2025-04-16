@@ -1,27 +1,36 @@
+import { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
 
 import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 /**
  * Main home screen component displayed after authentication and onboarding.
  * Shows user content and provides access to core app features.
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home() {
+function Home({ navigation }) {
   // hooks
   const {
     Alignments, Fonts, Images, Spaces,
   } = useTheme();
-  const { logoutMutation } = useAuth();
+  const { onboardingViews } = useAuth();
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
+  useEffect(() => {
+    const route = onboardingViews?.views?.reduce((acc, view) => {
+      if (view.index < acc.index && view.canShow) {
+        return view;
+      }
+      return acc;
+    }, { index: 100, route: '' })?.route;
+    if (route) {
+      navigation.navigate(route);
+    }
+  }, [onboardingViews, navigation]);
 
   return (
     <ScreenContainer
@@ -34,6 +43,7 @@ function Home() {
     >
       {/* header */}
       <View style={[
+        Spaces.marginTop[16],
         Alignments.row,
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
@@ -49,7 +59,6 @@ function Home() {
           Sous titre
         </Text>
       </View>
-      <Button onPress={handleLogout} title="Logout" variant="Primary" />
     </ScreenContainer>
   );
 }

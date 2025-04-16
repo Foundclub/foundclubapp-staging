@@ -1,15 +1,125 @@
 export default {
+  addCoach: {
+    actions: {
+      save: 'Ajouter',
+    },
+    alerts: {
+      alreadyExist: {
+        actions: {
+          addToClub: 'Ajouter au club',
+          cancel: 'Annuler',
+        },
+        description: "Le détenteur de ce numéro de téléphone utilise l'application sous le nom de {{firstname}} {{lastname}}. Voulez-vous l'ajouter à votre club ?",
+        title: 'Un utilisateur existe déjà avec ce numéro de téléphone.',
+      },
+      alreadyInClub: {
+        description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
+        title: "Impossible d'ajouter cet·te entraîneur·e à l'équipe",
+      },
+    },
+    fields: {
+      birthdate: {
+        label: 'Date de naissance',
+        placeholder: 'JJ/MM/AAAA',
+      },
+      firstname: {
+        label: 'Prénom',
+        placeholder: 'Luc',
+      },
+      lastname: {
+        label: 'Nom',
+        placeholder: 'Harne',
+      },
+      phoneNumber: {
+        label: 'Numéro de téléphone',
+        placeholder: '+33612345678',
+      },
+    },
+    subtitles: {
+      avatar: "Ajoutez une photo de profil pour que l'on puisse reconnaître l'entraîneur·e facilement.",
+      birthdate: "Renseignez la date de naissance de l'entraîneur·e.",
+      name: "Renseignez le nom et prénom de l'entraîneur·e.",
+    },
+    titles: {
+      avatar: 'Une photo de profil ?',
+      birthdate: 'Quelle est sa date de naissance ?',
+      main: 'Ajouter un·e entraîneur·e',
+      name: "Comment s'appelle l'entraîneur·e ?",
+    },
+  },
   APIerrors: {
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+    phoneNumberAlreadyUsed: 'Ce numéro est déjà utilisé par {{firstname}} {{lastname}}.',
+    phoneNumberAlreadyUsedWithClub: 'Ce numéro est déjà utilisé par un·e entraîneur·e qui appartient à un club.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
     schemaMismatch: 'Un problème est survenu lors de la récupération des informations.'
     + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
     title: 'Erreur',
   },
+  clubDetails: {
+    actions: {
+      delete: 'Supprimer',
+    },
+    alerts: {
+      deleteTrainer: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Supprimer',
+        },
+        description: 'Le compte ne sera pas supprimé mais l\'entraineur·e ne sera plus lié au club. Êtes-vous sûr·e de vouloir continuer ?',
+        title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e.',
+      },
+      inviteTrainer: {
+        message: 'Bonjour {{coachName}} !'
+        + '\nVous avez été désigné comme entraineur·e dans le club {{clubName}}.'
+        + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
+        + ' et commencer à gérer vos équipes et vos évènements.'
+        + '\nIOS : {{appStoreUrl}}'
+        + '\nAndroid : {{googlePlayUrl}}',
+        title: 'Bienvenue sur Found Club !',
+      },
+    },
+    titles: {
+      activities: 'Activités',
+      coachs: 'Nos entraîneur·e·s',
+      sponsors: 'Nos partenaires',
+      teams: 'Équipes',
+    },
+  },
+  clubFilters: {
+    actions: {
+      apply: 'Appliquer les filtres',
+      clear: 'Effacer les filtres',
+    },
+    fields: {
+      activity: {
+        label: 'Activité',
+        placeholder: 'Basketball',
+      },
+      city: {
+        label: 'Ville',
+        placeholder: 'Marseille',
+      },
+      radius: {
+        label: 'Dans un rayon autour de : ',
+      },
+    },
+  },
+  clubList: {
+    actions: {
+      createClub: 'Ajouter mon club',
+    },
+    fields: {
+      search: 'Rechercher',
+    },
+    noData: 'Aucun club ne correspond à la recherche.',
+    title: 'Trouver mon club ',
+  },
   common: {
     actions: {
+      cancel: 'Annuler',
       photoFromCamera: 'Prendre une photo',
-      photoFromGallery: 'Choisir une photo depuis la gallerie',
+      photoFromGallery: 'Choisir depuis la gallerie',
     },
     messages: {
       noData: 'Aucune donnée disponible',
@@ -33,7 +143,7 @@ export default {
     },
     or: 'ou',
     subtitle: 'Renseigne ton numéro de téléphone.',
-    title: 'Connecte toi',
+    title: 'Connecte-toi',
   },
   modals: {
     actions: {
@@ -59,10 +169,23 @@ export default {
   },
   profile: {
     actions: {
+      deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
+      findClub: 'Trouver mon club',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       save: 'Continuer',
+    },
+    alerts: {
+      deleteAlert: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Ouvrir le formulaire',
+        },
+        subtitle: 'Pour demander la suppression de votre compte merci de remplir le formulaire de contact'
+        + ' suivant en précisant votre demande.',
+        title: 'Supprimer votre compte ?',
+      },
     },
     fields: {
       birthdate: {
@@ -90,9 +213,9 @@ export default {
         male: 'Masculine',
       },
       types: {
-        coach: 'Entraîneur',
-        player: 'Joueur',
-        president: 'Dirigeant',
+        coach: 'Entraîneur·e',
+        player: 'Joueur·se',
+        president: 'Dirigeant·e',
       },
     },
     subtitles: {
@@ -105,6 +228,7 @@ export default {
     titles: {
       avatar: 'Une photo de profil ?',
       birthdate: 'Quelle est ta date de naissance ?',
+      edit: 'Modifier mes informations',
       name: "Comment t'appelles-tu ?",
       profile: 'Mon compte',
       section: 'Dans quelle section évolues-tu ?',
@@ -134,7 +258,7 @@ export default {
         regular: 'et progresse dans ta carrière sportive.',
       },
       info: {
-        bold: '📢 Reste informé',
+        bold: '📢 Reste informé·e',
         regular: ' des nouveautés grâce aux notifications',
       },
       register: {
@@ -146,7 +270,7 @@ export default {
         regular: ' des clubs et des évènements près de chez toi.',
       },
     },
-    subtitle: 'Prêt à trouver ton club et évoluer dans le sport ?',
-    title: 'Bienvenu sur',
+    subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
+    title: 'Bienvenu·e sur',
   },
 };

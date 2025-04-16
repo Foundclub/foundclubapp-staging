@@ -66,7 +66,8 @@ function UserBirthdate({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserAvatar);
+      navigation.navigate(route.params?.nextRoute(RouteNames.UserBirthdate)
+       || RouteNames.UserAvatar);
     },
   });
 

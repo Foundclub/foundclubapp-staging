@@ -6,8 +6,19 @@
  * @property {string} [lastname]
  * @property {string} phoneNumber
  * @property {string} [email]
- * @property {'Entraineur' | 'new' | 'Joueur' | 'Dirigeant'} type
- * @property {{url: string} | import("react-native-image-crop-picker").Image} [avatar]
+ * @property {Role} role
+ * @property {Avatar} [avatar]
  * @property {string} [birthdate]
  * @property {'female' | 'male'} [section]
+ * @property {Club} [club]
+ */
+
+/**
+ * @typedef {{url: string} & import("react-native-image-crop-picker").Image} Avatar
+ */
+
+/**
+ * @typedef {object} Role
+ * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant'} name
+ * @property {string} documentId
  */

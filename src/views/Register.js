@@ -56,8 +56,8 @@ function Register() {
       >
         <View style={[Spaces.gap[40], Alignments.fill]}>
           <View style={[Spaces.gap[16]]}>
-            <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('login.title')}</Text>
-            <Text style={[Fonts.p1, Fonts.neutral00]}>{t('login.subtitle')}</Text>
+            <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
+            <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
           </View>
           {canShowCodeButton
             ? (

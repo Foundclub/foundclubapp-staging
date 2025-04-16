@@ -11,7 +11,6 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
-import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 import BottomModal from '../bottomModal/BottomModal';
 import Input from '../input/Input';
@@ -57,7 +56,7 @@ const AutocompleteSelect = forwardRef(
   (props, ref) => {
   // hooks
     const {
-      Alignments, Colors, Fonts, Spaces,
+      Alignments, Fonts, Spaces,
     } = useTheme();
     const { t } = useTranslation();
 
@@ -156,9 +155,7 @@ const AutocompleteSelect = forwardRef(
             ]}
           >
             <View style={[
-              Spaces.marginTop[12],
-              Spaces.marginBottom[24],
-              Spaces.gap[24],
+              Alignments.fullSize,
             ]}
             >
               <Text style={[
@@ -166,7 +163,7 @@ const AutocompleteSelect = forwardRef(
                 Fonts.neutral00,
                 Spaces.marginTop[4]]}
               >
-                {props.placeholder}
+                {props.label}
               </Text>
               {/* search input */}
               {props.isSearchable ? (
@@ -180,51 +177,38 @@ const AutocompleteSelect = forwardRef(
                 />
               ) : null}
               {/* options */}
-              <SkeletonLoader
-                backgroundColor={Colors.neutral200}
-                isActive={!!props.isLoading}
+              <ScrollView
+                contentContainerStyle={[Spaces.gap[12], Spaces.marginTop[16]]}
               >
-                <ScrollView contentContainerStyle={[Spaces.gap[12]]}>
-                  {props.options.map((option) => (
-                    <View
-                      key={`${option.value}-${option.label}`}
-                      style={[Alignments.row, Spaces.marginTop[8]]}
-                    >
-                      <Checkable
-                        disabled={false}
-                        isChecked={handleIsChecked(option)}
-                        setIsChecked={
+                {props.options.map((option) => (
+                  <View
+                    key={`${option.value}-${option.label}`}
+                    style={[Alignments.row, Spaces.marginTop[8]]}
+                  >
+                    <Checkable
+                      disabled={false}
+                      isChecked={handleIsChecked(option)}
+                      setIsChecked={
                       () => (handleSelectOption(option))
                     }
-                        text={option.label}
-                      />
-                    </View>
-                  ))}
-                  {props.isLoading ? [...Array(5)].map((index) => (
-                    <View key={index} style={[Alignments.row, Spaces.marginTop[8]]}>
-                      <Checkable
-                        disabled={false}
-                        isChecked
-                        setIsChecked={() => {}}
-                        text="loading ..."
-                      />
-                    </View>
-                  )) : null}
-                  {props.options.length === 0 && (props.searchValue?.length || 0) > 0
-                    ? (
-                      <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
-                        {t('common.messages.noData')}
-                      </Text>
-                    ) : null}
-                </ScrollView>
-              </SkeletonLoader>
+                      text={option.label}
+                    />
+                  </View>
+                ))}
+                {props.options.length === 0 && (props.searchValue?.length || 0) > 0
+                  ? (
+                    <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                      {t('common.messages.noData')}
+                    </Text>
+                  ) : null}
+              </ScrollView>
+              {/* validation */}
+              <Button
+                onPress={handleValidation}
+                title={t('modals.actions.select')}
+                variant="Primary"
+              />
             </View>
-            {/* validation */}
-            <Button
-              onPress={handleValidation}
-              title={t('modals.actions.select')}
-              variant="Primary"
-            />
           </View>
         </BottomModal>
       </View>

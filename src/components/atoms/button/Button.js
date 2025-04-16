@@ -17,6 +17,7 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]
  * @param {'before' | 'after'} [props.iconPosition]
  * @param {(event: import('react-native').GestureResponderEvent) => void} [props.onPress]
+ * @param {boolean} [props.isOption]
  * @returns {import('react').ReactElement}
  */
 function Button({
@@ -24,6 +25,7 @@ function Button({
   icon,
   iconPosition,
   isLoading,
+  isOption = false,
   onPress,
   style,
   title,
@@ -35,6 +37,7 @@ function Button({
 
   const imageStyle = {
     aspectRatio: 1,
+    height: 16,
     tintColor: ApplicationStyle[`buttonText${variant}`].color,
     width: 16,
   };
@@ -44,8 +47,8 @@ function Button({
       disabled={isLoading || disabled}
       onPress={onPress}
       style={[
-        ApplicationStyle[`button${variant}`],
-        !title && ApplicationStyle.buttonIcon,
+        ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
+        !title && ApplicationStyle[`buttonIcon${isOption ? 'Option' : ''}`],
         disabled && ApplicationStyle.buttonDisabled,
         style,
       ]}

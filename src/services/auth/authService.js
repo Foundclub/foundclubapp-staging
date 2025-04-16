@@ -1,4 +1,5 @@
 import { signInWithPhoneNumber as firebaseSignInWithPhoneNumber, getAuth } from '@react-native-firebase/auth';
+import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
@@ -17,7 +18,15 @@ const userSchema = Joi.object({
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   section: Joi.string().valid('female', 'male').allow(null).optional(),
-  type: Joi.string().valid('Entraineur', 'new', 'Joueur', 'Dirigeant').required(),
+  // type: Joi.string().valid('Entraineur', 'new', 'Joueur', 'Dirigeant').required(),
+}).required();
+
+/**
+ * Role validation schema
+ */
+const roleSchema = Joi.object({
+  documentId: Joi.string().required(),
+  name: Joi.string().required(),
 }).required();
 
 /**
@@ -55,8 +64,8 @@ export const login = async ({ code, confirm }) => {
     const result = await client.post('/firebase-auth/login', { idToken });
 
     const schema = Joi.object({
+      data: Joi.object().required(),
       jwt: Joi.string().required(),
-      user: Joi.object().required(),
     }).required();
     await schema.validateAsync(result.data, { allowUnknown: true });
 
@@ -104,23 +113,36 @@ export const updateMe = async (userData) => {
     const formData = new FormData();
 
     // Create a copy to avoid modifying the parameter directly
-    const userDataCopy = { ...userData };
+    const userDataCopy = {
+      ...userData,
+      birthdate: userData.birthdate ? format(new Date(userData.birthdate), 'yyyy-MM-dd') : undefined,
+      role: userData.role?.documentId || userData?.role,
+    };
+
+    // Remove empty properties (undefined, null, or empty string)
+    Object.keys(userDataCopy).forEach((key) => {
+      // @ts-expect-error because keys are defined just above
+      if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
+        // @ts-expect-error because keys are defined just above
+        delete userDataCopy?.[key];
+      }
+    });
 
     // Handle avatar file separately
-    if (userDataCopy.avatar && typeof userDataCopy.avatar === 'object') {
+    if (userDataCopy.avatar && userDataCopy.avatar.path) {
       const fileToUpload = {
-        // @ts-expect-error because of react native image type
-
         name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
-        // @ts-expect-error because of react native image type
         type: userDataCopy.avatar.mime,
-        // @ts-expect-error because of react native image type
         uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
       };
       // @ts-expect-error because of react native image type
       formData.append('avatar', fileToUpload);
-      delete userDataCopy.avatar;
     }
+    delete userDataCopy.avatar;
+    // else if (userDataCopy.avatar && userDataCopy.avatar.url) {
+    //   formData.append('avatar', userDataCopy.avatar.url);
+    //   delete userDataCopy.avatar;
+    // }
 
     // Append all other user data
     Object.entries(userDataCopy).forEach(([key, value]) => {
@@ -138,14 +160,118 @@ export const updateMe = async (userData) => {
         },
       },
     );
-
-    const validationResult = await userSchema.validateAsync(result.data, {
-      abortEarly: false,
+    const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to update user data: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Create a trainer
+ * @param {Partial<User>} userData
+ * @returns {Promise<object>} The created trainer data
+ */
+export const createTrainer = async (userData) => {
+  const formData = new FormData();
+
+  const userDataCopy = { ...userData, username: userData.phoneNumber };
+
+  // Remove empty properties (undefined, null, or empty string)
+  Object.keys(userDataCopy).forEach((key) => {
+    // @ts-expect-error because keys are defined just above
+    if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
+      // @ts-expect-error because keys are defined just above
+      delete userDataCopy?.[key];
+    }
+  });
+
+  // Handle avatar file separately
+  if (userDataCopy.avatar && userDataCopy.avatar.path) {
+    const fileToUpload = {
+      name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
+      type: userDataCopy.avatar.mime,
+      uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
+    };
+    // @ts-expect-error because of react native image type
+    formData.append('avatar', fileToUpload);
+    delete userDataCopy.avatar;
+  }
+
+  // Append all other user data
+  Object.entries(userDataCopy).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      formData.append(key, value.toString());
+    }
+  });
+
+  const result = await client.post(
+    '/firebase-auth/create-trainer',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  );
+  try {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to create trainer: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Remove a trainer from my team
+ * @param {string} id
+ * @returns {Promise<object>} The created trainer data
+ */
+export const removeTrainerFromClub = async (id) => {
+  const result = await client.delete(`/firebase-auth/remove-trainer-from-club/${id}`);
+  return result.data;
+};
+/**
+ * Link a trainer to my club
+ * @param {string} id
+ * @returns {Promise<object>} The linked trainer data
+ */
+export const linkTrainerToClub = async (id) => {
+  const result = await client.put(`/firebase-auth/add-trainer-to-club/${id}`);
+  try {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to add trainer to my club: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Get all roles
+ * @returns {Promise<Role[]>} - The promise
+ */
+export const getAllRoles = async () => {
+  const result = await client.get('/users-permissions/roles');
+  try {
+    const schema = Joi.object({
+      roles: Joi.array().items(roleSchema).required(),
+    }).required();
+    const validationResult = await schema.validateAsync(result.data, {
+      allowUnknown: true,
+    });
+
+    return validationResult.roles;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to fetch roles data: ${errorToDisplay}`);
   }
 };

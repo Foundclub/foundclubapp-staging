@@ -89,6 +89,7 @@ export const staticFontStyle = {
   uppercase: {
     textTransform: 'uppercase',
   },
+
   // from design system
   h1: {
     color: 'black',

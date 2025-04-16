@@ -15,8 +15,9 @@ export const storage = new MMKV();
  */
 const initStore = {
   auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
+  clubFilters: undefined,
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
-  onboardingViews: [],
+  onboardingViews: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
 };
 

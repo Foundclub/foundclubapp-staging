@@ -1,4 +1,8 @@
 export const RouteNames = /** @type {const} */ ({
+  AddCoach: 'AddCoach',
+  Club: 'Club',
+  ClubFilters: 'ClubFilters',
+  ClubList: 'ClubList',
   Home: 'Home',
   Login: 'Login',
   Profile: 'Profile',
@@ -7,7 +11,7 @@ export const RouteNames = /** @type {const} */ ({
   UserAvatar: 'UserAvatar',
   UserBirthdate: 'UserBirthdate',
   UserName: 'UserName',
+  UserRole: 'UserRole',
   UserSection: 'UserSection',
-  UserType: 'UserType',
   Welcome: 'Welcome',
 });

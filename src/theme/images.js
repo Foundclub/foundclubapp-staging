@@ -16,8 +16,14 @@ export const images = {
   chevronDown: require('../assets/icons/chevron-down.png'),
   close: require('../assets/icons/close.png'),
   edit: require('../assets/icons/edit.png'),
+  envelope: require('../assets/icons/envelope.png'),
+  filter: require('../assets/icons/filter.png'),
+  phone: require('../assets/icons/phone.png'),
   plus: require('../assets/icons/plus.png'),
   search: require('../assets/icons/search.png'),
+  share: require('../assets/icons/share.png'),
+  shield: require('../assets/icons/shield.png'),
+  trash: require('../assets/icons/trash.png'),
 };
 
 /**
