@@ -79,13 +79,7 @@ const PhoneInput = forwardRef(
     const getInternationalValue = (val) => {
       try {
         const phoneNumber = parsePhoneNumberFromString(val || '');
-        if (phoneNumber?.country) {
-          const newDialCode = `+${getCountryCallingCode(phoneNumber.country)}`;
-          const foundDialCode = DIAL_CODES.find(({ value: code }) => code === newDialCode);
-          if (foundDialCode) setDialCode(foundDialCode);
-          return phoneNumber.formatInternational();
-        }
-        return phoneNumber?.formatInternational();
+        return phoneNumber?.number;
       } catch (e) {
         return value;
       }

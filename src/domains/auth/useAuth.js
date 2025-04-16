@@ -61,7 +61,7 @@ export const useAuth = () => {
   });
 
   const onboardingViews = useMemo(() => (
-    userData ? getOnboardingViews(userData) : []
+    userData ? getOnboardingViews(userData) : undefined
   ), [userData]);
 
   const profileFields = useMemo(() => (

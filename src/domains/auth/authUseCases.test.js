@@ -39,49 +39,53 @@ describe('authUseCases', () => {
 
   describe('getOnboardingViews', () => {
     it('should return complete flow for new user', () => {
-      const views = getOnboardingViews({ role: { name: 'Authenticated' } });
-      expect(views).toEqual([
-        RouteNames.UserRole,
-        RouteNames.UserName,
-        RouteNames.UserSection,
-        RouteNames.UserBirthdate,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      const result = getOnboardingViews({ role: { name: 'Authenticated' } });
+      expect(result.totalViews).toBe(6);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserRole },
+        { canShow: true, index: 2, route: RouteNames.UserName },
+        { canShow: true, index: 3, route: RouteNames.UserSection },
+        { canShow: true, index: 4, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 5, route: RouteNames.UserAvatar },
+        { canShow: true, index: 6, route: RouteNames.Welcome },
       ]);
     });
 
     it('should return coach-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_ROLES.coach } });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserSection,
-        RouteNames.UserBirthdate,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      const result = getOnboardingViews({ role: { name: USER_ROLES.coach } });
+      expect(result.totalViews).toBe(4);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: true, index: 2, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 3, route: RouteNames.UserAvatar },
+        { canShow: true, index: 4, route: RouteNames.Welcome },
       ]);
     });
 
     it('should return player-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_ROLES.player } });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserBirthdate,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      const result = getOnboardingViews({ role: { name: USER_ROLES.player } });
+      expect(result.totalViews).toBe(5);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: true, index: 2, route: RouteNames.UserSection },
+        { canShow: true, index: 3, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 4, route: RouteNames.UserAvatar },
+        { canShow: true, index: 5, route: RouteNames.Welcome },
       ]);
     });
 
     it('should return president-specific flow', () => {
-      const views = getOnboardingViews({ role: { name: USER_ROLES.president } });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      const result = getOnboardingViews({ role: { name: USER_ROLES.president } });
+      expect(result.totalViews).toBe(3);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: true, index: 2, route: RouteNames.UserAvatar },
+        { canShow: true, index: 3, route: RouteNames.Welcome },
       ]);
     });
 
-    it('should skip completed steps', () => {
-      const views = getOnboardingViews({
+    it('should return empty views array when all steps are completed', () => {
+      const result = getOnboardingViews({
         avatar: 'avatar.jpg',
         birthdate: '1990-01-01',
         firstname: 'John',
@@ -89,59 +93,65 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
         section: 'male',
       });
-      expect(views).toEqual([RouteNames.Home]);
+      expect(result.totalViews).toBe(4);
+      expect(result.views).toEqual([]);
     });
 
     it('should skip name step when firstname and lastname are provided', () => {
-      const views = getOnboardingViews({
+      const result = getOnboardingViews({
         firstname: 'John',
         lastname: 'Doe',
         role: { name: USER_ROLES.coach },
       });
-      expect(views).toEqual([
-        RouteNames.UserSection,
-        RouteNames.UserBirthdate,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      expect(result.totalViews).toBe(4);
+      expect(result.views).toEqual([
+        { canShow: false, index: 1, route: RouteNames.UserName },
+        { canShow: true, index: 2, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 3, route: RouteNames.UserAvatar },
+        { canShow: true, index: 4, route: RouteNames.Welcome },
       ]);
     });
 
     it('should skip section step when section is provided', () => {
-      const views = getOnboardingViews({
-        role: { name: USER_ROLES.coach },
+      const result = getOnboardingViews({
+        role: { name: USER_ROLES.player },
         section: 'male',
       });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserBirthdate,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      expect(result.totalViews).toBe(5);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: false, index: 2, route: RouteNames.UserSection },
+        { canShow: true, index: 3, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 4, route: RouteNames.UserAvatar },
+        { canShow: true, index: 5, route: RouteNames.Welcome },
       ]);
     });
 
     it('should skip birthdate step when birthdate is provided', () => {
-      const views = getOnboardingViews({
+      const result = getOnboardingViews({
         birthdate: '1990-01-01',
         role: { name: USER_ROLES.coach },
       });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserSection,
-        RouteNames.UserAvatar,
-        RouteNames.Welcome,
+      expect(result.totalViews).toBe(4);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: false, index: 2, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 3, route: RouteNames.UserAvatar },
+        { canShow: true, index: 4, route: RouteNames.Welcome },
       ]);
     });
 
     it('should skip avatar step when avatar is provided', () => {
-      const views = getOnboardingViews({
+      const result = getOnboardingViews({
         avatar: 'avatar.jpg',
         role: { name: USER_ROLES.coach },
       });
-      expect(views).toEqual([
-        RouteNames.UserName,
-        RouteNames.UserSection,
-        RouteNames.UserBirthdate,
-        RouteNames.Welcome,
+      expect(result.totalViews).toBe(4);
+      expect(result.views).toEqual([
+        { canShow: true, index: 1, route: RouteNames.UserName },
+        { canShow: true, index: 2, route: RouteNames.UserBirthdate },
+        { canShow: false, index: 3, route: RouteNames.UserAvatar },
+        { canShow: true, index: 4, route: RouteNames.Welcome },
       ]);
     });
   });

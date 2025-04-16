@@ -3,6 +3,20 @@ export default {
     actions: {
       save: 'Ajouter',
     },
+    alerts: {
+      alreadyExist: {
+        actions: {
+          addToClub: 'Ajouter au club',
+          cancel: 'Annuler',
+        },
+        description: "Le détenteur de ce numéro de téléphone utilise l'application sous le nom de {{firstname}} {{lastname}}. Voulez-vous l'ajouter à votre club ?",
+        title: 'Un utilisateur existe déjà avec ce numéro de téléphone.',
+      },
+      alreadyInClub: {
+        description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
+        title: "Impossible d'ajouter cet·te entraîneur·e à l'équipe",
+      },
+    },
     fields: {
       birthdate: {
         label: 'Date de naissance',
@@ -35,6 +49,8 @@ export default {
   },
   APIerrors: {
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+    phoneNumberAlreadyUsed: 'Ce numéro est déjà utilisé par {{firstname}} {{lastname}}.',
+    phoneNumberAlreadyUsedWithClub: 'Ce numéro est déjà utilisé par un·e entraîneur·e qui appartient à un club.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
     schemaMismatch: 'Un problème est survenu lors de la récupération des informations.'
     + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
@@ -101,6 +117,7 @@ export default {
   },
   common: {
     actions: {
+      cancel: 'Annuler',
       photoFromCamera: 'Prendre une photo',
       photoFromGallery: 'Choisir depuis la gallerie',
     },
@@ -152,11 +169,23 @@ export default {
   },
   profile: {
     actions: {
+      deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       save: 'Continuer',
+    },
+    alerts: {
+      deleteAlert: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Ouvrir le formulaire',
+        },
+        subtitle: 'Pour demander la suppression de votre compte merci de remplir le formulaire de contact'
+        + ' suivant en précisant votre demande.',
+        title: 'Supprimer votre compte ?',
+      },
     },
     fields: {
       birthdate: {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, ScrollView,
+  Alert, KeyboardAvoidingView, Platform, ScrollView,
   View,
 } from 'react-native';
 
@@ -18,7 +18,7 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { createTrainer } from '@/services/auth/authService';
+import { createTrainer, linkTrainerToClub } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -30,7 +30,7 @@ const defaultValues = {
 };
 
 const addCoachSchema = Joi.object({
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/),
+  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   firstname: Joi.string().required(),
   lastname: Joi.string().required(),
   phoneNumber: Joi.string(),
@@ -62,8 +62,57 @@ function AddCoach({ navigation }) {
     shouldFocusError: false,
   });
 
+  const linkTrainerToClubMutation = useMutation({
+    mutationFn: linkTrainerToClub,
+    onSuccess: () => {
+      navigation.goBack();
+    },
+  });
+
   const createTrainerMutation = useMutation({
+    meta: {
+      preventToastError: true,
+    },
     mutationFn: createTrainer,
+    onError: (/** @type {import('axios').AxiosError} */error) => {
+      const errorResponse = error?.response?.data?.error;
+      if (errorResponse.message === 'Uniqueness check failed' && errorResponse.details?.user) {
+        const { user } = errorResponse.details;
+        if (user?.club) {
+          Alert.alert(
+            t('addCoach.alert@s.alreadyInClub.title'),
+            t(
+              'addCoach.alerts.alreadyInClub.description',
+              {
+                firstname: user.firstname,
+                lastname: user.lastname,
+              },
+            ),
+
+          );
+        } else if (user) {
+          Alert.alert(
+            t('addCoach.alerts.alreadyExist.title'),
+            t('addCoach.alerts.alreadyExist.description', {
+              firstname: user.firstname,
+              lastname: user.lastname,
+            }),
+            [
+              {
+                style: 'cancel',
+                text: t('addCoach.alerts.alreadyExist.actions.cancel'),
+              },
+              {
+                onPress: () => {
+                  linkTrainerToClubMutation.mutate(user.documentId);
+                },
+                text: t('addCoach.alerts.alreadyExist.actions.addToClub'),
+              },
+            ],
+          );
+        }
+      }
+    },
     onSuccess: () => {
       navigation.goBack();
     },

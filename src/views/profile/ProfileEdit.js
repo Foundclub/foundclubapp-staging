@@ -239,9 +239,9 @@ function ProfileEdit({ navigation }) {
                     placeholder={t('profile.fields.section.placeholder')}
                     ref={ref}
                     setValue={
-                    (/** @type {{value: string, label: string}} */option) => { onChange(option?.label || ''); }
+                    (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
                   }
-                    value={value}
+                    value={sectionOptions.find((option) => option.value === value)?.label || ''}
                   />
                 )}
               />

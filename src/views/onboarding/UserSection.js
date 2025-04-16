@@ -33,7 +33,8 @@ function UserSection({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserBirthdate);
+      navigation.navigate(route.params?.nextRoute(RouteNames.UserSection)
+       || RouteNames.UserBirthdate);
     },
   });
 

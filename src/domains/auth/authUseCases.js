@@ -28,7 +28,7 @@ export const getAuthTokens = () => {
 /**
  * Get the onboarding view to show based on user type and existing user data
  * @param {User} params - The user data parameters
- * @returns {string[]} Array of route names representing the onboarding flow
+ * @returns {{totalViews: number, views: {index: number, route: string, canShow: boolean}[]}}
  */
 export const getOnboardingViews = ({
   avatar, birthdate, firstname, lastname, role, section,
@@ -37,46 +37,62 @@ export const getOnboardingViews = ({
     switch (role.name) {
       case USER_ROLES.coach:
         return [
-          RouteNames.UserName,
-          RouteNames.UserSection,
-          RouteNames.UserBirthdate,
-          RouteNames.UserAvatar,
-          RouteNames.Welcome,
+          { canShow: true, index: 1, route: RouteNames.UserName },
+          { canShow: true, index: 2, route: RouteNames.UserBirthdate },
+          { canShow: true, index: 3, route: RouteNames.UserAvatar },
+          { canShow: true, index: 4, route: RouteNames.Welcome },
         ];
       case USER_ROLES.player:
         return [
-          RouteNames.UserName,
-          RouteNames.UserBirthdate,
-          RouteNames.UserAvatar,
-          RouteNames.Welcome,
+          { canShow: true, index: 1, route: RouteNames.UserName },
+          { canShow: true, index: 2, route: RouteNames.UserSection },
+          { canShow: true, index: 3, route: RouteNames.UserBirthdate },
+          { canShow: true, index: 4, route: RouteNames.UserAvatar },
+          { canShow: true, index: 5, route: RouteNames.Welcome },
         ];
       case USER_ROLES.president:
         return [
-          RouteNames.UserName,
-          RouteNames.UserAvatar,
-          RouteNames.Welcome,
+          { canShow: true, index: 1, route: RouteNames.UserName },
+          { canShow: true, index: 2, route: RouteNames.UserAvatar },
+          { canShow: true, index: 3, route: RouteNames.Welcome },
         ];
       default:
         return [
-          RouteNames.UserRole,
-          RouteNames.UserName,
-          RouteNames.UserSection,
-          RouteNames.UserBirthdate,
-          RouteNames.UserAvatar,
-          RouteNames.Welcome,
+          { canShow: true, index: 1, route: RouteNames.UserRole },
+          { canShow: true, index: 2, route: RouteNames.UserName },
+          { canShow: true, index: 3, route: RouteNames.UserSection },
+          { canShow: true, index: 4, route: RouteNames.UserBirthdate },
+          { canShow: true, index: 5, route: RouteNames.UserAvatar },
+          { canShow: true, index: 6, route: RouteNames.Welcome },
         ];
     }
   })();
-
-  const filteredViews = baseViews.filter((view) => {
-    if (view === RouteNames.UserName && firstname && lastname) return false;
-    if (view === RouteNames.UserSection && section) return false;
-    if (view === RouteNames.UserBirthdate && birthdate) return false;
-    if (view === RouteNames.UserAvatar && avatar) return false;
-    if (view === RouteNames.UserRole && role.name !== 'Authenticated') return false;
-    return true;
+  const totalViews = baseViews.length;
+  const filteredViews = baseViews.map((view) => {
+    if (view.route === RouteNames.UserName && firstname && lastname) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserSection && section) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserBirthdate && birthdate) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserAvatar && avatar) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserRole && role.name !== 'Authenticated') {
+      return Object.assign(view, { canShow: false });
+    }
+    return view;
   });
-  return filteredViews?.length > 1 ? filteredViews : [RouteNames.Home];
+
+  const views = filteredViews?.filter((view) => view.canShow)?.length > 1 ? filteredViews
+    : [];
+  return {
+    totalViews,
+    views,
+  };
 };
 
 /**
@@ -90,7 +106,6 @@ export const profileFieldToDisplay = (role) => {
       return [
         'firstname',
         'lastname',
-        'section',
         'birthdate',
         'avatar',
       ];
@@ -100,6 +115,7 @@ export const profileFieldToDisplay = (role) => {
         'lastname',
         'birthdate',
         'avatar',
+        'section',
       ];
     case USER_ROLES.president:
       return [
@@ -109,7 +125,6 @@ export const profileFieldToDisplay = (role) => {
       ];
     default:
       return [
-        RouteNames.UserRole,
         'firstname',
         'lastname',
         'section',
@@ -120,15 +135,25 @@ export const profileFieldToDisplay = (role) => {
 };
 
 /**
- * Format input string to DD/MM/YYYY pattern
- * @param {string} value - The input value to format
- * @returns {string} - The formatted date string
+ * Format date string from YYYY-MM-DD to DD/MM/YYYY pattern
+ * @param {string} value - The input value to format (expected in YYYY-MM-DD format)
+ * @returns {string} - The formatted date string in DD/MM/YYYY format
  */
 export const formatBirthdateToDisplay = (value) => {
-  // Remove any non-digit characters
+  if (!value || typeof value !== 'string') return '';
+
+  // Check if the value is in YYYY-MM-DD format
+  const datePattern = /^(\d{4})-(\d{2})-(\d{2}).*$/;
+  const match = value.match(datePattern);
+
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
+
+  // If not in expected format, try to handle as in the original function
   const numbers = value.replace(/\D/g, '');
 
-  // Apply mask as DD/MM/YYYY
   if (numbers.length <= 2) return numbers;
   if (numbers.length <= 4) return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
   return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;

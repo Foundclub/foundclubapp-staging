@@ -261,14 +261,16 @@ function ClubDetails({ navigation, route }) {
               >
                 {
                   coachs?.map((/** @type {User} */ user) => (
-                    <View style={[
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.backgroundColor.primary700,
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Alignments.justifySpaceBetween,
-                      Spaces.padding[16],
-                      Spaces.gap[16]]}
+                    <View
+                      key={user.documentId}
+                      style={[
+                        ApplicationStyle.borderRadius24,
+                        ApplicationStyle.backgroundColor.primary700,
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifySpaceBetween,
+                        Spaces.padding[16],
+                        Spaces.gap[16]]}
                     >
                       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
                         <Image

@@ -3,7 +3,7 @@
  * @property {Auth} [auth] The authentication state.
  * @property {string} [fcmToken] - The Firebase Cloud Messaging token.
  * @property {string} [theme] - The current theme.
- * @property {string[]} [onboardingViews] - The list of onboarding views to show.
+ * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
  */
 

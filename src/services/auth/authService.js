@@ -1,4 +1,5 @@
 import { signInWithPhoneNumber as firebaseSignInWithPhoneNumber, getAuth } from '@react-native-firebase/auth';
+import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
@@ -112,12 +113,16 @@ export const updateMe = async (userData) => {
     const formData = new FormData();
 
     // Create a copy to avoid modifying the parameter directly
-    const userDataCopy = { ...userData, role: userData.role?.documentId || userData?.role };
+    const userDataCopy = {
+      ...userData,
+      birthdate: userData.birthdate ? format(new Date(userData.birthdate), 'yyyy-MM-dd') : undefined,
+      role: userData.role?.documentId || userData?.role,
+    };
 
     // Remove empty properties (undefined, null, or empty string)
     Object.keys(userDataCopy).forEach((key) => {
       // @ts-expect-error because keys are defined just above
-      if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '' || key === 'avatar') {
+      if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
         // @ts-expect-error because keys are defined just above
         delete userDataCopy?.[key];
       }
@@ -132,8 +137,12 @@ export const updateMe = async (userData) => {
       };
       // @ts-expect-error because of react native image type
       formData.append('avatar', fileToUpload);
-      delete userDataCopy.avatar;
     }
+    delete userDataCopy.avatar;
+    // else if (userDataCopy.avatar && userDataCopy.avatar.url) {
+    //   formData.append('avatar', userDataCopy.avatar.url);
+    //   delete userDataCopy.avatar;
+    // }
 
     // Append all other user data
     Object.entries(userDataCopy).forEach(([key, value]) => {
@@ -167,48 +176,48 @@ export const updateMe = async (userData) => {
  * @returns {Promise<object>} The created trainer data
  */
 export const createTrainer = async (userData) => {
-  try {
-    const formData = new FormData();
+  const formData = new FormData();
 
-    const userDataCopy = { ...userData, username: userData.phoneNumber };
+  const userDataCopy = { ...userData, username: userData.phoneNumber };
 
-    // Remove empty properties (undefined, null, or empty string)
-    Object.keys(userDataCopy).forEach((key) => {
+  // Remove empty properties (undefined, null, or empty string)
+  Object.keys(userDataCopy).forEach((key) => {
+    // @ts-expect-error because keys are defined just above
+    if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
       // @ts-expect-error because keys are defined just above
-      if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
-        // @ts-expect-error because keys are defined just above
-        delete userDataCopy?.[key];
-      }
-    });
-
-    // Handle avatar file separately
-    if (userDataCopy.avatar && userDataCopy.avatar.path) {
-      const fileToUpload = {
-        name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
-        type: userDataCopy.avatar.mime,
-        uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
-      };
-      // @ts-expect-error because of react native image type
-      formData.append('avatar', fileToUpload);
-      delete userDataCopy.avatar;
+      delete userDataCopy?.[key];
     }
+  });
 
-    // Append all other user data
-    Object.entries(userDataCopy).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        formData.append(key, value.toString());
-      }
-    });
+  // Handle avatar file separately
+  if (userDataCopy.avatar && userDataCopy.avatar.path) {
+    const fileToUpload = {
+      name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
+      type: userDataCopy.avatar.mime,
+      uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
+    };
+    // @ts-expect-error because of react native image type
+    formData.append('avatar', fileToUpload);
+    delete userDataCopy.avatar;
+  }
 
-    const result = await client.post(
-      '/firebase-auth/create-trainer',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+  // Append all other user data
+  Object.entries(userDataCopy).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      formData.append(key, value.toString());
+    }
+  });
+
+  const result = await client.post(
+    '/firebase-auth/create-trainer',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
       },
-    );
+    },
+  );
+  try {
     const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
@@ -227,6 +236,23 @@ export const createTrainer = async (userData) => {
 export const removeTrainerFromClub = async (id) => {
   const result = await client.delete(`/firebase-auth/remove-trainer-from-club/${id}`);
   return result.data;
+};
+/**
+ * Link a trainer to my club
+ * @param {string} id
+ * @returns {Promise<object>} The linked trainer data
+ */
+export const linkTrainerToClub = async (id) => {
+  const result = await client.put(`/firebase-auth/add-trainer-to-club/${id}`);
+  try {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to add trainer to my club: ${errorToDisplay}`);
+  }
 };
 
 /**

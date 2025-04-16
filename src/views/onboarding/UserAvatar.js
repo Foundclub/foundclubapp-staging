@@ -36,7 +36,7 @@ function UserAvatar({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserName);
+      navigation.navigate(route.params?.nextRoute(RouteNames.UserAvatar) || RouteNames.UserName);
     },
   });
 
@@ -44,6 +44,10 @@ function UserAvatar({ navigation, route }) {
     if (avatar && userData) {
       updateUserMutation.mutate(Object.assign(userData, { avatar }));
     }
+  };
+
+  const handleSkip = () => {
+    navigation.navigate(route.params?.nextRoute(RouteNames.UserAvatar) || RouteNames.UserName);
   };
 
   return (
@@ -83,7 +87,7 @@ function UserAvatar({ navigation, route }) {
           variant="Primary"
         />
         <TouchableOpacity
-          onPress={handleNext}
+          onPress={handleSkip}
           style={[Alignments.alignCenter]}
         >
           <Text style={[Fonts.p1, Fonts.neutral300, Fonts.underlineText]}>

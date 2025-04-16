@@ -43,7 +43,7 @@ function UserRole({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserName);
+      navigation.navigate(route.params?.nextRoute(RouteNames.UserRole) || RouteNames.UserName);
     },
   });
 

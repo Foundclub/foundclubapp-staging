@@ -2,7 +2,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, RefreshControl, Text, TouchableOpacity, View,
+  Alert,
+  Image, Linking, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -47,6 +48,27 @@ function Profile({ navigation }) {
     navigation.navigate(RouteNames.Club, {
       clubId: userData?.club?.documentId,
     });
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('profile.alerts.deleteAlert.title'),
+      t('profile.alerts.deleteAlert.subtitle'),
+      [
+        {
+          style: 'cancel',
+          text: t('profile.alerts.deleteAlert.actions.cancel'),
+        },
+        {
+          onPress: () => {
+            if (process.env.DELETE_ACCOUNT_URL) {
+              Linking.openURL(process.env.DELETE_ACCOUNT_URL);
+            }
+          },
+          text: t('profile.alerts.deleteAlert.actions.confirm'),
+        },
+      ],
+    );
   };
 
   useFocusEffect(
@@ -165,7 +187,10 @@ function Profile({ navigation }) {
             )}
           </View>
         </WithDataWrapper>
-        <View style={[Spaces.gap[24], Spaces.marginTop[24]]}>
+        <View style={[
+          Spaces.gap[24],
+          Spaces.marginTop[24]]}
+        >
           <Button
             onPress={handleEditUser}
             title={t('profile.actions.edit')}
@@ -176,6 +201,13 @@ function Profile({ navigation }) {
             title={t('profile.actions.logout')}
             variant="Secondary"
           />
+          <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
+            <TouchableOpacity onPress={handleDeleteAccount}>
+              <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                {t('profile.actions.deleteAccount')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
