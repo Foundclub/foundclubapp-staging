@@ -89,32 +89,21 @@ function PrivateNavigator() {
     return route || RouteNames.Home;
   }, [onboardingViews]);
 
-  /**
-   * Get the next route name for a given current route
-   * @param {string} currentRoute
-   * @returns {string|undefined} Next route name or undefined if it's the last route
-   */
-  const getNextRoute = (currentRoute) => {
-    const currentIndex = onboardingViews?.views?.find(
-      (view) => view.route === currentRoute,
-    )?.index || 0;
-    return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
-  };
-
-  const canShowHome = useMemo(() => onboardingViews?.views
-    ?.filter(({ canShow }) => canShow)?.length || 0 <= 2, [onboardingViews]);
+  const canShowHome = useMemo(() => !!(onboardingViews?.views
+    ?.filter(({ canShow }) => canShow)?.length || 0 <= 2), [onboardingViews]);
 
   const canShowView = useCallback((/** @type {string} */routeName) => {
+    // console.log('canShowView', routeName, onboardingViews);
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
     const viewable = onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0;
-    return view && viewable > 1;
+    return !!(view && viewable > 1);
   }, [onboardingViews]);
 
   return userData?.documentId ? (
     <Stack.Navigator
       id={undefined}
       initialRouteName={initialRouteName}
-      key={JSON.stringify(userData || {})}
+      key={userData?.documentId}
       screenOptions={commonOptions}
     >
       {canShowHome ? (
@@ -175,9 +164,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}
-          initialParams={{
-            nextRoute: getNextRoute,
-          }}
           key={onboardingViews?.totalViews}
           name={RouteNames.UserRole}
           options={commonOptions}
@@ -186,7 +172,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.UserName) ? (
         <Stack.Screen
           component={UserName}
-          initialParams={{ nextRoute: getNextRoute }}
           key={onboardingViews?.totalViews}
           name={RouteNames.UserName}
           options={{
@@ -201,7 +186,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.UserSection) ? (
         <Stack.Screen
           component={UserSection}
-          initialParams={{ nextRoute: getNextRoute }}
           key={onboardingViews?.totalViews}
           name={RouteNames.UserSection}
           options={{
@@ -217,7 +201,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.UserBirthdate) ? (
         <Stack.Screen
           component={UserBirthdate}
-          initialParams={{ nextRoute: getNextRoute }}
           key={onboardingViews?.totalViews}
           name={RouteNames.UserBirthdate}
           options={{
@@ -233,7 +216,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.UserAvatar) ? (
         <Stack.Screen
           component={UserAvatar}
-          initialParams={{ nextRoute: getNextRoute }}
           key={onboardingViews?.totalViews}
           name={RouteNames.UserAvatar}
           options={{
@@ -249,7 +231,6 @@ function PrivateNavigator() {
       {canShowView(RouteNames.Welcome) ? (
         <Stack.Screen
           component={Welcome}
-          initialParams={{ nextRoute: RouteNames.Home }}
           key={onboardingViews?.totalViews}
           name={RouteNames.Welcome}
           options={{

@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 
+import { useAuth } from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -58,15 +59,16 @@ const birthdateSchema = Joi.object({
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User birthdate screen component
  */
-function UserBirthdate({ navigation, route }) {
+function UserBirthdate({ navigation }) {
   const { Alignments, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const { getNextOnboardingRoute } = useAuth();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute(RouteNames.UserBirthdate)
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)
        || RouteNames.UserAvatar);
     },
   });

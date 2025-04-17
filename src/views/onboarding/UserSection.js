@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { USER_SECTIONS } from '@/domains/auth/authUseCases';
+import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -20,9 +21,11 @@ import { updateMe } from '@/services/auth/authService';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User section screen component
  */
-function UserSection({ navigation, route }) {
+function UserSection({ navigation }) {
   // hooks
   const { data: userData } = useGetMe();
+  const { getNextOnboardingRoute } = useAuth();
+
   // local state
   const [section, setSection] = useState(userData?.section || '');
   const {
@@ -33,7 +36,7 @@ function UserSection({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute(RouteNames.UserSection)
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserSection)
        || RouteNames.UserBirthdate);
     },
   });
