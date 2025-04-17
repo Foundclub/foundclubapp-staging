@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Share } from 'react-native';
 
@@ -24,6 +24,7 @@ export const useAuth = () => {
   // hooks
   const [, appDispatch] = useAppContext();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   // api calls
   const otpMutation = useMutation({
@@ -46,6 +47,7 @@ export const useAuth = () => {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
+      queryClient.clear();
       appDispatch({ type: 'DELETE_AUTHENTICATION' });
     },
   });
@@ -100,10 +102,18 @@ export const useAuth = () => {
     });
   };
 
+  const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
+    const currentIndex = onboardingViews?.views?.find(
+      (view) => view.route === currentRoute,
+    )?.index || 0;
+    return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
+  }, [onboardingViews]);
+
   return {
     canShowCodeButton: !!confirm,
     confirm,
     getAuthTokens,
+    getNextOnboardingRoute,
     inviteTrainer,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,

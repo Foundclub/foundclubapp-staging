@@ -10,27 +10,13 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 /**
  * Main home screen component displayed after authentication and onboarding.
  * Shows user content and provides access to core app features.
- * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home({ navigation }) {
+function Home() {
   // hooks
   const {
     Alignments, Fonts, Images, Spaces,
   } = useTheme();
-  const { onboardingViews } = useAuth();
-
-  useEffect(() => {
-    const route = onboardingViews?.views?.reduce((acc, view) => {
-      if (view.index < acc.index && view.canShow) {
-        return view;
-      }
-      return acc;
-    }, { index: 100, route: '' })?.route;
-    if (route) {
-      navigation.navigate(route);
-    }
-  }, [onboardingViews, navigation]);
 
   return (
     <ScreenContainer

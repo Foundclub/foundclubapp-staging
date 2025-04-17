@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -19,7 +20,7 @@ import { updateMe } from '@/services/auth/authService';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User avatar screen component
  */
-function UserAvatar({ navigation, route }) {
+function UserAvatar({ navigation }) {
   // local state
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
@@ -27,6 +28,8 @@ function UserAvatar({ navigation, route }) {
   );
 
   // hooks
+  const { getNextOnboardingRoute } = useAuth();
+
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
@@ -36,7 +39,7 @@ function UserAvatar({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute(RouteNames.UserAvatar) || RouteNames.UserName);
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserAvatar) || RouteNames.UserName);
     },
   });
 
@@ -47,7 +50,7 @@ function UserAvatar({ navigation, route }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(route.params?.nextRoute(RouteNames.UserAvatar) || RouteNames.UserName);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserAvatar) || RouteNames.UserName);
   };
 
   return (

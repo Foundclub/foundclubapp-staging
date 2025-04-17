@@ -5,6 +5,7 @@ import { RefreshControl, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
+import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -22,8 +23,9 @@ import { updateMe } from '@/services/auth/authService';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User type screen component
  */
-function UserRole({ navigation, route }) {
+function UserRole({ navigation }) {
   const { data: userData } = useGetMe();
+  const { getNextOnboardingRoute } = useAuth();
   // local state
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),
@@ -43,7 +45,7 @@ function UserRole({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute(RouteNames.UserRole) || RouteNames.UserName);
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserRole) || RouteNames.UserName);
     },
   });
 
