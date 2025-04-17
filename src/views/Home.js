@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
