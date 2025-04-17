@@ -139,10 +139,6 @@ export const updateMe = async (userData) => {
       formData.append('avatar', fileToUpload);
     }
     delete userDataCopy.avatar;
-    // else if (userDataCopy.avatar && userDataCopy.avatar.url) {
-    //   formData.append('avatar', userDataCopy.avatar.url);
-    //   delete userDataCopy.avatar;
-    // }
 
     // Append all other user data
     Object.entries(userDataCopy).forEach(([key, value]) => {
