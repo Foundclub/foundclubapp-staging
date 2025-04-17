@@ -24,7 +24,6 @@ function Welcome({ navigation }) {
   const { t } = useTranslation();
 
   const handleNext = () => {
-    console.log('GO HOME');
     navigation.reset({
       index: 0,
       routes: [{ name: RouteNames.Home }],
