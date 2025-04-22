@@ -14,7 +14,7 @@
  */
 
 /**
- * @typedef {{url: string} & import("react-native-image-crop-picker").Image} Avatar
+ * @typedef {{url: string, id?:string} & import("react-native-image-crop-picker").Image} Avatar
  */
 
 /**

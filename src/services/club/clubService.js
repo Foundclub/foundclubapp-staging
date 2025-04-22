@@ -262,8 +262,8 @@ export const updateClub = async (clubData) => {
           // @ts-expect-error because of react native image type
           formData.append(`sponsor[${index}][logo]`, fileToUpload);
         }
-        if (sponsor.logo && sponsor.logo.url) {
-          formData.append(`sponsor[${index}][logo]`, sponsor.logo.url);
+        if (sponsor.logo && sponsor.logo.id) {
+          formData.append(`sponsor[${index}][logo]`, sponsor.logo.id);
         }
 
         // Append other sponsor fields
