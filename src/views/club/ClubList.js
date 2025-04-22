@@ -5,7 +5,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { getClubFiltersNumber, getClubInitials } from '@/domains/club/clubUseCase';
+import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -33,6 +33,7 @@ function ClubList({ navigation }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { getClubFiltersNumber, getClubInitials } = useClub();
 
   const [{ clubFilters }, appDispatch] = useAppContext();
 
@@ -87,9 +88,12 @@ function ClubList({ navigation }) {
     || [], [clubPages]);
 
   /**
-   * @type {(info: { item: Club }) => import('react').ReactElement}
+   * Render the club item
+   * @param {object} param
+   * @param {Club} param.item
+   * @returns {import('react').ReactElement}
    */
-  const renderItem = useCallback(({ item }) => (
+  const renderItem = ({ item }) => (
     <TouchableOpacity
       key={item.id}
       onPress={() => handleClubSelection(item.documentId)}
@@ -114,17 +118,7 @@ function ClubList({ navigation }) {
         </Text>
       </View>
     </TouchableOpacity>
-  ), [
-    Alignments.row,
-    Alignments.alignCenter,
-    Fonts.neutral00,
-    Fonts.p1Bold,
-    Fonts.p3,
-    Spaces.gap,
-    Spaces.paddingHorizontal,
-    Spaces.paddingVertical,
-    handleClubSelection,
-  ]);
+  );
 
   const renderEmptyList = () => (
     <View style={[
@@ -140,6 +134,7 @@ function ClubList({ navigation }) {
         {t('clubList.noData')}
       </Text>
       <Button
+        onPress={() => navigation.navigate(RouteNames.CreateClub)}
         style={Spaces.paddingHorizontal[16]}
         title={t('clubList.actions.createClub')}
         variant="Primary"

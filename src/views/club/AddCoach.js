@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { formatBirthdateToDisplay } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -49,6 +49,7 @@ function AddCoach({ navigation }) {
   );
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
+  const { formatBirthdateToDisplay } = useAuth();
 
   const {
     control,

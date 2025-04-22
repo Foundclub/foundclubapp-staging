@@ -7,8 +7,8 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-import { useAuth } from '@/domains/auth/useAuth';
-import { getClubInitials } from '@/domains/club/clubUseCase';
+import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -28,6 +28,7 @@ function Profile({ navigation }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { getClubInitials } = useClub();
   const {
     logoutMutation, refetchUserData, userData, userDataError, userDataLoading,
   } = useAuth();

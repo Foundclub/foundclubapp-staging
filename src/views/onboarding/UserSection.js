@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { USER_SECTIONS } from '@/domains/auth/authUseCases';
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -24,7 +23,7 @@ import { updateMe } from '@/services/auth/authService';
 function UserSection({ navigation }) {
   // hooks
   const { data: userData } = useGetMe();
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, USER_SECTIONS } = useAuth();
 
   // local state
   const [section, setSection] = useState(userData?.section || '');

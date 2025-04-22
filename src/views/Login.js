@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';

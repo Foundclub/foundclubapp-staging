@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -25,7 +24,7 @@ import { updateMe } from '@/services/auth/authService';
  */
 function UserRole({ navigation }) {
   const { data: userData } = useGetMe();
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, USER_ROLES } = useAuth();
   // local state
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),

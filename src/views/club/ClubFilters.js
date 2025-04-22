@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { getGeohashForPointAndRadius } from '@/domains/places/placesUseCases';
+import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -41,6 +41,7 @@ function ClubFilters({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const [{ clubFilters }, appDispatch] = useAppContext();
+  const { getGeohashForPointAndRadius } = usePlaces();
 
   const {
     data: allActivities,
