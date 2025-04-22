@@ -131,7 +131,7 @@ export const updateMe = async (userData) => {
     // Handle avatar file separately
     if (userDataCopy.avatar && userDataCopy.avatar.path) {
       const fileToUpload = {
-        name: userDataCopy.avatar.filename || `image.${userDataCopy.avatar.path.split('.').pop()}`,
+        name: userDataCopy.avatar.path.split('/').pop(),
         type: userDataCopy.avatar.mime,
         uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
       };
@@ -230,7 +230,7 @@ export const createTrainer = async (userData) => {
  * @returns {Promise<object>} The created trainer data
  */
 export const removeTrainerFromClub = async (id) => {
-  const result = await client.delete(`/firebase-auth/remove-trainer-from-club/${id}`);
+  const result = await client.put(`/firebase-auth/remove-trainer-from-club/${id}`);
   return result.data;
 };
 /**

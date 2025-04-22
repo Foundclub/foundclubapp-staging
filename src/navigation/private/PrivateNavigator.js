@@ -8,6 +8,7 @@ import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
 import AddCoach from '@/views/club/AddCoach';
+import AddSponsor from '@/views/club/AddSponsor';
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
@@ -159,6 +160,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={AddSponsor}
+        name={RouteNames.AddSponsor}
+        options={{
+          ...commonOptions,
+          headerTitle: t('addSponsor.title'),
         }}
       />
       {canShowView(RouteNames.UserRole) ? (

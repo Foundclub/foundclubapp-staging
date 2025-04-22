@@ -119,7 +119,10 @@ const PhoneInput = forwardRef(
         <View style={[
           Alignments.row,
           Alignments.absolute,
-          { left: DIALCODE_WIDTH, top: Platform.OS === 'ios' ? 30 : 40 }]}
+          {
+            left: DIALCODE_WIDTH,
+            top: Platform.OS === 'ios' ? 30 : 36,
+          }]}
         >
           <View style={[
             ApplicationStyle.backgroundColor.neutral00,

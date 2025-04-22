@@ -29,6 +29,7 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
     try {
       const image = await ImagePicker.openCamera({
         cropping: true,
+        forceJpg: true,
         height: size * 2,
         includeBase64: true,
         mediaType: 'photo',
@@ -45,6 +46,7 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
     try {
       const image = await ImagePicker.openPicker({
         cropping: true,
+        forceJpg: true,
         height: size * 2,
         includeBase64: true,
         mediaType: 'photo',
