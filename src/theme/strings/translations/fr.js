@@ -47,6 +47,23 @@ export default {
       name: "Comment s'appelle l'entraîneur·e ?",
     },
   },
+  addSponsor: {
+    actions: {
+      save: 'Ajouter',
+    },
+    fields: {
+      link: {
+        label: 'Lien vers le site du partenaire',
+        placeholder: 'https://www.nike.com',
+      },
+      logo: 'Logo du partenaire',
+      title: {
+        label: 'Nom du partenaire',
+        placeholder: 'Nike',
+      },
+    },
+    title: 'Ajouter un partenaire',
+  },
   APIerrors: {
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
     phoneNumberAlreadyUsed: 'Ce numéro est déjà utilisé par {{firstname}} {{lastname}}.',
@@ -61,6 +78,14 @@ export default {
       delete: 'Supprimer',
     },
     alerts: {
+      deleteSponsor: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Supprimer',
+        },
+        description: 'Êtes-vous sûr·e de vouloir continuer ?',
+        title: 'Vous êtes sur le point de supprimer le partenaire {{sponsorName}} .',
+      },
       deleteTrainer: {
         actions: {
           cancel: 'Annuler',

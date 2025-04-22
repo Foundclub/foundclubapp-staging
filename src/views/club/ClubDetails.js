@@ -21,6 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetAddressFromCoordinates, useGetClub } from '@/services/club/clubQueries';
+import { updateClub } from '@/services/club/clubService';
 
 /**
  * Club details screen component
@@ -56,8 +57,15 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
+  const deleteSponsorMutation = useMutation({
+    mutationFn: updateClub,
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   // TODO: put this in a permission hook
-  const canEditCoachs = useMemo(() => userData?.role.name === USER_ROLES.president
+  const canEditClub = useMemo(() => userData?.role.name === USER_ROLES.president
   && userData?.club?.documentId === clubId, [userData, clubId]);
 
   const coachs = useMemo(() => club?.members?.filter(
@@ -67,6 +75,38 @@ function ClubDetails({ navigation, route }) {
   // handlers
   const handleCreateCoach = () => {
     navigation.navigate(RouteNames.AddCoach, { clubId });
+  };
+
+  const handleCreateSponsor = () => {
+    navigation.navigate(RouteNames.AddSponsor, { clubId });
+  };
+
+  /**
+   * Handle delete sponsor action
+   * @param {Sponsor} sponsor
+   */
+  const handleDeleteSponsor = (sponsor) => {
+    Alert.alert(
+      t('clubDetails.alerts.deleteSponsor.title', { sponsorName: sponsor.title }),
+      t('clubDetails.alerts.deleteSponsor.description'),
+      [
+        {
+          style: 'cancel',
+          text: t('clubDetails.alerts.deleteSponsor.actions.cancel'),
+        },
+        {
+          onPress: () => {
+            if (club) {
+              const newClub = Object.assign(club, {
+                sponsor: (club?.sponsor || []).filter((s) => s.link !== sponsor.link),
+              });
+              deleteSponsorMutation.mutate(newClub);
+            }
+          },
+          text: t('clubDetails.alerts.deleteSponsor.actions.confirm'),
+        },
+      ],
+    );
   };
 
   /**
@@ -157,27 +197,31 @@ function ClubDetails({ navigation, route }) {
               Alignments.alignCenter,
               Spaces.paddingHorizontal[24]]}
             >
-              <View style={[Alignments.row, Spaces.gap[4]]}>
-                <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
-                <TouchableOpacity onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}>
-                  <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-                    {club?.phoneNumber}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[
-                Alignments.row, Spaces.gap[4]]}
-              >
-                <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
-                <TouchableOpacity onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}>
-                  <Text
-                    numberOfLines={1}
-                    style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
-                  >
-                    {club?.email}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {club?.phoneNumber ? (
+                <View style={[Alignments.row, Spaces.gap[4]]}>
+                  <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
+                  <TouchableOpacity onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}>
+                    <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                      {club?.phoneNumber}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {club?.email ? (
+                <View style={[
+                  Alignments.row, Spaces.gap[4]]}
+                >
+                  <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
+                  <TouchableOpacity onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}>
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
+                    >
+                      {club?.email}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -199,55 +243,88 @@ function ClubDetails({ navigation, route }) {
           </View>
 
           {/* Sponsors */}
-          {club?.sponsor?.length && club?.sponsor?.length > 0 && (
+          {(club?.sponsor?.length || canEditClub) && (
           <View style={[Spaces.gap[16]]}>
             <View style={[Alignments.row,
               Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
             >
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
+              {canEditClub ? (
+                <Button
+                  icon="plus"
+                  isOption
+                  onPress={handleCreateSponsor}
+                  variant="Primary"
+                />
+              ) : null}
             </View>
             <ScrollView
               contentContainerStyle={[Spaces.gap[16]]}
               horizontal
               showsHorizontalScrollIndicator={false}
             >
-              {club.sponsor.map((/** @type {Sponsor} */ sponsor) => (
-                <TouchableOpacity
-                  key={sponsor.title}
-                  onPress={() => {
-                    if (sponsor.link) {
-                      Linking.openURL(sponsor.link);
-                    }
-                  }}
-                  style={[
-                    Alignments.alignCenter,
-                  ]}
+              {club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
+                <View
+                  key={sponsor.link}
+                  style={[Alignments.relative, Spaces.marginTop[8]]}
                 >
-                  <Image
-                    source={{ uri: sponsor.logo.url }}
+                  {
+                    canEditClub ? (
+                      <TouchableOpacity
+                        onPress={() => handleDeleteSponsor(sponsor)}
+                        style={[
+                          Alignments.absolute,
+                          ApplicationStyle.backgroundColor.error700,
+                          ApplicationStyle.borderRadius24,
+                          Spaces.padding[8],
+                          { right: -12, top: -8, zIndex: 1 },
+                        ]}
+                      >
+                        <Image
+                          source={Images.trash}
+                          style={[
+                            ApplicationStyle.icon16,
+                            ApplicationStyle.tintColor.neutral00]}
+                        />
+                      </TouchableOpacity>
+                    ) : null
+                  }
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (sponsor.link) {
+                        Linking.openURL(sponsor.link);
+                      }
+                    }}
                     style={[
-                      ApplicationStyle.roundIcon55,
-                      ApplicationStyle.borderWidth1,
-                      ApplicationStyle.borderColor.neutral00,
+                      Alignments.alignCenter,
                     ]}
-                  />
-                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {sponsor.title}
-                  </Text>
-                </TouchableOpacity>
+                  >
+                    <Image
+                      source={{ uri: sponsor?.logo?.url }}
+                      style={[
+                        ApplicationStyle.roundIcon55,
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                      ]}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {sponsor.title}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ))}
             </ScrollView>
           </View>
           )}
 
           {/* Coachs */}
-          {coachs?.length || canEditCoachs ? (
+          {coachs?.length || canEditClub ? (
             <View style={[Spaces.gap[16]]}>
               <View style={[Alignments.row,
                 Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
               >
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
-                {canEditCoachs ? (
+                {canEditClub ? (
                   <Button
                     icon="plus"
                     isOption
@@ -285,7 +362,7 @@ function ClubDetails({ navigation, route }) {
                           {`${user.firstname} ${user.lastname}`}
                         </Text>
                       </View>
-                      {canEditCoachs ? (
+                      {canEditClub ? (
                         <View style={[Alignments.row, Spaces.gap[8]]}>
                           <Button
                             icon="trash"
