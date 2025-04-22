@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 

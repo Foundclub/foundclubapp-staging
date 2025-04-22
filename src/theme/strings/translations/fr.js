@@ -150,6 +150,35 @@ export default {
       noData: 'Aucune donnée disponible',
     },
   },
+  createClubRequest: {
+    actions: {
+      create: 'Ajouter le club',
+      ok: 'OK',
+    },
+    alerts: {
+      description: "L'équipe Found Club va examiner votre demande et vous recontacter dans les plus brefs délais.",
+      title: 'Votre demande de création de club a bien été envoyée',
+    },
+    fields: {
+      clubName: {
+        label: 'Nom du club',
+        placeholder: 'FC Marseille',
+      },
+      holderFirstname: {
+        label: 'Prénom du responsable',
+        placeholder: 'Luc',
+      },
+      holderLastname: {
+        label: 'Nom du responsable',
+        placeholder: 'Harne',
+      },
+      holderPhone: {
+        label: 'Numéro de téléphone du responsable',
+        placeholder: '0612345678',
+      },
+    },
+    title: 'Ajouter un club',
+  },
   errorPage: {
     action: 'Recharger la page',
     subtitle: 'Une erreur est survenue.',

@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
@@ -12,6 +12,7 @@ import AddSponsor from '@/views/club/AddSponsor';
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
+import CreateClubRequest from '@/views/club/CreateClubRequest';
 import Home from '@/views/Home';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
@@ -168,6 +169,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('addSponsor.title'),
+        }}
+      />
+      <Stack.Screen
+        component={CreateClubRequest}
+        name={RouteNames.CreateClub}
+        options={{
+          ...commonOptions,
+          headerTitle: t('createClubRequest.title'),
         }}
       />
       {canShowView(RouteNames.UserRole) ? (

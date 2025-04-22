@@ -9,13 +9,18 @@ import {
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
 
-import { getAuthTokens, getOnboardingViews, profileFieldToDisplay } from './authUseCases';
+import {
+  formatBirthdateToDisplay,
+  formatBirthdateToSend,
+  getAuthTokens, getOnboardingViews, profileFieldToDisplay, USER_ROLES,
+  USER_SECTIONS,
+} from './authUseCases';
 
 /**
  * Custom hook to manage authentication
  * @inheritdoc
  */
-export const useAuth = () => {
+const useAuth = () => {
   // local states
   const [confirm, setConfirm] = useState(/**
      @type {import('@react-native-firebase/auth')
@@ -109,9 +114,15 @@ export const useAuth = () => {
     return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
   }, [onboardingViews]);
 
+  const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
+ === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
+
   return {
+    canEditClub,
     canShowCodeButton: !!confirm,
     confirm,
+    formatBirthdateToDisplay,
+    formatBirthdateToSend,
     getAuthTokens,
     getNextOnboardingRoute,
     inviteTrainer,
@@ -123,8 +134,12 @@ export const useAuth = () => {
     profileFields,
     refetchUserData,
     setConfirm,
+    USER_ROLES,
+    USER_SECTIONS,
     userData,
     userDataError,
     userDataLoading,
   };
 };
+
+export default useAuth;

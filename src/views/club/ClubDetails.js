@@ -7,9 +7,8 @@ import {
   Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
-import { useAuth } from '@/domains/auth/useAuth';
-import { getClubInitials } from '@/domains/club/clubUseCase';
+import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -35,8 +34,9 @@ function ClubDetails({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
-  const { inviteTrainer, userData } = useAuth();
+  const { canEditClub, inviteTrainer, USER_ROLES } = useAuth();
   const { t } = useTranslation();
+  const { getClubInitials } = useClub();
 
   const {
     data: club,
@@ -64,13 +64,11 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
-  // TODO: put this in a permission hook
-  const canEditClub = useMemo(() => userData?.role.name === USER_ROLES.president
-  && userData?.club?.documentId === clubId, [userData, clubId]);
-
   const coachs = useMemo(() => club?.members?.filter(
     (user) => user.role.name === USER_ROLES.coach,
-  ), [club]);
+  ), [club, USER_ROLES.coach]);
+
+  const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
 
   // handlers
   const handleCreateCoach = () => {
@@ -243,13 +241,13 @@ function ClubDetails({ navigation, route }) {
           </View>
 
           {/* Sponsors */}
-          {(club?.sponsor?.length || canEditClub) && (
+          {(club?.sponsor?.length || canEdit) && (
           <View style={[Spaces.gap[16]]}>
             <View style={[Alignments.row,
               Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
             >
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
-              {canEditClub ? (
+              {canEdit ? (
                 <Button
                   icon="plus"
                   isOption
@@ -269,7 +267,7 @@ function ClubDetails({ navigation, route }) {
                   style={[Alignments.relative, Spaces.marginTop[8]]}
                 >
                   {
-                    canEditClub ? (
+                    canEdit ? (
                       <TouchableOpacity
                         onPress={() => handleDeleteSponsor(sponsor)}
                         style={[
@@ -318,13 +316,13 @@ function ClubDetails({ navigation, route }) {
           )}
 
           {/* Coachs */}
-          {coachs?.length || canEditClub ? (
+          {coachs?.length || canEdit ? (
             <View style={[Spaces.gap[16]]}>
               <View style={[Alignments.row,
                 Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
               >
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
-                {canEditClub ? (
+                {canEdit ? (
                   <Button
                     icon="plus"
                     isOption
@@ -362,7 +360,7 @@ function ClubDetails({ navigation, route }) {
                           {`${user.firstname} ${user.lastname}`}
                         </Text>
                       </View>
-                      {canEditClub ? (
+                      {canEdit ? (
                         <View style={[Alignments.row, Spaces.gap[8]]}>
                           <Button
                             icon="trash"

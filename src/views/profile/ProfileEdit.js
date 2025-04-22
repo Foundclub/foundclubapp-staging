@@ -8,8 +8,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-import { formatBirthdateToDisplay, formatBirthdateToSend, USER_SECTIONS } from '@/domains/auth/authUseCases';
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -53,7 +52,9 @@ function ProfileEdit({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
-  const { profileFields } = useAuth();
+  const {
+    formatBirthdateToDisplay, formatBirthdateToSend, profileFields, USER_SECTIONS,
+  } = useAuth();
 
   // local state
   const [avatar, setAvatar] = useState(

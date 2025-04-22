@@ -10,11 +10,11 @@ export function getClubInitials(clubName) {
   }
 
   // List of French connecting words to exclude
-  const excludedWords = ['de', 'du', 'des', 'le', 'la', 'les', 'et', 'a', 'à', 'au', 'aux', 'en', 'l\'', 'd\''];
+  const excludedWords = ['de', 'du', 'des', 'le', 'la', 'les', 'et', 'a', 'à', 'au', 'aux', 'en', 'l', 'd'];
 
   // Split the club name into words and filter out empty strings
   const words = clubName
-    .split(/\s+/)
+    .split(/[\s']+/)
     .filter((word) => word.length > 0);
 
   // Get the initial of each word that's not in the excluded list
@@ -40,9 +40,9 @@ export function getClubInitials(clubName) {
  */
 export const getClubFiltersNumber = (filters) => {
   let number = 0;
-  if (filters?.name) {
-    number += 1;
-  }
+  // if (filters?.name) {
+  //   number += 1;
+  // }
   if (filters?.geohash?.length) {
     number += 1;
   }
@@ -51,5 +51,3 @@ export const getClubFiltersNumber = (filters) => {
   }
   return number;
 };
-
-// TODO: put this in a hook
