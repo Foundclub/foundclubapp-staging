@@ -61,15 +61,15 @@ const queryClient = new QueryClient({
       if (!mutation?.options?.meta?.preventToastError) {
         // Handle error and show Alert
         displayErrorAlert(
-          error.message,
+          error,
           mutation?.options?.meta?.errorMessageFallback?.toString(),
         );
       }
-      if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-        Sentry.captureException(error);
-      } else {
-        Sentry.captureException(error);
-      }
+      // if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
+      //   Sentry.captureException(error);
+      // } else {
+      //   Sentry.captureException(error);
+      // }
     },
   }),
 

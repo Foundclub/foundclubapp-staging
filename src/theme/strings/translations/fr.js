@@ -65,7 +65,80 @@ export default {
     title: 'Ajouter un partenaire',
   },
   APIerrors: {
+    // Authentication errors
+    AUTHENTICATION_FAILED: "Échec d'authentification.",
+    INVALID_TOKEN: "Jeton d'authentification invalide.",
+    MISSING_TOKEN: "Jeton d'authentification manquant.",
+
+    // Authorization errors
+    FORBIDDEN: 'Accès refusé.',
+    UNAUTHORIZED: "Vous n'êtes pas autorisé·e à effectuer cette action.",
+
+    // Validation errors
+    INVALID_FIELD_FORMAT: 'Format de champ invalide.',
+    MISSING_REQUIRED_FIELD: 'Un champ obligatoire est manquant.',
+    VALIDATION_ERROR: 'Erreur de validation.',
+
+    // User errors
+    EMAIL_TAKEN: 'Cette adresse email est déjà utilisée.',
+    PHONE_NUMBER_TAKEN: 'Ce numéro de téléphone est déjà utilisé.',
+    USER_ALREADY_EXISTS: 'Cet utilisateur existe déjà.',
+    USER_NOT_FOUND: 'Utilisateur introuvable.',
+    USERNAME_TAKEN: "Ce nom d'utilisateur est déjà utilisé.",
+
+    // Club errors
+    CLUB_DELETE_ERROR: 'Erreur lors de la suppression du club.',
+    CLUB_IMPORT_ERROR: "Erreur lors de l'import des données du club.",
+    CLUB_NOT_FOUND: 'Club introuvable.',
+    CLUB_SPONSOR_ERROR: 'Erreur concernant le partenaire du club.',
+    CLUB_UPDATE_ERROR: 'Erreur lors de la mise à jour du club.',
+    USER_NOT_IN_CLUB: "L'utilisateur n'est pas membre du club.",
+
+    // Membership request errors
+    MEMBERSHIP_REQUEST_ALREADY_PROCESSED: "La demande d'adhésion a déjà été traitée.",
+    MEMBERSHIP_REQUEST_NOT_PENDING: "La demande d'adhésion n'est pas en attente.",
+    MEMBERSHIP_REQUEST_REFUSED: "La demande d'adhésion a été refusée.",
+
+    // Activity errors
+    ACTIVITY_DELETE_ERROR: "Erreur lors de la suppression de l'activité.",
+
+    // Trainer errors
+    NOT_A_TRAINER: "L'utilisateur n'est pas un·e entraîneur·e.",
+    TRAINER_ALREADY_IN_CLUB: "L'entraîneur·e est déjà membre d'un club.",
+    TRAINER_HAS_TEAMS: "L'entraîneur·e est associé·e à des équipes.",
+    TRAINER_IS_UNIQUE_TEAM_TRAINER: "L'entraîneur·e est le/la seul·e entraîneur·e de l'équipe.",
+    TRAINER_NOT_FOUND: 'Entraîneur·e introuvable.',
+    TRAINER_NOT_IN_CLUB: "L'entraîneur·e n'est pas membre du club.",
+
+    // Event errors
+    EVENT_CANCEL_ERROR: "Erreur lors de l'annulation de l'événement.",
+    EVENT_CREATE_ERROR: "Erreur lors de la création de l'événement.",
+    EVENT_FIND_ERROR: "Erreur lors de la recherche de l'événement.",
+    EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
+
+    // Role errors
+    ROLE_NOT_FOUND: 'Rôle introuvable.',
+
+    // Server errors
+    DATABASE_ERROR: 'Erreur de base de données.',
+    INTERNAL_SERVER_ERROR: 'Erreur interne du serveur.',
+
+    // File upload errors
+    FILE_TOO_LARGE: 'Fichier trop volumineux.',
+    FILE_UPLOAD_ERROR: 'Erreur lors du téléchargement du fichier.',
+    INVALID_FILE_TYPE: 'Type de fichier invalide.',
+
+    // Policy errors
+    CLUB_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s du club.',
+    CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
+    CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
+    CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
+    EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+    HAD_PENDING_MEMBERSHIP_REQUEST_POLICY_ERROR: "Vous avez déjà une demande d'adhésion en attente.",
+    MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et dirigeant·e·s du club.',
+    MANAGER_WITH_CLUB_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s avec club.',
     phoneNumberAlreadyUsed: 'Ce numéro est déjà utilisé par {{firstname}} {{lastname}}.',
     phoneNumberAlreadyUsedWithClub: 'Ce numéro est déjà utilisé par un·e entraîneur·e qui appartient à un club.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
@@ -76,6 +149,7 @@ export default {
   clubDetails: {
     actions: {
       delete: 'Supprimer',
+      join: "C'est mon club !",
     },
     alerts: {
       deleteSponsor: {
@@ -102,6 +176,13 @@ export default {
         + '\nIOS : {{appStoreUrl}}'
         + '\nAndroid : {{googlePlayUrl}}',
         title: 'Bienvenue sur Found Club !',
+      },
+      joinClub: {
+        actions: {
+          ok: 'OK',
+        },
+        description: 'Votre dirigeant·e va recevoir votre demande et la traiter dès que possible.',
+        title: "Votre demande d'adhésion a bien été envoyée",
       },
     },
     titles: {

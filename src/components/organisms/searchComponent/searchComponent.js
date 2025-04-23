@@ -12,10 +12,16 @@ import Input from '@/components/molecules/input/Input';
  * @param {number} [props.filterNumber] - The number of filters applied
  * @param {() => void} props.openFilters - Function to open the filters
  * @param {(text: string) => void} props.handleSearchField - Function to handle search field changes
+ * @param {string} [props.searchDefaultValue] - Default value for the search field
  * @returns {import('react').ReactElement} Search component
  */
-function SearchComponent({ filterNumber = undefined, handleSearchField, openFilters }) {
-  const [search, setSearch] = useState('');
+function SearchComponent({
+  filterNumber = undefined,
+  handleSearchField,
+  openFilters,
+  searchDefaultValue = '',
+}) {
+  const [search, setSearch] = useState(searchDefaultValue);
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();

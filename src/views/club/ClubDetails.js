@@ -21,6 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetAddressFromCoordinates, useGetClub } from '@/services/club/clubQueries';
 import { updateClub } from '@/services/club/clubService';
+import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 
 /**
  * Club details screen component
@@ -34,7 +35,9 @@ function ClubDetails({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
-  const { canEditClub, inviteTrainer, USER_ROLES } = useAuth();
+  const {
+    canEditClub, canJoinClub, inviteTrainer, USER_ROLES, userData,
+  } = useAuth();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
 
@@ -61,6 +64,22 @@ function ClubDetails({ navigation, route }) {
     mutationFn: updateClub,
     onSuccess: () => {
       refetch();
+    },
+  });
+
+  const createClubMembershipRequestMutation = useMutation({
+    mutationFn: createClubMembershipRequest,
+    onSuccess: () => {
+      Alert.alert(
+        t('clubDetails.alerts.joinClub.title'),
+        t('clubDetails.alerts.joinClub.description'),
+        [
+          {
+            onPress: () => refetch(),
+            text: t('clubDetails.alerts.joinClub.actions.ok'),
+          },
+        ],
+      );
     },
   });
 
@@ -132,6 +151,15 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
+  const handleAskToJoinClub = () => {
+    if (canJoinClub && clubId && userData?.documentId) {
+      createClubMembershipRequestMutation.mutate({
+        club: clubId,
+        user: userData?.documentId,
+      });
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -158,6 +186,7 @@ function ClubDetails({ navigation, route }) {
             refreshing={isLoading}
           />
                     )}
+        showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper
           error={error?.message}
@@ -171,10 +200,10 @@ function ClubDetails({ navigation, route }) {
             Spaces.gap[16],
             Spaces.paddingHorizontal[24],
             Spaces.paddingBottom[40],
-            Spaces.marginTop[32],
+            Spaces.marginTop[24],
           ]}
           >
-            <View style={{ marginTop: -40 }}>
+            <View style={{ marginTop: -32 }}>
               <TeamShield
                 initials={club?.name ? getClubInitials(club?.name) : ''}
               />
@@ -391,6 +420,14 @@ function ClubDetails({ navigation, route }) {
 
         </WithDataWrapper>
       </ScrollView>
+      {canJoinClub ? (
+        <Button
+          onPress={handleAskToJoinClub}
+          style={Spaces.marginTop[12]}
+          title={t('clubDetails.actions.join')}
+          variant="Primary"
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

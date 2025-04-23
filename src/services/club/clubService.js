@@ -2,6 +2,7 @@ import Joi from 'joi';
 import { Platform } from 'react-native';
 
 import client from '../client';
+import { getPlacesFromCoordinates } from '../places/placesService';
 
 /**
  * Club validation schema
@@ -34,13 +35,13 @@ const clubSchema = Joi.object({
 const clubListSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
-  email: Joi.string().optional(),
-  geohash: Joi.string().optional(),
+  email: Joi.string().allow('', null).optional(),
+  geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
   isCustomer: Joi.boolean().required().default(false),
   maxTeamNumber: Joi.number().required().default(0),
   name: Joi.string().required(),
-  phoneNumber: Joi.string().optional(),
+  phoneNumber: Joi.string().allow('', null).optional(),
 }).required();
 
 /**
@@ -67,6 +68,7 @@ export const getAddressFromCoordinates = async (lat, lng) => {
         lon: lng,
         zoom: 18,
       },
+      timeout: 10000,
     });
 
     const { address } = response.data;
@@ -166,15 +168,15 @@ export const getClubs = async (params = {}) => {
       const clubsWithCity = await Promise.all(validationResult.data.map(
         async (/** @type {Club} */ club) => {
           if (club.address?.lat && club.address?.lng) {
-            const address = await getAddressFromCoordinates(
-              club.address.lat,
-              club.address.lng,
+            const address = await getPlacesFromCoordinates(
+              {
+                lat: club.address.lat,
+                lon: club.address.lng,
+              },
             );
-            // Extract city from the address (assuming it's after the comma and space)
-            const city = address.split(', ')[1];
             return {
               ...club,
-              city,
+              city: `${address?.properties?.postcode} ${address?.properties?.city}`,
             };
           }
           return club;

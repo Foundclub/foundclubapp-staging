@@ -1,6 +1,6 @@
 /**
  * @typedef {object} Place
- * @property {{label: string}} properties - The properties of the places.
+ * @property {{label: string, postcode: string, city: string}} properties
  * @property {{coordinates: [string]}} geometry - The geometry of the places.
  */
 

@@ -19,11 +19,12 @@ export const getErrorMessage = (errorCode, genericI18nKey = 'generic') => {
 
 /**
  * Display an error alert with the given error code.
- * @param {string} errorCode - The error code to display.
+ * @param {{message: string, details?: {message: string, code: string}}} error
  * @param {string} [genericI18nKey] - The generic i18n key to use if the error code is not found.
  * @returns {void}
  */
-export const displayErrorAlert = (errorCode, genericI18nKey = 'generic') => {
-  const message = getErrorMessage(errorCode, genericI18nKey);
+export const displayErrorAlert = (error, genericI18nKey = 'generic') => {
+  const code = error?.details?.code || error?.message;
+  const message = getErrorMessage(code, genericI18nKey);
   return Alert.alert(i18next.t('APIerrors.title'), message);
 };
