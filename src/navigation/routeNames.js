@@ -4,6 +4,7 @@ export const RouteNames = /** @type {const} */ ({
   Club: 'Club',
   ClubFilters: 'ClubFilters',
   ClubList: 'ClubList',
+  ClubMembershipRequests: 'ClubMembershipRequests',
   CreateClub: 'CreateClub',
   Home: 'Home',
   Login: 'Login',

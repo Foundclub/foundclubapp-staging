@@ -1,5 +1,7 @@
 /**
  * @typedef {object} ClubMembershipRequest
- * @property {string} user
+ * @property {User} user
  * @property {string} club
+ * @property {string} documentId
+ * @property {'processed' | 'refused' | 'pending'} state
  */

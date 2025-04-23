@@ -42,6 +42,7 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: async (data) => {
+      queryClient.clear();
       appDispatch({
         payload: data,
         type: 'SET_AUTHENTICATION',

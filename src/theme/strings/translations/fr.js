@@ -150,6 +150,7 @@ export default {
     actions: {
       delete: 'Supprimer',
       join: "C'est mon club !",
+      manageJoinRequests: 'Voir les demandes d\'affiliation',
     },
     alerts: {
       deleteSponsor: {
@@ -220,6 +221,19 @@ export default {
     },
     noData: 'Aucun club ne correspond à la recherche.',
     title: 'Trouver mon club ',
+  },
+  clubMembershipRequestList: {
+    actions: {
+      accept: 'Accepter',
+      reject: 'Refuser',
+    },
+    fields: {
+      accepted: 'Demande acceptée',
+      pending: "{{firstname}} s'est signalé comme entraineur·e de cette équipe ",
+      rejected: 'Demande refusée',
+    },
+    noData: 'Aucune demande d\'affiliation en attente',
+    title: 'Demandes d\'affiliation',
   },
   common: {
     actions: {

@@ -12,6 +12,7 @@ import AddSponsor from '@/views/club/AddSponsor';
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
+import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
 import CreateClubRequest from '@/views/club/CreateClubRequest';
 import Home from '@/views/Home';
 import UserAvatar from '@/views/onboarding/UserAvatar';
@@ -161,6 +162,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={ClubMembershipRequestList}
+        name={RouteNames.ClubMembershipRequests}
+        options={{
+          ...commonOptions,
+          headerTitle: t('clubMembershipRequestList.title'),
         }}
       />
       <Stack.Screen
