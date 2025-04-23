@@ -46,7 +46,7 @@ function ClubList({ navigation }) {
     isLoading,
     refetch,
   } = useGetClubs(Object.assign(clubFilters || {}, {
-    pageSize: 7,
+    pageSize: 10,
   }));
 
   // handlers
@@ -101,8 +101,8 @@ function ClubList({ navigation }) {
         Alignments.row,
         Alignments.alignCenter,
         Spaces.gap[16],
-        Spaces.paddingVertical[8],
-        Spaces.paddingHorizontal[16],
+        Spaces.paddingVertical[12],
+        Spaces.paddingRight[24],
       ]}
     >
       <TeamShield
@@ -152,21 +152,27 @@ function ClubList({ navigation }) {
         Alignments.fill,
       ]}
     >
-      <View style={[Spaces.gap[40]]}>
+      <View style={[Spaces.gap[40], Alignments.fill]}>
         <SearchComponent
           filterNumber={getClubFiltersNumber(clubFilters)}
           handleSearchField={handleSearchField}
           openFilters={handleOpenFilters}
+          searchDefaultValue={clubFilters?.name}
         />
         <WithDataWrapper
           error={error?.message}
           isLoading={isLoading && !isFetchingNextPage}
+          wrapperStyle={[Alignments.fill]}
         >
-          <View style={[Alignments.fill, { minHeight: 300 }]}>
+          <View style={[
+            Alignments.fill,
+            ApplicationStyle.borderRadius2,
+            { minHeight: 500 }]}
+          >
             <FlashList
               contentContainerStyle={{ paddingBottom: 20 }}
               data={clubs}
-              estimatedItemSize={100}
+              estimatedItemSize={120}
               keyExtractor={(item) => item?.documentId || 'unknown'}
               ListEmptyComponent={renderEmptyList}
               onEndReached={handleEndReached}

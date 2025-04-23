@@ -41,7 +41,7 @@ const resetAuth = async (axiosError) => {
     storage.delete('auth');
   }
 
-  return Promise.reject(axiosError);
+  return Promise.reject(axiosError?.response?.data?.error);
 };
 
 /**

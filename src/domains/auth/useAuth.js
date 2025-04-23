@@ -42,6 +42,7 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: async (data) => {
+      queryClient.clear();
       appDispatch({
         payload: data,
         type: 'SET_AUTHENTICATION',
@@ -117,8 +118,16 @@ const useAuth = () => {
   const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
  === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
+  const canJoinClub = useMemo(() => {
+    if (userData?.role.name === USER_ROLES.coach) {
+      return !userData?.club;
+    }
+    return false;
+  }, [userData]);
+
   return {
     canEditClub,
+    canJoinClub,
     canShowCodeButton: !!confirm,
     confirm,
     formatBirthdateToDisplay,
