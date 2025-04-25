@@ -9,11 +9,6 @@ export const USER_ROLES = /** @type {const} */({
   president: 'Dirigeant',
 });
 
-export const USER_SECTIONS = /** @type {const} */({
-  female: 'female',
-  male: 'male',
-});
-
 export const getAuthTokens = () => {
   const storageAuthRaw = storage.getString('auth');
   let auth = null;

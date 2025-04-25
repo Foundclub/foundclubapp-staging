@@ -160,12 +160,6 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
-  const handleManageMembershipRequests = () => {
-    if (clubId) {
-      navigation.navigate(RouteNames.ClubMembershipRequests, { clubId });
-    }
-  };
-
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -431,14 +425,6 @@ function ClubDetails({ navigation, route }) {
           onPress={handleAskToJoinClub}
           style={Spaces.marginTop[12]}
           title={t('clubDetails.actions.join')}
-          variant="Primary"
-        />
-      ) : null}
-      {canEdit ? (
-        <Button
-          onPress={handleManageMembershipRequests}
-          style={Spaces.marginTop[12]}
-          title={t('clubDetails.actions.manageJoinRequests')}
           variant="Primary"
         />
       ) : null}

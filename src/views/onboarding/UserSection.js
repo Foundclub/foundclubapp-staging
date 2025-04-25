@@ -14,6 +14,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetSections } from '@/services/section/sectionQueries';
 
 /**
  * Team section selection screen component. Allows users to select their team section (male/female).
@@ -23,7 +24,8 @@ import { updateMe } from '@/services/auth/authService';
 function UserSection({ navigation }) {
   // hooks
   const { data: userData } = useGetMe();
-  const { getNextOnboardingRoute, USER_SECTIONS } = useAuth();
+  const { getNextOnboardingRoute } = useAuth();
+  const { data: sections } = useGetSections();
 
   // local state
   const [section, setSection] = useState(userData?.section || '');
@@ -74,17 +76,14 @@ function UserSection({ navigation }) {
           </Text>
         </View>
         <View style={[Spaces.gap[24]]}>
-          <TabButton
-            isActive={section === USER_SECTIONS.female}
-            onPress={() => handleSelection(USER_SECTIONS.female)}
-            title={t('profile.fields.sections.female')}
-          />
-          <TabButton
-            isActive={section === USER_SECTIONS.male}
-            onPress={() => handleSelection(USER_SECTIONS.male)}
-            title={t('profile.fields.sections.male')}
-          />
-
+          {sections?.map((sectionItem) => (
+            <TabButton
+              isActive={section === sectionItem.documentId}
+              key={sectionItem.documentId}
+              onPress={() => handleSelection(sectionItem.documentId)}
+              title={t(`profile.fields.sections.${sectionItem.name.toLowerCase()}`)}
+            />
+          ))}
         </View>
       </View>
       <Button

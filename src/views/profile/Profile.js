@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -12,6 +12,7 @@ import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -30,8 +31,21 @@ function Profile({ navigation }) {
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   const {
-    logoutMutation, refetchUserData, userData, userDataError, userDataLoading,
+    canEditClub,
+    canManageTeam,
+    logoutMutation,
+    refetchUserData,
+    userData,
+    userDataError,
+    userDataLoading,
   } = useAuth();
+
+  const canManageClub = useMemo(() => {
+    if (!userData?.club?.documentId) {
+      return false;
+    }
+    return canEditClub(userData?.club?.documentId);
+  }, [userData, canEditClub]);
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
@@ -47,6 +61,12 @@ function Profile({ navigation }) {
 
   const handleOpenClub = () => {
     navigation.navigate(RouteNames.Club, {
+      clubId: userData?.club?.documentId,
+    });
+  };
+
+  const handleOpenTeams = () => {
+    navigation.navigate(RouteNames.TeamList, {
       clubId: userData?.club?.documentId,
     });
   };
@@ -72,6 +92,12 @@ function Profile({ navigation }) {
     );
   };
 
+  const handleManageMembershipRequests = () => {
+    if (userData?.club?.documentId) {
+      navigation.navigate(RouteNames.ClubMembershipRequests, { clubId: userData.club.documentId });
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetchUserData();
@@ -81,7 +107,12 @@ function Profile({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.gap[32]]}
+      contentContainerStyle={[
+        Spaces.gap[32],
+        Spaces.paddingTop[24],
+        Spaces.paddingBottom[12],
+        Alignments.justifySpaceBetween,
+      ]}
     >
       <View style={[
         Alignments.justifyCenter,
@@ -163,7 +194,7 @@ function Profile({ navigation }) {
                       initials={
                         userData?.club?.name
                           ? getClubInitials(userData.club?.name) : ''
-}
+                      }
                       isSmall
                     />
                     <View style={[
@@ -189,28 +220,52 @@ function Profile({ navigation }) {
           </View>
         </WithDataWrapper>
         <View style={[
-          Spaces.gap[24],
-          Spaces.marginTop[24]]}
+          Spaces.gap[16]]}
         >
-          <Button
+          <TabButton
+            isActive={false}
             onPress={handleEditUser}
             title={t('profile.actions.edit')}
-            variant="Primary"
           />
-          <Button
-            onPress={handleLogout}
-            title={t('profile.actions.logout')}
-            variant="Secondary"
-          />
-          <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
-            <TouchableOpacity onPress={handleDeleteAccount}>
-              <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-                {t('profile.actions.deleteAccount')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {canManageClub ? (
+            <TabButton
+              isActive={false}
+              onPress={handleOpenClub}
+              title={t('profile.actions.manageClub')}
+            />
+          ) : null}
+          {canManageClub ? (
+            <TabButton
+              isActive={false}
+              onPress={handleManageMembershipRequests}
+              title={t('profile.actions.manageJoinRequests')}
+            />
+          ) : null}
+          {canManageTeam ? (
+            <TabButton
+              isActive={false}
+              onPress={handleOpenTeams}
+              title={t('profile.actions.manageTeams')}
+            />
+          ) : null}
         </View>
       </ScrollView>
+      <View style={[
+        Spaces.gap[12]]}
+      >
+        <Button
+          onPress={handleLogout}
+          title={t('profile.actions.logout')}
+          variant="Secondary"
+        />
+        <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
+          <TouchableOpacity onPress={handleDeleteAccount}>
+            <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+              {t('profile.actions.deleteAccount')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </ScreenContainer>
   );
 }
