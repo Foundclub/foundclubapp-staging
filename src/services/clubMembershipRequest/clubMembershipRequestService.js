@@ -1,5 +1,13 @@
+import Joi from 'joi';
+
 import client from '../client';
 
+const clubMembershipRequestSchema = Joi.object({
+  club: Joi.string().required(),
+  documentId: Joi.string().required(),
+  state: Joi.string().valid('processed', 'refused', 'pending').required(),
+  user: Joi.object().required(),
+}).required();
 /**
  * Create a new club membership request
  * @param {{user: string, club: string}} clubMembershipRequestData
@@ -42,7 +50,27 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
   };
 
   const response = await client.get('/club-membership-requests', { params: filters });
-  return response.data;
+  try {
+    const schema = Joi.object({
+      data: Joi.array().items(clubMembershipRequestSchema).empty(Joi.array().length(0)),
+      meta: Joi.object({
+        pagination: Joi.object({
+          page: Joi.number().required(),
+          pageCount: Joi.number().required(),
+          pageSize: Joi.number().required(),
+          total: Joi.number().required(),
+        }).required(),
+      }).required(),
+    }).required();
+
+    const validationResult = await schema.validateAsync(response.data, {
+      allowUnknown: true,
+    });
+    return validationResult.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to fetch club membership requests: ${errorToDisplay}`);
+  }
 };
 
 /**

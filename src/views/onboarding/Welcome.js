@@ -26,7 +26,7 @@ function Welcome({ navigation }) {
   const handleNext = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: RouteNames.Home }],
+      routes: [{ name: RouteNames.HomeTab }],
     });
   };
 

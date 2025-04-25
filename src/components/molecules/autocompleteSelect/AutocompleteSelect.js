@@ -17,8 +17,9 @@ import Input from '../input/Input';
 /**
  * @typedef {object} SelectProps
  * @property {Array<Option>} options - The options of the select.
- * @property {string} value - The select options
+ * @property {string | string[]} value - The select options
  * @property {Function} setValue - The function to set the selected value.
+ * @property {boolean} [isMulti] - Whether multiple options can be selected.
  * @property {boolean} [isSearchable] - The flag to know if the select is searchable or not.
  * @property {boolean} [disabled] - The flag to know if the select is searchable or not.
  * @property {(value: string) => void} [setSearchValue] - The function to set the search value
@@ -62,8 +63,9 @@ const AutocompleteSelect = forwardRef(
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
-    const [selectedOption, setSelectedOption] = useState(
-      /** @type {Option | undefined} */(undefined),
+    const [selectedOptions, setSelectedOptions] = useState(
+      /** @type {Option[] | Option | undefined} */
+      (props.isMulti ? [] : undefined),
     );
 
     // refs
@@ -86,7 +88,17 @@ const AutocompleteSelect = forwardRef(
      * @returns {void}
      */
     const handleSelectOption = (option) => {
-      setSelectedOption((current) => (current === option ? undefined : option));
+      if (props.isMulti) {
+        setSelectedOptions((current) => {
+          const currentArray = Array.isArray(current) ? current : [];
+          const exists = currentArray.some((opt) => opt.value === option.value);
+          return exists
+            ? currentArray.filter((opt) => opt.value !== option.value)
+            : [...currentArray, option];
+        });
+      } else {
+        setSelectedOptions((current) => (current === option ? undefined : option));
+      }
     };
 
     const handleCloseModal = () => {
@@ -98,7 +110,7 @@ const AutocompleteSelect = forwardRef(
 
     const handleValidation = () => {
       handleCloseModal();
-      props.setValue(selectedOption);
+      props.setValue(selectedOptions);
     };
 
     /**
@@ -106,8 +118,31 @@ const AutocompleteSelect = forwardRef(
      * @param {Option} option - The option to check.
      * @returns {boolean} The flag to know if the option is checked.
      */
-    const handleIsChecked = (option) => !!selectedOption
-    && selectedOption?.value === option.value;
+    const handleIsChecked = (option) => {
+      if (props.isMulti) {
+        return Array.isArray(selectedOptions) && selectedOptions.some(
+          (opt) => opt.value === option.value,
+        );
+      }
+      const singleOption = selectedOptions;
+      return Boolean(
+        singleOption && !Array.isArray(singleOption) && singleOption.value === option.value,
+      );
+    };
+
+    const getDisplayValue = () => {
+      if (!props.value) return '';
+
+      if (props.isMulti && Array.isArray(props.value)) {
+        const selectedLabels = props.options
+          .filter((opt) => props.value.includes(opt.value))
+          .map((opt) => opt.label);
+        return selectedLabels.join(', ');
+      }
+
+      // const option = props.options.find((opt) => opt.value === props.value);
+      return props.value || undefined;
+    };
 
     return (
       <View style={[Alignments.relative]}>
@@ -122,17 +157,19 @@ const AutocompleteSelect = forwardRef(
               { zIndex: 1 },
             ]}
           >
-            {props.value
-              ? (
-                <Text style={[Fonts.p1, Fonts.neutral00]}>
-                  { props.value}
-                </Text>
-              )
-              : (
-                <Text style={[Fonts.p1, Fonts.neutral500]}>
-                  {props.placeholder}
-                </Text>
-              )}
+            {props.value ? (
+              <Text
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                style={[Fonts.p1, Fonts.neutral00]}
+              >
+                {getDisplayValue()}
+              </Text>
+            ) : (
+              <Text style={[Fonts.p1, Fonts.neutral500]}>
+                {props.placeholder}
+              </Text>
+            )}
           </TouchableOpacity>
           <Input
             editable={false}
@@ -192,6 +229,7 @@ const AutocompleteSelect = forwardRef(
                       () => (handleSelectOption(option))
                     }
                       text={option.label}
+                      type={props.isMulti ? 'square' : 'circle'}
                     />
                   </View>
                 ))}

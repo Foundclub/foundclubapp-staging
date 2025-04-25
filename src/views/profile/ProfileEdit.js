@@ -20,6 +20,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -52,8 +53,9 @@ function ProfileEdit({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const { data: sections } = useGetSections();
   const {
-    formatBirthdateToDisplay, formatBirthdateToSend, profileFields, USER_SECTIONS,
+    formatBirthdateToDisplay, formatBirthdateToSend, profileFields,
   } = useAuth();
 
   // local state
@@ -62,10 +64,10 @@ function ProfileEdit({ navigation }) {
     (userData?.avatar?.url ? { url: userData.avatar.url } : undefined),
   );
 
-  const sectionOptions = [
-    { label: t('profile.fields.sections.female'), value: USER_SECTIONS.female },
-    { label: t('profile.fields.sections.male'), value: USER_SECTIONS.male },
-  ];
+  const sectionOptions = sections?.map((section) => ({
+    label: section.name,
+    value: section.documentId,
+  })) || [];
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -152,7 +154,8 @@ function ProfileEdit({ navigation }) {
                 />
               )}
             />
-            {profileFields.includes('firstname') ? (
+
+            {profileFields?.includes('firstname') ? (
               <Controller
                 control={control}
                 name="firstname"

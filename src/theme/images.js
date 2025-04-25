@@ -23,6 +23,8 @@ export const images = {
   search: require('../assets/icons/search.png'),
   share: require('../assets/icons/share.png'),
   shield: require('../assets/icons/shield.png'),
+  stadium: require('../assets/icons/stadium.png'),
+  strokeShield: require('../assets/icons/stroke-shield.png'),
   trash: require('../assets/icons/trash.png'),
 };
 

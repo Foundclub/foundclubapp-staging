@@ -14,7 +14,6 @@ import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
 import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
 import CreateClubRequest from '@/views/club/CreateClubRequest';
-import Home from '@/views/Home';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserName from '@/views/onboarding/UserName';
@@ -23,9 +22,14 @@ import UserSection from '@/views/onboarding/UserSection';
 import Welcome from '@/views/onboarding/Welcome';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
+import TeamDetails from '@/views/team/TeamDetails';
+import TeamEdit from '@/views/team/TeamEdit';
+import TeamList from '@/views/team/TeamList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+
+import PrivateTabNavigator from './PrivateTabNavigator';
 
 const Stack = createStackNavigator();
 
@@ -57,7 +61,6 @@ function PrivateNavigator() {
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
 
   // renderers
-
   /**
    * Render the stepper component.
    * @param {string} routeName
@@ -89,7 +92,7 @@ function PrivateNavigator() {
       }
       return acc;
     }, { index: 100, route: '' })?.route;
-    return route || RouteNames.Home;
+    return route || RouteNames.HomeTab;
   }, [onboardingViews]);
 
   const canShowHome = useMemo(() => !!(onboardingViews?.views
@@ -111,8 +114,8 @@ function PrivateNavigator() {
     >
       {canShowHome ? (
         <Stack.Screen
-          component={Home}
-          name={RouteNames.Home}
+          component={PrivateTabNavigator}
+          name={RouteNames.HomeTab}
           options={{ headerShown: false }}
         />
       ) : null}
@@ -170,6 +173,30 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('clubMembershipRequestList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamList}
+        name={RouteNames.TeamList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamDetails}
+        name={RouteNames.TeamDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={TeamEdit}
+        name={RouteNames.TeamEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamEdit.title'),
         }}
       />
       <Stack.Screen

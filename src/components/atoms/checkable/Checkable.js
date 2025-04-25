@@ -31,7 +31,12 @@ function Checkable({
   const bouncyCheckboxRef = useRef(null);
 
   const iconComponent = type === 'square'
-    ? <Image source={Images.check} style={[{ height: 16, width: 16 }]} /> : (
+    ? (
+      <Image
+        source={Images.check}
+        style={[{ height: 16, width: 16 }, ApplicationStyle.tintColor.primary500]}
+      />
+    ) : (
       <View
         style={[
           { height: 14, width: 14 },
@@ -89,7 +94,7 @@ function Checkable({
         <BouncyCheckbox
           disableText
           fillColor={Colors.neutral00}
-          iconComponent={iconComponent}
+          iconComponent={(isChecked || type === 'circle') ? iconComponent : null}
           innerIconStyle={{
             borderColor: isChecked ? Colors.primary500 : Colors.neutral00,
             borderRadius: type === 'square' ? 4 : 12,

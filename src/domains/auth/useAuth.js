@@ -13,7 +13,6 @@ import {
   formatBirthdateToDisplay,
   formatBirthdateToSend,
   getAuthTokens, getOnboardingViews, profileFieldToDisplay, USER_ROLES,
-  USER_SECTIONS,
 } from './authUseCases';
 
 /**
@@ -125,9 +124,16 @@ const useAuth = () => {
     return false;
   }, [userData]);
 
+  const canManageTeam = useMemo(
+    () => userData?.role.name === USER_ROLES.coach
+    || userData?.role.name === USER_ROLES.president,
+    [userData],
+  );
+
   return {
     canEditClub,
     canJoinClub,
+    canManageTeam,
     canShowCodeButton: !!confirm,
     confirm,
     formatBirthdateToDisplay,
@@ -144,7 +150,6 @@ const useAuth = () => {
     refetchUserData,
     setConfirm,
     USER_ROLES,
-    USER_SECTIONS,
     userData,
     userDataError,
     userDataLoading,

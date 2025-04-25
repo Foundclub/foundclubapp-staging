@@ -294,6 +294,11 @@ export default {
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Connecte-toi',
   },
+  menu: {
+    chat: 'Messagerie',
+    myAccount: 'Mon compte',
+    search: 'Rechercher',
+  },
   modals: {
     actions: {
       search: 'Rechercher...',
@@ -323,6 +328,9 @@ export default {
       findClub: 'Trouver mon club',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
+      manageClub: 'Gérer mon club',
+      manageJoinRequests: 'Gérer les demandes d\'affiliation',
+      manageTeams: 'Gérer mes équipes',
       save: 'Continuer',
     },
     alerts: {
@@ -396,6 +404,77 @@ export default {
     },
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Crée ton compte',
+  },
+  teamDetails: {
+    actions: {
+      edit: 'Modifier l\'équipe',
+    },
+    sections: {
+      players_one: 'Joueur·se',
+      players_other: 'Joueur·se·s',
+      trainers_one: 'Entraîneur·e',
+      trainers_other: 'Entraîneur·e·s',
+    },
+    title: 'Mon équipe',
+  },
+  teamEdit: {
+    actions: {
+      save: 'Enregistrer',
+    },
+    fields: {
+      activities: {
+        label: 'Activités',
+        placeholder: 'Basketball',
+      },
+      category: {
+        label: 'Catégorie',
+        placeholder: 'U16',
+      },
+      description: {
+        label: 'Description',
+        placeholder: 'Équipe senior évoluant en championnat régional depuis 2015.',
+      },
+      level: {
+        label: 'Niveau',
+        placeholder: 'Régional',
+      },
+      name: {
+        label: 'Nom de l\'équipe',
+        placeholder: 'Les lions de Marseille',
+      },
+      section: {
+        label: 'Section',
+        placeholder: 'Féminine',
+      },
+      trainers: {
+        label: 'Entraîneur·e·s',
+        placeholder: 'Luc Harne',
+      },
+    },
+    title: 'Créer une équipe',
+    titleEdit: "Modifier l'équipe",
+  },
+  teamList: {
+    actions: {
+      add: 'Ajouter une équipe',
+    },
+    alerts: {
+      maxTeamLimitReached: {
+        actions: {
+          cancel: 'Abandon',
+          contact: 'Contacter Found Club',
+        },
+        description: 'Vous avez atteint le nombre maximum d\'équipes autorisées dans votre club. Veuillez contacter Found Club pour débloquer cette limite.',
+        title: 'Limite d\'équipes atteinte',
+      },
+    },
+    fields: {
+      category: 'Catégorie',
+      level: 'Niveau',
+      section: 'Section',
+    },
+    noData: 'Votre club n\'a pas encore d\'équipes.',
+    title: 'Équipes de mon club',
   },
   welcome: {
     actions: {

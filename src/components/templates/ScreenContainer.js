@@ -1,6 +1,5 @@
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ImageBackground, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,20 +26,19 @@ function ScreenContainer({
   } = useTheme();
   const insets = useSafeAreaInsets();
   const headerHeightNative = useHeaderHeight();
-  const tabBarHeight = useContext(BottomTabBarHeightContext);
 
   // constants
   const containerSpaces = useMemo(() => ({
-    marginBottom: tabBarHeight ? tabBarHeight - 12 : 0,
     paddingTop: headerHeightNative || insets.top,
-  }), [tabBarHeight, headerHeightNative, insets.top]);
+  }), [headerHeightNative, insets.top]);
 
   return (
     <ImageBackground
+      resizeMode="cover"
       source={Images[bgImage]}
       style={[
         Alignments.fill,
-        Spaces.padding[24],
+        Spaces.paddingHorizontal[24],
         containerSpaces,
         ...style,
       ]}
