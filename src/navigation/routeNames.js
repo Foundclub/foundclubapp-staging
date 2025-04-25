@@ -16,6 +16,7 @@ export const RouteNames = /** @type {const} */ ({
   Team: 'Team',
   TeamDetails: 'TeamDetails',
   TeamEdit: 'TeamEdit',
+  TeamFilters: 'TeamFilters',
   TeamList: 'TeamList',
   UserAvatar: 'UserAvatar',
   UserBirthdate: 'UserBirthdate',

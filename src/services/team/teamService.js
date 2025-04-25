@@ -20,25 +20,55 @@ const teamSchema = Joi.object({
 
 /**
  * Get teams
- * @param {string} clubId
  * @param {{
  *   page?: number;
  *   pageSize?: number;
+ *   clubId?: string;
+ *   name?: string;
+ *   level?: string[];
+ *   section?: string;
+ *   category?: string[];
+ *   activities?: string;
  * }} [params]
  * @returns {Promise<{data: Team[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
-export const getTeams = async (clubId, params = {}) => {
+export const getTeams = async (params = {}) => {
   const {
+    activities,
+    category,
+    clubId,
+    level,
+    name,
     page,
     pageSize,
+    section,
   } = params;
 
   const filters = {
     filters: {
-      club: {
+      activities: activities ? {
+        documentId: activities,
+      } : undefined,
+      category: category?.length ? {
+        documentId: {
+          $in: category,
+        },
+      } : undefined,
+      club: clubId ? {
         documentId: clubId,
-      },
+      } : undefined,
+      level: level?.length ? {
+        documentId: {
+          $in: level,
+        },
+      } : undefined,
+      name: name ? {
+        $containsi: name,
+      } : undefined,
+      section: section ? {
+        documentId: section,
+      } : undefined,
     },
     pagination: {
       page: page || 1,

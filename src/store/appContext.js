@@ -18,6 +18,7 @@ const initStore = {
   clubFilters: undefined,
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
   onboardingViews: undefined,
+  teamFilters: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
 };
 

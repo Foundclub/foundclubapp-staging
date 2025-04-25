@@ -7,7 +7,7 @@ import client from '../client';
  */
 export const placeSchema = Joi.object({
   geometry: Joi.object({
-    coordinates: Joi.array().items(Joi.string()).required(),
+    coordinates: Joi.array().items(Joi.any()).required(),
   }).unknown(true).optional(),
   properties: Joi.object({
     city: Joi.string().allow('', null).optional(),
@@ -34,8 +34,10 @@ export const searchPlaces = async (search) => {
     params: { limit: 10, q: search, type: 'municipality' },
   });
   try {
-    const validationResult = await placesResponseSchema.validateAsync(response.data);
-    return validationResult?.features;
+    const validationResult = await placesResponseSchema.validateAsync(
+      Joi.array().items(placeSchema).validateAsync(response.data.features),
+    );
+    return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch places: ${errorToDisplay}`);

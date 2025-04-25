@@ -4,24 +4,23 @@ import { getTeamById, getTeams } from './teamService';
 
 /**
  * React Query hook to fetch teams
- * @param {string} clubId
  * @param {{
  *   pageSize?: number;
+ *   clubId?: string;
  * }} [params]
  * @param {any} [options]
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<{
  * pages: { data: Team[];
  * meta: { pagination: { page: number; pageCount: number; total: number } } }[] }>}
  */
-export const useGetTeams = (clubId, params, options) => useInfiniteQuery({
-  enabled: !!clubId,
+export const useGetTeams = (params, options) => useInfiniteQuery({
   getNextPageParam: (lastPage) => {
     if (!lastPage) return undefined;
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
-  queryFn: ({ pageParam = 1 }) => getTeams(clubId, { ...params, page: pageParam }),
-  queryKey: ['teams', clubId, params],
+  queryFn: ({ pageParam = 1 }) => getTeams({ ...params, page: pageParam }),
+  queryKey: ['teams', params],
   ...options,
 });
 

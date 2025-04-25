@@ -36,6 +36,7 @@ import Input from '../input/Input';
  * | Array<import('react-native').ImageStyle>} [iconStyle]
  * @property {keyof import('../../../theme/types').AllImages} [customIcon] - The custom icon.
  * @property {'start' | 'end'} [customIconPosition]
+ * @property {boolean} [lightMode] - The flag to know if the select is in light mode.
  */
 
 /**
@@ -175,6 +176,7 @@ const AutocompleteSelect = forwardRef(
             editable={false}
             error={props.error}
             label={props.label}
+            lightMode={props.lightMode}
             readOnly
             ref={ref}
             wrapperStyle={props.wrapperStyle}

@@ -279,6 +279,18 @@ export default {
     subtitle: 'Une erreur est survenue.',
     title: 'Oups !',
   },
+  home: {
+    fields: {
+      type: {
+        label: 'Trouver',
+        options: {
+          club: 'un club',
+          event: 'un évènement',
+          team: 'une équipe',
+        },
+      },
+    },
+  },
   login: {
     actions: {
       login: 'Se connecter',
@@ -454,6 +466,30 @@ export default {
     title: 'Créer une équipe',
     titleEdit: "Modifier l'équipe",
   },
+  teamFilters: {
+    actions: {
+      apply: 'Appliquer les filtres',
+      clear: 'Effacer les filtres',
+    },
+    fields: {
+      activities: {
+        label: 'Activités',
+        placeholder: 'Basketball',
+      },
+      category: {
+        label: 'Catégorie',
+        placeholder: 'U16',
+      },
+      level: {
+        label: 'Niveau',
+        placeholder: 'Régional',
+      },
+      section: {
+        label: 'Section',
+        placeholder: 'Féminine',
+      },
+    },
+  },
   teamList: {
     actions: {
       add: 'Ajouter une équipe',
@@ -473,7 +509,7 @@ export default {
       level: 'Niveau',
       section: 'Section',
     },
-    noData: 'Votre club n\'a pas encore d\'équipes.',
+    noData: 'Aucune équipe trouvée.',
     title: 'Équipes de mon club',
   },
   welcome: {

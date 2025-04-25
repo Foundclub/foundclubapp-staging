@@ -24,6 +24,7 @@ import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
 import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
+import TeamFilters from '@/views/team/TeamFilters';
 import TeamList from '@/views/team/TeamList';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -181,6 +182,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('teamList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamFilters}
+        name={RouteNames.TeamFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
         }}
       />
       <Stack.Screen

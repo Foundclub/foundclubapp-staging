@@ -80,7 +80,9 @@ export const getTabScreenCommonOptions = ({
   },
   tabBarStyle: {
     backgroundColor: getThemeColors().primary700,
-    borderTopWidth: 0,
+    borderTopColor: getThemeColors().primary900,
+    borderTopWidth: 1,
     margin: 0,
+    minHeight: 70,
   },
 });

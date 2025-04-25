@@ -5,6 +5,7 @@
  * @property {string} [theme] - The current theme.
  * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
+ * @property {TeamFilters} [teamFilters] - The filters for teams.
  */
 
 /**
@@ -18,7 +19,7 @@
 /**
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
- * | 'SET_CLUB_FILTERS'} AppContextTypes
+ * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS'} AppContextTypes
  */
 
 /**
@@ -47,4 +48,13 @@
  * @property {string} activity
  * @property {{label: string, value: string}} city
  * @property {number} radius
+ */
+
+/**
+ * @typedef {object} TeamFilters
+ * @property {string} name
+ * @property {string} activities
+ * @property {string} section
+ * @property {string} category
+ * @property {string} level
  */
