@@ -19,6 +19,9 @@ export default function appReducer(state, action) {
     case 'SET_ONBOARDING_VIEWS': {
       return { ...state, onboardingViews: action.payload };
     }
+    case 'SET_TEAM_FILTERS': {
+      return { ...state, teamFilters: action.payload };
+    }
     case 'SET_THEME': {
       return { ...state, theme: action.payload };
     }

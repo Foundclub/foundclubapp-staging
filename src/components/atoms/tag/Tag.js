@@ -6,9 +6,10 @@ import useTheme from '@/theme/themeContext';
  * Tag component for displaying labels or categories
  * @param {object} props - Component props
  * @param {string} props.text - Text to display in the tag
+ * @param {'primary500' | 'neutral00'} [props.textColor] - Color of the text, defaults to primary500
  * @returns {import('react').ReactElement} Tag component
  */
-function Tag({ text }) {
+function Tag({ text, textColor = 'primary500' }) {
   const {
     ApplicationStyle, Fonts, Spaces,
   } = useTheme();
@@ -27,7 +28,7 @@ function Tag({ text }) {
         numberOfLines={1}
         style={[
           Fonts.p3,
-          Fonts.primary500,
+          Fonts[textColor],
         ]}
       >
         {text}

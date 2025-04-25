@@ -24,6 +24,7 @@ import useTheme from '@/theme/themeContext';
  * @property {Function} [onBlur]
  * @property {() => void} [onBottomIconPress]
  * @property {string} [iconColor]
+ * @property {boolean} [lightMode]
  */
 
 /**
@@ -86,23 +87,24 @@ const Input = forwardRef(
             <View style={[
               Alignments.row,
               Alignments.alignCenter,
-              Spaces.paddingHorizontal[16],
+              Spaces.paddingLeft[16],
+              Spaces.paddingRight[4],
               Spaces.gap[16],
               Platform.OS === 'ios' ? Spaces.paddingBottom[12] : Spaces.paddingBottom[0],
             ]}
             >
               {
-            props.icon
-              ? (
-                <Image
-                  source={Images[props.icon]}
-                  style={[ApplicationStyle.icon24,
-                    ApplicationStyle.tintColor[mainColor],
-                    props.iconStyle]}
-                />
-              )
-              : null
-          }
+                props.icon
+                  ? (
+                    <Image
+                      source={Images[props.icon]}
+                      style={[ApplicationStyle.icon24,
+                        ApplicationStyle.tintColor[mainColor],
+                        props.iconStyle]}
+                    />
+                  )
+                  : null
+              }
               <TextInput
                 autoFocus={props.autoFocus}
                 cursorColor={Colors.primary500}
@@ -130,6 +132,7 @@ const Input = forwardRef(
                   props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
                   Alignments.fill,
                   props.style,
+                  props.multiline ? null : { height: 40 },
                 ]}
                 textAlignVertical={props.textAlignVertical}
                 value={props.value}
@@ -147,14 +150,16 @@ const Input = forwardRef(
                   </TouchableOpacity>
                 )
                 : null
-            }
+              }
             </View>
-            <View style={[
-              Alignments.fullWidth,
-              ApplicationStyle.backgroundColor[mainColor],
-              ApplicationStyle.separator,
-            ]}
-            />
+            {props.lightMode ? null : (
+              <View style={[
+                Alignments.fullWidth,
+                ApplicationStyle.backgroundColor[mainColor],
+                ApplicationStyle.separator,
+              ]}
+              />
+            )}
           </View>
         </View>
         {

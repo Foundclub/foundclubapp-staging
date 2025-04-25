@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 // utils
 import Home from '@/views/Home';
+import Messaging from '@/views/Messaging';
 import Profile from '@/views/profile/Profile';
 
 import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
@@ -83,7 +84,7 @@ function PrivateTabNavigator() {
         })}
       />
       <Tab.Screen
-        component={Home}
+        component={Messaging}
         name={RouteNames.Chat}
         options={({
           headerShown: false,
