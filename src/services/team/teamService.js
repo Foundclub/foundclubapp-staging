@@ -208,3 +208,13 @@ export const updateTeam = async (teamData) => {
     throw new Error(`Failed to update team: ${errorToDisplay}`);
   }
 };
+
+/**
+ * Leave a team
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const leaveTeam = async (teamId) => {
+  const response = await client.post(`/teams/${teamId}/quit`);
+  return response.data;
+};

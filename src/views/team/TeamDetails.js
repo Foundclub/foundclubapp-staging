@@ -23,6 +23,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetTeam } from '@/services/team/teamQueries';
+import { leaveTeam } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 /**
@@ -38,20 +39,14 @@ function TeamDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { canJoinTeam, canManageTeam, userData: currentUser } = useAuth();
+  const {
+    canJoinTeam, canManageTeam, inviteTeamPlayers, refetchUserData, userData: currentUser,
+  } = useAuth();
   const { getClubInitials } = useClub();
 
   const {
     data: team, error, isLoading, refetch,
   } = useGetTeam(teamId);
-
-  const trainersCount = useMemo(() => team?.trainers?.length || 0, [team?.trainers]);
-  const playersCount = useMemo(() => team?.players?.length || 0, [team?.players]);
-
-  // handlers
-  const handleEditTeam = useCallback(() => {
-    navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
-  }, [navigation, team?.club?.documentId, teamId]);
 
   const createTeamMembershipRequestMutation = useMutation({
     mutationFn: createTeamMembershipRequest,
@@ -64,6 +59,29 @@ function TeamDetails({ navigation, route }) {
     },
   });
 
+  const leaveTeamMutation = useMutation({
+    mutationFn: leaveTeam,
+    onSuccess: () => {
+      refetchUserData();
+      refetch();
+    },
+  });
+
+  const trainersCount = useMemo(() => team?.trainers?.length || 0, [team?.trainers]);
+  const playersCount = useMemo(() => team?.players?.length || 0, [team?.players]);
+  const isMyTeam = useMemo(
+    () => {
+      const allMyTeams = (currentUser?.myTeams || [])?.concat(currentUser?.trainedTeams || []);
+      return !!allMyTeams?.some((/** @type {Team} */ item) => item.documentId === teamId);
+    },
+    [currentUser?.trainedTeams, currentUser?.myTeams, teamId],
+  );
+
+  // handlers
+  const handleEditTeam = useCallback(() => {
+    navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
+  }, [navigation, team?.club?.documentId, teamId]);
+
   const handleJoinTeam = useCallback(() => {
     if (teamId && currentUser?.documentId) {
       createTeamMembershipRequestMutation.mutate({
@@ -72,6 +90,28 @@ function TeamDetails({ navigation, route }) {
       });
     }
   }, [teamId, createTeamMembershipRequestMutation, currentUser?.documentId]);
+
+  const handleLeaveTeam = useCallback(() => {
+    if (teamId && currentUser?.documentId) {
+      leaveTeamMutation.mutate(teamId);
+    }
+  }, [teamId, currentUser?.documentId, leaveTeamMutation]);
+
+  const handleAskToLeave = useCallback(() => {
+    Alert.alert(
+      t('teamDetails.alerts.leave.title'),
+      t('teamDetails.alerts.leave.description'),
+      [
+        {
+          text: t('teamDetails.alerts.leave.actions.cancel'),
+        },
+        {
+          onPress: handleLeaveTeam,
+          text: t('teamDetails.alerts.leave.actions.confirm'),
+        },
+      ],
+    );
+  }, [t, handleLeaveTeam]);
 
   useFocusEffect(
     useCallback(() => {
@@ -250,7 +290,7 @@ function TeamDetails({ navigation, route }) {
               </View>
             ) : null}
             {/* Players */}
-            {playersCount ? (
+            {playersCount || canManageTeam ? (
               <View style={[Spaces.gap[16]]}>
                 <View style={[Alignments.row,
                   Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -258,6 +298,17 @@ function TeamDetails({ navigation, route }) {
                   <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                     {t('teamDetails.sections.players', { count: playersCount })}
                   </Text>
+                  {canManageTeam && (
+                    <Button
+                      icon="share"
+                      isOption
+                      onPress={() => inviteTeamPlayers({
+                        clubName: team?.club?.name,
+                        teamName: team?.name,
+                      })}
+                      variant="Primary"
+                    />
+                  )}
                 </View>
                 {
                   team?.players?.map((/** @type {User} */ player) => (
@@ -301,6 +352,16 @@ function TeamDetails({ navigation, route }) {
           variant="Primary"
         />
       )}
+      {
+        isMyTeam && (
+          <Button
+            onPress={handleAskToLeave}
+            style={Spaces.paddingHorizontal[16]}
+            title={t('teamDetails.actions.leave')}
+            variant="Secondary"
+          />
+        )
+      }
       {canJoinTeam && (
         <Button
           onPress={handleJoinTeam}

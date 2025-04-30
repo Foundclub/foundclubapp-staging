@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -93,6 +93,12 @@ function TeamListContent({ clubId = undefined, playerId = undefined, showFilters
       type: 'SET_TEAM_FILTERS',
     });
   }, [appDispatch, teamFilters]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   // renderers
   /**

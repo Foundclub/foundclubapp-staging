@@ -110,14 +110,39 @@ export default {
     TRAINER_NOT_FOUND: 'Entraîneur·e introuvable.',
     TRAINER_NOT_IN_CLUB: "L'entraîneur·e n'est pas membre du club.",
 
-    // Event errors
-    EVENT_CANCEL_ERROR: "Erreur lors de l'annulation de l'événement.",
-    EVENT_CREATE_ERROR: "Erreur lors de la création de l'événement.",
-    EVENT_FIND_ERROR: "Erreur lors de la recherche de l'événement.",
-    EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
+    // Team errors
+    CLUB_MAX_TEAM_NUMBER_REACHED: 'Le nombre maximum d\'équipes pour ce club a été atteint.',
+    TEAM_CLUB_REQUIRED: 'Un club est requis pour chaque équipe.',
+    TEAM_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres de l\'équipe.',
+    TEAM_PLAYER_REMOVE_ERROR: 'Erreur lors de la suppression du/de la joueur·se de l\'équipe.',
+    TEAM_TRAINER_CONNECT_REQUIRED: 'La connexion avec l\'entraîneur·e est requise.',
+    TEAM_TRAINER_REMOVE_ERROR: 'Erreur lors de la suppression de l\'entraîneur·e de l\'équipe.',
+    TEAM_TRAINER_REQUIRED: 'Au moins un·e entraîneur·e est requis·e pour chaque équipe.',
+    TEAM_TRAINER_SET_REQUIRED: 'Une équipe d\'entraîneur·e·s est requise.',
 
-    // Role errors
-    ROLE_NOT_FOUND: 'Rôle introuvable.',
+    // Department errors
+    DEPARTMENT_IMPORT_ERROR: 'Erreur lors de l\'import des données du département.',
+    DEPARTMENT_REQUIRED: 'Le département est requis.',
+
+    // Event errors
+    EVENT_CAPACITY_ERROR: 'La capacité maximale de l\'événement est atteinte.',
+    EVENT_DATE_ERROR: 'La date de l\'événement est invalide.',
+    EVENT_IS_NOT_ACTIVE_ERROR: 'L\'événement n\'est pas actif.',
+    EVENT_PARTICIPATION_ACCEPT_ERROR: 'Erreur lors de l\'acceptation de la participation.',
+    EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
+    EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
+    EVENT_PARTICIPATION_REFUSE_ERROR: 'Erreur lors du refus de la participation.',
+    EVENT_USER_ALREADY_IN_EVENT_ERROR: 'L\'utilisateur·rice est déjà inscrit·e à cet événement.',
+    EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: 'L\'utilisateur·rice n\'est pas joueur·se de l\'équipe.',
+
+    // Event participation request errors
+    EVENT_PARTICIPATION_ALREADY_HAS_A_REQUEST_POLICY_ERROR: 'Une demande de participation existe déjà pour cet événement.',
+    EVENT_PARTICIPATION_REQUEST_ALREADY_EXISTS: 'Une demande de participation existe déjà.',
+    EVENT_PARTICIPATION_REQUEST_NOT_FOUND: 'Demande de participation introuvable.',
+    EVENT_PARTICIPATION_REQUEST_POLICY_ERROR: 'Violation de la politique concernant les demandes de participation.',
+
+    // Policy errors
+    TEAM_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les gestionnaires d\'équipe.',
 
     // Server errors
     DATABASE_ERROR: 'Erreur de base de données.',
@@ -321,7 +346,7 @@ export default {
     },
   },
   myTeamList: {
-    title: 'Meq équipes',
+    title: 'Mes équipes',
   },
   otp: {
     actions: {
@@ -426,14 +451,32 @@ export default {
     actions: {
       edit: 'Modifier l\'équipe',
       join: "C'est mon équipe !",
+      leave: "Quitter l'équipe",
     },
     alerts: {
+      invitePlayers: {
+        message: 'Bonjour !'
+        + '\nVotre équipe {{teamName}} de votre club {{clubName}} vous attends !'
+        + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
+        + ' et commencer accéder et participer aux évènements de votre équipe.'
+        + '\nIOS : {{appStoreUrl}}'
+        + '\nAndroid : {{googlePlayUrl}}',
+        title: 'Vos coéquipiers vous attendent !',
+      },
       joinRequest: {
         actions: {
           ok: 'OK',
         },
         description: 'Votre entraîneur·e va recevoir votre demande et la traiter dès que possible.',
         title: 'Votre demande d\'adhésion a bien été envoyée',
+      },
+      leave: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: "Quitter l'équipe",
+        },
+        description: 'Vous êtes sur le point de quitter l\'équipe. Une fois cette action validée vous ne pourrez plus participer aux entrainements et matchs.',
+        title: 'Êtes-vous sûr·e de vouloir quitter cette équipe ?',
       },
     },
     sections: {

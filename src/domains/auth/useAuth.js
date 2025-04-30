@@ -107,6 +107,34 @@ const useAuth = () => {
     });
   };
 
+  /**
+   * Invite team players
+   * @param {object} param
+   * @param {string} [param.clubName]
+   * @param {string} [param.teamName]
+   * @returns {void}
+   */
+  const inviteTeamPlayers = ({ clubName, teamName }) => {
+    // Create an invitation message with download links
+    const appStoreUrl = process.env.APP_STORE_URL;
+    const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
+
+    // Construct the message
+    const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
+      appStoreUrl,
+      clubName,
+      googlePlayUrl,
+      teamName,
+    });
+
+    Share.share({
+      message: shareMessage,
+      title: t(
+        'teamDetails.alerts.invitePlayers.title',
+      ),
+    });
+  };
+
   const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
     const currentIndex = onboardingViews?.views?.find(
       (view) => view.route === currentRoute,
@@ -148,6 +176,7 @@ const useAuth = () => {
     formatBirthdateToSend,
     getAuthTokens,
     getNextOnboardingRoute,
+    inviteTeamPlayers,
     inviteTrainer,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,
