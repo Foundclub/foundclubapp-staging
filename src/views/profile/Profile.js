@@ -32,6 +32,7 @@ function Profile({ navigation }) {
   const { getClubInitials } = useClub();
   const {
     canEditClub,
+    canJoinClub,
     canManageTeam,
     logoutMutation,
     refetchUserData,
@@ -65,9 +66,26 @@ function Profile({ navigation }) {
     });
   };
 
-  const handleOpenTeams = () => {
+  /**
+   * Opens the team screen.
+   * @param {string} teamId - The ID of the team to open
+   * @returns {void}
+   */
+  const handleOpenTeam = (teamId) => {
+    navigation.navigate(RouteNames.TeamDetails, {
+      teamId,
+    });
+  };
+
+  const handleOpenClubTeams = () => {
     navigation.navigate(RouteNames.TeamList, {
       clubId: userData?.club?.documentId,
+    });
+  };
+
+  const handleOpenMyTeams = () => {
+    navigation.navigate(RouteNames.MyTeamList, {
+      playerId: userData?.documentId,
     });
   };
 
@@ -92,10 +110,90 @@ function Profile({ navigation }) {
     );
   };
 
-  const handleManageMembershipRequests = () => {
+  const handleManageClubMembershipRequests = () => {
     if (userData?.club?.documentId) {
       navigation.navigate(RouteNames.ClubMembershipRequests, { clubId: userData.club.documentId });
     }
+  };
+
+  const handleManageTeamMembershipRequests = () => {
+    if (userData?.club?.documentId) {
+      navigation.navigate(
+        RouteNames.TeamMembershipRequests,
+        { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
+      );
+    }
+  };
+
+  const renderUserClub = () => {
+    if (userData?.club) {
+      return (
+        <TouchableOpacity
+          onPress={handleOpenClub}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[16],
+            { marginTop: -10, maxWidth: '85%' }]}
+        >
+          <TeamShield
+            initials={
+            userData?.club?.name
+              ? getClubInitials(userData.club?.name) : ''
+          }
+            isSmall
+          />
+          <View style={[
+            { height: 40, width: 1 },
+            ApplicationStyle.backgroundColor.neutral300,
+          ]}
+          />
+          <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
+            {userData?.club?.name}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+    if (canJoinClub) {
+      return (
+        <Button
+          isOption
+          onPress={handleFindClub}
+          title={t('profile.actions.findClub')}
+          variant="SecondaryLight"
+        />
+      );
+    }
+    if ((userData?.myTeams?.length || 0) > 0) {
+      const team = userData?.myTeams?.[0];
+      return team ? (
+        <TouchableOpacity
+          onPress={() => handleOpenTeam(team.documentId || '')}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[16],
+            { marginTop: -10, maxWidth: '85%' }]}
+        >
+          <TeamShield
+            initials={
+            team?.club?.name
+              ? getClubInitials(team.club?.name) : ''
+          }
+            isSmall
+          />
+          <View style={[
+            { height: 40, width: 1 },
+            ApplicationStyle.backgroundColor.neutral300,
+          ]}
+          />
+          <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
+            {team?.name}
+          </Text>
+        </TouchableOpacity>
+      ) : null;
+    }
+    return null;
   };
 
   useFocusEffect(
@@ -180,41 +278,7 @@ function Profile({ navigation }) {
               >
                 {`${userData.firstname} ${userData.lastname?.toUpperCase()}`}
               </Text>
-              {userData.club
-                ? (
-                  <TouchableOpacity
-                    onPress={handleOpenClub}
-                    style={[
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Spaces.gap[16],
-                      { marginTop: -10, maxWidth: '85%' }]}
-                  >
-                    <TeamShield
-                      initials={
-                        userData?.club?.name
-                          ? getClubInitials(userData.club?.name) : ''
-                      }
-                      isSmall
-                    />
-                    <View style={[
-                      { height: 40, width: 1 },
-                      ApplicationStyle.backgroundColor.neutral300,
-                    ]}
-                    />
-                    <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
-                      {userData?.club?.name}
-                    </Text>
-                  </TouchableOpacity>
-                )
-                : (
-                  <Button
-                    isOption
-                    onPress={handleFindClub}
-                    title={t('profile.actions.findClub')}
-                    variant="SecondaryLight"
-                  />
-                )}
+              {renderUserClub()}
             </View>
             )}
           </View>
@@ -237,15 +301,29 @@ function Profile({ navigation }) {
           {canManageClub ? (
             <TabButton
               isActive={false}
-              onPress={handleManageMembershipRequests}
-              title={t('profile.actions.manageJoinRequests')}
+              onPress={handleManageClubMembershipRequests}
+              title={t('profile.actions.manageClubJoinRequests')}
             />
           ) : null}
           {canManageTeam ? (
             <TabButton
               isActive={false}
-              onPress={handleOpenTeams}
+              onPress={handleOpenClubTeams}
               title={t('profile.actions.manageTeams')}
+            />
+          ) : null}
+          {userData?.myTeams?.length ? (
+            <TabButton
+              isActive={false}
+              onPress={handleOpenMyTeams}
+              title={t('profile.actions.myTeams')}
+            />
+          ) : null}
+          {canManageTeam ? (
+            <TabButton
+              isActive={false}
+              onPress={handleManageTeamMembershipRequests}
+              title={t('profile.actions.manageTeamJoinRequests')}
             />
           ) : null}
         </View>

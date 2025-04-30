@@ -22,10 +22,12 @@ import UserSection from '@/views/onboarding/UserSection';
 import Welcome from '@/views/onboarding/Welcome';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
+import MyTeamList from '@/views/team/MyTeamList';
 import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
 import TeamFilters from '@/views/team/TeamFilters';
 import TeamList from '@/views/team/TeamList';
+import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -185,6 +187,14 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={MyTeamList}
+        name={RouteNames.MyTeamList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('myTeamList.title'),
+        }}
+      />
+      <Stack.Screen
         component={TeamFilters}
         name={RouteNames.TeamFilters}
         options={{
@@ -198,6 +208,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={TeamMembershipRequestList}
+        name={RouteNames.TeamMembershipRequests}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamMembershipRequestList.title'),
         }}
       />
       <Stack.Screen

@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,10 +21,11 @@ import { useGetTeams } from '@/services/team/teamQueries';
  * Team list content to be used in home page or dedicated team list screen
  * @param {object} props
  * @param {string} [props.clubId] - The ID of the club to fetch teams for
+ * @param {string} [props.playerId] - The ID of the player to fetch teams for
  * @param {boolean} [props.showFilters] - Whether to hide the filters section
  * @returns {import('react').ReactElement} Team list content component
  */
-function TeamListContent({ clubId, showFilters = false }) {
+function TeamListContent({ clubId = undefined, playerId = undefined, showFilters = false }) {
   // hooks
   const {
     Alignments,
@@ -48,6 +49,7 @@ function TeamListContent({ clubId, showFilters = false }) {
   } = useGetTeams(Object.assign(teamFilters || {}, {
     clubId,
     pageSize: 10,
+    playerId,
   }));
 
   // variables
@@ -91,6 +93,12 @@ function TeamListContent({ clubId, showFilters = false }) {
       type: 'SET_TEAM_FILTERS',
     });
   }, [appDispatch, teamFilters]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   // renderers
   /**

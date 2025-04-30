@@ -7,6 +7,7 @@ import { getTeamById, getTeams } from './teamService';
  * @param {{
  *   pageSize?: number;
  *   clubId?: string;
+ *   playerId?: string;
  * }} [params]
  * @param {any} [options]
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<{

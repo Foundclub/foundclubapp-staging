@@ -3,7 +3,7 @@ import {
   forwardRef, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -121,7 +121,7 @@ const PhoneInput = forwardRef(
           Alignments.absolute,
           {
             left: DIALCODE_WIDTH,
-            top: Platform.OS === 'ios' ? 30 : 36,
+            top: 40,
           }]}
         >
           <View style={[

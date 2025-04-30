@@ -18,7 +18,6 @@ const userSchema = Joi.object({
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   section: Joi.string().valid('female', 'male').allow(null).optional(),
-  // type: Joi.string().valid('Entraineur', 'new', 'Joueur', 'Dirigeant').required(),
 }).required();
 
 /**
@@ -57,12 +56,11 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
  * }>} The promise
  */
 export const login = async ({ code, confirm }) => {
+  const firebaseResult = await confirm.confirm(code);
+  const idToken = await firebaseResult.user.getIdToken();
+
+  const result = await client.post('/firebase-auth/login', { idToken });
   try {
-    const firebaseResult = await confirm.confirm(code);
-    const idToken = await firebaseResult.user.getIdToken();
-
-    const result = await client.post('/firebase-auth/login', { idToken });
-
     const schema = Joi.object({
       data: Joi.object().required(),
       jwt: Joi.string().required(),

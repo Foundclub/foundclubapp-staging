@@ -24,6 +24,7 @@ const teamSchema = Joi.object({
  *   page?: number;
  *   pageSize?: number;
  *   clubId?: string;
+ *   playerId?: string;
  *   name?: string;
  *   level?: string[];
  *   section?: string;
@@ -65,6 +66,11 @@ export const getTeams = async (params = {}) => {
       } : undefined,
       name: name ? {
         $containsi: name,
+      } : undefined,
+      players: params.playerId ? {
+        documentId: {
+          $eq: params.playerId,
+        },
       } : undefined,
       section: section ? {
         documentId: section,
@@ -201,4 +207,14 @@ export const updateTeam = async (teamData) => {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to update team: ${errorToDisplay}`);
   }
+};
+
+/**
+ * Leave a team
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const leaveTeam = async (teamId) => {
+  const response = await client.post(`/teams/${teamId}/quit`);
+  return response.data;
 };

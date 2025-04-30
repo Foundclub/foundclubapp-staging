@@ -88,7 +88,7 @@ function Home() {
       <View style={[
         Alignments.row,
         Alignments.alignCenter,
-        Spaces.gap[8],
+        Spaces.gap[12],
       ]}
       >
         <Text style={[

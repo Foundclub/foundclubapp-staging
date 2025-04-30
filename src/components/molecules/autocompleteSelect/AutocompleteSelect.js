@@ -154,7 +154,7 @@ const AutocompleteSelect = forwardRef(
               Alignments.absolute,
               Alignments.fullSize,
               Spaces.padding[12],
-              Spaces.paddingTop[32],
+              Spaces.paddingTop[40],
               { zIndex: 1 },
             ]}
           >

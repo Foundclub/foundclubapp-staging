@@ -14,6 +14,7 @@
  * @property {number} maxTeamNumber - Maximum number of teams allowed (required, default: 0)
  * @property {string} [geohash] - Geohash representation of the club's location (optional)
  * @property {User[]} [members] - Users associated with the club (optional)
+ * @property {string[]} [teams] - Users associated with the club (optional)
  */
 
 /**
