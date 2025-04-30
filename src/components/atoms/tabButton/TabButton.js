@@ -36,7 +36,7 @@ function TabButton({
           : ApplicationStyle.backgroundColor.transparent,
       ]}
     >
-      <Text style={[Fonts.p1, Fonts.primary100]}>
+      <Text style={[{ maxWidth: '90%' }, Fonts.p1, Fonts.primary100]}>
         {title}
       </Text>
       <Image

@@ -1,8 +1,14 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, RefreshControl, ScrollView, Text, View,
+  Alert,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -17,6 +23,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetTeam } from '@/services/team/teamQueries';
+import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 /**
  * Team details screen component
@@ -31,21 +38,40 @@ function TeamDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { canManageTeam } = useAuth();
+  const { canJoinTeam, canManageTeam, userData: currentUser } = useAuth();
   const { getClubInitials } = useClub();
 
   const {
     data: team, error, isLoading, refetch,
   } = useGetTeam(teamId);
 
+  const trainersCount = useMemo(() => team?.trainers?.length || 0, [team?.trainers]);
+  const playersCount = useMemo(() => team?.players?.length || 0, [team?.players]);
+
   // handlers
   const handleEditTeam = useCallback(() => {
     navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
   }, [navigation, team?.club?.documentId, teamId]);
 
-  // Count-based section titles
-  const trainersCount = useMemo(() => team?.trainers?.length || 0, [team?.trainers]);
-  const playersCount = useMemo(() => team?.players?.length || 0, [team?.players]);
+  const createTeamMembershipRequestMutation = useMutation({
+    mutationFn: createTeamMembershipRequest,
+    onSuccess: () => {
+      Alert.alert(
+        t('teamDetails.alerts.joinRequest.title'),
+        t('teamDetails.alerts.joinRequest.description'),
+        [{ onPress: () => navigation.goBack(), text: t('teamDetails.alerts.joinRequest.actions.ok') }],
+      );
+    },
+  });
+
+  const handleJoinTeam = useCallback(() => {
+    if (teamId && currentUser?.documentId) {
+      createTeamMembershipRequestMutation.mutate({
+        team: teamId,
+        user: currentUser.documentId,
+      });
+    }
+  }, [teamId, createTeamMembershipRequestMutation, currentUser?.documentId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -192,9 +218,9 @@ function TeamDetails({ navigation, route }) {
                   </Text>
                 </View>
                 {
-                  team?.trainers?.map((/** @type {User} */ user) => (
+                  team?.trainers?.map((/** @type {User} */ trainer) => (
                     <View
-                      key={user.documentId}
+                      key={trainer.documentId}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -206,7 +232,8 @@ function TeamDetails({ navigation, route }) {
                     >
                       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
                         <Image
-                          source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
+                          source={trainer.avatar
+                            ? { uri: trainer?.avatar?.url } : Images.roundAvatar}
                           style={[
                             ApplicationStyle.roundIcon40,
                             ApplicationStyle.borderWidth1,
@@ -214,7 +241,7 @@ function TeamDetails({ navigation, route }) {
                           ]}
                         />
                         <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {`${user.firstname} ${user.lastname}`}
+                          {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
                     </View>
@@ -233,9 +260,9 @@ function TeamDetails({ navigation, route }) {
                   </Text>
                 </View>
                 {
-                  team?.players?.map((/** @type {User} */ user) => (
+                  team?.players?.map((/** @type {User} */ player) => (
                     <View
-                      key={user.documentId}
+                      key={player.documentId}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -247,7 +274,7 @@ function TeamDetails({ navigation, route }) {
                     >
                       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
                         <Image
-                          source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
+                          source={player.avatar ? { uri: player?.avatar?.url } : Images.roundAvatar}
                           style={[
                             ApplicationStyle.roundIcon40,
                             ApplicationStyle.borderWidth1,
@@ -255,7 +282,7 @@ function TeamDetails({ navigation, route }) {
                           ]}
                         />
                         <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {`${user.firstname} ${user.lastname}`}
+                          {`${player.firstname} ${player.lastname}`}
                         </Text>
                       </View>
                     </View>
@@ -271,6 +298,14 @@ function TeamDetails({ navigation, route }) {
           onPress={handleEditTeam}
           style={Spaces.paddingHorizontal[16]}
           title={t('teamDetails.actions.edit')}
+          variant="Primary"
+        />
+      )}
+      {canJoinTeam && (
+        <Button
+          onPress={handleJoinTeam}
+          style={Spaces.paddingHorizontal[16]}
+          title={t('teamDetails.actions.join')}
           variant="Primary"
         />
       )}

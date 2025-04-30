@@ -11,6 +11,8 @@
  * @property {string} [birthdate]
  * @property {'female' | 'male'} [section]
  * @property {Club} [club]
+ * @property {Team[]} [myTeams]
+ * @property {Team[]} [trainedTeams]
  */
 
 /**

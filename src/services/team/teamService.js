@@ -24,6 +24,7 @@ const teamSchema = Joi.object({
  *   page?: number;
  *   pageSize?: number;
  *   clubId?: string;
+ *   playerId?: string;
  *   name?: string;
  *   level?: string[];
  *   section?: string;
@@ -65,6 +66,11 @@ export const getTeams = async (params = {}) => {
       } : undefined,
       name: name ? {
         $containsi: name,
+      } : undefined,
+      players: params.playerId ? {
+        documentId: {
+          $eq: params.playerId,
+        },
       } : undefined,
       section: section ? {
         documentId: section,

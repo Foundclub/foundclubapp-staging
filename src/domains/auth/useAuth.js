@@ -124,6 +124,13 @@ const useAuth = () => {
     return false;
   }, [userData]);
 
+  const canJoinTeam = useMemo(() => {
+    if (userData?.role.name === USER_ROLES.player) {
+      return !userData?.myTeams?.length;
+    }
+    return false;
+  }, [userData]);
+
   const canManageTeam = useMemo(
     () => userData?.role.name === USER_ROLES.coach
     || userData?.role.name === USER_ROLES.president,
@@ -133,6 +140,7 @@ const useAuth = () => {
   return {
     canEditClub,
     canJoinClub,
+    canJoinTeam,
     canManageTeam,
     canShowCodeButton: !!confirm,
     confirm,

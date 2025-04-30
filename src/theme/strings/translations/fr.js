@@ -320,6 +320,9 @@ export default {
       title: 'Sélectionner un pays',
     },
   },
+  myTeamList: {
+    title: 'Meq équipes',
+  },
   otp: {
     actions: {
       confirm: 'Confirmer',
@@ -341,8 +344,10 @@ export default {
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       manageClub: 'Gérer mon club',
-      manageJoinRequests: 'Gérer les demandes d\'affiliation',
+      manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
+      manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
+      myTeams: 'Mes équipes',
       save: 'Continuer',
     },
     alerts: {
@@ -420,6 +425,16 @@ export default {
   teamDetails: {
     actions: {
       edit: 'Modifier l\'équipe',
+      join: "C'est mon équipe !",
+    },
+    alerts: {
+      joinRequest: {
+        actions: {
+          ok: 'OK',
+        },
+        description: 'Votre entraîneur·e va recevoir votre demande et la traiter dès que possible.',
+        title: 'Votre demande d\'adhésion a bien été envoyée',
+      },
     },
     sections: {
       players_one: 'Joueur·se',
@@ -511,6 +526,19 @@ export default {
     },
     noData: 'Aucune équipe trouvée.',
     title: 'Équipes de mon club',
+  },
+  teamMembershipRequestList: {
+    actions: {
+      accept: 'Accepter',
+      reject: 'Refuser',
+    },
+    fields: {
+      accepted: 'Demande acceptée',
+      pending: "{{firstname}} s'est signalé comme joueur·se de l'équipe {{teamName}} ",
+      rejected: 'Demande refusée',
+    },
+    noData: 'Aucune demande d\'adhésion en attente',
+    title: 'Demandes d\'adhésion',
   },
   welcome: {
     actions: {

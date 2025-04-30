@@ -21,7 +21,7 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,
 });
 
-// Sentry.init({
+Sentry.init({
 //   attachStacktrace: true,
 //   beforeSend: (event) => {
 //     // Don't send events in development mode
@@ -39,7 +39,7 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
 //   tracesSampleRate: 1.0,
 //   // Add integration for better React Navigation tracking
 //   integrations: [navigationIntegration],
-// });
+});
 
 // Reactotron configuration to debug app
 if (__DEV__) {
