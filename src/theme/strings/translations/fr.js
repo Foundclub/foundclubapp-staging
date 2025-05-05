@@ -304,6 +304,61 @@ export default {
     subtitle: 'Une erreur est survenue.',
     title: 'Oups !',
   },
+  eventEdit: {
+    actions: {
+      save: 'Enregistrer',
+    },
+    fields: {
+      capacity: {
+        label: 'Capacité',
+        placeholder: 'Nombre de participant·e·s',
+      },
+      club: {
+        label: 'Club',
+        placeholder: 'Sélectionner un club',
+      },
+      date: {
+        label: "Date de l'évènement",
+        placeholder: 'JJ/MM/AAAA',
+      },
+      description: {
+        label: 'Description',
+        placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
+      },
+      location: {
+        label: 'Lieu',
+        placeholder: 'Sélectionner un lieu',
+      },
+      sessionStatus: {
+        label: 'Statut de la session',
+        options: {
+          closed: 'Fermé',
+          open: 'Ouvert',
+        },
+      },
+      team: {
+        label: 'Équipe',
+        placeholder: 'Sélectionner une équipe',
+      },
+      time: {
+        label: "Horaire de l'évènement",
+        placeholder: 'JJ/MM/AAAA',
+      },
+      type: {
+        label: 'Type d\'évènement',
+        placeholder: 'Sélectionner un type d\'évènement',
+      },
+      validationMode: {
+        label: 'Mode de validation',
+        options: {
+          auto: 'Automatique',
+          manual: 'Manuelle',
+        },
+      },
+    },
+    title: 'Créer un évènement',
+    titleEdit: 'Modifier l\'évènement',
+  },
   home: {
     fields: {
       type: {
@@ -346,6 +401,7 @@ export default {
     },
   },
   myTeamList: {
+
     title: 'Mes équipes',
   },
   otp: {
@@ -370,6 +426,7 @@ export default {
       logout: 'Déconnexion',
       manageClub: 'Gérer mon club',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
+      manageEvents: 'Gérer mes évènements',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
       myTeams: 'Mes équipes',

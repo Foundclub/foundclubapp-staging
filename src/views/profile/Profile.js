@@ -125,6 +125,10 @@ function Profile({ navigation }) {
     }
   };
 
+  const handleOpenEvents = () => {
+    navigation.navigate(RouteNames.EventEdit);
+  };
+
   const renderUserClub = () => {
     if (userData?.club) {
       return (
@@ -210,6 +214,7 @@ function Profile({ navigation }) {
         Spaces.paddingTop[24],
         Spaces.paddingBottom[12],
         Alignments.justifySpaceBetween,
+        Alignments.fill,
       ]}
     >
       <View style={[
@@ -239,6 +244,8 @@ function Profile({ navigation }) {
             refreshing={userDataLoading}
           />
         )}
+        showsVerticalScrollIndicator={false}
+        style={[Alignments.fill]}
       >
 
         <WithDataWrapper
@@ -326,11 +333,14 @@ function Profile({ navigation }) {
               title={t('profile.actions.manageTeamJoinRequests')}
             />
           ) : null}
+          {canManageTeam ? (
+            <TabButton
+              isActive={false}
+              onPress={handleOpenEvents}
+              title={t('profile.actions.manageEvents')}
+            />
+          ) : null}
         </View>
-      </ScrollView>
-      <View style={[
-        Spaces.gap[12]]}
-      >
         <Button
           onPress={handleLogout}
           title={t('profile.actions.logout')}
@@ -343,7 +353,7 @@ function Profile({ navigation }) {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }

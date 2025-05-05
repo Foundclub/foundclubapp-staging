@@ -13,10 +13,17 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @param {string} props.placeholder - The placeholder of the input.
  * @param {string} [props.error] - The error of the input.
  * @param {boolean} [props.disabled] - The error of the input.
+ * @param { string} [props.type] - The type of the input.
  * @returns {React.ReactElement} The autocomplete address input component.
  */
 function AutocompleteAddressInput({
-  address, disabled = false, error, label, placeholder, setAddress,
+  address,
+  disabled = false,
+  error,
+  label,
+  placeholder,
+  setAddress,
+  type = 'municipality',
 }) {
   // ref
   const selectRef = useRef(null);
@@ -29,6 +36,7 @@ function AutocompleteAddressInput({
       enabled: addressSearch?.length > 1,
     },
     searchParam: addressSearch,
+    type,
   });
 
   // variables

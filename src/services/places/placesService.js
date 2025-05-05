@@ -26,12 +26,13 @@ export const placesResponseSchema = Joi.object({
 /**
  * Search for places
  * @param {string} search - The search query
+ * @param {string} [type] - The type of place to search for
  * @returns {Promise<Place[]>} - The promise with the response
  */
-export const searchPlaces = async (search) => {
+export const searchPlaces = async (search, type = 'municipality') => {
   const response = await client.get('/search', {
     baseURL: 'https://api-adresse.data.gouv.fr',
-    params: { limit: 10, q: search, type: 'municipality' },
+    params: { limit: 10, q: search, type },
   });
   try {
     const validationResult = await placesResponseSchema.validateAsync(

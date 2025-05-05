@@ -7,10 +7,11 @@ import { searchPlaces } from './placesService';
  * @param {object} param - The parameters.
  * @param {import('@tanstack/react-query').QueriesOptions<any>} param.options - The query options
  * @param {string} param.searchParam - The search parameter
+ * @param {string} [param.type] - The type of the input.
  * @returns {{data: PlaceSearch, isLoading: boolean}} - The query object
  */
-export const useGetPlaces = ({ options, searchParam }) => useQuery({
-  queryFn: () => searchPlaces(searchParam),
+export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
+  queryFn: () => searchPlaces(searchParam, type),
   queryKey: ['places', searchParam],
   ...options,
 });
