@@ -92,9 +92,9 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
     navigation.navigate(RouteNames.EventFilters);
   }, [navigation]);
 
-  const handleSearchField = useCallback((/** @type {string} */ name) => {
+  const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
-      payload: Object.assign(eventFilters || {}, { name }),
+      payload: Object.assign(eventFilters || {}, { q }),
       type: 'SET_EVENT_FILTERS',
     });
   }, [appDispatch, eventFilters]);
@@ -157,14 +157,14 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
         Alignments.row,
         Alignments.wrap]}
       >
-        {item?.location ? (
+        {item?.locationDetails ? (
           <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
             <Image
               source={Images.pin}
               style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
             />
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              {`${item?.location?.lat} ${item?.location?.lng}`}
+              {JSON.parse(item?.locationDetails)?.address || ''}
             </Text>
           </View>
         ) : null}
@@ -226,7 +226,7 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
           filterNumber={filterCount}
           handleSearchField={handleSearchField}
           openFilters={handleOpenFilters}
-          searchDefaultValue={eventFilters?.name}
+          searchDefaultValue={eventFilters?.q}
         />
       ) : null}
       <WithDataWrapper

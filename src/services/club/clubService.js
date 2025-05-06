@@ -2,7 +2,6 @@ import Joi from 'joi';
 import { Platform } from 'react-native';
 
 import client from '../client';
-import { getPlacesFromCoordinates } from '../places/placesService';
 
 /**
  * Club validation schema
@@ -43,52 +42,6 @@ const clubListSchema = Joi.object({
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('', null).optional(),
 }).required();
-
-/**
- * Convert geographic coordinates to a real address using OpenStreetMap (Nominatim)
- * @param {number | undefined} lat - Latitude
- * @param {number | undefined} lng - Longitude
- * @returns {Promise<string>} - The address information
- */
-export const getAddressFromCoordinates = async (lat, lng) => {
-  if (!lat || !lng) {
-    throw new Error('Latitude and longitude are required');
-  }
-
-  try {
-    const response = await client.get('https://nominatim.openstreetmap.org/reverse', {
-      headers: {
-        'Accept-Language': 'fr',
-        'User-Agent': 'FoundClubApp',
-      },
-      params: {
-        addressdetails: 1,
-        format: 'json',
-        lat,
-        lon: lng,
-        zoom: 18,
-      },
-      timeout: 10000,
-    });
-
-    const { address } = response.data;
-    const houseNumber = address.house_number || '';
-    const road = address.road || '';
-    const postcode = address.postcode || '';
-    const city = address.city || address.town || address.village || '';
-
-    // Format: house_number road, postcode city
-    const formattedAddressString = [
-      [houseNumber, road].filter(Boolean).join(' '),
-      [postcode, city].filter(Boolean).join(' '),
-    ].filter(Boolean).join(', ');
-
-    return formattedAddressString;
-  } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to get address from coordinates: ${errorToDisplay}`);
-  }
-};
 
 /**
  * Get the list of clubs
@@ -162,28 +115,6 @@ export const getClubs = async (params = {}) => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-
-    // Add city information to each club from coordinates
-    if (validationResult.data && Array.isArray(validationResult.data)) {
-      const clubsWithCity = await Promise.all(validationResult.data.map(
-        async (/** @type {Club} */ club) => {
-          if (club.address?.lat && club.address?.lng) {
-            const address = await getPlacesFromCoordinates(
-              {
-                lat: club.address.lat,
-                lon: club.address.lng,
-              },
-            );
-            return {
-              ...club,
-              city: `${address?.properties?.postcode} ${address?.properties?.city}`,
-            };
-          }
-          return club;
-        },
-      ));
-      validationResult.data = clubsWithCity;
-    }
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;

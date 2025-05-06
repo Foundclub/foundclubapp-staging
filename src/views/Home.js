@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -59,6 +60,8 @@ function Home() {
     switch (searchType) {
       case 'clubs':
         return <ClubListContent />;
+      case 'events':
+        return <EventListContent showFilters />;
       case 'teams':
         return <TeamListContent showFilters />;
       default:

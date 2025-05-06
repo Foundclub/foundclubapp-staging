@@ -121,9 +121,11 @@ function ClubListContent() {
         >
           {item.name}
         </Text>
-        <Text style={[Fonts.p3, Fonts.neutral00]}>
-          {item.city}
-        </Text>
+        {item.addressDetails ? (
+          <Text style={[Fonts.p3, Fonts.neutral00]}>
+            {`${JSON.parse(item.addressDetails)?.postcode || ''} ${JSON.parse(item.addressDetails)?.city || ''}`}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );

@@ -1,8 +1,6 @@
 import {
-  formatDateForDisplay,
   formatDateInput,
   formatDateTimeToSend,
-  formatTimeForDisplay,
   formatTimeInput,
   isValidDate,
   isValidTime,
@@ -31,40 +29,12 @@ describe('Event Use Cases', () => {
     });
   });
 
-  describe('formatDateForDisplay', () => {
-    test('should format valid date string correctly', () => {
-      const input = '2025-05-15T14:30:00Z';
-      const expected = '2025-05-15T14:30';
-      expect(formatDateForDisplay(input)).toBe(expected);
-    });
-
-    test('should return undefined for invalid input', () => {
-      expect(formatDateForDisplay(undefined)).toBeUndefined();
-      expect(formatDateForDisplay(null)).toBeUndefined();
-      expect(formatDateForDisplay(123)).toBeUndefined();
-    });
-  });
-
-  describe('formatTimeForDisplay', () => {
-    test('should format valid time string correctly', () => {
-      const input = '2025-05-15T14:30:00Z';
-      const expected = '2025-05-15T14:30';
-      expect(formatTimeForDisplay(input)).toBe(expected);
-    });
-
-    test('should return undefined for invalid input', () => {
-      expect(formatTimeForDisplay(undefined)).toBeUndefined();
-      expect(formatTimeForDisplay(null)).toBeUndefined();
-      expect(formatTimeForDisplay(123)).toBeUndefined();
-    });
-  });
-
   describe('formatDateTimeToSend', () => {
     test('should format valid date and time correctly', () => {
       const dateString = '15/05/2025';
       const timeString = '14:30';
       const result = formatDateTimeToSend(dateString, timeString);
-      expect(result).toMatch(/2025-05-15T14:30:00/);
+      expect(result).toMatch(/2025-05-15T12:30:00/);
     });
 
     test('should return undefined for invalid inputs', () => {
@@ -103,6 +73,8 @@ describe('Event Use Cases', () => {
     test('should validate correct date formats', () => {
       expect(isValidDate('15/05/2025')).toBe(true);
       expect(isValidDate('31/12/2025')).toBe(true);
+      expect(isValidDate('06/05/2025')).toBe(true); // Current date
+      expect(isValidDate('01/01/2026')).toBe(true); // Future date
     });
 
     test('should invalidate incorrect date formats', () => {
@@ -110,6 +82,8 @@ describe('Event Use Cases', () => {
       expect(isValidDate('15/13/2025')).toBe(false);
       expect(isValidDate('15-05-2025')).toBe(false);
       expect(isValidDate('2025/05/15')).toBe(false);
+      expect(isValidDate('00/05/2025')).toBe(false); // Invalid day
+      expect(isValidDate('15/00/2025')).toBe(false); // Invalid month
     });
 
     test('should validate month-specific day limits', () => {
@@ -117,6 +91,8 @@ describe('Event Use Cases', () => {
       expect(isValidDate('31/04/2025')).toBe(false); // April
       expect(isValidDate('29/02/2024')).toBe(true); // Leap year
       expect(isValidDate('29/02/2025')).toBe(false); // Non-leap year
+      expect(isValidDate('30/04/2025')).toBe(true); // April 30 days
+      expect(isValidDate('31/07/2025')).toBe(true); // July 31 days
     });
   });
 

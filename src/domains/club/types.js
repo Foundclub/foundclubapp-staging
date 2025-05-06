@@ -5,6 +5,7 @@
  * @property {string} [documentId] - The unique identifier of the club
  * @property {string} name - The name of the club (required, unique)
  * @property {{lat: number, lng: number}} [address] - The location of the club (required)
+ * @property {string} [addressDetails] - The full address of the club (optional)
  * @property {Array<Activity>} [activites] - Activities associated with the club
  * @property {boolean} isCustomer - Indicates if the club is a customer (default: false, required)
  * @property {string} [phoneNumber] - The club's phone number (optional)

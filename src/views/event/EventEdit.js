@@ -1,4 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
+import { format } from 'date-fns';
 import Joi from 'joi';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -65,10 +66,8 @@ function EventEdit({ navigation, route }) {
   const { data: event } = useGetEvent(eventId);
   const { data: eventTypes } = useGetEventTypes();
   const {
-    formatDateForDisplay,
     formatDateInput,
     formatDateTimeToSend,
-    formatTimeForDisplay,
     formatTimeInput,
     sessionStatusOptions,
     validationModeOptions,
@@ -94,10 +93,18 @@ function EventEdit({ navigation, route }) {
   } = useForm({
     defaultValues: {
       ...defaultValues,
-      ...event,
-      date: formatDateForDisplay(event?.date || ''),
-      location: { label: '', value: '' }, // TODO replace with real address
-      time: formatTimeForDisplay(event?.date || '')?.split('T')[1].slice(0, 5),
+      capacity: event?.capacity || 1,
+      date: event?.date ? format(new Date(event?.date), 'dd/MM/yyyy') : '',
+      description: event?.description || '',
+      location: {
+        label: event?.locationDetails ? JSON.parse(event?.locationDetails)?.address : '',
+        value: `${event?.location?.lat}|${event?.location?.lng}`,
+      },
+      sessionStatus: event?.sessionStatus || 'open',
+      team: event?.team?.documentId || '',
+      time: event?.date ? format(new Date(event?.date), 'HH:mm') : '',
+      type: event?.type?.documentId || '',
+      validationMode: event?.validationMode || 'auto',
     },
     mode: 'onBlur',
     resolver: joiResolver(eventSchema),
@@ -115,10 +122,10 @@ function EventEdit({ navigation, route }) {
     const formattedData = {
       ...data,
       date: formatDateTimeToSend(data.date, data.time),
-      location: splittedLocation ? {
-        lat: parseFloat(splittedLocation[0]) || 0,
-        lng: parseFloat(splittedLocation[1]) || 0,
-      } : undefined,
+      location: splittedLocation?.length === 2 ? {
+        lat: parseFloat(splittedLocation[1]) || 0,
+        lng: parseFloat(splittedLocation[0]) || 0,
+      } : data.location,
     };
 
     delete formattedData.time;

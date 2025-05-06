@@ -147,8 +147,9 @@ const AutocompleteSelect = forwardRef(
 
     return (
       <View style={[Alignments.relative]}>
-        <View style={[Alignments.relative]}>
+        <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
           <TouchableOpacity
+            disabled={props.disabled}
             onPress={handleFocus}
             style={[
               Alignments.absolute,

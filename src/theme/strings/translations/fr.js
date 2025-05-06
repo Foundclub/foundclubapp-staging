@@ -304,6 +304,15 @@ export default {
     subtitle: 'Une erreur est survenue.',
     title: 'Oups !',
   },
+  eventDetails: {
+    actions: {
+      edit: 'Modifier l\'évènement',
+    },
+    fields: {
+      description: 'À propos',
+      participations: 'Participants',
+    },
+  },
   eventEdit: {
     actions: {
       save: 'Enregistrer',
@@ -358,6 +367,53 @@ export default {
     },
     title: 'Créer un évènement',
     titleEdit: 'Modifier l\'évènement',
+  },
+  eventFilters: {
+    actions: {
+      apply: 'Appliquer les filtres',
+      clear: 'Effacer les filtres',
+    },
+    fields: {
+      activity: {
+        label: 'Activité',
+        placeholder: 'Sélectionner une activité',
+      },
+      category: {
+        label: 'Catégorie',
+        placeholder: 'Sélectionner une catégorie',
+      },
+      club: {
+        label: 'Club',
+        placeholder: 'Sélectionner un club',
+      },
+      level: {
+        label: 'Niveau',
+        placeholder: 'Sélectionner un niveau',
+      },
+      sessionStatus: {
+        label: 'Statut de la session',
+        options: {
+          closed: 'Fermé',
+          open: 'Ouvert',
+        },
+      },
+      team: {
+        label: 'Équipe',
+        placeholder: 'Sélectionner une équipe',
+        selectClubFirst: 'Sélectionner un club avant l\'équipe',
+      },
+      type: {
+        label: 'Type d\'évènement',
+        placeholder: 'Sélectionner un type d\'évènement',
+      },
+    },
+  },
+  eventList: {
+    actions: {
+      add: 'Ajouter un évènement',
+    },
+    noData: 'Aucun évènement trouvé.',
+    title: 'Mes évènements',
   },
   home: {
     fields: {

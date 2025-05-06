@@ -23,26 +23,6 @@ export const VALIDATION_MODE_OPTIONS = [
 ];
 
 /**
- * Format a datetime string for display date
- * @param {string | undefined} dateString - The date string to format
- * @returns {string | undefined} The formatted date string
- */
-export const formatDateForDisplay = (dateString) => {
-  if (!dateString || typeof dateString !== 'string') return undefined;
-  return new Date(dateString).toISOString().slice(0, 16);
-};
-
-/**
- * Format a datetime string for display time
- * @param {string | undefined} dateString - The date string to format
- * @returns {string | undefined} The formatted date string
- */
-export const formatTimeForDisplay = (dateString) => {
-  if (!dateString || typeof dateString !== 'string') return undefined;
-  return new Date(dateString).toISOString().slice(0, 16);
-};
-
-/**
  * Format a date string to send
  * @param {string | undefined} dateString - The date string to format
  * @param {string | undefined} timeString - The time string to format
@@ -57,7 +37,7 @@ export const formatDateTimeToSend = (dateString, timeString) => {
   const year = splittedDate[2];
   const hours = splittedTime[0];
   const minutes = splittedTime[1];
-  const date = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00Z`);
+  const date = new Date(`${year}-${month}-${day}T${hours}:${minutes}`);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString();
 };

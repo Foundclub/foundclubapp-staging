@@ -145,6 +145,13 @@ const useAuth = () => {
   const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
  === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
+  const canEditEvent = useCallback(
+    (/** @type {string} */teamId) => userData?.role.name
+ === USER_ROLES.coach
+ && userData?.trainedTeams?.map(({ documentId }) => documentId)?.includes(teamId),
+    [userData],
+  );
+
   const canJoinClub = useMemo(() => {
     if (userData?.role.name === USER_ROLES.coach) {
       return !userData?.club;
@@ -165,10 +172,18 @@ const useAuth = () => {
     [userData],
   );
 
+  const canManageEvents = useMemo(
+    () => userData?.role.name === USER_ROLES.coach
+    || userData?.role.name === USER_ROLES.president,
+    [userData],
+  );
+
   return {
     canEditClub,
+    canEditEvent,
     canJoinClub,
     canJoinTeam,
+    canManageEvents,
     canManageTeam,
     canShowCodeButton: !!confirm,
     confirm,

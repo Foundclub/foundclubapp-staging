@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { searchPlaces } from './placesService';
+import { getPlacesFromCoordinates, searchPlaces } from './placesService';
 
 /**
  * Get places query.
@@ -13,5 +13,19 @@ import { searchPlaces } from './placesService';
 export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
   queryFn: () => searchPlaces(searchParam, type),
   queryKey: ['places', searchParam],
+  ...options,
+});
+
+/**
+ * Get places from coordinates query.
+ * @param {object} param - The parameters.
+ * @param {import('@tanstack/react-query').QueriesOptions<any>} [param.options] - The query options
+ * @param {number} param.lat - The latitude
+ * @param {number} param.lon - The longitude
+ * @returns {{data: Place, isLoading: boolean}} - The query object
+ */
+export const useGetPlacesFromCoordinates = ({ lat, lon, options }) => useQuery({
+  queryFn: () => getPlacesFromCoordinates({ lat, lon }),
+  queryKey: ['places', lat, lon],
   ...options,
 });
