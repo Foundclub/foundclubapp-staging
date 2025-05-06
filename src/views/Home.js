@@ -20,16 +20,16 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 const searchOptions = [
   {
+    label: i18n.t('home.fields.type.options.event'),
+    value: 'events',
+  },
+  {
     label: i18n.t('home.fields.type.options.club'),
     value: 'clubs',
   },
   {
     label: i18n.t('home.fields.type.options.team'),
     value: 'teams',
-  },
-  {
-    label: i18n.t('home.fields.type.options.event'),
-    value: 'events',
   },
 ];
 
@@ -124,7 +124,6 @@ function Home() {
           ))}
         </ScrollView>
       </View>
-
       {renderContent()}
     </ScreenContainer>
   );

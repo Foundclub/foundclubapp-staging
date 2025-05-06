@@ -240,7 +240,7 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
           { minHeight: 500 }]}
         >
           <FlashList
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={Spaces.paddingBottom[64]}
             data={events}
             estimatedItemSize={120}
             keyExtractor={(item) => item?.documentId || 'unknown'}

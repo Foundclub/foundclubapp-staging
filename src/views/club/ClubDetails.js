@@ -86,11 +86,15 @@ function ClubDetails({ navigation, route }) {
 
   // handlers
   const handleCreateCoach = () => {
-    navigation.navigate(RouteNames.AddCoach, { clubId });
+    if (userData) {
+      navigation.navigate(RouteNames.AddCoach, { clubId });
+    }
   };
 
   const handleCreateSponsor = () => {
-    navigation.navigate(RouteNames.AddSponsor, { clubId });
+    if (userData) {
+      navigation.navigate(RouteNames.AddSponsor, { clubId });
+    }
   };
 
   /**

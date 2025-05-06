@@ -396,6 +396,7 @@ export default {
           closed: 'Fermé',
           open: 'Ouvert',
         },
+        placeholder: 'Sélectionner un statut',
       },
       team: {
         label: 'Équipe',

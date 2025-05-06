@@ -171,7 +171,7 @@ function ClubListContent() {
           { minHeight: 500 }]}
         >
           <FlashList
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={Spaces.paddingBottom[64]}
             data={clubs}
             estimatedItemSize={120}
             keyExtractor={(item) => item?.documentId || 'unknown'}

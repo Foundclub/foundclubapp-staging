@@ -237,7 +237,7 @@ function TeamListContent({ clubId = undefined, playerId = undefined, showFilters
           { minHeight: 500 }]}
         >
           <FlashList
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={Spaces.paddingBottom[64]}
             data={teams}
             estimatedItemSize={120}
             keyExtractor={(item) => item?.documentId || 'unknown'}

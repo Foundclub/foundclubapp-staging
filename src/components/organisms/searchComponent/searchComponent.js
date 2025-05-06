@@ -29,7 +29,11 @@ function SearchComponent({
   } = useTheme();
 
   return (
-    <View style={[Alignments.row, Alignments.alignEnd, Spaces.gap[12]]}>
+    <View style={[
+      Alignments.row,
+      Alignments.alignEnd,
+      Spaces.gap[12]]}
+    >
 
       <View style={[Alignments.fill]}>
         <Input

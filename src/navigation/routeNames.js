@@ -1,6 +1,8 @@
 export const RouteNames = /** @type {const} */ ({
   AddCoach: 'AddCoach',
   AddSponsor: 'AddSponsor',
+  AuthStackAccount: 'AuthStackAccount',
+  AuthStackMessaging: 'AuthStackMessaging',
   Chat: 'Chat',
   Club: 'Club',
   ClubFilters: 'ClubFilters',
