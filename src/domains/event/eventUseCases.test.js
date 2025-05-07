@@ -1,10 +1,12 @@
 import {
+  canEventBeJoined,
   createEventPayload,
   createReccurrentEventPayload,
   formatDateInput,
   formatDateTimeToSend,
   formatTimeInput,
   getReccurrenceDayOptions,
+  haveIAlreadyJoined,
   isValidDate,
   isValidTime,
   RECURRENCE_FREQUENCY_OPTIONS,
@@ -278,6 +280,82 @@ describe('Event Use Cases', () => {
     test('should handle invalid frequency', () => {
       const result = getReccurrenceDayOptions('invalid');
       expect(result).toHaveLength(31); // defaults to monthly
+    });
+  });
+
+  describe('canEventBeJoined', () => {
+    test('should allow player to join when capacity not reached', () => {
+      const result = canEventBeJoined({
+        capacity: 10,
+        participations: [{ documentId: 'user1' }, { documentId: 'user2' }],
+        userId: 'user3',
+        userRole: { name: 'Joueur' },
+      });
+      expect(result).toBe(true);
+    });
+
+    test('should not allow joining when capacity reached', () => {
+      const result = canEventBeJoined({
+        capacity: 2,
+        participations: [{ documentId: 'user1' }, { documentId: 'user2' }],
+        userId: 'user3',
+        userRole: { name: 'Joueur' },
+      });
+      expect(result).toBe(false);
+    });
+
+    test('should not allow non-players to join', () => {
+      const result = canEventBeJoined({
+        capacity: 10,
+        participations: [],
+        userId: 'user1',
+        userRole: { name: 'Entraineur' },
+      });
+      expect(result).toBe(false);
+    });
+
+    test('should not allow user to join if already participating', () => {
+      const result = canEventBeJoined({
+        capacity: 10,
+        participations: [{ documentId: 'user1' }],
+        userId: 'user1',
+        userRole: { name: 'Joueur' },
+      });
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('haveIAlreadyJoined', () => {
+    test('should return true when user has joined', () => {
+      const result = haveIAlreadyJoined({
+        participations: [{ documentId: 'user1' }, { documentId: 'user2' }],
+        userId: 'user1',
+      });
+      expect(result).toBe(true);
+    });
+
+    test('should return false when user has not joined', () => {
+      const result = haveIAlreadyJoined({
+        participations: [{ documentId: 'user1' }, { documentId: 'user2' }],
+        userId: 'user3',
+      });
+      expect(result).toBe(false);
+    });
+
+    test('should handle empty participations array', () => {
+      const result = haveIAlreadyJoined({
+        participations: [],
+        userId: 'user1',
+      });
+      expect(result).toBe(false);
+    });
+
+    test('should handle undefined userId', () => {
+      const result = haveIAlreadyJoined({
+        participations: [{ documentId: 'user1' }],
+        userId: undefined,
+      });
+      expect(result).toBe(false);
     });
   });
 });

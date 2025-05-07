@@ -61,7 +61,7 @@ function Home() {
       case 'clubs':
         return <ClubListContent />;
       case 'events':
-        return <EventListContent showFilters />;
+        return <EventListContent additionalFilters={{ sessionStatus: 'open' }} showFilters />;
       case 'teams':
         return <TeamListContent showFilters />;
       default:

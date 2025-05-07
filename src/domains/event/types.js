@@ -37,7 +37,7 @@
  * @property {Team} [team] - Associated team
  * @property {FCEventType} [type] - Event type
  * @property {'auto' | 'manual'} validationMode - How participation requests are validated
- * @property {User[]} [participations] - List of participants
+ * @property {User[]} participations - List of participants
  */
 
 /**

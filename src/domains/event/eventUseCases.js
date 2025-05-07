@@ -3,6 +3,8 @@ import { fr } from 'date-fns/locale/fr';
 
 import i18n from '@/theme/strings';
 
+import { USER_ROLES } from '../auth/authUseCases';
+
 export const SESSIONS_STATUS_OPTIONS = [
   {
     label: i18n.t('eventEdit.fields.sessionStatus.options.open'),
@@ -239,3 +241,30 @@ export const getReccurrenceDayOptions = (recurrenceFrequency) => {
     value: `${i + 1}`,
   }));
 };
+
+/**
+ * Check if the event can be joined
+ * @param {object} params - The parameters to check
+ * @param {number} params.capacity - The maximum capacity of the event
+ * @param {User[]} params.participations - The list of participants
+ * @param {string} [params.userId] - The ID of the user to check
+ * @param {Role} [params.userRole] - The role of the user
+ * @returns {boolean} - True if the event can be joined, false otherwise
+ */
+export const canEventBeJoined = (
+  {
+    capacity, participations, userId, userRole,
+  },
+) => userRole?.name === USER_ROLES.player && participations.length < capacity
+&& !participations.some((/** @type {User} */ p) => p.documentId === userId);
+
+/**
+ * Check if the user has already joined the event
+ * @param {object} params - The parameters to check
+ * @param {User[]} params.participations - The list of participants
+ * @param {string} [params.userId] - The ID of the user to check
+ * @returns {boolean} - True if the user has already joined, false otherwise
+ */
+export const haveIAlreadyJoined = ({ participations, userId }) => participations.some(
+  (p) => p.documentId === userId,
+);

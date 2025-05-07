@@ -4,7 +4,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
-import { SESSIONS_STATUS_OPTIONS } from '@/domains/event/eventUseCases';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -71,7 +70,6 @@ function EventFilters({ navigation }) {
       category: eventFilters?.category || '',
       club: eventFilters?.club || null,
       level: eventFilters?.level || '',
-      sessionStatus: eventFilters?.sessionStatus || '',
       team: eventFilters?.team || null,
       type: eventFilters?.type || '',
     },
@@ -195,7 +193,6 @@ function EventFilters({ navigation }) {
    *   category: string;
    *   club: {label: string; value: string} | null;
    *   level: string;
-   *   sessionStatus: string;
    *   team: {label: string; value: string} | null;
    *   type: string;
    * }} data - The filter data
@@ -241,23 +238,6 @@ function EventFilters({ navigation }) {
               setSearchValue={setCategorySearchValue}
               setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
               value={getOptionLabel(categories, value)}
-            />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="sessionStatus"
-          render={({
-            field: { onChange, value },
-          }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'sessionStatus' })}
-              label={t('eventFilters.fields.sessionStatus.label')}
-              options={SESSIONS_STATUS_OPTIONS}
-              placeholder={t('eventFilters.fields.sessionStatus.placeholder')}
-              setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
-              value={getOptionLabel(SESSIONS_STATUS_OPTIONS, value)}
             />
           )}
         />

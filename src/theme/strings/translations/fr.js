@@ -433,6 +433,26 @@ export default {
   eventList: {
     actions: {
       add: 'Ajouter un évènement',
+      join: 'Participer',
+    },
+    info: {
+      alreadyJoined: 'Je participe !',
+      pendingRequest: 'Participation en attente',
+    },
+    joinModal: {
+      actions: {
+        cancel: 'Annuler',
+        confirm: 'Confirmer ma participation',
+      },
+      checkboxes: {
+        conditions: "J'accepte les conditions pour participer à l'évènement",
+        responsibility: 'Je déclare avoir pris connaissance de la "Déclaration de responsabilité et acceptation des risques"',
+      },
+      description: 'En validant mon inscription à cet entraînement / détection organisé par [Nom du club ou de l’organisateur], je reconnais et accepte expressément les termes suivants :'
+        + '\nPratique sportive et risques inhérents : '
+        + '\n    - Je reconnais que la participation à des activités sportives comporte des risques inhérents pouvant inclure, sans s’y limiter, des blessures corporelles, des chocs, des fractures, des entorses, des lésions musculaires, voire des accidents plus graves.'
+        + '\n    - Je suis conscient(e) que ces risques peuvent survenir indépendamment des précautions prises par ',
+      title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
     },
     noData: 'Aucun évènement trouvé.',
     title: 'Mes évènements',

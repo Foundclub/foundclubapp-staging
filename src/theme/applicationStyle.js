@@ -108,6 +108,9 @@ export const staticStyle = {
     borderRadius: 8,
   },
   // Border Width
+  borderWidth0: {
+    borderWidth: 0,
+  },
   borderWidth1: {
     borderWidth: 1,
   },

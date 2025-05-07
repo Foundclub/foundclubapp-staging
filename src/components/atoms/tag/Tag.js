@@ -12,7 +12,7 @@ import useTheme from '@/theme/themeContext';
  */
 function Tag({ text, textColor = 'primary500', textStyle }) {
   const {
-    ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
 
   return (
@@ -23,6 +23,7 @@ function Tag({ text, textColor = 'primary500', textStyle }) {
         ApplicationStyle.borderRadius8,
         Spaces.paddingVertical[4],
         Spaces.paddingHorizontal[8],
+        Alignments.alignCenter,
       ]}
     >
       <Text

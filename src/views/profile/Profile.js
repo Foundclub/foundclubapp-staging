@@ -57,6 +57,10 @@ function Profile({ navigation }) {
     navigation.navigate(RouteNames.ClubList);
   };
 
+  const handleFindTeam = () => {
+    navigation.navigate(RouteNames.TeamList);
+  };
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };
@@ -201,7 +205,14 @@ function Profile({ navigation }) {
         </TouchableOpacity>
       ) : null;
     }
-    return null;
+    return (
+      <Button
+        isOption
+        onPress={handleFindTeam}
+        title={t('profile.actions.findTeam')}
+        variant="SecondaryLight"
+      />
+    );
   };
 
   useFocusEffect(

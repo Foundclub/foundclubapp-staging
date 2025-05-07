@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -12,17 +12,20 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
+import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
 /**
  * Event details screen component
@@ -31,6 +34,7 @@ import { useGetEvent } from '@/services/event/eventQueries';
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
 
   // hooks
   const {
@@ -38,7 +42,8 @@ function EventDetails({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
-  const { canEditEvent } = useAuth();
+  const { canEditEvent, userData } = useAuth();
+  const { canEventBeJoined, haveIAlreadyJoined } = useEvent();
 
   const {
     data: event,
@@ -46,16 +51,48 @@ function EventDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetEvent(eventId);
+  const { data: eventParticipations } = useGetEventParticipations(
+    eventId,
+    userData?.documentId,
+    {
+      pageSize: 100,
+    },
+  );
 
   // handlers
   const handleEditEvent = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [navigation, eventId]);
 
+  const handleJoinEvent = useCallback(() => {
+    setIsJoinModalVisible(true);
+  }, []);
+
+  const handleCloseJoinModal = useCallback(() => {
+    setIsJoinModalVisible(false);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch]),
+  );
+
+  // memoized values
+  const hasPendingRequest = useMemo(() => {
+    const myParticipations = eventParticipations?.pages?.[0]?.data || [];
+    if (myParticipations.length) {
+      return myParticipations.some((participation) => (
+        participation.participationStatus === 'pending'
+        && participation.user.documentId === userData?.documentId
+      ));
+    }
+    return false;
+  }, [eventParticipations, userData]);
+
+  const participationInfo = useMemo(
+    () => (hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')),
+    [hasPendingRequest, t],
   );
 
   return (
@@ -216,20 +253,81 @@ function EventDetails({ navigation, route }) {
           <View style={[Spaces.gap[16], Alignments.fill]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               {t('eventDetails.fields.participations')}
-              <Text>{` : ${event?.participations?.length || 0} / ${event?.capacity}`}</Text>
+              <Text>{` :  ${event?.participations?.length || 0} / ${event?.capacity}`}</Text>
             </Text>
+            {
+              event?.participations?.map((/** @type {User} */ player) => (
+                <View
+                  key={player.documentId}
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.backgroundColor.primary700,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.padding[16],
+                    Spaces.gap[16]]}
+                >
+                  <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                    <Image
+                      source={player.avatar ? { uri: player?.avatar?.url } : Images.roundAvatar}
+                      style={[
+                        ApplicationStyle.roundIcon40,
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                      ]}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {`${player.firstname} ${player.lastname}`}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            }
           </View>
-
         </WithDataWrapper>
       </ScrollView>
-      {canEditEvent(event?.team?.documentId || '') && (
-        <Button
-          onPress={handleEditEvent}
-          style={Spaces.paddingHorizontal[16]}
-          title={t('eventDetails.actions.edit')}
-          variant="Primary"
-        />
-      )}
+
+      <View style={[Spaces.gap[16],
+        Spaces.paddingHorizontal[16],
+        Spaces.marginVertical[16]]}
+      >
+        {haveIAlreadyJoined({
+          participations: event?.participations || [],
+          userId: userData?.documentId,
+        }) || hasPendingRequest ? (
+          <Tag
+            text={participationInfo}
+            textStyle={Fonts.p1Bold}
+          />
+          ) : (
+            <Button
+              disabled={!canEventBeJoined({
+                capacity: event?.capacity || 0,
+                participations: event?.participations || [],
+                userId: userData?.documentId,
+                userRole: userData?.role,
+              })}
+              onPress={handleJoinEvent}
+              title={t('eventList.actions.join')}
+              variant="Primary"
+            />
+          )}
+        {canEditEvent(event?.team?.documentId || '') && (
+          <Button
+            onPress={handleEditEvent}
+            title={t('eventDetails.actions.edit')}
+            variant="Primary"
+          />
+        )}
+      </View>
+
+      <JoinEventModal
+        eventId={eventId}
+        isVisible={isJoinModalVisible}
+        onClose={handleCloseJoinModal}
+        onSuccess={refetch}
+      />
     </ScreenContainer>
   );
 }

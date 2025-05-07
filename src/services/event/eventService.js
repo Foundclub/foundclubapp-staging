@@ -153,7 +153,13 @@ export const getEvents = async (params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['team', 'team.club', 'team.category', 'team.level', 'team.activities', 'type'],
+    populate: ['team',
+      'team.club',
+      'team.category',
+      'team.level',
+      'team.activities',
+      'participations',
+      'type'],
   };
 
   let teamFilter = {};

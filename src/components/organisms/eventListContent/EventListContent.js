@@ -1,33 +1,57 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { format } from 'date-fns';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Text, TouchableOpacity, View,
+  Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import useEvent from '@/domains/event/useEvent';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
+import Checkable from '@/components/atoms/checkable/Checkable';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
+import { useCreateEventParticipation } from '@/services/eventParticipation/eventParticipationQueries';
 
 /**
  * Event list content to be used in home page or dedicated event list screen
  * @param {object} props
- * @param {string[]} [props.teamIds] - The ID of the club to fetch events for
  * @param {boolean} [props.showFilters] - Whether to hide the filters section
+ * @param {{
+ *  teamIds?: string[];
+ *   team?: {label: string, value: string};
+ *   name?: string;
+ *   type?: string;
+ *   club?: {label: string, value: string};
+ *   category?: string;
+ *   level?: string;
+ *   activity?: string;
+ *   sessionStatus?: string;
+ *   q?: string;
+ * }} [props.additionalFilters] - Whether the event list is open
  * @returns {import('react').ReactElement} Event list content component
  */
-function EventListContent({ showFilters = false, teamIds = undefined }) {
+function EventListContent({ additionalFilters, showFilters = false }) {
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
+  const [acceptResponsibility, setAcceptResponsibility] = useState(false);
+  const [acceptConditions, setAcceptConditions] = useState(false);
+
+  const createEventParticipation = useCreateEventParticipation();
+
   // hooks
   const {
     Alignments,
@@ -40,6 +64,8 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
   const { t } = useTranslation();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
+  const { canEventBeJoined, haveIAlreadyJoined } = useEvent();
+  const { userData } = useAuth();
 
   const {
     data: requestPages,
@@ -51,8 +77,7 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
     refetch,
   } = useGetEvents(Object.assign(eventFilters || {}, {
     pageSize: 10,
-    teamIds,
-  }));
+  }, additionalFilters));
 
   // variables
   const events = useMemo(() => requestPages?.pages
@@ -99,6 +124,40 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
     });
   }, [appDispatch, eventFilters]);
 
+  const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
+    setSelectedEvent(event);
+    setIsJoinModalVisible(true);
+  }, []);
+
+  const handleCloseJoinModal = useCallback(() => {
+    setIsJoinModalVisible(false);
+    setSelectedEvent(undefined);
+    setAcceptResponsibility(false);
+    setAcceptConditions(false);
+  }, []);
+
+  const handleConfirmParticipation = useCallback(() => {
+    if (selectedEvent?.documentId
+       && acceptResponsibility
+       && acceptConditions && userData?.documentId) {
+      createEventParticipation.mutate({
+        event: selectedEvent.documentId,
+        user: userData.documentId,
+      }, {
+        onSuccess: () => {
+          handleCloseJoinModal();
+          refetch();
+        },
+      });
+    }
+  }, [selectedEvent,
+    acceptResponsibility,
+    acceptConditions,
+    userData,
+    createEventParticipation,
+    handleCloseJoinModal,
+    refetch]);
+
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -120,7 +179,7 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
         Alignments.justifySpaceBetween,
         Spaces.padding[24],
         Spaces.marginVertical[12],
-        Spaces.gap[16],
+        Spaces.gap[24],
         ApplicationStyle.backgroundColor.primary700,
         ApplicationStyle.borderRadius24,
       ]}
@@ -201,6 +260,32 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
           </View>
         ) : null}
       </View>
+      {
+        haveIAlreadyJoined({
+          participations: item?.participations,
+          userId: userData?.documentId,
+        }) ? (
+          <View style={[Alignments.fullWidth]}>
+            <Tag
+              text={t('eventList.info.alreadyJoined')}
+              textStyle={Fonts.p1Bold}
+            />
+          </View>
+          ) : (
+            <Button
+              disabled={!canEventBeJoined({
+                capacity: item?.capacity,
+                participations: item?.participations,
+                userId: userData?.documentId,
+                userRole: userData?.role,
+              })}
+              onPress={() => handleJoinEvent(item)}
+              style={Alignments.fullWidth}
+              title={t('eventList.actions.join')}
+              variant="Primary"
+            />
+          )
+      }
     </TouchableOpacity>
   );
 
@@ -254,6 +339,63 @@ function EventListContent({ showFilters = false, teamIds = undefined }) {
           />
         </View>
       </WithDataWrapper>
+      <BottomModal
+        close={handleCloseJoinModal}
+        isVisible={isJoinModalVisible}
+      >
+        <ScrollView contentContainerStyle={
+          [Spaces.gap[32], Spaces.padding[24]]
+}
+        >
+          <Text style={[Fonts.p1Black, Fonts.neutral00]}>
+            {t('eventList.joinModal.title')}
+          </Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>
+            {t('eventList.joinModal.description')}
+          </Text>
+
+          <View style={[Spaces.gap[16]]}>
+            <Checkable
+              fontStyle={[Fonts.p2, Fonts.neutral00]}
+              isChecked={acceptResponsibility}
+              setIsChecked={() => setAcceptResponsibility(!acceptResponsibility)}
+              text={t('eventList.joinModal.checkboxes.responsibility')}
+              type="square"
+              wrapperStyle={[ApplicationStyle.borderWidth0,
+                ApplicationStyle.backgroundColor.transparent,
+                Spaces.padding[0],
+                Alignments.rowReverse,
+              ]}
+            />
+            <Checkable
+              fontStyle={[Fonts.p2, Fonts.neutral00]}
+              isChecked={acceptConditions}
+              setIsChecked={() => setAcceptConditions(!acceptConditions)}
+              text={t('eventList.joinModal.checkboxes.conditions')}
+              type="square"
+              wrapperStyle={[ApplicationStyle.borderWidth0,
+                ApplicationStyle.backgroundColor.transparent,
+                Spaces.padding[0],
+                Alignments.rowReverse,
+              ]}
+            />
+          </View>
+
+        </ScrollView>
+        <View style={[Spaces.gap[16]]}>
+          <Button
+            disabled={!acceptResponsibility || !acceptConditions}
+            onPress={handleConfirmParticipation}
+            title={t('eventList.joinModal.actions.confirm')}
+            variant="Primary"
+          />
+          <Button
+            onPress={handleCloseJoinModal}
+            title={t('eventList.joinModal.actions.cancel')}
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
     </View>
   );
 }

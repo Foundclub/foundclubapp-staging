@@ -39,7 +39,7 @@ function EventList({ navigation, route }) {
         Alignments.fill,
       ]}
     >
-      <EventListContent teamIds={teamIds} />
+      <EventListContent additionalFilters={{ teamIds }} />
       {
         canManageEvents ? (
           <Button
