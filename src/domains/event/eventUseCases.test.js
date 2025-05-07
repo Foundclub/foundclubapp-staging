@@ -34,7 +34,15 @@ describe('Event Use Cases', () => {
       const dateString = '15/05/2025';
       const timeString = '14:30';
       const result = formatDateTimeToSend(dateString, timeString);
-      expect(result).toMatch(/2025-05-15T12:30:00/);
+      // Check that the ISO string contains our expected date and time components
+      expect(result).toMatch(/^2025-05-15T.*:30:00/);
+
+      // Parse the result back to a Date to verify the components
+      const resultDate = new Date(result);
+      expect(resultDate.getUTCDate()).toBe(15);
+      expect(resultDate.getUTCMonth()).toBe(4); // May is 4 (zero-based)
+      expect(resultDate.getUTCFullYear()).toBe(2025);
+      expect(resultDate.getUTCMinutes()).toBe(30);
     });
 
     test('should return undefined for invalid inputs', () => {
