@@ -10,12 +10,12 @@ export const eventSchema = Joi.object({
   location: Joi.object({
     lat: Joi.number().required(),
     lng: Joi.number().required(),
-  }).required(),
+  }).allow(null).optional(),
   sessionStatus: Joi.string().valid('open', 'closed').required(),
   team: Joi.object({
     documentId: Joi.string().required(),
     name: Joi.string().required(),
-  }).required(),
+  }).allow(null).optional(),
   type: Joi.object({
     documentId: Joi.string().required(),
     name: Joi.string().required(),
@@ -144,11 +144,15 @@ export const getEvents = async (params = {}) => {
 
   /**
    * @type {{ filters: Record<string, any>; _q: string | undefined;
-   * pagination: { page: number; pageSize: number }; populate: string[] }}
+   * pagination: { page: number; pageSize: number }; populate: string[]; sort: string[] }}
    */
   const filters = {
     _q: q,
-    filters: {},
+    filters: {
+      date: {
+        $gte: new Date().toISOString(), // Only future events
+      },
+    },
     pagination: {
       page: page || 1,
       pageSize: pageSize || 10,
@@ -160,6 +164,7 @@ export const getEvents = async (params = {}) => {
       'team.activities',
       'participations',
       'type'],
+    sort: ['date:asc'], // Sort by closest date first
   };
 
   let teamFilter = {};
