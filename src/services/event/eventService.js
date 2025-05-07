@@ -11,7 +11,7 @@ export const eventSchema = Joi.object({
     lat: Joi.number().required(),
     lng: Joi.number().required(),
   }).required(),
-  sessionStatus: Joi.string().valid('open', 'closed', 'cancelled').required(),
+  sessionStatus: Joi.string().valid('open', 'closed').required(),
   team: Joi.object({
     documentId: Joi.string().required(),
     name: Joi.string().required(),
@@ -20,7 +20,7 @@ export const eventSchema = Joi.object({
     documentId: Joi.string().required(),
     name: Joi.string().required(),
   }).required(),
-  validationMode: Joi.string().valid('automatic', 'manual').required(),
+  validationMode: Joi.string().valid('auto', 'manual').required(),
 }).required();
 
 /**

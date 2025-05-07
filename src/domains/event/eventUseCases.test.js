@@ -1,9 +1,13 @@
 import {
+  createEventPayload,
+  createReccurrentEventPayload,
   formatDateInput,
   formatDateTimeToSend,
   formatTimeInput,
+  getReccurrenceDayOptions,
   isValidDate,
   isValidTime,
+  RECURRENCE_FREQUENCY_OPTIONS,
   SESSIONS_STATUS_OPTIONS,
   VALIDATION_MODE_OPTIONS,
 } from './eventUseCases';
@@ -29,6 +33,15 @@ describe('Event Use Cases', () => {
     });
   });
 
+  describe('RECURRENCE_FREQUENCY_OPTIONS', () => {
+    test('should have correct options', () => {
+      expect(RECURRENCE_FREQUENCY_OPTIONS).toEqual([
+        { label: 'eventEdit.fields.recurrenceFrequency.options.week', value: 'week' },
+        { label: 'eventEdit.fields.recurrenceFrequency.options.month', value: 'month' },
+      ]);
+    });
+  });
+
   describe('formatDateTimeToSend', () => {
     test('should format valid date and time correctly', () => {
       const dateString = '15/05/2025';
@@ -49,6 +62,12 @@ describe('Event Use Cases', () => {
       expect(formatDateTimeToSend(undefined, '14:30')).toBeUndefined();
       expect(formatDateTimeToSend('15/05/2025', undefined)).toBeUndefined();
       expect(formatDateTimeToSend('invalid', '14:30')).toBeUndefined();
+    });
+
+    test('should handle empty strings', () => {
+      expect(formatDateTimeToSend('', '14:30')).toBeUndefined();
+      expect(formatDateTimeToSend('15/05/2025', '')).toBeUndefined();
+      expect(formatDateTimeToSend('', '')).toBeUndefined();
     });
   });
 
@@ -74,6 +93,13 @@ describe('Event Use Cases', () => {
     test('should remove non-digits', () => {
       expect(formatTimeInput('14:30')).toBe('14:30');
       expect(formatTimeInput('14-30')).toBe('14:30');
+    });
+
+    test('should handle malformed inputs', () => {
+      expect(formatTimeInput('')).toBe('');
+      expect(formatTimeInput('abc')).toBe('');
+      expect(formatTimeInput('12::')).toBe('12');
+      expect(formatTimeInput('25:70')).toBe('25:70');
     });
   });
 
@@ -102,6 +128,13 @@ describe('Event Use Cases', () => {
       expect(isValidDate('30/04/2025')).toBe(true); // April 30 days
       expect(isValidDate('31/07/2025')).toBe(true); // July 31 days
     });
+
+    test('should handle invalid inputs', () => {
+      expect(isValidDate('')).toBe(false);
+      expect(isValidDate(undefined)).toBe(false);
+      expect(isValidDate(null)).toBe(false);
+      expect(isValidDate('abc')).toBe(false);
+    });
   });
 
   describe('isValidTime', () => {
@@ -116,6 +149,135 @@ describe('Event Use Cases', () => {
       expect(isValidTime('14:60')).toBe(false);
       expect(isValidTime('14-30')).toBe(false);
       expect(isValidTime('1430')).toBe(false);
+    });
+
+    test('should handle invalid inputs', () => {
+      expect(isValidTime('')).toBe(false);
+      expect(isValidTime(undefined)).toBe(false);
+      expect(isValidTime(null)).toBe(false);
+      expect(isValidTime('abc')).toBe(false);
+    });
+  });
+
+  describe('createEventPayload', () => {
+    test('should format event data correctly', () => {
+      const mockEvent = {
+        capacity: 10,
+        date: '15/05/2025',
+        description: 'Test event',
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        sessionStatus: 'open',
+        team: 'team-123',
+        time: '14:30',
+        type: 'type-123',
+        validationMode: 'auto',
+      };
+
+      const result = createEventPayload(mockEvent);
+
+      expect(result).toEqual({
+        capacity: 10,
+        date: expect.stringMatching(/^2025-05-15T.*:30:00/),
+        description: 'Test event',
+        location: {
+          lat: 48.8566,
+          lng: 2.3522,
+        },
+        sessionStatus: 'open',
+        team: 'team-123',
+        type: 'type-123',
+        validationMode: 'auto',
+      });
+    });
+
+    test('should handle missing location data', () => {
+      const mockEvent = {
+        capacity: 10,
+        date: '15/05/2025',
+        sessionStatus: 'open',
+        team: 'team-123',
+        time: '14:30',
+        type: 'type-123',
+        validationMode: 'auto',
+      };
+
+      const result = createEventPayload(mockEvent);
+      expect(result.location).toBeUndefined();
+    });
+  });
+
+  describe('createReccurrentEventPayload', () => {
+    test('should create single event when not recurrent', () => {
+      const mockEvent = {
+        capacity: 10,
+        date: '15/05/2025',
+        isRecurrent: false,
+        sessionStatus: 'open',
+        time: '14:30',
+      };
+
+      const result = createReccurrentEventPayload(mockEvent);
+      expect(result).toHaveLength(1);
+      expect(result[0].date).toMatch(/^2025-05-15T.*:30:00/);
+    });
+
+    test('should create weekly recurring events', () => {
+      const mockEvent = {
+        capacity: 10,
+        date: '15/05/2025',
+        isRecurrent: true,
+        recurrenceEndDate: '29/05/2025',
+        recurrenceFrequency: 'week',
+        recurrenceStartDate: '15/05/2025',
+        sessionStatus: 'open',
+        time: '14:30',
+      };
+
+      const result = createReccurrentEventPayload(mockEvent);
+      expect(result).toHaveLength(3); // 3 weeks
+      expect(result[0].date).toMatch(/^2025-05-15/);
+      expect(result[1].date).toMatch(/^2025-05-22/);
+      expect(result[2].date).toMatch(/^2025-05-29/);
+    });
+
+    test('should create monthly recurring events', () => {
+      const mockEvent = {
+        capacity: 10,
+        date: '15/05/2025',
+        isRecurrent: true,
+        recurrenceEndDate: '15/07/2025',
+        recurrenceFrequency: 'month',
+        recurrenceStartDate: '15/05/2025',
+        sessionStatus: 'open',
+        time: '14:30',
+      };
+
+      const result = createReccurrentEventPayload(mockEvent);
+      expect(result).toHaveLength(3); // 3 months
+      expect(result[0].date).toMatch(/^2025-05-15/);
+      expect(result[1].date).toMatch(/^2025-06-15/);
+      expect(result[2].date).toMatch(/^2025-07-15/);
+    });
+  });
+
+  describe('getReccurrenceDayOptions', () => {
+    test('should return weekday options for weekly frequency', () => {
+      const result = getReccurrenceDayOptions('week');
+      expect(result).toHaveLength(7);
+      expect(result[0]).toHaveProperty('label');
+      expect(result[0]).toHaveProperty('value');
+    });
+
+    test('should return day of month options for monthly frequency', () => {
+      const result = getReccurrenceDayOptions('month');
+      expect(result).toHaveLength(31);
+      expect(result[0]).toEqual({ label: '1', value: '1' });
+      expect(result[30]).toEqual({ label: '31', value: '31' });
+    });
+
+    test('should handle invalid frequency', () => {
+      const result = getReccurrenceDayOptions('invalid');
+      expect(result).toHaveLength(31); // defaults to monthly
     });
   });
 });

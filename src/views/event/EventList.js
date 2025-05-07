@@ -44,6 +44,7 @@ function EventList({ navigation, route }) {
         canManageEvents ? (
           <Button
             onPress={handleAddEvent}
+            style={Spaces.marginVertical[24]}
             title={t('eventList.actions.add')}
             variant="Primary"
           />

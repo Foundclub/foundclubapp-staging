@@ -334,9 +334,30 @@ export default {
         label: 'Description',
         placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
       },
+      isRecurrent: {
+        label: 'Évènement récurrent',
+      },
       location: {
         label: 'Lieu',
         placeholder: 'Sélectionner un lieu',
+      },
+      recurrenceDay: {
+        label: 'Jour de la récurrence',
+      },
+      recurrenceEndDate: {
+        label: 'Date de fin de la récurrence',
+        placeholder: 'JJ/MM/AAAA',
+      },
+      recurrenceFrequency: {
+        label: 'Fréquence de la récurrence',
+        options: {
+          month: 'Mensuel',
+          week: 'Hebdomadaire',
+        },
+      },
+      recurrenceStartDate: {
+        label: 'Date de début de la récurrence',
+        placeholder: 'JJ/MM/AAAA',
       },
       sessionStatus: {
         label: 'Statut de la session',
