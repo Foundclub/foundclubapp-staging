@@ -31,7 +31,6 @@ const filtersSchema = Joi.object({
     value: Joi.string(),
   }).allow(null).optional(),
   level: Joi.string().allow(''),
-  sessionStatus: Joi.string().allow(''),
   team: Joi.object({
     label: Joi.string(),
     value: Joi.string(),
@@ -99,7 +98,7 @@ function EventFilters({ navigation }) {
     if (activitySearchValue) {
       return formattedActivities.filter(
         (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.toLowerCase(),
+          activitySearchValue.trim().toLowerCase(),
         ),
       );
     }
@@ -115,7 +114,7 @@ function EventFilters({ navigation }) {
     if (categorySearchValue) {
       return formattedCategories.filter(
         (category) => category.label.toLowerCase().includes(
-          categorySearchValue.toLowerCase(),
+          categorySearchValue.trim().toLowerCase(),
         ),
       );
     }
@@ -139,7 +138,7 @@ function EventFilters({ navigation }) {
     if (levelSearchValue) {
       return formattedLevels.filter(
         (level) => level.label.toLowerCase().includes(
-          levelSearchValue.toLowerCase(),
+          levelSearchValue.trim().toLowerCase(),
         ),
       );
     }
@@ -155,7 +154,7 @@ function EventFilters({ navigation }) {
     if (typeSearchValue) {
       return formattedTypes.filter(
         (type) => type.label.toLowerCase().includes(
-          typeSearchValue.toLowerCase(),
+          typeSearchValue.trim().toLowerCase(),
         ),
       );
     }
@@ -171,7 +170,7 @@ function EventFilters({ navigation }) {
     if (teamSearchValue) {
       return formattedTeams.filter(
         (team) => team.label.toLowerCase().includes(
-          teamSearchValue.toLowerCase(),
+          teamSearchValue.trim().toLowerCase(),
         ),
       );
     }
@@ -198,7 +197,13 @@ function EventFilters({ navigation }) {
    * }} data - The filter data
    */
   const handleApplyFilters = (data) => {
-    appDispatch({ payload: data, type: 'SET_EVENT_FILTERS' });
+    appDispatch({
+      payload: Object.assign(
+        data,
+        { teamIds: data?.team?.value ? [data.team.value] : null },
+      ),
+      type: 'SET_EVENT_FILTERS',
+    });
     navigation.goBack();
   };
 

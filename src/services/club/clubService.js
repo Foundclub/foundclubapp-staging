@@ -70,6 +70,9 @@ export const getClubs = async (params = {}) => {
       page: page || 1,
       pageSize: pageSize || 7,
     },
+    sort: {
+      name: 'asc',
+    },
   };
 
   if (activity) {

@@ -33,7 +33,6 @@ function Profile({ navigation }) {
   const {
     canEditClub,
     canJoinClub,
-    canManageEvents,
     canManageTeam,
     logoutMutation,
     refetchUserData,
@@ -128,13 +127,6 @@ function Profile({ navigation }) {
         { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
       );
     }
-  };
-
-  const handleOpenEvents = () => {
-    navigation.navigate(
-      RouteNames.EventList,
-      { teamIds: userData?.trainedTeams?.map((team) => team.documentId) },
-    );
   };
 
   const renderUserClub = () => {
@@ -346,13 +338,6 @@ function Profile({ navigation }) {
               isActive={false}
               onPress={handleManageTeamMembershipRequests}
               title={t('profile.actions.manageTeamJoinRequests')}
-            />
-          ) : null}
-          {canManageEvents ? (
-            <TabButton
-              isActive={false}
-              onPress={handleOpenEvents}
-              title={t('profile.actions.manageEvents')}
             />
           ) : null}
         </View>

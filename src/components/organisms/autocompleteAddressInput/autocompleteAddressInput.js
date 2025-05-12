@@ -35,7 +35,7 @@ function AutocompleteAddressInput({
     options: {
       enabled: addressSearch?.length > 1,
     },
-    searchParam: addressSearch,
+    searchParam: addressSearch?.trim(),
     type,
   });
 

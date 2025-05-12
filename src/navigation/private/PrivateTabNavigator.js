@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 // utils
+import MyEventsList from '@/views/event/MyEventList';
 import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
 import Profile from '@/views/profile/Profile';
@@ -67,6 +68,21 @@ function PrivateTabNavigator() {
             },
           ),
         }}
+      />
+      <Tab.Screen
+        component={MyEventsList}
+        name={RouteNames.MyEventList}
+        options={({
+          headerShown: false,
+          ...getTabScreenCommonOptions(
+            {
+              activeColor: Colors.primary500,
+              icon: Images.stadium,
+              label: t('menu.planning'),
+              renderTabBarIcon,
+            },
+          ),
+        })}
       />
       <Tab.Screen
         component={Profile}

@@ -19,10 +19,12 @@ import useTheme from '@/theme/themeContext';
  * | Array<import('react-native').ViewStyle>} [props.wrapperStyle] - The wrapper style.
  * @param {import('react-native').ViewStyle
  * | Array<import('react-native').ViewStyle>} [props.fontStyle] - The font style.
+ * @param {string} [props.customFillColor] - The custom fill color.
  * @returns {React.ReactElement} Checkable component.
  */
 function Checkable({
   children,
+  customFillColor = undefined,
   disabled = false,
   fontStyle,
   isChecked,
@@ -101,7 +103,7 @@ function Checkable({
         )}
         <BouncyCheckbox
           disableText
-          fillColor={type === 'circle' ? Colors.neutral00 : 'transparent'}
+          fillColor={customFillColor || (type === 'circle' ? Colors.neutral00 : 'transparent')}
           iconComponent={(isChecked || type === 'circle') ? iconComponent : null}
           innerIconStyle={{
             borderColor: isChecked ? Colors.primary500 : Colors.neutral00,

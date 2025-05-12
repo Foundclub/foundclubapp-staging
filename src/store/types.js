@@ -70,5 +70,6 @@
  * @property {string} sessionStatus
  * @property {string} type
  * @property {{label: string, value: string}} team
+ * @property {string[]} [teamIds]
  * @property {{label: string, value: string}} club
  */

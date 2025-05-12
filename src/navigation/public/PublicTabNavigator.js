@@ -68,6 +68,21 @@ function PublicTabNavigator() {
       />
       <Tab.Screen
         component={AuthStackNavigator}
+        name={RouteNames.AuthStackPlanning}
+        options={({
+          headerShown: false,
+          ...getTabScreenCommonOptions(
+            {
+              activeColor: Colors.primary500,
+              icon: Images.stadium,
+              label: t('menu.planning'),
+              renderTabBarIcon,
+            },
+          ),
+        })}
+      />
+      <Tab.Screen
+        component={AuthStackNavigator}
         name={RouteNames.AuthStackAccount}
         options={({
           headerShown: false,

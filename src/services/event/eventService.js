@@ -113,6 +113,7 @@ export const getEventTypes = async () => {
  * @param {{
  *   teamIds?: string[];
  *   team?: {label: string, value: string};
+ *   participantId?: string;
  *   name?: string;
  *   page?: number;
  *   pageSize?: number;
@@ -123,6 +124,7 @@ export const getEventTypes = async () => {
  *   activity?: string;
  *   sessionStatus?: string;
  *   q?: string;
+ *   useOrFilter?: boolean;
  * }} params
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -135,109 +137,112 @@ export const getEvents = async (params = {}) => {
     level,
     page,
     pageSize,
+    participantId,
     q,
     sessionStatus,
-    team,
     teamIds,
     type,
+    useOrFilter = false,
   } = params;
 
-  /**
-   * @type {{ filters: Record<string, any>; _q: string | undefined;
-   * pagination: { page: number; pageSize: number }; populate: string[]; sort: string[] }}
-   */
-  const filters = {
-    _q: q,
-    filters: {
-      date: {
-        $gte: new Date().toISOString(), // Only future events
-      },
+  /** @type {Record<string, any>} */
+  const filtersObj = {
+    date: {
+      $gt: new Date().toISOString(), // Only get future dates
     },
-    pagination: {
-      page: page || 1,
-      pageSize: pageSize || 10,
-    },
-    populate: ['team',
-      'team.club',
-      'team.category',
-      'team.level',
-      'team.activities',
-      'participations',
-      'type'],
-    sort: ['date:asc'], // Sort by closest date first
   };
 
-  let teamFilter = {};
+  // Build team and participant filters
+  if (teamIds?.length || participantId) {
+    if (useOrFilter) {
+      filtersObj.$or = [];
+      if (teamIds?.length) {
+        filtersObj.$or.push({
+          team: {
+            documentId: {
+              $in: teamIds,
+            },
+          },
+        });
+      }
+      if (participantId) {
+        filtersObj.$or.push({
+          participations: {
+            documentId: {
+              $containsi: [participantId],
+            },
 
-  // Handle team filter (either single team or multiple teams)
-  if (team?.value) {
-    teamFilter = {
-      documentId: team.value,
-    };
-  } else if (teamIds) {
-    teamFilter = {
-      documentId: {
-        $in: teamIds,
-      },
-    };
+          },
+        });
+      }
+    } else {
+      if (teamIds?.length) {
+        filtersObj.team = {
+          documentId: {
+            $in: teamIds,
+          },
+        };
+      }
+      if (participantId) {
+        filtersObj.participations = {
+          user: {
+            documentId: participantId,
+          },
+        };
+      }
+    }
   }
 
-  // Filter by category
-  if (category) {
-    teamFilter = {
-      ...teamFilter,
-      category: {
-        documentId: category,
-      },
-    };
-  }
-
-  // Filter by level
-  if (level) {
-    teamFilter = {
-      ...teamFilter,
-      level: {
-        documentId: level,
-      },
-    };
-  }
-
-  // Filter by activity
-  if (activity) {
-    teamFilter = {
-      ...teamFilter,
-      activities: {
-        documentId: activity,
-      },
-    };
-  }
-
-  // Filter by club
-  if (club?.value) {
-    teamFilter = {
-      ...teamFilter,
-      club: {
-        documentId: club.value,
-      },
-    };
-  }
-
-  // Add team filter if there are any team-related conditions
-  if (Object.keys(teamFilter).length > 0) {
-    filters.filters.team = teamFilter;
-  }
-
-  // Filter by type
   if (type) {
-    filters.filters.type = {
+    filtersObj.type = {
       documentId: type,
     };
   }
 
-  // Filter by session status
   if (sessionStatus) {
-    filters.filters.sessionStatus = sessionStatus;
+    filtersObj.sessionStatus = sessionStatus;
   }
+
+  if (club?.value || category || level || activity) {
+    filtersObj.team = filtersObj.team || {};
+
+    if (club?.value) {
+      filtersObj.team.club = {
+        documentId: club.value,
+      };
+    }
+
+    if (category) {
+      filtersObj.team.category = {
+        documentId: category,
+      };
+    }
+
+    if (level) {
+      filtersObj.team.level = {
+        documentId: level,
+      };
+    }
+
+    if (activity) {
+      filtersObj.team.activities = {
+        documentId: {
+          $containsi: activity,
+        },
+      };
+    }
+  }
+
+  const filters = {
+    _q: q,
+    filters: filtersObj,
+    pagination: {
+      page: page || 1,
+      pageSize: pageSize || 10,
+    },
+    populate: ['team', 'team.club', 'team.section', 'team.category', 'team.level', 'team.activities', 'type', 'participations'],
+    sort: ['date:asc'], // Sort by date ascending
+  };
 
   const response = await client.get('/events', { params: filters });
   try {

@@ -100,7 +100,7 @@ function ClubFilters({ navigation }) {
     if (activitySearchValue) {
       return formattedActivities.filter(
         (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.toLowerCase(),
+          activitySearchValue.trim().toLowerCase(),
         ),
       );
     }

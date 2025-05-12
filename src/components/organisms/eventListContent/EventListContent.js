@@ -7,6 +7,7 @@ import {
   Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useEvent from '@/domains/event/useEvent';
@@ -31,8 +32,8 @@ import { useCreateEventParticipation } from '@/services/eventParticipation/event
  * @param {object} props
  * @param {boolean} [props.showFilters] - Whether to hide the filters section
  * @param {{
- *  teamIds?: string[];
- *   team?: {label: string, value: string};
+ *   teamIds?: string[];
+ *   participantId?: string;
  *   name?: string;
  *   type?: string;
  *   club?: {label: string, value: string};
@@ -41,6 +42,7 @@ import { useCreateEventParticipation } from '@/services/eventParticipation/event
  *   activity?: string;
  *   sessionStatus?: string;
  *   q?: string;
+ *   useOrFilter?: boolean;
  * }} [props.additionalFilters] - Whether the event list is open
  * @returns {import('react').ReactElement} Event list content component
  */
@@ -75,9 +77,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetEvents(Object.assign(eventFilters || {}, {
+  } = useGetEvents({
+    ...(showFilters ? eventFilters : {}),
+    ...additionalFilters,
     pageSize: 10,
-  }, additionalFilters));
+  });
 
   // variables
   const events = useMemo(() => requestPages?.pages
@@ -90,14 +94,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
     return Object.values(eventFilters).reduce((/** @type {number} */ acc, value) => {
-      if (typeof value === 'object') {
+      if (Array.isArray(value)) {
         return acc;
       }
-      if (Array.isArray(value)) {
-        return acc + (value.length > 0 ? 1 : 0);
-      }
       return acc + (value ? 1 : 0);
-    }, -1);
+    }, 0);
   }, [eventFilters]);
 
   // handlers
@@ -128,6 +129,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
   }, []);
+
+  const handleGoLogin = () => {
+    // @ts-expect-error because of react navigation type definitions
+    navigation.navigate(RouteNames.AuthStackAccount);
+  };
 
   const handleCloseJoinModal = useCallback(() => {
     setIsJoinModalVisible(false);
@@ -165,6 +171,63 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   );
 
   // renderers
+
+  /**
+   * Renders the action button for joining an event
+   * @param {FCEvent} item - The event item
+   * @returns {import('react').ReactElement} The rendered action button
+   */
+  const renderActionButton = (item) => {
+    if (userData?.role?.name === USER_ROLES.player) {
+      const alreadyJoined = haveIAlreadyJoined({
+        participations: item?.participations,
+        userId: userData?.documentId,
+      });
+      if (alreadyJoined) {
+        return (
+          <View style={[Alignments.fullWidth]}>
+            <Tag
+              text={t('eventList.info.alreadyJoined')}
+              textStyle={Fonts.p1Bold}
+            />
+          </View>
+        );
+      }
+      return (
+        <Button
+          disabled={!canEventBeJoined({
+            capacity: item?.capacity,
+            participations: item?.participations,
+            userId: userData?.documentId,
+            userRole: userData?.role,
+          })}
+          onPress={() => handleJoinEvent(item)}
+          style={Alignments.fullWidth}
+          title={t('eventList.actions.join')}
+          variant="Primary"
+        />
+      );
+    }
+    if (userData?.role?.name === USER_ROLES.coach
+       || userData?.role?.name === USER_ROLES.president) {
+      return (
+        <Button
+          onPress={() => handleEventSelect(item)}
+          style={Alignments.fullWidth}
+          title={t('eventList.actions.about')}
+          variant="Primary"
+        />
+      );
+    }
+    return (
+      <Button
+        onPress={handleGoLogin}
+        style={Alignments.fullWidth}
+        title={t('eventList.actions.join')}
+        variant="Primary"
+      />
+    );
+  };
   /**
    * Renders an individual event item
    * @param {object} param - The item to render
@@ -216,6 +279,17 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         Alignments.row,
         Alignments.wrap]}
       >
+        {item?.team?.activities?.length ? (
+          <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
+            <Image
+              source={Images.running}
+              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+            />
+            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {item?.team?.activities?.map(({ name }) => name)?.join(', ') || ''}
+            </Text>
+          </View>
+        ) : null}
         {item?.locationDetails ? (
           <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
             <Image
@@ -260,32 +334,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           </View>
         ) : null}
       </View>
-      {
-        haveIAlreadyJoined({
-          participations: item?.participations,
-          userId: userData?.documentId,
-        }) ? (
-          <View style={[Alignments.fullWidth]}>
-            <Tag
-              text={t('eventList.info.alreadyJoined')}
-              textStyle={Fonts.p1Bold}
-            />
-          </View>
-          ) : (
-            <Button
-              disabled={!canEventBeJoined({
-                capacity: item?.capacity,
-                participations: item?.participations,
-                userId: userData?.documentId,
-                userRole: userData?.role,
-              })}
-              onPress={() => handleJoinEvent(item)}
-              style={Alignments.fullWidth}
-              title={t('eventList.actions.join')}
-              variant="Primary"
-            />
-          )
-      }
+      {renderActionButton(item)}
     </TouchableOpacity>
   );
 

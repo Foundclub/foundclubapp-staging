@@ -17,7 +17,6 @@ import CreateClubRequest from '@/views/club/CreateClubRequest';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
-import EventList from '@/views/event/EventList';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserName from '@/views/onboarding/UserName';
@@ -236,14 +235,6 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('eventEdit.title'),
-        }}
-      />
-      <Stack.Screen
-        component={EventList}
-        name={RouteNames.EventList}
-        options={{
-          ...commonOptions,
-          headerTitle: t('eventList.title'),
         }}
       />
       <Stack.Screen

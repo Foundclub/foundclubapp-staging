@@ -432,6 +432,7 @@ export default {
   },
   eventList: {
     actions: {
+      about: 'À propos',
       add: 'Ajouter un évènement',
       join: 'Participer',
     },
@@ -487,6 +488,7 @@ export default {
   menu: {
     chat: 'Messagerie',
     myAccount: 'Mon compte',
+    planning: 'Mon planning',
     search: 'Rechercher',
   },
   modals: {
@@ -497,6 +499,14 @@ export default {
     phone: {
       title: 'Sélectionner un pays',
     },
+  },
+  myEventList: {
+    fields: {
+      type: {
+        all: 'Tous',
+      },
+    },
+    title: 'Mes prochains évènements',
   },
   myTeamList: {
 

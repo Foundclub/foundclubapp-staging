@@ -23,6 +23,7 @@ export const images = {
   phone: require('../assets/icons/phone.png'),
   pin: require('../assets/icons/pin.png'),
   plus: require('../assets/icons/plus.png'),
+  running: require('../assets/icons/running.png'),
   search: require('../assets/icons/search.png'),
   share: require('../assets/icons/share.png'),
   shield: require('../assets/icons/shield.png'),

@@ -58,7 +58,7 @@ const AutocompleteSelect = forwardRef(
   (props, ref) => {
   // hooks
     const {
-      Alignments, Fonts, Spaces,
+      Alignments, Colors, Fonts, Spaces,
     } = useTheme();
     const { t } = useTranslation();
 
@@ -226,6 +226,7 @@ const AutocompleteSelect = forwardRef(
                     style={[Alignments.row, Spaces.marginTop[8]]}
                   >
                     <Checkable
+                      customFillColor={Colors.neutral00}
                       disabled={false}
                       isChecked={handleIsChecked(option)}
                       setIsChecked={

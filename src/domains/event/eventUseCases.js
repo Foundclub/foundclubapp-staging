@@ -265,6 +265,9 @@ export const canEventBeJoined = (
  * @param {string} [params.userId] - The ID of the user to check
  * @returns {boolean} - True if the user has already joined, false otherwise
  */
-export const haveIAlreadyJoined = ({ participations, userId }) => participations.some(
-  (p) => p.documentId === userId,
-);
+export const haveIAlreadyJoined = ({ participations, userId }) => {
+  if (participations?.length === 0) return false;
+  return participations?.some(
+    (p) => p.documentId === userId,
+  );
+};
