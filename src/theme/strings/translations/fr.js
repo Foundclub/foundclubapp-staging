@@ -324,6 +324,7 @@ export default {
       actions: {
         cancel: 'Annuler',
         confirm: 'Confirmer',
+        report: 'Signaler',
       },
       cancelEvent: {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
@@ -337,6 +338,20 @@ export default {
           },
         },
         title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
+      },
+      reportEvent: {
+        description: 'Merci de nous indiquer la raison pour laquelle vous signalez cet évènement.',
+        fields: {
+          reason: {
+            label: 'Raison du signalement',
+            placeholder: 'Cet évènement est inapproprié.',
+          },
+        },
+        title: 'Signaler un évènement',
+      },
+      reportSuccess: {
+        description: 'Merci de votre retour, nous allons traiter votre demande dans les plus brefs délais.',
+        title: 'Votre signalement a bien été envoyé',
       },
     },
   },

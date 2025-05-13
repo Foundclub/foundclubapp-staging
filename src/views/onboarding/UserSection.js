@@ -81,7 +81,7 @@ function UserSection({ navigation }) {
               isActive={section === sectionItem.documentId}
               key={sectionItem.documentId}
               onPress={() => handleSelection(sectionItem.documentId)}
-              title={t(`profile.fields.sections.${sectionItem.name.toLowerCase()}`)}
+              title={sectionItem.name}
             />
           ))}
         </View>

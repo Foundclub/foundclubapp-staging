@@ -1,7 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useLayoutEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -24,6 +26,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
+import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -35,6 +38,7 @@ import {
   acceptEventParticipation,
   declineEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
+import { createEventReport } from '@/services/eventReportService';
 
 /**
  * Event details screen component
@@ -45,6 +49,7 @@ function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
 
   // hooks
@@ -95,17 +100,48 @@ function EventDetails({ navigation, route }) {
     },
   });
 
+  const { isPending: isReportingEvent, mutate: reportEvent } = useMutation({
+    mutationFn: createEventReport,
+    onSuccess: () => {
+      setIsReportModalVisible(false);
+      Alert.alert(
+        t('eventDetails.modals.reportSuccess.title'),
+        t('eventDetails.modals.reportSuccess.description'),
+      );
+    },
+  });
+
   const handleEditEvent = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [navigation, eventId]);
 
-  const handleJoinEvent = useCallback(() => {
+  const handleJoinEvent = () => {
     setIsJoinModalVisible(true);
+  };
+
+  const handleCloseJoinModal = () => {
+    setIsJoinModalVisible(false);
+  };
+
+  const handleOpenReportModal = useCallback(() => {
+    setIsReportModalVisible(true);
   }, []);
 
-  const handleCloseJoinModal = useCallback(() => {
-    setIsJoinModalVisible(false);
-  }, []);
+  const handleCloseReportModal = () => {
+    setIsReportModalVisible(false);
+  };
+
+  /**
+   * Handle report submission
+   * @param {string} reason - The reason for reporting the event
+   */
+  const handleSubmitReport = (reason) => {
+    if (!userData?.documentId || !eventId) {
+      Alert.alert(t('eventDetails.report.errorTitle'), t('eventDetails.report.missingInfoError'));
+      return;
+    }
+    reportEvent({ event: eventId, reason });
+  };
 
   /**
    * Handle participation request
@@ -177,13 +213,6 @@ function EventDetails({ navigation, route }) {
     );
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-      refetchParticipations();
-    }, [refetch, refetchParticipations]),
-  );
-
   // memoized values
   const hasPendingRequest = useMemo(() => {
     const myParticipations = eventParticipations?.pages?.[0]?.data || [];
@@ -209,6 +238,8 @@ function EventDetails({ navigation, route }) {
       (participation) => participation.participationStatus === 'pending',
     );
   }, [eventParticipations]);
+
+  // renderers
 
   /**
    * Renders the action button for joining an event
@@ -275,6 +306,31 @@ function EventDetails({ navigation, route }) {
       />
     );
   };
+
+  const renderReportButton = useCallback(() => (
+    <Button
+      icon="flag"
+      isOption
+      onPress={handleOpenReportModal}
+      style={Spaces.marginRight[16]}
+      variant="Secondary"
+    />
+  ), [handleOpenReportModal, Spaces]);
+
+  // effects
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      refetchParticipations();
+    }, [refetch, refetchParticipations]),
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: renderReportButton,
+    });
+  }, [navigation, renderReportButton]);
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -612,6 +668,12 @@ function EventDetails({ navigation, route }) {
           setSelectedParticipationId('');
         }}
         onSubmit={handleRefuseSubmit}
+      />
+      <ReportEventModal
+        isLoading={isReportingEvent}
+        isVisible={isReportModalVisible}
+        onClose={handleCloseReportModal}
+        onSubmit={handleSubmitReport}
       />
     </ScreenContainer>
   );

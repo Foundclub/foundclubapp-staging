@@ -20,6 +20,7 @@ export const images = {
   edit: require('../assets/icons/edit.png'),
   envelope: require('../assets/icons/envelope.png'),
   filter: require('../assets/icons/filter.png'),
+  flag: require('../assets/icons/flag.png'),
   phone: require('../assets/icons/phone.png'),
   pin: require('../assets/icons/pin.png'),
   plus: require('../assets/icons/plus.png'),
