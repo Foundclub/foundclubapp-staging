@@ -1,8 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Image,
   RefreshControl,
   ScrollView,
@@ -10,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useEvent from '@/domains/event/useEvent';
@@ -20,12 +23,18 @@ import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
+import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
+import { cancelEvent } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
+import {
+  acceptEventParticipation,
+  declineEventParticipation,
+} from '@/services/eventParticipation/eventParticipationService';
 
 /**
  * Event details screen component
@@ -35,6 +44,8 @@ import { useGetEventParticipations } from '@/services/eventParticipation/eventPa
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
+  const [selectedParticipationId, setSelectedParticipationId] = useState('');
 
   // hooks
   const {
@@ -46,20 +57,44 @@ function EventDetails({ navigation, route }) {
   const { canEventBeJoined, haveIAlreadyJoined } = useEvent();
 
   const {
-    data: event,
-    error,
-    isLoading,
-    refetch,
+    data: event, error, isLoading, refetch,
   } = useGetEvent(eventId);
-  const { data: eventParticipations } = useGetEventParticipations(
+
+  const { data: eventParticipations, refetch: refetchParticipations } = useGetEventParticipations(
     eventId,
-    userData?.documentId,
+    canEditEvent(event?.team?.documentId || '')
+      ? undefined
+      : userData?.documentId,
     {
       pageSize: 100,
     },
   );
 
-  // handlers
+  const { mutate: acceptParticipation } = useMutation({
+    mutationFn: acceptEventParticipation,
+    onSuccess: () => {
+      refetch();
+      refetchParticipations();
+      setSelectedParticipationId('');
+    },
+  });
+
+  const { mutate: declineParticipation } = useMutation({
+    mutationFn: declineEventParticipation,
+    onSuccess: () => {
+      refetchParticipations();
+      setIsRefuseModalVisible(false);
+      setSelectedParticipationId('');
+    },
+  });
+
+  const { mutate: cancelEventMutation } = useMutation({
+    mutationFn: cancelEvent,
+    onSuccess: () => {
+      navigation.goBack();
+    },
+  });
+
   const handleEditEvent = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [navigation, eventId]);
@@ -72,29 +107,174 @@ function EventDetails({ navigation, route }) {
     setIsJoinModalVisible(false);
   }, []);
 
+  /**
+   * Handle participation request
+   * @param {string} participationId - The ID of the participation
+   * @param {'accepted' | 'declined'} status - The status of the participation
+   * @returns {void}
+   */
+  const handleUpdateParticipation = (participationId, status) => {
+    if (!participationId) return;
+
+    setSelectedParticipationId(participationId);
+
+    if (status === 'accepted') {
+      Alert.alert(t('eventDetails.modals.accept.title'), '', [
+        {
+          onPress: () => setSelectedParticipationId(''),
+          style: 'cancel',
+          text: t('eventDetails.modals.actions.cancel'),
+        },
+        {
+          onPress: () => {
+            acceptParticipation(participationId);
+            setSelectedParticipationId('');
+          },
+          style: 'default',
+          text: t('eventDetails.modals.actions.confirm'),
+        },
+      ]);
+    } else if (status === 'declined') {
+      setIsRefuseModalVisible(true);
+    }
+  };
+
+  /**
+   * Handle refusal submission
+   * @param {string} reason - The reason for refusal
+   * @returns {void}
+   */
+  const handleRefuseSubmit = (reason) => {
+    if (selectedParticipationId) {
+      declineParticipation({
+        reason,
+        requestId: selectedParticipationId,
+      });
+    }
+    setSelectedParticipationId('');
+  };
+
+  const handleGoLogin = () => {
+    navigation.navigate(RouteNames.AuthStackAccount);
+  };
+
+  const handleCancelEvent = () => {
+    if (!eventId) return;
+    Alert.alert(
+      t('eventDetails.modals.cancelEvent.title'),
+      t('eventDetails.modals.cancelEvent.description'),
+      [
+        {
+          style: 'cancel',
+          text: t('eventDetails.modals.actions.cancel'),
+        },
+        {
+          onPress: () => cancelEventMutation(eventId),
+          style: 'destructive',
+          text: t('eventDetails.modals.actions.confirm'),
+        },
+      ],
+    );
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch]),
+      refetchParticipations();
+    }, [refetch, refetchParticipations]),
   );
 
   // memoized values
   const hasPendingRequest = useMemo(() => {
     const myParticipations = eventParticipations?.pages?.[0]?.data || [];
     if (myParticipations.length) {
-      return myParticipations.some((participation) => (
-        participation.participationStatus === 'pending'
-        && participation.user.documentId === userData?.documentId
-      ));
+      return myParticipations.some(
+        (participation) => participation.participationStatus === 'pending'
+          && participation.user.documentId === userData?.documentId,
+      );
     }
     return false;
   }, [eventParticipations, userData]);
 
   const participationInfo = useMemo(
-    () => (hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')),
+    () => (hasPendingRequest
+      ? t('eventList.info.pendingRequest')
+      : t('eventList.info.alreadyJoined')),
     [hasPendingRequest, t],
   );
 
+  const pendingParticipations = useMemo(() => {
+    const allParticipations = eventParticipations?.pages?.[0]?.data || [];
+    return allParticipations.filter(
+      (participation) => participation.participationStatus === 'pending',
+    );
+  }, [eventParticipations]);
+
+  /**
+   * Renders the action button for joining an event
+   * @returns {import('react').ReactElement} The rendered action button
+   */
+  const renderActionButtons = () => {
+    if (userData?.role?.name === USER_ROLES.player) {
+      const alreadyJoined = haveIAlreadyJoined({
+        participations: event?.participations || [],
+        userId: userData?.documentId,
+      });
+      if (alreadyJoined || hasPendingRequest) {
+        return (
+          <View style={[Alignments.fullWidth]}>
+            <Tag text={participationInfo} textStyle={Fonts.p1Bold} />
+          </View>
+        );
+      }
+      return (
+        <Button
+          disabled={
+            !canEventBeJoined({
+              capacity: event?.capacity || 0,
+              participations: event?.participations || [],
+              userId: userData?.documentId,
+              userRole: userData?.role,
+            })
+          }
+          onPress={handleJoinEvent}
+          style={Alignments.fullWidth}
+          title={t('eventDetails.actions.join')}
+          variant="Primary"
+        />
+      );
+    }
+    if (
+      userData?.role?.name === USER_ROLES.coach
+      || userData?.role?.name === USER_ROLES.president
+    ) {
+      if (canEditEvent(event?.team?.documentId || '')) {
+        return (
+          <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
+            <Button
+              onPress={handleEditEvent}
+              title={t('eventDetails.actions.edit')}
+              variant="Primary"
+            />
+            <Button
+              onPress={handleCancelEvent}
+              title={t('eventDetails.actions.cancelEvent')}
+              variant="SecondaryLight"
+            />
+          </View>
+        );
+      }
+      return <View />;
+    }
+    return (
+      <Button
+        onPress={handleGoLogin}
+        style={Alignments.fullWidth}
+        title={t('eventList.actions.join')}
+        variant="Primary"
+      />
+    );
+  };
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -106,10 +286,12 @@ function EventDetails({ navigation, route }) {
         Alignments.fill,
       ]}
     >
-      <View style={[
-        Spaces.gap[8],
-        Alignments.justifyCenter,
-        Alignments.alignCenter]}
+      <View
+        style={[
+          Spaces.gap[8],
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+        ]}
       >
         <Tag
           text={event?.type?.name?.toUpperCase() || ''}
@@ -118,13 +300,13 @@ function EventDetails({ navigation, route }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          Spaces.gap[32],
-          Spaces.paddingBottom[40],
-        ]}
+        contentContainerStyle={[Spaces.gap[32], Spaces.paddingBottom[40]]}
         refreshControl={(
           <RefreshControl
-            onRefresh={refetch}
+            onRefresh={() => {
+              refetch();
+              refetchParticipations();
+            }}
             refreshing={isLoading}
           />
         )}
@@ -146,63 +328,83 @@ function EventDetails({ navigation, route }) {
               Spaces.paddingVertical[32],
             ]}
           >
-            <View style={[
-              Spaces.gap[4],
-              Alignments.alignCenter,
-              Alignments.fullWidth,
-              Alignments.row,
-            ]}
+            <View
+              style={[
+                Spaces.gap[4],
+                Alignments.alignCenter,
+                Alignments.fullWidth,
+                Alignments.row,
+              ]}
             >
               <TeamShield
-                initials={event?.team?.club?.name ? getClubInitials(event?.team?.club?.name || '') : ''}
+                initials={
+                  event?.team?.club?.name
+                    ? getClubInitials(event?.team?.club?.name || '')
+                    : ''
+                }
                 isSmall
               />
               <Text style={[Fonts.p1Bold, Fonts.neutral00, { maxWidth: '75%' }]}>
                 {event?.team?.club?.name}
               </Text>
             </View>
-            <View style={[Alignments.fullWidth, Spaces.gap[8], Spaces.marginBottom[12],
-            ]}
+            <View
+              style={[
+                Alignments.fullWidth,
+                Spaces.gap[8],
+                Spaces.marginBottom[12],
+              ]}
             >
-              <Text style={[Fonts.p2Bold, Fonts.primary500, Fonts.textRight, Alignments.fullWidth]}>
+              <Text
+                style={[
+                  Fonts.p2Bold,
+                  Fonts.primary500,
+                  Fonts.textRight,
+                  Alignments.fullWidth,
+                ]}
+              >
                 {event?.team?.section?.name}
               </Text>
-              <View style={[
-                Alignments.fullWidth,
-                ApplicationStyle.separator,
-                ApplicationStyle.backgroundColor.primary500,
-              ]}
+              <View
+                style={[
+                  Alignments.fullWidth,
+                  ApplicationStyle.separator,
+                  ApplicationStyle.backgroundColor.primary500,
+                ]}
               />
             </View>
 
-            <View style={[
-              Spaces.gap[24],
-              Alignments.fill,
-            ]}
-            >
+            <View style={[Spaces.gap[24], Alignments.fill]}>
               {event?.locationDetails ? (
-                <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
+                <View
+                  style={[
+                    Alignments.row,
+                    Alignments.justifyCenter,
+                    Spaces.gap[8],
+                  ]}
+                >
                   <Image
                     source={Images.pin}
-                    style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+                    style={[
+                      ApplicationStyle.icon20,
+                      ApplicationStyle.tintColor.neutral00,
+                    ]}
                   />
                   <Text style={[Fonts.p2, Fonts.primary100]}>
                     {JSON.parse(event.locationDetails)?.address}
                   </Text>
                 </View>
               ) : null}
-              <View style={[
-                Alignments.row,
-                Alignments.fill,
-                Spaces.gap[16]]}
-              >
-                { event?.date ? (
+              <View style={[Alignments.row, Alignments.fill, Spaces.gap[16]]}>
+                {event?.date ? (
                   <View style={[Spaces.gap[8]]}>
                     <View style={[Alignments.row, Spaces.gap[8]]}>
                       <Image
                         source={Images.calendar}
-                        style={[ApplicationStyle.icon20,
-                          ApplicationStyle.tintColor.neutral00]}
+                        style={[
+                          ApplicationStyle.icon20,
+                          ApplicationStyle.tintColor.neutral00,
+                        ]}
                       />
                       <Text style={[Fonts.p2, Fonts.primary100]}>
                         {format(new Date(event.date), 'dd MMMM yyyy')}
@@ -212,7 +414,10 @@ function EventDetails({ navigation, route }) {
                     <View style={[Alignments.row, Spaces.gap[4]]}>
                       <Image
                         source={Images.clock}
-                        style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+                        style={[
+                          ApplicationStyle.icon20,
+                          ApplicationStyle.tintColor.neutral00,
+                        ]}
                       />
                       <Text style={[Fonts.p2, Fonts.primary100]}>
                         {format(new Date(event.date), 'HH:mm')}
@@ -220,19 +425,25 @@ function EventDetails({ navigation, route }) {
                     </View>
                   </View>
                 ) : null}
-                <View style={[
-                  { height: 45, width: 1 },
-                  ApplicationStyle.backgroundColor.neutral00,
-                ]}
+                <View
+                  style={[
+                    { height: 45, width: 1 },
+                    ApplicationStyle.backgroundColor.neutral00,
+                  ]}
                 />
-                { event?.team ? (
+                {event?.team ? (
                   <View style={[Spaces.gap[8]]}>
-
-                    <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}
+                    >
                       {event?.team?.category?.name}
                     </Text>
 
-                    <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}
+                    >
                       {event?.team?.level?.name}
                     </Text>
                   </View>
@@ -249,84 +460,158 @@ function EventDetails({ navigation, route }) {
               {event?.description}
             </Text>
           </View>
+          {/* Participation Requests section */}
+          {canEditEvent(event?.team?.documentId || '')
+            && pendingParticipations.length > 0 && (
+              <View style={[Spaces.gap[16], Alignments.fill]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('eventDetails.fields.participationRequests')}
+                </Text>
+                {pendingParticipations.map((participation) => (
+                  <View
+                    key={participation.documentId}
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      Alignments.row,
+                      ApplicationStyle.backgroundColor.primary700,
+                      Spaces.padding[24],
+                      Spaces.gap[24],
+                    ]}
+                  >
+                    <View
+                      style={[
+                        Alignments.row,
+                        Spaces.gap[16],
+                        Alignments.alignCenter,
+                      ]}
+                    >
+                      <Image
+                        source={
+                          participation.user.avatar
+                            ? { uri: participation.user.avatar.url }
+                            : Images.roundAvatar
+                        }
+                        style={[
+                          ApplicationStyle.roundIcon40,
+                          ApplicationStyle.borderWidth1,
+                          ApplicationStyle.borderColor.neutral00,
+                        ]}
+                      />
+                      <Text
+                        numberOfLines={1}
+                        style={[Fonts.p1Bold, Fonts.neutral00]}
+                      >
+                        {`${participation.user.firstname} ${participation.user.lastname}`}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        Alignments.row,
+                        Spaces.gap[8],
+                        Alignments.justifyCenter,
+                      ]}
+                    >
+                      <Button
+                        icon="check"
+                        isOption
+                        onPress={() => participation.documentId
+                          && handleUpdateParticipation(
+                            participation.documentId,
+                            'accepted',
+                          )}
+                        variant="Primary"
+                      />
+                      <Button
+                        icon="close"
+                        isOption
+                        onPress={() => participation.documentId
+                          && handleUpdateParticipation(
+                            participation.documentId,
+                            'declined',
+                          )}
+                        variant="Secondary"
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+          )}
           {/* Participation section */}
           <View style={[Spaces.gap[16], Alignments.fill]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               {t('eventDetails.fields.participations')}
-              <Text>{` :  ${event?.participations?.length || 0} / ${event?.capacity}`}</Text>
+              <Text>
+                {` :  ${event?.participations?.length || 0} / ${
+                  event?.capacity
+                }`}
+              </Text>
             </Text>
-            {
-              event?.participations?.map((/** @type {User} */ player) => (
+            {event?.participations?.map((/** @type {User} */ player) => (
+              <View
+                key={player.documentId}
+                style={[
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.backgroundColor.primary700,
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.padding[16],
+                  Spaces.gap[16],
+                ]}
+              >
                 <View
-                  key={player.documentId}
                   style={[
-                    ApplicationStyle.borderRadius24,
-                    ApplicationStyle.backgroundColor.primary700,
                     Alignments.row,
+                    Spaces.gap[16],
                     Alignments.alignCenter,
-                    Alignments.justifySpaceBetween,
-                    Spaces.padding[16],
-                    Spaces.gap[16]]}
+                  ]}
                 >
-                  <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
-                    <Image
-                      source={player.avatar ? { uri: player?.avatar?.url } : Images.roundAvatar}
-                      style={[
-                        ApplicationStyle.roundIcon40,
-                        ApplicationStyle.borderWidth1,
-                        ApplicationStyle.borderColor.neutral00,
-                      ]}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                      {`${player.firstname} ${player.lastname}`}
-                    </Text>
-                  </View>
+                  <Image
+                    source={
+                      player.avatar
+                        ? { uri: player?.avatar?.url }
+                        : Images.roundAvatar
+                    }
+                    style={[
+                      ApplicationStyle.roundIcon40,
+                      ApplicationStyle.borderWidth1,
+                      ApplicationStyle.borderColor.neutral00,
+                    ]}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p1Bold, Fonts.neutral00]}
+                  >
+                    {`${player.firstname} ${player.lastname}`}
+                  </Text>
                 </View>
-              ))
-            }
+              </View>
+            ))}
           </View>
         </WithDataWrapper>
       </ScrollView>
 
-      <View style={[Spaces.gap[16],
-        Spaces.paddingHorizontal[16],
-        Spaces.marginVertical[16]]}
-      >
-        {haveIAlreadyJoined({
-          participations: event?.participations || [],
-          userId: userData?.documentId,
-        }) || hasPendingRequest ? (
-          <Tag
-            text={participationInfo}
-            textStyle={Fonts.p1Bold}
-          />
-          ) : (
-            <Button
-              disabled={!canEventBeJoined({
-                capacity: event?.capacity || 0,
-                participations: event?.participations || [],
-                userId: userData?.documentId,
-                userRole: userData?.role,
-              })}
-              onPress={handleJoinEvent}
-              title={t('eventList.actions.join')}
-              variant="Primary"
-            />
-          )}
-        {canEditEvent(event?.team?.documentId || '') && (
-          <Button
-            onPress={handleEditEvent}
-            title={t('eventDetails.actions.edit')}
-            variant="Primary"
-          />
-        )}
+      <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+        {renderActionButtons()}
       </View>
 
       <JoinEventModal
         eventId={eventId}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
-        onSuccess={refetch}
+        onSuccess={() => {
+          refetch();
+          refetchParticipations();
+        }}
+      />
+
+      <RefuseParticipationModal
+        isVisible={isRefuseModalVisible}
+        onClose={() => {
+          setIsRefuseModalVisible(false);
+          setSelectedParticipationId('');
+        }}
+        onSubmit={handleRefuseSubmit}
       />
     </ScreenContainer>
   );

@@ -1,4 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
+import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { useEffect, useMemo } from 'react';
@@ -24,11 +25,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import {
-  useCreateEvent,
   useGetEvent,
   useGetEventTypes,
-  useUpdateEvent,
 } from '@/services/event/eventQueries';
+import { createEvent, updateEvent } from '@/services/event/eventService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -107,9 +107,15 @@ function EventEdit({ navigation, route }) {
     validationModeOptions,
   } = useEvent();
 
-  const createEventMutation = useCreateEvent();
+  const createEventMutation = useMutation({
+    mutationFn: createEvent,
+    onSuccess: () => {
+      navigation.goBack();
+    },
+  });
 
-  const updateEventMutation = useUpdateEvent({
+  const updateEventMutation = useMutation({
+    mutationFn: updateEvent,
     onSuccess: () => {
       navigation.goBack();
     },
@@ -180,7 +186,7 @@ function EventEdit({ navigation, route }) {
     if (eventId) {
       updateEventMutation.mutate({
         documentId: eventId,
-        ...formattedEvents[0],
+        eventData: formattedEvents[0],
       });
     } else {
       const promises = formattedEvents.map(

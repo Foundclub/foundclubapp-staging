@@ -94,6 +94,8 @@ function BottomModal({
       enablePanDownToClose
       handleComponent={null}
       index={0}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       onDismiss={close}
       ref={modalRef}
     >

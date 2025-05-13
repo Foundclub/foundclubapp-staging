@@ -91,10 +91,12 @@ export const acceptEventParticipation = async (requestId) => {
 
 /**
  * Decline an event participation request
- * @param {string} requestId - The ID of the request to decline
+ * @param {object} param - The ID of the request to decline
+ * @param {string} param.requestId - The ID of the request to decline
+ * @param {string} [param.reason] - The reason for declining the request
  * @returns {Promise<EventParticipation>} - The updated request
  */
-export const declineEventParticipation = async (requestId) => {
-  const response = await client.post(`/event-participations/${requestId}/decline`);
+export const declineEventParticipation = async ({ reason, requestId }) => {
+  const response = await client.post(`/event-participations/${requestId}/refuse`, { data: { reason } });
   return response.data;
 };

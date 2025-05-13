@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
@@ -9,7 +10,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
-import { useCreateEventParticipation } from '@/services/eventParticipation/eventParticipationQueries';
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 /**
  * Modal for joining an event
@@ -29,7 +30,10 @@ function JoinEventModal({
   const [acceptResponsibility, setAcceptResponsibility] = useState(false);
   const [acceptConditions, setAcceptConditions] = useState(false);
 
-  const createEventParticipation = useCreateEventParticipation();
+  const createEventParticipationMutation = useMutation({
+    mutationFn: createEventParticipation,
+    onSuccess,
+  });
   const { userData } = useAuth();
   const { t } = useTranslation();
   const {
@@ -41,7 +45,7 @@ function JoinEventModal({
 
   const handleConfirmParticipation = useCallback(() => {
     if (eventId && acceptResponsibility && acceptConditions && userData?.documentId) {
-      createEventParticipation.mutate({
+      createEventParticipationMutation.mutate({
         event: eventId,
         user: userData.documentId,
       }, {
@@ -56,7 +60,7 @@ function JoinEventModal({
     acceptResponsibility,
     acceptConditions,
     userData,
-    createEventParticipation,
+    createEventParticipationMutation,
     onClose,
     onSuccess,
   ]);

@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, Text, TouchableOpacity, View,
+  Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
@@ -15,17 +15,16 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Checkable from '@/components/atoms/checkable/Checkable';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
-import { useCreateEventParticipation } from '@/services/eventParticipation/eventParticipationQueries';
+
+import JoinEventModal from '../joinEventModal/JoinEventModal';
 
 /**
  * Event list content to be used in home page or dedicated event list screen
@@ -49,10 +48,6 @@ import { useCreateEventParticipation } from '@/services/eventParticipation/event
 function EventListContent({ additionalFilters, showFilters = false }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
-  const [acceptResponsibility, setAcceptResponsibility] = useState(false);
-  const [acceptConditions, setAcceptConditions] = useState(false);
-
-  const createEventParticipation = useCreateEventParticipation();
 
   // hooks
   const {
@@ -138,31 +133,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const handleCloseJoinModal = useCallback(() => {
     setIsJoinModalVisible(false);
     setSelectedEvent(undefined);
-    setAcceptResponsibility(false);
-    setAcceptConditions(false);
   }, []);
-
-  const handleConfirmParticipation = useCallback(() => {
-    if (selectedEvent?.documentId
-       && acceptResponsibility
-       && acceptConditions && userData?.documentId) {
-      createEventParticipation.mutate({
-        event: selectedEvent.documentId,
-        user: userData.documentId,
-      }, {
-        onSuccess: () => {
-          handleCloseJoinModal();
-          refetch();
-        },
-      });
-    }
-  }, [selectedEvent,
-    acceptResponsibility,
-    acceptConditions,
-    userData,
-    createEventParticipation,
-    handleCloseJoinModal,
-    refetch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -388,63 +359,12 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           />
         </View>
       </WithDataWrapper>
-      <BottomModal
-        close={handleCloseJoinModal}
+      <JoinEventModal
+        eventId={selectedEvent?.documentId || ''}
         isVisible={isJoinModalVisible}
-      >
-        <ScrollView contentContainerStyle={
-          [Spaces.gap[32], Spaces.padding[24]]
-}
-        >
-          <Text style={[Fonts.p1Black, Fonts.neutral00]}>
-            {t('eventList.joinModal.title')}
-          </Text>
-          <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('eventList.joinModal.description')}
-          </Text>
-
-          <View style={[Spaces.gap[16]]}>
-            <Checkable
-              fontStyle={[Fonts.p2, Fonts.neutral00]}
-              isChecked={acceptResponsibility}
-              setIsChecked={() => setAcceptResponsibility(!acceptResponsibility)}
-              text={t('eventList.joinModal.checkboxes.responsibility')}
-              type="square"
-              wrapperStyle={[ApplicationStyle.borderWidth0,
-                ApplicationStyle.backgroundColor.transparent,
-                Spaces.padding[0],
-                Alignments.rowReverse,
-              ]}
-            />
-            <Checkable
-              fontStyle={[Fonts.p2, Fonts.neutral00]}
-              isChecked={acceptConditions}
-              setIsChecked={() => setAcceptConditions(!acceptConditions)}
-              text={t('eventList.joinModal.checkboxes.conditions')}
-              type="square"
-              wrapperStyle={[ApplicationStyle.borderWidth0,
-                ApplicationStyle.backgroundColor.transparent,
-                Spaces.padding[0],
-                Alignments.rowReverse,
-              ]}
-            />
-          </View>
-
-        </ScrollView>
-        <View style={[Spaces.gap[16]]}>
-          <Button
-            disabled={!acceptResponsibility || !acceptConditions}
-            onPress={handleConfirmParticipation}
-            title={t('eventList.joinModal.actions.confirm')}
-            variant="Primary"
-          />
-          <Button
-            onPress={handleCloseJoinModal}
-            title={t('eventList.joinModal.actions.cancel')}
-            variant="Secondary"
-          />
-        </View>
-      </BottomModal>
+        onClose={handleCloseJoinModal}
+        onSuccess={refetch}
+      />
     </View>
   );
 }

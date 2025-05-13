@@ -37,14 +37,25 @@ export const createEvent = async (eventData) => {
 
 /**
  * Update an event
- * @param {string} documentId - The event ID
- * @param {FCEventForm} eventData - The event data to update
+ * @param {object} params
+ * @param {string} params.documentId - The event ID
+ * @param {FCEventForm} params.eventData - The event data to update
  * @returns {Promise<any>} 201
  */
-export const updateEvent = async (documentId, eventData) => {
+export const updateEvent = async ({ documentId, eventData }) => {
   const response = await client.put(`/events/${documentId}`, {
     data: eventData,
   });
+  return response.data;
+};
+
+/**
+ * Cancel an event
+ * @param {string} documentId - The event ID
+ * @returns {Promise<any>} 201
+ */
+export const cancelEvent = async (documentId) => {
+  const response = await client.post(`/events/${documentId}/cancel`);
   return response.data;
 };
 
@@ -150,6 +161,7 @@ export const getEvents = async (params = {}) => {
     date: {
       $gt: new Date().toISOString(), // Only get future dates
     },
+    isActive: true,
   };
 
   // Build team and participant filters

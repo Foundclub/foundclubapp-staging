@@ -306,11 +306,38 @@ export default {
   },
   eventDetails: {
     actions: {
+      accept: 'Accepter',
+      cancelEvent: 'Annuler l\'évènement',
       edit: 'Modifier l\'évènement',
+      join: 'Participer',
+      refuse: 'Refuser',
     },
     fields: {
       description: 'À propos',
+      participationRequests: 'Demandes de participation',
       participations: 'Participants',
+    },
+    modals: {
+      accept: {
+        title: 'Êtes-vous sûr·e de vouloir accepter cette demande ?',
+      },
+      actions: {
+        cancel: 'Annuler',
+        confirm: 'Confirmer',
+      },
+      cancelEvent: {
+        description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
+        title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
+      },
+      refuse: {
+        fields: {
+          reason: {
+            label: 'Raison du refus',
+            placeholder: 'Il faut avoir plus de 16 ans.',
+          },
+        },
+        title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
+      },
     },
   },
   eventEdit: {
