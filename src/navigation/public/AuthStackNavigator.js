@@ -3,16 +3,16 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Login from '@/views/Login';
 import Register from '@/views/Register';
 
-import { commonOptions } from '@/navigation/commonOptions';
-import { RouteNames } from '@/navigation/routeNames';
+import { commonOptions } from '../commonOptions';
+import { RouteNames } from '../routeNames';
 
 const Stack = createStackNavigator();
 
 /**
- * PublicNavigator component, with routes available for non authenticated users.
- * @returns {import('react').ReactElement} PublicNavigator component.
+ * AuthStackNavigator component, with routes available for non authenticated users.
+ * @returns {import('react').ReactElement} AuthStackNavigator component.
  */
-function PublicNavigator() {
+function AuthStackNavigator() {
   return (
     <Stack.Navigator id={undefined} screenOptions={commonOptions}>
       <Stack.Screen
@@ -27,4 +27,4 @@ function PublicNavigator() {
   );
 }
 
-export default PublicNavigator;
+export default AuthStackNavigator;

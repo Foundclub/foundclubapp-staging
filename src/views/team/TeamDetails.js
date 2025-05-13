@@ -79,8 +79,10 @@ function TeamDetails({ navigation, route }) {
 
   // handlers
   const handleEditTeam = useCallback(() => {
-    navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
-  }, [navigation, team?.club?.documentId, teamId]);
+    if (currentUser) {
+      navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
+    }
+  }, [navigation, team?.club?.documentId, teamId, currentUser]);
 
   const handleJoinTeam = useCallback(() => {
     if (teamId && currentUser?.documentId) {

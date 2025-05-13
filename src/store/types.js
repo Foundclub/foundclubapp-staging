@@ -6,6 +6,7 @@
  * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
  * @property {TeamFilters} [teamFilters] - The filters for teams.
+ * @property {EventFilters} [eventFilters] - The filters for events.
  */
 
 /**
@@ -19,7 +20,8 @@
 /**
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
- * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS'} AppContextTypes
+ * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS'
+ * | 'SET_EVENT_FILTERS'} AppContextTypes
  */
 
 /**
@@ -57,4 +59,17 @@
  * @property {string} section
  * @property {string} category
  * @property {string} level
+ */
+
+/**
+ * @typedef {object} EventFilters
+ * @property {string} q
+ * @property {string} activities
+ * @property {string} category
+ * @property {string} level
+ * @property {string} sessionStatus
+ * @property {string} type
+ * @property {{label: string, value: string}} team
+ * @property {string[]} [teamIds]
+ * @property {{label: string, value: string}} club
  */

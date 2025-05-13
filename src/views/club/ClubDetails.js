@@ -19,7 +19,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
-import { useGetAddressFromCoordinates, useGetClub } from '@/services/club/clubQueries';
+import { useGetClub } from '@/services/club/clubQueries';
 import { updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 
@@ -47,11 +47,6 @@ function ClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetClub(clubId ?? '');
-
-  const { data: address } = useGetAddressFromCoordinates({
-    lat: club?.address?.lat,
-    lng: club?.address?.lng,
-  });
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
@@ -91,11 +86,15 @@ function ClubDetails({ navigation, route }) {
 
   // handlers
   const handleCreateCoach = () => {
-    navigation.navigate(RouteNames.AddCoach, { clubId });
+    if (userData) {
+      navigation.navigate(RouteNames.AddCoach, { clubId });
+    }
   };
 
   const handleCreateSponsor = () => {
-    navigation.navigate(RouteNames.AddSponsor, { clubId });
+    if (userData) {
+      navigation.navigate(RouteNames.AddSponsor, { clubId });
+    }
   };
 
   /**
@@ -216,7 +215,7 @@ function ClubDetails({ navigation, route }) {
                 {club?.name}
               </Text>
               <Text style={[Fonts.p2, Fonts.primary100]}>
-                {address}
+                {club?.addressDetails ? JSON.parse(club?.addressDetails)?.address : ''}
               </Text>
             </View>
             <View style={[

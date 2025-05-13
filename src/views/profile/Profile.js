@@ -56,6 +56,10 @@ function Profile({ navigation }) {
     navigation.navigate(RouteNames.ClubList);
   };
 
+  const handleFindTeam = () => {
+    navigation.navigate(RouteNames.TeamList);
+  };
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };
@@ -193,7 +197,14 @@ function Profile({ navigation }) {
         </TouchableOpacity>
       ) : null;
     }
-    return null;
+    return (
+      <Button
+        isOption
+        onPress={handleFindTeam}
+        title={t('profile.actions.findTeam')}
+        variant="SecondaryLight"
+      />
+    );
   };
 
   useFocusEffect(
@@ -210,6 +221,7 @@ function Profile({ navigation }) {
         Spaces.paddingTop[24],
         Spaces.paddingBottom[12],
         Alignments.justifySpaceBetween,
+        Alignments.fill,
       ]}
     >
       <View style={[
@@ -239,6 +251,8 @@ function Profile({ navigation }) {
             refreshing={userDataLoading}
           />
         )}
+        showsVerticalScrollIndicator={false}
+        style={[Alignments.fill]}
       >
 
         <WithDataWrapper
@@ -327,10 +341,6 @@ function Profile({ navigation }) {
             />
           ) : null}
         </View>
-      </ScrollView>
-      <View style={[
-        Spaces.gap[12]]}
-      >
         <Button
           onPress={handleLogout}
           title={t('profile.actions.logout')}
@@ -343,7 +353,7 @@ function Profile({ navigation }) {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }

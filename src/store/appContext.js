@@ -16,6 +16,7 @@ export const storage = new MMKV();
 const initStore = {
   auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
   clubFilters: undefined,
+  eventFilters: undefined,
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
   onboardingViews: undefined,
   teamFilters: undefined,

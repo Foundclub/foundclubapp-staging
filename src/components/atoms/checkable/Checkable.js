@@ -12,18 +12,26 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} props.isChecked - The checked state.
  * @param {(checked: boolean) => void} props.setIsChecked - The set checked state function.
  * @param {string} props.text - The text of the checkable.
- * @param {boolean} props.disabled - The disabled state of the checkable.
+ * @param {boolean} [props.disabled] - The disabled state of the checkable.
  * @param {'circle' | 'square'} [props.type] - The type (circle for radio, square for checkbox).
  * @param {React.ReactNode} [props.children] - The children of the component.
+ * @param {import('react-native').ViewStyle
+ * | Array<import('react-native').ViewStyle>} [props.wrapperStyle] - The wrapper style.
+ * @param {import('react-native').ViewStyle
+ * | Array<import('react-native').ViewStyle>} [props.fontStyle] - The font style.
+ * @param {string} [props.customFillColor] - The custom fill color.
  * @returns {React.ReactElement} Checkable component.
  */
 function Checkable({
   children,
-  disabled,
+  customFillColor = undefined,
+  disabled = false,
+  fontStyle,
   isChecked,
   setIsChecked,
   text,
   type = 'circle',
+  wrapperStyle,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -76,16 +84,18 @@ function Checkable({
         ApplicationStyle.borderWidth2,
         ApplicationStyle.borderColor.neutral00,
         Spaces.padding[16],
+        Spaces.gap[16],
         isChecked ? ApplicationStyle.backgroundColor.primary500
           : ApplicationStyle.backgroundColor.transparent,
+        wrapperStyle,
       ]}
       >
         {children || (
         <Text style={[
           Alignments.fill,
           Fonts.p1Bold,
-          Spaces.marginLeft[16],
           isChecked ? Fonts.primary700 : Fonts.neutral00,
+          fontStyle,
         ]}
         >
           {text}
@@ -93,7 +103,7 @@ function Checkable({
         )}
         <BouncyCheckbox
           disableText
-          fillColor={Colors.neutral00}
+          fillColor={customFillColor || (type === 'circle' ? Colors.neutral00 : 'transparent')}
           iconComponent={(isChecked || type === 'circle') ? iconComponent : null}
           innerIconStyle={{
             borderColor: isChecked ? Colors.primary500 : Colors.neutral00,

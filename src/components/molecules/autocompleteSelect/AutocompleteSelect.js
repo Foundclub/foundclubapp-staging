@@ -58,7 +58,7 @@ const AutocompleteSelect = forwardRef(
   (props, ref) => {
   // hooks
     const {
-      Alignments, Fonts, Spaces,
+      Alignments, Colors, Fonts, Spaces,
     } = useTheme();
     const { t } = useTranslation();
 
@@ -147,8 +147,9 @@ const AutocompleteSelect = forwardRef(
 
     return (
       <View style={[Alignments.relative]}>
-        <View style={[Alignments.relative]}>
+        <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
           <TouchableOpacity
+            disabled={props.disabled}
             onPress={handleFocus}
             style={[
               Alignments.absolute,
@@ -225,6 +226,7 @@ const AutocompleteSelect = forwardRef(
                     style={[Alignments.row, Spaces.marginTop[8]]}
                   >
                     <Checkable
+                      customFillColor={Colors.neutral00}
                       disabled={false}
                       isChecked={handleIsChecked(option)}
                       setIsChecked={

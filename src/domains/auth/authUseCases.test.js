@@ -35,6 +35,11 @@ describe('authUseCases', () => {
       getAuthTokens();
       expect(storage.getString).toHaveBeenCalledWith('auth');
     });
+
+    it('should handle empty string auth data', () => {
+      storage.getString.mockReturnValue('');
+      expect(getAuthTokens()).toBeNull();
+    });
   });
 
   describe('getOnboardingViews', () => {
@@ -152,6 +157,32 @@ describe('authUseCases', () => {
         { canShow: true, index: 2, route: RouteNames.UserBirthdate },
         { canShow: false, index: 3, route: RouteNames.UserAvatar },
         { canShow: true, index: 4, route: RouteNames.Welcome },
+      ]);
+    });
+
+    it('should handle invalid role gracefully', () => {
+      const result = getOnboardingViews({ role: { name: 'InvalidRole' } });
+      expect(result.totalViews).toBe(6);
+      expect(result.views).toEqual([
+        { canShow: false, index: 1, route: RouteNames.UserRole },
+        { canShow: true, index: 2, route: RouteNames.UserName },
+        { canShow: true, index: 3, route: RouteNames.UserSection },
+        { canShow: true, index: 4, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 5, route: RouteNames.UserAvatar },
+        { canShow: true, index: 6, route: RouteNames.Welcome },
+      ]);
+    });
+
+    it('should handle undefined user data', () => {
+      const result = getOnboardingViews({ role: {} });
+      expect(result.totalViews).toBe(6);
+      expect(result.views).toEqual([
+        { canShow: false, index: 1, route: RouteNames.UserRole },
+        { canShow: true, index: 2, route: RouteNames.UserName },
+        { canShow: true, index: 3, route: RouteNames.UserSection },
+        { canShow: true, index: 4, route: RouteNames.UserBirthdate },
+        { canShow: true, index: 5, route: RouteNames.UserAvatar },
+        { canShow: true, index: 6, route: RouteNames.Welcome },
       ]);
     });
   });

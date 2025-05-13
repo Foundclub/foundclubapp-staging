@@ -6,7 +6,8 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
-import PublicNavigator from '@/navigation/public/publicNavigator';
+
+import PublicNavigator from './public/PublicMainNavigator';
 
 /**
  * AppNavigator component.

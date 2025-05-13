@@ -14,10 +14,15 @@ import useTheme from '@/theme/themeContext';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 const searchOptions = [
+  {
+    label: i18n.t('home.fields.type.options.event'),
+    value: 'events',
+  },
   {
     label: i18n.t('home.fields.type.options.club'),
     value: 'clubs',
@@ -25,10 +30,6 @@ const searchOptions = [
   {
     label: i18n.t('home.fields.type.options.team'),
     value: 'teams',
-  },
-  {
-    label: i18n.t('home.fields.type.options.event'),
-    value: 'events',
   },
 ];
 
@@ -59,6 +60,8 @@ function Home() {
     switch (searchType) {
       case 'clubs':
         return <ClubListContent />;
+      case 'events':
+        return <EventListContent additionalFilters={{ sessionStatus: 'open' }} showFilters />;
       case 'teams':
         return <TeamListContent showFilters />;
       default:
@@ -121,7 +124,6 @@ function Home() {
           ))}
         </ScrollView>
       </View>
-
       {renderContent()}
     </ScreenContainer>
   );

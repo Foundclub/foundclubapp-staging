@@ -7,11 +7,12 @@ import useTheme from '@/theme/themeContext';
  * @param {object} props - Component props
  * @param {string} props.text - Text to display in the tag
  * @param {'primary500' | 'neutral00'} [props.textColor] - Color of the text, defaults to primary500
+ * @param {import('react-native').TextStyle} [props.textStyle] - Additional styles for the text
  * @returns {import('react').ReactElement} Tag component
  */
-function Tag({ text, textColor = 'primary500' }) {
+function Tag({ text, textColor = 'primary500', textStyle }) {
   const {
-    ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
 
   return (
@@ -22,12 +23,14 @@ function Tag({ text, textColor = 'primary500' }) {
         ApplicationStyle.borderRadius8,
         Spaces.paddingVertical[4],
         Spaces.paddingHorizontal[8],
+        Alignments.alignCenter,
       ]}
     >
       <Text
         numberOfLines={1}
         style={[
           Fonts.p3,
+          textStyle,
           Fonts[textColor],
         ]}
       >

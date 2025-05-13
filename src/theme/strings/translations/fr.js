@@ -304,6 +304,187 @@ export default {
     subtitle: 'Une erreur est survenue.',
     title: 'Oups !',
   },
+  eventDetails: {
+    actions: {
+      accept: 'Accepter',
+      cancelEvent: 'Annuler l\'évènement',
+      edit: 'Modifier l\'évènement',
+      join: 'Participer',
+      refuse: 'Refuser',
+    },
+    fields: {
+      description: 'À propos',
+      participationRequests: 'Demandes de participation',
+      participations: 'Participants',
+    },
+    modals: {
+      accept: {
+        title: 'Êtes-vous sûr·e de vouloir accepter cette demande ?',
+      },
+      actions: {
+        cancel: 'Annuler',
+        confirm: 'Confirmer',
+      },
+      cancelEvent: {
+        description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
+        title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
+      },
+      refuse: {
+        fields: {
+          reason: {
+            label: 'Raison du refus',
+            placeholder: 'Il faut avoir plus de 16 ans.',
+          },
+        },
+        title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
+      },
+    },
+  },
+  eventEdit: {
+    actions: {
+      save: 'Enregistrer',
+    },
+    fields: {
+      capacity: {
+        label: 'Capacité',
+        placeholder: 'Nombre de participant·e·s',
+      },
+      club: {
+        label: 'Club',
+        placeholder: 'Sélectionner un club',
+      },
+      date: {
+        label: "Date de l'évènement",
+        placeholder: 'JJ/MM/AAAA',
+      },
+      description: {
+        label: 'Description',
+        placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
+      },
+      isRecurrent: {
+        label: 'Évènement récurrent',
+      },
+      location: {
+        label: 'Lieu',
+        placeholder: 'Sélectionner un lieu',
+      },
+      recurrenceDay: {
+        label: 'Jour de la récurrence',
+      },
+      recurrenceEndDate: {
+        label: 'Date de fin de la récurrence',
+        placeholder: 'JJ/MM/AAAA',
+      },
+      recurrenceFrequency: {
+        label: 'Fréquence de la récurrence',
+        options: {
+          month: 'Mensuel',
+          week: 'Hebdomadaire',
+        },
+      },
+      recurrenceStartDate: {
+        label: 'Date de début de la récurrence',
+        placeholder: 'JJ/MM/AAAA',
+      },
+      sessionStatus: {
+        label: 'Statut de la session',
+        options: {
+          closed: 'Fermé',
+          open: 'Ouvert',
+        },
+      },
+      team: {
+        label: 'Équipe',
+        placeholder: 'Sélectionner une équipe',
+      },
+      time: {
+        label: "Horaire de l'évènement",
+        placeholder: 'JJ/MM/AAAA',
+      },
+      type: {
+        label: 'Type d\'évènement',
+        placeholder: 'Sélectionner un type d\'évènement',
+      },
+      validationMode: {
+        label: 'Mode de validation',
+        options: {
+          auto: 'Automatique',
+          manual: 'Manuelle',
+        },
+      },
+    },
+    title: 'Créer un évènement',
+    titleEdit: 'Modifier l\'évènement',
+  },
+  eventFilters: {
+    actions: {
+      apply: 'Appliquer les filtres',
+      clear: 'Effacer les filtres',
+    },
+    fields: {
+      activity: {
+        label: 'Activité',
+        placeholder: 'Sélectionner une activité',
+      },
+      category: {
+        label: 'Catégorie',
+        placeholder: 'Sélectionner une catégorie',
+      },
+      club: {
+        label: 'Club',
+        placeholder: 'Sélectionner un club',
+      },
+      level: {
+        label: 'Niveau',
+        placeholder: 'Sélectionner un niveau',
+      },
+      sessionStatus: {
+        label: 'Statut de la session',
+        options: {
+          closed: 'Fermé',
+          open: 'Ouvert',
+        },
+        placeholder: 'Sélectionner un statut',
+      },
+      team: {
+        label: 'Équipe',
+        placeholder: 'Sélectionner une équipe',
+        selectClubFirst: 'Sélectionner un club avant l\'équipe',
+      },
+      type: {
+        label: 'Type d\'évènement',
+        placeholder: 'Sélectionner un type d\'évènement',
+      },
+    },
+  },
+  eventList: {
+    actions: {
+      about: 'À propos',
+      add: 'Ajouter un évènement',
+      join: 'Participer',
+    },
+    info: {
+      alreadyJoined: 'Je participe !',
+      pendingRequest: 'Participation en attente',
+    },
+    joinModal: {
+      actions: {
+        cancel: 'Annuler',
+        confirm: 'Confirmer ma participation',
+      },
+      checkboxes: {
+        conditions: "J'accepte les conditions pour participer à l'évènement",
+        responsibility: 'Je déclare avoir pris connaissance de la "Déclaration de responsabilité et acceptation des risques"',
+      },
+      description: 'En validant mon inscription à cet entraînement / détection organisé par [Nom du club ou de l’organisateur], je reconnais et accepte expressément les termes suivants :'
+        + '\nPratique sportive et risques inhérents : '
+        + '\n    - Je reconnais que la participation à des activités sportives comporte des risques inhérents pouvant inclure, sans s’y limiter, des blessures corporelles, des chocs, des fractures, des entorses, des lésions musculaires, voire des accidents plus graves.'
+        + '\n    - Je suis conscient(e) que ces risques peuvent survenir indépendamment des précautions prises par ',
+      title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
+    },
+    noData: 'Aucun évènement trouvé.',
+    title: 'Mes évènements',
+  },
   home: {
     fields: {
       type: {
@@ -334,6 +515,7 @@ export default {
   menu: {
     chat: 'Messagerie',
     myAccount: 'Mon compte',
+    planning: 'Mon planning',
     search: 'Rechercher',
   },
   modals: {
@@ -345,7 +527,16 @@ export default {
       title: 'Sélectionner un pays',
     },
   },
+  myEventList: {
+    fields: {
+      type: {
+        all: 'Tous',
+      },
+    },
+    title: 'Mes prochains évènements',
+  },
   myTeamList: {
+
     title: 'Mes équipes',
   },
   otp: {
@@ -370,6 +561,7 @@ export default {
       logout: 'Déconnexion',
       manageClub: 'Gérer mon club',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
+      manageEvents: 'Gérer mes évènements',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
       myTeams: 'Mes équipes',

@@ -46,11 +46,12 @@ function TeamListContent({ clubId = undefined, playerId = undefined, showFilters
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetTeams(Object.assign(teamFilters || {}, {
+  } = useGetTeams({
+    ...(showFilters ? teamFilters : {}),
     clubId,
     pageSize: 10,
     playerId,
-  }));
+  });
 
   // variables
   const teams = useMemo(() => requestPages?.pages
@@ -67,7 +68,7 @@ function TeamListContent({ clubId = undefined, playerId = undefined, showFilters
         return count + (value.length > 0 ? 1 : 0);
       }
       return count + (value ? 1 : 0);
-    }, -1);
+    }, 0);
   }, [teamFilters]);
 
   // handlers
@@ -237,7 +238,7 @@ function TeamListContent({ clubId = undefined, playerId = undefined, showFilters
           { minHeight: 500 }]}
         >
           <FlashList
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={Spaces.paddingBottom[64]}
             data={teams}
             estimatedItemSize={120}
             keyExtractor={(item) => item?.documentId || 'unknown'}

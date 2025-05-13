@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { getAddressFromCoordinates, getClubById, getClubs } from './clubService';
+import { getClubById, getClubs } from './clubService';
 
 /**
  * React Query hook to fetch clubs list
@@ -35,18 +35,5 @@ export const useGetClub = (id, options = {}) => useQuery({
   enabled: !!id,
   queryFn: () => getClubById(id),
   queryKey: ['club', id],
-  ...options,
-});
-
-/**
- * React Query hook to fetch address from coordinates
- * @param {{lat: number | undefined; lng: number | undefined}} coordinates
- * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
- * @returns {import('@tanstack/react-query').UseQueryResult<string>}
- */
-export const useGetAddressFromCoordinates = ({ lat, lng }, options = {}) => useQuery({
-  enabled: lat !== undefined && lng !== undefined,
-  queryFn: () => getAddressFromCoordinates(lat, lng),
-  queryKey: ['address', { lat, lng }],
   ...options,
 });

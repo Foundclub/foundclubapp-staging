@@ -34,6 +34,7 @@ function Messaging() {
         <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
         <ProfileButton />
       </View>
+      {/* body */}
       <View>
         <Text style={[Fonts.h2Black, Fonts.neutral00]}>
           Liste des conversations
