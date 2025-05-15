@@ -29,7 +29,7 @@ function UserDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { getClubInitials } = useClub();
-  const { userData: currentUser } = useAuth();
+  const { canSendMessageToUser, userData: currentUser } = useAuth();
   const { startWhisperChat } = useMessaging();
 
   const {
@@ -170,14 +170,14 @@ function UserDetails({ navigation, route }) {
           {/* TODO: {renderUserTeams()} */}
         </WithDataWrapper>
       </ScrollView>
-      {currentUser?.documentId !== userId && (
+      {user && canSendMessageToUser(user) ? (
         <Button
           onPress={handleStartChat}
           style={Spaces.marginBottom[24]}
           title={t('userDetails.actions.sendMessage')}
           variant="Primary"
         />
-      )}
+      ) : null}
     </ScreenContainer>
   );
 }

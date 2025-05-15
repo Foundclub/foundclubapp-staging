@@ -185,6 +185,21 @@ const useAuth = () => {
     [userData],
   );
 
+  const canSendMessageToUser = useCallback((/** @type {User} */userToContact) => {
+    if (userToContact?.documentId === userData?.documentId) {
+      return false;
+    }
+    const myTeams = (userData?.myTeams || [])
+      ?.concat(userData?.trainedTeams || [])
+      ?.map(({ documentId }) => documentId);
+
+    const userToContactTeams = (userToContact?.myTeams || [])
+      ?.concat(userToContact?.trainedTeams || [])
+      ?.map(({ documentId }) => documentId);
+
+    return myTeams?.some((teamId) => userToContactTeams?.includes(teamId));
+  }, [userData]);
+
   return {
     canEditClub,
     canEditEvent,
@@ -192,6 +207,7 @@ const useAuth = () => {
     canJoinTeam,
     canManageEvents,
     canManageTeam,
+    canSendMessageToUser,
     canShowCodeButton: !!confirm,
     confirm,
     formatBirthdateToDisplay,
