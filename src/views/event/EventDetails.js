@@ -11,6 +11,7 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -211,6 +212,16 @@ function EventDetails({ navigation, route }) {
         },
       ],
     );
+  };
+
+  /**
+   * Handle participation acceptance
+   * @param {User} user
+   */
+  const handleUserPress = (user) => {
+    if (user?.documentId) {
+      navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+    }
   };
 
   // memoized values
@@ -524,8 +535,9 @@ function EventDetails({ navigation, route }) {
                   {t('eventDetails.fields.participationRequests')}
                 </Text>
                 {pendingParticipations.map((participation) => (
-                  <View
+                  <TouchableOpacity
                     key={participation.documentId}
+                    onPress={() => handleUserPress(participation.user)}
                     style={[
                       ApplicationStyle.borderRadius24,
                       Alignments.row,
@@ -588,7 +600,7 @@ function EventDetails({ navigation, route }) {
                         variant="Secondary"
                       />
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
           )}
@@ -603,8 +615,9 @@ function EventDetails({ navigation, route }) {
               </Text>
             </Text>
             {event?.participations?.map((/** @type {User} */ player) => (
-              <View
+              <TouchableOpacity
                 key={player.documentId}
+                onPress={() => handleUserPress(player)}
                 style={[
                   ApplicationStyle.borderRadius24,
                   ApplicationStyle.backgroundColor.primary700,
@@ -641,7 +654,7 @@ function EventDetails({ navigation, route }) {
                     {`${player.firstname} ${player.lastname}`}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </WithDataWrapper>

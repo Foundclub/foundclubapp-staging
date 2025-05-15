@@ -26,6 +26,7 @@ export const images = {
   plus: require('../assets/icons/plus.png'),
   running: require('../assets/icons/running.png'),
   search: require('../assets/icons/search.png'),
+  send: require('../assets/icons/send.png'),
   share: require('../assets/icons/share.png'),
   shield: require('../assets/icons/shield.png'),
   stadium: require('../assets/icons/stadium.png'),

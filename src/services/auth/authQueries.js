@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getAllRoles, getMe } from './authService';
+import { getAllRoles, getMe, getUserById } from './authService';
 
 /**
  * Get current login user
@@ -22,5 +22,18 @@ export const useGetMe = (options) => useQuery({
 export const useGetRoles = (options) => useQuery({
   queryFn: () => getAllRoles(),
   queryKey: ['get-roles'],
+  ...options,
+});
+
+/**
+ * Get user by id
+ * @param {string} userId - The user id
+ * @param {import('@tanstack/react-query').UseQueryOptions<
+ * User, Error, User, string[]>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<User, Error>} The query result.
+ */
+export const useGetUserById = (userId, options) => useQuery({
+  queryFn: () => getUserById(userId),
+  queryKey: ['get-user-by-id', userId],
   ...options,
 });

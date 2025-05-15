@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -114,6 +115,16 @@ function TeamDetails({ navigation, route }) {
       ],
     );
   }, [t, handleLeaveTeam]);
+
+  /**
+   * Handle user press
+   * @param {User} user
+   */
+  const handleUserPress = (user) => {
+    if (user?.documentId) {
+      navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -261,8 +272,9 @@ function TeamDetails({ navigation, route }) {
                 </View>
                 {
                   team?.trainers?.map((/** @type {User} */ trainer) => (
-                    <View
+                    <TouchableOpacity
                       key={trainer.documentId}
+                      onPress={() => handleUserPress(trainer)}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -286,7 +298,7 @@ function TeamDetails({ navigation, route }) {
                           {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 }
               </View>
@@ -314,8 +326,9 @@ function TeamDetails({ navigation, route }) {
                 </View>
                 {
                   team?.players?.map((/** @type {User} */ player) => (
-                    <View
+                    <TouchableOpacity
                       key={player.documentId}
+                      onPress={() => handleUserPress(player)}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -323,7 +336,8 @@ function TeamDetails({ navigation, route }) {
                         Alignments.alignCenter,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
-                        Spaces.gap[16]]}
+                        Spaces.gap[16],
+                      ]}
                     >
                       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
                         <Image
@@ -338,7 +352,7 @@ function TeamDetails({ navigation, route }) {
                           {`${player.firstname} ${player.lastname}`}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 }
               </View>

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Share } from 'react-native';
 
-import { useAppContext } from '@/store/appContext';
+import { storage, useAppContext } from '@/store/appContext';
 
 import {
   getMe, login, logout, signInWithPhoneNumber,
@@ -53,6 +53,13 @@ const useAuth = () => {
     mutationFn: logout,
     onSuccess: () => {
       queryClient.clear();
+      // Clear all read message data
+      const allKeys = storage.getAllKeys();
+      allKeys.forEach((key) => {
+        if (key.startsWith('chat_')) {
+          storage.delete(key);
+        }
+      });
       appDispatch({ type: 'DELETE_AUTHENTICATION' });
     },
   });

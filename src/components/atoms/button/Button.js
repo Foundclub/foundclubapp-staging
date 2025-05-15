@@ -37,9 +37,9 @@ function Button({
 
   const imageStyle = {
     aspectRatio: 1,
-    height: 16,
+    height: 20,
     tintColor: ApplicationStyle[`buttonText${variant}`].color,
-    width: 16,
+    width: 20,
   };
 
   return (

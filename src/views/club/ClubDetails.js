@@ -159,6 +159,16 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
+  /**
+   * Handle user press action
+   * @param {User} user
+   */
+  const handleUserPress = (user) => {
+    if (user?.documentId) {
+      navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -364,8 +374,9 @@ function ClubDetails({ navigation, route }) {
               >
                 {
                   coachs?.map((/** @type {User} */ user) => (
-                    <View
+                    <TouchableOpacity
                       key={user.documentId}
+                      onPress={() => handleUserPress(user)}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -410,7 +421,7 @@ function ClubDetails({ navigation, route }) {
                           />
                         </View>
                       ) : null}
-                    </View>
+                    </TouchableOpacity>
                   ))
                 }
               </ScrollView>

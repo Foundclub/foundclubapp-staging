@@ -5,15 +5,17 @@ import useTheme from '@/theme/themeContext';
 
 /**
  * HeaderBackButton component.
+ * @param {object} props
+ * @param {() => void} [props.onPress]
  * @returns {import('react').ReactElement}
  */
-function HeaderBackButton() {
+function HeaderBackButton({ onPress = undefined }) {
   const navigation = useNavigation();
   const { ApplicationStyle, Images, Spaces } = useTheme();
 
   return (
     <TouchableOpacity
-      onPress={navigation.goBack}
+      onPress={onPress || navigation.goBack}
       style={[
         ApplicationStyle.borderRadius100,
         ApplicationStyle.borderWidth1,

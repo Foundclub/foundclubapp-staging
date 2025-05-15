@@ -270,6 +270,9 @@ export default {
       noData: 'Aucune donnée disponible',
     },
   },
+  conversation: {
+    messagePlaceholder: 'Message',
+  },
   createClubRequest: {
     actions: {
       create: 'Ajouter le club',
@@ -533,6 +536,10 @@ export default {
     planning: 'Mon planning',
     search: 'Rechercher',
   },
+  messaging: {
+    noData: 'Aucune conversation trouvée.',
+    title: 'Messages privés',
+  },
   modals: {
     actions: {
       search: 'Rechercher...',
@@ -789,6 +796,12 @@ export default {
     },
     noData: 'Aucune demande d\'adhésion en attente',
     title: 'Demandes d\'adhésion',
+  },
+  userDetails: {
+    actions: {
+      sendMessage: 'Envoyer un message',
+    },
+    title: 'Infos profil',
   },
   welcome: {
     actions: {
