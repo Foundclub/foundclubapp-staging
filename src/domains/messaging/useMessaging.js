@@ -41,7 +41,7 @@ const useMessaging = (currentChatId) => {
   ) => {
     const lastReadTimestamp = storage.getString(getLastReadMessageKey(chatId));
     if (!lastReadTimestamp) return true;
-    return new Date(lastMessageTimestamp) >= new Date(lastReadTimestamp);
+    return new Date(lastMessageTimestamp) > new Date(lastReadTimestamp);
   }, []);
 
   /**
@@ -50,7 +50,9 @@ const useMessaging = (currentChatId) => {
    */
   const updateLastReadMessage = useCallback((/** @type {string} */ chatId) => {
     storage.set(getLastReadMessageKey(chatId), new Date().toISOString());
-  }, []);
+    // Invalidate chats query to refetch with updated unread status
+    queryClient.invalidateQueries({ queryKey: ['chats'] });
+  }, [queryClient]);
 
   /**
    * Handle new message received from socket
@@ -78,6 +80,15 @@ const useMessaging = (currentChatId) => {
             }],
           };
         }
+
+        // Check if message already exists in first page
+        const messageExists = oldData.pages[0].data.some(
+          (/** @type {{ id: string }} */ msg) => msg.id === formattedMessage.id,
+        );
+        if (messageExists) {
+          return oldData;
+        }
+
         // Add new message to first page
         return {
           ...oldData,
@@ -96,10 +107,11 @@ const useMessaging = (currentChatId) => {
         if (!oldChats) return undefined;
         return oldChats.map((chat) => {
           if (chat.documentId === message.chat?.documentId) {
-            return {
+            const updatedChat = {
               ...chat,
               messages: [message],
             };
+            return updatedChat;
           }
           return chat;
         });
@@ -150,8 +162,16 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_DELETED);
       socket.off(EVENTS.JOINED);
       socket.off(EVENTS.ERROR);
+      updateLastReadMessage(currentChatId);
     };
-  }, [socket, handleNewMessage, handleMessageDeleted, handleJoined, currentChatId, isConnected]);
+  }, [socket,
+    handleNewMessage,
+    handleMessageDeleted,
+    handleJoined,
+    currentChatId,
+    isConnected,
+    updateLastReadMessage,
+  ]);
 
   const createWhisperChatMutation = useMutation({
     mutationFn: createWhisperChat,
@@ -163,12 +183,16 @@ const useMessaging = (currentChatId) => {
    * @param {string} message - The message text
    * @returns {void}
    */
-  const sendMessage = useCallback((/** @type {string} */ chatId, /** @type {string} */ message) => {
+  const sendMessage = useCallback((
+    /** @type {string} */ chatId,
+    /** @type {string} */ message,
+  ) => {
     if (!socket || !isConnected) {
       // eslint-disable-next-line no-console
       console.error('Cannot send message: socket not connected');
       return;
     }
+
     socket.emit(EVENTS.SEND_MESSAGE, {
       chatDocumentId: chatId,
       message,

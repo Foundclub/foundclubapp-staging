@@ -60,10 +60,10 @@ function Messaging({ navigation }) {
       (p) => p.documentId !== userData?.documentId,
     ) || chat.participants?.[0];
 
-    const hasUnread = lastMessage && getUnreadStatus(
+    const hasUnread = (lastMessage && getUnreadStatus(
       chat.documentId,
       new Date(lastMessage.createdAt).toISOString(),
-    );
+    ));
 
     return (
       <TouchableOpacity
