@@ -235,6 +235,7 @@ export default {
     titles: {
       activities: 'Activités',
       coachs: 'Nos entraîneur·e·s',
+      owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
       teams: 'Équipes',
     },
@@ -610,6 +611,7 @@ export default {
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
+      findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       manageClub: 'Gérer mon club',

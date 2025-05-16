@@ -84,6 +84,10 @@ function ClubDetails({ navigation, route }) {
     (user) => user.role.name === USER_ROLES.coach,
   ), [club, USER_ROLES.coach]);
 
+  const owners = useMemo(() => club?.members?.filter(
+    (user) => user.role.name === USER_ROLES.president,
+  ), [club, USER_ROLES.president]);
+
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
 
   // handlers
@@ -176,7 +180,11 @@ function ClubDetails({ navigation, route }) {
    */
   const handleUserPress = (user) => {
     if (user?.documentId) {
-      navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+      if (user?.documentId === userData?.documentId) {
+        navigation.navigate(RouteNames.Profile);
+      } else {
+        navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+      }
     }
   };
 
@@ -385,6 +393,73 @@ function ClubDetails({ navigation, route }) {
               >
                 {
                   coachs?.map((/** @type {User} */ user) => (
+                    <TouchableOpacity
+                      key={user.documentId}
+                      onPress={() => handleUserPress(user)}
+                      style={[
+                        ApplicationStyle.borderRadius24,
+                        ApplicationStyle.backgroundColor.primary700,
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifySpaceBetween,
+                        Spaces.padding[16],
+                        Spaces.gap[16]]}
+                    >
+                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                        <Image
+                          source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
+                          style={[
+                            ApplicationStyle.roundIcon40,
+                            ApplicationStyle.borderWidth1,
+                            ApplicationStyle.borderColor.neutral00,
+                          ]}
+                        />
+                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                          {`${user.firstname} ${user.lastname}`}
+                        </Text>
+                      </View>
+                      {canEdit ? (
+                        <View style={[Alignments.row, Spaces.gap[8]]}>
+                          <Button
+                            icon="trash"
+                            isOption
+                            onPress={() => handleDeleteTrainer(user.documentId)}
+                            variant="SecondaryLight"
+                          />
+                          <Button
+                            icon="share"
+                            isOption
+                            onPress={() => {
+                              inviteTrainer({
+                                clubName: club?.name,
+                                firstname: user.firstname,
+                                phoneNumber: user.phoneNumber,
+                              });
+                            }}
+                            variant="SecondaryLight"
+                          />
+                        </View>
+                      ) : null}
+                    </TouchableOpacity>
+                  ))
+                }
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {/* president */}
+          {owners?.length ? (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row,
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
+              </View>
+              <ScrollView
+                contentContainerStyle={[Spaces.gap[16]]}
+              >
+                {
+                  owners?.map((/** @type {User} */ user) => (
                     <TouchableOpacity
                       key={user.documentId}
                       onPress={() => handleUserPress(user)}

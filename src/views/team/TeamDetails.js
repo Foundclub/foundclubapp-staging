@@ -130,7 +130,11 @@ function TeamDetails({ navigation, route }) {
    */
   const handleUserPress = (user) => {
     if (user?.documentId) {
-      navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+      if (user?.documentId === currentUser?.documentId) {
+        navigation.navigate(RouteNames.Profile);
+      } else {
+        navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+      }
     }
   };
 
