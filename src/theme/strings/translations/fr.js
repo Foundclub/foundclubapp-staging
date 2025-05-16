@@ -173,6 +173,7 @@ export default {
   },
   clubDetails: {
     actions: {
+      contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
       join: "C'est mon club !",
       manageJoinRequests: 'Voir les demandes d\'affiliation',
@@ -663,6 +664,7 @@ export default {
   },
   teamDetails: {
     actions: {
+      contactTeam: 'Contacter l\'équipe',
       edit: 'Modifier l\'équipe',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",

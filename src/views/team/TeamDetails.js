@@ -14,6 +14,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -44,10 +45,17 @@ function TeamDetails({ navigation, route }) {
     canJoinTeam, canManageTeam, inviteTeamPlayers, refetchUserData, userData: currentUser,
   } = useAuth();
   const { getClubInitials } = useClub();
+  const { startTeamChat } = useMessaging();
 
   const {
     data: team, error, isLoading, refetch,
   } = useGetTeam(teamId);
+
+  const allMembers = useMemo(() => {
+    const allTrainers = team?.trainers || [];
+    const allPlayers = team?.players || [];
+    return allTrainers.concat(allPlayers);
+  }, [team]);
 
   const createTeamMembershipRequestMutation = useMutation({
     mutationFn: createTeamMembershipRequest,
@@ -123,6 +131,15 @@ function TeamDetails({ navigation, route }) {
   const handleUserPress = (user) => {
     if (user?.documentId) {
       navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (team?.documentId) {
+      const newChat = await startTeamChat(team?.documentId);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
     }
   };
 
@@ -366,6 +383,14 @@ function TeamDetails({ navigation, route }) {
           style={Spaces.paddingHorizontal[16]}
           title={t('teamDetails.actions.edit')}
           variant="Primary"
+        />
+      )}
+      {canManageTeam && allMembers?.length > 1 && (
+        <Button
+          onPress={handleStartChat}
+          style={Spaces.paddingHorizontal[16]}
+          title={t('teamDetails.actions.contactTeam')}
+          variant="PrimaryLight"
         />
       )}
       {

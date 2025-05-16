@@ -4,45 +4,18 @@ import { useCallback, useEffect } from 'react';
 
 import { storage } from '@/store/appContext';
 
-import { createWhisperChat } from '@/services/chat/chatService';
+import { createClubChat, createTeamChat, createWhisperChat } from '@/services/chat/chatService';
 
-/**
- * Get the storage key for the last read message timestamp of a chat
- * @param {string} chatId - The chat ID
- * @returns {string} The storage key
- */
-const getLastReadMessageKey = (/** @type {string} */ chatId) => `chat_${chatId}_last_read`;
+import { getConversationName, getLastReadMessageKey, getUnreadStatus } from './messagingUseCases';
 
 /**
  * Custom hook to handle messaging functionality
- * @param {string} [currentChatId] - The ID of the current chat room
- * @returns {{
- *   joinChat: (chatId: string) => void;
- *   leaveChat: (chatId: string) => void;
- *   sendMessage: (chatId: string, text: string) => void;
- *   startWhisperChat: (participants: string[]) => Promise<Chat | undefined>;
- *   getUnreadStatus: (chatId: string, lastMessageTimestamp: string) => boolean;
- *   updateLastReadMessage: (chatId: string) => void;
- * }} The messaging functionality
+ * @param {string} [currentChatId] - The current chat ID
+ * @inheritdoc
  */
 const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
-
-  /**
-   * Check if a chat has unread messages
-   * @param {string} chatId - The chat ID
-   * @param {string} lastMessageTimestamp - The timestamp of the last message
-   * @returns {boolean} - Whether the chat has unread messages
-   */
-  const getUnreadStatus = useCallback((
-    /** @type {string} */ chatId,
-    /** @type {string} */ lastMessageTimestamp,
-  ) => {
-    const lastReadTimestamp = storage.getString(getLastReadMessageKey(chatId));
-    if (!lastReadTimestamp) return true;
-    return new Date(lastMessageTimestamp) > new Date(lastReadTimestamp);
-  }, []);
 
   /**
    * Update the last read message timestamp for a chat
@@ -74,6 +47,7 @@ const useMessaging = (currentChatId) => {
 
         if (!oldData) {
           return {
+            pageParams: [null],
             pages: [{
               data: [formattedMessage],
               meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
@@ -103,18 +77,23 @@ const useMessaging = (currentChatId) => {
     // Update chat list to show latest message
     queryClient.setQueryData(
       ['chats'],
-      (/** @type {Chat[] | undefined} */ oldChats) => {
-        if (!oldChats) return undefined;
-        return oldChats.map((chat) => {
-          if (chat.documentId === message.chat?.documentId) {
-            const updatedChat = {
-              ...chat,
-              messages: [message],
-            };
-            return updatedChat;
-          }
-          return chat;
-        });
+      (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            data: page.data.map((chat) => {
+              if (chat.documentId === message.chat?.documentId) {
+                return {
+                  ...chat,
+                  messages: [message],
+                };
+              }
+              return chat;
+            }),
+          })),
+        };
       },
     );
   }, [queryClient]);
@@ -175,6 +154,12 @@ const useMessaging = (currentChatId) => {
 
   const createWhisperChatMutation = useMutation({
     mutationFn: createWhisperChat,
+  });
+  const createClubChatMutation = useMutation({
+    mutationFn: createClubChat,
+  });
+  const createTeamChatMutation = useMutation({
+    mutationFn: createTeamChat,
   });
 
   /**
@@ -257,6 +242,46 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
+  /**
+   * Start a team chat
+   * @param {string} teamId - The team ID to start the chat with
+   * @returns {Promise<Chat | undefined>} The created chat or existing chat
+   */
+  const startTeamChat = async (teamId) => {
+    // Check existing chats
+    const existingChats = queryClient.getQueryData(['chats']) || [];
+    if (Array.isArray(existingChats) && existingChats.length > 0) {
+      const existingChat = existingChats.find(
+        (/** @type {any} */ chat) => chat.team?.documentId === teamId,
+      );
+      if (existingChat) return existingChat;
+    }
+
+    // If no existing chat found, create a new one
+    const result = await createTeamChatMutation.mutateAsync(teamId);
+    return result;
+  };
+
+  /**
+   * Start a club chat
+   * @param {string} clubId - The club ID to start the chat with
+   * @returns {Promise<Chat | undefined>} The created chat or existing chat
+   */
+  const startClubChat = async (clubId) => {
+    // Check existing chats
+    const existingChats = queryClient.getQueryData(['chats']) || [];
+    if (Array.isArray(existingChats) && existingChats.length > 0) {
+      const existingChat = existingChats.find(
+        (/** @type {any} */ chat) => chat.club?.documentId === clubId,
+      );
+      if (existingChat) return existingChat;
+    }
+
+    // If no existing chat found, create a new one
+    const result = await createClubChatMutation.mutateAsync(clubId);
+    return result;
+  };
+
   // Update last read message when entering/leaving chat
   useEffect(() => {
     if (currentChatId && socket) {
@@ -270,10 +295,13 @@ const useMessaging = (currentChatId) => {
   }, [currentChatId, socket, updateLastReadMessage]);
 
   return {
+    getConversationName,
     getUnreadStatus,
     joinChat,
     leaveChat,
     sendMessage,
+    startClubChat,
+    startTeamChat,
     startWhisperChat,
     updateLastReadMessage,
   };

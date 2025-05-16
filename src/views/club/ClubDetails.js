@@ -9,6 +9,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,6 +39,7 @@ function ClubDetails({ navigation, route }) {
   const {
     canEditClub, canJoinClub, inviteTrainer, USER_ROLES, userData,
   } = useAuth();
+  const { startClubChat } = useMessaging();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
 
@@ -85,6 +87,15 @@ function ClubDetails({ navigation, route }) {
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
 
   // handlers
+  const handleStartChat = async () => {
+    if (club?.documentId) {
+      const newChat = await startClubChat(club?.documentId);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
+    }
+  };
+
   const handleCreateCoach = () => {
     if (userData) {
       navigation.navigate(RouteNames.AddCoach, { clubId });
@@ -435,6 +446,14 @@ function ClubDetails({ navigation, route }) {
           onPress={handleAskToJoinClub}
           style={Spaces.marginTop[12]}
           title={t('clubDetails.actions.join')}
+          variant="Primary"
+        />
+      ) : null}
+      { coachs?.length && canEdit ? (
+        <Button
+          onPress={handleStartChat}
+          style={Spaces.marginBottom[24]}
+          title={t('clubDetails.actions.contactTrainers')}
           variant="Primary"
         />
       ) : null}

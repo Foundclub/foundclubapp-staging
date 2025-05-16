@@ -7,11 +7,14 @@ import useTheme from '@/theme/themeContext';
  * @param {object} props - Component props
  * @param {string} props.initials - Team initials (max 3 letters)
  * @param {boolean} [props.isSmall] - Size of the shield
+ * @param {boolean} [props.isNeutral] - Colors
  * @returns {import('react').ReactElement} TeamShield component
  */
-function TeamShield({ initials, isSmall = false }) {
+function TeamShield({ initials, isNeutral = false, isSmall = false }) {
   // hooks
-  const { Alignments, Fonts, Images } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Fonts, Images,
+  } = useTheme();
 
   // Format initials to max 3 letters uppercase
   const formattedInitials = initials.slice(0, 3).toUpperCase();
@@ -25,10 +28,12 @@ function TeamShield({ initials, isSmall = false }) {
     >
       <Image
         source={Images.shield}
-        style={{
-          height: size,
-          width: size,
-        }}
+        style={[
+          isNeutral ? ApplicationStyle.tintColor.neutral200 : ApplicationStyle.tintColor.primary200,
+          {
+            height: size,
+            width: size,
+          }]}
       />
       <View style={[
         Alignments.absolute,
@@ -36,7 +41,7 @@ function TeamShield({ initials, isSmall = false }) {
       >
         <Text style={[
           isSmall ? Fonts.p2Black : Fonts.h4Black,
-          Fonts.primary700,
+          isNeutral ? Fonts.neutral700 : Fonts.primary700,
           { top: size / 3.5 },
         ]}
         >

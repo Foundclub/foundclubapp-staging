@@ -1,15 +1,18 @@
 import { FlashList } from '@shopify/flash-list';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -29,16 +32,29 @@ function Messaging({ navigation }) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
-  const { userData } = useAuth();
+  const { allMyTeams, userData } = useAuth();
+  const { getClubInitials } = useClub();
 
   const {
-    data: chats,
+    data: chatsData,
     error,
+    fetchNextPage,
+    hasNextPage,
     isLoading,
     refetch,
-  } = useGetChats();
+  } = useGetChats({
+    currentUserClubId: userData?.club?.documentId,
+    currentUserId: userData?.documentId,
+    currentUserTeamIds: allMyTeams?.map((team) => team.documentId || ''),
+  });
 
-  const { getUnreadStatus, joinChat } = useMessaging();
+  const allChats = useMemo(() => (chatsData?.pages ? chatsData?.pages?.reduce(
+    (acc, page) => acc.concat(page.data),
+    /** @type {Chat[]} */([]),
+  )
+    : []), [chatsData?.pages]);
+
+  const { getConversationName, getUnreadStatus, joinChat } = useMessaging();
 
   /**
    * Handle chat press event
@@ -50,15 +66,62 @@ function Messaging({ navigation }) {
   };
 
   /**
+   * Render the avatar for a conversation
+   * @param {Chat} chat
+   * @returns {import('react').ReactElement} The rendered avatar
+   */
+  const renderConversationAvatar = (chat) => {
+    switch (chat.type) {
+      case 'club':
+        return (
+          <TeamShield
+            initials={chat?.club?.name ? getClubInitials(chat?.club?.name) : ''}
+            isNeutral
+            isSmall
+          />
+        );
+      case 'team':
+        return (
+          <TeamShield
+            initials={chat?.team?.name ? getClubInitials(chat?.team?.name) : ''}
+            isSmall
+          />
+        );
+      case 'whisper': {
+        const participant = chat.participants?.find(
+          (p) => p.documentId !== userData?.documentId,
+        ) || chat.participants?.[0];
+        return (
+          <Image
+            source={participant?.avatar?.url
+              ? { uri: participant.avatar.url } : Images.roundAvatar}
+            style={[
+              ApplicationStyle.borderRadius24,
+              { height: 48, width: 48 },
+            ]}
+          />
+        );
+      }
+      default:
+        return (
+          <Image
+            source={Images.roundAvatar}
+            style={[
+              ApplicationStyle.borderRadius24,
+              { height: 48, width: 48 },
+            ]}
+          />
+        );
+    }
+  };
+
+  /**
    * Render a chat item
    * @param {{ item: Chat }} param - The chat item
    * @returns {import('react').ReactElement} The rendered chat item
    */
   const renderChat = ({ item: chat }) => {
     const lastMessage = chat.messages?.[0];
-    const participant = chat.participants?.find(
-      (p) => p.documentId !== userData?.documentId,
-    ) || chat.participants?.[0];
 
     const hasUnread = (lastMessage && getUnreadStatus(
       chat.documentId,
@@ -85,14 +148,7 @@ function Messaging({ navigation }) {
               { height: 48, width: 48 },
             ]}
           >
-            <Image
-              source={participant?.avatar?.url
-                ? { uri: participant.avatar.url } : Images.roundAvatar}
-              style={[
-                ApplicationStyle.borderRadius24,
-                { height: 48, width: 48 },
-              ]}
-            />
+            {renderConversationAvatar(chat)}
           </TouchableOpacity>
           <View style={[Alignments.fill, Alignments.column]}>
             <Text
@@ -102,7 +158,13 @@ function Messaging({ navigation }) {
                 hasUnread && Fonts.neutral00,
               ]}
             >
-              {`${participant?.firstname} ${participant?.lastname}`}
+              {getConversationName({
+                chatClub: chat.club,
+                chatParticipants: chat.participants,
+                chatTeam: chat.team,
+                chatType: chat.type,
+                meId: userData?.documentId,
+              })}
             </Text>
             {lastMessage && (
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
@@ -180,15 +242,16 @@ function Messaging({ navigation }) {
         >
           <FlashList
             contentContainerStyle={Spaces.paddingBottom[64]}
-            data={chats}
+            data={allChats}
             estimatedItemSize={80}
             keyExtractor={(item) => item.documentId}
             ListEmptyComponent={renderEmptyList}
+            onEndReached={() => hasNextPage && fetchNextPage()}
+            onEndReachedThreshold={0.5}
             onRefresh={refetch}
             refreshing={isLoading}
             renderItem={renderChat}
             showsVerticalScrollIndicator={false}
-            style={Spaces.paddingHorizontal[24]}
           />
         </View>
       </WithDataWrapper>

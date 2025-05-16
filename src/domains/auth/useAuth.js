@@ -149,6 +149,9 @@ const useAuth = () => {
     return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
   }, [onboardingViews]);
 
+  const allMyTeams = useMemo(() => (userData?.myTeams || [])
+    ?.concat(userData?.trainedTeams || []), [userData]);
+
   const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
  === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
@@ -189,6 +192,11 @@ const useAuth = () => {
     if (userToContact?.documentId === userData?.documentId) {
       return false;
     }
+
+    if (userData?.role.name === USER_ROLES.president) {
+      return userData?.club?.documentId === userToContact?.club?.documentId;
+    }
+
     const myTeams = (userData?.myTeams || [])
       ?.concat(userData?.trainedTeams || [])
       ?.map(({ documentId }) => documentId);
@@ -201,6 +209,7 @@ const useAuth = () => {
   }, [userData]);
 
   return {
+    allMyTeams,
     canEditClub,
     canEditEvent,
     canJoinClub,

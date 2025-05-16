@@ -30,7 +30,7 @@ function Conversation({ navigation, route }) {
   const { chatId } = route.params ?? {};
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { sendMessage, updateLastReadMessage } = useMessaging(chatId);
+  const { getConversationName, sendMessage, updateLastReadMessage } = useMessaging(chatId);
   const {
     data: messagesPages,
     fetchNextPage,
@@ -55,25 +55,25 @@ function Conversation({ navigation, route }) {
     />
   ), [navigation]);
 
-  const headerTitle = useMemo(() => {
-    if (chatData && userData) {
-      const otherParticipant = chatData.participants.find(
-        (participant) => participant.documentId !== userData.documentId,
-      );
-      if (otherParticipant) {
-        return `${otherParticipant.firstname} ${otherParticipant.lastname}`;
-      }
-    }
-    return '';
-  }, [chatData, userData]);
-
   // Set navigation options
   useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => headerLeft,
-      headerTitle,
-    });
-  }, [navigation, headerLeft, headerTitle]);
+    if (chatData) {
+      navigation.setOptions({
+        headerLeft: () => headerLeft,
+        headerTitle: getConversationName({
+          chatClub: chatData?.club,
+          chatParticipants: chatData?.participants,
+          chatTeam: chatData?.team,
+          chatType: chatData?.type || '',
+          meId: userData?.documentId,
+        }),
+      });
+    }
+  }, [navigation,
+    headerLeft,
+    chatData,
+    getConversationName,
+    userData]);
 
   const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
     const formattedMessages = page.data.map((msg) => ({
@@ -88,6 +88,11 @@ function Conversation({ navigation, route }) {
     }));
     return [...acc, ...formattedMessages];
   }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages]);
+
+  const canShowUsernameOnMessage = useMemo(() => {
+    const hasMultipleParticpants = chatData?.participants && chatData?.participants.length > 2;
+    return chatData?.type !== 'whisper' || hasMultipleParticpants;
+  }, [chatData]);
 
   const onSend = (msgs = /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) => {
     msgs.forEach((msg) => {
@@ -261,7 +266,7 @@ function Conversation({ navigation, route }) {
         renderBubble={renderBubble}
         renderInputToolbar={renderInputToolbar}
         renderSend={renderSend}
-        renderUsernameOnMessage={chatData?.participants && chatData?.participants.length > 2}
+        renderUsernameOnMessage={canShowUsernameOnMessage}
         timeFormat="HH:mm"
         timeTextStyle={{
           left: { ...Fonts.p3, color: Colors.neutral500 },

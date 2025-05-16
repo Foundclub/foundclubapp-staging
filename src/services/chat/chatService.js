@@ -18,18 +18,65 @@ const chatSchema = Joi.object({
     Joi.array().length(0),
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),
-  type: Joi.string().valid('whisper', 'group').required(),
+  type: Joi.string().valid('whisper', 'club', 'team').required(),
   updatedAt: Joi.date().required(),
 }).required();
 
 /**
  * Get all chats for the current user
- * @returns {Promise<Chat[]>}
+ * @param {number} [page] - The page number
+ * @param {number} [pageSize] - The page size
+ * @param {{
+ *   currentUserId?: string;
+ *   currentUserClubId?: string;
+ *   currentUserTeamIds?: string[];
+ * }} [filters] - Optional filters for the chats
+ * @returns {Promise<{data: Chat[],
+ * meta: { pagination: { page: number, pageCount: number, total: number }}}>}
  */
-export const getChats = async () => {
+export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
   const response = await client.get('/chats', {
     params: {
+      filters: {
+        $or: [
+          // Get whisper chats where current user is a participant
+          filters.currentUserId ? {
+            participants: {
+              documentId: filters.currentUserId,
+            },
+            type: 'whisper',
+          } : null,
+          // Get whisper chats related to user's club
+          filters.currentUserClubId ? {
+            club: {
+              documentId: filters.currentUserClubId,
+            },
+            type: 'whisper',
+          } : null,
+          // Get whisper chats related to user's teams' clubs
+          ...(filters.currentUserTeamIds?.map((teamId) => ({
+            team: {
+              documentId: teamId,
+            },
+            type: 'whisper',
+          })) || []),
+          // Get team chats where user's teams are involved
+          ...(filters.currentUserTeamIds?.map((teamId) => ({
+            team: {
+              documentId: teamId,
+            },
+            type: 'team',
+          })) || []),
+        ].filter(Boolean),
+      },
+      pagination: {
+        page,
+        pageSize,
+      },
       populate: {
+        club: {
+          populate: '*',
+        },
         messages: {
           populate: ['sender', 'sender.avatar'],
           sort: ['createdAt:desc'],
@@ -37,7 +84,16 @@ export const getChats = async () => {
         participants: {
           populate: ['avatar'],
         },
+        team: {
+          populate: '*',
+        },
       },
+      sort: [
+        // Sort by type to get clubs first, then teams, then whispers
+        'type:asc',
+        // Then sort by most recent message
+        'updatedAt:desc',
+      ],
     },
   });
 
@@ -49,7 +105,7 @@ export const getChats = async () => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    return validationResult.data;
+    return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch chats: ${errorToDisplay}`);
@@ -66,12 +122,18 @@ export const getChatById = async (chatId) => {
     params: {
       chat: chatId,
       populate: {
+        club: {
+          populate: '*',
+        },
         messages: {
           populate: ['sender', 'sender.avatar'],
           sort: ['createdAt:desc'],
         },
         participants: {
           populate: ['avatar'],
+        },
+        team: {
+          populate: '*',
         },
       },
     },
@@ -169,7 +231,7 @@ export const createChatMessage = async ({ chatId, message }) => {
 };
 
 /**
- * Create a new whisper chat
+ * Create a new whisper chat (1to1)
  * @param {string[]} participants - The participant ids
  * @returns {Promise<Chat>}
  */
@@ -178,6 +240,60 @@ export const createWhisperChat = async (participants) => {
     data: {
       participants,
       type: 'whisper',
+    },
+  });
+
+  try {
+    const schema = Joi.object({
+      data: Joi.object({ documentId: Joi.string().required() }).required(),
+    }).required();
+
+    const validationResult = await schema.validateAsync(response.data, {
+      allowUnknown: true,
+    });
+    return validationResult.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to create chat: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Create a new club chat (with all trainers and presidents)
+ * @param {string} club - The club id
+ * @returns {Promise<Chat>}
+ */
+export const createClubChat = async (club) => {
+  const response = await client.post('/chats/club', {
+    data: {
+      club,
+    },
+  });
+
+  try {
+    const schema = Joi.object({
+      data: Joi.object({ documentId: Joi.string().required() }).required(),
+    }).required();
+
+    const validationResult = await schema.validateAsync(response.data, {
+      allowUnknown: true,
+    });
+    return validationResult.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to create chat: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Create a new team chat (with all team members and trainers)
+ * @param {string} team - The team id
+ * @returns {Promise<Chat>}
+ */
+export const createTeamChat = async (team) => {
+  const response = await client.post('/chats/team', {
+    data: {
+      team,
     },
   });
 

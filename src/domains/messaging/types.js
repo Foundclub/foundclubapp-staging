@@ -8,6 +8,8 @@
  * @property {ChatMessage[]} [messages] - The messages in the chat
  * @property {Date} createdAt - When the chat was created
  * @property {Date} updatedAt - When the chat was last updated
+ * @property {Club} [club] - The club this chat belongs to
+ * @property {Team} [team] - The team this chat belongs to
  */
 
 /**
