@@ -39,7 +39,7 @@ import {
   acceptEventParticipation,
   declineEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
-import { createEventReport } from '@/services/eventReportService';
+import { createEventReport } from '@/services/eventReport/eventReportService';
 
 /**
  * Event details screen component
@@ -137,10 +137,6 @@ function EventDetails({ navigation, route }) {
    * @param {string} reason - The reason for reporting the event
    */
   const handleSubmitReport = (reason) => {
-    if (!userData?.documentId || !eventId) {
-      Alert.alert(t('eventDetails.report.errorTitle'), t('eventDetails.report.missingInfoError'));
-      return;
-    }
     reportEvent({ event: eventId, reason });
   };
 

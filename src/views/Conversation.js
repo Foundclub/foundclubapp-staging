@@ -1,6 +1,9 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable react/jsx-props-no-spreading */
-import { useEffect, useMemo } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Alert, View } from 'react-native';
 import {
   Bubble,
   Composer,
@@ -15,11 +18,13 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
+import { createMessageReport } from '@/services/messageReport/messageReportService';
 
 /**
  * Chat conversation screen component
@@ -31,6 +36,12 @@ function Conversation({ navigation, route }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { getConversationName, sendMessage, updateLastReadMessage } = useMessaging(chatId);
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(
+    /**
+     * @type {import('react-native-gifted-chat').IMessage & {documentId: string} | undefined}
+     */ (undefined),
+  );
   const {
     data: messagesPages,
     fetchNextPage,
@@ -44,6 +55,18 @@ function Conversation({ navigation, route }) {
     Fonts,
     Spaces,
   } = useTheme();
+
+  const { isPending: isReportingMessage, mutate: reportMessage } = useMutation({
+    mutationFn: createMessageReport,
+    onSuccess: () => {
+      setIsReportModalVisible(false);
+      setSelectedMessage(undefined);
+      Alert.alert(
+        t('conversation.modals.reportSuccess.title'),
+        t('conversation.modals.reportSuccess.description'),
+      );
+    },
+  });
 
   const headerLeft = useMemo(() => (
     <HeaderBackButton
@@ -79,6 +102,7 @@ function Conversation({ navigation, route }) {
     const formattedMessages = page.data.map((msg) => ({
       _id: msg.id,
       createdAt: new Date(msg.createdAt),
+      documentId: msg.documentId,
       text: msg.message,
       user: {
         _id: msg.sender.documentId || '',
@@ -110,19 +134,48 @@ function Conversation({ navigation, route }) {
    * @returns {void}
    */
   const handleAvatarPress = (user) => {
-    // eslint-disable-next-line no-underscore-dangle
     if (user._id !== userData?.documentId) {
       navigation.navigate(RouteNames.Profile, {
-        // eslint-disable-next-line no-underscore-dangle
         userId: user._id,
       });
     }
   };
 
+  const handleGoToUserDetails = () => {
+    setIsReportModalVisible(false);
+    if (selectedMessage) {
+      handleAvatarPress(selectedMessage.user);
+    }
+    setSelectedMessage(undefined);
+  };
+
   /**
-   * Render a custom day component
+   * Handle message press event to show actions modal
+   * @param {any} _
+   * @param {import('react-native-gifted-chat').IMessage
+   * & {documentId: string}} currentMessage - The message object
+   * @returns {void}
+   */
+  const handleMessagePress = (_, currentMessage) => {
+    const isOwnMessage = currentMessage.user._id === userData?.documentId;
+    if (!isOwnMessage) {
+      setIsReportModalVisible(true);
+      setSelectedMessage(currentMessage);
+    }
+  };
+
+  const handleSubmitReport = () => {
+    if (selectedMessage?.documentId) {
+      reportMessage({
+        message: selectedMessage.documentId,
+      });
+    }
+  };
+
+  /**
+   * Render a custom time component
    * @param {import('react-native-gifted-chat').TimeProps<any>} props - Component props
-   * @returns {React.ReactNode} Rendered day component
+   * @returns {React.ReactNode} Rendered time component
    */
   const renderTime = (props) => (
     <Time
@@ -241,7 +294,6 @@ function Conversation({ navigation, route }) {
       ]}
       style={[Spaces.paddingHorizontal[0]]}
     >
-
       <GiftedChat
         dateFormat="dd MMMM yyyy"
         dateFormatCalendar={{
@@ -259,6 +311,7 @@ function Conversation({ navigation, route }) {
         locale="fr"
         messages={messages}
         onLoadEarlier={() => fetchNextPage()}
+        onPress={handleMessagePress}
         onPressAvatar={handleAvatarPress}
         onSend={onSend}
         placeholder={t('conversation.messagePlaceholder')}
@@ -278,6 +331,29 @@ function Conversation({ navigation, route }) {
           name: `${userData?.firstname} ${userData?.lastname}`,
         }}
       />
+      <BottomModal
+        close={() => {
+          setIsReportModalVisible(false);
+          setSelectedMessage(undefined);
+        }}
+        isVisible={isReportModalVisible}
+      >
+        <View style={[Spaces.gap[16], Spaces.marginTop[32]]}>
+          <Button
+            disabled={isReportingMessage}
+            onPress={handleGoToUserDetails}
+            title={t('conversation.modals.actions.seeUser')}
+            variant="PrimaryLight"
+          />
+          <Button
+            disabled={isReportingMessage}
+            isLoading={isReportingMessage}
+            onPress={handleSubmitReport}
+            title={t('conversation.modals.actions.report')}
+            variant="SecondaryLight"
+          />
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }
