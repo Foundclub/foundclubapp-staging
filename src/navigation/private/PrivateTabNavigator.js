@@ -1,7 +1,9 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { Image, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 // utils
+import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+
 import MyEventsList from '@/views/event/MyEventList';
 import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
@@ -23,6 +25,7 @@ function PrivateTabNavigator() {
   // hooks
   const { t } = useTranslation();
   const { Colors, Images } = useTheme();
+  const { unreadCount } = useUnreadMessages();
 
   /**
    * Render tab bar icon.
@@ -37,13 +40,31 @@ function PrivateTabNavigator() {
   }) => (
     <View>
       <Image source={source} style={{ height: 20, tintColor: color, width: 20 }} />
-      {badge ? (
-        <View style={{
-          paddingLeft: 21,
-          position: 'absolute',
-          top: 7,
-        }}
-        />
+      {badge > 0 ? (
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.error500,
+            borderRadius: 10,
+            height: 16,
+            justifyContent: 'center',
+            minWidth: 16,
+            padding: 2,
+            position: 'absolute',
+            right: -6,
+            top: -4,
+          }}
+        >
+          <Text
+            style={{
+              color: Colors.neutral00,
+              fontFamily: 'Montserrat-Bold',
+              fontSize: 10,
+            }}
+          >
+            {badge}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -59,60 +80,53 @@ function PrivateTabNavigator() {
         name={RouteNames.Search}
         options={{
           headerShown: false,
-          ...getTabScreenCommonOptions(
-            {
-              activeColor: Colors.primary500,
-              icon: Images.search,
-              label: t('menu.search'),
-              renderTabBarIcon,
-            },
-          ),
+          ...getTabScreenCommonOptions({
+            activeColor: Colors.primary500,
+            icon: Images.search,
+            label: t('menu.search'),
+            renderTabBarIcon,
+          }),
         }}
       />
       <Tab.Screen
         component={MyEventsList}
         name={RouteNames.MyEventList}
-        options={({
+        options={{
           headerShown: false,
-          ...getTabScreenCommonOptions(
-            {
-              activeColor: Colors.primary500,
-              icon: Images.stadium,
-              label: t('menu.planning'),
-              renderTabBarIcon,
-            },
-          ),
-        })}
+          ...getTabScreenCommonOptions({
+            activeColor: Colors.primary500,
+            icon: Images.stadium,
+            label: t('menu.planning'),
+            renderTabBarIcon,
+          }),
+        }}
       />
       <Tab.Screen
         component={Profile}
         name={RouteNames.Profile}
-        options={({
+        options={{
           headerShown: false,
-          ...getTabScreenCommonOptions(
-            {
-              activeColor: Colors.primary500,
-              icon: Images.strokeShield,
-              label: t('menu.myAccount'),
-              renderTabBarIcon,
-            },
-          ),
-        })}
+          ...getTabScreenCommonOptions({
+            activeColor: Colors.primary500,
+            icon: Images.strokeShield,
+            label: t('menu.myAccount'),
+            renderTabBarIcon,
+          }),
+        }}
       />
       <Tab.Screen
         component={Messaging}
         name={RouteNames.Chat}
-        options={({
+        options={{
           headerShown: false,
-          ...getTabScreenCommonOptions(
-            {
-              activeColor: Colors.primary500,
-              icon: Images.envelope,
-              label: t('menu.chat'),
-              renderTabBarIcon,
-            },
-          ),
-        })}
+          ...getTabScreenCommonOptions({
+            activeColor: Colors.primary500,
+            badge: unreadCount,
+            icon: Images.envelope,
+            label: t('menu.chat'),
+            renderTabBarIcon,
+          }),
+        }}
       />
     </Tab.Navigator>
   );

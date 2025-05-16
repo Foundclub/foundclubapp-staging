@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Share } from 'react-native';
 
-import { useAppContext } from '@/store/appContext';
+import { storage, useAppContext } from '@/store/appContext';
 
 import {
   getMe, login, logout, signInWithPhoneNumber,
@@ -53,6 +53,13 @@ const useAuth = () => {
     mutationFn: logout,
     onSuccess: () => {
       queryClient.clear();
+      // Clear all read message data
+      const allKeys = storage.getAllKeys();
+      allKeys.forEach((key) => {
+        if (key.startsWith('chat_')) {
+          storage.delete(key);
+        }
+      });
       appDispatch({ type: 'DELETE_AUTHENTICATION' });
     },
   });
@@ -142,6 +149,9 @@ const useAuth = () => {
     return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
   }, [onboardingViews]);
 
+  const allMyTeams = useMemo(() => (userData?.myTeams || [])
+    ?.concat(userData?.trainedTeams || []), [userData]);
+
   const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
  === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
@@ -178,13 +188,35 @@ const useAuth = () => {
     [userData],
   );
 
+  const canSendMessageToUser = useCallback((/** @type {User} */userToContact) => {
+    if (userToContact?.documentId === userData?.documentId) {
+      return false;
+    }
+
+    if (userData?.role.name === USER_ROLES.president) {
+      return userData?.club?.documentId === userToContact?.club?.documentId;
+    }
+
+    const myTeams = (userData?.myTeams || [])
+      ?.concat(userData?.trainedTeams || [])
+      ?.map(({ documentId }) => documentId);
+
+    const userToContactTeams = (userToContact?.myTeams || [])
+      ?.concat(userToContact?.trainedTeams || [])
+      ?.map(({ documentId }) => documentId);
+
+    return myTeams?.some((teamId) => userToContactTeams?.includes(teamId));
+  }, [userData]);
+
   return {
+    allMyTeams,
     canEditClub,
     canEditEvent,
     canJoinClub,
     canJoinTeam,
     canManageEvents,
     canManageTeam,
+    canSendMessageToUser,
     canShowCodeButton: !!confirm,
     confirm,
     formatBirthdateToDisplay,

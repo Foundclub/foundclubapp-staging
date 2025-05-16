@@ -57,7 +57,7 @@ function Profile({ navigation }) {
   };
 
   const handleFindTeam = () => {
-    navigation.navigate(RouteNames.TeamList);
+    navigation.navigate(RouteNames.Search);
   };
 
   const handleLogout = () => {

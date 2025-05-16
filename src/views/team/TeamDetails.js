@@ -8,11 +8,13 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -43,10 +45,17 @@ function TeamDetails({ navigation, route }) {
     canJoinTeam, canManageTeam, inviteTeamPlayers, refetchUserData, userData: currentUser,
   } = useAuth();
   const { getClubInitials } = useClub();
+  const { startTeamChat } = useMessaging();
 
   const {
     data: team, error, isLoading, refetch,
   } = useGetTeam(teamId);
+
+  const allMembers = useMemo(() => {
+    const allTrainers = team?.trainers || [];
+    const allPlayers = team?.players || [];
+    return allTrainers.concat(allPlayers);
+  }, [team]);
 
   const createTeamMembershipRequestMutation = useMutation({
     mutationFn: createTeamMembershipRequest,
@@ -114,6 +123,29 @@ function TeamDetails({ navigation, route }) {
       ],
     );
   }, [t, handleLeaveTeam]);
+
+  /**
+   * Handle user press
+   * @param {User} user
+   */
+  const handleUserPress = (user) => {
+    if (user?.documentId) {
+      if (user?.documentId === currentUser?.documentId) {
+        navigation.navigate(RouteNames.Profile);
+      } else {
+        navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+      }
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (team?.documentId) {
+      const newChat = await startTeamChat(team?.documentId);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -261,8 +293,9 @@ function TeamDetails({ navigation, route }) {
                 </View>
                 {
                   team?.trainers?.map((/** @type {User} */ trainer) => (
-                    <View
+                    <TouchableOpacity
                       key={trainer.documentId}
+                      onPress={() => handleUserPress(trainer)}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -286,7 +319,7 @@ function TeamDetails({ navigation, route }) {
                           {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 }
               </View>
@@ -314,8 +347,9 @@ function TeamDetails({ navigation, route }) {
                 </View>
                 {
                   team?.players?.map((/** @type {User} */ player) => (
-                    <View
+                    <TouchableOpacity
                       key={player.documentId}
+                      onPress={() => handleUserPress(player)}
                       style={[
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
@@ -323,7 +357,8 @@ function TeamDetails({ navigation, route }) {
                         Alignments.alignCenter,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
-                        Spaces.gap[16]]}
+                        Spaces.gap[16],
+                      ]}
                     >
                       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
                         <Image
@@ -338,7 +373,7 @@ function TeamDetails({ navigation, route }) {
                           {`${player.firstname} ${player.lastname}`}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))
                 }
               </View>
@@ -352,6 +387,14 @@ function TeamDetails({ navigation, route }) {
           style={Spaces.paddingHorizontal[16]}
           title={t('teamDetails.actions.edit')}
           variant="Primary"
+        />
+      )}
+      {canManageTeam && allMembers?.length > 1 && (
+        <Button
+          onPress={handleStartChat}
+          style={Spaces.paddingHorizontal[16]}
+          title={t('teamDetails.actions.contactTeam')}
+          variant="PrimaryLight"
         />
       )}
       {

@@ -120,6 +120,9 @@ export const staticStyle = {
   borderWidth2: {
     borderWidth: 2,
   },
+  noBorderTop: {
+    borderTopWidth: 0,
+  },
   // border style
   borderStyleDashed: {
     borderStyle: borderStyles.dashed,

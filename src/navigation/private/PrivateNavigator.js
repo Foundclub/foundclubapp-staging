@@ -14,6 +14,7 @@ import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
 import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
 import CreateClubRequest from '@/views/club/CreateClubRequest';
+import Conversation from '@/views/Conversation';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
@@ -25,6 +26,7 @@ import UserSection from '@/views/onboarding/UserSection';
 import Welcome from '@/views/onboarding/Welcome';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
+import UserDetails from '@/views/profile/UserDetails';
 import MyTeamList from '@/views/team/MyTeamList';
 import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
@@ -267,6 +269,22 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('createClubRequest.title'),
+        }}
+      />
+      <Stack.Screen
+        component={Conversation}
+        name={RouteNames.Conversation}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={UserDetails}
+        name={RouteNames.UserDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
         }}
       />
       {canShowView(RouteNames.UserRole) ? (

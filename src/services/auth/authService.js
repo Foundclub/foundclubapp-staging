@@ -269,3 +269,25 @@ export const getAllRoles = async () => {
     throw new Error(`Failed to fetch roles data: ${errorToDisplay}`);
   }
 };
+
+/**
+ * Get a user by ID
+ * @param {string|number} id - The user ID
+ * @returns {Promise<User>} - User data
+ */
+export const getUserById = async (id) => {
+  const result = await client.get(`/users/${id}`, {
+    params: {
+      populate: ['role', 'avatar', 'club', 'trainedTeams', 'myTeams'],
+    },
+  });
+  try {
+    const validationResult = await userSchema.validateAsync(result.data, {
+      allowUnknown: true,
+    });
+    return validationResult;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to fetch user data: ${errorToDisplay}`);
+  }
+};

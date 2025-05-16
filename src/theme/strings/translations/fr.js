@@ -125,13 +125,17 @@ export default {
     DEPARTMENT_REQUIRED: 'Le département est requis.',
 
     // Event errors
+    EVENT_CANCEL_ERROR: 'Erreur lors de l\'annulation de l\'événement.',
     EVENT_CAPACITY_ERROR: 'La capacité maximale de l\'événement est atteinte.',
+    EVENT_CREATE_ERROR: 'Erreur lors de la création de l\'événement.',
     EVENT_DATE_ERROR: 'La date de l\'événement est invalide.',
+    EVENT_FIND_ERROR: 'Erreur lors de la recherche de l\'événement.',
     EVENT_IS_NOT_ACTIVE_ERROR: 'L\'événement n\'est pas actif.',
     EVENT_PARTICIPATION_ACCEPT_ERROR: 'Erreur lors de l\'acceptation de la participation.',
     EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
     EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
     EVENT_PARTICIPATION_REFUSE_ERROR: 'Erreur lors du refus de la participation.',
+    EVENT_UPDATE_ERROR: 'Erreur lors de la mise à jour de l\'événement.',
     EVENT_USER_ALREADY_IN_EVENT_ERROR: 'L\'utilisateur·rice est déjà inscrit·e à cet événement.',
     EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: 'L\'utilisateur·rice n\'est pas joueur·se de l\'équipe.',
 
@@ -141,8 +145,14 @@ export default {
     EVENT_PARTICIPATION_REQUEST_NOT_FOUND: 'Demande de participation introuvable.',
     EVENT_PARTICIPATION_REQUEST_POLICY_ERROR: 'Violation de la politique concernant les demandes de participation.',
 
-    // Policy errors
-    TEAM_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les gestionnaires d\'équipe.',
+    // Chat errors
+    CHAT_ID_NOT_PROVIDED: 'ID de chat non fourni.',
+    FAILED_TO_ACCESS_CHAT: 'Impossible d\'accéder au chat.',
+    FAILED_TO_JOIN_CHAT: 'Impossible de rejoindre le chat.',
+    FAILED_TO_SEND_MESSAGE: 'Impossible d\'envoyer le message.',
+    MESSAGE_TOO_LONG: 'Le message est trop long.',
+    RATE_LIMIT_EXCEEDED: 'Limite de taux dépassée.',
+    USER_NOT_PARTICIPANT_OF_CHAT: 'L\'utilisateur·rice n\'est pas participant·e du chat.',
 
     // Server errors
     DATABASE_ERROR: 'Erreur de base de données.',
@@ -154,6 +164,10 @@ export default {
     INVALID_FILE_TYPE: 'Type de fichier invalide.',
 
     // Policy errors
+    CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR: 'CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR',
+    CHAT_MESSAGE_REPORT_NOT_FOUND_POLICY_ERROR: 'CHAT_MESSAGE_REPORT_NOT_FOUND_POLICY_ERROR',
+    CHAT_NOT_FOUND_POLICY_ERROR: 'CHAT_NOT_FOUND_POLICY_ERROR',
+    CLUB_MANAGER_CREATE_POLICY_ERROR: 'CLUB_MANAGER_CREATE_POLICY_ERROR',
     CLUB_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s du club.',
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
@@ -169,10 +183,17 @@ export default {
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
     schemaMismatch: 'Un problème est survenu lors de la récupération des informations.'
     + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
+    TEAM_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les gestionnaires d\'équipe.',
+    TEAM_TRAINER_CREATE_POLICY_ERROR: 'Violation de la politique de création d\'événements par les entraîneur·e·s.',
     title: 'Erreur',
+    UNIQUE_CLUB_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions de club.',
+    UNIQUE_TEAM_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions d\'équipe.',
+    UNIQUE_WHISPER_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions privées.',
+    USER_NOT_FOUND_POLICY_ERROR: 'Violation de la politique concernant les utilisateurs introuvables.',
   },
   clubDetails: {
     actions: {
+      contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
       join: "C'est mon club !",
       manageJoinRequests: 'Voir les demandes d\'affiliation',
@@ -214,6 +235,7 @@ export default {
     titles: {
       activities: 'Activités',
       coachs: 'Nos entraîneur·e·s',
+      owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
       teams: 'Équipes',
     },
@@ -270,6 +292,19 @@ export default {
       noData: 'Aucune donnée disponible',
     },
   },
+  conversation: {
+    messagePlaceholder: 'Message',
+    modals: {
+      actions: {
+        report: 'Signaler le message',
+        seeUser: 'Voir le profil',
+      },
+      reportSuccess: {
+        description: 'Merci de votre retour, nous allons traiter votre demande dans les plus brefs délais.',
+        title: 'Votre signalement a bien été envoyé',
+      },
+    },
+  },
   createClubRequest: {
     actions: {
       create: 'Ajouter le club',
@@ -324,6 +359,7 @@ export default {
       actions: {
         cancel: 'Annuler',
         confirm: 'Confirmer',
+        report: 'Signaler',
       },
       cancelEvent: {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
@@ -337,6 +373,20 @@ export default {
           },
         },
         title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
+      },
+      reportEvent: {
+        description: 'Merci de nous indiquer la raison pour laquelle vous signalez cet évènement.',
+        fields: {
+          reason: {
+            label: 'Raison du signalement',
+            placeholder: 'Cet évènement est inapproprié.',
+          },
+        },
+        title: 'Signaler un évènement',
+      },
+      reportSuccess: {
+        description: 'Merci de votre retour, nous allons traiter votre demande dans les plus brefs délais.',
+        title: 'Votre signalement a bien été envoyé',
       },
     },
   },
@@ -518,6 +568,10 @@ export default {
     planning: 'Mon planning',
     search: 'Rechercher',
   },
+  messaging: {
+    noData: 'Aucune conversation trouvée.',
+    title: 'Messages privés',
+  },
   modals: {
     actions: {
       search: 'Rechercher...',
@@ -557,6 +611,7 @@ export default {
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
+      findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
       manageClub: 'Gérer mon club',
@@ -641,6 +696,7 @@ export default {
   },
   teamDetails: {
     actions: {
+      contactTeam: 'Contacter l\'équipe',
       edit: 'Modifier l\'équipe',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
@@ -774,6 +830,12 @@ export default {
     },
     noData: 'Aucune demande d\'adhésion en attente',
     title: 'Demandes d\'adhésion',
+  },
+  userDetails: {
+    actions: {
+      sendMessage: 'Envoyer un message',
+    },
+    title: 'Infos profil',
   },
   welcome: {
     actions: {
