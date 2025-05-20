@@ -138,8 +138,8 @@ export const getEventTypes = async () => {
  *   q?: string;
  *   playerEventsFilter?: boolean;
  *   trainerEventsFilter?: boolean;
- * }} params myEventFilter - If true, only events where the user is a participant
- * and user's teams closed events will be returned
+ * }} params playerEventsFilter - If true, only events where the user is a participant
+ * and user's teams closed events will be returned, if true trainerEventFilter is ignored
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
