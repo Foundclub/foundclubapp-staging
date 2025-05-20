@@ -32,7 +32,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
-import { cancelEvent } from '@/services/event/eventService';
+import { cancelEvent, remindUnansweredPlayers } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   acceptEventParticipation,
@@ -99,6 +99,16 @@ function EventDetails({ navigation, route }) {
     },
   });
 
+  const { mutate: remindEventMutation } = useMutation({
+    mutationFn: remindUnansweredPlayers,
+    onSuccess: () => {
+      Alert.alert(
+        t('eventDetails.modals.remindSuccess.title'),
+        t('eventDetails.modals.remindSuccess.description'),
+      );
+    },
+  });
+
   const { isPending: isReportingEvent, mutate: reportEvent } = useMutation({
     mutationFn: createEventReport,
     onSuccess: () => {
@@ -110,9 +120,66 @@ function EventDetails({ navigation, route }) {
     },
   });
 
+  // memoized values
+  const hasPendingRequest = useMemo(() => {
+    const myParticipations = eventParticipations?.pages?.[0]?.data || [];
+    if (myParticipations.length) {
+      return myParticipations.some(
+        (participation) => participation.participationStatus === 'pending'
+          && participation.user.documentId === userData?.documentId,
+      );
+    }
+    return false;
+  }, [eventParticipations, userData]);
+
+  const pendingParticipations = useMemo(() => {
+    const allParticipations = eventParticipations?.pages?.[0]?.data || [];
+    return allParticipations.filter(
+      (participation) => participation.participationStatus === 'pending',
+    );
+  }, [eventParticipations]);
+
+  /** @type {{ missing: User[]; notAnswered: User[]; participating: User[]; }} */
+  const participationsByStatus = useMemo(() => {
+    if (!canEditEvent(event?.team?.documentId || '')) {
+      return {
+        missing: [],
+        notAnswered: [],
+        participating: event?.participations || [],
+      };
+    }
+
+    const teamPlayers = event?.team?.players || [];
+
+    /** @type {User[]} */
+    const participatingPlayers = event?.participations || [];
+    /** @type {User[]} */
+    const missingPlayers = event?.missings || [];
+    const notAnsweredPlayers = teamPlayers.filter(
+      (player) => !participatingPlayers.some(
+        (participation) => participation.documentId === player.documentId,
+      )
+      && !missingPlayers.some((missing) => missing.documentId === player.documentId),
+    );
+
+    return {
+      missing: missingPlayers || [],
+      notAnswered: notAnsweredPlayers || [],
+      participating: participatingPlayers || [],
+    };
+  }, [event, canEditEvent]);
+
+  // handlers
+
   const handleEditEvent = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [navigation, eventId]);
+
+  const handleRemindPlayers = () => {
+    if (eventId) {
+      remindEventMutation(eventId);
+    }
+  };
 
   const handleJoinEvent = () => {
     setIsJoinModalVisible(true);
@@ -221,55 +288,6 @@ function EventDetails({ navigation, route }) {
       }
     }
   };
-
-  // memoized values
-  const hasPendingRequest = useMemo(() => {
-    const myParticipations = eventParticipations?.pages?.[0]?.data || [];
-    if (myParticipations.length) {
-      return myParticipations.some(
-        (participation) => participation.participationStatus === 'pending'
-          && participation.user.documentId === userData?.documentId,
-      );
-    }
-    return false;
-  }, [eventParticipations, userData]);
-
-  const pendingParticipations = useMemo(() => {
-    const allParticipations = eventParticipations?.pages?.[0]?.data || [];
-    return allParticipations.filter(
-      (participation) => participation.participationStatus === 'pending',
-    );
-  }, [eventParticipations]);
-
-  /** @type {{ missing: User[]; notAnswered: User[]; participating: User[]; }} */
-  const participationsByStatus = useMemo(() => {
-    if (!canEditEvent(event?.team?.documentId || '')) {
-      return {
-        missing: [],
-        notAnswered: [],
-        participating: event?.participations || [],
-      };
-    }
-
-    const teamPlayers = event?.team?.players || [];
-
-    /** @type {User[]} */
-    const participatingPlayers = event?.participations || [];
-    /** @type {User[]} */
-    const missingPlayers = event?.missings || [];
-    const notAnsweredPlayers = teamPlayers.filter(
-      (player) => !participatingPlayers.some(
-        (participation) => participation.documentId === player.documentId,
-      )
-      && !missingPlayers.some((missing) => missing.documentId === player.documentId),
-    );
-
-    return {
-      missing: missingPlayers || [],
-      notAnswered: notAnsweredPlayers || [],
-      participating: participatingPlayers || [],
-    };
-  }, [event, canEditEvent]);
 
   // renderers
 
@@ -691,9 +709,19 @@ function EventDetails({ navigation, route }) {
                 )}
                 {participationsByStatus.notAnswered.length > 0 && (
                   <>
-                    <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-                      {t('eventDetails.participationStatus.notAnswered')}
-                    </Text>
+                    <View style={[Alignments.row,
+                      Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    >
+                      <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+                        {t('eventDetails.participationStatus.notAnswered')}
+                      </Text>
+                      <Button
+                        isOption
+                        onPress={handleRemindPlayers}
+                        title={t('eventDetails.actions.remind')}
+                        variant="Primary"
+                      />
+                    </View>
                     {participationsByStatus.notAnswered.map((player) => (
                       <TouchableOpacity
                         key={player.documentId}

@@ -24,3 +24,12 @@
  * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant'} name
  * @property {string} documentId
  */
+
+/**
+ * @typedef {object} remoteMessageData
+ * @property {string} type
+ * @property {string} [teamId]
+ * @property {string} [clubId]
+ * @property {string} [eventId]
+ * @property {string} [conversationId]
+ */

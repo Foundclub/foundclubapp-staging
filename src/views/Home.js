@@ -1,3 +1,4 @@
+import useNotifications from '@/hooks/useNotifications';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,9 +36,10 @@ const searchOptions = [
 
 /**
  * Main home screen to search for clubs, team or events
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home() {
+function Home({ navigation }) {
   const [searchType, setSearchType] = useState(searchOptions[0].value);
   const {
     Alignments,
@@ -47,6 +49,7 @@ function Home() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  useNotifications({ navigate: navigation.navigate });
 
   /**
    * Handle search type change

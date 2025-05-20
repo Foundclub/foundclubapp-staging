@@ -6,6 +6,7 @@ import { Linking, Platform, Share } from 'react-native';
 import { storage, useAppContext } from '@/store/appContext';
 
 import {
+  deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
 
@@ -50,7 +51,15 @@ const useAuth = () => {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
+    mutationFn: async (/** @type {string} */token) => {
+      deleteDeviceToken(token).then(() => {
+        appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
+        return logout();
+      }).catch(() => {
+        appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
+        return logout();
+      });
+    },
     onSuccess: () => {
       queryClient.clear();
       // Clear all read message data

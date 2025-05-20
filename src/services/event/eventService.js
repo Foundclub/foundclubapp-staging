@@ -72,6 +72,7 @@ export const getEventById = async (documentId) => {
         'team.section',
         'team.category',
         'team.level',
+        'team.players',
         'type',
         'missings',
         'participations'],
@@ -327,5 +328,15 @@ export const getEvents = async (params = {}) => {
  */
 export const missingEvent = async (eventId) => {
   const response = await client.post(`/events/${eventId}/missing`);
+  return response.data;
+};
+
+/**
+ * Send push notification to all players that haven't respond yet to the event
+ * @param {string} eventId - The ID of the event to answer to
+ * @returns {Promise<Event>} - The updated event
+ */
+export const remindUnansweredPlayers = async (eventId) => {
+  const response = await client.post(`/events/${eventId}/remind-unanswered-players`);
   return response.data;
 };
