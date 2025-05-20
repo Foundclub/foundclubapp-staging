@@ -17,7 +17,7 @@ const userSchema = Joi.object({
   id: Joi.number().required(),
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
-  section: Joi.string().valid('female', 'male').allow(null).optional(),
+  section: Joi.object().allow(null).optional(),
 }).required();
 
 /**
@@ -115,6 +115,7 @@ export const updateMe = async (userData) => {
       ...userData,
       birthdate: userData.birthdate ? format(new Date(userData.birthdate), 'yyyy-MM-dd') : undefined,
       role: userData.role?.documentId || userData?.role,
+      section: userData.section?.documentId || userData?.section,
     };
 
     // Remove empty properties (undefined, null, or empty string)
@@ -272,17 +273,13 @@ export const getAllRoles = async () => {
 
 /**
  * Get a user by ID
- * @param {string|number} id - The user ID
+ * @param {string} id - The user ID
  * @returns {Promise<User>} - User data
  */
 export const getUserById = async (id) => {
-  const result = await client.get(`/users/${id}`, {
-    params: {
-      populate: ['role', 'avatar', 'club', 'trainedTeams', 'myTeams'],
-    },
-  });
+  const result = await client.get(`/firebase-auth/${id}`);
   try {
-    const validationResult = await userSchema.validateAsync(result.data, {
+    const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
     return validationResult;

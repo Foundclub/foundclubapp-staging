@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -39,6 +40,12 @@ function UserDetails({ navigation, route }) {
     refetch,
   } = useGetUserById(userId);
 
+  const allUserTeams = useMemo(
+    () => currentUser?.myTeams?.concat(currentUser?.trainedTeams || []) || [],
+    [currentUser],
+  );
+
+  // handlers
   const handleStartChat = async () => {
     if (currentUser?.documentId && user?.documentId) {
       const newChat = await startWhisperChat([currentUser.documentId, user?.documentId]);
@@ -52,6 +59,16 @@ function UserDetails({ navigation, route }) {
     navigation.navigate(RouteNames.Club, {
       clubId: user?.club?.documentId,
     });
+  };
+
+  /**
+   * Handle team press action
+   * @param {Team} team
+   */
+  const handleTeamPress = (team) => {
+    if (team?.documentId) {
+      navigation.navigate(RouteNames.TeamDetails, { teamId: team.documentId });
+    }
   };
 
   return (
@@ -101,6 +118,7 @@ function UserDetails({ navigation, route }) {
         <WithDataWrapper
           error={error?.message}
           isLoading={isLoading}
+          wrapperStyle={[Spaces.gap[32]]}
         >
 
           <View
@@ -167,7 +185,44 @@ function UserDetails({ navigation, route }) {
               </View>
             )}
           </View>
-          {/* TODO: {renderUserTeams()} */}
+          {/* teams */}
+          {allUserTeams?.length ? (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row,
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('userDetails.titles.teams')}</Text>
+              </View>
+              {
+                allUserTeams?.map((/** @type {Team} */ team) => (
+                  <TouchableOpacity
+                    key={team.documentId}
+                    onPress={() => handleTeamPress(team)}
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      ApplicationStyle.backgroundColor.primary700,
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Alignments.justifySpaceBetween,
+                      Spaces.padding[8],
+                      Spaces.gap[16]]}
+                  >
+                    <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <TeamShield
+                        initials={team?.name ? getClubInitials(team?.name) : ''}
+                        isNeutral
+                        isSmall
+                      />
+                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        {team.name}
+                      </Text>
+                    </View>
+
+                  </TouchableOpacity>
+                ))
+              }
+            </View>
+          ) : null}
         </WithDataWrapper>
       </ScrollView>
       {user && canSendMessageToUser(user) ? (

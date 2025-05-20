@@ -25,7 +25,11 @@ import { useGetTeams } from '@/services/team/teamQueries';
  * @param {boolean} [props.showFilters] - Whether to hide the filters section
  * @returns {import('react').ReactElement} Team list content component
  */
-function TeamListContent({ clubId = undefined, playerId = undefined, showFilters = false }) {
+function TeamListContent({
+  clubId = undefined,
+  playerId = undefined,
+  showFilters = false,
+}) {
   // hooks
   const {
     Alignments,

@@ -41,7 +41,6 @@ export default {
       name: "Renseignez le nom et prénom de l'entraîneur·e.",
     },
     titles: {
-      avatar: 'Une photo de profil ?',
       birthdate: 'Quelle est sa date de naissance ?',
       main: 'Ajouter un·e entraîneur·e',
       name: "Comment s'appelle l'entraîneur·e ?",
@@ -113,7 +112,7 @@ export default {
     // Team errors
     CLUB_MAX_TEAM_NUMBER_REACHED: 'Le nombre maximum d\'équipes pour ce club a été atteint.',
     TEAM_CLUB_REQUIRED: 'Un club est requis pour chaque équipe.',
-    TEAM_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres de l\'équipe.',
+    TEAM_MEMBER_POLICY_ERROR: 'Pour effectuer cette action, vous devez être membre de l\'équipe.',
     TEAM_PLAYER_REMOVE_ERROR: 'Erreur lors de la suppression du/de la joueur·se de l\'équipe.',
     TEAM_TRAINER_CONNECT_REQUIRED: 'La connexion avec l\'entraîneur·e est requise.',
     TEAM_TRAINER_REMOVE_ERROR: 'Erreur lors de la suppression de l\'entraîneur·e de l\'équipe.',
@@ -125,12 +124,14 @@ export default {
     DEPARTMENT_REQUIRED: 'Le département est requis.',
 
     // Event errors
+    EVENT_ALREADY_MISSING: 'Vous avez déjà répondu absent à cet évènements.',
     EVENT_CANCEL_ERROR: 'Erreur lors de l\'annulation de l\'événement.',
     EVENT_CAPACITY_ERROR: 'La capacité maximale de l\'événement est atteinte.',
     EVENT_CREATE_ERROR: 'Erreur lors de la création de l\'événement.',
     EVENT_DATE_ERROR: 'La date de l\'événement est invalide.',
     EVENT_FIND_ERROR: 'Erreur lors de la recherche de l\'événement.',
     EVENT_IS_NOT_ACTIVE_ERROR: 'L\'événement n\'est pas actif.',
+    EVENT_MISSING_ERROR: 'Erreur lors de la réponse à l\'événement.',
     EVENT_PARTICIPATION_ACCEPT_ERROR: 'Erreur lors de l\'acceptation de la participation.',
     EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
     EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
@@ -237,7 +238,7 @@ export default {
       coachs: 'Nos entraîneur·e·s',
       owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
-      teams: 'Équipes',
+      teams: 'Nos équipes',
     },
   },
   clubFilters: {
@@ -389,6 +390,11 @@ export default {
         title: 'Votre signalement a bien été envoyé',
       },
     },
+    participationStatus: {
+      missing: 'Absent·e·s',
+      notAnswered: 'En attente de réponse',
+      participating: 'Présent·e·s',
+    },
   },
   eventEdit: {
     actions: {
@@ -510,11 +516,14 @@ export default {
   eventList: {
     actions: {
       about: 'À propos',
+      absent: 'Absent·e',
       add: 'Ajouter un évènement',
       join: 'Participer',
+      present: 'Présent·e',
     },
     info: {
       alreadyJoined: 'Je participe !',
+      alreadyMissing: 'Je serai absent·e',
       pendingRequest: 'Participation en attente',
     },
     joinModal: {
@@ -703,12 +712,13 @@ export default {
     },
     alerts: {
       invitePlayers: {
+        alreadyHaveTheApp: "J'ai déjà l'application",
+        downloadOnAndroid: 'Télécharger sur Android',
+        downloadOnIOS: 'Télécharger sur iOS',
         message: 'Bonjour !'
-        + '\nVotre équipe {{teamName}} de votre club {{clubName}} vous attends !'
+        + '\nVotre équipe {{teamName}} de votre club {{clubName}} vous attend !'
         + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
-        + ' et commencer accéder et participer aux évènements de votre équipe.'
-        + '\nIOS : {{appStoreUrl}}'
-        + '\nAndroid : {{googlePlayUrl}}',
+        + ' et commencer accéder et participer aux évènements de votre équipe.',
         title: 'Vos coéquipiers vous attendent !',
       },
       joinRequest: {
@@ -727,13 +737,14 @@ export default {
         title: 'Êtes-vous sûr·e de vouloir quitter cette équipe ?',
       },
     },
+    myTitle: 'Mon équipe',
     sections: {
       players_one: 'Joueur·se',
       players_other: 'Joueur·se·s',
       trainers_one: 'Entraîneur·e',
       trainers_other: 'Entraîneur·e·s',
     },
-    title: 'Mon équipe',
+    title: 'Équipe',
   },
   teamEdit: {
     actions: {
@@ -836,6 +847,9 @@ export default {
       sendMessage: 'Envoyer un message',
     },
     title: 'Infos profil',
+    titles: {
+      teams: 'Équipes',
+    },
   },
   welcome: {
     actions: {

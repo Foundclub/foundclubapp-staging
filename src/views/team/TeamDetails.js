@@ -133,7 +133,7 @@ function TeamDetails({ navigation, route }) {
       if (user?.documentId === currentUser?.documentId) {
         navigation.navigate(RouteNames.Profile);
       } else {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
       }
     }
   };
@@ -170,7 +170,7 @@ function TeamDetails({ navigation, route }) {
         Alignments.alignCenter]}
       >
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('teamDetails.title').toUpperCase()}
+          {t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`).toUpperCase()}
         </Text>
         <View style={[
           ApplicationStyle.separator,
@@ -339,6 +339,7 @@ function TeamDetails({ navigation, route }) {
                       isOption
                       onPress={() => inviteTeamPlayers({
                         clubName: team?.club?.name,
+                        teamId: team?.documentId,
                         teamName: team?.name,
                       })}
                       variant="Primary"

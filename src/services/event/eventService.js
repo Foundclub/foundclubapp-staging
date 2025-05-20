@@ -73,6 +73,7 @@ export const getEventById = async (documentId) => {
         'team.category',
         'team.level',
         'type',
+        'missings',
         'participations'],
     },
   });
@@ -135,8 +136,10 @@ export const getEventTypes = async () => {
  *   activity?: string;
  *   sessionStatus?: string;
  *   q?: string;
- *   useOrFilter?: boolean;
- * }} params
+ *   playerEventsFilter?: boolean;
+ *   trainerEventsFilter?: boolean;
+ * }} params playerEventsFilter - If true, only events where the user is a participant
+ * and user's teams closed events will be returned, if true trainerEventFilter is ignored
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
@@ -149,11 +152,12 @@ export const getEvents = async (params = {}) => {
     page,
     pageSize,
     participantId,
+    playerEventsFilter = false,
     q,
     sessionStatus,
     teamIds,
+    trainerEventsFilter = false,
     type,
-    useOrFilter = false,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -166,7 +170,35 @@ export const getEvents = async (params = {}) => {
 
   // Build team and participant filters
   if (teamIds?.length || participantId) {
-    if (useOrFilter) {
+    if (playerEventsFilter) {
+      filtersObj.$or = [];
+      if (teamIds?.length) {
+        filtersObj.$or.push({
+          $and: [
+            {
+              team: {
+                documentId: {
+                  $in: teamIds,
+                },
+              },
+            },
+            {
+              sessionStatus: 'closed',
+            },
+          ],
+        });
+      }
+      if (participantId) {
+        filtersObj.$or.push({
+          participations: {
+            documentId: {
+              $containsi: [participantId],
+            },
+
+          },
+        });
+      }
+    } else if (trainerEventsFilter) {
       filtersObj.$or = [];
       if (teamIds?.length) {
         filtersObj.$or.push({
@@ -197,9 +229,7 @@ export const getEvents = async (params = {}) => {
       }
       if (participantId) {
         filtersObj.participations = {
-          user: {
-            documentId: participantId,
-          },
+          documentId: participantId,
         };
       }
     }
@@ -252,7 +282,17 @@ export const getEvents = async (params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['team', 'team.club', 'team.section', 'team.category', 'team.level', 'team.activities', 'type', 'participations'],
+    populate: [
+      'team',
+      'team.club',
+      'team.section',
+      'team.category',
+      'team.level',
+      'team.activities',
+      'type',
+      'participations',
+      'missings',
+    ],
     sort: ['date:asc'], // Sort by date ascending
   };
 
@@ -278,4 +318,14 @@ export const getEvents = async (params = {}) => {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch events: ${errorToDisplay}`);
   }
+};
+
+/**
+ * Mark as missing for an event
+ * @param {string} eventId - The ID of the event to answer to
+ * @returns {Promise<Event>} - The updated event
+ */
+export const missingEvent = async (eventId) => {
+  const response = await client.post(`/events/${eventId}/missing`);
+  return response.data;
 };

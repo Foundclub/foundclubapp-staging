@@ -38,6 +38,7 @@
  * @property {FCEventType} [type] - Event type
  * @property {'auto' | 'manual'} validationMode - How participation requests are validated
  * @property {User[]} participations - List of participants
+ * @property {User[]} missings - List of participants who said no
  */
 
 /**

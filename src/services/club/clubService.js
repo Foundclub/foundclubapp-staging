@@ -143,6 +143,9 @@ export const getClubById = async (id) => {
         sponsor: {
           populate: 'logo',
         },
+        teams: {
+          populate: '*',
+        },
       },
     },
   });

@@ -271,3 +271,17 @@ export const haveIAlreadyJoined = ({ participations, userId }) => {
     (p) => p.documentId === userId,
   );
 };
+
+/**
+ * Check if user has already answer no to event
+ * @param {object} params
+ * @param {User[]} params.missings - The list of participants
+ * @param {string} [params.userId] - The ID of the user to check
+ * @returns {boolean} - True if the user has already answered no, false otherwise
+ */
+export const haveIAlreadyAnsweredNo = ({ missings, userId }) => {
+  if (missings?.length === 0) return false;
+  return missings?.some(
+    (p) => p.documentId === userId,
+  );
+};

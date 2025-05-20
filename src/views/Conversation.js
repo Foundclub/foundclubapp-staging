@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
+import 'dayjs/locale/fr';
 import {
   Bubble,
   Composer,
@@ -134,10 +135,10 @@ function Conversation({ navigation, route }) {
    * @returns {void}
    */
   const handleAvatarPress = (user) => {
-    if (user._id !== userData?.documentId) {
-      navigation.navigate(RouteNames.Profile, {
-        userId: user._id,
-      });
+    if (user._id === userData?.documentId) {
+      navigation.navigate(RouteNames.Profile);
+    } else {
+      navigation.navigate(RouteNames.UserDetails, { userId: user._id });
     }
   };
 
@@ -295,7 +296,7 @@ function Conversation({ navigation, route }) {
       style={[Spaces.paddingHorizontal[0]]}
     >
       <GiftedChat
-        dateFormat="dd MMMM yyyy"
+        dateFormat="DD MMMM"
         dateFormatCalendar={{
           lastDay: '[Hier à] h:mm',
           lastWeek: '[La semaine dernière] dddd [à] h:mm',

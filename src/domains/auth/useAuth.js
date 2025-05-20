@@ -119,23 +119,33 @@ const useAuth = () => {
    * @param {object} param
    * @param {string} [param.clubName]
    * @param {string} [param.teamName]
+   * @param {string} [param.teamId]
    * @returns {void}
    */
-  const inviteTeamPlayers = ({ clubName, teamName }) => {
+  const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
     // Create an invitation message with download links
     const appStoreUrl = process.env.APP_STORE_URL;
     const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
+    const deeplinkUrl = `foundclub://team/${teamId}`;
 
     // Construct the message
     const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
-      appStoreUrl,
       clubName,
-      googlePlayUrl,
       teamName,
     });
 
+    const urls = `\n\n${
+      t('teamDetails.alerts.invitePlayers.alreadyHaveTheApp')} :  \n${
+      deeplinkUrl}
+      \n${
+  t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
+  appStoreUrl}
+      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${
+  googlePlayUrl}
+      `;
+
     Share.share({
-      message: shareMessage,
+      message: `${shareMessage}${urls}`,
       title: t(
         'teamDetails.alerts.invitePlayers.title',
       ),
