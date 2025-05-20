@@ -288,3 +288,28 @@ export const getUserById = async (id) => {
     throw new Error(`Failed to fetch user data: ${errorToDisplay}`);
   }
 };
+
+/**
+ * Add device token for current user
+ * @param {string} token fcm token
+ * @returns {Promise<object>} The promise
+ */
+export const addDeviceToken = async (token) => {
+  const result = await client.post('/firebase-auth/me/device', {
+    data: {
+      platform: Platform.OS,
+      token,
+    },
+  });
+  return result.data;
+};
+
+/**
+ * Delete device token for current user
+ * @param {string} token fcm token
+ * @returns {Promise<object>} The promise
+ */
+export const deleteDeviceToken = async (token) => {
+  const result = await client.delete(`/firebase-auth/me/device/${token}`);
+  return result.data;
+};

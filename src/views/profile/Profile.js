@@ -9,6 +9,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -29,6 +30,7 @@ function Profile({ navigation }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const [{ fcmToken }] = useAppContext();
   const { getClubInitials } = useClub();
   const {
     canEditClub,
@@ -61,7 +63,7 @@ function Profile({ navigation }) {
   };
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logoutMutation.mutate(fcmToken || '');
   };
 
   const handleOpenClub = () => {

@@ -347,6 +347,8 @@ export default {
       edit: 'Modifier l\'évènement',
       join: 'Participer',
       refuse: 'Refuser',
+      remind: 'Relancer',
+
     },
     fields: {
       description: 'À propos',
@@ -375,6 +377,10 @@ export default {
         },
         title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
       },
+      remindSuccess: {
+        description: 'Les joueur·se·s vont recevoir une notification pour leur rappeler de répondre à l\'évènement.',
+        title: 'Votre relance a bien été envoyée',
+      },
       reportEvent: {
         description: 'Merci de nous indiquer la raison pour laquelle vous signalez cet évènement.',
         fields: {
@@ -392,7 +398,7 @@ export default {
     },
     participationStatus: {
       missing: 'Absent·e·s',
-      notAnswered: 'En attente de réponse',
+      notAnswered: 'Sans réponse',
       participating: 'Présent·e·s',
     },
   },

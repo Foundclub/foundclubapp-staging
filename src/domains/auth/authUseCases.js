@@ -176,3 +176,28 @@ export const formatBirthdateToSend = (value) => {
   // Return in ISO format
   return `${year}-${month}-${day}`;
 };
+
+export const NOTIFICATION_TYPES = {
+  // Users
+  ADD_TO_TEAM: 'addToTeam',
+
+  // Clubs
+  CLUB_MEMBERSHIP_REQUEST: 'clubMembershipRequest',
+  CLUB_REQUEST: 'clubRequest',
+
+  // Teams
+  NEW_TEAM: 'newTeam',
+  TEAM_MEMBERSHIP_REQUEST: 'teamMembershipRequest',
+  TEAM_REQUEST: 'teamRequest',
+
+  // Events
+  EVENT_CANCELLATION: 'eventCancellation',
+  EVENT_REMINDER: 'eventReminder',
+  NEW_PARTICIPATION: 'newParticipation',
+  PARTICIPATION_REQUEST: 'participationRequest',
+
+  // Messages
+  NEW_TEAM_MESSAGE: 'newTeamMessage',
+  NEW_TEAM_PLAYER_MESSAGE: 'newTeamPlayerMessage',
+  NEW_WHISPER: 'newWhisper',
+};
