@@ -29,7 +29,7 @@ const defaultValues = {
   firstname: '',
   lastname: '',
   phoneNumber: '',
-  section: /** @type {'female' | 'male'} */ (''),
+  section: '',
 };
 
 const profileSchema = Joi.object({
@@ -86,6 +86,7 @@ function ProfileEdit({ navigation }) {
       ...defaultValues,
       ...userData,
       birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
+      section: userData?.section?.documentId || '',
     },
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
@@ -103,6 +104,7 @@ function ProfileEdit({ navigation }) {
         ...data,
         avatar,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
+        section: sections?.find((section) => section.documentId === data.section),
       });
     }
   };

@@ -28,7 +28,7 @@ function UserSection({ navigation }) {
   const { data: sections } = useGetSections();
 
   // local state
-  const [section, setSection] = useState(userData?.section || '');
+  const [section, setSection] = useState(userData?.section?.documentId || '');
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();

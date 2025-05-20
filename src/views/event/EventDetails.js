@@ -15,15 +15,14 @@ import {
   View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
-import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
@@ -60,7 +59,6 @@ function EventDetails({ navigation, route }) {
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   const { canEditEvent, userData } = useAuth();
-  const { canEventBeJoined, haveIAlreadyJoined } = useEvent();
 
   const {
     data: event, error, isLoading, refetch,
@@ -219,7 +217,7 @@ function EventDetails({ navigation, route }) {
       if (user?.documentId === userData?.documentId) {
         navigation.navigate(RouteNames.Profile);
       } else {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.id });
+        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
       }
     }
   };
@@ -236,19 +234,42 @@ function EventDetails({ navigation, route }) {
     return false;
   }, [eventParticipations, userData]);
 
-  const participationInfo = useMemo(
-    () => (hasPendingRequest
-      ? t('eventList.info.pendingRequest')
-      : t('eventList.info.alreadyJoined')),
-    [hasPendingRequest, t],
-  );
-
   const pendingParticipations = useMemo(() => {
     const allParticipations = eventParticipations?.pages?.[0]?.data || [];
     return allParticipations.filter(
       (participation) => participation.participationStatus === 'pending',
     );
   }, [eventParticipations]);
+
+  /** @type {{ missing: User[]; notAnswered: User[]; participating: User[]; }} */
+  const participationsByStatus = useMemo(() => {
+    if (!canEditEvent(event?.team?.documentId || '')) {
+      return {
+        missing: [],
+        notAnswered: [],
+        participating: event?.participations || [],
+      };
+    }
+
+    const teamPlayers = event?.team?.players || [];
+
+    /** @type {User[]} */
+    const participatingPlayers = event?.participations || [];
+    /** @type {User[]} */
+    const missingPlayers = event?.missings || [];
+    const notAnsweredPlayers = teamPlayers.filter(
+      (player) => !participatingPlayers.some(
+        (participation) => participation.documentId === player.documentId,
+      )
+      && !missingPlayers.some((missing) => missing.documentId === player.documentId),
+    );
+
+    return {
+      missing: missingPlayers || [],
+      notAnswered: notAnsweredPlayers || [],
+      participating: participatingPlayers || [],
+    };
+  }, [event, canEditEvent]);
 
   // renderers
 
@@ -257,65 +278,19 @@ function EventDetails({ navigation, route }) {
    * @returns {import('react').ReactElement} The rendered action button
    */
   const renderActionButtons = () => {
-    if (userData?.role?.name === USER_ROLES.player) {
-      const alreadyJoined = haveIAlreadyJoined({
-        participations: event?.participations || [],
-        userId: userData?.documentId,
-      });
-      if (alreadyJoined || hasPendingRequest) {
-        return (
-          <View style={[Alignments.fullWidth]}>
-            <Tag text={participationInfo} textStyle={Fonts.p1Bold} />
-          </View>
-        );
-      }
-      return (
-        <Button
-          disabled={
-            !canEventBeJoined({
-              capacity: event?.capacity || 0,
-              participations: event?.participations || [],
-              userId: userData?.documentId,
-              userRole: userData?.role,
-            })
-          }
-          onPress={handleJoinEvent}
-          style={Alignments.fullWidth}
-          title={t('eventDetails.actions.join')}
-          variant="Primary"
-        />
-      );
-    }
-    if (
-      userData?.role?.name === USER_ROLES.coach
-      || userData?.role?.name === USER_ROLES.president
-    ) {
-      if (canEditEvent(event?.team?.documentId || '')) {
-        return (
-          <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
-            <Button
-              onPress={handleEditEvent}
-              title={t('eventDetails.actions.edit')}
-              variant="Primary"
-            />
-            <Button
-              onPress={handleCancelEvent}
-              title={t('eventDetails.actions.cancelEvent')}
-              variant="SecondaryLight"
-            />
-          </View>
-        );
-      }
-      return <View />;
-    }
-    return (
-      <Button
-        onPress={handleGoLogin}
-        style={Alignments.fullWidth}
-        title={t('eventList.actions.join')}
-        variant="Primary"
+    const canEdit = canEditEvent(event?.team?.documentId || '');
+    return event ? (
+      <EventAnswerButtons
+        event={event}
+        hasPendingRequest={hasPendingRequest}
+        onAbout={() => {}}
+        onCancel={canEdit ? handleCancelEvent : undefined}
+        onDecline={() => {}}
+        onEdit={canEdit ? handleEditEvent : undefined}
+        onJoin={handleJoinEvent}
+        onLogin={handleGoLogin}
       />
-    );
+    ) : <View />;
   };
 
   const renderReportButton = useCallback(() => (
@@ -614,48 +589,200 @@ function EventDetails({ navigation, route }) {
                 }`}
               </Text>
             </Text>
-            {event?.participations?.map((/** @type {User} */ player) => (
-              <TouchableOpacity
-                key={player.documentId}
-                onPress={() => handleUserPress(player)}
-                style={[
-                  ApplicationStyle.borderRadius24,
-                  ApplicationStyle.backgroundColor.primary700,
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Alignments.justifySpaceBetween,
-                  Spaces.padding[16],
-                  Spaces.gap[16],
-                ]}
-              >
-                <View
+            {participationsByStatus ? (
+              <>
+                {participationsByStatus.participating.length > 0 && (
+                  <>
+                    <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+                      {t('eventDetails.participationStatus.participating')}
+                    </Text>
+                    {participationsByStatus.participating.map((player) => (
+                      <TouchableOpacity
+                        key={player.documentId}
+                        onPress={() => handleUserPress(player)}
+                        style={[
+                          ApplicationStyle.borderRadius24,
+                          ApplicationStyle.backgroundColor.primary700,
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Alignments.justifySpaceBetween,
+                          Spaces.padding[16],
+                          Spaces.gap[16],
+                        ]}
+                      >
+                        <View
+                          style={[
+                            Alignments.row,
+                            Spaces.gap[16],
+                            Alignments.alignCenter,
+                          ]}
+                        >
+                          <Image
+                            source={
+                              player.avatar
+                                ? { uri: player?.avatar?.url }
+                                : Images.roundAvatar
+                            }
+                            style={[
+                              ApplicationStyle.roundIcon40,
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                            ]}
+                          />
+                          <Text
+                            numberOfLines={1}
+                            style={[Fonts.p1Bold, Fonts.neutral00]}
+                          >
+                            {`${player.firstname} ${player.lastname}`}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+                {participationsByStatus.missing.length > 0 && (
+                  <>
+                    <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+                      {t('eventDetails.participationStatus.missing')}
+                    </Text>
+                    {participationsByStatus.missing.map((player) => (
+                      <TouchableOpacity
+                        key={player.documentId}
+                        onPress={() => handleUserPress(player)}
+                        style={[
+                          ApplicationStyle.borderRadius24,
+                          ApplicationStyle.backgroundColor.primary700,
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Alignments.justifySpaceBetween,
+                          Spaces.padding[16],
+                          Spaces.gap[16],
+                        ]}
+                      >
+                        <View
+                          style={[
+                            Alignments.row,
+                            Spaces.gap[16],
+                            Alignments.alignCenter,
+                          ]}
+                        >
+                          <Image
+                            source={
+                              player.avatar
+                                ? { uri: player?.avatar?.url }
+                                : Images.roundAvatar
+                            }
+                            style={[
+                              ApplicationStyle.roundIcon40,
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                            ]}
+                          />
+                          <Text
+                            numberOfLines={1}
+                            style={[Fonts.p1Bold, Fonts.neutral00]}
+                          >
+                            {`${player.firstname} ${player.lastname}`}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+                {participationsByStatus.notAnswered.length > 0 && (
+                  <>
+                    <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+                      {t('eventDetails.participationStatus.notAnswered')}
+                    </Text>
+                    {participationsByStatus.notAnswered.map((player) => (
+                      <TouchableOpacity
+                        key={player.documentId}
+                        onPress={() => handleUserPress(player)}
+                        style={[
+                          ApplicationStyle.borderRadius24,
+                          ApplicationStyle.backgroundColor.primary700,
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Alignments.justifySpaceBetween,
+                          Spaces.padding[16],
+                          Spaces.gap[16],
+                        ]}
+                      >
+                        <View
+                          style={[
+                            Alignments.row,
+                            Spaces.gap[16],
+                            Alignments.alignCenter,
+                          ]}
+                        >
+                          <Image
+                            source={
+                              player.avatar
+                                ? { uri: player?.avatar?.url }
+                                : Images.roundAvatar
+                            }
+                            style={[
+                              ApplicationStyle.roundIcon40,
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                            ]}
+                          />
+                          <Text
+                            numberOfLines={1}
+                            style={[Fonts.p1Bold, Fonts.neutral00]}
+                          >
+                            {`${player.firstname} ${player.lastname}`}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+              </>
+            ) : (
+              event?.participations?.map((/** @type {User} */ player) => (
+                <TouchableOpacity
+                  key={player.documentId}
+                  onPress={() => handleUserPress(player)}
                   style={[
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.backgroundColor.primary700,
                     Alignments.row,
-                    Spaces.gap[16],
                     Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.padding[16],
+                    Spaces.gap[16],
                   ]}
                 >
-                  <Image
-                    source={
-                      player.avatar
-                        ? { uri: player?.avatar?.url }
-                        : Images.roundAvatar
-                    }
+                  <View
                     style={[
-                      ApplicationStyle.roundIcon40,
-                      ApplicationStyle.borderWidth1,
-                      ApplicationStyle.borderColor.neutral00,
+                      Alignments.row,
+                      Spaces.gap[16],
+                      Alignments.alignCenter,
                     ]}
-                  />
-                  <Text
-                    numberOfLines={1}
-                    style={[Fonts.p1Bold, Fonts.neutral00]}
                   >
-                    {`${player.firstname} ${player.lastname}`}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                    <Image
+                      source={
+                        player.avatar
+                          ? { uri: player?.avatar?.url }
+                          : Images.roundAvatar
+                      }
+                      style={[
+                        ApplicationStyle.roundIcon40,
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                      ]}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p1Bold, Fonts.neutral00]}
+                    >
+                      {`${player.firstname} ${player.lastname}`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </WithDataWrapper>
       </ScrollView>

@@ -9,7 +9,7 @@
  * @property {Role} role
  * @property {Avatar} [avatar]
  * @property {string} [birthdate]
- * @property {'female' | 'male'} [section]
+ * @property {{documentId: string, name: string}} [section]
  * @property {Club} [club]
  * @property {Team[]} [myTeams]
  * @property {Team[]} [trainedTeams]

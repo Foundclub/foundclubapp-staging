@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -41,6 +42,27 @@ function MyEventList({ navigation }) {
   const teamIds = (userData?.myTeams || []).concat((userData?.trainedTeams || [])).map(
     (team) => team.documentId || '',
   );
+
+  // Compute filters based on user role and context
+  const eventFilters = useMemo(() => {
+    // If user is a player, show events they participate in and closed events from their teams
+    if (userData?.role?.name === USER_ROLES.player) {
+      return {
+        participantId: userData?.documentId,
+        playerEventsFilter: true,
+        teamIds: teamIds.length > 0 ? teamIds : undefined,
+        type: selectedType || undefined,
+      };
+    }
+
+    // For other roles, just show their team events
+    return {
+      participantId: userData?.documentId,
+      teamIds: teamIds.length > 0 ? teamIds : undefined,
+      trainerEventsFilter: true,
+      type: selectedType || undefined,
+    };
+  }, [userData, teamIds, selectedType]);
 
   const handleAddEvent = () => {
     navigation.navigate(RouteNames.EventEdit);
@@ -113,12 +135,7 @@ function MyEventList({ navigation }) {
         ))}
       </ScrollView>
       <EventListContent
-        additionalFilters={{
-          participantId: userData?.documentId,
-          teamIds: teamIds.length > 0 ? teamIds : undefined,
-          type: selectedType || undefined,
-          useOrFilter: true,
-        }}
+        additionalFilters={eventFilters}
       />
       {
         canManageEvents ? (

@@ -1,5 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
+import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,22 +8,20 @@ import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
-import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
-import useEvent from '@/domains/event/useEvent';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
+import { missingEvent } from '@/services/event/eventService';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
@@ -61,8 +60,6 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const { t } = useTranslation();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
-  const { canEventBeJoined, haveIAlreadyJoined } = useEvent();
-  const { userData } = useAuth();
 
   const {
     data: requestPages,
@@ -103,6 +100,17 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  /**
+   * Mutation for marking an event as missing
+   * @type {import('@tanstack/react-query').UseMutationResult<any, Error, string, unknown>}
+   */
+  const missingEventMutation = useMutation({
+    mutationFn: missingEvent,
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     // @ts-expect-error because of react navigation type definitions
     navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
@@ -125,6 +133,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     setIsJoinModalVisible(true);
   }, []);
 
+  const handleDeclineEvent = useCallback((/** @type {FCEvent} */ event) => {
+    if (!event?.documentId) return;
+    missingEventMutation.mutate(event.documentId);
+  }, [missingEventMutation]);
+
   const handleGoLogin = () => {
     // @ts-expect-error because of react navigation type definitions
     navigation.navigate(RouteNames.AuthStackAccount);
@@ -142,63 +155,6 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   );
 
   // renderers
-
-  /**
-   * Renders the action button for joining an event
-   * @param {FCEvent} item - The event item
-   * @returns {import('react').ReactElement} The rendered action button
-   */
-  const renderActionButton = (item) => {
-    if (userData?.role?.name === USER_ROLES.player) {
-      const alreadyJoined = haveIAlreadyJoined({
-        participations: item?.participations,
-        userId: userData?.documentId,
-      });
-      if (alreadyJoined) {
-        return (
-          <View style={[Alignments.fullWidth]}>
-            <Tag
-              text={t('eventList.info.alreadyJoined')}
-              textStyle={Fonts.p1Bold}
-            />
-          </View>
-        );
-      }
-      return (
-        <Button
-          disabled={!canEventBeJoined({
-            capacity: item?.capacity,
-            participations: item?.participations,
-            userId: userData?.documentId,
-            userRole: userData?.role,
-          })}
-          onPress={() => handleJoinEvent(item)}
-          style={Alignments.fullWidth}
-          title={t('eventList.actions.join')}
-          variant="Primary"
-        />
-      );
-    }
-    if (userData?.role?.name === USER_ROLES.coach
-       || userData?.role?.name === USER_ROLES.president) {
-      return (
-        <Button
-          onPress={() => handleEventSelect(item)}
-          style={Alignments.fullWidth}
-          title={t('eventList.actions.about')}
-          variant="Primary"
-        />
-      );
-    }
-    return (
-      <Button
-        onPress={handleGoLogin}
-        style={Alignments.fullWidth}
-        title={t('eventList.actions.join')}
-        variant="Primary"
-      />
-    );
-  };
   /**
    * Renders an individual event item
    * @param {object} param - The item to render
@@ -305,7 +261,13 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           </View>
         ) : null}
       </View>
-      {renderActionButton(item)}
+      <EventAnswerButtons
+        event={item}
+        onAbout={() => handleEventSelect(item)}
+        onDecline={() => handleDeclineEvent(item)}
+        onJoin={() => handleJoinEvent(item)}
+        onLogin={handleGoLogin}
+      />
     </TouchableOpacity>
   );
 
