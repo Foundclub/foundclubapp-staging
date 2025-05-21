@@ -102,20 +102,30 @@ const useAuth = () => {
     // Create an invitation message with download links
     const appStoreUrl = process.env.APP_STORE_URL;
     const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
+    const deeplinkUrl = 'foundclub://';
 
     // Construct the message
-    const inviteMessage = t('clubDetails.alerts.inviteTrainer.message', {
-      appStoreUrl,
+    const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
       clubName,
       coachName: firstname,
-      googlePlayUrl,
     });
-    const encodedMessage = encodeURIComponent(inviteMessage);
+
+    const urls = `\n\n${
+      t('teamDetails.alerts.invitePlayers.alreadyHaveTheApp')} :  \n${
+      deeplinkUrl}
+      \n${
+  t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
+  appStoreUrl}
+      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${
+  googlePlayUrl}
+      `;
+
+    const encodedMessage = `${shareMessage}${urls}`;
     const smsUrl = `sms:${phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodedMessage}`;
 
     Linking.openURL(smsUrl).catch(() => {
       Share.share({
-        message: inviteMessage,
+        message: encodedMessage,
         title: t(
           'clubDetails.alerts.inviteTrainer.title',
         ),

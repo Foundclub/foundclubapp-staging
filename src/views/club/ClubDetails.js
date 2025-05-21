@@ -410,13 +410,17 @@ function ClubDetails({ navigation, route }) {
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
                         Alignments.row,
+                        Alignments.fill,
                         Alignments.alignCenter,
+                        Alignments.fill,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
                         Spaces.gap[16],
                       ]}
                     >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <View style={[
+                        Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                      >
                         <Image
                           source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
                           style={[
@@ -425,7 +429,10 @@ function ClubDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                           ]}
                         />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        <Text
+                          numberOfLines={2}
+                          style={[Fonts.p1Bold, Fonts.neutral00]}
+                        >
                           {`${user.firstname} ${user.lastname}`}
                         </Text>
                       </View>
@@ -479,11 +486,14 @@ function ClubDetails({ navigation, route }) {
                         ApplicationStyle.backgroundColor.primary700,
                         Alignments.row,
                         Alignments.alignCenter,
+                        Alignments.fill,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
                         Spaces.gap[16]]}
                     >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <View style={[
+                        Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                      >
                         <Image
                           source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
                           style={[
@@ -492,32 +502,13 @@ function ClubDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                           ]}
                         />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        <Text
+                          numberOfLines={2}
+                          style={[Fonts.p1Bold, Fonts.neutral00]}
+                        >
                           {`${user.firstname} ${user.lastname}`}
                         </Text>
                       </View>
-                      {canEdit ? (
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
-                          <Button
-                            icon="trash"
-                            isOption
-                            onPress={() => handleDeleteTrainer(user.documentId)}
-                            variant="SecondaryLight"
-                          />
-                          <Button
-                            icon="share"
-                            isOption
-                            onPress={() => {
-                              inviteTrainer({
-                                clubName: club?.name,
-                                firstname: user.firstname,
-                                phoneNumber: user.phoneNumber,
-                              });
-                            }}
-                            variant="SecondaryLight"
-                          />
-                        </View>
-                      ) : null}
                     </TouchableOpacity>
                   ))
                 }

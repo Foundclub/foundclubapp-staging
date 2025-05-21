@@ -220,9 +220,7 @@ export default {
         message: 'Bonjour {{coachName}} !'
         + '\nVous avez été désigné comme entraineur·e dans le club {{clubName}}.'
         + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
-        + ' et commencer à gérer vos équipes et vos évènements.'
-        + '\nIOS : {{appStoreUrl}}'
-        + '\nAndroid : {{googlePlayUrl}}',
+        + ' et commencer à gérer vos équipes et vos évènements.',
         title: 'Bienvenue sur Found Club !',
       },
       joinClub: {

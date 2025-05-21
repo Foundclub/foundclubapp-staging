@@ -14,6 +14,7 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {object} props
  * @param {FCEvent} props.event - The event data
  * @param {() => void} props.onJoin - Callback when user wants to join
+ * @param {() => void} props.onParticipate - Callback when user participate on its team event
  * @param {() => void} props.onDecline - Callback when user declines
  * @param {() => void} props.onAbout - Callback when user wants to see details
  * @param {() => void} props.onLogin - Callback when user needs to login
@@ -31,6 +32,7 @@ function EventAnswerButtons({
   onEdit,
   onJoin,
   onLogin,
+  onParticipate,
 }) {
   // hooks
   const { t } = useTranslation();
@@ -78,7 +80,7 @@ function EventAnswerButtons({
         <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Button
-              onPress={onJoin}
+              onPress={onParticipate}
               style={Alignments.fullWidth}
               title={t('eventList.actions.present')}
               variant="Primary"

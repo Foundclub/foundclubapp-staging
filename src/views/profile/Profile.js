@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
@@ -160,7 +161,7 @@ function Profile({ navigation }) {
         </TouchableOpacity>
       );
     }
-    if (canJoinClub) {
+    if (canJoinClub || userData?.role?.name === USER_ROLES.president) {
       return (
         <Button
           isOption
