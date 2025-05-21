@@ -124,7 +124,7 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       case NOTIFICATION_TYPES.CLUB_REQUEST:
-        navigate(RouteNames.HomeTab, {
+        navigate(RouteNames.Profile, {
           params: {
             clubId: remoteMessageData.clubId,
           },
@@ -143,7 +143,7 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       case NOTIFICATION_TYPES.NEW_PARTICIPATION:
-        navigate(RouteNames.HomeTab, {
+        navigate(RouteNames.MyEventList, {
           params: {
             eventId: remoteMessageData.eventId,
           },
@@ -151,7 +151,7 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       case NOTIFICATION_TYPES.NEW_TEAM:
-        navigate(RouteNames.HomeTab, {
+        navigate(RouteNames.Profile, {
           params: {
             teamId: remoteMessageData.teamId,
           },
@@ -183,7 +183,7 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       case NOTIFICATION_TYPES.PARTICIPATION_REQUEST:
-        navigate(RouteNames.HomeTab, {
+        navigate(RouteNames.MyEventList, {
           params: {
             eventId: remoteMessageData.eventId,
           },
@@ -192,15 +192,15 @@ const useNotifications = ({ navigate }) => {
         break;
       case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
         navigate(RouteNames.Profile, {
-          screen: RouteNames.TeamMembershipRequests,
-        });
-        break;
-      case NOTIFICATION_TYPES.TEAM_REQUEST:
-        navigate(RouteNames.HomeTab, {
           params: {
             teamId: remoteMessageData.teamId,
           },
           screen: RouteNames.TeamDetails,
+        });
+        break;
+      case NOTIFICATION_TYPES.TEAM_REQUEST:
+        navigate(RouteNames.Profile, {
+          screen: RouteNames.TeamMembershipRequests,
         });
         break;
       default:

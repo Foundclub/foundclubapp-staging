@@ -8,6 +8,7 @@ import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -22,6 +23,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
 import { missingEvent } from '@/services/event/eventService';
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
@@ -60,6 +62,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const { t } = useTranslation();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
+  const { userData } = useAuth();
 
   const {
     data: requestPages,
@@ -73,6 +76,19 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     ...(showFilters ? eventFilters : {}),
     ...additionalFilters,
     pageSize: 10,
+  });
+
+  /**
+   * Mutation to create an event participation
+   * @type {import('@tanstack/react-query').UseMutationResult<EventParticipation,
+   * Error, {user: string, event: string, reason?: string}, unknown>}
+   */
+  const createEventParticipationMutation = useMutation({
+    mutationFn: createEventParticipation,
+    onSuccess: () => {
+      refetch();
+      setIsJoinModalVisible(false);
+    },
   });
 
   // variables
@@ -133,6 +149,15 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     setIsJoinModalVisible(true);
   }, []);
 
+  const handleParticipateToEvent = useCallback((/** @type {FCEvent} */ event) => {
+    if (event?.documentId && userData?.documentId) {
+      createEventParticipationMutation.mutate({
+        event: event.documentId,
+        user: userData.documentId,
+      });
+    }
+  }, [createEventParticipationMutation, userData]);
+
   const handleDeclineEvent = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) return;
     missingEventMutation.mutate(event.documentId);
@@ -140,7 +165,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
 
   const handleGoLogin = () => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.AuthStackAccount);
+    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount });
   };
 
   const handleCloseJoinModal = useCallback(() => {
@@ -267,6 +292,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         onDecline={() => handleDeclineEvent(item)}
         onJoin={() => handleJoinEvent(item)}
         onLogin={handleGoLogin}
+        onParticipate={() => handleParticipateToEvent(item)}
       />
     </TouchableOpacity>
   );
@@ -322,10 +348,10 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         </View>
       </WithDataWrapper>
       <JoinEventModal
+        createEventParticipationMutation={createEventParticipationMutation}
         eventId={selectedEvent?.documentId || ''}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
-        onSuccess={refetch}
       />
     </View>
   );

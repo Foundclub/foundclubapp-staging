@@ -1,4 +1,3 @@
-import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
@@ -10,30 +9,26 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-
 /**
  * Modal for joining an event
  * @param {object} props
  * @param {string} props.eventId - ID of the event to join
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} props.onClose - Function to call when closing the modal
- * @param {() => void} props.onSuccess - Function to call when successfully joining
+ * @param {import('@tanstack/react-query').UseMutationResult<EventParticipation,
+ * Error, {user: string, event: string, reason?: string},
+ * unknown>} props.createEventParticipationMutation - Mutation for creating event participation
  * @returns {import('react').ReactElement} JoinEventModal component
  */
 function JoinEventModal({
+  createEventParticipationMutation,
   eventId,
   isVisible,
   onClose,
-  onSuccess,
 }) {
   const [acceptResponsibility, setAcceptResponsibility] = useState(false);
   const [acceptConditions, setAcceptConditions] = useState(false);
 
-  const createEventParticipationMutation = useMutation({
-    mutationFn: createEventParticipation,
-    onSuccess,
-  });
   const { userData } = useAuth();
   const { t } = useTranslation();
   const {
@@ -48,22 +43,9 @@ function JoinEventModal({
       createEventParticipationMutation.mutate({
         event: eventId,
         user: userData.documentId,
-      }, {
-        onSuccess: () => {
-          onClose();
-          onSuccess();
-        },
       });
     }
-  }, [
-    eventId,
-    acceptResponsibility,
-    acceptConditions,
-    userData,
-    createEventParticipationMutation,
-    onClose,
-    onSuccess,
-  ]);
+  }, [eventId, acceptResponsibility, acceptConditions, userData, createEventParticipationMutation]);
 
   const handleClose = useCallback(() => {
     onClose();

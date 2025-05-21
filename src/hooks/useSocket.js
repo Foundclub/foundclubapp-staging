@@ -40,7 +40,8 @@ const useSocket = () => {
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        transports: ['websocket'],
+        timeout: 10000, // Increase timeout for mobile networks
+        transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
       });
 
       socket.on('connect', () => {
@@ -51,7 +52,9 @@ const useSocket = () => {
         setIsConnected(false);
       });
 
-      socket.on('connect_error', () => {
+      socket.on('connect_error', (error) => {
+        // eslint-disable-next-line no-console
+        console.error('Socket connection error:', error.message);
         setIsConnected(false);
       });
 

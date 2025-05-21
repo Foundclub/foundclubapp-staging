@@ -300,12 +300,16 @@ function TeamDetails({ navigation, route }) {
                         ApplicationStyle.borderRadius24,
                         ApplicationStyle.backgroundColor.primary700,
                         Alignments.row,
+                        Alignments.fill,
                         Alignments.alignCenter,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
                         Spaces.gap[16]]}
                     >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <View
+                        style={[
+                          Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                      >
                         <Image
                           source={trainer.avatar
                             ? { uri: trainer?.avatar?.url } : Images.roundAvatar}
@@ -315,7 +319,7 @@ function TeamDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                           ]}
                         />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
@@ -357,11 +361,14 @@ function TeamDetails({ navigation, route }) {
                         Alignments.row,
                         Alignments.alignCenter,
                         Alignments.justifySpaceBetween,
+                        Alignments.fill,
                         Spaces.padding[16],
                         Spaces.gap[16],
                       ]}
                     >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <View style={[
+                        Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                      >
                         <Image
                           source={player.avatar ? { uri: player?.avatar?.url } : Images.roundAvatar}
                           style={[
@@ -370,7 +377,7 @@ function TeamDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                           ]}
                         />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${player.firstname} ${player.lastname}`}
                         </Text>
                       </View>

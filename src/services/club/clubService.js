@@ -71,6 +71,7 @@ export const getClubs = async (params = {}) => {
       pageSize: pageSize || 7,
     },
     sort: {
+      isCustomer: 'desc',
       name: 'asc',
     },
   };
@@ -237,6 +238,16 @@ export const updateClub = async (clubData) => {
 
       // Remove the members from clubDataCopy as we've handled them separately
       delete clubDataCopy.members;
+    }
+
+    // Handle teams data
+    if (clubDataCopy.teams && Array.isArray(clubDataCopy.teams)) {
+      clubDataCopy.teams.forEach((team, index) => {
+        formData.append(`teams[${index}]`, team?.documentId || '');
+      });
+
+      // Remove the teams from clubDataCopy as we've handled them separately
+      delete clubDataCopy.teams;
     }
     // Handle address data
     if (clubDataCopy.address && typeof clubDataCopy.address === 'object') {

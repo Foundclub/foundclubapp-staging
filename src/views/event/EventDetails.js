@@ -36,6 +36,7 @@ import { cancelEvent, remindUnansweredPlayers } from '@/services/event/eventServ
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   acceptEventParticipation,
+  createEventParticipation,
   declineEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
@@ -73,6 +74,20 @@ function EventDetails({ navigation, route }) {
       pageSize: 100,
     },
   );
+
+  /**
+   * Mutation to create an event participation
+   * @type {import('@tanstack/react-query').UseMutationResult<EventParticipation,
+   * Error, {user: string, event: string, reason?: string}, unknown>}
+   */
+  const createEventParticipationMutation = useMutation({
+    mutationFn: createEventParticipation,
+    onSuccess: () => {
+      refetch();
+      refetchParticipations();
+      setIsJoinModalVisible(false);
+    },
+  });
 
   const { mutate: acceptParticipation } = useMutation({
     mutationFn: acceptEventParticipation,
@@ -185,6 +200,15 @@ function EventDetails({ navigation, route }) {
     setIsJoinModalVisible(true);
   };
 
+  const handleParticipateToEvent = useCallback((/** @type {FCEvent} */ ev) => {
+    if (ev?.documentId && userData?.documentId) {
+      createEventParticipationMutation.mutate({
+        event: ev.documentId,
+        user: userData.documentId,
+      });
+    }
+  }, [createEventParticipationMutation, userData]);
+
   const handleCloseJoinModal = () => {
     setIsJoinModalVisible(false);
   };
@@ -253,7 +277,7 @@ function EventDetails({ navigation, route }) {
   };
 
   const handleGoLogin = () => {
-    navigation.navigate(RouteNames.AuthStackAccount);
+    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount });
   };
 
   const handleCancelEvent = () => {
@@ -307,6 +331,7 @@ function EventDetails({ navigation, route }) {
         onEdit={canEdit ? handleEditEvent : undefined}
         onJoin={handleJoinEvent}
         onLogin={handleGoLogin}
+        onParticipate={() => handleParticipateToEvent(event)}
       />
     ) : <View />;
   };
@@ -534,6 +559,7 @@ function EventDetails({ navigation, route }) {
                     style={[
                       ApplicationStyle.borderRadius24,
                       Alignments.row,
+                      Alignments.fill,
                       ApplicationStyle.backgroundColor.primary700,
                       Spaces.padding[24],
                       Spaces.gap[24],
@@ -544,6 +570,7 @@ function EventDetails({ navigation, route }) {
                         Alignments.row,
                         Spaces.gap[16],
                         Alignments.alignCenter,
+                        { flex: 0.7 },
                       ]}
                     >
                       <Image
@@ -559,7 +586,7 @@ function EventDetails({ navigation, route }) {
                         ]}
                       />
                       <Text
-                        numberOfLines={1}
+                        numberOfLines={2}
                         style={[Fonts.p1Bold, Fonts.neutral00]}
                       >
                         {`${participation.user.firstname} ${participation.user.lastname}`}
@@ -622,6 +649,7 @@ function EventDetails({ navigation, route }) {
                           ApplicationStyle.borderRadius24,
                           ApplicationStyle.backgroundColor.primary700,
                           Alignments.row,
+                          Alignments.fill,
                           Alignments.alignCenter,
                           Alignments.justifySpaceBetween,
                           Spaces.padding[16],
@@ -633,6 +661,7 @@ function EventDetails({ navigation, route }) {
                             Alignments.row,
                             Spaces.gap[16],
                             Alignments.alignCenter,
+                            { flex: 0.7 },
                           ]}
                         >
                           <Image
@@ -648,7 +677,7 @@ function EventDetails({ navigation, route }) {
                             ]}
                           />
                           <Text
-                            numberOfLines={1}
+                            numberOfLines={2}
                             style={[Fonts.p1Bold, Fonts.neutral00]}
                           >
                             {`${player.firstname} ${player.lastname}`}
@@ -731,6 +760,7 @@ function EventDetails({ navigation, route }) {
                           ApplicationStyle.backgroundColor.primary700,
                           Alignments.row,
                           Alignments.alignCenter,
+                          Alignments.fill,
                           Alignments.justifySpaceBetween,
                           Spaces.padding[16],
                           Spaces.gap[16],
@@ -741,6 +771,7 @@ function EventDetails({ navigation, route }) {
                             Alignments.row,
                             Spaces.gap[16],
                             Alignments.alignCenter,
+                            { flex: 0.7 },
                           ]}
                         >
                           <Image
@@ -756,7 +787,7 @@ function EventDetails({ navigation, route }) {
                             ]}
                           />
                           <Text
-                            numberOfLines={1}
+                            numberOfLines={2}
                             style={[Fonts.p1Bold, Fonts.neutral00]}
                           >
                             {`${player.firstname} ${player.lastname}`}
@@ -777,6 +808,7 @@ function EventDetails({ navigation, route }) {
                     ApplicationStyle.backgroundColor.primary700,
                     Alignments.row,
                     Alignments.alignCenter,
+                    Alignments.fill,
                     Alignments.justifySpaceBetween,
                     Spaces.padding[16],
                     Spaces.gap[16],
@@ -787,6 +819,7 @@ function EventDetails({ navigation, route }) {
                       Alignments.row,
                       Spaces.gap[16],
                       Alignments.alignCenter,
+                      { flex: 0.7 },
                     ]}
                   >
                     <Image
@@ -802,7 +835,7 @@ function EventDetails({ navigation, route }) {
                       ]}
                     />
                     <Text
-                      numberOfLines={1}
+                      numberOfLines={2}
                       style={[Fonts.p1Bold, Fonts.neutral00]}
                     >
                       {`${player.firstname} ${player.lastname}`}
@@ -820,13 +853,10 @@ function EventDetails({ navigation, route }) {
       </View>
 
       <JoinEventModal
+        createEventParticipationMutation={createEventParticipationMutation}
         eventId={eventId}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
-        onSuccess={() => {
-          refetch();
-          refetchParticipations();
-        }}
       />
 
       <RefuseParticipationModal
