@@ -1,6 +1,7 @@
 import { CardStyleInterpolators } from '@react-navigation/stack';
 
 import getThemeColors from '@/theme/colors';
+import { lineHeights, sizes } from '@/theme/fonts';
 
 import Header from '@/components/atoms/header/Header';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
@@ -12,6 +13,12 @@ export const commonOptions = {
   headerShadowVisible: false,
   headerShown: true,
   headerTitle: () => <Header />,
+  headerTitleAlign: 'center',
+  headerTitleStyle: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.p1Size,
+    lineHeight: lineHeights.p1Height,
+  },
   headerTransparent: true,
   title: '',
 };
