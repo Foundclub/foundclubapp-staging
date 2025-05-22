@@ -13,7 +13,7 @@ export const commonOptions = {
   headerShadowVisible: false,
   headerShown: true,
   headerTitle: () => <Header />,
-  headerTitleAlign: 'center',
+  headerTitleAlign: /** @type {const} */ ('center'),
   headerTitleStyle: {
     fontFamily: 'Montserrat-Bold',
     fontSize: sizes.p1Size,
