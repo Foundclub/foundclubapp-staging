@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import { io } from 'socket.io-client';
 
 import { useAppContext } from '@/store/appContext';
@@ -40,8 +41,8 @@ const useSocket = () => {
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        timeout: 10000, // Increase timeout for mobile networks
-        transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
+        timeout: 10000,
+        transports: ['websocket'],
       });
 
       socket.on('connect', () => {
@@ -55,6 +56,7 @@ const useSocket = () => {
       socket.on('connect_error', (error) => {
         // eslint-disable-next-line no-console
         console.error('Socket connection error:', error.message);
+        Alert.alert('Socket connection error:', error.message);
         setIsConnected(false);
       });
 
