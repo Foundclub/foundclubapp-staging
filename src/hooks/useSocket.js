@@ -37,7 +37,6 @@ const useSocket = () => {
     if (!socketRef.current) {
       const socket = io(process.env.SOCKET_URL, {
         auth: { token: auth.token },
-        autoConnect: false,
         extraHeaders: {
           'User-Agent': 'react-native',
         },
