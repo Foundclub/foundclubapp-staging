@@ -37,15 +37,21 @@ const useSocket = () => {
     if (!socketRef.current) {
       const socket = io(process.env.SOCKET_URL, {
         auth: { token: auth.token },
+        autoConnect: false,
+        extraHeaders: {
+          'User-Agent': 'react-native',
+        },
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
+        secure: true,
         timeout: 10000,
         transports: ['websocket'],
       });
 
       socket.on('connect', () => {
+        console.log('SOCKET CONNECTED');
         setIsConnected(true);
       });
 
@@ -56,7 +62,7 @@ const useSocket = () => {
       socket.on('connect_error', (error) => {
         // eslint-disable-next-line no-console
         console.error('Socket connection error:', error.message);
-        Alert.alert('Socket connection error:', error.message);
+        Alert.alert('Socket connection error:', `${process.env.SOCKET_URL} ${error.message} ${error.name} ${error.cause}`);
         setIsConnected(false);
       });
 
