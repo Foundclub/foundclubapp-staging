@@ -198,9 +198,9 @@ const useAuth = () => {
     return false;
   }, [userData]);
 
-  const canJoinTeam = useMemo(() => {
+  const canJoinTeam = useCallback((/** @type {string} */teamId) => {
     if (userData?.role.name === USER_ROLES.player) {
-      return !userData?.myTeams?.length;
+      return !userData?.myTeams?.some(({ documentId }) => documentId === teamId);
     }
     return false;
   }, [userData]);

@@ -33,7 +33,7 @@ import { createEvent, updateEvent } from '@/services/event/eventService';
 import { getFieldError } from '@/utils/form/formUtils';
 
 const defaultValues = {
-  capacity: 1,
+  capacity: null,
   date: '',
   description: '',
   isRecurrent: false,
@@ -50,7 +50,7 @@ const defaultValues = {
 };
 
 const eventSchema = Joi.object({
-  capacity: Joi.number().min(1).required(),
+  capacity: Joi.number().allow(null, '').optional(),
   date: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   description: Joi.string().allow('').optional(),
   documentId: Joi.string().allow(null, '').optional(),
@@ -126,12 +126,12 @@ function EventEdit({ navigation, route }) {
     formState: { errors: formErrors },
     handleSubmit,
     setFocus,
+    setValue,
     watch,
-
   } = useForm({
     defaultValues: {
       ...defaultValues,
-      capacity: event?.capacity || 1,
+      capacity: event?.capacity,
       date: event?.date ? format(new Date(event?.date), 'dd/MM/yyyy') : '',
       description: event?.description || '',
       location: {
@@ -275,7 +275,7 @@ function EventEdit({ navigation, route }) {
                   label={t('eventEdit.fields.location.label')}
                   placeholder={t('eventEdit.fields.location.placeholder')}
                   setAddress={onChange}
-                  type="housenumber"
+                  type="street"
                 />
               )}
             />
@@ -429,7 +429,15 @@ function EventEdit({ navigation, route }) {
                     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
                       <Switch
                         key={name}
-                        onValueChange={onChange}
+                        onValueChange={(newValue) => {
+                          onChange(newValue);
+                          if (newValue) {
+                            const dateValue = watch('date');
+                            if (dateValue) {
+                              setValue('recurrenceStartDate', dateValue);
+                            }
+                          }
+                        }}
                         trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
                         value={value}
                       />

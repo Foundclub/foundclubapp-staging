@@ -137,7 +137,12 @@ function UserBirthdate({ navigation }) {
                   keyboardType="number-pad"
                   maxLength={2}
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    if (text.length === 2) {
+                      setFocus('month');
+                    }
+                  }}
                   onSubmitEditing={() => setFocus('month')}
                   placeholder="JJ"
                   ref={ref}
@@ -164,7 +169,12 @@ function UserBirthdate({ navigation }) {
                   keyboardType="number-pad"
                   maxLength={2}
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    if (text.length === 2) {
+                      setFocus('year');
+                    }
+                  }}
                   onSubmitEditing={() => setFocus('year')}
                   placeholder="MM"
                   ref={ref}

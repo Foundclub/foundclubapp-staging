@@ -1,6 +1,6 @@
 /**
  * @typedef {object} FCEventForm
- * @property {number} capacity - Maximum number of participants
+ * @property {number} [capacity] - Maximum number of participants
  * @property {string} [date] - date string for the event
  * @property {string} [time] - time string for the event
  * @property {string} [description] - Optional event description

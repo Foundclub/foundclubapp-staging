@@ -2,7 +2,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -13,6 +15,7 @@ import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
@@ -62,7 +65,13 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const { t } = useTranslation();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
-  const { userData } = useAuth();
+  const { userData: { documentId: userDocumentId } = {} } = useAuth();
+
+  const eventsConfig = useMemo(() => ({
+    ...(showFilters ? eventFilters : {}),
+    ...additionalFilters,
+    pageSize: 7,
+  }), [showFilters, eventFilters, additionalFilters]);
 
   const {
     data: requestPages,
@@ -72,11 +81,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetEvents({
-    ...(showFilters ? eventFilters : {}),
-    ...additionalFilters,
-    pageSize: 10,
-  });
+  } = useGetEvents(eventsConfig);
 
   /**
    * Mutation to create an event participation
@@ -137,6 +142,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     navigation.navigate(RouteNames.EventFilters);
   }, [navigation]);
 
+  const handleFindEvent = () => {
+    // @ts-expect-error because of react navigation type definitions
+    navigation.navigate(RouteNames.Search);
+  };
+
   const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
       payload: Object.assign(eventFilters || {}, { q }),
@@ -150,13 +160,13 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   }, []);
 
   const handleParticipateToEvent = useCallback((/** @type {FCEvent} */ event) => {
-    if (event?.documentId && userData?.documentId) {
+    if (event?.documentId && userDocumentId) {
       createEventParticipationMutation.mutate({
         event: event.documentId,
-        user: userData.documentId,
+        user: userDocumentId,
       });
     }
-  }, [createEventParticipationMutation, userData]);
+  }, [createEventParticipationMutation, userDocumentId]);
 
   const handleDeclineEvent = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) return;
@@ -309,6 +319,16 @@ function EventListContent({ additionalFilters, showFilters = false }) {
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
         {t('eventList.noData')}
       </Text>
+      {
+        !showFilters ? (
+          <Button
+            isOption
+            onPress={handleFindEvent}
+            title={t('eventList.actions.findEvent')}
+            variant="SecondaryLight"
+          />
+        ) : null
+      }
     </View>
   );
 

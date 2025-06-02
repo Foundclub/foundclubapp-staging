@@ -123,7 +123,11 @@ export const getTeamById = async (teamId) => {
           populate: '*',
         },
         club: {
-          populate: '*',
+          populate: {
+            sponsor: {
+              populate: 'logo',
+            },
+          },
         },
         level: {
           populate: '*',

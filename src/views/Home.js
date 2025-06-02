@@ -28,10 +28,11 @@ const searchOptions = [
     label: i18n.t('home.fields.type.options.club'),
     value: 'clubs',
   },
-  {
-    label: i18n.t('home.fields.type.options.team'),
-    value: 'teams',
-  },
+  // TODO: uncomment or remove (with corresonding components) after found club have accepted
+  // {
+  //   label: i18n.t('home.fields.type.options.team'),
+  //   value: 'teams',
+  // },
 ];
 
 /**
@@ -64,7 +65,12 @@ function Home({ navigation }) {
       case 'clubs':
         return <ClubListContent />;
       case 'events':
-        return <EventListContent additionalFilters={{ sessionStatus: 'open' }} showFilters />;
+        return (
+          <EventListContent
+            additionalFilters={{ sessionStatus: 'open' }}
+            showFilters
+          />
+        );
       case 'teams':
         return <TeamListContent showFilters />;
       default:

@@ -139,6 +139,9 @@ export const getEventTypes = async () => {
  *   q?: string;
  *   playerEventsFilter?: boolean;
  *   trainerEventsFilter?: boolean;
+ *   startDateAfter?: Date;
+ *   startDateBefore?: Date;
+ *   sort?: string;
  * }} params playerEventsFilter - If true, only events where the user is a participant
  * and user's teams closed events will be returned, if true trainerEventFilter is ignored
  * @returns {Promise<{data: FCEvent[], meta: {
@@ -156,6 +159,8 @@ export const getEvents = async (params = {}) => {
     playerEventsFilter = false,
     q,
     sessionStatus,
+    startDateAfter,
+    startDateBefore,
     teamIds,
     trainerEventsFilter = false,
     type,
@@ -163,11 +168,23 @@ export const getEvents = async (params = {}) => {
 
   /** @type {Record<string, any>} */
   const filtersObj = {
-    date: {
-      $gt: new Date().toISOString(), // Only get future dates
-    },
     isActive: true,
   };
+
+  // Apply date filters if provided, otherwise use default future dates filter
+  if (startDateAfter || startDateBefore) {
+    filtersObj.date = {};
+    if (startDateAfter) {
+      filtersObj.date.$gte = startDateAfter.toISOString();
+    }
+    if (startDateBefore) {
+      filtersObj.date.$lte = startDateBefore.toISOString();
+    }
+  } else {
+    filtersObj.date = {
+      $gt: new Date().toISOString(), // Only get future dates if no specific date filter is set
+    };
+  }
 
   // Build team and participant filters
   if (teamIds?.length || participantId) {
@@ -294,7 +311,7 @@ export const getEvents = async (params = {}) => {
       'participations',
       'missings',
     ],
-    sort: ['date:asc'], // Sort by date ascending
+    sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
   };
 
   const response = await client.get('/events', { params: filters });

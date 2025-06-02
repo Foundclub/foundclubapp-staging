@@ -382,6 +382,49 @@ function ClubDetails({ navigation, route }) {
           </View>
           )}
 
+          {/* teams */}
+          {club?.teams?.length ? (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row,
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
+              </View>
+              <View
+                style={[Spaces.gap[16]]}
+              >
+                {
+                  club?.teams?.map((/** @type {Team} */ team) => (
+                    <TouchableOpacity
+                      key={team.documentId}
+                      onPress={() => handleTeamPress(team)}
+                      style={[
+                        ApplicationStyle.borderRadius24,
+                        ApplicationStyle.backgroundColor.primary700,
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifySpaceBetween,
+                        Spaces.padding[8],
+                        Spaces.gap[16]]}
+                    >
+                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                        <TeamShield
+                          initials={team?.name ? getClubInitials(team?.name) : ''}
+                          isNeutral
+                          isSmall
+                        />
+                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                          {team.name}
+                        </Text>
+                      </View>
+
+                    </TouchableOpacity>
+                  ))
+                }
+              </View>
+            </View>
+          ) : null}
+
           {/* Coachs */}
           {coachs?.length || canEdit ? (
             <View style={[Spaces.gap[16]]}>
@@ -415,7 +458,7 @@ function ClubDetails({ navigation, route }) {
                         Alignments.fill,
                         Alignments.justifySpaceBetween,
                         Spaces.padding[16],
-                        Spaces.gap[16],
+                        Spaces.gap[24],
                       ]}
                     >
                       <View style={[
@@ -509,49 +552,6 @@ function ClubDetails({ navigation, route }) {
                           {`${user.firstname} ${user.lastname}`}
                         </Text>
                       </View>
-                    </TouchableOpacity>
-                  ))
-                }
-              </View>
-            </View>
-          ) : null}
-
-          {/* teams */}
-          {club?.teams?.length ? (
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
-              </View>
-              <View
-                style={[Spaces.gap[16]]}
-              >
-                {
-                  club?.teams?.map((/** @type {Team} */ team) => (
-                    <TouchableOpacity
-                      key={team.documentId}
-                      onPress={() => handleTeamPress(team)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
-                        Spaces.padding[8],
-                        Spaces.gap[16]]}
-                    >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
-                        <TeamShield
-                          initials={team?.name ? getClubInitials(team?.name) : ''}
-                          isNeutral
-                          isSmall
-                        />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {team.name}
-                        </Text>
-                      </View>
-
                     </TouchableOpacity>
                   ))
                 }

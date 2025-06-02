@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -153,7 +154,8 @@ function TeamEdit({ navigation, route }) {
   ), [levels, levelSearch]);
 
   const trainerOptions = clubData?.members
-    ?.filter((member) => member.role.name === 'Entraineur')
+    ?.filter((member) => member.role.name === USER_ROLES.coach
+    || member.role.name === USER_ROLES.president)
     .map((trainer) => ({
       label: `${trainer.firstname} ${trainer.lastname}`,
       value: trainer.documentId || '',

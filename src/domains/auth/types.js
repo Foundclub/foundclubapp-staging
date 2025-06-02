@@ -9,6 +9,9 @@
  * @property {Role} role
  * @property {Avatar} [avatar]
  * @property {string} [birthdate]
+ * @property {string} [position]
+ * @property {string} [weight]
+ * @property {string} [height]
  * @property {{documentId: string, name: string}} [section]
  * @property {Club} [club]
  * @property {Team[]} [myTeams]

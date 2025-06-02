@@ -28,6 +28,17 @@ function SearchComponent({
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
 
+  /**
+   * Handles the change in the search input.
+   * @param {string} text
+   */
+  const handleChange = (text) => {
+    setSearch(text);
+    if (text.length >= 3) {
+      handleSearchField(text);
+    }
+  };
+
   return (
     <View style={[
       Alignments.row,
@@ -39,7 +50,7 @@ function SearchComponent({
         <Input
           icon="search"
           onBlur={() => handleSearchField(search)}
-          onChangeText={setSearch}
+          onChangeText={handleChange}
           placeholder={placeholder}
           value={search}
         />
