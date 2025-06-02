@@ -100,3 +100,12 @@ export const declineEventParticipation = async ({ reason, requestId }) => {
   const response = await client.post(`/event-participations/${requestId}/refuse`, { data: { reason } });
   return response.data;
 };
+
+/**
+ * Delete an event participation
+ * @param {string} requestId - The ID of the participation to delete
+ * @returns {Promise<void>}
+ */
+export const deleteEventParticipation = async (requestId) => {
+  await client.delete(`/event-participations/${requestId}`);
+};

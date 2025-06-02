@@ -16,6 +16,7 @@ import { getClubMembershipRequests } from './clubMembershipRequestService';
 export const useGetClubMembershipRequests = (clubId, params, options) => useInfiniteQuery({
   enabled: !!clubId,
   getNextPageParam: (lastPage) => {
+    if (!lastPage) return undefined;
     const { meta: { pagination } } = lastPage;
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },

@@ -185,6 +185,46 @@ function UserDetails({ navigation, route }) {
               </View>
             )}
           </View>
+          {/* details */}
+          <View style={[Alignments.row, Alignments.justifySpaceAround, Spaces.gap[16]]}>
+            <View style={[Spaces.gap[12]]}>
+              {user?.birthdate ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.birthYear')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.birthdate ? new Date(user.birthdate).getFullYear() : ''}`}
+                  </Text>
+                </Text>
+              ) : null}
+              {user?.position ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.position')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.position}`}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
+            <View style={[Spaces.gap[12]]}>
+              {user?.height ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.height')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.height}`}
+                  </Text>
+                </Text>
+              ) : null}
+              {user?.weight ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.weight')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.weight}`}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
           {/* teams */}
           {allUserTeams?.length ? (
             <View style={[Spaces.gap[16]]}>

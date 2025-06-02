@@ -32,12 +32,13 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
-import { cancelEvent, remindUnansweredPlayers } from '@/services/event/eventService';
+import { cancelEvent, missingEvent, remindUnansweredPlayers } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   acceptEventParticipation,
   createEventParticipation,
   declineEventParticipation,
+  deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
 
@@ -132,6 +133,26 @@ function EventDetails({ navigation, route }) {
         t('eventDetails.modals.reportSuccess.title'),
         t('eventDetails.modals.reportSuccess.description'),
       );
+    },
+  });
+
+  const { mutate: deleteParticipation } = useMutation({
+    mutationFn: deleteEventParticipation,
+    onSuccess: () => {
+      refetch();
+      refetchParticipations();
+    },
+  });
+
+  /**
+   * Mutation for marking an event as missing
+   * @type {import('@tanstack/react-query').UseMutationResult<any, Error, string, unknown>}
+   */
+  const missingEventMutation = useMutation({
+    mutationFn: missingEvent,
+    onSuccess: () => {
+      refetch();
+      refetchParticipations();
     },
   });
 
@@ -299,8 +320,69 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  const handleDeleteParticipation = useCallback(() => {
+    const myParticipation = eventParticipations?.pages?.[0]?.data?.find(
+      (participation) => participation.user.documentId === userData?.documentId,
+    );
+
+    const isUserMissing = event?.missings?.some(
+      (missing) => missing.documentId === userData?.documentId,
+    );
+
+    if (myParticipation?.documentId) {
+      // If user is participating, show alert about deleting participation
+      Alert.alert(
+        t('eventDetails.modals.deleteParticipation.title'),
+        t('eventDetails.modals.deleteParticipation.description'),
+        [
+          {
+            style: 'cancel',
+            text: t('eventDetails.modals.actions.cancel'),
+          },
+          {
+            onPress: () => {
+              deleteParticipation(myParticipation.documentId || '');
+            },
+            style: 'destructive',
+            text: t('eventDetails.modals.actions.confirm'),
+          },
+        ],
+      );
+    } else if (isUserMissing) {
+      // If user is marked as missing, show alert about joining the event
+      Alert.alert(
+        t('eventDetails.modals.editResponse.title'),
+        t('eventDetails.modals.editResponse.description'),
+        [
+          {
+            style: 'cancel',
+            text: t('eventDetails.modals.actions.cancel'),
+          },
+          {
+            onPress: () => {
+              if (event?.documentId && userData?.documentId) {
+                createEventParticipationMutation.mutate({
+                  event: event.documentId,
+                  user: userData.documentId,
+                });
+              }
+            },
+            style: 'default', // Not destructive since they're joining
+            text: t('eventDetails.modals.actions.confirm'),
+          },
+        ],
+      );
+    }
+  }, [
+    createEventParticipationMutation,
+    deleteParticipation,
+    event,
+    eventParticipations,
+    t,
+    userData]);
+
   /**
-   * Handle participation acceptance
+   * Handle user press
    * @param {User} user
    */
   const handleUserPress = (user) => {
@@ -312,6 +394,11 @@ function EventDetails({ navigation, route }) {
       }
     }
   };
+
+  const handleDeclineEvent = useCallback((/** @type {FCEvent} */ ev) => {
+    if (!ev?.documentId) return;
+    missingEventMutation.mutate(ev.documentId);
+  }, [missingEventMutation]);
 
   // renderers
 
@@ -327,7 +414,8 @@ function EventDetails({ navigation, route }) {
         hasPendingRequest={hasPendingRequest}
         onAbout={() => {}}
         onCancel={canEdit ? handleCancelEvent : undefined}
-        onDecline={() => {}}
+        onDecline={() => handleDeclineEvent(event)}
+        onDeleteParticipation={handleDeleteParticipation}
         onEdit={canEdit ? handleEditEvent : undefined}
         onJoin={handleJoinEvent}
         onLogin={handleGoLogin}

@@ -19,6 +19,7 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} props.onAbout - Callback when user wants to see details
  * @param {() => void} props.onLogin - Callback when user needs to login
  * @param {boolean} [props.hasPendingRequest]
+ * @param {() => void} [props.onDeleteParticipation] - Callback to delete their participation
  * @param {() => void} [props.onEdit] - Callback when user wants to edit the event
  * @param {() => void} [props.onCancel] - Callback when user wants to cancel the event
  * @returns {import('react').ReactElement} Event answer buttons component
@@ -29,6 +30,7 @@ function EventAnswerButtons({
   onAbout,
   onCancel,
   onDecline,
+  onDeleteParticipation,
   onEdit,
   onJoin,
   onLogin,
@@ -55,22 +57,38 @@ function EventAnswerButtons({
   if (userData?.role?.name === USER_ROLES.player) {
     if (alreadyJoined || hasPendingRequest) {
       return (
-        <View style={[Alignments.fullWidth]}>
+        <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag
             text={hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')}
             textStyle={Fonts.p1Bold}
           />
+          {onDeleteParticipation && (
+            <Button
+              onPress={onDeleteParticipation}
+              style={Alignments.fullWidth}
+              title={t('eventDetails.actions.cancelResponse')}
+              variant="SecondaryLight"
+            />
+          )}
         </View>
       );
     }
 
     if (alreadyMissing) {
       return (
-        <View style={[Alignments.fullWidth]}>
+        <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag
             text={t('eventList.info.alreadyMissing')}
             textStyle={Fonts.p1Bold}
           />
+          {onDeleteParticipation && (
+            <Button
+              onPress={onDeleteParticipation}
+              style={Alignments.fullWidth}
+              title={t('eventDetails.actions.editResponse')}
+              variant="SecondaryLight"
+            />
+          )}
         </View>
       );
     }

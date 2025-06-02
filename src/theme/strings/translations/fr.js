@@ -98,8 +98,8 @@ export default {
     MEMBERSHIP_REQUEST_NOT_PENDING: "La demande d'adhésion n'est pas en attente.",
     MEMBERSHIP_REQUEST_REFUSED: "La demande d'adhésion a été refusée.",
 
-    // Activity errors
-    ACTIVITY_DELETE_ERROR: "Erreur lors de la suppression de l'activité.",
+    // Sport errors
+    SPORT_DELETE_ERROR: 'Erreur lors de la suppression du sport.',
 
     // Trainer errors
     NOT_A_TRAINER: "L'utilisateur n'est pas un·e entraîneur·e.",
@@ -142,9 +142,11 @@ export default {
 
     // Event participation request errors
     EVENT_PARTICIPATION_ALREADY_HAS_A_REQUEST_POLICY_ERROR: 'Une demande de participation existe déjà pour cet événement.',
+    EVENT_PARTICIPATION_DELETE_ERROR: 'Erreur lors de la suppression de la participation à l\'événement.',
     EVENT_PARTICIPATION_REQUEST_ALREADY_EXISTS: 'Une demande de participation existe déjà.',
     EVENT_PARTICIPATION_REQUEST_NOT_FOUND: 'Demande de participation introuvable.',
     EVENT_PARTICIPATION_REQUEST_POLICY_ERROR: 'Violation de la politique concernant les demandes de participation.',
+    EVENT_PLAYER_POLICY_ERROR: 'Violation de la politique concernant les joueur·se·s.',
 
     // Chat errors
     CHAT_ID_NOT_PROVIDED: 'ID de chat non fourni.',
@@ -232,7 +234,7 @@ export default {
       },
     },
     titles: {
-      activities: 'Activités',
+      activities: 'Sports',
       coachs: 'Nos entraîneur·e·s',
       owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
@@ -246,8 +248,8 @@ export default {
     },
     fields: {
       activity: {
-        label: 'Activité',
-        placeholder: 'Basketball',
+        label: 'Sport',
+        placeholder: 'Sélectionner une activité',
       },
       city: {
         label: 'Ville',
@@ -342,11 +344,12 @@ export default {
     actions: {
       accept: 'Accepter',
       cancelEvent: 'Annuler l\'évènement',
+      cancelResponse: 'Annuler ma participation',
       edit: 'Modifier l\'évènement',
+      editResponse: 'Modifier ma réponse',
       join: 'Participer',
       refuse: 'Refuser',
       remind: 'Relancer',
-
     },
     fields: {
       description: 'À propos',
@@ -365,6 +368,14 @@ export default {
       cancelEvent: {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
         title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
+      },
+      deleteParticipation: {
+        description: 'Êtes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
+        title: 'Annuler ma participation',
+      },
+      editResponse: {
+        description: "En modifiant votre réponse vous indiquez votre participation à l'évènement",
+        title: 'Modifier ma réponse',
       },
       refuse: {
         fields: {
@@ -426,7 +437,7 @@ export default {
       },
       location: {
         label: 'Lieu',
-        placeholder: 'Sélectionner un lieu',
+        placeholder: '2 rue du stade, 69000 Lyon',
       },
       recurrenceDay: {
         label: 'Jour de la récurrence',
@@ -483,8 +494,8 @@ export default {
     },
     fields: {
       activity: {
-        label: 'Activité',
-        placeholder: 'Sélectionner une activité',
+        label: 'Sport',
+        placeholder: 'Sélectionner un sport',
       },
       category: {
         label: 'Catégorie',
@@ -522,6 +533,7 @@ export default {
       about: 'À propos',
       absent: 'Absent·e',
       add: 'Ajouter un évènement',
+      findEvent: 'Trouver un évènement',
       join: 'Participer',
       present: 'Présent·e',
     },
@@ -595,12 +607,19 @@ export default {
     },
   },
   myEventList: {
+    actions: {
+      closeTimeFilter: 'Valider',
+    },
     fields: {
+      timeFilter: {
+        next: 'Mes prochains évènements',
+        past: 'Mes évènements passés',
+        selectDate: 'Sélectionner une date',
+      },
       type: {
         all: 'Tous',
       },
     },
-    title: 'Mes prochains évènements',
   },
   myTeamList: {
 
@@ -655,6 +674,10 @@ export default {
         label: 'Prénom',
         placeholder: 'Luc',
       },
+      height: {
+        label: 'Taille (m)',
+        placeholder: '1,80',
+      },
       lastname: {
         label: 'Nom',
         placeholder: 'Harne',
@@ -662,6 +685,10 @@ export default {
       phoneNumber: {
         label: 'Numéro de téléphone',
         placeholder: '+33612345678',
+      },
+      position: {
+        label: 'Poste',
+        placeholder: 'Ailier',
       },
       section: {
         label: 'Section',
@@ -675,6 +702,10 @@ export default {
         coach: 'Entraîneur·e',
         player: 'Joueur·se',
         president: 'Dirigeant·e',
+      },
+      weight: {
+        label: 'Poids (kg)',
+        placeholder: '80',
       },
     },
     subtitles: {
@@ -709,12 +740,21 @@ export default {
   },
   teamDetails: {
     actions: {
-      contactTeam: 'Contacter l\'équipe',
-      edit: 'Modifier l\'équipe',
+      contactTeam: 'Contacter',
+      edit: 'Modifier',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
     },
     alerts: {
+      deleteTrainer: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Supprimer du club',
+        },
+        description: 'Le compte ne sera pas supprimé mais l\'entraineur·e ne sera plus lié au club ni à aucune de ces équipes.'
+        + ' Si vous souhaitez le retirer seulement de cette équipe merci de passer par le bouton de modification de l\'équipe.',
+        title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e de votre club.',
+      },
       invitePlayers: {
         alreadyHaveTheApp: "J'ai déjà l'application",
         downloadOnAndroid: 'Télécharger sur Android',
@@ -743,6 +783,7 @@ export default {
     },
     myTitle: 'Mon équipe',
     sections: {
+      nextEvents: 'Prochains évènements',
       players_one: 'Joueur·se',
       players_other: 'Joueur·se·s',
       trainers_one: 'Entraîneur·e',
@@ -756,12 +797,12 @@ export default {
     },
     fields: {
       activities: {
-        label: 'Activités',
-        placeholder: 'Basketball',
+        label: 'Sports',
+        placeholder: 'Sélectionner un sport',
       },
       category: {
         label: 'Catégorie',
-        placeholder: 'U16',
+        placeholder: 'Sélectionner une catégorie',
       },
       description: {
         label: 'Description',
@@ -769,7 +810,7 @@ export default {
       },
       level: {
         label: 'Niveau',
-        placeholder: 'Régional',
+        placeholder: 'Sélectionner un niveau',
       },
       name: {
         label: 'Nom de l\'équipe',
@@ -777,11 +818,11 @@ export default {
       },
       section: {
         label: 'Section',
-        placeholder: 'Féminine',
+        placeholder: 'Sélectionner une section',
       },
       trainers: {
         label: 'Entraîneur·e·s',
-        placeholder: 'Luc Harne',
+        placeholder: 'Sélectionner un·e entraîneur·e',
       },
     },
     title: 'Créer une équipe',
@@ -794,20 +835,20 @@ export default {
     },
     fields: {
       activities: {
-        label: 'Activités',
-        placeholder: 'Basketball',
+        label: 'Sports',
+        placeholder: 'Sélectionner un sport',
       },
       category: {
         label: 'Catégorie',
-        placeholder: 'U16',
+        placeholder: 'Sélectionner une catégorie',
       },
       level: {
         label: 'Niveau',
-        placeholder: 'Régional',
+        placeholder: 'Sélectionner un niveau',
       },
       section: {
         label: 'Section',
-        placeholder: 'Féminine',
+        placeholder: 'Sélectionner une section',
       },
     },
   },
@@ -849,6 +890,12 @@ export default {
   userDetails: {
     actions: {
       sendMessage: 'Envoyer un message',
+    },
+    fields: {
+      birthYear: 'Année de naissance',
+      height: 'Taille (m)',
+      position: 'Poste',
+      weight: 'Poids (kg)',
     },
     title: 'Infos profil',
     titles: {

@@ -13,7 +13,7 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {boolean} [props.disabled]
  * @param {string} [props.title]
  * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' } props.variant
- * @param {import('react-native').ViewStyle} [props.style]
+ * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.style]
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]
  * @param {'before' | 'after'} [props.iconPosition]
  * @param {(event: import('react-native').GestureResponderEvent) => void} [props.onPress]

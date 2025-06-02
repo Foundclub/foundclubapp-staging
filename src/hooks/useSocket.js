@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { io } from 'socket.io-client';
 
 import { useAppContext } from '@/store/appContext';
@@ -50,7 +49,6 @@ const useSocket = () => {
       });
 
       socket.on('connect', () => {
-        console.log('SOCKET CONNECTED');
         setIsConnected(true);
       });
 
@@ -61,7 +59,6 @@ const useSocket = () => {
       socket.on('connect_error', (error) => {
         // eslint-disable-next-line no-console
         console.error('Socket connection error:', error.message);
-        Alert.alert('Socket connection error:', `${process.env.SOCKET_URL} ${error.message} ${error.name} ${error.cause}`);
         setIsConnected(false);
       });
 

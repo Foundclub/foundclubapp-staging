@@ -27,18 +27,24 @@ import { getFieldError } from '@/utils/form/formUtils';
 const defaultValues = {
   birthdate: '',
   firstname: '',
+  height: '',
   lastname: '',
   phoneNumber: '',
+  position: '',
   section: '',
+  weight: '',
 };
 
 const profileSchema = Joi.object({
   birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   documentId: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().required(),
+  height: Joi.string().allow(null, '').optional(),
   lastname: Joi.string().required(),
   phoneNumber: Joi.string(),
+  position: Joi.string().allow(null, '').optional(),
   section: Joi.string().allow(null, '').optional(),
+  weight: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
 /**
@@ -248,6 +254,79 @@ function ProfileEdit({ navigation }) {
                     (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
                   }
                     value={sectionOptions.find((option) => option.value === value)?.label || ''}
+                  />
+                )}
+              />
+            ) : null}
+            {profileFields?.includes('weight') ? (
+              <Controller
+                control={control}
+                name="weight"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="next"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    inputMode="decimal"
+                    keyboardType="number-pad"
+                    label={t('profile.fields.weight.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    onSubmitEditing={() => setFocus('height')}
+                    placeholder={t('profile.fields.weight.placeholder')}
+                    ref={ref}
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+
+            {profileFields?.includes('height') ? (
+              <Controller
+                control={control}
+                name="height"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="next"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    inputMode="decimal"
+                    keyboardType="number-pad"
+                    label={t('profile.fields.height.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    onSubmitEditing={() => setFocus('position')}
+                    placeholder={t('profile.fields.height.placeholder')}
+                    ref={ref}
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+            {profileFields?.includes('position') ? (
+              <Controller
+                control={control}
+                name="position"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    enterKeyHint="done"
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('profile.fields.position.label')}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    placeholder={t('profile.fields.position.placeholder')}
+                    ref={ref}
+                    value={value}
                   />
                 )}
               />

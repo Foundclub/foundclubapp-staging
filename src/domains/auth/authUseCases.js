@@ -111,6 +111,9 @@ export const profileFieldToDisplay = (role) => {
         'birthdate',
         'avatar',
         'section',
+        'height',
+        'weight',
+        'position',
       ];
     case USER_ROLES.president:
       return [

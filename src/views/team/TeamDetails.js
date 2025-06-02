@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
+  Linking,
   RefreshControl,
   ScrollView,
   Text,
@@ -12,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -20,10 +22,12 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetTeam } from '@/services/team/teamQueries';
 import { leaveTeam } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
@@ -42,7 +46,12 @@ function TeamDetails({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const {
-    canJoinTeam, canManageTeam, inviteTeamPlayers, refetchUserData, userData: currentUser,
+    canEditClub,
+    canJoinTeam,
+    canManageTeam,
+    inviteTeamPlayers,
+    refetchUserData,
+    userData: currentUser,
   } = useAuth();
   const { getClubInitials } = useClub();
   const { startTeamChat } = useMessaging();
@@ -72,6 +81,13 @@ function TeamDetails({ navigation, route }) {
     mutationFn: leaveTeam,
     onSuccess: () => {
       refetchUserData();
+      refetch();
+    },
+  });
+
+  const deleteTrainerMutation = useMutation({
+    mutationFn: removeTrainerFromClub,
+    onSuccess: () => {
       refetch();
     },
   });
@@ -145,6 +161,28 @@ function TeamDetails({ navigation, route }) {
         navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
       }
     }
+  };
+
+  /**
+   * Handle delete trainer action
+   * @param {string} trainerId
+   */
+  const handleDeleteTrainer = (trainerId) => {
+    Alert.alert(
+      t('teamDetails.alerts.deleteTrainer.title'),
+      t('teamDetails.alerts.deleteTrainer.description'),
+      [
+        {
+          text: t('teamDetails.alerts.deleteTrainer.actions.cancel'),
+        },
+        {
+          onPress: () => {
+            deleteTrainerMutation.mutate(trainerId);
+          },
+          text: t('teamDetails.alerts.deleteTrainer.actions.confirm'),
+        },
+      ],
+    );
   };
 
   useFocusEffect(
@@ -276,11 +314,49 @@ function TeamDetails({ navigation, route }) {
           </View>
           <View
             style={[
-              Spaces.gap[24],
+              Spaces.gap[40],
               Spaces.marginTop[24],
               Spaces.paddingBottom[24],
             ]}
           >
+            {/* Sponsors */}
+            {(team?.club?.sponsor?.length) && (
+              <ScrollView
+                contentContainerStyle={[Spaces.gap[16]]}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+              >
+                {team?.club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
+                  <View
+                    key={sponsor.link}
+                    style={[Alignments.relative, Spaces.marginTop[8]]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (sponsor.link) {
+                          Linking.openURL(sponsor.link);
+                        }
+                      }}
+                      style={[
+                        Alignments.alignCenter,
+                      ]}
+                    >
+                      <Image
+                        source={{ uri: sponsor?.logo?.url }}
+                        style={[
+                          ApplicationStyle.roundIcon55,
+                          ApplicationStyle.borderWidth1,
+                          ApplicationStyle.borderColor.neutral00,
+                        ]}
+                      />
+                      <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {sponsor.title}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
             {/* Trainers */}
             {trainersCount ? (
               <View style={[Spaces.gap[16]]}>
@@ -323,6 +399,17 @@ function TeamDetails({ navigation, route }) {
                           {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
+                      {team?.club?.documentId && canEditClub(team?.club?.documentId)
+                      && trainer?.role?.name === USER_ROLES.coach ? (
+                        <View style={[Alignments.row, Spaces.gap[8]]}>
+                          <Button
+                            icon="trash"
+                            isOption
+                            onPress={() => handleDeleteTrainer(trainer.documentId || '')}
+                            variant="SecondaryLight"
+                          />
+                        </View>
+                        ) : null}
                     </TouchableOpacity>
                   ))
                 }
@@ -386,25 +473,44 @@ function TeamDetails({ navigation, route }) {
                 }
               </View>
             ) : null}
+            {/* Next events */}
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row,
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  {t('teamDetails.sections.nextEvents')}
+                </Text>
+              </View>
+              <EventListContent
+                additionalFilters={{
+                  ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
+                  teamIds: [team?.documentId || ''],
+                }}
+                showFilters={false}
+              />
+            </View>
           </View>
         </WithDataWrapper>
       </ScrollView>
-      {canManageTeam && (
+      <View style={[Alignments.row, Spaces.gap[16]]}>
+        {canManageTeam && (
         <Button
           onPress={handleEditTeam}
-          style={Spaces.paddingHorizontal[16]}
+          style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
           title={t('teamDetails.actions.edit')}
           variant="Primary"
         />
-      )}
-      {canManageTeam && allMembers?.length > 1 && (
+        )}
+        {canManageTeam && allMembers?.length > 1 && (
         <Button
           onPress={handleStartChat}
-          style={Spaces.paddingHorizontal[16]}
+          style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
           title={t('teamDetails.actions.contactTeam')}
           variant="PrimaryLight"
         />
-      )}
+        )}
+      </View>
       {
         isMyTeam && (
           <Button
@@ -415,7 +521,7 @@ function TeamDetails({ navigation, route }) {
           />
         )
       }
-      {canJoinTeam && (
+      {canJoinTeam(teamId) && (
         <Button
           onPress={handleJoinTeam}
           style={Spaces.paddingHorizontal[16]}
