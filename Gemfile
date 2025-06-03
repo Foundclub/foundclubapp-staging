@@ -7,7 +7,10 @@ ruby ">= 3.0.2"
 gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
 gem 'concurrent-ruby', '< 1.3.4'
 gem 'rb-readline'
-gem 'fastlane'
+# temporary fix waiting for fastlane team to fix, according to this issue : https://github.com/fastlane/fastlane/issues/29573
+gem 'fastlane',
+    git:    'https://github.com/visuallization/fastlane.git',
+    branch: 'fix/templateName-is-not-an-attribute-on-the-resource-profiles'
 
 
 
