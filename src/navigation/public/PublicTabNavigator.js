@@ -90,7 +90,7 @@ function PublicTabNavigator() {
             {
               activeColor: Colors.primary500,
               icon: Images.strokeShield,
-              label: t('menu.myAccount'),
+              label: t('menu.myTeams'),
               renderTabBarIcon,
             },
           ),
