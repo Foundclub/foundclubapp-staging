@@ -3,7 +3,7 @@ import Joi from 'joi';
 import client from '../client';
 
 const clubMembershipRequestSchema = Joi.object({
-  club: Joi.string().required(),
+  club: Joi.object().required(),
   documentId: Joi.string().required(),
   state: Joi.string().valid('processed', 'refused', 'pending').required(),
   user: Joi.object().required(),
@@ -66,7 +66,7 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    return validationResult.data;
+    return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch club membership requests: ${errorToDisplay}`);

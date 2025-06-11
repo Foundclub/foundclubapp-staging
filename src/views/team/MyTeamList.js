@@ -1,5 +1,8 @@
+import { Image, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -9,6 +12,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @returns {import('react').ReactElement} Team list screen component
  */
 function MyTeamList({ route }) {
+  const { Images } = useTheme();
   const { playerId } = route?.params ?? {};
 
   // hooks
@@ -27,6 +31,16 @@ function MyTeamList({ route }) {
         Alignments.fill,
       ]}
     >
+      <View style={[
+        Spaces.marginTop[16],
+        Spaces.marginBottom[24],
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween]}
+      >
+        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <ProfileButton />
+      </View>
       <TeamListContent playerId={playerId} />
     </ScreenContainer>
   );

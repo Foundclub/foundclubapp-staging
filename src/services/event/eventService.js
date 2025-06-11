@@ -19,7 +19,7 @@ export const eventSchema = Joi.object({
   type: Joi.object({
     documentId: Joi.string().required(),
     name: Joi.string().required(),
-  }).required(),
+  }).allow(null).optional(),
   validationMode: Joi.string().valid('auto', 'manual').required(),
 }).required();
 

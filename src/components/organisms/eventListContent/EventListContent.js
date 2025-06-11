@@ -106,11 +106,19 @@ function EventListContent({ additionalFilters, showFilters = false }) {
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
-    return Object.values(eventFilters).reduce((/** @type {number} */ acc, value) => {
-      if (Array.isArray(value)) {
+
+    return Object.entries(eventFilters).reduce((/** @type {number} */ acc, [key, value]) => {
+      // Skip date range filters completely
+      if (key === 'startDateBefore' || key === 'startDateAfter') {
         return acc;
       }
-      return acc + (value ? 1 : 0);
+
+      // Skip if the value is falsy or an array
+      if (!value || Array.isArray(value)) {
+        return acc;
+      }
+
+      return acc + 1;
     }, 0);
   }, [eventFilters]);
 
@@ -230,9 +238,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           </Text>
         </View>
         <View style={[Alignments.fullHeight, Alignments.alignEnd]}>
-          <Tag
-            text={item?.type?.name || ''}
-          />
+          {item?.type ? (
+            <Tag
+              text={item?.type?.name || ''}
+            />
+          ) : null}
         </View>
       </View>
       <View style={[

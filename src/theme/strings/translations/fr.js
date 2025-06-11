@@ -232,6 +232,14 @@ export default {
         description: 'Votre dirigeant·e va recevoir votre demande et la traiter dès que possible.',
         title: "Votre demande d'adhésion a bien été envoyée",
       },
+      myClub: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Contacter Found Club',
+        },
+        description: 'Contactez nos équipes pour accéder aux fonctionnalités pour les dirigeant·e·s et entraineurs de club !',
+        title: 'Vous êtes dirigeant·e de ce club ?',
+      },
     },
     titles: {
       activities: 'Sports',
@@ -417,8 +425,8 @@ export default {
     },
     fields: {
       capacity: {
-        label: 'Capacité',
-        placeholder: 'Nombre de participant·e·s',
+        label: 'Nombre de participant·e·s',
+        placeholder: 'Illimité',
       },
       club: {
         label: 'Club',
@@ -505,6 +513,10 @@ export default {
         label: 'Club',
         placeholder: 'Sélectionner un club',
       },
+      date: {
+        label: 'Date',
+        placeholder: 'Sélectionner une date',
+      },
       level: {
         label: 'Niveau',
         placeholder: 'Sélectionner un niveau',
@@ -589,7 +601,7 @@ export default {
   },
   menu: {
     chat: 'Messagerie',
-    myAccount: 'Mon compte',
+    myTeams: 'Mes équipes',
     planning: 'Mon planning',
     search: 'Rechercher',
   },

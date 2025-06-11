@@ -198,6 +198,13 @@ const useAuth = () => {
     return false;
   }, [userData]);
 
+  const canContactAdmin = useMemo(() => {
+    if (userData?.role.name === USER_ROLES.president) {
+      return !userData?.club;
+    }
+    return false;
+  }, [userData]);
+
   const canJoinTeam = useCallback((/** @type {string} */teamId) => {
     if (userData?.role.name === USER_ROLES.player) {
       return !userData?.myTeams?.some(({ documentId }) => documentId === teamId);
@@ -222,8 +229,8 @@ const useAuth = () => {
       return false;
     }
 
-    if (userData?.role.name === USER_ROLES.president) {
-      return userData?.club?.documentId === userToContact?.club?.documentId;
+    if (userData?.club?.documentId === userToContact?.club?.documentId) {
+      return userData?.role.name === USER_ROLES.president;
     }
 
     const myTeams = (userData?.myTeams || [])
@@ -239,6 +246,7 @@ const useAuth = () => {
 
   return {
     allMyTeams,
+    canContactAdmin,
     canEditClub,
     canEditEvent,
     canJoinClub,

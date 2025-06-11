@@ -1,19 +1,20 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { Image, Text, View } from 'react-native';
-// utils
+// hooks
+import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
-
+// screens
 import MyEventsList from '@/views/event/MyEventList';
 import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
-import Profile from '@/views/profile/Profile';
+import MyTeamList from '@/views/team/MyTeamList';
+// utils and misc
+import TeamList from '@/views/team/TeamList';
 
+import useTheme from '../../theme/themeContext';
 import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
-// screens
-// hooks
-import useTheme from '../../theme/themeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -26,6 +27,7 @@ function PrivateTabNavigator() {
   const { t } = useTranslation();
   const { Colors, Images } = useTheme();
   const { unreadCount } = useUnreadMessages();
+  const { canManageTeam, userData } = useAuth();
 
   /**
    * Render tab bar icon.
@@ -102,14 +104,19 @@ function PrivateTabNavigator() {
         }}
       />
       <Tab.Screen
-        component={Profile}
-        name={RouteNames.Profile}
+        component={canManageTeam && userData?.club
+          ? TeamList : MyTeamList}
+        initialParams={{
+          clubId: userData?.club?.documentId,
+          playerId: userData?.documentId,
+        }}
+        name={RouteNames.MyTeamList}
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
             activeColor: Colors.primary500,
             icon: Images.strokeShield,
-            label: t('menu.myAccount'),
+            label: t('menu.myTeams'),
             renderTabBarIcon,
           }),
         }}

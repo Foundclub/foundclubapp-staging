@@ -28,11 +28,6 @@ const searchOptions = [
     label: i18n.t('home.fields.type.options.club'),
     value: 'clubs',
   },
-  // TODO: uncomment or remove (with corresonding components) after found club have accepted
-  // {
-  //   label: i18n.t('home.fields.type.options.team'),
-  //   value: 'teams',
-  // },
 ];
 
 /**

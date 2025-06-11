@@ -119,6 +119,7 @@ const Input = forwardRef(
                 onChangeText={props.onChangeText}
                 onEndEditing={handleBlur}
                 onFocus={handleFocus}
+                onPressIn={props.onPressIn}
                 onSubmitEditing={props.onSubmitEditing}
                 placeholder={props.placeholder}
                 placeholderTextColor={Colors.neutral500}
