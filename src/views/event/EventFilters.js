@@ -1,4 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +12,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -30,6 +34,7 @@ const filtersSchema = Joi.object({
     label: Joi.string(),
     value: Joi.string(),
   }).allow(null).optional(),
+  date: Joi.date().allow(null).optional(),
   level: Joi.string().allow(''),
   team: Joi.object({
     label: Joi.string(),
@@ -52,10 +57,11 @@ function EventFilters({ navigation }) {
   const [typeSearchValue, setTypeSearchValue] = useState('');
   const [teamSearchValue, setTeamSearchValue] = useState('');
   const [selectedClub, setSelectedClub] = useState('');
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
   // hooks
   const { t } = useTranslation();
-  const { Alignments, Spaces } = useTheme();
+  const { Alignments, Fonts, Spaces } = useTheme();
   const [{ eventFilters }, appDispatch] = useAppContext();
 
   const {
@@ -68,6 +74,7 @@ function EventFilters({ navigation }) {
       activity: eventFilters?.activities || '',
       category: eventFilters?.category || '',
       club: eventFilters?.club || null,
+      date: eventFilters?.date || null,
       level: eventFilters?.level || '',
       team: eventFilters?.team || null,
       type: eventFilters?.type || '',
@@ -194,13 +201,30 @@ function EventFilters({ navigation }) {
    *   level: string;
    *   team: {label: string; value: string} | null;
    *   type: string;
+   *   date: string | null;
    * }} data - The filter data
    */
   const handleApplyFilters = (data) => {
+    let startDateAfter = null;
+    let startDateBefore = null;
+
+    if (data.date) {
+      const startOfDay = new Date(data.date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(data.date);
+      endOfDay.setHours(23, 59, 59, 999);
+      startDateAfter = startOfDay;
+      startDateBefore = endOfDay;
+    }
+
     appDispatch({
       payload: Object.assign(
         data,
-        { teamIds: data?.team?.value ? [data.team.value] : null },
+        {
+          startDateAfter,
+          startDateBefore,
+          teamIds: data?.team?.value ? [data.team.value] : null,
+        },
       ),
       type: 'SET_EVENT_FILTERS',
     });
@@ -352,6 +376,44 @@ function EventFilters({ navigation }) {
               setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
               value={getOptionLabel(types, value)}
             />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="date"
+          render={({
+            field: { onChange, value },
+          }) => (
+            <>
+              <Input
+                error={getFieldError({ errors: formErrors, fieldName: 'date' })}
+                inputMode="none"
+                label={t('eventFilters.fields.date.label')}
+                onPressIn={() => setIsDatePickerVisible(true)}
+                placeholder={t('eventFilters.fields.date.placeholder')}
+                readOnly
+                style={[Fonts.neutral00]}
+                value={value ? format(value, 'dd/MM/yyyy') : ''}
+              />
+              <BottomModal
+                close={() => setIsDatePickerVisible(false)}
+                isVisible={isDatePickerVisible}
+              >
+                <DateTimePicker
+                  display="spinner"
+                  minimumDate={new Date()}
+                  mode="date"
+                  onChange={(event, selectedDate) => {
+                    setIsDatePickerVisible(false);
+                    if (event.type === 'set' && selectedDate) {
+                      onChange(selectedDate);
+                    }
+                  }}
+                  value={value ? new Date(value) : new Date()}
+                />
+              </BottomModal>
+            </>
           )}
         />
       </ScrollView>

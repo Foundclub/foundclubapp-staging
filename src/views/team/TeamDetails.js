@@ -502,7 +502,7 @@ function TeamDetails({ navigation, route }) {
           variant="Primary"
         />
         )}
-        {canManageTeam && allMembers?.length > 1 && (
+        {canManageTeam && allMembers?.length > 1 && isMyTeam && (
         <Button
           onPress={handleStartChat}
           style={[Alignments.fill, Spaces.paddingHorizontal[16]]}

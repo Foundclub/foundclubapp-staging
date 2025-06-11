@@ -84,18 +84,6 @@ function Profile({ navigation }) {
     });
   };
 
-  const handleOpenClubTeams = () => {
-    navigation.navigate(RouteNames.TeamList, {
-      clubId: userData?.club?.documentId,
-    });
-  };
-
-  const handleOpenMyTeams = () => {
-    navigation.navigate(RouteNames.MyTeamList, {
-      playerId: userData?.documentId,
-    });
-  };
-
   const handleDeleteAccount = () => {
     Alert.alert(
       t('profile.alerts.deleteAlert.title'),
@@ -221,7 +209,7 @@ function Profile({ navigation }) {
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.gap[32],
-        Spaces.paddingTop[24],
+        Spaces.paddingTop[0],
         Spaces.paddingBottom[12],
         Alignments.justifySpaceBetween,
         Alignments.fill,
@@ -322,21 +310,7 @@ function Profile({ navigation }) {
               title={t('profile.actions.manageClubJoinRequests')}
             />
           ) : null}
-          {canManageTeam ? (
-            <TabButton
-              isActive={false}
-              onPress={handleOpenClubTeams}
-              title={t('profile.actions.manageTeams')}
-            />
-          ) : null}
-          {userData?.myTeams?.length ? (
-            <TabButton
-              isActive={false}
-              onPress={handleOpenMyTeams}
-              title={t('profile.actions.myTeams')}
-            />
-          ) : null}
-          {canManageTeam ? (
+          {canManageTeam && userData?.club ? (
             <TabButton
               isActive={false}
               onPress={handleManageTeamMembershipRequests}

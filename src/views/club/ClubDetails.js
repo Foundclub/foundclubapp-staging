@@ -37,7 +37,12 @@ function ClubDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const {
-    canEditClub, canJoinClub, inviteTrainer, USER_ROLES, userData,
+    canContactAdmin,
+    canEditClub,
+    canJoinClub,
+    inviteTrainer,
+    USER_ROLES,
+    userData,
   } = useAuth();
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
@@ -135,6 +140,27 @@ function ClubDetails({ navigation, route }) {
             }
           },
           text: t('clubDetails.alerts.deleteSponsor.actions.confirm'),
+        },
+      ],
+    );
+  };
+
+  const handleContactFoundClub = () => {
+    Alert.alert(
+      t('clubDetails.alerts.myClub.title'),
+      t('clubDetails.alerts.myClub.description'),
+      [
+        {
+          style: 'cancel',
+          text: t('clubDetails.alerts.myClub.actions.cancel'),
+        },
+        {
+          onPress: () => {
+            if (process.env.CONTACT_URL) {
+              Linking.openURL(process.env.CONTACT_URL);
+            }
+          },
+          text: t('clubDetails.alerts.myClub.actions.confirm'),
         },
       ],
     );
@@ -563,6 +589,14 @@ function ClubDetails({ navigation, route }) {
       {canJoinClub ? (
         <Button
           onPress={handleAskToJoinClub}
+          style={Spaces.marginTop[12]}
+          title={t('clubDetails.actions.join')}
+          variant="Primary"
+        />
+      ) : null}
+      {canContactAdmin ? (
+        <Button
+          onPress={handleContactFoundClub}
           style={Spaces.marginTop[12]}
           title={t('clubDetails.actions.join')}
           variant="Primary"

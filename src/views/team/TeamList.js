@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { Image, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -22,6 +24,7 @@ function TeamList({ navigation, route }) {
   // hooks
   const {
     Alignments,
+    Images,
     Spaces,
   } = useTheme();
 
@@ -35,12 +38,22 @@ function TeamList({ navigation, route }) {
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
-        Spaces.paddingVertical[24],
+        Spaces.paddingBottom[24],
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
       ]}
     >
+      <View style={[
+        Spaces.marginTop[16],
+        Spaces.marginBottom[24],
+        Alignments.row,
+        Alignments.alignCenter,
+        Alignments.justifySpaceBetween]}
+      >
+        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <ProfileButton />
+      </View>
       <TeamListContent clubId={clubId} />
       {
         canManageTeam ? (

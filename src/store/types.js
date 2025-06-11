@@ -69,6 +69,7 @@
  * @property {string} level
  * @property {string} sessionStatus
  * @property {string} type
+ * @property {string} date
  * @property {{label: string, value: string}} team
  * @property {string[]} [teamIds]
  * @property {{label: string, value: string}} club

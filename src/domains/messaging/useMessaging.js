@@ -4,7 +4,12 @@ import { useCallback, useEffect } from 'react';
 
 import { storage } from '@/store/appContext';
 
-import { createClubChat, createTeamChat, createWhisperChat } from '@/services/chat/chatService';
+import {
+  createClubChat,
+  createTeamChat,
+  createWhisperChat,
+  getChats,
+} from '@/services/chat/chatService';
 
 import { getConversationName, getLastReadMessageKey, getUnreadStatus } from './messagingUseCases';
 
@@ -215,26 +220,35 @@ const useMessaging = (currentChatId) => {
     // Sort participants to ensure consistent comparison
     const sortedParticipants = [...participants].sort();
 
-    // Check existing chats
-    const existingChats = queryClient.getQueryData(['chats']) || [];
-    if (Array.isArray(existingChats) && existingChats.length > 0) {
-      const existingChat = existingChats.find((/** @type {any} */ chat) => {
-        const chatParticipants = chat.participants
-          ?.map((/** @type {any} */ p) => (p.documentId || p))
-          .sort();
-
-        return (
-          chatParticipants?.length === sortedParticipants.length
-          && chatParticipants?.every((
-            /** @type {string} */ p,
-            /** @type {number} */ i,
-          ) => p === sortedParticipants[i])
-        );
+    // Check existing chats by ensuring we have the data
+    try {
+      const chatsData = await queryClient.ensureQueryData({
+        queryFn: () => getChats(),
+        queryKey: ['chats'],
       });
 
-      if (existingChat) {
-        return existingChat;
+      if (chatsData?.data) {
+        const existingChat = chatsData.data.find((/** @type {any} */ chat) => {
+          const chatParticipants = chat.participants
+            ?.map((/** @type {any} */ p) => (p.documentId || p))
+            .sort();
+
+          return (
+            chatParticipants?.length === sortedParticipants.length
+            && chatParticipants?.every((
+              /** @type {string} */ p,
+              /** @type {number} */ i,
+            ) => p === sortedParticipants[i])
+          );
+        });
+
+        if (existingChat) {
+          return existingChat;
+        }
       }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error checking existing chats:', error);
     }
 
     // If no existing chat found, create a new one
@@ -248,13 +262,22 @@ const useMessaging = (currentChatId) => {
    * @returns {Promise<Chat | undefined>} The created chat or existing chat
    */
   const startTeamChat = async (teamId) => {
-    // Check existing chats
-    const existingChats = queryClient.getQueryData(['chats']) || [];
-    if (Array.isArray(existingChats) && existingChats.length > 0) {
-      const existingChat = existingChats.find(
-        (/** @type {any} */ chat) => chat.team?.documentId === teamId,
-      );
-      if (existingChat) return existingChat;
+    // Check existing chats by ensuring we have the data
+    try {
+      const chatsData = await queryClient.ensureQueryData({
+        queryFn: () => getChats(),
+        queryKey: ['chats'],
+      });
+
+      if (chatsData?.data) {
+        const existingChat = chatsData.data.find(
+          (/** @type {any} */ chat) => chat.team?.documentId === teamId,
+        );
+        if (existingChat) return existingChat;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error checking existing team chats:', error);
     }
 
     // If no existing chat found, create a new one
@@ -268,13 +291,22 @@ const useMessaging = (currentChatId) => {
    * @returns {Promise<Chat | undefined>} The created chat or existing chat
    */
   const startClubChat = async (clubId) => {
-    // Check existing chats
-    const existingChats = queryClient.getQueryData(['chats']) || [];
-    if (Array.isArray(existingChats) && existingChats.length > 0) {
-      const existingChat = existingChats.find(
-        (/** @type {any} */ chat) => chat.club?.documentId === clubId,
-      );
-      if (existingChat) return existingChat;
+    // Check existing chats by ensuring we have the data
+    try {
+      const chatsData = await queryClient.ensureQueryData({
+        queryFn: () => getChats(),
+        queryKey: ['chats'],
+      });
+
+      if (chatsData?.data) {
+        const existingChat = chatsData.data.find(
+          (/** @type {any} */ chat) => chat.club?.documentId === clubId,
+        );
+        if (existingChat) return existingChat;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error checking existing club chats:', error);
     }
 
     // If no existing chat found, create a new one

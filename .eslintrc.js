@@ -4,7 +4,7 @@ module.exports = {
     'airbnb',
     'plugin:perfectionist/recommended-alphabetical-legacy',
     'eslint:recommended'],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'vendor/**'],
   parserOptions: {
     ecmaVersion: 'latest',
     jsx: true,
