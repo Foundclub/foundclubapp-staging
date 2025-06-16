@@ -214,6 +214,18 @@ const useNotifications = ({ navigate }) => {
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
+      // Skip notification display for message types that shouldn't show in foreground
+      const skipTypes = [
+        NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
+        NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE,
+        NOTIFICATION_TYPES.NEW_WHISPER,
+      ];
+
+      const messageType = remoteMessage.data?.type;
+      if (messageType && typeof messageType === 'string' && skipTypes.includes(messageType)) {
+        return;
+      }
+
       onDisplayNotification({
         body: remoteMessage.notification?.body || '',
         data: remoteMessage.data,

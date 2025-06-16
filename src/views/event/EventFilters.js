@@ -1,11 +1,15 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import {
+  ScrollView, Text, View,
+} from 'react-native';
 
+import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -14,6 +18,7 @@ import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -30,12 +35,14 @@ import { getFieldError } from '@/utils/form/formUtils';
 const filtersSchema = Joi.object({
   activity: Joi.string().allow(''),
   category: Joi.string().allow(''),
+  city: Joi.object().allow(''),
   club: Joi.object({
     label: Joi.string(),
     value: Joi.string(),
   }).allow(null).optional(),
   date: Joi.date().allow(null).optional(),
   level: Joi.string().allow(''),
+  radius: Joi.number().allow(''),
   team: Joi.object({
     label: Joi.string(),
     value: Joi.string(),
@@ -61,21 +68,27 @@ function EventFilters({ navigation }) {
 
   // hooks
   const { t } = useTranslation();
-  const { Alignments, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const [{ eventFilters }, appDispatch] = useAppContext();
+  const { getGeohashForPointAndRadius } = usePlaces();
 
   const {
     control,
     formState: { errors: formErrors },
     handleSubmit,
     setValue,
+    watch,
   } = useForm({
     defaultValues: {
       activity: eventFilters?.activities || '',
       category: eventFilters?.category || '',
+      city: eventFilters?.city || { label: '', value: '' },
       club: eventFilters?.club || null,
       date: eventFilters?.date || null,
       level: eventFilters?.level || '',
+      radius: eventFilters?.radius || 2,
       team: eventFilters?.team || null,
       type: eventFilters?.type || '',
     },
@@ -201,10 +214,13 @@ function EventFilters({ navigation }) {
    *   level: string;
    *   team: {label: string; value: string} | null;
    *   type: string;
+   *   city: { label: string; value: string };
+   *   radius: number;
    *   date: string | null;
    * }} data - The filter data
    */
   const handleApplyFilters = (data) => {
+    // format date params
     let startDateAfter = null;
     let startDateBefore = null;
 
@@ -217,10 +233,19 @@ function EventFilters({ navigation }) {
       startDateBefore = endOfDay;
     }
 
+    // fomar place params
+    const coordinates = data.city?.value?.split('|');
+    const geohash = coordinates ? getGeohashForPointAndRadius(
+      parseFloat(coordinates[1]),
+      parseFloat(coordinates[0]),
+      data.radius,
+    ) : undefined;
+
     appDispatch({
       payload: Object.assign(
         data,
         {
+          geohash,
           startDateAfter,
           startDateBefore,
           teamIds: data?.team?.value ? [data.team.value] : null,
@@ -251,6 +276,53 @@ function EventFilters({ navigation }) {
         contentContainerStyle={[Spaces.gap[40]]}
         style={[Spaces.marginVertical[16]]}
       >
+        <Controller
+          control={control}
+          name="city"
+          render={({
+            field: {
+              onChange, value,
+            },
+          }) => (
+            <AutocompleteAddressInput
+              address={value}
+              error={getFieldError({ errors: formErrors, fieldName: 'address' })}
+              label={t('clubFilters.fields.city.label')}
+              placeholder={t('clubFilters.fields.city.placeholder')}
+              setAddress={onChange}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="radius"
+          render={({
+            field: { onChange, value },
+          }) => (
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[
+                Fonts.p1Bold,
+                Fonts.neutral00]}
+              >
+                {`${t('clubFilters.fields.radius.label')}${value}km`}
+              </Text>
+              <Slider
+                disabled={!watch('city')?.value}
+                maximumTrackTintColor={Colors.primary700}
+                maximumValue={50}
+                minimumTrackTintColor={Colors.primary500}
+                minimumValue={2}
+                onValueChange={onChange}
+                step={2}
+                style={[Alignments.fullWidth, { height: 50 }]}
+                tapToSeek
+                thumbTintColor={Colors.primary500}
+                value={value}
+              />
+            </View>
+          )}
+        />
         <Controller
           control={control}
           name="category"

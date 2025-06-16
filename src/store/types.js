@@ -5,7 +5,6 @@
  * @property {string} [theme] - The current theme.
  * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
- * @property {TeamFilters} [teamFilters] - The filters for teams.
  * @property {EventFilters} [eventFilters] - The filters for events.
  */
 
@@ -53,15 +52,6 @@
  */
 
 /**
- * @typedef {object} TeamFilters
- * @property {string} name
- * @property {string} activities
- * @property {string} section
- * @property {string} category
- * @property {string} level
- */
-
-/**
  * @typedef {object} EventFilters
  * @property {string} q
  * @property {string} activities
@@ -73,4 +63,6 @@
  * @property {{label: string, value: string}} team
  * @property {string[]} [teamIds]
  * @property {{label: string, value: string}} club
+ * @property {{label: string, value: string}} city
+ * @property {number} radius
  */

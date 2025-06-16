@@ -185,8 +185,8 @@ const useAuth = () => {
  === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
   const canEditEvent = useCallback(
-    (/** @type {string} */teamId) => userData?.role.name
- === USER_ROLES.coach
+    (/** @type {string} */teamId) => (userData?.role.name
+ === USER_ROLES.coach || userData?.role.name === USER_ROLES.president)
  && userData?.trainedTeams?.map(({ documentId }) => documentId)?.includes(teamId),
     [userData],
   );

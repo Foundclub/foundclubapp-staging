@@ -142,6 +142,8 @@ export const getEventTypes = async () => {
  *   startDateAfter?: Date;
  *   startDateBefore?: Date;
  *   sort?: string;
+ *   geohash?: string;
+ *  }} params - The parameters for filtering events
  * }} params playerEventsFilter - If true, only events where the user is a participant
  * and user's teams closed events will be returned, if true trainerEventFilter is ignored
  * @returns {Promise<{data: FCEvent[], meta: {
@@ -152,6 +154,7 @@ export const getEvents = async (params = {}) => {
     activity,
     category,
     club,
+    geohash,
     level,
     page,
     pageSize,
@@ -291,6 +294,12 @@ export const getEvents = async (params = {}) => {
         },
       };
     }
+  }
+
+  if (geohash && geohash.length) {
+    filtersObj.geohash = {
+      $contains: geohash,
+    };
   }
 
   const filters = {
