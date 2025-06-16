@@ -5,7 +5,6 @@ import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
 import TeamDetails from '@/views/team/TeamDetails';
-import TeamFilters from '@/views/team/TeamFilters';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -43,14 +42,6 @@ function PublicNavigator() {
       <Stack.Screen
         component={ClubDetails}
         name={RouteNames.Club}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={TeamFilters}
-        name={RouteNames.TeamFilters}
         options={{
           ...commonOptions,
           headerTitle: '',

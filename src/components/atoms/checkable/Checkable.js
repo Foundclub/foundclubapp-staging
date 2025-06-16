@@ -96,6 +96,7 @@ function Checkable({
           Fonts.p1Bold,
           isChecked ? Fonts.primary700 : Fonts.neutral00,
           fontStyle,
+          { maxWidth: '85%' },
         ]}
         >
           {text}

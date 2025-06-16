@@ -5,13 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
-import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -22,13 +20,11 @@ import { useGetTeams } from '@/services/team/teamQueries';
  * @param {object} props
  * @param {string} [props.clubId] - The ID of the club to fetch teams for
  * @param {string} [props.playerId] - The ID of the player to fetch teams for
- * @param {boolean} [props.showFilters] - Whether to hide the filters section
  * @returns {import('react').ReactElement} Team list content component
  */
 function TeamListContent({
   clubId = undefined,
   playerId = undefined,
-  showFilters = false,
 }) {
   // hooks
   const {
@@ -40,7 +36,6 @@ function TeamListContent({
   const { getClubInitials } = useClub();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const [{ teamFilters }, appDispatch] = useAppContext();
 
   const {
     data: requestPages,
@@ -51,7 +46,6 @@ function TeamListContent({
     isLoading,
     refetch,
   } = useGetTeams({
-    ...(showFilters ? teamFilters : {}),
     clubId,
     pageSize: 10,
     playerId,
@@ -65,16 +59,6 @@ function TeamListContent({
     }, [])
     || [], [requestPages]);
 
-  const filterCount = useMemo(() => {
-    if (!teamFilters) return 0;
-    return Object.values(teamFilters).reduce((count, value) => {
-      if (Array.isArray(value)) {
-        return count + (value.length > 0 ? 1 : 0);
-      }
-      return count + (value ? 1 : 0);
-    }, 0);
-  }, [teamFilters]);
-
   // handlers
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -86,18 +70,6 @@ function TeamListContent({
     // @ts-expect-error because of react navigation type definitions
     navigation.navigate(RouteNames.TeamDetails, { teamId: team.documentId });
   }, [navigation]);
-
-  const handleOpenFilters = useCallback(() => {
-    // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.TeamFilters);
-  }, [navigation]);
-
-  const handleSearchField = useCallback((/** @type {string} */ name) => {
-    appDispatch({
-      payload: Object.assign(teamFilters || {}, { name }),
-      type: 'SET_TEAM_FILTERS',
-    });
-  }, [appDispatch, teamFilters]);
 
   useFocusEffect(
     useCallback(() => {
@@ -223,14 +195,6 @@ function TeamListContent({
 
   return (
     <View style={[Spaces.gap[40], Alignments.fill]}>
-      {showFilters ? (
-        <SearchComponent
-          filterNumber={filterCount}
-          handleSearchField={handleSearchField}
-          openFilters={handleOpenFilters}
-          searchDefaultValue={teamFilters?.name}
-        />
-      ) : null}
       <WithDataWrapper
         error={error?.message}
         isLoading={isLoading && !isFetchingNextPage}

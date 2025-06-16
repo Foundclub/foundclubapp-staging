@@ -255,8 +255,11 @@ export const canEventBeJoined = (
   {
     capacity, participations, userId, userRole,
   },
-) => userRole?.name === USER_ROLES.player && participations.length < capacity
-&& !participations.some((/** @type {User} */ p) => p.documentId === userId);
+) => {
+  if (!capacity) return true;
+  return userRole?.name === USER_ROLES.player && participations.length < capacity
+    && !participations.some((/** @type {User} */ p) => p.documentId === userId);
+};
 
 /**
  * Check if the user has already joined the event

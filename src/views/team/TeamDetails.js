@@ -66,6 +66,11 @@ function TeamDetails({ navigation, route }) {
     return allTrainers.concat(allPlayers);
   }, [team]);
 
+  const isMyClub = useMemo(
+    () => team?.club?.documentId === currentUser?.club?.documentId,
+    [team?.club?.documentId, currentUser?.club?.documentId],
+  );
+
   const createTeamMembershipRequestMutation = useMutation({
     mutationFn: createTeamMembershipRequest,
     onSuccess: () => {
@@ -494,7 +499,7 @@ function TeamDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       <View style={[Alignments.row, Spaces.gap[16]]}>
-        {canManageTeam && (
+        {canManageTeam && isMyClub && (
         <Button
           onPress={handleEditTeam}
           style={[Alignments.fill, Spaces.paddingHorizontal[16]]}

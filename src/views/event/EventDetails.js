@@ -412,7 +412,6 @@ function EventDetails({ navigation, route }) {
       <EventAnswerButtons
         event={event}
         hasPendingRequest={hasPendingRequest}
-        onAbout={() => {}}
         onCancel={canEdit ? handleCancelEvent : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}
@@ -563,7 +562,7 @@ function EventDetails({ navigation, route }) {
                       ApplicationStyle.tintColor.neutral00,
                     ]}
                   />
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
+                  <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
                     {JSON.parse(event.locationDetails)?.address}
                   </Text>
                 </View>
@@ -717,8 +716,8 @@ function EventDetails({ navigation, route }) {
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               {t('eventDetails.fields.participations')}
               <Text>
-                {` :  ${event?.participations?.length || 0} / ${
-                  event?.capacity
+                {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${
+                  event?.capacity || ''
                 }`}
               </Text>
             </Text>

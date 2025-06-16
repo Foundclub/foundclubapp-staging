@@ -16,7 +16,7 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} props.onJoin - Callback when user wants to join
  * @param {() => void} props.onParticipate - Callback when user participate on its team event
  * @param {() => void} props.onDecline - Callback when user declines
- * @param {() => void} props.onAbout - Callback when user wants to see details
+ * @param {() => void} [props.onAbout] - Callback when user wants to see details
  * @param {() => void} props.onLogin - Callback when user needs to login
  * @param {boolean} [props.hasPendingRequest]
  * @param {() => void} [props.onDeleteParticipation] - Callback to delete their participation
@@ -151,14 +151,17 @@ function EventAnswerButtons({
         </View>
       );
     }
-    return (
-      <Button
-        onPress={onAbout}
-        style={Alignments.fullWidth}
-        title={t('eventList.actions.about')}
-        variant="Primary"
-      />
-    );
+    if (onAbout) {
+      return (
+        <Button
+          onPress={onAbout}
+          style={Alignments.fullWidth}
+          title={t('eventList.actions.about')}
+          variant="Primary"
+        />
+      );
+    }
+    return <View />;
   }
 
   // For non-logged in users, show login button

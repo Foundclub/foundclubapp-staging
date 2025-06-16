@@ -60,7 +60,7 @@ function Profile({ navigation }) {
   };
 
   const handleFindTeam = () => {
-    navigation.navigate(RouteNames.Search);
+    navigation.navigate(RouteNames.HomeTab);
   };
 
   const handleLogout = () => {
@@ -228,9 +228,11 @@ function Profile({ navigation }) {
           ApplicationStyle.backgroundColor.neutral00,
           { width: 98 }]}
         />
-        <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-          {userData?.role?.name?.toUpperCase()}
-        </Text>
+        <View style={[{ maxWidth: '80%' }, Alignments.alignCenter]}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.primary500]}>
+            {userData?.role?.name?.toUpperCase()}
+          </Text>
+        </View>
       </View>
       <ScrollView
         contentContainerStyle={[

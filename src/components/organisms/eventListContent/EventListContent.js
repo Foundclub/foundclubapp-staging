@@ -217,32 +217,34 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         ApplicationStyle.borderRadius24,
       ]}
     >
-      <View style={[
-        Alignments.row,
-        Alignments.fullWidth,
-        Alignments.alignCenter,
-        Alignments.justifySpaceBetween,
-        Spaces.gap[8]]}
-      >
-        <TeamShield
-          initials={item?.team?.club?.name ? getClubInitials(item?.team?.club?.name) : ''}
-          isSmall
-        />
-        <View style={[Spaces.gap[4], { maxWidth: '40%' }]}>
-          <Text
-            ellipsizeMode="tail"
-            numberOfLines={2}
-            style={[Fonts.p1Bold, Fonts.neutral00]}
-          >
-            {item?.team?.club?.name || ''}
-          </Text>
-        </View>
-        <View style={[Alignments.fullHeight, Alignments.alignEnd]}>
+      <View style={[Alignments.fullWidth]}>
+        <View style={[Alignments.fullWidth, Alignments.alignEnd]}>
           {item?.type ? (
             <Tag
               text={item?.type?.name || ''}
             />
           ) : null}
+        </View>
+        <View style={[
+          Alignments.row,
+          Alignments.fullWidth,
+          Alignments.alignCenter,
+          Spaces.gap[8]]}
+        >
+          <TeamShield
+            initials={item?.team?.club?.name ? getClubInitials(item?.team?.club?.name) : ''}
+            isSmall
+          />
+          <View style={[Spaces.gap[4], { maxWidth: '80%' }]}>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={2}
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+            >
+              {item?.team?.club?.name || ''}
+            </Text>
+          </View>
+
         </View>
       </View>
       <View style={[
