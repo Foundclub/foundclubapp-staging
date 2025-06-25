@@ -2,6 +2,7 @@ import { signInWithPhoneNumber as firebaseSignInWithPhoneNumber, getAuth } from 
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
+import { getDeviceId } from 'react-native-device-info';
 
 import client from '@/services/client';
 
@@ -297,6 +298,7 @@ export const getUserById = async (id) => {
 export const addDeviceToken = async (token) => {
   const result = await client.post('/firebase-auth/me/device', {
     data: {
+      device: getDeviceId(),
       platform: Platform.OS,
       token,
     },

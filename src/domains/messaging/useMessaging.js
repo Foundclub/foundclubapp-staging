@@ -80,8 +80,9 @@ const useMessaging = (currentChatId) => {
     );
 
     // Update chat list to show latest message
-    queryClient.setQueryData(
-      ['chats'],
+    // Need to update all chat list queries regardless of params
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
       (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
         if (!oldData?.pages) return oldData;
         return {

@@ -7,6 +7,7 @@ export const eventSchema = Joi.object({
   date: Joi.date().iso().required(),
   description: Joi.string().allow('', null),
   documentId: Joi.string(),
+  geohash: Joi.string().allow('', null).optional(),
   location: Joi.object({
     lat: Joi.number().required(),
     lng: Joi.number().required(),
