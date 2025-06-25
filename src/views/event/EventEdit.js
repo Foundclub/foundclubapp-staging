@@ -275,7 +275,7 @@ function EventEdit({ navigation, route }) {
                   label={t('eventEdit.fields.location.label')}
                   placeholder={t('eventEdit.fields.location.placeholder')}
                   setAddress={onChange}
-                  type="street"
+                  type=""
                 />
               )}
             />

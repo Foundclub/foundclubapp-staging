@@ -113,6 +113,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         return acc;
       }
 
+      // Skip date annex filter completely
+      if (key === 'radius' || key === 'city') {
+        return acc;
+      }
+
       // Skip if the value is falsy or an array
       if (!value || Array.isArray(value)) {
         return acc;

@@ -103,24 +103,26 @@ function PrivateTabNavigator() {
           }),
         }}
       />
-      <Tab.Screen
-        component={canManageTeam && userData?.club
-          ? TeamList : MyTeamList}
-        initialParams={{
-          clubId: userData?.club?.documentId,
-          playerId: userData?.documentId,
-        }}
-        name={RouteNames.MyTeamList}
-        options={{
-          headerShown: false,
-          ...getTabScreenCommonOptions({
-            activeColor: Colors.primary500,
-            icon: Images.strokeShield,
-            label: t('menu.myTeams'),
-            renderTabBarIcon,
-          }),
-        }}
-      />
+      {userData?.id ? (
+        <Tab.Screen
+          component={canManageTeam && userData?.club
+            ? TeamList : MyTeamList}
+          initialParams={{
+            clubId: userData?.club?.documentId,
+            playerId: userData?.documentId,
+          }}
+          name={RouteNames.MyTeamList}
+          options={{
+            headerShown: false,
+            ...getTabScreenCommonOptions({
+              activeColor: Colors.primary500,
+              icon: Images.strokeShield,
+              label: t('menu.myTeams'),
+              renderTabBarIcon,
+            }),
+          }}
+        />
+      ) : null}
       <Tab.Screen
         component={Messaging}
         name={RouteNames.Chat}
