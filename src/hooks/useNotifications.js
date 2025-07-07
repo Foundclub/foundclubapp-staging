@@ -91,6 +91,9 @@ const useNotifications = ({ navigate }) => {
   const { userData } = useAuth();
 
   const { mutate: saveTokenMutation } = useMutation({
+    meta: {
+      preventToastError: true,
+    },
     mutationFn: addDeviceToken,
     onError: () => {
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });

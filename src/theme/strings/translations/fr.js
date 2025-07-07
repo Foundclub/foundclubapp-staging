@@ -564,9 +564,24 @@ export default {
         responsibility: 'Je déclare avoir pris connaissance de la "Déclaration de responsabilité et acceptation des risques"',
       },
       description: 'En validant mon inscription à cet entraînement / détection organisé par [Nom du club ou de l’organisateur], je reconnais et accepte expressément les termes suivants :'
-        + '\nPratique sportive et risques inhérents : '
+        + '\n\nPratique sportive et risques inhérents : '
         + '\n    - Je reconnais que la participation à des activités sportives comporte des risques inhérents pouvant inclure, sans s’y limiter, des blessures corporelles, des chocs, des fractures, des entorses, des lésions musculaires, voire des accidents plus graves.'
-        + '\n    - Je suis conscient(e) que ces risques peuvent survenir indépendamment des précautions prises par ',
+        + '\n    - Je suis conscient(e) que ces risques peuvent survenir indépendamment des précautions prises par '
+        + 'l’organisateur, les entraîneurs ou les autres participants.'
+        + '\nAbsence de couverture d’assurance par Found Club'
+        + '\n    - Je reconnais que Found Club n’organise pas ces événements et agit uniquement en tant que plateforme de mise en relation entre joueurs et clubs.'
+        + '\n    - Je comprends que Found Club ne fournit aucune assurance couvrant les blessures, accidents ou dommages matériels subis lors de ma participation.'
+        + '\n\nResponsabilité individuelle :'
+        + '\n    - Je déclare être pleinement responsable de ma participation et renonce à tout recours contre Found Club, l’organisateur de l’événement, les entraîneurs et tout autre tiers impliqué.'
+        + '\n    - En cas de blessure ou d’accident, je reconnais que je ne pourrai engager aucune responsabilité contre Found Club et que je devrai prendre en charge mes propres soins médicaux et assurances personnelles.'
+        + '\n\nÉtat de santé et aptitude physique :'
+        + '\n    - Je certifie être apte physiquement à pratiquer l’activité concernée et n’avoir aucune contre-indication médicale à la pratique du sport.'
+        + '\n    - J’assume l’entière responsabilité de mon état de santé et je m’engage à ne pas participer en cas de doute sur ma condition physique.'
+        + '\n\nAcceptation des conditions :'
+        + '\nEn cochant la case ci-dessous et en validant mon inscription,'
+        + ' je reconnais avoir lu, compris et accepté cette déclaration de responsabilité,'
+        + ' et j’accepte de dégager Found Club et les organisateurs de toute responsabilité en cas d’accident,'
+        + ' de blessure ou de dommage survenant lors de l’événement.',
       title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
     },
     noData: 'Aucun évènement trouvé.',

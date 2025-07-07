@@ -624,14 +624,16 @@ function EventDetails({ navigation, route }) {
             </View>
           </View>
           {/* Description section */}
-          <View style={[Spaces.gap[16], Alignments.fill]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.fields.description')}
-            </Text>
-            <Text style={[Fonts.p1, Fonts.primary100]}>
-              {event?.description}
-            </Text>
-          </View>
+          {event?.description ? (
+            <View style={[Spaces.gap[16], Alignments.fill]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('eventDetails.fields.description')}
+              </Text>
+              <Text style={[Fonts.p1, Fonts.primary100]}>
+                {event?.description}
+              </Text>
+            </View>
+          ) : null}
           {/* Participation Requests section */}
           {canEditEvent(event?.team?.documentId || '')
             && pendingParticipations.length > 0 && (
