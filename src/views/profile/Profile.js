@@ -143,7 +143,11 @@ function Profile({ navigation }) {
             ApplicationStyle.backgroundColor.neutral300,
           ]}
           />
-          <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
+          <Text
+            numberOfLines={2}
+            style={[Fonts.p1Black, Fonts.neutral00,
+              { maxWidth: '90%' }]}
+          >
             {userData?.club?.name}
           </Text>
         </TouchableOpacity>

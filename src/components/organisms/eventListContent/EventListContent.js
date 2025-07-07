@@ -157,7 +157,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
 
   const handleFindEvent = () => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.Search);
+    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.Search });
   };
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
@@ -275,7 +275,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
               source={Images.pin}
               style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
             />
-            <Text style={[Fonts.p2, Fonts.primary100]}>
+            <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '95%' }]}>
               {JSON.parse(item?.locationDetails)?.address || ''}
             </Text>
           </View>
