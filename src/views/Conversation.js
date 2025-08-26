@@ -298,11 +298,11 @@ function Conversation({ navigation, route }) {
       <GiftedChat
         dateFormat="DD MMMM"
         dateFormatCalendar={{
-          lastDay: '[Hier à] h:mm',
-          lastWeek: '[La semaine dernière] dddd [à] h:mm',
-          nextDay: '[Demain à] h:mm',
-          nextWeek: 'dddd [à] h:mm',
-          sameDay: '[Aujourd\'hui à] h:mm',
+          lastDay: '[Hier]',
+          lastWeek: '[La semaine dernière] dddd',
+          nextDay: '[Demain]',
+          nextWeek: 'dddd',
+          sameDay: '[Aujourd\'hui]',
           sameElse: 'DD/MM/YYYY',
         }}
         focusOnInputWhenOpeningKeyboard

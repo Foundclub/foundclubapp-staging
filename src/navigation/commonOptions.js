@@ -18,6 +18,7 @@ export const commonOptions = {
     fontFamily: 'Montserrat-Bold',
     fontSize: sizes.p1Size,
     lineHeight: lineHeights.p1Height,
+    maxWidth: 211,
   },
   headerTransparent: true,
   title: '',
