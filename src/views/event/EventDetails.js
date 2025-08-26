@@ -659,7 +659,7 @@ function EventDetails({ navigation, route }) {
                         Alignments.row,
                         Spaces.gap[16],
                         Alignments.alignCenter,
-                        { flex: 0.7 },
+                        Alignments.fill,
                       ]}
                     >
                       <Image
@@ -676,7 +676,7 @@ function EventDetails({ navigation, route }) {
                       />
                       <Text
                         numberOfLines={2}
-                        style={[Fonts.p1Bold, Fonts.neutral00]}
+                        style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}
                       >
                         {`${participation.user.firstname} ${participation.user.lastname}`}
                       </Text>
