@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 
@@ -17,9 +18,14 @@ import { RouteNames } from '@/navigation/routeNames';
  * @returns {import('react').ReactElement} Team list screen component
  */
 function TeamList({ navigation, route }) {
-  const { clubId } = route?.params ?? {};
   const { t } = useTranslation();
-  const { canManageTeam } = useAuth();
+  const { canManageTeam, refetchUserData, userData } = useAuth();
+  const clubId = route?.params?.clubId ? route?.params.clubId : userData?.club?.documentId;
+
+  // Effects
+  useFocusEffect(() => {
+    refetchUserData();
+  });
 
   // hooks
   const {

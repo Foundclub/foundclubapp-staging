@@ -1,5 +1,7 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Image, View } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
@@ -14,6 +16,11 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 function MyTeamList({ route }) {
   const { Images } = useTheme();
   const { playerId } = route?.params ?? {};
+  const { refetchUserData } = useAuth();
+  // Effects
+  useFocusEffect(() => {
+    refetchUserData();
+  });
 
   // hooks
   const {
