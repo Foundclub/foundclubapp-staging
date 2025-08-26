@@ -219,9 +219,10 @@ const useNotifications = ({ navigate }) => {
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       // Skip notification display for message types that shouldn't show in foreground
       const skipTypes = [
-        NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
-        NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE,
-        NOTIFICATION_TYPES.NEW_WHISPER,
+        '',
+        // NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
+        // NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE,
+        // NOTIFICATION_TYPES.NEW_WHISPER,
       ];
 
       const messageType = remoteMessage.data?.type;

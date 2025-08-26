@@ -93,7 +93,6 @@ function RefuseParticipationModal({
           placeholder={t('eventDetails.modals.refuse.fields.reason.placeholder')}
           ref={inputRef}
           textAlignVertical="top"
-          value={reason}
         />
         <View style={[
           Alignments.row, Spaces.gap[16], Alignments.fullWidth, Spaces.marginTop[24]]}
