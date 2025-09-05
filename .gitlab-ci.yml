@@ -10,7 +10,7 @@ stages:
   stage: Quality
   only:
     - merge_requests
-    - develop
+    - main
   before_script:
     - npm ci --cache .npm --prefer-offline
   cache:

@@ -17,7 +17,7 @@ function Stepper({ currentStep, steps }) {
     <View style={[
       Alignments.fullWidth,
       Alignments.relative,
-      { height: 4, width: windowWidth - 170 },
+      { height: 4, width: windowWidth - 155 },
     ]}
     >
       <View

@@ -1,10 +1,10 @@
 default_platform(:ios)
 
 # User values
-ios_app_id = 'TE_REPLACE'
-ios_app_scheme = 'TE_REPLACE'
-ios_firebase_app_id = 'TE_REPLACE'
-firebase_project_number = 0000
+ios_app_id = 'com.foundclub'
+ios_app_scheme = 'foundclub'
+ios_firebase_app_id = '1:353491626274:ios:1df11df38f94df543edd7b'
+firebase_project_number = 353491626274
 
 # System values
 ios_directory = File.expand_path("..", Dir.pwd)

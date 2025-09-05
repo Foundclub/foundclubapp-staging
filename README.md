@@ -121,14 +121,15 @@ You're environment variables need to be set directly (and one by one) in CircleC
 **Back-office URL:**  
 **How to deploy :** Tag on main branch with this format `xx.xx.xx`
 
+
 ## Third party services
 
-### Service name //TODO:
+### Service name
 
-[service_url](test)
-description
+[Firebase console](https://console.firebase.google.com/u/0/project/found-club/overview)
+Gestion de l'authentification (Authentication - phone OTP) et la distribution des appplications de test (App Distribution)
 
-## Tech history //TODO:
+## Tech history
 
-Répertorier ici l'historique du projet, quelles concessions techniques ont été faites et sont suffisamment impactantes dans l'architecture du code pour être documentées, quelles librairies ont été utilisées ici, comment les tests sont-ils écrits, etc.
+L'historique technique est mutualisé entre cette application et l'application back-end afin de simplifier la rédaction. Les détails sont décrits dans le channel slack spécifique au projet : [#team_found_club](https://zolteam.slack.com/docs/T0D0FB5HN/F08H8NBNNAG)
 

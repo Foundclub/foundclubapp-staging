@@ -1,26 +1,74 @@
-import { Image, Text, View } from 'react-native';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
+import Tag from '@/components/atoms/tag/Tag';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import useNotifications from '@/hooks/useNotifications';
+
+const searchOptions = [
+  {
+    label: i18n.t('home.fields.type.options.event'),
+    value: 'events',
+  },
+  {
+    label: i18n.t('home.fields.type.options.club'),
+    value: 'clubs',
+  },
+];
+
 /**
- * Main home screen component displayed after authentication and onboarding.
- * Shows user content and provides access to core app features.
+ * Main home screen to search for clubs, team or events
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home() {
-  // hooks
+function Home({ navigation }) {
+  const [searchType, setSearchType] = useState(searchOptions[0].value);
   const {
-    Alignments, Fonts, Images, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Fonts,
+    Images,
+    Spaces,
   } = useTheme();
-  const { logoutMutation } = useAuth();
+  const { t } = useTranslation();
+  useNotifications({ navigate: navigation.navigate });
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  /**
+   * Handle search type change
+   * @param {string} value - The new search type value
+   */
+  const onChange = (value) => {
+    setSearchType(value);
+  };
+
+  const renderContent = () => {
+    switch (searchType) {
+      case 'clubs':
+        return <ClubListContent />;
+      case 'events':
+        return (
+          <EventListContent
+            additionalFilters={{ sessionStatus: 'open' }}
+            showFilters
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -29,11 +77,11 @@ function Home() {
       contentContainerStyle={[
         Alignments.column,
         Alignments.fill,
-        Spaces.gap[24],
       ]}
     >
-      {/* header */}
       <View style={[
+        Spaces.marginTop[16],
+        Spaces.marginBottom[24],
         Alignments.row,
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
@@ -41,15 +89,44 @@ function Home() {
         <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
         <ProfileButton />
       </View>
-      <View>
-        <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-          Titre
+
+      <View style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.gap[12],
+      ]}
+      >
+        <Text style={[
+          Fonts.h4,
+          Fonts.neutral00,
+        ]}
+        >
+          {t('home.fields.type.label')}
         </Text>
-        <Text style={[Fonts.p1, Fonts.neutral00]}>
-          Sous titre
-        </Text>
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[8]]}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          {searchOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              onPress={() => onChange(option.value)}
+              style={[
+                option.value === searchType && ApplicationStyle.backgroundColor.primary500,
+                ApplicationStyle.borderRadius8,
+              ]}
+            >
+              <Tag
+                text={option.label}
+                textColor={option.value === searchType ? 'neutral00' : 'primary500'}
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
-      <Button onPress={handleLogout} title="Logout" variant="Primary" />
+      {renderContent()}
     </ScreenContainer>
   );
 }

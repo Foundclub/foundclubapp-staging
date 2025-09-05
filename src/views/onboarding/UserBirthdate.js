@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -58,15 +59,17 @@ const birthdateSchema = Joi.object({
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User birthdate screen component
  */
-function UserBirthdate({ navigation, route }) {
+function UserBirthdate({ navigation }) {
   const { Alignments, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const { getNextOnboardingRoute } = useAuth();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserAvatar);
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)
+       || RouteNames.UserAvatar);
     },
   });
 
@@ -134,7 +137,12 @@ function UserBirthdate({ navigation, route }) {
                   keyboardType="number-pad"
                   maxLength={2}
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    if (text.length === 2) {
+                      setFocus('month');
+                    }
+                  }}
                   onSubmitEditing={() => setFocus('month')}
                   placeholder="JJ"
                   ref={ref}
@@ -161,7 +169,12 @@ function UserBirthdate({ navigation, route }) {
                   keyboardType="number-pad"
                   maxLength={2}
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    onChange(text);
+                    if (text.length === 2) {
+                      setFocus('year');
+                    }
+                  }}
                   onSubmitEditing={() => setFocus('year')}
                   placeholder="MM"
                   ref={ref}

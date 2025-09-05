@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { USER_SECTIONS } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -14,17 +14,21 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetSections } from '@/services/section/sectionQueries';
 
 /**
  * Team section selection screen component. Allows users to select their team section (male/female).
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User section screen component
  */
-function UserSection({ navigation, route }) {
+function UserSection({ navigation }) {
   // hooks
   const { data: userData } = useGetMe();
+  const { getNextOnboardingRoute } = useAuth();
+  const { data: sections } = useGetSections();
+
   // local state
-  const [section, setSection] = useState(userData?.section || '');
+  const [section, setSection] = useState(userData?.section?.documentId || '');
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
@@ -33,7 +37,8 @@ function UserSection({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(route.params?.nextRoute || RouteNames.UserBirthdate);
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserSection)
+       || RouteNames.UserBirthdate);
     },
   });
 
@@ -71,17 +76,14 @@ function UserSection({ navigation, route }) {
           </Text>
         </View>
         <View style={[Spaces.gap[24]]}>
-          <TabButton
-            isActive={section === USER_SECTIONS.female}
-            onPress={() => handleSelection(USER_SECTIONS.female)}
-            title={t('profile.fields.sections.female')}
-          />
-          <TabButton
-            isActive={section === USER_SECTIONS.male}
-            onPress={() => handleSelection(USER_SECTIONS.male)}
-            title={t('profile.fields.sections.male')}
-          />
-
+          {sections?.map((sectionItem) => (
+            <TabButton
+              isActive={section === sectionItem.documentId}
+              key={sectionItem.documentId}
+              onPress={() => handleSelection(sectionItem.documentId)}
+              title={sectionItem.name}
+            />
+          ))}
         </View>
       </View>
       <Button

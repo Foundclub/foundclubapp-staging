@@ -21,7 +21,7 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,
 });
 
-// Sentry.init({
+Sentry.init({
 //   attachStacktrace: true,
 //   beforeSend: (event) => {
 //     // Don't send events in development mode
@@ -39,7 +39,7 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
 //   tracesSampleRate: 1.0,
 //   // Add integration for better React Navigation tracking
 //   integrations: [navigationIntegration],
-// });
+});
 
 // Reactotron configuration to debug app
 if (__DEV__) {
@@ -61,15 +61,15 @@ const queryClient = new QueryClient({
       if (!mutation?.options?.meta?.preventToastError) {
         // Handle error and show Alert
         displayErrorAlert(
-          error.message,
+          error,
           mutation?.options?.meta?.errorMessageFallback?.toString(),
         );
       }
-      if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-        Sentry.captureException(error);
-      } else {
-        Sentry.captureException(error);
-      }
+      // if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
+      //   Sentry.captureException(error);
+      // } else {
+      //   Sentry.captureException(error);
+      // }
     },
   }),
 

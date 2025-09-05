@@ -16,7 +16,7 @@ import { RouteNames } from '@/navigation/routeNames';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Welcome screen component
  */
-function Welcome({ navigation, route }) {
+function Welcome({ navigation }) {
   // hooks
   const {
     Alignments, Fonts, Images, Spaces,
@@ -26,7 +26,7 @@ function Welcome({ navigation, route }) {
   const handleNext = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: route.params?.nextRoute || RouteNames.Home }],
+      routes: [{ name: RouteNames.HomeTab }],
     });
   };
 

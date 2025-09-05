@@ -3,7 +3,9 @@
  * @property {Auth} [auth] The authentication state.
  * @property {string} [fcmToken] - The Firebase Cloud Messaging token.
  * @property {string} [theme] - The current theme.
- * @property {string[]} [onboardingViews] - The list of onboarding views to show.
+ * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
+ * @property {ClubFilters} [clubFilters] - The filters for the club.
+ * @property {EventFilters} [eventFilters] - The filters for events.
  */
 
 /**
@@ -16,7 +18,9 @@
 
 /**
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
- * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'} AppContextTypes
+ * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
+ * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS'
+ * | 'SET_EVENT_FILTERS'} AppContextTypes
  */
 
 /**
@@ -36,4 +40,29 @@
  * @callback AppContextDispatch
  * @param {Action} action The action to be performed.
  * @returns {void}
+ */
+
+/**
+ * @typedef {object} ClubFilters
+ * @property {string} name
+ * @property {string} geohash
+ * @property {string} activity
+ * @property {{label: string, value: string}} city
+ * @property {number} radius
+ */
+
+/**
+ * @typedef {object} EventFilters
+ * @property {string} q
+ * @property {string} activities
+ * @property {string} category
+ * @property {string} level
+ * @property {string} sessionStatus
+ * @property {string} type
+ * @property {string} date
+ * @property {{label: string, value: string}} team
+ * @property {string[]} [teamIds]
+ * @property {{label: string, value: string}} club
+ * @property {{label: string, value: string}} city
+ * @property {number} radius
  */

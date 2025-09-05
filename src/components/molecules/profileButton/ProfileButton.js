@@ -1,8 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
 import { Image, TouchableOpacity } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 /**
  * ProfileButton component displays user avatar and navigates to profile screen.
@@ -15,7 +17,7 @@ function ProfileButton() {
 
   const handlePress = () => {
     // @ts-expect-error - Navigation typing will be fixed when types are properly set up
-    navigation.navigate('Profile');
+    navigation.navigate(userData ? RouteNames.Profile : RouteNames.AuthStackAccount);
   };
 
   return (
@@ -28,7 +30,6 @@ function ProfileButton() {
       ]}
     >
       <Image
-        // @ts-expect-error
         source={userData?.avatar ? { uri: userData.avatar?.url } : Images.roundAvatar}
         style={[
           ApplicationStyle.borderRadius24,

@@ -11,15 +11,15 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
-import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 import BottomModal from '../bottomModal/BottomModal';
 import Input from '../input/Input';
 /**
  * @typedef {object} SelectProps
  * @property {Array<Option>} options - The options of the select.
- * @property {string} value - The select options
+ * @property {string | string[]} value - The select options
  * @property {Function} setValue - The function to set the selected value.
+ * @property {boolean} [isMulti] - Whether multiple options can be selected.
  * @property {boolean} [isSearchable] - The flag to know if the select is searchable or not.
  * @property {boolean} [disabled] - The flag to know if the select is searchable or not.
  * @property {(value: string) => void} [setSearchValue] - The function to set the search value
@@ -36,6 +36,7 @@ import Input from '../input/Input';
  * | Array<import('react-native').ImageStyle>} [iconStyle]
  * @property {keyof import('../../../theme/types').AllImages} [customIcon] - The custom icon.
  * @property {'start' | 'end'} [customIconPosition]
+ * @property {boolean} [lightMode] - The flag to know if the select is in light mode.
  */
 
 /**
@@ -63,8 +64,9 @@ const AutocompleteSelect = forwardRef(
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
-    const [selectedOption, setSelectedOption] = useState(
-      /** @type {Option | undefined} */(undefined),
+    const [selectedOptions, setSelectedOptions] = useState(
+      /** @type {Option[] | Option | undefined} */
+      (props.isMulti ? [] : undefined),
     );
 
     // refs
@@ -87,7 +89,17 @@ const AutocompleteSelect = forwardRef(
      * @returns {void}
      */
     const handleSelectOption = (option) => {
-      setSelectedOption((current) => (current === option ? undefined : option));
+      if (props.isMulti) {
+        setSelectedOptions((current) => {
+          const currentArray = Array.isArray(current) ? current : [];
+          const exists = currentArray.some((opt) => opt.value === option.value);
+          return exists
+            ? currentArray.filter((opt) => opt.value !== option.value)
+            : [...currentArray, option];
+        });
+      } else {
+        setSelectedOptions((current) => (current === option ? undefined : option));
+      }
     };
 
     const handleCloseModal = () => {
@@ -99,7 +111,7 @@ const AutocompleteSelect = forwardRef(
 
     const handleValidation = () => {
       handleCloseModal();
-      props.setValue(selectedOption);
+      props.setValue(selectedOptions);
     };
 
     /**
@@ -107,38 +119,65 @@ const AutocompleteSelect = forwardRef(
      * @param {Option} option - The option to check.
      * @returns {boolean} The flag to know if the option is checked.
      */
-    const handleIsChecked = (option) => !!selectedOption
-    && selectedOption?.value === option.value;
+    const handleIsChecked = (option) => {
+      if (props.isMulti) {
+        return Array.isArray(selectedOptions) && selectedOptions.some(
+          (opt) => opt.value === option.value,
+        );
+      }
+      const singleOption = selectedOptions;
+      return Boolean(
+        singleOption && !Array.isArray(singleOption) && singleOption.value === option.value,
+      );
+    };
+
+    const getDisplayValue = () => {
+      if (!props.value) return '';
+
+      if (props.isMulti && Array.isArray(props.value)) {
+        const selectedLabels = props.options
+          .filter((opt) => props.value.includes(opt.value))
+          .map((opt) => opt.label);
+        return selectedLabels.join(', ');
+      }
+
+      // const option = props.options.find((opt) => opt.value === props.value);
+      return props.value || undefined;
+    };
 
     return (
       <View style={[Alignments.relative]}>
-        <View style={[Alignments.relative]}>
+        <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
           <TouchableOpacity
+            disabled={props.disabled}
             onPress={handleFocus}
             style={[
               Alignments.absolute,
               Alignments.fullSize,
               Spaces.padding[12],
-              Spaces.paddingTop[32],
+              Spaces.paddingTop[40],
               { zIndex: 1 },
             ]}
           >
-            {props.value
-              ? (
-                <Text style={[Fonts.p1, Fonts.neutral00]}>
-                  { props.value}
-                </Text>
-              )
-              : (
-                <Text style={[Fonts.p1, Fonts.neutral500]}>
-                  {props.placeholder}
-                </Text>
-              )}
+            {props.value ? (
+              <Text
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                style={[Fonts.p1, Fonts.neutral00]}
+              >
+                {getDisplayValue()}
+              </Text>
+            ) : (
+              <Text style={[Fonts.p1, Fonts.neutral500]}>
+                {props.placeholder}
+              </Text>
+            )}
           </TouchableOpacity>
           <Input
             editable={false}
             error={props.error}
             label={props.label}
+            lightMode={props.lightMode}
             readOnly
             ref={ref}
             wrapperStyle={props.wrapperStyle}
@@ -156,9 +195,7 @@ const AutocompleteSelect = forwardRef(
             ]}
           >
             <View style={[
-              Spaces.marginTop[12],
-              Spaces.marginBottom[24],
-              Spaces.gap[24],
+              Alignments.fullSize,
             ]}
             >
               <Text style={[
@@ -166,7 +203,7 @@ const AutocompleteSelect = forwardRef(
                 Fonts.neutral00,
                 Spaces.marginTop[4]]}
               >
-                {props.placeholder}
+                {props.label}
               </Text>
               {/* search input */}
               {props.isSearchable ? (
@@ -180,51 +217,41 @@ const AutocompleteSelect = forwardRef(
                 />
               ) : null}
               {/* options */}
-              <SkeletonLoader
-                backgroundColor={Colors.neutral200}
-                isActive={!!props.isLoading}
+              <ScrollView
+                contentContainerStyle={[Spaces.gap[12], Spaces.marginTop[16]]}
+                style={{ height: 500 }}
               >
-                <ScrollView contentContainerStyle={[Spaces.gap[12]]}>
-                  {props.options.map((option) => (
-                    <View
-                      key={`${option.value}-${option.label}`}
-                      style={[Alignments.row, Spaces.marginTop[8]]}
-                    >
-                      <Checkable
-                        disabled={false}
-                        isChecked={handleIsChecked(option)}
-                        setIsChecked={
+                {props.options.map((option) => (
+                  <View
+                    key={`${option.value}-${option.label}`}
+                    style={[Alignments.row, Spaces.marginTop[8]]}
+                  >
+                    <Checkable
+                      customFillColor={Colors.neutral00}
+                      disabled={false}
+                      isChecked={handleIsChecked(option)}
+                      setIsChecked={
                       () => (handleSelectOption(option))
                     }
-                        text={option.label}
-                      />
-                    </View>
-                  ))}
-                  {props.isLoading ? [...Array(5)].map((index) => (
-                    <View key={index} style={[Alignments.row, Spaces.marginTop[8]]}>
-                      <Checkable
-                        disabled={false}
-                        isChecked
-                        setIsChecked={() => {}}
-                        text="loading ..."
-                      />
-                    </View>
-                  )) : null}
-                  {props.options.length === 0 && (props.searchValue?.length || 0) > 0
-                    ? (
-                      <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
-                        {t('common.messages.noData')}
-                      </Text>
-                    ) : null}
-                </ScrollView>
-              </SkeletonLoader>
+                      text={option.label}
+                      type={props.isMulti ? 'square' : 'circle'}
+                    />
+                  </View>
+                ))}
+                {props.options.length === 0 && (props.searchValue?.length || 0) > 0
+                  ? (
+                    <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                      {t('common.messages.noData')}
+                    </Text>
+                  ) : null}
+              </ScrollView>
+              {/* validation */}
+              <Button
+                onPress={handleValidation}
+                title={t('modals.actions.select')}
+                variant="Primary"
+              />
             </View>
-            {/* validation */}
-            <Button
-              onPress={handleValidation}
-              title={t('modals.actions.select')}
-              variant="Primary"
-            />
           </View>
         </BottomModal>
       </View>

@@ -108,6 +108,9 @@ export const staticStyle = {
     borderRadius: 8,
   },
   // Border Width
+  borderWidth0: {
+    borderWidth: 0,
+  },
   borderWidth1: {
     borderWidth: 1,
   },
@@ -116,6 +119,9 @@ export const staticStyle = {
   },
   borderWidth2: {
     borderWidth: 2,
+  },
+  noBorderTop: {
+    borderTopWidth: 0,
   },
   // border style
   borderStyleDashed: {
@@ -165,6 +171,18 @@ export const staticStyle = {
     height: 48,
     resizeMode: resizeModes.contain,
     width: 48,
+  },
+  roundIcon40: {
+    borderRadius: 40,
+    height: 40,
+    resizeMode: resizeModes.cover,
+    width: 40,
+  },
+  roundIcon55: {
+    borderRadius: 55,
+    height: 55,
+    resizeMode: resizeModes.cover,
+    width: 55,
   },
   // Shadows
   shadow100: {

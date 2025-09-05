@@ -10,6 +10,12 @@ export default function appReducer(state, action) {
     case 'SET_AUTHENTICATION': {
       return { ...state, auth: action.payload };
     }
+    case 'SET_CLUB_FILTERS': {
+      return { ...state, clubFilters: action.payload };
+    }
+    case 'SET_EVENT_FILTERS': {
+      return { ...state, eventFilters: action.payload };
+    }
     case 'SET_FCM_TOKEN': {
       return { ...state, fcmToken: action.payload };
     }

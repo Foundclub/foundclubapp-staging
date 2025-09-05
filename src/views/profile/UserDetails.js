@@ -1,0 +1,280 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
+
+import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
+import useMessaging from '@/domains/messaging/useMessaging';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetUserById } from '@/services/auth/authQueries';
+
+/**
+ * User profile view component for displaying other users' profiles
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
+ * @returns {import('react').ReactElement} UserProfile component
+ */
+function UserDetails({ navigation, route }) {
+  const { userId } = route.params ?? {};
+  const { t } = useTranslation();
+  const {
+    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+  } = useTheme();
+  const { getClubInitials } = useClub();
+  const { canSendMessageToUser, userData: currentUser } = useAuth();
+  const { startWhisperChat } = useMessaging();
+
+  const {
+    data: user,
+    error,
+    isLoading,
+    refetch,
+  } = useGetUserById(userId);
+
+  const allUserTeams = useMemo(
+    () => currentUser?.myTeams?.concat(currentUser?.trainedTeams || []) || [],
+    [currentUser],
+  );
+
+  // handlers
+  const handleStartChat = async () => {
+    if (currentUser?.documentId && user?.documentId) {
+      const newChat = await startWhisperChat([currentUser.documentId, user?.documentId]);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
+    }
+  };
+
+  const handleOpenClub = () => {
+    navigation.navigate(RouteNames.Club, {
+      clubId: user?.club?.documentId,
+    });
+  };
+
+  /**
+   * Handle team press action
+   * @param {Team} team
+   */
+  const handleTeamPress = (team) => {
+    if (team?.documentId) {
+      navigation.navigate(RouteNames.TeamDetails, { teamId: team.documentId });
+    }
+  };
+
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[
+        Spaces.gap[40],
+        Spaces.paddingBottom[24],
+        Alignments.justifySpaceBetween,
+        Alignments.column,
+        Alignments.fill,
+      ]}
+    >
+      {/* header */}
+      <View
+        style={[
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[12],
+        ]}
+      >
+        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+          {t('userDetails.title').toUpperCase()}
+        </Text>
+        <View style={[
+          ApplicationStyle.separator,
+          ApplicationStyle.backgroundColor.neutral00,
+          { width: 98 }]}
+        />
+        <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+          {user?.role?.name?.toUpperCase()}
+        </Text>
+      </View>
+      <ScrollView
+        contentContainerStyle={[
+          Spaces.gap[32],
+        ]}
+        refreshControl={(
+          <RefreshControl
+            onRefresh={refetch}
+            refreshing={isLoading}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        style={[Alignments.fill]}
+      >
+        <WithDataWrapper
+          error={error?.message}
+          isLoading={isLoading}
+          wrapperStyle={[Spaces.gap[32]]}
+        >
+
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[16],
+            ]}
+          >
+            <Image
+              source={user?.avatar?.url
+                ? { uri: user.avatar?.url }
+                : Images.roundAvatar}
+              style={[
+                ApplicationStyle.borderColor.neutral00,
+                ApplicationStyle.borderWidth1,
+                { borderRadius: 80, height: 80, width: 80 }]}
+            />
+            {user?.firstname && user?.lastname && (
+              <View style={[
+                { maxWidth: '70%' },
+                Alignments.justifyStart,
+                Alignments.alignStart,
+                Spaces.gap[24],
+              ]}
+              >
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    Fonts.textCenter,
+                    Fonts.h4Black,
+                    Spaces.marginLeft[8],
+                    Fonts.neutral00]}
+                >
+                  {`${user.firstname} ${user.lastname?.toUpperCase()}`}
+                </Text>
+                {user.club ? (
+                  <TouchableOpacity
+                    onPress={handleOpenClub}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[16],
+                      { marginTop: -10, maxWidth: '75%' }]}
+                  >
+                    <TeamShield
+                      initials={user?.club?.name
+                        ? getClubInitials(user.club?.name) : ''}
+                      isSmall
+                    />
+                    <View style={[
+                      { height: 40, width: 1 },
+                      ApplicationStyle.backgroundColor.neutral300,
+                    ]}
+                    />
+                    <Text
+                      numberOfLines={2}
+                      style={[Fonts.p1Black, Fonts.neutral00]}
+                    >
+                      {user?.club?.name}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+          </View>
+          {/* details */}
+          <View style={[Alignments.row, Alignments.justifySpaceAround, Spaces.gap[16]]}>
+            <View style={[Spaces.gap[12]]}>
+              {user?.birthdate ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.birthYear')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.birthdate ? new Date(user.birthdate).getFullYear() : ''}`}
+                  </Text>
+                </Text>
+              ) : null}
+              {user?.position ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.position')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.position}`}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
+            <View style={[Spaces.gap[12]]}>
+              {user?.height ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.height')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.height}`}
+                  </Text>
+                </Text>
+              ) : null}
+              {user?.weight ? (
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {t('userDetails.fields.weight')}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`  ${user?.weight}`}
+                  </Text>
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          {/* teams */}
+          {allUserTeams?.length ? (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row,
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('userDetails.titles.teams')}</Text>
+              </View>
+              {
+                allUserTeams?.map((/** @type {Team} */ team) => (
+                  <TouchableOpacity
+                    key={team.documentId}
+                    onPress={() => handleTeamPress(team)}
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      ApplicationStyle.backgroundColor.primary700,
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Alignments.justifySpaceBetween,
+                      Spaces.padding[8],
+                      Spaces.gap[16]]}
+                  >
+                    <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                      <TeamShield
+                        initials={team?.name ? getClubInitials(team?.name) : ''}
+                        isNeutral
+                        isSmall
+                      />
+                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        {team.name}
+                      </Text>
+                    </View>
+
+                  </TouchableOpacity>
+                ))
+              }
+            </View>
+          ) : null}
+        </WithDataWrapper>
+      </ScrollView>
+      {user && canSendMessageToUser(user) ? (
+        <Button
+          onPress={handleStartChat}
+          style={Spaces.marginBottom[24]}
+          title={t('userDetails.actions.sendMessage')}
+          variant="Primary"
+        />
+      ) : null}
+    </ScreenContainer>
+  );
+}
+
+export default UserDetails;

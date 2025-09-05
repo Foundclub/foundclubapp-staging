@@ -1,22 +1,42 @@
 import { createStackNavigator } from '@react-navigation/stack';
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { useAuth } from '@/domains/auth/useAuth';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
-import Home from '@/views/Home';
+import AddCoach from '@/views/club/AddCoach';
+import AddSponsor from '@/views/club/AddSponsor';
+import ClubDetails from '@/views/club/ClubDetails';
+import ClubFilters from '@/views/club/ClubFilters';
+import ClubList from '@/views/club/ClubList';
+import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
+import CreateClubRequest from '@/views/club/CreateClubRequest';
+import Conversation from '@/views/Conversation';
+import EventDetails from '@/views/event/EventDetails';
+import EventEdit from '@/views/event/EventEdit';
+import EventFilters from '@/views/event/EventFilters';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserName from '@/views/onboarding/UserName';
+import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
-import UserType from '@/views/onboarding/UserType';
 import Welcome from '@/views/onboarding/Welcome';
-import Profile from '@/views/Profile';
-import ProfileEdit from '@/views/ProfileEdit';
+import Profile from '@/views/profile/Profile';
+import ProfileEdit from '@/views/profile/ProfileEdit';
+import UserDetails from '@/views/profile/UserDetails';
+import MyTeamList from '@/views/team/MyTeamList';
+import TeamDetails from '@/views/team/TeamDetails';
+import TeamEdit from '@/views/team/TeamEdit';
+import TeamList from '@/views/team/TeamList';
+import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+
+import PrivateTabNavigator from './PrivateTabNavigator';
 
 const Stack = createStackNavigator();
 
@@ -26,25 +46,28 @@ const Stack = createStackNavigator();
  * @returns {import('react').ReactElement | null} PrivateNavigator component.
  */
 function PrivateNavigator() {
+  // hooks
   const { Fonts, Spaces } = useTheme();
-  const { onboardingViews } = useAuth();
+  const { onboardingViews, userData } = useAuth();
+  const { t } = useTranslation();
 
+  // methods
   /**
    * Get the step number based on the current route name.
    * @param {string} routeName
    * @returns {number} Step number
    */
-  const getStepNumber = (routeName) => {
-    if (!onboardingViews?.includes(routeName)) return 0;
-    return onboardingViews.indexOf(routeName) + 1;
-  };
+  const getStepNumber = (routeName) => onboardingViews?.views?.find(
+    (view) => view.route === routeName,
+  )?.index || 0;
 
   /**
    * Get the total number of steps in the onboarding process.
    * @returns {number} Total steps
    */
-  const getTotalSteps = () => onboardingViews?.length || 0;
+  const getTotalSteps = () => onboardingViews?.totalViews || 0;
 
+  // renderers
   /**
    * Render the stepper component.
    * @param {string} routeName
@@ -60,7 +83,7 @@ function PrivateNavigator() {
    * @returns {import('react').ReactElement}
    */
   const renderStepperIndicator = (routeName) => (
-    <View style={[Spaces.marginHorizontal[24]]}>
+    <View style={[Spaces.marginHorizontal[12]]}>
       <Text style={[Fonts.p2, Fonts.neutral300]}>
         {getStepNumber(routeName)}
         /
@@ -69,27 +92,40 @@ function PrivateNavigator() {
     </View>
   );
 
-  /**
-   * Get the next route name for a given current route
-   * @param {string} currentRoute
-   * @returns {string|undefined} Next route name or undefined if it's the last route
-   */
-  const getNextRoute = (currentRoute) => {
-    const currentIndex = onboardingViews?.indexOf(currentRoute);
-    return onboardingViews?.[currentIndex + 1];
-  };
+  const initialRouteName = useMemo(() => {
+    const route = onboardingViews?.views?.reduce((acc, view) => {
+      if (view.index < acc.index && view.canShow) {
+        return view;
+      }
+      return acc;
+    }, { index: 100, route: '' })?.route;
+    return route || RouteNames.HomeTab;
+  }, [onboardingViews]);
 
-  return onboardingViews?.length ? (
+  const canShowHome = useMemo(() => !!(onboardingViews?.views
+    ?.filter(({ canShow }) => canShow)?.length || 0 <= 2), [onboardingViews]);
+
+  const canShowView = useCallback((/** @type {string} */routeName) => {
+    // console.log('canShowView', routeName, onboardingViews);
+    const view = onboardingViews?.views?.find((item) => item.route === routeName);
+    const viewable = onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0;
+    return !!(view && viewable > 1);
+  }, [onboardingViews]);
+
+  return userData?.documentId ? (
     <Stack.Navigator
       id={undefined}
-      initialRouteName={onboardingViews[0] || RouteNames.Home}
+      initialRouteName={initialRouteName}
+      key={userData?.documentId}
       screenOptions={commonOptions}
     >
-      <Stack.Screen
-        component={Home}
-        name={RouteNames.Home}
-        options={{ headerShown: false }}
-      />
+      {canShowHome ? (
+        <Stack.Screen
+          component={PrivateTabNavigator}
+          name={RouteNames.HomeTab}
+          options={{ headerShown: false }}
+        />
+      ) : null}
       <Stack.Screen
         component={Profile}
         name={RouteNames.Profile}
@@ -103,83 +139,227 @@ function PrivateNavigator() {
         name={RouteNames.ProfileEdit}
         options={{
           ...commonOptions,
-          headerTitle: 'Modifier mes informations',
+          headerTitle: t('profile.titles.edit'),
         }}
       />
-      {onboardingViews?.includes(RouteNames.UserType) && (
+      <Stack.Screen
+        component={AddCoach}
+        name={RouteNames.AddCoach}
+        options={{
+          ...commonOptions,
+          headerTitle: t('addCoach.titles.main'),
+        }}
+      />
+      <Stack.Screen
+        component={ClubList}
+        name={RouteNames.ClubList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('clubList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={ClubFilters}
+        name={RouteNames.ClubFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={ClubDetails}
+        name={RouteNames.Club}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={ClubMembershipRequestList}
+        name={RouteNames.ClubMembershipRequests}
+        options={{
+          ...commonOptions,
+          headerTitle: t('clubMembershipRequestList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamList}
+        name={RouteNames.TeamList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={MyTeamList}
+        name={RouteNames.MyTeamList}
+        options={{
+          ...commonOptions,
+          headerTitle: t('myTeamList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamDetails}
+        name={RouteNames.TeamDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={TeamMembershipRequestList}
+        name={RouteNames.TeamMembershipRequests}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamMembershipRequestList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamEdit}
+        name={RouteNames.TeamEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamEdit.title'),
+        }}
+      />
+      <Stack.Screen
+        component={EventEdit}
+        name={RouteNames.EventEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: t('eventEdit.title'),
+        }}
+      />
+      <Stack.Screen
+        component={EventFilters}
+        name={RouteNames.EventFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={EventDetails}
+        name={RouteNames.EventDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={AddSponsor}
+        name={RouteNames.AddSponsor}
+        options={{
+          ...commonOptions,
+          headerTitle: t('addSponsor.title'),
+        }}
+      />
+      <Stack.Screen
+        component={CreateClubRequest}
+        name={RouteNames.CreateClub}
+        options={{
+          ...commonOptions,
+          headerTitle: t('createClubRequest.title'),
+        }}
+      />
+      <Stack.Screen
+        component={Conversation}
+        name={RouteNames.Conversation}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={UserDetails}
+        name={RouteNames.UserDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}
-          initialParams={{
-            nextRoute: getNextRoute(RouteNames.UserType),
-          }}
-          name={RouteNames.UserType}
-          options={{
-            ...commonOptions,
-            headerRight: () => renderStepperIndicator(RouteNames.UserType),
-            headerTitle: () => renderStepper(RouteNames.UserType),
-          }}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserRole}
+          options={commonOptions}
         />
-      )}
-      {onboardingViews?.includes(RouteNames.UserName) && (
+      ) : null}
+      {canShowView(RouteNames.UserName) ? (
         <Stack.Screen
           component={UserName}
-          initialParams={{ nextRoute: getNextRoute(RouteNames.UserName) }}
+          key={onboardingViews?.totalViews}
           name={RouteNames.UserName}
           options={{
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserName),
             headerTitle: () => renderStepper(RouteNames.UserName),
+            headerTitleAlign: 'left',
+
           }}
         />
-      )}
-      {onboardingViews?.includes(RouteNames.UserSection) && (
+      ) : null}
+      {canShowView(RouteNames.UserSection) ? (
         <Stack.Screen
           component={UserSection}
-          initialParams={{ nextRoute: getNextRoute(RouteNames.UserSection) }}
+          key={onboardingViews?.totalViews}
           name={RouteNames.UserSection}
           options={{
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserSection),
             headerTitle: () => renderStepper(RouteNames.UserSection),
+            headerTitleAlign: 'left',
+
           }}
         />
-      )}
-      {onboardingViews?.includes(RouteNames.UserBirthdate) && (
+      ) : null}
+
+      {canShowView(RouteNames.UserBirthdate) ? (
         <Stack.Screen
           component={UserBirthdate}
-          initialParams={{ nextRoute: getNextRoute(RouteNames.UserBirthdate) }}
+          key={onboardingViews?.totalViews}
           name={RouteNames.UserBirthdate}
           options={{
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserBirthdate),
             headerTitle: () => renderStepper(RouteNames.UserBirthdate),
+            headerTitleAlign: 'left',
+
           }}
         />
-      )}
-      {onboardingViews?.includes(RouteNames.UserAvatar) && (
+      ) : null}
+
+      {canShowView(RouteNames.UserAvatar) ? (
         <Stack.Screen
           component={UserAvatar}
-          initialParams={{ nextRoute: getNextRoute(RouteNames.UserAvatar) }}
+          key={onboardingViews?.totalViews}
           name={RouteNames.UserAvatar}
           options={{
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserAvatar),
             headerTitle: () => renderStepper(RouteNames.UserAvatar),
+            headerTitleAlign: 'left',
+
           }}
         />
-      )}
-      {onboardingViews?.includes(RouteNames.Welcome) && (
+      ) : null}
+
+      {canShowView(RouteNames.Welcome) ? (
         <Stack.Screen
           component={Welcome}
-          initialParams={{ nextRoute: getNextRoute(RouteNames.Welcome) }}
+          key={onboardingViews?.totalViews}
           name={RouteNames.Welcome}
           options={{
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.Welcome),
             headerTitle: () => renderStepper(RouteNames.Welcome),
+            headerTitleAlign: 'left',
+
           }}
         />
-      )}
+      ) : null}
+
     </Stack.Navigator>
   ) : null;
 }
