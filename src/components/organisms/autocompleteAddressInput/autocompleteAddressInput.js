@@ -41,7 +41,7 @@ function AutocompleteAddressInput({
 
   // variables
   const placesOptions = useMemo(() => {
-    if (places?.length > 0) {
+    if (places?.length) {
       return places.map(
         /**
          * Represents the properties and geometry of the places.

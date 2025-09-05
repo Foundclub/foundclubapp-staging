@@ -1,4 +1,3 @@
-import useNotifications from '@/hooks/useNotifications';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +16,8 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import useNotifications from '@/hooks/useNotifications';
 
 const searchOptions = [
   {

@@ -77,9 +77,6 @@ export const getTabScreenCommonOptions = ({
     display: icon ? 'flex' : 'none',
   },
   tabBarInactiveTintColor: getLabelColor(labelScheme, false),
-  tabBarItemStyle: {
-    marginTop: 8,
-  },
   tabBarLabel: label,
   tabBarLabelStyle: {
     fontFamily: 'Montserrat-Bold',
@@ -91,6 +88,5 @@ export const getTabScreenCommonOptions = ({
     borderTopColor: getThemeColors().primary900,
     borderTopWidth: 1,
     margin: 0,
-    minHeight: 70,
   },
 });

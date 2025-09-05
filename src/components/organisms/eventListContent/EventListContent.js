@@ -372,7 +372,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           <FlashList
             contentContainerStyle={Spaces.paddingBottom[64]}
             data={events}
-            estimatedItemSize={120}
+            estimatedItemSize={850}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}
             onEndReached={handleEndReached}
@@ -385,6 +385,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         </View>
       </WithDataWrapper>
       <JoinEventModal
+        clubName={selectedEvent?.team?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}
         eventId={selectedEvent?.documentId || ''}
         isVisible={isJoinModalVisible}

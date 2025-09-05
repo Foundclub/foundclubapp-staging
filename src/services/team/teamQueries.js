@@ -28,7 +28,7 @@ export const useGetTeams = (params, options) => useInfiniteQuery({
 /**
  * React Query hook to fetch a single team
  * @param {string} teamId
- * @param {any} [options]
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
  * @returns {import('@tanstack/react-query').UseQueryResult<Team>}
  */
 export const useGetTeam = (teamId, options) => useQuery({

@@ -5,10 +5,10 @@ import { getPlacesFromCoordinates, searchPlaces } from './placesService';
 /**
  * Get places query.
  * @param {object} param - The parameters.
- * @param {import('@tanstack/react-query').QueriesOptions<any>} param.options - The query options
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [param.options]
  * @param {string} param.searchParam - The search parameter
  * @param {string} [param.type] - The type of the input.
- * @returns {{data: PlaceSearch, isLoading: boolean}} - The query object
+ * @returns {import('@tanstack/react-query').UseQueryResult<Place[]>}
  */
 export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
   queryFn: () => searchPlaces(searchParam, type),
@@ -19,10 +19,10 @@ export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
 /**
  * Get places from coordinates query.
  * @param {object} param - The parameters.
- * @param {import('@tanstack/react-query').QueriesOptions<any>} [param.options] - The query options
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [param.options]
  * @param {number} param.lat - The latitude
  * @param {number} param.lon - The longitude
- * @returns {{data: Place, isLoading: boolean}} - The query object
+ * @returns {import('@tanstack/react-query').UseQueryResult<{data: Place, isLoading: boolean}>}
  */
 export const useGetPlacesFromCoordinates = ({ lat, lon, options }) => useQuery({
   queryFn: () => getPlacesFromCoordinates({ lat, lon }),

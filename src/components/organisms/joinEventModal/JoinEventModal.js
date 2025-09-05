@@ -18,9 +18,11 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {import('@tanstack/react-query').UseMutationResult<EventParticipation,
  * Error, {user: string, event: string, reason?: string},
  * unknown>} props.createEventParticipationMutation - Mutation for creating event participation
+ * @param {string} props.clubName - Name of the club
  * @returns {import('react').ReactElement} JoinEventModal component
  */
 function JoinEventModal({
+  clubName,
   createEventParticipationMutation,
   eventId,
   isVisible,
@@ -58,12 +60,15 @@ function JoinEventModal({
       close={handleClose}
       isVisible={isVisible}
     >
-      <ScrollView contentContainerStyle={[Spaces.gap[32], Spaces.padding[24]]}>
+      <ScrollView
+        contentContainerStyle={[Spaces.gap[32], Spaces.padding[24]]}
+        style={[{ height: 500 }]}
+      >
         <Text style={[Fonts.p1Black, Fonts.neutral00]}>
           {t('eventList.joinModal.title')}
         </Text>
         <Text style={[Fonts.p1, Fonts.neutral00]}>
-          {t('eventList.joinModal.description')}
+          {t('eventList.joinModal.description', { clubName })}
         </Text>
 
         <View style={[Spaces.gap[16]]}>

@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Platform, Share } from 'react-native';
+import {
+  Alert, Linking, Platform, Share,
+} from 'react-native';
 
 import { storage, useAppContext } from '@/store/appContext';
 
@@ -34,6 +36,9 @@ const useAuth = () => {
   // api calls
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
+    onError: (error) => {
+      Alert.alert(t('APIerrors.otpError'), error.message || error.toString());
+    },
     onSuccess: (data) => {
       setConfirm(data);
     },
@@ -41,6 +46,9 @@ const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: login,
+    onError: (error) => {
+      Alert.alert(t('APIerrors.otpError'), error.message || error.toString());
+    },
     onSuccess: async (data) => {
       queryClient.clear();
       appDispatch({
