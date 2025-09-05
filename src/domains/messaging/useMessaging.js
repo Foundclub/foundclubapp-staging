@@ -1,7 +1,7 @@
-import useSocket, { EVENTS } from '@/hooks/useSocket';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 
+import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
 import { storage } from '@/store/appContext';
 
 import {
@@ -11,7 +11,7 @@ import {
   getChats,
 } from '@/services/chat/chatService';
 
-import { getConversationName, getLastReadMessageKey, getUnreadStatus } from './messagingUseCases';
+import useSocket, { EVENTS } from '@/hooks/useSocket';
 
 /**
  * Custom hook to handle messaging functionality

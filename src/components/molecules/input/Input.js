@@ -133,7 +133,7 @@ const Input = forwardRef(
                   props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
                   Alignments.fill,
                   props.style,
-                  props.multiline ? null : { height: 40 },
+                  { minHeight: 30 },
                 ]}
                 textAlignVertical={props.textAlignVertical}
                 value={props.value}

@@ -219,6 +219,7 @@ const AutocompleteSelect = forwardRef(
               {/* options */}
               <ScrollView
                 contentContainerStyle={[Spaces.gap[12], Spaces.marginTop[16]]}
+                style={{ height: 500 }}
               >
                 {props.options.map((option) => (
                   <View

@@ -173,7 +173,7 @@ function ClubListContent() {
           <FlashList
             contentContainerStyle={Spaces.paddingBottom[64]}
             data={clubs}
-            estimatedItemSize={120}
+            estimatedItemSize={250}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}
             onEndReached={handleEndReached}

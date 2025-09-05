@@ -408,7 +408,8 @@ function EventDetails({ navigation, route }) {
    */
   const renderActionButtons = () => {
     const canEdit = canEditEvent(event?.team?.documentId || '');
-    return event ? (
+    const hasDateInPast = event?.date ? new Date(event?.date) < new Date() : true;
+    return event && !hasDateInPast ? (
       <EventAnswerButtons
         event={event}
         hasPendingRequest={hasPendingRequest}
@@ -942,6 +943,7 @@ function EventDetails({ navigation, route }) {
       </View>
 
       <JoinEventModal
+        clubName={event?.team?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}
         eventId={eventId}
         isVisible={isJoinModalVisible}
