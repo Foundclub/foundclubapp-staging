@@ -98,7 +98,7 @@ android {
         release {
             storeFile file("keystore")
             storePassword project.hasProperty('RELEASE_STORE_PASSWORD') ? project.RELEASE_STORE_PASSWORD : ''
-            keyAlias "TO_REPLACE"
+            keyAlias "foundclub"
             keyPassword project.hasProperty('RELEASE_KEY_PASSWORD') ? project.RELEASE_KEY_PASSWORD : ''
         }
     }
