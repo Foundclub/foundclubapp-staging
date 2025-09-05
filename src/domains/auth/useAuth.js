@@ -37,7 +37,7 @@ const useAuth = () => {
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
     onError: (error) => {
-      Alert.alert(t('APIerrors.otpError'), error.message || error.toString());
+      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
     },
     onSuccess: (data) => {
       setConfirm(data);
@@ -47,7 +47,7 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onError: (error) => {
-      Alert.alert(t('APIerrors.otpError'), error.message || error.toString());
+      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
     },
     onSuccess: async (data) => {
       queryClient.clear();
