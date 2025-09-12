@@ -47,7 +47,7 @@ function TeamListContent({
     refetch,
   } = useGetTeams({
     clubId,
-    pageSize: 10,
+    pageSize: 15,
     playerId,
   });
 

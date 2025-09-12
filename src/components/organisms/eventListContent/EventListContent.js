@@ -70,7 +70,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const eventsConfig = useMemo(() => ({
     ...(showFilters ? eventFilters : {}),
     ...additionalFilters,
-    pageSize: 7,
+    pageSize: 15,
   }), [showFilters, eventFilters, additionalFilters]);
 
   const {

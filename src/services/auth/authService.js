@@ -48,17 +48,26 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
 /**
  * Confirm OTP code and login
  * @param {object} params
- * @param {any} params.confirm - The confirmation object
+ * @param {import('@react-native-firebase/auth').FirebaseAuthTypes.ConfirmationResult
+ * } params.confirm - The confirmation object
  * @param {string} params.code - The OTP code
  * @returns {Promise<{
  *   idToken: string,
- *   idUser: import('@react-native-firebase/auth').FirebaseAuthTypes.User,
+ *   idUser?: import('@react-native-firebase/auth').FirebaseAuthTypes.User,
  *   token: string
  * }>} The promise
  */
 export const login = async ({ code, confirm }) => {
-  const firebaseResult = await confirm.confirm(code);
-  const idToken = await firebaseResult.user.getIdToken();
+  // Check if user is already authenticated (auto-verification case)
+  const { currentUser } = getAuth();
+
+  let firebaseResult;
+  if (currentUser) {
+    firebaseResult = { user: currentUser };
+  } else {
+    firebaseResult = await confirm.confirm(code);
+  }
+  const idToken = await firebaseResult?.user.getIdToken() || '';
 
   const result = await client.post('/firebase-auth/login', { idToken });
   try {
@@ -68,7 +77,7 @@ export const login = async ({ code, confirm }) => {
     }).required();
     await schema.validateAsync(result.data, { allowUnknown: true });
 
-    return { idToken, idUser: firebaseResult.user, token: result.data.jwt };
+    return { idToken, idUser: firebaseResult?.user, token: result.data.jwt };
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`API response does not match getCurrentUser Schema: ${errorToDisplay}`);

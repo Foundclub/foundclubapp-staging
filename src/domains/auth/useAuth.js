@@ -1,5 +1,8 @@
+import auth from '@react-native-firebase/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Linking, Platform, Share,
@@ -11,6 +14,7 @@ import {
   deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
+import client from '@/services/client';
 
 import {
   formatBirthdateToDisplay,
@@ -23,15 +27,24 @@ import {
  * @inheritdoc
  */
 const useAuth = () => {
-  // local states
+  // local sta
   const [confirm, setConfirm] = useState(/**
      @type {import('@react-native-firebase/auth')
     .FirebaseAuthTypes.ConfirmationResult | undefined} */(undefined),
   );
+  const [isCodeAutoVerified, setIsCodeAutoVerified] = useState(false);
+
   // hooks
   const [, appDispatch] = useAppContext();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  // Track auto-verification state
+  useEffect(() => {
+    if (auth().currentUser && confirm) {
+      setIsCodeAutoVerified(true);
+    }
+  }, [confirm]);
 
   // api calls
   const otpMutation = useMutation({
@@ -262,7 +275,7 @@ const useAuth = () => {
     canManageEvents,
     canManageTeam,
     canSendMessageToUser,
-    canShowCodeButton: !!confirm,
+    canShowCodeButton: !!confirm && !isCodeAutoVerified,
     confirm,
     formatBirthdateToDisplay,
     formatBirthdateToSend,

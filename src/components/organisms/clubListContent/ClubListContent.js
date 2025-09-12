@@ -38,7 +38,7 @@ function ClubListContent() {
     isLoading,
     refetch,
   } = useGetClubs(Object.assign(clubFilters || {}, {
-    pageSize: 10,
+    pageSize: 30,
   }));
   const navigation = useNavigation();
   const { t } = useTranslation();
