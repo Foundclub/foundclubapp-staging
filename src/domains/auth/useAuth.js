@@ -14,7 +14,6 @@ import {
   deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
-import client from '@/services/client';
 
 import {
   formatBirthdateToDisplay,
