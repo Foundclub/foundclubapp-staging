@@ -1,7 +1,6 @@
-import auth from '@react-native-firebase/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,19 +30,11 @@ const useAuth = () => {
      @type {import('@react-native-firebase/auth')
     .FirebaseAuthTypes.ConfirmationResult | undefined} */(undefined),
   );
-  const [isCodeAutoVerified, setIsCodeAutoVerified] = useState(false);
 
   // hooks
   const [, appDispatch] = useAppContext();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-
-  // Track auto-verification state
-  useEffect(() => {
-    if (auth().currentUser && confirm) {
-      setIsCodeAutoVerified(true);
-    }
-  }, [confirm]);
 
   // api calls
   const otpMutation = useMutation({
@@ -274,7 +265,7 @@ const useAuth = () => {
     canManageEvents,
     canManageTeam,
     canSendMessageToUser,
-    canShowCodeButton: !!confirm && !isCodeAutoVerified,
+    canShowCodeButton: !!confirm,
     confirm,
     formatBirthdateToDisplay,
     formatBirthdateToSend,
