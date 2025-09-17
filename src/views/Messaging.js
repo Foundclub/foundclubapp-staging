@@ -244,7 +244,6 @@ function Messaging({ navigation }) {
         >
           <FlashList
             data={allChats}
-            estimatedItemSize={80}
             keyExtractor={(item) => item.documentId}
             ListEmptyComponent={renderEmptyList}
             onEndReached={() => hasNextPage && fetchNextPage()}

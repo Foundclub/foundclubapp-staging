@@ -206,7 +206,6 @@ function TeamListContent({
         >
           <FlashList
             data={teams}
-            estimatedItemSize={600}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}
             onEndReached={handleEndReached}

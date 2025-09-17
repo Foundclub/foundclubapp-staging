@@ -370,7 +370,6 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         >
           <FlashList
             data={events}
-            estimatedItemSize={850}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}
             onEndReached={handleEndReached}
