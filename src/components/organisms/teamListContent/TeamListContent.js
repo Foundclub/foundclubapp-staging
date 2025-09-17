@@ -205,7 +205,6 @@ function TeamListContent({
           ApplicationStyle.borderRadius2]}
         >
           <FlashList
-            contentContainerStyle={Spaces.paddingBottom[64]}
             data={teams}
             estimatedItemSize={600}
             keyExtractor={(item) => item?.documentId || 'unknown'}

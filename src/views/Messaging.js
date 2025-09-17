@@ -236,14 +236,13 @@ function Messaging({ navigation }) {
       <WithDataWrapper
         error={error?.message}
         isLoading={isLoading}
+        wrapperStyle={[Alignments.fill]}
       >
         <View style={[
           Alignments.fill,
-          ApplicationStyle.borderRadius2,
-          { minHeight: 500 }]}
+          ApplicationStyle.borderRadius2]}
         >
           <FlashList
-            contentContainerStyle={Spaces.paddingBottom[64]}
             data={allChats}
             estimatedItemSize={80}
             keyExtractor={(item) => item.documentId}

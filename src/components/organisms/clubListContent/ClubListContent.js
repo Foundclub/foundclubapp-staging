@@ -171,7 +171,6 @@ function ClubListContent() {
         ]}
         >
           <FlashList
-            contentContainerStyle={Spaces.paddingBottom[64]}
             data={clubs}
             estimatedItemSize={250}
             keyExtractor={(item) => item?.documentId || 'unknown'}

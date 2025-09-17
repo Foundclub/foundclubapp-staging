@@ -213,7 +213,6 @@ function ClubMembershipRequestList({ route }) {
           ApplicationStyle.borderRadius2]}
         >
           <FlashList
-            contentContainerStyle={{ paddingBottom: 20 }}
             data={requests}
             estimatedItemSize={120}
             keyExtractor={(item) => item?.documentId || 'unknown'}

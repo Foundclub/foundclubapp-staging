@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useGetChats } from '@/services/chat/chatQueries';
 
+import useAuth from '../auth/useAuth';
 import useMessaging from './useMessaging';
 
 /**
@@ -10,6 +11,7 @@ import useMessaging from './useMessaging';
  */
 const useUnreadMessages = () => {
   const [unreadCount, setUnreadCount] = useState(0);
+  const { userData } = useAuth();
   const { getUnreadStatus } = useMessaging();
   const { data: chatsData } = useGetChats();
 
@@ -25,7 +27,9 @@ const useUnreadMessages = () => {
       }
 
       const lastMessage = chat.messages[0];
-      if (!lastMessage?.createdAt) return total;
+      if (!lastMessage?.createdAt || lastMessage?.sender?.documentId === userData?.documentId) {
+        return total;
+      }
 
       const hasUnread = getUnreadStatus(
         chat.documentId,
@@ -34,7 +38,7 @@ const useUnreadMessages = () => {
 
       return hasUnread ? total + 1 : total;
     }, 0);
-  }, [chatsData, getUnreadStatus]);
+  }, [chatsData, getUnreadStatus, userData]);
 
   useEffect(() => {
     setUnreadCount(countUnreadMessages());

@@ -369,7 +369,6 @@ function EventListContent({ additionalFilters, showFilters = false }) {
           ApplicationStyle.borderRadius2]}
         >
           <FlashList
-            contentContainerStyle={Spaces.paddingBottom[64]}
             data={events}
             estimatedItemSize={850}
             keyExtractor={(item) => item?.documentId || 'unknown'}
