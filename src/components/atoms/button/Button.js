@@ -65,6 +65,7 @@ function Button({
           >
             {title ? (
               <Text
+                numberOfLines={1}
                 style={[
                   Fonts.p1Bold,
                   ApplicationStyle[`buttonText${variant}`],

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
@@ -64,6 +65,7 @@ function UserBirthdate({ navigation }) {
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -99,7 +101,10 @@ function UserBirthdate({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.paddingVertical[24]]}
+      contentContainerStyle={[
+        Spaces.paddingVertical[24],
+        { marginBottom: insets.bottom },
+      ]}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

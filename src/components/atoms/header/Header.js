@@ -13,9 +13,9 @@ function Header() {
    * @type {import('react-native').ImageStyle}
    */
   const logoSize = {
-    height: 23,
+    height: 30,
     resizeMode: 'contain',
-    width: 211,
+    width: 222,
   };
 
   return (

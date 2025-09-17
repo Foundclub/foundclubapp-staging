@@ -168,7 +168,7 @@ function ClubListContent() {
         <View style={[
           Alignments.fill,
           ApplicationStyle.borderRadius2,
-          { minHeight: 500 }]}
+        ]}
         >
           <FlashList
             contentContainerStyle={Spaces.paddingBottom[64]}

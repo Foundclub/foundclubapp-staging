@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -25,6 +26,7 @@ import { updateMe } from '@/services/auth/authService';
 function UserRole({ navigation }) {
   const { data: userData } = useGetMe();
   const { getNextOnboardingRoute, USER_ROLES } = useAuth();
+  const insets = useSafeAreaInsets();
   // local state
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),
@@ -71,6 +73,7 @@ function UserRole({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
+        { marginBottom: insets.bottom },
       ]}
     >
       <ScrollView

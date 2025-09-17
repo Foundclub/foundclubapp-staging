@@ -71,9 +71,6 @@ function AddCoach({ navigation }) {
   });
 
   const createTrainerMutation = useMutation({
-    meta: {
-      preventToastError: true,
-    },
     mutationFn: createTrainer,
     onError: (/** @type {import('axios').AxiosError} */error) => {
       const errorResponse = error?.response?.data?.error;

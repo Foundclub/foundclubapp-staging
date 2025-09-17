@@ -115,6 +115,7 @@ function MyEventList({ navigation }) {
     setTimeFilter(filter);
     if (filter === 'date') {
       setIsDatePickerVisible(true);
+      setSelectedDate(new Date());
     } else {
       setIsTimeFilterModalVisible(false);
     }
@@ -160,7 +161,7 @@ function MyEventList({ navigation }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
         <ProfileButton />
       </View>
       <TouchableOpacity

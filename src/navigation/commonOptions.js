@@ -1,4 +1,5 @@
 import { CardStyleInterpolators } from '@react-navigation/stack';
+import { Platform } from 'react-native';
 
 import getThemeColors from '@/theme/colors';
 import { lineHeights, sizes } from '@/theme/fonts';
@@ -47,11 +48,13 @@ const getLabelColor = (labelScheme, focused) => {
  * @param {Function} [props.renderTabBarIcon] - The render tab bar icon function.
  * @param {number} [props.badge] - The badge of the tab.
  * @param {'light' | 'dark'} [props.labelScheme] - The color scheme of the label.
+ * @param {number} [props.bottomInset] - The bottom inset to account for safe area.
  * @returns {import('@react-navigation/bottom-tabs').BottomTabNavigationOptions}
  */
 export const getTabScreenCommonOptions = ({
   activeColor,
   badge,
+  bottomInset = 0,
   icon = undefined,
   label,
   labelScheme = 'light',
@@ -87,6 +90,7 @@ export const getTabScreenCommonOptions = ({
     backgroundColor: getThemeColors().primary700,
     borderTopColor: getThemeColors().primary900,
     borderTopWidth: 1,
-    margin: 0,
+    height: Platform.OS === 'ios' ? 80 : 80 + bottomInset,
+    marginBottom: 0,
   },
 });

@@ -161,8 +161,9 @@ function TeamMembershipRequestList({ route }) {
           >
             {t('teamMembershipRequestList.fields.pending', {
               firstname: item?.user?.firstname,
-              teamName: item?.team?.name,
             })}
+            {' '}
+            {item?.team?.name}
           </Text>
         </View>
         )}
@@ -223,8 +224,7 @@ function TeamMembershipRequestList({ route }) {
       >
         <View style={[
           Alignments.fill,
-          ApplicationStyle.borderRadius2,
-          { minHeight: 500 }]}
+          ApplicationStyle.borderRadius2]}
         >
           <FlashList
             contentContainerStyle={{ paddingBottom: 20 }}

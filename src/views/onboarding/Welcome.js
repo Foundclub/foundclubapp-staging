@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image, ScrollView, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +23,7 @@ function Welcome({ navigation }) {
     Alignments, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const handleNext = () => {
     navigation.reset({
@@ -38,6 +40,7 @@ function Welcome({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
+        { marginBottom: insets.bottom },
       ]}
     >
       <ScrollView

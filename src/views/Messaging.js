@@ -121,7 +121,9 @@ function Messaging({ navigation }) {
    * @returns {import('react').ReactElement} The rendered chat item
    */
   const renderChat = ({ item: chat }) => {
-    const lastMessage = chat.messages?.[0];
+    const lastMessage = chat.messages?.filter(
+      ({ sender }) => sender?.documentId !== userData?.documentId,
+    )?.[0];
 
     const hasUnread = (lastMessage && getUnreadStatus(
       chat.documentId,
@@ -225,7 +227,7 @@ function Messaging({ navigation }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
         <ProfileButton />
       </View>
       <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>

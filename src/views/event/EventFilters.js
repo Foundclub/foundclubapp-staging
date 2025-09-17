@@ -88,7 +88,7 @@ function EventFilters({ navigation }) {
       club: eventFilters?.club || null,
       date: eventFilters?.date || null,
       level: eventFilters?.level || '',
-      radius: eventFilters?.radius || 2,
+      radius: eventFilters?.radius || 10,
       team: eventFilters?.team || null,
       type: eventFilters?.type || '',
     },
@@ -233,7 +233,7 @@ function EventFilters({ navigation }) {
       startDateBefore = endOfDay;
     }
 
-    // fomar place params
+    // fomat place params
     const coordinates = data.city?.value?.split('|');
     const geohash = coordinates ? getGeohashForPointAndRadius(
       parseFloat(coordinates[1]),
@@ -312,7 +312,7 @@ function EventFilters({ navigation }) {
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={2}
+                minimumValue={10}
                 onValueChange={onChange}
                 step={2}
                 style={[Alignments.fullWidth, { height: 50 }]}

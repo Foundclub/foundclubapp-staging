@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -35,6 +36,7 @@ function UserAvatar({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const insets = useSafeAreaInsets();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -58,6 +60,7 @@ function UserAvatar({ navigation }) {
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
+        { marginBottom: insets.bottom },
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,

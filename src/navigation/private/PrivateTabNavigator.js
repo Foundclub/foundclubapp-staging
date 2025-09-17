@@ -10,6 +10,8 @@ import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
 import MyTeamList from '@/views/team/MyTeamList';
 // utils and misc
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import TeamList from '@/views/team/TeamList';
 
 import useTheme from '../../theme/themeContext';
@@ -28,6 +30,7 @@ function PrivateTabNavigator() {
   const { Colors, Images } = useTheme();
   const { unreadCount } = useUnreadMessages();
   const { canManageTeam, userData } = useAuth();
+  const insets = useSafeAreaInsets();
 
   /**
    * Render tab bar icon.
@@ -84,6 +87,7 @@ function PrivateTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions({
             activeColor: Colors.primary500,
+            bottomInset: insets.bottom,
             icon: Images.search,
             label: t('menu.search'),
             renderTabBarIcon,
@@ -97,6 +101,7 @@ function PrivateTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions({
             activeColor: Colors.primary500,
+            bottomInset: insets.bottom,
             icon: Images.stadium,
             label: t('menu.planning'),
             renderTabBarIcon,
@@ -116,6 +121,7 @@ function PrivateTabNavigator() {
             headerShown: false,
             ...getTabScreenCommonOptions({
               activeColor: Colors.primary500,
+              bottomInset: insets.bottom,
               icon: Images.strokeShield,
               label: t('menu.myTeams'),
               renderTabBarIcon,
@@ -131,6 +137,7 @@ function PrivateTabNavigator() {
           ...getTabScreenCommonOptions({
             activeColor: Colors.primary500,
             badge: unreadCount,
+            bottomInset: insets.bottom,
             icon: Images.envelope,
             label: t('menu.chat'),
             renderTabBarIcon,

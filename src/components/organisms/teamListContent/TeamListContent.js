@@ -202,8 +202,7 @@ function TeamListContent({
       >
         <View style={[
           Alignments.fill,
-          ApplicationStyle.borderRadius2,
-          { minHeight: 500 }]}
+          ApplicationStyle.borderRadius2]}
         >
           <FlashList
             contentContainerStyle={Spaces.paddingBottom[64]}

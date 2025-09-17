@@ -45,7 +45,7 @@ function MyTeamList({ route }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 23, resizeMode: 'cover', width: 222 }} />
+        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
         <ProfileButton />
       </View>
       <TeamListContent playerId={playerId} />

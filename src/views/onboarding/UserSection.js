@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -26,6 +27,7 @@ function UserSection({ navigation }) {
   const { data: userData } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
   const { data: sections } = useGetSections();
+  const insets = useSafeAreaInsets();
 
   // local state
   const [section, setSection] = useState(userData?.section?.documentId || '');
@@ -64,6 +66,7 @@ function UserSection({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
+        { marginBottom: insets.bottom },
       ]}
     >
       <View style={[Spaces.gap[40]]}>

@@ -909,7 +909,7 @@ export default {
     },
     fields: {
       accepted: 'Demande acceptée',
-      pending: "{{firstname}} s'est signalé comme joueur·se de l'équipe {{teamName}} ",
+      pending: "{{firstname}} s'est signalé comme joueur·se de l'équipe",
       rejected: 'Demande refusée',
     },
     noData: 'Aucune demande d\'adhésion en attente',

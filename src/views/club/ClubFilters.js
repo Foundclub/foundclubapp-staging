@@ -51,7 +51,7 @@ function ClubFilters({ navigation }) {
     activity: clubFilters?.activity || '',
     city: clubFilters?.city || { label: '', value: '' },
     name: clubFilters?.name || '',
-    radius: clubFilters?.radius || 2,
+    radius: clubFilters?.radius || 10,
   }), [clubFilters]);
 
   const {
@@ -162,7 +162,7 @@ function ClubFilters({ navigation }) {
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={2}
+                minimumValue={10}
                 onValueChange={onChange}
                 step={2}
                 style={[Alignments.fullWidth, { height: 50 }]}
