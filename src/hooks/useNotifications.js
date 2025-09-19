@@ -10,6 +10,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { MMKV } from 'react-native-mmkv';
 
 import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -18,6 +19,26 @@ import { addDeviceToken } from '@/services/auth/authService';
 
 import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
+
+// Create a storage instance for notifications
+const notificationStorage = new MMKV({
+  id: 'notifications-storage',
+});
+
+/**
+ * Check if a notification is a duplicate based on its messageId
+ * @param {string} [messageId]
+ * @returns {boolean}
+ */
+const isNotificationDuplicate = (messageId) => {
+  if (!messageId) return false;
+  const lastNotificationId = notificationStorage.getString('last-notification-id');
+  if (lastNotificationId === messageId) {
+    return true;
+  }
+  notificationStorage.set('last-notification-id', messageId);
+  return false;
+};
 
 const requestUserPermission = async () => {
   const messagingInstance = getMessaging(getApp());
@@ -227,6 +248,12 @@ const useNotifications = ({ navigate }) => {
 
       const messageType = remoteMessage.data?.type;
       if (messageType && typeof messageType === 'string' && skipTypes.includes(messageType)) {
+        return;
+      }
+
+      // Check for duplicate notifications using messageId
+      const { messageId } = remoteMessage;
+      if (isNotificationDuplicate(messageId)) {
         return;
       }
 

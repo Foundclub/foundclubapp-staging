@@ -228,7 +228,10 @@ function MyEventList({ navigation }) {
       }
 
       <BottomModal
-        close={() => setIsTimeFilterModalVisible(false)}
+        close={() => {
+          setIsTimeFilterModalVisible(false);
+          setIsDatePickerVisible(false);
+        }}
         isVisible={isTimeFilterModalVisible}
         style={{ minHeight: '80%' }}
       >
@@ -248,6 +251,7 @@ function MyEventList({ navigation }) {
                   setIsDatePickerVisible(false);
                 }
               }}
+              themeVariant="dark"
               value={selectedDate || new Date()}
             />
             {Platform.OS === 'ios'

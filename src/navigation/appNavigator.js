@@ -40,6 +40,7 @@ function AppNavigator({ navigationIntegration }) {
 
   return (
     <NavigationContainer
+      key={auth?.token || 'no-token'}
       linking={linking}
       onReady={() => {
         navigationIntegration.registerNavigationContainer(containerRef);
