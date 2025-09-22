@@ -99,12 +99,13 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
 
   try {
     const schema = Joi.object({
-      data: Joi.array().items(chatSchema).required(),
+      data: Joi.array().items(chatSchema).empty(Joi.array().length(0)),
     }).required();
 
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
+    console.log('validation result', validationResult);
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;

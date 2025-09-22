@@ -49,7 +49,7 @@ function Messaging({ navigation }) {
   });
 
   const allChats = useMemo(() => (chatsData?.pages ? chatsData?.pages?.reduce(
-    (acc, page) => acc.concat(page.data),
+    (acc, page) => acc.concat(page.data || []),
     /** @type {Chat[]} */([]),
   )
     : []), [chatsData?.pages]);
