@@ -157,7 +157,7 @@ function ClubDetails({ navigation, route }) {
         {
           onPress: () => {
             if (process.env.CONTACT_URL) {
-              Linking.openURL(process.env.CONTACT_URL);
+              Linking.openURL(encodeURI(process.env.CONTACT_URL));
             }
           },
           text: t('clubDetails.alerts.myClub.actions.confirm'),

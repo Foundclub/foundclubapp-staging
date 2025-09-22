@@ -105,7 +105,6 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    console.log('validation result', validationResult);
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
