@@ -98,6 +98,9 @@ function JoinEventModal({
               Alignments.rowReverse,
             ]}
           />
+          <Text style={[Fonts.p2, Fonts.neutral00]}>
+            {t('eventList.joinModal.validation')}
+          </Text>
         </View>
       </ScrollView>
 
