@@ -157,14 +157,8 @@ function ClubDetails({ navigation, route }) {
         {
           onPress: async () => {
             try {
-              // Affiche toujours la valeur de la variable d'environnement
-              Alert.alert(
-                'Variable d\'environnement',
-                `CONTACT_URL = ${process.env.CONTACT_URL || 'undefined'}`,
-              );
-
               if (process.env.CONTACT_URL) {
-                await Linking.openURL(encodeURI(process.env.CONTACT_URL));
+                await Linking.openURL(process.env.CONTACT_URL);
               }
             } catch (errorMessage) {
               Alert.alert(
