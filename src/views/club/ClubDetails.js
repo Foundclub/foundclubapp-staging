@@ -156,16 +156,7 @@ function ClubDetails({ navigation, route }) {
         },
         {
           onPress: async () => {
-            try {
-              if (process.env.CONTACT_URL) {
-                await Linking.openURL(process.env.CONTACT_URL);
-              }
-            } catch (errorMessage) {
-              Alert.alert(
-                'Erreur',
-                `Impossible d'ouvrir l'URL: ${errorMessage}\nCONTACT_URL = ${process.env.CONTACT_URL || 'undefined'}`,
-              );
-            }
+            await Linking.openURL('https://foundclubpro.com/#inscrire-club');
           },
           text: t('clubDetails.alerts.myClub.actions.confirm'),
         },
