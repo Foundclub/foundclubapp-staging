@@ -8,7 +8,6 @@ import useTheme from '@/theme/themeContext';
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 
 import PublicNavigator from './public/PublicMainNavigator';
-import { RouteNames } from './routeNames';
 
 /**
  * AppNavigator component.
@@ -27,21 +26,9 @@ function AppNavigator({ navigationIntegration }) {
     ? ApplicationStyle.darkNavigationTheme
     : ApplicationStyle.lightNavigationTheme;
 
-  const linking = {
-    config: {
-      screens: {
-        [RouteNames.TeamDetails]: 'team/:teamId',
-      },
-    },
-    prefixes: [
-      'foundclub://',
-    ],
-  };
-
   return (
     <NavigationContainer
       key={auth?.token || 'no-token'}
-      linking={linking}
       onReady={() => {
         navigationIntegration.registerNavigationContainer(containerRef);
       }}

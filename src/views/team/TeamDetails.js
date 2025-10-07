@@ -435,7 +435,6 @@ function TeamDetails({ navigation, route }) {
                       isOption
                       onPress={() => inviteTeamPlayers({
                         clubName: team?.club?.name,
-                        teamId: team?.documentId,
                         teamName: team?.name,
                       })}
                       variant="Primary"
