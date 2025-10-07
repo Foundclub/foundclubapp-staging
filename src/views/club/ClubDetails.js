@@ -155,9 +155,22 @@ function ClubDetails({ navigation, route }) {
           text: t('clubDetails.alerts.myClub.actions.cancel'),
         },
         {
-          onPress: () => {
-            if (process.env.CONTACT_URL) {
-              Linking.openURL(encodeURI(process.env.CONTACT_URL));
+          onPress: async () => {
+            try {
+              // Affiche toujours la valeur de la variable d'environnement
+              Alert.alert(
+                'Variable d\'environnement',
+                `CONTACT_URL = ${process.env.CONTACT_URL || 'undefined'}`,
+              );
+
+              if (process.env.CONTACT_URL) {
+                await Linking.openURL(encodeURI(process.env.CONTACT_URL));
+              }
+            } catch (errorMessage) {
+              Alert.alert(
+                'Erreur',
+                `Impossible d'ouvrir l'URL: ${errorMessage}\nCONTACT_URL = ${process.env.CONTACT_URL || 'undefined'}`,
+              );
             }
           },
           text: t('clubDetails.alerts.myClub.actions.confirm'),
