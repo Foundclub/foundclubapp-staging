@@ -1,6 +1,6 @@
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useMemo } from 'react';
-import { ImageBackground, Platform, View } from 'react-native';
+import { ImageBackground, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
@@ -29,9 +29,8 @@ function ScreenContainer({
 
   // constants
   const containerSpaces = useMemo(() => ({
-    paddingBottom: Platform.OS === 'android' ? insets.bottom : 0,
     paddingTop: headerHeightNative || insets.top,
-  }), [headerHeightNative, insets.top, insets.bottom]);
+  }), [headerHeightNative, insets.top]);
 
   return (
     <ImageBackground

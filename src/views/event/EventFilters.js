@@ -6,8 +6,9 @@ import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, View,
+  Platform, ScrollView, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
@@ -73,6 +74,7 @@ function EventFilters({ navigation }) {
   } = useTheme();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getGeohashForPointAndRadius } = usePlaces();
+  const insets = useSafeAreaInsets();
 
   const {
     control,
@@ -270,6 +272,7 @@ function EventFilters({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
+        { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 },
       ]}
     >
       <ScrollView

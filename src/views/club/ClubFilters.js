@@ -3,7 +3,8 @@ import Slider from '@react-native-community/slider';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
@@ -42,6 +43,7 @@ function ClubFilters({ navigation }) {
   } = useTheme();
   const [{ clubFilters }, appDispatch] = useAppContext();
   const { getGeohashForPointAndRadius } = usePlaces();
+  const insets = useSafeAreaInsets();
 
   const {
     data: allActivities,
@@ -123,6 +125,7 @@ function ClubFilters({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
+        { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 },
       ]}
     >
       <View style={[Spaces.gap[40], Spaces.marginTop[16]]}>
