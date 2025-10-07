@@ -89,7 +89,7 @@ function BottomModal({
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
         style]}
-      enableContentPanningGesture
+      enableContentPanningGesture={Platform.OS === 'ios'}
       enableDynamicSizing
       enablePanDownToClose
       handleComponent={null}
