@@ -113,7 +113,6 @@ const useAuth = () => {
     // Create an invitation message with download links
     const appStoreUrl = process.env.APP_STORE_URL;
     const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
-    const deeplinkUrl = 'foundclub://';
 
     // Construct the message
     const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
@@ -122,11 +121,8 @@ const useAuth = () => {
     });
 
     const urls = `\n\n${
-      t('teamDetails.alerts.invitePlayers.alreadyHaveTheApp')} :  \n${
-      deeplinkUrl}
-      \n${
-  t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
-  appStoreUrl}
+      t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
+      appStoreUrl}
       \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${
   googlePlayUrl}
       `;
