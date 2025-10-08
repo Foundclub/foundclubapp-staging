@@ -18,6 +18,7 @@ commands:
         default: ios deploy_build
     steps:
       - generate_env
+      - run: echo .env
       - add_ssh_keys: # THEN set the *new* SSH key for gitlab.
           fingerprints:
             - "SHA256:yq4j8vrgqFMWbseNEYZV3G0gTuOsO7Qq0OJpHuGKfZU"

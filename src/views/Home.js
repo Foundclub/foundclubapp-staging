@@ -130,7 +130,6 @@ function Home({ navigation }) {
       </View>
       <Button
         onPress={() => {
-          // Créer un objet avec toutes les variables d'environnement
           const envVars = {
             API_URL: process.env.API_URL,
             APP_STORE_URL: process.env.APP_STORE_URL,
