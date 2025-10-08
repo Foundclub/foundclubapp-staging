@@ -146,6 +146,10 @@ function ClubDetails({ navigation, route }) {
   };
 
   const handleContactFoundClub = () => {
+    const envVars = {
+      CONTACT_URL: process.env.CONTACT_URL,
+    };
+
     Alert.alert(
       t('clubDetails.alerts.myClub.title'),
       t('clubDetails.alerts.myClub.description'),
@@ -156,7 +160,7 @@ function ClubDetails({ navigation, route }) {
         },
         {
           onPress: async () => {
-            await Linking.openURL('https://foundclubpro.com/#inscrire-club');
+            await Linking.openURL(envVars.CONTACT_URL || '');
           },
           text: t('clubDetails.alerts.myClub.actions.confirm'),
         },
@@ -593,12 +597,31 @@ function ClubDetails({ navigation, route }) {
         />
       ) : null}
       {canContactAdmin ? (
-        <Button
-          onPress={handleContactFoundClub}
-          style={Spaces.marginTop[12]}
-          title={t('clubDetails.actions.join')}
-          variant="Primary"
-        />
+        <>
+          <Button
+            onPress={handleContactFoundClub}
+            style={Spaces.marginTop[12]}
+            title={t('clubDetails.actions.join')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => {
+              const envVars = {
+                API_URL: process.env.API_URL,
+                APP_STORE_URL: process.env.APP_STORE_URL,
+                BUILD_ENV: process.env.BUILD_ENV,
+                CONTACT_URL: process.env.CONTACT_URL,
+                DELETE_ACCOUNT_URL: process.env.DELETE_ACCOUNT_URL,
+                GOOGLE_PLAY_URL: process.env.GOOGLE_PLAY_URL,
+                SENTRY_DSN: process.env.SENTRY_DSN,
+                SOCKET_URL: process.env.SOCKET_URL,
+              };
+              Alert.alert('Variables d\'environnement', JSON.stringify(envVars, null, 2));
+            }}
+            title="Test"
+            variant="Primary"
+          />
+        </>
       ) : null}
       { coachs?.length && canEdit ? (
         <Button
