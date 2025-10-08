@@ -1,43 +1,15 @@
+# .circleci/config.yml
+
+version: 2.1
+
+orbs:
+  ruby: circleci/ruby@2.1.3
+  node: circleci/node@5.2.0
+
 commands:
   generate_env:
     steps:
-      - run:
-          name: Display environment info
-          command: |
-            echo "===== Environment Variables Info ====="
-            echo "ENV: $ENV"
-            echo "GIT_TAG: ${GIT_TAG:-'not set'}"
-            echo "======================================="
-      - run:
-          name: Generate .env file
-          command: bash env_generator.sh
-      - run:
-          name: Display generated .env (masked)
-          command: |
-            echo "===== Generated .env file ====="
-            if [ -f .env ]; then
-              # Afficher les noms des variables et masquer partiellement les valeurs
-              while IFS= read -r line; do
-                if [[ -n "$line" && ! "$line" =~ ^# ]]; then
-                  var_name=$(echo "$line" | cut -d '=' -f 1)
-                  var_value=$(echo "$line" | cut -d '=' -f 2-)
-                  # Masquer les valeurs sensibles (SENTRY_DSN, tokens, etc.)
-                  if [[ "$var_name" =~ (DSN|TOKEN|KEY|SECRET|PASSWORD) ]]; then
-                    echo "$var_name=***MASKED***"
-                  elif [[ -n "$var_value" && ${#var_value} -gt 10 ]]; then
-                    # Afficher les 10 premiers caractères pour les URLs longues
-                    echo "$var_name=${var_value:0:10}...${var_value: -5}"
-                  else
-                    echo "$var_name=$var_value"
-                  fi
-                fi
-              done < .env
-            else
-              echo ".env file not found!"
-            fi
-            echo "================================"       echo ".env file not found!"
-            fi
-            echo "================================"
+      - run: bash env_generator.sh
 
   ios_build:
     parameters:
