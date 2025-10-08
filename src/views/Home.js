@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
+  Button,
   Image,
   ScrollView,
   Text,
@@ -126,6 +128,23 @@ function Home({ navigation }) {
           ))}
         </ScrollView>
       </View>
+      <Button
+        onPress={() => {
+          // Créer un objet avec toutes les variables d'environnement
+          const envVars = {
+            API_URL: process.env.API_URL,
+            APP_STORE_URL: process.env.APP_STORE_URL,
+            BUILD_ENV: process.env.BUILD_ENV,
+            CONTACT_URL: process.env.CONTACT_URL,
+            DELETE_ACCOUNT_URL: process.env.DELETE_ACCOUNT_URL,
+            GOOGLE_PLAY_URL: process.env.GOOGLE_PLAY_URL,
+            SENTRY_DSN: process.env.SENTRY_DSN,
+            SOCKET_URL: process.env.SOCKET_URL,
+          };
+          Alert.alert('Variables d\'environnement', JSON.stringify(envVars, null, 2));
+        }}
+        title="Test"
+      />
       {renderContent()}
     </ScreenContainer>
   );
