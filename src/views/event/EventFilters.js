@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Platform, ScrollView, Text, View,
+  ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -272,7 +272,7 @@ function EventFilters({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
-        { paddingBottom: Platform.OS === 'android' ? insets.bottom : 0 },
+        { paddingBottom: insets.bottom },
       ]}
     >
       <ScrollView
