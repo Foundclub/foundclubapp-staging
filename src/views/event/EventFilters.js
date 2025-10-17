@@ -73,7 +73,7 @@ function EventFilters({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const [{ eventFilters }, appDispatch] = useAppContext();
-  // const { getGeohashForPointAndRadius } = usePlaces();
+  const { getGeohashForPointAndRadius } = usePlaces();
   const insets = useSafeAreaInsets();
 
   const {
@@ -235,12 +235,24 @@ function EventFilters({ navigation }) {
       startDateBefore = endOfDay;
     }
 
+    // fomat place params
+    const coordinates = data.city?.value?.split('|');
+    const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
+      parseFloat(coordinates[1]),
+      parseFloat(coordinates[0]),
+      data.radius,
+    ) : undefined;
+
     const payload = {
       ...data,
       startDateAfter,
       startDateBefore,
       teamIds: data?.team?.value ? [data.team.value] : null,
     };
+
+    if (geohash) {
+      payload.geohash = geohash;
+    }
 
     appDispatch({
       payload,
