@@ -250,7 +250,6 @@ function EventFilters({ navigation }) {
       teamIds: data?.team?.value ? [data.team.value] : null,
     };
 
-    // Only add geohash if it's defined
     if (geohash) {
       payload.geohash = geohash;
     }
