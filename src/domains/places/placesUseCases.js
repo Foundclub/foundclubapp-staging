@@ -15,13 +15,8 @@ import { encode } from 'ngeohash';
  * 6 = 1.22km×0.61km
  * 7 = 153m×153m
  * 8 = 38.2m×19.1m
- *
- * Note: We use lower precision (larger cells) to ensure we capture points
- * near geohash boundaries. The backend should do distance-based filtering.
  */
 const getGeohashPrecision = (radius) => {
-  // Use lower precision to account for geohash boundaries
-  // Each level should cover at least 2x the radius to catch neighboring cells
   if (radius >= 2500) return 1;
   if (radius >= 300) return 2;
   if (radius >= 40) return 3;
