@@ -18,12 +18,13 @@ import { encode } from 'ngeohash';
  */
 const getGeohashPrecision = (radius) => {
   if (radius >= 2500) return 1;
-  if (radius >= 300) return 2;
-  if (radius >= 40) return 3;
-  if (radius >= 5) return 4;
-  if (radius >= 0.6) return 5;
-  if (radius >= 0.076) return 6;
-  return 7;
+  if (radius >= 625) return 2;
+  if (radius >= 78) return 3;
+  if (radius >= 20) return 4;
+  if (radius >= 2.5) return 5;
+  if (radius >= 0.6) return 6;
+  if (radius >= 0.076) return 7;
+  return 8;
 };
 
 /**
