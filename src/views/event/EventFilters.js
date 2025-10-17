@@ -90,7 +90,7 @@ function EventFilters({ navigation }) {
       club: eventFilters?.club || null,
       date: eventFilters?.date || null,
       level: eventFilters?.level || '',
-      radius: eventFilters?.radius || 10,
+      radius: eventFilters?.radius || 20,
       team: eventFilters?.team || null,
       type: eventFilters?.type || '',
     },
@@ -315,7 +315,7 @@ function EventFilters({ navigation }) {
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={10}
+                minimumValue={20}
                 onValueChange={onChange}
                 step={2}
                 style={[Alignments.fullWidth, { height: 50 }]}

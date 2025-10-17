@@ -53,7 +53,7 @@ function ClubFilters({ navigation }) {
     activity: clubFilters?.activity || '',
     city: clubFilters?.city || { label: '', value: '' },
     name: clubFilters?.name || '',
-    radius: clubFilters?.radius || 10,
+    radius: clubFilters?.radius || 20,
   }), [clubFilters]);
 
   const {
@@ -165,7 +165,7 @@ function ClubFilters({ navigation }) {
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={10}
+                minimumValue={20}
                 onValueChange={onChange}
                 step={2}
                 style={[Alignments.fullWidth, { height: 50 }]}
@@ -192,12 +192,12 @@ function ClubFilters({ navigation }) {
               searchValue={activitySearchValue}
               setSearchValue={setActivitySearchValue}
               setValue={
-              /**
-               * Handles selection of an activity option
-               * @param {{value: string}} option The selected option
-               * @returns {void}
-               */
-              (option) => onChange(option?.value || '')
+                /**
+                 * Handles selection of an activity option
+                 * @param {{value: string}} option The selected option
+                 * @returns {void}
+                 */
+                (option) => onChange(option?.value || '')
               }
               value={getActivityLabel(value)}
             />
