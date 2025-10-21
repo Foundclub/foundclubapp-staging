@@ -3,7 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
-  useCallback, useMemo, useState,
+  useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -113,13 +113,18 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         return acc;
       }
 
-      // Skip date annex filter completely
-      if (key === 'radius' || key === 'city') {
+      // Skip location-related filters (city, radius, geohash)
+      if (key === 'radius' || key === 'city' || key === 'geohash') {
         return acc;
       }
 
-      // Skip if the value is falsy or an array
-      if (!value || Array.isArray(value)) {
+      // Skip teamIds array filter
+      if (key === 'teamIds') {
+        return acc;
+      }
+
+      // Skip if the value is falsy or an empty array
+      if (!value || (Array.isArray(value) && value.length === 0)) {
         return acc;
       }
 
@@ -348,6 +353,11 @@ function EventListContent({ additionalFilters, showFilters = false }) {
       }
     </View>
   );
+
+  // useEffect to log the filters select and use in the request
+  useEffect(() => {
+    console.log('Event filters updated:', eventFilters);
+  }, [eventFilters, refetch, showFilters]);
 
   return (
     <View style={[Spaces.gap[40], Alignments.fill]}>

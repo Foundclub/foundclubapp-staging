@@ -237,22 +237,22 @@ function EventFilters({ navigation }) {
 
     // fomat place params
     const coordinates = data.city?.value?.split('|');
-    const geohash = coordinates ? getGeohashForPointAndRadius(
+    const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
       parseFloat(coordinates[1]),
       parseFloat(coordinates[0]),
       data.radius,
     ) : undefined;
 
+    const payload = {
+      ...data,
+      startDateAfter,
+      startDateBefore,
+      teamIds: data?.team?.value ? [data.team.value] : null,
+      ...(geohash && { geohash }),
+    };
+
     appDispatch({
-      payload: Object.assign(
-        data,
-        {
-          geohash,
-          startDateAfter,
-          startDateBefore,
-          teamIds: data?.team?.value ? [data.team.value] : null,
-        },
-      ),
+      payload,
       type: 'SET_EVENT_FILTERS',
     });
     navigation.goBack();
