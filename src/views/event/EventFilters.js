@@ -248,11 +248,8 @@ function EventFilters({ navigation }) {
       startDateAfter,
       startDateBefore,
       teamIds: data?.team?.value ? [data.team.value] : null,
+      ...(geohash && { geohash }),
     };
-
-    if (geohash) {
-      payload.geohash = geohash;
-    }
 
     appDispatch({
       payload,
