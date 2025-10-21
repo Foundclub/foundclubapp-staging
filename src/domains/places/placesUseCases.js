@@ -1,5 +1,5 @@
 // @ts-ignore
-import { encode } from 'ngeohash';
+import { bboxes } from 'ngeohash';
 
 /**
  * Calculate appropriate geohash precision based on radius
@@ -28,13 +28,29 @@ const getGeohashPrecision = (radius) => {
 };
 
 /**
- * Get a geohash for a point with precision based on radius
+ * Get geohashes for a point with precision based on radius
+ * Returns an array of geohash prefixes covering the bounding box
  * @param {number} latitude - Latitude of the point
  * @param {number} longitude - Longitude of the point
  * @param {number} radius - Radius in km
- * @returns {string} Geohash covering the area
+ * @returns {string[]} Array of geohash prefixes covering the area
  */
 export const getGeohashForPointAndRadius = (latitude, longitude, radius) => {
   const precision = getGeohashPrecision(radius);
-  return encode(latitude, longitude, precision);
+
+  // Convert radius to degrees (approximate)
+  // 1 degree latitude ≈ 111km
+  const latDelta = radius / 111;
+  const lngDelta = radius / (111 * Math.cos((latitude * Math.PI) / 180));
+
+  // Calculate bounding box
+  const minLat = latitude - latDelta;
+  const maxLat = latitude + latDelta;
+  const minLng = longitude - lngDelta;
+  const maxLng = longitude + lngDelta;
+
+  // Get all geohashes covering the bounding box at the given precision
+  const geohashes = bboxes(minLat, minLng, maxLat, maxLng, precision);
+
+  return geohashes;
 };
