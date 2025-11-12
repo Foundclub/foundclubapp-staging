@@ -21,11 +21,14 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,
 });
 
+// Désactiver Sentry en staging ou utiliser un projet Sentry séparé
+const isStaging = process.env.ENV === 'staging';
+
 Sentry.init({
 //   attachStacktrace: true,
 //   beforeSend: (event) => {
-//     // Don't send events in development mode
-//     if (__DEV__) {
+//     // Don't send events in development mode or staging
+//     if (__DEV__ || isStaging) {
 //       return null;
 //     }
 //     return event;
@@ -40,6 +43,15 @@ Sentry.init({
 //   // Add integration for better React Navigation tracking
 //   integrations: [navigationIntegration],
 });
+
+// Désactiver Analytics/Crashlytics en staging
+// Note: Installer les packages si nécessaire: npm install @react-native-firebase/analytics @react-native-firebase/crashlytics
+// if (isStaging) {
+//   import analytics from '@react-native-firebase/analytics';
+//   import crashlytics from '@react-native-firebase/crashlytics';
+//   analytics().setAnalyticsCollectionEnabled(false);
+//   crashlytics().setCrashlyticsCollectionEnabled(false);
+// }
 
 // Reactotron configuration to debug app
 if (__DEV__) {
