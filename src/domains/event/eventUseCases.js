@@ -79,7 +79,12 @@ export const formatDateInput = (date) => {
  * @param {string} dateString
  * @returns {Date | undefined}
  */
-const getDateFromDateInput = (dateString) => {
+/**
+ * Convert a date string in the format 'dd/mm/yyyy' to a Date object.
+ * @param {string} dateString
+ * @returns {Date | undefined}
+ */
+export const getDateFromDateInput = (dateString) => {
   if (!dateString || typeof dateString !== 'string') return undefined;
   const splittedDate = dateString.split('/');
   const day = splittedDate[0];
@@ -159,6 +164,19 @@ export const isValidTime = (timeString) => {
 };
 
 /**
+ * Format time string from HH:mm to HH:mm:ss.SSS format for Strapi
+ * @param {string | undefined} timeString - The time string in HH:mm format
+ * @returns {string | undefined} The formatted time string in HH:mm:ss.SSS format
+ */
+const formatTimeForStrapi = (timeString) => {
+  if (!timeString || typeof timeString !== 'string') return undefined;
+  const pattern = /^(\d{2}):(\d{2})$/;
+  const match = timeString.match(pattern);
+  if (!match) return undefined;
+  return `${timeString}:00.000`;
+};
+
+/**
  * Create the event payload for the API from the event form data
  * @param {FCEventForm} event
  * @returns {FCEventForm}
@@ -168,11 +186,20 @@ export const createEventPayload = (event) => {
   const splittedLocation = event.location?.value?.split('|');
   const formattedData = {
     ...event,
-    date: formatDateTimeToSend(event.date, event.time),
+    date: formatDateTimeToSend(event.date, event.startTime),
     location: splittedLocation?.length === 2 ? {
       lat: parseFloat(splittedLocation[1]) || 0,
       lng: parseFloat(splittedLocation[0]) || 0,
-    } : event.location,
+    } : (event.location?.label ? {
+      lat: 0,
+      lng: 0,
+      label: event.location.label, // Use label if available, fallback to 0,0
+    } : undefined),
+    locationDetails: event.location?.label ? JSON.stringify({ address: event.location.label }) : null,
+    // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
+    startTime: formatTimeForStrapi(event.startTime),
+    endTime: formatTimeForStrapi(event.endTime),
+    featuredRequestStatus: event.requestFeatured ? 'pending' : 'none',
   };
 
   delete formattedData.time;
@@ -180,7 +207,17 @@ export const createEventPayload = (event) => {
   delete formattedData.recurrenceFrequency;
   delete formattedData.recurrenceStartDate;
   delete formattedData.recurrenceEndDate;
+  delete formattedData.recurrenceInterval;
+  delete formattedData.recurrenceDays;
   delete formattedData.isRecurrent;
+  delete formattedData.requestFeatured; // Ne pas envoyer à Strapi
+
+  // Remove undefined or null numeric fields to let Strapi use defaults
+  if (formattedData.capacity == null || formattedData.capacity === '') delete formattedData.capacity;
+  if (formattedData.pricePerPerson == null || formattedData.pricePerPerson === '') delete formattedData.pricePerPerson;
+  if (formattedData.totalPlayers == null || formattedData.totalPlayers === '') delete formattedData.totalPlayers;
+  if (!formattedData.location) delete formattedData.location;
+  if (!formattedData.locationDetails) delete formattedData.locationDetails;
 
   return formattedData;
 };
@@ -195,21 +232,104 @@ export const createReccurrentEventPayload = (event) => {
     const startDate = getDateFromDateInput(event.recurrenceStartDate) || new Date();
     const endDate = getDateFromDateInput(event.recurrenceEndDate) || new Date();
 
+    // Generate a unique recurrence group ID
+    const recurrenceGroupId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     const events = [];
-    const currentDate = startDate;
+    const currentDate = new Date(startDate); // Start from the recurrence start date
 
-    while (currentDate <= endDate) {
-      const formattedEvent = {
-        ...event,
-        date: format(currentDate, 'dd/MM/yyyy'),
-        location: event.location,
-      };
-      events.push(createEventPayload(formattedEvent));
+    // Helper to get day index (0=Sunday, 1=Monday, etc.)
+    const getDayIndex = (date) => date.getDay();
 
-      if (event.recurrenceFrequency === 'week') {
-        currentDate.setDate(currentDate.getDate() + 7);
-      } else if (event.recurrenceFrequency === 'month') {
-        currentDate.setMonth(currentDate.getMonth() + 1);
+    // Helper to set day of week for a given date
+    const setDayOfWeek = (date, dayIndex) => {
+      const result = new Date(date);
+      const currentDay = result.getDay();
+      const distance = (dayIndex + 7 - currentDay) % 7;
+      // If the target day is today or in the future within the same week, add distance
+      // But we want to set the day relative to the START of the week block?
+      // Actually, the requirement is: "Semaine 1 : Crée les events Lundi et Mercredi."
+      // So we should align currentDate to the start of the week (e.g. Monday) and then add days.
+      // Let's assume Monday is start of week for simplicity in calculation, or just use date-fns if available.
+      // Since we don't have date-fns startOfWeek imported, let's do it manually or rely on the current date being the anchor.
+
+      // Better approach: 
+      // 1. Iterate by weeks (interval).
+      // 2. For each week, iterate through recurrenceDays.
+      // 3. Construct the date for that day in that week.
+
+      // To do this correctly, we need to know the "Monday" of the current week block.
+      const day = result.getDay();
+      const diff = result.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+      const monday = new Date(result.setDate(diff));
+
+      // Now add (dayIndex - 1) days to monday (since Monday is 1)
+      // If dayIndex is 0 (Sunday), it's Monday + 6.
+      const targetDayOffset = dayIndex === 0 ? 6 : dayIndex - 1;
+      const targetDate = new Date(monday);
+      targetDate.setDate(monday.getDate() + targetDayOffset);
+      return targetDate;
+    };
+
+    // Parse recurrence days (ensure they are numbers)
+    const recurrenceDays = (event.recurrenceDays || []).map(Number);
+    const interval = event.recurrenceInterval || 1;
+
+    // If frequency is week and we have specific days
+    if (event.recurrenceFrequency === 'week' && recurrenceDays.length > 0) {
+      // Align currentDate to the start of the week (Monday) of the startDate
+      // This ensures our week blocks are aligned with the calendar week
+      const day = currentDate.getDay();
+      const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+      let weekStart = new Date(currentDate);
+      weekStart.setDate(diff);
+
+      // Loop until weekStart exceeds endDate
+      while (weekStart <= endDate) {
+        // For this week, create events for selected days
+        recurrenceDays.forEach(dayIndex => {
+          // Calculate date for this day in the current week
+          // Monday is base. 
+          // dayIndex: 0 (Sun) -> +6 days
+          // dayIndex: 1 (Mon) -> +0 days
+          // ...
+          const offset = dayIndex === 0 ? 6 : dayIndex - 1;
+          const eventDate = new Date(weekStart);
+          eventDate.setDate(weekStart.getDate() + offset);
+
+          // Check if eventDate is within range [startDate, endDate]
+          // We must check startDate because we aligned to Monday, which might be before startDate
+          if (eventDate >= startDate && eventDate <= endDate) {
+            const formattedEvent = {
+              ...event,
+              date: format(eventDate, 'dd/MM/yyyy'),
+              location: event.location,
+              recurrenceGroupId, // Add the group ID
+            };
+            events.push(createEventPayload(formattedEvent));
+          }
+        });
+
+        // Move to next week block
+        weekStart.setDate(weekStart.getDate() + (7 * interval));
+      }
+    } else {
+      // Fallback for Month or Week without specific days (legacy/simple mode)
+      // Or if user didn't select days for week (should be validated, but safe fallback)
+      while (currentDate <= endDate) {
+        const formattedEvent = {
+          ...event,
+          date: format(currentDate, 'dd/MM/yyyy'),
+          location: event.location,
+          recurrenceGroupId,
+        };
+        events.push(createEventPayload(formattedEvent));
+
+        if (event.recurrenceFrequency === 'week') {
+          currentDate.setDate(currentDate.getDate() + (7 * interval));
+        } else if (event.recurrenceFrequency === 'month') {
+          currentDate.setMonth(currentDate.getMonth() + interval);
+        }
       }
     }
 

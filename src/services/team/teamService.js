@@ -80,7 +80,19 @@ export const getTeams = async (params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['club', 'players', 'trainers', 'activities', 'section', 'category', 'level'],
+    populate: {
+      activities: true,
+      category: true,
+      club: {
+        populate: {
+          logo: true,
+        },
+      },
+      level: true,
+      players: true,
+      section: true,
+      trainers: true,
+    },
   };
 
   const response = await client.get('/teams', { params: filters });
@@ -124,6 +136,7 @@ export const getTeamById = async (teamId) => {
         },
         club: {
           populate: {
+            logo: true,
             sponsor: {
               populate: 'logo',
             },

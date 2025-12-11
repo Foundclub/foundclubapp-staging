@@ -9,6 +9,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -73,6 +74,7 @@ function TeamEdit({ navigation, route }) {
     Alignments, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
 
   const teamMutation = useMutation({
     mutationFn: teamId ? updateTeam : createTeam,
@@ -153,37 +155,58 @@ function TeamEdit({ navigation, route }) {
     }, [])
   ), [levels, levelSearch]);
 
-  const trainerOptions = clubData?.members
-    ?.filter((member) => member.role.name === USER_ROLES.coach
-    || member.role.name === USER_ROLES.president)
-    .map((trainer) => ({
-      label: `${trainer.firstname} ${trainer.lastname}`,
-      value: trainer.documentId || '',
-    })) || [];
+  const trainerOptions = useMemo(() => {
+    const members = clubData?.members
+      ?.filter((member) => member.role?.name === USER_ROLES.coach
+      || member.role?.name === USER_ROLES.president)
+      .map((trainer) => ({
+        label: `${trainer.firstname} ${trainer.lastname}`,
+        value: trainer.documentId || '',
+      })) || [];
+
+    // Always add current user if they are a president or coach and not already in the list
+    if (userData && (userData.role?.name === USER_ROLES.president || userData.role?.name === USER_ROLES.coach)) {
+      const userAlreadyInList = members.some((m) => m.value === userData.documentId);
+      if (!userAlreadyInList) {
+        members.unshift({
+          label: `${userData.firstname} ${userData.lastname} (Vous)`,
+          value: userData.documentId || '',
+        });
+      }
+    }
+
+    return members;
+  }, [clubData?.members, userData]);
 
   /**
    * Handle form submit
    * @param {typeof defaultValues} data
    */
   const handleFormSubmit = (data) => {
+    // Format trainers for Strapi v5 relation format
+    const formattedTrainers = data.trainers?.length
+      ? { connect: data.trainers.map((id) => ({ documentId: id })) }
+      : undefined;
+
     if (teamId) {
       teamMutation.mutate({
         ...data,
         activities: [data.activities],
         documentId: teamId,
-        trainers: data.trainers,
+        trainers: formattedTrainers,
       });
     } else {
       teamMutation.mutate({
         ...data,
         activities: [data.activities],
         club: clubId,
+        trainers: formattedTrainers,
       });
     }
   };
 
   // Set navigation options to change the header title based on whether editing or creating
-  useMemo(() => {
+  useEffect(() => {
     navigation.setOptions({
       headerTitle: teamId
         ? t('teamEdit.titleEdit')

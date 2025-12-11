@@ -1,8 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
@@ -10,13 +10,20 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClubs } from '@/services/club/clubQueries';
 
+import { getImageUrl } from '@/utils/imageUrl';
+import { getShortAddress } from '@/utils/location';
+
 import SearchComponent from '../searchComponent/searchComponent';
+import SearchMap from '@/components/organisms/searchMap/SearchMap';
+import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 
 /**
  * Club list element to inject on home page or a dedicate one
@@ -27,6 +34,7 @@ function ClubListContent() {
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
+  const [isMapView, setIsMapView] = useState(false);
   const [{ clubFilters }, appDispatch] = useAppContext();
   const { getClubFiltersNumber, getClubInitials } = useClub();
   const {
@@ -49,7 +57,7 @@ function ClubListContent() {
       const items = page?.data || [];
       return acc.concat(items);
     }, [])
-      || [], [clubPages]);
+    || [], [clubPages]);
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -101,6 +109,7 @@ function ClubListContent() {
         Alignments.row,
         Alignments.alignCenter,
         Spaces.gap[16],
+        Spaces.paddingLeft[16],
         Spaces.paddingVertical[12],
         Spaces.paddingRight[24],
         Spaces.marginVertical[8],
@@ -109,10 +118,20 @@ function ClubListContent() {
         ApplicationStyle.borderRadius8,
       ]}
     >
-      <TeamShield
-        initials={getClubInitials(item.name)}
-        isSmall
-      />
+      {item.logo?.url ? (
+        <ProfileAvatar
+          imageUrl={item.logo.url}
+          size={60}
+          style={{ borderRadius: 30 }}
+          imageStyle={{ borderRadius: 30 }}
+        />
+      ) : (
+        <TeamShield
+          initials={getClubInitials(item.name)}
+          isSmall
+          size={60}
+        />
+      )}
       <View style={[Spaces.gap[4], { maxWidth: '80%' }]}>
         <Text
           ellipsizeMode="tail"
@@ -122,67 +141,109 @@ function ClubListContent() {
           {item.name}
         </Text>
         {item.addressDetails ? (
-          <Text style={[Fonts.p3, Fonts.neutral00]}>
-            {`${JSON.parse(item.addressDetails)?.postcode || ''} ${JSON.parse(item.addressDetails)?.city || ''}`}
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {getShortAddress(item.addressDetails)}
           </Text>
         ) : null}
+        {item.sponsor?.length > 0 && (
+          <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
+            {item.sponsor.slice(0, 5).map((sponsor, idx) => (
+              <View
+                key={sponsor.id || idx}
+                style={[Alignments.alignCenter, Spaces.gap[4], { width: 40 }]}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: 'white',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Image
+                    source={{ uri: getImageUrl(sponsor.logo?.url) }}
+                    style={{ width: 30, height: 30, resizeMode: 'contain' }}
+                  />
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Fonts.p4Bold, // Assuming p4Bold exists or using a small font
+                    Fonts.neutral00,
+                    { fontSize: 10, textAlign: 'center', width: '100%' }
+                  ]}
+                >
+                  {sponsor.title || sponsor.name || 'Sponsor'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
 
   const renderEmptyList = () => (
-    <View style={[
-      ApplicationStyle.backgroundColor.primary900,
-      ApplicationStyle.borderRadius32,
-      Alignments.alignCenter,
-      Spaces.gap[32],
-      Spaces.paddingHorizontal[12],
-      Spaces.paddingVertical[24],
-      Spaces.marginVertical[24]]}
-    >
-      <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {t('clubList.noData')}
-      </Text>
-      <Button
-        onPress={handleCreateClub}
-        style={Spaces.paddingHorizontal[16]}
-        title={t('clubList.actions.createClub')}
-        variant="Primary"
-      />
-    </View>
+    <EmptyState
+      title={t('clubList.noData')}
+      actionLabel={t('clubList.actions.createClub')}
+      onAction={handleCreateClub}
+    />
   );
 
   return (
     <View style={[Spaces.gap[40], Alignments.fill]}>
-      <SearchComponent
-        filterNumber={getClubFiltersNumber(clubFilters)}
-        handleSearchField={handleSearchField}
-        openFilters={handleOpenFilters}
-        searchDefaultValue={clubFilters?.name}
-      />
-      <WithDataWrapper
-        error={error?.message}
-        isLoading={isLoading && !isFetchingNextPage}
-        wrapperStyle={[Alignments.fill]}
-      >
-        <View style={[
-          Alignments.fill,
-          ApplicationStyle.borderRadius2,
-        ]}
-        >
-          <FlashList
-            data={clubs}
-            keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={renderEmptyList}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            onRefresh={refetch}
-            refreshing={isLoading && !isFetchingNextPage}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
+      <View style={[Spaces.gap[40], Alignments.fill]}>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+          <View style={{ flex: 1 }}>
+            <SearchComponent
+              filterNumber={getClubFiltersNumber(clubFilters)}
+              handleSearchField={handleSearchField}
+              openFilters={handleOpenFilters}
+              searchDefaultValue={clubFilters?.name}
+            />
+          </View>
         </View>
-      </WithDataWrapper>
+        {isMapView ? (
+          <SearchMap
+            items={clubs}
+            onMarkerPress={handleClubSelection}
+            type="club"
+          />
+        ) : (
+          <WithDataWrapper
+            error={error?.message}
+            isLoading={isLoading && !isFetchingNextPage}
+            wrapperStyle={[Alignments.fill]}
+          >
+            <View style={[
+              Alignments.fill,
+              ApplicationStyle.borderRadius2,
+            ]}
+            >
+              <FlashList
+                data={clubs}
+                keyExtractor={(item) => item?.documentId || 'unknown'}
+                ListEmptyComponent={renderEmptyList}
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={0.5}
+                onRefresh={refetch}
+                refreshing={isLoading && !isFetchingNextPage}
+                renderItem={renderItem}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          </WithDataWrapper>
+        )}
+        <MapFloatButton
+          isMapView={isMapView}
+          onPress={() => setIsMapView(!isMapView)}
+          type="club"
+        />
+      </View>
     </View>
   );
 }

@@ -24,10 +24,12 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
+import { getImageUrl } from '@/utils/imageUrl';
 import { useGetTeam } from '@/services/team/teamQueries';
 import { leaveTeam } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
@@ -234,7 +236,7 @@ function TeamDetails({ navigation, route }) {
             onRefresh={refetch}
             refreshing={isLoading}
           />
-                          )}
+        )}
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper
@@ -251,13 +253,26 @@ function TeamDetails({ navigation, route }) {
               Alignments.relative,
               Spaces.gap[24],
               Spaces.padding[24],
-              Spaces.marginTop[24],
+              Spaces.marginTop[64],
             ]}
           >
-            <View style={[{ marginTop: -32 }, Alignments.absolute]}>
-              <TeamShield
-                initials={team?.club?.name ? getClubInitials(team?.club?.name || '') : ''}
-              />
+            <View style={[{ marginTop: -45 }, Alignments.absolute]}>
+              {team?.club?.logo?.url ? (
+                <ProfileAvatar
+                  imageUrl={team.club.logo.url}
+                  size={90}
+                  style={[
+                    ApplicationStyle.borderWidth1,
+                    ApplicationStyle.borderColor.neutral00,
+                    { borderRadius: 90 },
+                  ]}
+                  imageStyle={{ borderRadius: 90 }}
+                />
+              ) : (
+                <TeamShield
+                  initials={team?.club?.name ? getClubInitials(team?.club?.name || '') : ''}
+                />
+              )}
             </View>
             <View style={[
               Spaces.marginTop[32],
@@ -347,7 +362,7 @@ function TeamDetails({ navigation, route }) {
                       ]}
                     >
                       <Image
-                        source={{ uri: sponsor?.logo?.url }}
+                        source={{ uri: getImageUrl(sponsor?.logo?.url) }}
                         style={[
                           ApplicationStyle.roundIcon55,
                           ApplicationStyle.borderWidth1,
@@ -366,7 +381,7 @@ function TeamDetails({ navigation, route }) {
             {trainersCount ? (
               <View style={[Spaces.gap[16]]}>
                 <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                 >
                   <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                     {t('teamDetails.sections.trainers', { count: trainersCount })}
@@ -391,21 +406,22 @@ function TeamDetails({ navigation, route }) {
                         style={[
                           Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                       >
-                        <Image
-                          source={trainer.avatar
-                            ? { uri: trainer?.avatar?.url } : Images.roundAvatar}
+                        <ProfileAvatar
+                          imageUrl={trainer?.avatar?.url}
+                          size={40}
                           style={[
-                            ApplicationStyle.roundIcon40,
                             ApplicationStyle.borderWidth1,
                             ApplicationStyle.borderColor.neutral00,
+                            { borderRadius: 40 },
                           ]}
+                          imageStyle={{ borderRadius: 40 }}
                         />
                         <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${trainer.firstname} ${trainer.lastname}`}
                         </Text>
                       </View>
                       {team?.club?.documentId && canEditClub(team?.club?.documentId)
-                      && trainer?.role?.name === USER_ROLES.coach ? (
+                        && trainer?.role?.name === USER_ROLES.coach ? (
                         <View style={[Alignments.row, Spaces.gap[8]]}>
                           <Button
                             icon="trash"
@@ -414,7 +430,7 @@ function TeamDetails({ navigation, route }) {
                             variant="SecondaryLight"
                           />
                         </View>
-                        ) : null}
+                      ) : null}
                     </TouchableOpacity>
                   ))
                 }
@@ -424,7 +440,7 @@ function TeamDetails({ navigation, route }) {
             {playersCount || canManageTeam ? (
               <View style={[Spaces.gap[16]]}>
                 <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                 >
                   <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                     {t('teamDetails.sections.players', { count: playersCount })}
@@ -460,13 +476,15 @@ function TeamDetails({ navigation, route }) {
                       <View style={[
                         Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                       >
-                        <Image
-                          source={player.avatar ? { uri: player?.avatar?.url } : Images.roundAvatar}
+                        <ProfileAvatar
+                          imageUrl={player?.avatar?.url}
+                          size={40}
                           style={[
-                            ApplicationStyle.roundIcon40,
                             ApplicationStyle.borderWidth1,
                             ApplicationStyle.borderColor.neutral00,
+                            { borderRadius: 40 },
                           ]}
+                          imageStyle={{ borderRadius: 40 }}
                         />
                         <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${player.firstname} ${player.lastname}`}
@@ -480,7 +498,7 @@ function TeamDetails({ navigation, route }) {
             {/* Next events */}
             <View style={[Spaces.gap[16]]}>
               <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+              Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
               >
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                   {t('teamDetails.sections.nextEvents')}
@@ -498,21 +516,23 @@ function TeamDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       <View style={[Alignments.row, Spaces.gap[16]]}>
-        {canManageTeam && isMyClub && (
-        <Button
-          onPress={handleEditTeam}
-          style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-          title={t('teamDetails.actions.edit')}
-          variant="Primary"
-        />
+        {/* Only show Edit button if user is a manager AND (it's their team OR they are club admin) */}
+        {canManageTeam && isMyClub && (isMyTeam || canEditClub(team?.club?.documentId)) && (
+          <Button
+            onPress={handleEditTeam}
+            style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
+            title={t('teamDetails.actions.edit')}
+            variant="Primary"
+          />
         )}
+        {/* Only show Contact button if user is a manager AND it's their team */}
         {canManageTeam && allMembers?.length > 1 && isMyTeam && (
-        <Button
-          onPress={handleStartChat}
-          style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-          title={t('teamDetails.actions.contactTeam')}
-          variant="PrimaryLight"
-        />
+          <Button
+            onPress={handleStartChat}
+            style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
+            title={t('teamDetails.actions.contactTeam')}
+            variant="PrimaryLight"
+          />
         )}
       </View>
       {

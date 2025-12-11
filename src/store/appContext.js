@@ -3,11 +3,43 @@ import { MMKV } from 'react-native-mmkv';
 
 import appReducer from '@/store/appReducer';
 
-const AppStateContext = React.createContext(/** @type {Store} */ ({}));
+const AppStateContext = React.createContext(/** @type {Store} */({}));
 const AppDispatchContext = React
-  .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */ ({}));
+  .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */({}));
 
-export const storage = new MMKV();
+import { Platform } from 'react-native';
+
+let storageInstance = null;
+
+export const getStorage = () => {
+  if (Platform.OS === 'web') {
+    return {
+      getString: () => null,
+      set: () => { },
+      delete: () => { },
+      getBoolean: () => false,
+      getNumber: () => 0,
+      clearAll: () => { },
+    };
+  }
+
+  if (!storageInstance) {
+    storageInstance = new MMKV();
+  }
+  return storageInstance;
+};
+
+export const storage = {
+  getString: (key) => getStorage().getString(key),
+  set: (key, value) => getStorage().set(key, value),
+  delete: (key) => getStorage().delete(key),
+  getBoolean: (key) => getStorage().getBoolean(key),
+  getNumber: (key) => getStorage().getNumber(key),
+  clearAll: () => getStorage().clearAll(),
+  contains: (key) => getStorage().contains(key),
+  getAllKeys: () => getStorage().getAllKeys(),
+  addOnValueChangedListener: (listener) => getStorage().addOnValueChangedListener(listener),
+};
 
 /**
  * Initial state for the global application context.
@@ -17,6 +49,8 @@ const initStore = {
   auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
   clubFilters: undefined,
   eventFilters: undefined,
+  mercatoFilters: undefined,
+  reservationFilters: undefined,
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
   onboardingViews: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,

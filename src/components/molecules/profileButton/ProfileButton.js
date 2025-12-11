@@ -5,6 +5,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
  * ProfileButton component displays user avatar and navigates to profile screen.
@@ -29,12 +30,10 @@ function ProfileButton() {
         ApplicationStyle.borderWidth1,
       ]}
     >
-      <Image
-        source={userData?.avatar ? { uri: userData.avatar?.url } : Images.roundAvatar}
-        style={[
-          ApplicationStyle.borderRadius24,
-          { height: 40, width: 40 },
-        ]}
+      <ProfileAvatar
+        imageUrl={userData?.avatar?.url}
+        size={40}
+        enablePreview={false}
       />
     </TouchableOpacity>
   );

@@ -5,6 +5,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -16,7 +17,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 function MyTeamList({ route }) {
   const { Images } = useTheme();
   const { playerId } = route?.params ?? {};
-  const { refetchUserData } = useAuth();
+  const { refetchUserData, userData } = useAuth();
   // Effects
   useFocusEffect(() => {
     refetchUserData();
@@ -46,9 +47,15 @@ function MyTeamList({ route }) {
         Alignments.justifySpaceBetween]}
       >
         <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
-        <ProfileButton />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <NotificationBadge />
+          <ProfileButton />
+        </View>
       </View>
-      <TeamListContent playerId={playerId} />
+      <TeamListContent
+        clubId={userData?.club?.documentId}
+        playerId={playerId}
+      />
     </ScreenContainer>
   );
 }

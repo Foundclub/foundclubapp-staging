@@ -16,6 +16,12 @@ export default function appReducer(state, action) {
     case 'SET_EVENT_FILTERS': {
       return { ...state, eventFilters: action.payload };
     }
+    case 'SET_MERCATO_FILTERS': {
+      return { ...state, mercatoFilters: action.payload };
+    }
+    case 'SET_RESERVATION_FILTERS': {
+      return { ...state, reservationFilters: action.payload };
+    }
     case 'SET_FCM_TOKEN': {
       return { ...state, fcmToken: action.payload };
     }

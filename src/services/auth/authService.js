@@ -6,6 +6,9 @@ import { getDeviceId } from 'react-native-device-info';
 
 import client from '@/services/client';
 
+// Check if Firebase bypass is enabled
+const BYPASS_FIREBASE = process.env.BYPASS_FIREBASE_AUTH === 'true';
+
 /**
  * User validation schema
  */
@@ -36,6 +39,16 @@ const roleSchema = Joi.object({
  * .FirebaseAuthTypes.ConfirmationResult>} The promise
  */
 export const signInWithPhoneNumber = async (phoneNumber) => {
+  // BYPASS MODE: Skip Firebase and return fake confirmation
+  if (BYPASS_FIREBASE) {
+    console.log('[BYPASS] Firebase Auth bypassed - returning fake confirmation');
+    return Promise.resolve({
+      confirm: async () => ({ phoneNumber }),
+      verificationId: 'bypass-verification-id',
+      phoneNumber,
+    });
+  }
+
   try {
     const auth = getAuth();
     const result = await firebaseSignInWithPhoneNumber(auth, phoneNumber);
@@ -58,6 +71,31 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
  * }>} The promise
  */
 export const login = async ({ code, confirm }) => {
+  // BYPASS MODE: Skip Firebase and login directly with phone number
+  if (BYPASS_FIREBASE) {
+    console.log('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
+    const phoneNumber = confirm.phoneNumber || '+33600000001';
+
+    try {
+      const result = await client.post('/firebase-auth/login-bypass', { phoneNumber });
+      const schema = Joi.object({
+        data: Joi.object().required(),
+        jwt: Joi.string().required(),
+      }).required();
+      await schema.validateAsync(result.data, { allowUnknown: true });
+
+      return {
+        idToken: 'bypass-token',
+        idUser: { phoneNumber },
+        token: result.data.jwt
+      };
+    } catch (error) {
+      const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+      throw new Error(`Bypass login failed: ${errorToDisplay}`);
+    }
+  }
+
+  // NORMAL MODE: Use Firebase Auth
   // Check if user is already authenticated (auto-verification case)
   const { currentUser } = getAuth();
 

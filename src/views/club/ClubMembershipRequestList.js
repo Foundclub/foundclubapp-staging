@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { useGetClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestQueries';
 import { acceptClubMembershipRequest, rejectClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
@@ -119,43 +120,44 @@ function ClubMembershipRequestList({ route }) {
           Spaces.gap[24],
         ]}
       >
-        <Image
-          source={item?.user?.avatar?.url
-            ? { uri: item?.user?.avatar?.url }
-            : Images.roundAvatar}
+        <ProfileAvatar
+          imageUrl={item?.user?.avatar?.url}
+          size={40}
           style={[
-            ApplicationStyle.borderColor.neutral00,
             ApplicationStyle.borderWidth1,
-            { borderRadius: 62, height: 62, width: 62 }]}
+            ApplicationStyle.borderColor.neutral00,
+            { borderRadius: 40 },
+          ]}
+          imageStyle={{ borderRadius: 40 }}
         />
         {item?.user?.firstname && item?.user?.lastname && (
-        <View style={[
-          { maxWidth: '70%' },
-          Alignments.justifyStart,
-          Alignments.alignStart,
-          Spaces.gap[4],
-        ]}
-        >
-          <Text
-            numberOfLines={2}
-            style={[
-              Fonts.textCenter,
-              Fonts.h4Black,
-              Fonts.neutral00]}
+          <View style={[
+            { maxWidth: '70%' },
+            Alignments.justifyStart,
+            Alignments.alignStart,
+            Spaces.gap[4],
+          ]}
           >
-            {`${item?.user?.firstname} ${item?.user?.lastname?.toUpperCase()}`}
-          </Text>
-          <Text
-            style={[
-              Fonts.textLeft,
-              Fonts.p3,
-              Fonts.neutral00]}
-          >
-            {t('clubMembershipRequestList.fields.pending', {
-              firstname: item?.user?.firstname,
-            })}
-          </Text>
-        </View>
+            <Text
+              numberOfLines={2}
+              style={[
+                Fonts.textCenter,
+                Fonts.h4Black,
+                Fonts.neutral00]}
+            >
+              {`${item?.user?.firstname} ${item?.user?.lastname?.toUpperCase()}`}
+            </Text>
+            <Text
+              style={[
+                Fonts.textLeft,
+                Fonts.p3,
+                Fonts.neutral00]}
+            >
+              {t('clubMembershipRequestList.fields.pending', {
+                firstname: item?.user?.firstname,
+              })}
+            </Text>
+          </View>
         )}
       </View>
       <View style={[Alignments.row, Spaces.gap[12]]}>

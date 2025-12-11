@@ -22,7 +22,7 @@ const clubSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
   email: Joi.string().allow('', null).optional(),
-  geohash: Joi.string().optional(),
+  geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
   isCustomer: Joi.boolean().required().default(false),
   maxTeamNumber: Joi.number().required().default(0),
@@ -34,6 +34,7 @@ const clubSchema = Joi.object({
 const clubListSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().required(),
+  documentId: Joi.string().optional(),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
@@ -59,6 +60,7 @@ export const getClubs = async (params = {}) => {
   const {
     activity,
     geohash,
+    isCustomer,
     name,
     page,
     pageSize,
@@ -74,7 +76,20 @@ export const getClubs = async (params = {}) => {
       isCustomer: 'desc',
       name: 'asc',
     },
+    populate: {
+      logo: true,
+      sponsor: {
+        populate: ['logo'],
+      },
+    },
   };
+
+  if (isCustomer !== undefined) {
+    filters.filters = {
+      ...filters.filters,
+      isCustomer,
+    };
+  }
 
   if (activity) {
     filters.filters = {
@@ -138,8 +153,9 @@ export const getClubById = async (id) => {
         activites: {
           populate: '*',
         },
+        logo: true,
         members: {
-          populate: '*',
+          populate: ['avatar', 'role'],
         },
         sponsor: {
           populate: 'logo',
@@ -173,12 +189,42 @@ export const getClubById = async (id) => {
  */
 export const updateClub = async (clubData) => {
   try {
+    console.log('[DEBUG - FRONTEND] ========== UPDATE CLUB START ==========');
+    console.log('[DEBUG - FRONTEND] Input clubData:', JSON.stringify(clubData, null, 2));
+
     const formData = new FormData();
     const clubDataCopy = {
       ...clubData,
       activites: clubData.activites?.map(({ documentId }) => documentId) || undefined,
       members: clubData.members?.map(({ documentId }) => documentId) || undefined,
     };
+
+    // Log club logo info
+    if (clubData.logo) {
+      console.log('[DEBUG - FRONTEND] Club Logo:', {
+        hasDocumentId: !!clubData.logo.documentId,
+        hasId: !!clubData.logo.id,
+        documentId: clubData.logo.documentId,
+        id: clubData.logo.id,
+        url: clubData.logo.url,
+      });
+    }
+
+    // Log sponsors info
+    if (clubData.sponsor && Array.isArray(clubData.sponsor)) {
+      console.log('[DEBUG - FRONTEND] Sponsors count:', clubData.sponsor.length);
+      clubData.sponsor.forEach((sponsor, index) => {
+        console.log(`[DEBUG - FRONTEND] Sponsor[${index}]:`, {
+          title: sponsor.title,
+          hasLogo: !!sponsor.logo,
+          logoHasDocumentId: sponsor.logo?.documentId ? true : false,
+          logoHasId: sponsor.logo?.id ? true : false,
+          logoDocumentId: sponsor.logo?.documentId,
+          logoId: sponsor.logo?.id,
+          logoUrl: sponsor.logo?.url,
+        });
+      });
+    }
 
     Object.keys(clubDataCopy).forEach((key) => {
       // @ts-expect-error because keys are defined just above
@@ -191,32 +237,34 @@ export const updateClub = async (clubData) => {
     // Handle sponsor data
     if (clubDataCopy.sponsor && Array.isArray(clubDataCopy.sponsor)) {
       // Process each sponsor separately
-      clubDataCopy.sponsor.forEach((sponsor, index) => {
-      // Handle logo file
+      for (let i = 0; i < clubDataCopy.sponsor.length; i++) {
+        const sponsor = clubDataCopy.sponsor[i];
+        console.warn('Processing sponsor', i, sponsor.logo);
+
+        // Only append if this is a NEW file to upload (has .path property)
         if (sponsor.logo && sponsor.logo.path) {
-          const fileToUpload = {
-            name: sponsor.logo.path.split('/').pop(),
+          // NEW FILE UPLOAD
+          console.warn('Appended file for sponsor', i);
+          formData.append(`sponsor[${i}][logo]`, {
+            name: sponsor.logo.filename,
             type: sponsor.logo.mime,
-            uri: Platform.OS === 'ios' ? sponsor.logo.path.replace('file://', '') : sponsor.logo.path,
-          };
-          // @ts-expect-error because of react native image type
-          formData.append(`sponsor[${index}][logo]`, fileToUpload);
-        }
-        if (sponsor.logo && sponsor.logo.id) {
-          formData.append(`sponsor[${index}][logo]`, sponsor.logo.id);
-        }
-
-        // Append other sponsor fields
-        if (sponsor.title) {
-          formData.append(`sponsor[${index}][title]`, sponsor.title);
+            uri: Platform.OS === 'android' ? sponsor.logo.path : sponsor.logo.path.replace('file://', ''),
+          });
+        } else {
+          // EXISTING LOGO - DO NOT SEND ANYTHING
+          // This prevents sending invalid documentIds that don't exist
+          console.warn(`Sponsor ${i} - skipping logo (no new file to upload)`);
         }
 
+        formData.append(`sponsor[${i}][title]`, sponsor.title);
         if (sponsor.link) {
-          formData.append(`sponsor[${index}][link]`, sponsor.link);
+          formData.append(`sponsor[${i}][link]`, sponsor.link);
         }
-      });
+        if (sponsor.id) {
+          formData.append(`sponsor[${i}][id]`, sponsor.id.toString());
+        }
+      }
 
-      // Remove the sponsor from clubDataCopy as we've handled it separately
       delete clubDataCopy.sponsor;
     }
 
@@ -262,8 +310,16 @@ export const updateClub = async (clubData) => {
         }
       });
 
-      // Remove the address from clubDataCopy as we've handled it separately
-      delete clubDataCopy.address;
+    }
+
+    // Handle club logo
+    if (clubDataCopy.logo) {
+      if (clubDataCopy.logo.documentId) {
+        formData.append('logo', clubDataCopy.logo.documentId);
+      } else if (clubDataCopy.logo.id) {
+        formData.append('logo', clubDataCopy.logo.id);
+      }
+      delete clubDataCopy.logo;
     }
 
     // Append all club data
@@ -289,7 +345,99 @@ export const updateClub = async (clubData) => {
 
     return validationResult.data;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    console.error('updateClub error full:', JSON.stringify(error.response?.data || error, null, 2));
+    const errorToDisplay = error?.response?.data?.error?.message || error?.message || JSON.stringify(error);
     throw new Error(`Failed to update club: ${errorToDisplay}`);
+  }
+};
+/**
+ * Update club info (name, email, phone, address, logo)
+ * @param {Club} clubData - The club data to update
+ * @returns {Promise<Club>} - The updated club data
+ */
+/**
+ * Upload a file to Strapi
+ * @param {object} file - The file object (from image picker)
+ * @returns {Promise<number>} - The uploaded file ID
+ */
+export const uploadFile = async (file) => {
+  try {
+    const formData = new FormData();
+    const fileToUpload = {
+      name: file.filename || `image.${file.path.split('.').pop()}`,
+      type: file.mime,
+      uri: Platform.OS === 'ios' ? file.path.replace('file://', '') : file.path,
+    };
+    // @ts-expect-error because of react native image type
+    formData.append('files', fileToUpload);
+
+    const response = await client.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (response.data && response.data.length > 0) {
+      return response.data[0].documentId || response.data[0].id;
+    }
+    throw new Error('Upload failed: No data received');
+  } catch (error) {
+
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : 'Unknown error';
+    throw new Error(`Failed to upload file: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Update club info (name, email, phone, address, logo)
+ * @param {Club} clubData - The club data to update
+ * @returns {Promise<Club>} - The updated club data
+ */
+export const updateClubInfo = async (clubData) => {
+  try {
+    const clubDataCopy = { ...clubData };
+    let logoId = null;
+
+    // Handle logo file upload if it's a new file (has path)
+    if (clubDataCopy.logo && clubDataCopy.logo.path) {
+      logoId = await uploadFile(clubDataCopy.logo);
+    } else if (clubDataCopy.logo && clubDataCopy.logo.id) {
+      // Keep existing logo if not changed
+      logoId = clubDataCopy.logo.id;
+    }
+
+    // Remove logo object from payload
+    delete clubDataCopy.logo;
+
+    // Remove empty properties
+    Object.keys(clubDataCopy).forEach((key) => {
+      // @ts-expect-error because keys are defined just above
+      if (clubDataCopy[key] === undefined || clubDataCopy[key] === null || clubDataCopy[key] === '') {
+        // @ts-expect-error because keys are defined just above
+        delete clubDataCopy[key];
+      }
+    });
+
+    // Prepare payload
+    const payload = {
+      ...clubDataCopy,
+      ...(logoId && { logo: logoId }),
+    };
+
+    // Send as JSON
+    const response = await client.put(`/clubs/${clubData.documentId}/update-info`, payload);
+
+    const schema = Joi.object({
+      data: clubSchema.required(),
+    }).required();
+
+    const validationResult = await schema.validateAsync(response.data, {
+      allowUnknown: true,
+    });
+
+    return validationResult.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to update club info: ${errorToDisplay}`);
   }
 };

@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -16,6 +16,7 @@ import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -23,6 +24,10 @@ import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
+import { getImageUrl } from '@/utils/imageUrl';
+
+import ClubPlanning from './ClubPlanningScreen';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 
 /**
  * Club details screen component
@@ -47,6 +52,7 @@ function ClubDetails({ navigation, route }) {
   const { startClubChat } = useMessaging();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
+  const [selectedTab, setSelectedTab] = useState('infos');
 
   const {
     data: club,
@@ -230,6 +236,34 @@ function ClubDetails({ navigation, route }) {
     }, [refetch]),
   );
 
+  const isMember = useMemo(() => {
+    if (!userData) return false;
+    if (userData.role?.name === 'admin' || userData.role?.name === 'SuperAdmin') return true;
+
+    // Check direct club membership
+    const userClubId = userData.club?.documentId || userData.club?.id;
+    if (userClubId === clubId) return true;
+
+    // Check team membership
+    return userData.teams?.some(t => {
+      const teamClubId = t.club?.documentId || t.club?.id;
+      return teamClubId === clubId;
+    });
+  }, [userData, clubId]);
+
+  const tabs = useMemo(() => {
+    const options = [{ label: 'Informations', value: 'infos' }];
+    if (isMember) {
+      options.push({ label: 'Planning', value: 'planning' });
+    }
+    return options;
+  }, [isMember]);
+
+  // Reset tab if access lost
+  if (selectedTab === 'planning' && !isMember) {
+    setSelectedTab('infos');
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -249,7 +283,7 @@ function ClubDetails({ navigation, route }) {
             onRefresh={refetch}
             refreshing={isLoading}
           />
-                    )}
+        )}
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper
@@ -267,10 +301,54 @@ function ClubDetails({ navigation, route }) {
             Spaces.marginTop[24],
           ]}
           >
+            {canEdit ? (
+              <TouchableOpacity
+                onPress={() => {
+                  // Try direct navigation first, then parent
+                  try {
+                    navigation.navigate(RouteNames.ClubEdit, { clubId });
+                  } catch (e) {
+                    console.warn('Direct navigation failed, trying parent', e);
+                    navigation.getParent()?.navigate(RouteNames.ClubEdit, { clubId });
+                  }
+                }}
+                style={[
+                  Alignments.absolute,
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.gap[8],
+                  { right: 16, top: 16, zIndex: 10 }
+                ]}
+              >
+                <Image
+                  source={Images.edit}
+                  style={[
+                    ApplicationStyle.icon20,
+                    ApplicationStyle.tintColor.primary500
+                  ]}
+                />
+                <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                  {t('clubDetails.actions.editInfo') || 'Modifier'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <View style={{ marginTop: -32 }}>
-              <TeamShield
-                initials={club?.name ? getClubInitials(club?.name) : ''}
-              />
+              {club?.logo?.url ? (
+                <ProfileAvatar
+                  imageUrl={club.logo.url}
+                  size={80}
+                  style={[
+                    ApplicationStyle.borderWidth1,
+                    ApplicationStyle.borderColor.neutral00,
+                    { borderRadius: 80 },
+                  ]}
+                  imageStyle={{ borderRadius: 80 }}
+                />
+              ) : (
+                <TeamShield
+                  initials={club?.name ? getClubInitials(club?.name) : ''}
+                />
+              )}
             </View>
             <View style={[
               Spaces.gap[4],
@@ -280,7 +358,13 @@ function ClubDetails({ navigation, route }) {
                 {club?.name}
               </Text>
               <Text style={[Fonts.p2, Fonts.primary100]}>
-                {club?.addressDetails ? JSON.parse(club?.addressDetails)?.address : ''}
+                {(() => {
+                  try {
+                    return club?.addressDetails ? JSON.parse(club.addressDetails)?.address : '';
+                  } catch (e) {
+                    return club?.addressDetails || '';
+                  }
+                })()}
               </Text>
             </View>
             <View style={[
@@ -316,301 +400,337 @@ function ClubDetails({ navigation, route }) {
             </View>
           </View>
 
-          {/* Activities */}
-          <View style={[Spaces.gap[16]]}>
-            <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
-            <View
-              key={Math.random()}
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Spaces.gap[16],
-              ]}
-            >
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {club?.activites?.map(({ name }) => name)?.join(', ')}
-              </Text>
-            </View>
+          {/* Tabs */}
+          <View style={[Alignments.alignCenter]}>
+            <SegmentedControl
+              options={tabs}
+              value={selectedTab}
+              onChange={setSelectedTab}
+            />
           </View>
 
-          {/* Sponsors */}
-          {(club?.sponsor?.length || canEdit) && (
-          <View style={[Spaces.gap[16]]}>
-            <View style={[Alignments.row,
-              Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-            >
-              <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
+          {selectedTab === 'planning' ? (
+            <ClubPlanning clubId={clubId} />
+          ) : (
+            <>
+              {/* Admin Actions */}
               {canEdit ? (
-                <Button
-                  icon="plus"
-                  isOption
-                  onPress={handleCreateSponsor}
-                  variant="Primary"
-                />
-              ) : null}
-            </View>
-            <ScrollView
-              contentContainerStyle={[Spaces.gap[16]]}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              {club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
-                <View
-                  key={sponsor.link}
-                  style={[Alignments.relative, Spaces.marginTop[8]]}
-                >
-                  {
-                    canEdit ? (
-                      <TouchableOpacity
-                        onPress={() => handleDeleteSponsor(sponsor)}
-                        style={[
-                          Alignments.absolute,
-                          ApplicationStyle.backgroundColor.error700,
-                          ApplicationStyle.borderRadius24,
-                          Spaces.padding[8],
-                          { right: -12, top: -8, zIndex: 1 },
-                        ]}
-                      >
-                        <Image
-                          source={Images.trash}
-                          style={[
-                            ApplicationStyle.icon16,
-                            ApplicationStyle.tintColor.neutral00]}
-                        />
-                      </TouchableOpacity>
-                    ) : null
-                  }
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (sponsor.link) {
-                        Linking.openURL(sponsor.link);
-                      }
-                    }}
-                    style={[
-                      Alignments.alignCenter,
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: sponsor?.logo?.url }}
-                      style={[
-                        ApplicationStyle.roundIcon55,
-                        ApplicationStyle.borderWidth1,
-                        ApplicationStyle.borderColor.neutral00,
-                      ]}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      {sponsor.title}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-          )}
-
-          {/* teams */}
-          {club?.teams?.length ? (
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
-              </View>
-              <View
-                style={[Spaces.gap[16]]}
-              >
-                {
-                  club?.teams?.map((/** @type {Team} */ team) => (
-                    <TouchableOpacity
-                      key={team.documentId}
-                      onPress={() => handleTeamPress(team)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        Alignments.justifySpaceBetween,
-                        Spaces.padding[8],
-                        Spaces.gap[16]]}
-                    >
-                      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
-                        <TeamShield
-                          initials={team?.name ? getClubInitials(team?.name) : ''}
-                          isNeutral
-                          isSmall
-                        />
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {team.name}
-                        </Text>
-                      </View>
-
-                    </TouchableOpacity>
-                  ))
-                }
-              </View>
-            </View>
-          ) : null}
-
-          {/* Coachs */}
-          {coachs?.length || canEdit ? (
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
-                {canEdit ? (
+                <View style={[Spaces.gap[16]]}>
                   <Button
+                    onPress={() => navigation.navigate(RouteNames.FacilityList)}
+                    title="Gérer les installations"
+                    variant="Secondary"
                     icon="plus"
-                    isOption
-                    onPress={handleCreateCoach}
-                    variant="Primary"
                   />
-                ) : null}
-              </View>
-              <View
-                style={[Spaces.gap[16]]}
-              >
-                {
-                  coachs?.map((/** @type {User} */ user) => (
-                    <TouchableOpacity
-                      key={user.documentId}
-                      onPress={() => handleUserPress(user)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.fill,
-                        Alignments.alignCenter,
-                        Alignments.fill,
-                        Alignments.justifySpaceBetween,
-                        Spaces.padding[16],
-                        Spaces.gap[24],
-                      ]}
-                    >
-                      <View style={[
-                        Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
-                      >
-                        <Image
-                          source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
-                          style={[
-                            ApplicationStyle.roundIcon40,
-                            ApplicationStyle.borderWidth1,
-                            ApplicationStyle.borderColor.neutral00,
-                          ]}
-                        />
-                        <Text
-                          numberOfLines={2}
-                          style={[Fonts.p1Bold, Fonts.neutral00]}
-                        >
-                          {`${user.firstname} ${user.lastname}`}
-                        </Text>
-                      </View>
-                      {canEdit ? (
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
-                          <Button
-                            icon="trash"
-                            isOption
-                            onPress={() => handleDeleteTrainer(user.documentId)}
-                            variant="SecondaryLight"
-                          />
-                          <Button
-                            icon="share"
-                            isOption
-                            onPress={() => {
-                              inviteTrainer({
-                                clubName: club?.name,
-                                firstname: user.firstname,
-                                phoneNumber: user.phoneNumber,
-                              });
-                            }}
-                            variant="SecondaryLight"
-                          />
-                        </View>
-                      ) : null}
-                    </TouchableOpacity>
-                  ))
-                }
-              </View>
-            </View>
-          ) : null}
 
-          {/* president */}
-          {owners?.length ? (
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
+                </View>
+              ) : null}
+
+              {/* Activities */}
+              <View style={[Spaces.gap[16]]}>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
+                <View
+                  key={Math.random()}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[16],
+                  ]}
+                >
+                  <Text style={[Fonts.p1, Fonts.neutral00]}>
+                    {club?.activites?.map(({ name }) => name)?.join(', ')}
+                  </Text>
+                </View>
               </View>
-              <View
-                style={[Spaces.gap[16]]}
-              >
-                {
-                  owners?.map((/** @type {User} */ user) => (
-                    <TouchableOpacity
-                      key={user.documentId}
-                      onPress={() => handleUserPress(user)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        Alignments.fill,
-                        Alignments.justifySpaceBetween,
-                        Spaces.padding[16],
-                        Spaces.gap[16]]}
-                    >
-                      <View style={[
-                        Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+
+              {/* Sponsors */}
+              {(club?.sponsor?.length || canEdit) && (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                  >
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
+                    {canEdit ? (
+                      <Button
+                        icon="plus"
+                        isOption
+                        onPress={handleCreateSponsor}
+                        variant="Primary"
+                      />
+                    ) : null}
+                  </View>
+                  <ScrollView
+                    contentContainerStyle={[Spaces.gap[16]]}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                  >
+                    {club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
+                      <View
+                        key={sponsor.link}
+                        style={[Alignments.relative, Spaces.marginTop[8]]}
                       >
-                        <Image
-                          source={user.avatar ? { uri: user?.avatar?.url } : Images.roundAvatar}
+                        {
+                          canEdit ? (
+                            <TouchableOpacity
+                              onPress={() => handleDeleteSponsor(sponsor)}
+                              style={[
+                                Alignments.absolute,
+                                ApplicationStyle.backgroundColor.error700,
+                                ApplicationStyle.borderRadius24,
+                                Spaces.padding[8],
+                                { right: -12, top: -8, zIndex: 1 },
+                              ]}
+                            >
+                              <Image
+                                source={Images.trash}
+                                style={[
+                                  ApplicationStyle.icon16,
+                                  ApplicationStyle.tintColor.neutral00]}
+                              />
+                            </TouchableOpacity>
+                          ) : null
+                        }
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (sponsor.link) {
+                              Linking.openURL(sponsor.link);
+                            }
+                          }}
                           style={[
-                            ApplicationStyle.roundIcon40,
-                            ApplicationStyle.borderWidth1,
-                            ApplicationStyle.borderColor.neutral00,
+                            Alignments.alignCenter,
                           ]}
-                        />
-                        <Text
-                          numberOfLines={2}
-                          style={[Fonts.p1Bold, Fonts.neutral00]}
                         >
-                          {`${user.firstname} ${user.lastname}`}
-                        </Text>
+                          <ProfileAvatar
+                            imageUrl={sponsor?.logo?.url}
+                            size={55}
+                            enablePreview={false}
+                            style={[
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 55 },
+                            ]}
+                            imageStyle={{ borderRadius: 55 }}
+                          />
+                          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {sponsor.title}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                    </TouchableOpacity>
-                  ))
-                }
-              </View>
-            </View>
-          ) : null}
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* teams */}
+              {club?.teams?.length ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                  >
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
+                  </View>
+                  <View
+                    style={[Spaces.gap[16]]}
+                  >
+                    {
+                      club?.teams?.map((/** @type {Team} */ team) => (
+                        <TouchableOpacity
+                          key={team.documentId}
+                          onPress={() => handleTeamPress(team)}
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Alignments.justifySpaceBetween,
+                            Spaces.padding[8],
+                            Spaces.gap[16]]}
+                        >
+                          <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                            <TeamShield
+                              initials={team?.name ? getClubInitials(team?.name) : ''}
+                              isNeutral
+                              isSmall
+                            />
+                            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                              {team.name}
+                            </Text>
+                          </View>
+
+                        </TouchableOpacity>
+                      ))
+                    }
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Coachs */}
+              {coachs?.length || canEdit ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                  >
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
+                    {canEdit ? (
+                      <Button
+                        icon="plus"
+                        isOption
+                        onPress={handleCreateCoach}
+                        variant="Primary"
+                      />
+                    ) : null}
+                  </View>
+                  <View
+                    style={[Spaces.gap[16]]}
+                  >
+                    {
+                      coachs?.map((/** @type {User} */ user) => (
+                        <TouchableOpacity
+                          key={user.documentId}
+                          onPress={() => handleUserPress(user)}
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.fill,
+                            Alignments.alignCenter,
+                            Alignments.fill,
+                            Alignments.justifySpaceBetween,
+                            Spaces.padding[16],
+                            Spaces.gap[24],
+                          ]}
+                        >
+                          <View style={[
+                            Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                          >
+                            <Image
+                              source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
+                              style={[
+                                ApplicationStyle.roundIcon40,
+                                ApplicationStyle.borderWidth1,
+                                ApplicationStyle.borderColor.neutral00,
+                              ]}
+                            />
+                            <Text
+                              numberOfLines={2}
+                              style={[Fonts.p1Bold, Fonts.neutral00]}
+                            >
+                              {`${user.firstname} ${user.lastname}`}
+                            </Text>
+                          </View>
+                          {canEdit ? (
+                            <View style={[Alignments.row, Spaces.gap[8]]}>
+                              <Button
+                                icon="trash"
+                                isOption
+                                onPress={() => handleDeleteTrainer(user.documentId)}
+                                variant="SecondaryLight"
+                              />
+                              <Button
+                                icon="share"
+                                isOption
+                                onPress={() => {
+                                  inviteTrainer({
+                                    clubName: club?.name,
+                                    firstname: user.firstname,
+                                    phoneNumber: user.phoneNumber,
+                                  });
+                                }}
+                                variant="SecondaryLight"
+                              />
+                            </View>
+                          ) : null}
+                        </TouchableOpacity>
+                      ))
+                    }
+                  </View>
+                </View>
+              ) : null}
+              {/* president */}
+              {owners?.length ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                  >
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
+                  </View>
+                  <View
+                    style={[Spaces.gap[16]]}
+                  >
+                    {
+                      owners?.map((/** @type {User} */ user) => (
+                        <TouchableOpacity
+                          key={user.documentId}
+                          onPress={() => handleUserPress(user)}
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Alignments.fill,
+                            Alignments.justifySpaceBetween,
+                            Spaces.padding[16],
+                            Spaces.gap[16]]}
+                        >
+                          <View style={[
+                            Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
+                          >
+                            <Image
+                              source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
+                              style={[
+                                ApplicationStyle.roundIcon40,
+                                ApplicationStyle.borderWidth1,
+                                ApplicationStyle.borderColor.neutral00,
+                              ]}
+                            />
+                            <Text
+                              numberOfLines={2}
+                              style={[Fonts.p1Bold, Fonts.neutral00]}
+                            >
+                              {`${user.firstname} ${user.lastname}`}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                    }
+                  </View>
+                </View>
+              ) : null}
+            </>
+          )}
         </WithDataWrapper>
       </ScrollView>
-      {canJoinClub ? (
-        <Button
-          onPress={handleAskToJoinClub}
-          style={Spaces.marginTop[12]}
-          title={t('clubDetails.actions.join')}
-          variant="Primary"
-        />
-      ) : null}
-      {canContactAdmin ? (
-        <Button
-          onPress={handleContactFoundClub}
-          style={Spaces.marginTop[12]}
-          title={t('clubDetails.actions.join')}
-          variant="Primary"
-        />
-      ) : null}
-      { coachs?.length && canEdit ? (
-        <Button
-          onPress={handleStartChat}
-          style={Spaces.marginBottom[24]}
-          title={t('clubDetails.actions.contactTrainers')}
-          variant="Primary"
-        />
-      ) : null}
-    </ScreenContainer>
+      {
+        canJoinClub ? (
+          <Button
+            onPress={handleAskToJoinClub}
+            style={Spaces.marginTop[12]}
+            title={t('clubDetails.actions.join')}
+            variant="Primary"
+          />
+        ) : null
+      }
+      {
+        canContactAdmin ? (
+          <Button
+            onPress={handleContactFoundClub}
+            style={Spaces.marginTop[12]}
+            title={t('clubDetails.actions.join')}
+            variant="Primary"
+          />
+        ) : null
+      }
+      {
+        coachs?.length && canEdit ? (
+          <Button
+            onPress={handleStartChat}
+            style={Spaces.marginBottom[24]}
+            title={t('clubDetails.actions.contactTrainers')}
+            variant="Primary"
+          />
+        ) : null
+      }
+    </ScreenContainer >
   );
 }
 

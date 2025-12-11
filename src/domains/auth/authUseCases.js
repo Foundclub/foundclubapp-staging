@@ -7,6 +7,7 @@ export const USER_ROLES = /** @type {const} */({
   new: 'Authenticated',
   player: 'Joueur',
   president: 'Dirigeant',
+  superAdmin: 'SuperAdmin',
 });
 
 export const getAuthTokens = () => {
@@ -46,6 +47,7 @@ export const getOnboardingViews = ({
           { canShow: true, index: 5, route: RouteNames.Welcome },
         ];
       case USER_ROLES.president:
+      case USER_ROLES.superAdmin:
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserAvatar },

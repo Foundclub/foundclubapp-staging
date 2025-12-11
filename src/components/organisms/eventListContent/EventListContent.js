@@ -1,15 +1,22 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import {
+  startOfDay,
+} from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Text, TouchableOpacity, View,
+  Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import DateSlider from '@/components/molecules/dateSlider/DateSlider';
+
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
@@ -27,8 +34,15 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import Input from '@/components/molecules/input/Input';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
+import SearchMap from '@/components/organisms/searchMap/SearchMap';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 
 /**
  * Event list content to be used in home page or dedicated event list screen
@@ -47,16 +61,33 @@ import JoinEventModal from '../joinEventModal/JoinEventModal';
  *   q?: string;
  *   useOrFilter?: boolean;
  * }} [props.additionalFilters] - Whether the event list is open
+ * @param {any[]} [props.events] - External list of events (optional)
+ * @param {Function} [props.onLoadMore] - Callback for loading more events (optional)
+ * @param {boolean} [props.isLoading] - External loading state (optional)
+ * @param {boolean} [props.isPlanning] - Whether the list is displayed in planning mode (optional)
  * @returns {import('react').ReactElement} Event list content component
  */
-function EventListContent({ additionalFilters, showFilters = false }) {
+function EventListContent({
+  additionalFilters,
+  showFilters = false,
+  isPlanning = false,
+  events: propEvents,
+  onLoadMore,
+  isLoading: propIsLoading,
+}) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
+  const [isMapView, setIsMapView] = useState(false);
+
+  // Date Picker State
+  // Date Picker State
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // hooks
   const {
     Alignments,
     ApplicationStyle,
+    Colors,
     Fonts,
     Images,
     Spaces,
@@ -65,7 +96,8 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const { t } = useTranslation();
   const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
-  const { userData: { documentId: userDocumentId } = {} } = useAuth();
+  const { userData } = useAuth();
+  const userDocumentId = userData?.documentId;
 
   const eventsConfig = useMemo(() => ({
     ...(showFilters ? eventFilters : {}),
@@ -73,15 +105,30 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     pageSize: 15,
   }), [showFilters, eventFilters, additionalFilters]);
 
+  const featuredEventsConfig = useMemo(() => ({
+    ...(showFilters ? eventFilters : {}),
+    ...additionalFilters,
+    isFeatured: true,
+    sessionStatus: 'open',
+    pageSize: 5,
+  }), [showFilters, eventFilters, additionalFilters]);
+
+  // Only fetch if no external events are provided
   const {
     data: requestPages,
     error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isLoading: isInternalLoading,
     refetch,
-  } = useGetEvents(eventsConfig);
+  } = useGetEvents(eventsConfig, { enabled: !propEvents });
+
+  const {
+    data: featuredPages,
+    isLoading: isFeaturedLoading,
+    refetch: refetchFeatured,
+  } = useGetEvents(featuredEventsConfig, { enabled: !propEvents });
 
   /**
    * Mutation to create an event participation
@@ -91,18 +138,28 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onSuccess: () => {
-      refetch();
+      if (!propEvents) refetch(); // Only refetch internal query
       setIsJoinModalVisible(false);
     },
   });
 
   // variables
-  const events = useMemo(() => requestPages?.pages
+  const internalEvents = useMemo(() => requestPages?.pages
     ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
       const items = page?.data || [];
       return acc.concat(items);
     }, [])
     || [], [requestPages]);
+
+  const featuredEvents = useMemo(() => featuredPages?.pages
+    ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
+      const items = page?.data || [];
+      return acc.concat(items);
+    }, [])
+    || [], [featuredPages]);
+
+  const events = propEvents || internalEvents;
+  const isLoading = propIsLoading !== undefined ? propIsLoading : isInternalLoading;
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -134,10 +191,12 @@ function EventListContent({ additionalFilters, showFilters = false }) {
 
   // handlers
   const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (onLoadMore) {
+      onLoadMore();
+    } else if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, onLoadMore]);
 
   /**
    * Mutation for marking an event as missing
@@ -146,7 +205,7 @@ function EventListContent({ additionalFilters, showFilters = false }) {
   const missingEventMutation = useMutation({
     mutationFn: missingEvent,
     onSuccess: () => {
-      refetch();
+      if (!propEvents) refetch();
     },
   });
 
@@ -201,10 +260,26 @@ function EventListContent({ additionalFilters, showFilters = false }) {
     setSelectedEvent(undefined);
   }, []);
 
+  // Date Picker Handlers
+  const handleDateSelected = useCallback((date) => {
+    setSelectedDate(date);
+    const start = startOfDay(date).toISOString();
+
+    appDispatch({
+      payload: Object.assign(eventFilters || {}, {
+        startDateAfter: start,
+      }),
+      type: 'SET_EVENT_FILTERS',
+    });
+  }, [appDispatch, eventFilters]);
+
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch]),
+      if (!propEvents) {
+        refetch();
+        refetchFeatured();
+      }
+    }, [refetch, refetchFeatured, propEvents]),
   );
 
   // renderers
@@ -214,144 +289,41 @@ function EventListContent({ additionalFilters, showFilters = false }) {
    * @param {FCEvent} param.item
    * @returns {import('react').ReactElement} The rendered event item
    */
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => handleEventSelect(item)}
-      style={[
-        Alignments.alignStart,
-        Alignments.justifySpaceBetween,
-        Spaces.padding[24],
-        Spaces.marginVertical[12],
-        Spaces.gap[24],
-        ApplicationStyle.backgroundColor.primary700,
-        ApplicationStyle.borderRadius24,
-      ]}
-    >
-      <View style={[Alignments.fullWidth]}>
-        <View style={[Alignments.fullWidth, Alignments.alignEnd]}>
-          {item?.type ? (
-            <Tag
-              text={item?.type?.name || ''}
-            />
-          ) : null}
-        </View>
-        <View style={[
-          Alignments.row,
-          Alignments.fullWidth,
-          Alignments.alignCenter,
-          Spaces.gap[8]]}
-        >
-          <TeamShield
-            initials={item?.team?.club?.name ? getClubInitials(item?.team?.club?.name) : ''}
-            isSmall
-          />
-          <View style={[Spaces.gap[4], { maxWidth: '80%' }]}>
-            <Text
-              ellipsizeMode="tail"
-              numberOfLines={2}
-              style={[Fonts.p1Bold, Fonts.neutral00]}
-            >
-              {item?.team?.club?.name || ''}
-            </Text>
-          </View>
+  const renderItem = ({ item }) => {
+    const isReservation = item?.type?.name === 'Réservation';
+    const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
+    const showAbout = isPlanning || isManager;
 
-        </View>
-      </View>
-      <View style={[
-        Alignments.alignCenter,
-        Spaces.gap[8],
-        Alignments.row,
-        Alignments.wrap]}
-      >
-        {item?.team?.activities?.length ? (
-          <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
-            <Image
-              source={Images.running}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-            />
-            <Text style={[Fonts.p2, Fonts.primary100]}>
-              {item?.team?.activities?.map(({ name }) => name)?.join(', ') || ''}
-            </Text>
-          </View>
-        ) : null}
-        {item?.locationDetails ? (
-          <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
-            <Image
-              source={Images.pin}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-            />
-            <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '95%' }]}>
-              {JSON.parse(item?.locationDetails)?.address || ''}
-            </Text>
-          </View>
-        ) : null}
-        {item?.date ? (
-          <View style={[
-            Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}
-          >
-            <Image
-              source={Images.calendar}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-            />
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p2, Fonts.primary100]}
-            >
-              {format(item?.date, 'dd MMM yyyy')}
-            </Text>
-          </View>
-        ) : null}
-        {item?.date ? (
-          <View style={[
-            Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}
-          >
-            <Image
-              source={Images.clock}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-            />
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p2, Fonts.primary100]}
-            >
-              {format(item?.date, 'HH:mm')}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-      <EventAnswerButtons
-        event={item}
-        onAbout={() => handleEventSelect(item)}
+    if (isReservation) {
+      return (
+        <EventCardNew
+          actionLabel={showAbout ? t('eventList.actions.about') : undefined}
+          item={item}
+          onParticipate={() => (showAbout ? handleEventSelect(item) : handleParticipateToEvent(item))}
+          onPress={() => handleEventSelect(item)}
+        />
+      );
+    }
+
+    return (
+      <EventCardNew
+        item={item}
         onDecline={() => handleDeclineEvent(item)}
         onJoin={() => handleJoinEvent(item)}
         onLogin={handleGoLogin}
         onParticipate={() => handleParticipateToEvent(item)}
+        onPress={() => handleEventSelect(item)}
       />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const renderEmptyList = () => (
-    <View style={[
-      ApplicationStyle.backgroundColor.primary900,
-      ApplicationStyle.borderRadius16,
-      Alignments.alignCenter,
-      Spaces.gap[32],
-      Spaces.padding[24],
-      Spaces.marginVertical[24]]}
-    >
-      <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {t('eventList.noData')}
-      </Text>
-      {
-        !showFilters ? (
-          <Button
-            isOption
-            onPress={handleFindEvent}
-            title={t('eventList.actions.findEvent')}
-            variant="SecondaryLight"
-          />
-        ) : null
-      }
-    </View>
+    <EmptyState
+      title={t('eventList.noData')}
+      description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
+      actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
+      onAction={!showFilters ? handleFindEvent : undefined}
+    />
   );
 
   // useEffect to log the filters select and use in the request
@@ -361,36 +333,81 @@ function EventListContent({ additionalFilters, showFilters = false }) {
 
   return (
     <View style={[Spaces.gap[40], Alignments.fill]}>
-      {showFilters ? (
-        <SearchComponent
-          filterNumber={filterCount}
-          handleSearchField={handleSearchField}
-          openFilters={handleOpenFilters}
-          searchDefaultValue={eventFilters?.q}
+
+
+      {isMapView ? (
+        <SearchMap
+          items={events}
+          onMarkerPress={handleEventSelect}
+          type="event"
         />
-      ) : null}
-      <WithDataWrapper
-        error={error?.message}
-        isLoading={isLoading && !isFetchingNextPage}
-        wrapperStyle={[Alignments.fill]}
-      >
-        <View style={[
-          Alignments.fill,
-          ApplicationStyle.borderRadius2]}
+      ) : (
+        <WithDataWrapper
+          error={error?.message}
+          isLoading={isLoading && !isFetchingNextPage}
+          wrapperStyle={[Alignments.fill]}
         >
-          <FlashList
-            data={events}
-            keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={renderEmptyList}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            onRefresh={refetch}
-            refreshing={isLoading && !isFetchingNextPage}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      </WithDataWrapper>
+          <View style={[
+            Alignments.fill,
+            ApplicationStyle.borderRadius2]}
+          >
+            <FlashList
+              data={events}
+              estimatedItemSize={200}
+              keyExtractor={(item) => item?.documentId || 'unknown'}
+              ListEmptyComponent={renderEmptyList}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.5}
+              onRefresh={() => {
+                refetch();
+                refetchFeatured();
+              }}
+              refreshing={isLoading && !isFetchingNextPage}
+              renderItem={renderItem}
+              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+              ListHeaderComponent={
+                <View style={[Spaces.gap[24], Spaces.marginBottom[24]]}>
+                  {!propEvents && featuredEvents.length > 0 ? (
+                    <FeaturedEvents events={featuredEvents} />
+                  ) : null}
+
+                  {/* Date Header */}
+                  <View>
+                    <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
+                      Événements à partir de
+                    </Text>
+                    <DateSlider
+                      selectedDate={selectedDate}
+                      onDateSelected={handleDateSelected}
+                    />
+                  </View>
+
+                  {showFilters ? (
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+                      <View style={{ flex: 1 }}>
+                        <OnboardingWrapper
+                          description="Recherchez par mot-clé ou utilisez les filtres avancés."
+                          id="search-filters"
+                          order={2}
+                          title="Filtres"
+                        >
+                          <SearchComponent
+                            filterNumber={filterCount}
+                            handleSearchField={handleSearchField}
+                            openFilters={handleOpenFilters}
+                            searchDefaultValue={eventFilters?.q}
+                          />
+                        </OnboardingWrapper>
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              }
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </WithDataWrapper>
+      )}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}
@@ -398,6 +415,23 @@ function EventListContent({ additionalFilters, showFilters = false }) {
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
       />
+
+      {/* Floating Map Button */}
+      {showFilters && (
+        <OnboardingWrapper
+          description="Basculez entre la vue liste et la carte interactive."
+          id="map-toggle"
+          order={4}
+          style={{ position: 'absolute', bottom: 20, right: 20 }} // Ensure wrapper has position
+          title="Carte"
+        >
+          <MapFloatButton
+            isMapView={isMapView}
+            onPress={() => setIsMapView(!isMapView)}
+            type="event"
+          />
+        </OnboardingWrapper>
+      )}
     </View>
   );
 }

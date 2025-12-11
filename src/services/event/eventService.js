@@ -3,26 +3,34 @@ import Joi from 'joi';
 import client from '../client';
 
 export const eventSchema = Joi.object({
-  capacity: Joi.number().required(),
+  capacity: Joi.number().allow(null).optional(),
   date: Joi.date().iso().required(),
   description: Joi.string().allow('', null),
   documentId: Joi.string(),
   geohash: Joi.string().allow('', null).optional(),
   location: Joi.object({
-    lat: Joi.number().required(),
-    lng: Joi.number().required(),
+    lat: Joi.number().allow(null).optional(),
+    lng: Joi.number().allow(null).optional(),
   }).allow(null).optional(),
-  sessionStatus: Joi.string().valid('open', 'closed').required(),
+  sessionStatus: Joi.string().valid('open', 'closed').allow(null).optional(),
   team: Joi.object({
-    documentId: Joi.string().required(),
-    name: Joi.string().required(),
+    documentId: Joi.string().allow(null).optional(),
+    name: Joi.string().allow(null).optional(),
   }).allow(null).optional(),
   type: Joi.object({
-    documentId: Joi.string().required(),
-    name: Joi.string().required(),
+    documentId: Joi.string().allow(null).optional(),
+    name: Joi.string().allow(null).optional(),
   }).allow(null).optional(),
-  validationMode: Joi.string().valid('auto', 'manual').required(),
-}).required();
+  validationMode: Joi.string().valid('auto', 'manual').allow(null).optional(),
+  isFeatured: Joi.boolean().allow(null).optional(),
+  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').allow(null).optional(),
+  facility: Joi.object({
+    documentId: Joi.string().allow(null).optional(),
+    name: Joi.string().allow(null).optional(),
+  }).allow(null).optional(),
+  invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
+  recurrenceGroupId: Joi.string().allow(null).optional(),
+}).unknown(true);
 
 /**
  * Create a new event
@@ -41,22 +49,31 @@ export const createEvent = async (eventData) => {
  * @param {object} params
  * @param {string} params.documentId - The event ID
  * @param {FCEventForm} params.eventData - The event data to update
+ * @param {'future' | 'all'} [params.recurrenceMode] - The recurrence update mode
  * @returns {Promise<any>} 201
  */
-export const updateEvent = async ({ documentId, eventData }) => {
+export const updateEvent = async ({ documentId, eventData, recurrenceMode }) => {
+  const data = { ...eventData };
+  if (recurrenceMode) {
+    data.recurrenceMode = recurrenceMode;
+  }
   const response = await client.put(`/events/${documentId}`, {
-    data: eventData,
+    data,
   });
   return response.data;
 };
 
 /**
  * Cancel an event
- * @param {string} documentId - The event ID
+ * @param {object} params
+ * @param {string} params.documentId - The event ID
+ * @param {'future' | 'all'} [params.recurrenceMode] - The recurrence cancel mode
  * @returns {Promise<any>} 201
  */
-export const cancelEvent = async (documentId) => {
-  const response = await client.post(`/events/${documentId}/cancel`);
+export const cancelEvent = async ({ documentId, recurrenceMode }) => {
+  const response = await client.post(`/events/${documentId}/cancel`, {
+    recurrenceMode,
+  });
   return response.data;
 };
 
@@ -70,6 +87,7 @@ export const getEventById = async (documentId) => {
     params: {
       populate: ['team',
         'team.club',
+        'team.club.logo',
         'team.section',
         'team.category',
         'team.level',
@@ -133,9 +151,9 @@ export const getEventTypes = async () => {
  *   pageSize?: number;
  *   type?: string;
  *   club?: {label: string, value: string};
- *   category?: string;
- *   level?: string;
- *   activity?: string;
+ *   category?: string | string[];
+ *   level?: string | string[];
+ *   activity?: string | string[];
  *   sessionStatus?: string;
  *   q?: string;
  *   playerEventsFilter?: boolean;
@@ -144,6 +162,8 @@ export const getEventTypes = async () => {
  *   startDateBefore?: Date;
  *   sort?: string;
  *   geohash?: string;
+ *   excludeType?: string;
+ *   isFeatured?: boolean;
  *  }} params - The parameters for filtering events
  * }} params playerEventsFilter - If true, only events where the user is a participant
  * and user's teams closed events will be returned, if true trainerEventFilter is ignored
@@ -168,6 +188,9 @@ export const getEvents = async (params = {}) => {
     teamIds,
     trainerEventsFilter = false,
     type,
+    excludeType,
+    isFeatured,
+    featuredRequestStatus,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -259,12 +282,22 @@ export const getEvents = async (params = {}) => {
 
   if (type) {
     filtersObj.type = {
-      documentId: type,
+      documentId: Array.isArray(type) ? { $in: type } : type,
+    };
+  } else if (excludeType) {
+    filtersObj.type = {
+      name: {
+        $ne: excludeType,
+      },
     };
   }
 
   if (sessionStatus) {
     filtersObj.sessionStatus = sessionStatus;
+  }
+
+  if (params.validationMode) {
+    filtersObj.validationMode = params.validationMode;
   }
 
   if (club?.value || category || level || activity) {
@@ -278,29 +311,63 @@ export const getEvents = async (params = {}) => {
 
     if (category) {
       filtersObj.team.category = {
-        documentId: category,
+        documentId: Array.isArray(category) ? { $in: category } : category,
       };
     }
 
     if (level) {
       filtersObj.team.level = {
-        documentId: level,
+        documentId: Array.isArray(level) ? { $in: level } : level,
       };
     }
 
     if (activity) {
-      filtersObj.team.activities = {
-        documentId: {
-          $containsi: activity,
-        },
-      };
+      if (Array.isArray(activity)) {
+        filtersObj.team.activities = {
+          documentId: {
+            $in: activity,
+          },
+        };
+      } else {
+        filtersObj.team.activities = {
+          documentId: {
+            $containsi: activity,
+          },
+        };
+      }
     }
+  }
+
+  if (params.facility) {
+    filtersObj.facility = {
+      documentId: params.facility,
+    };
   }
 
   if (geohash && geohash.length) {
     filtersObj.geohash = {
       $contains: geohash,
     };
+  }
+
+  if (typeof isFeatured === 'boolean') {
+    if (isFeatured) {
+      filtersObj.isFeatured = true;
+    } else {
+      filtersObj.isFeatured = {
+        $ne: true,
+      };
+    }
+  }
+
+  if (featuredRequestStatus) {
+    if (Array.isArray(featuredRequestStatus)) {
+      filtersObj.featuredRequestStatus = {
+        $in: featuredRequestStatus,
+      };
+    } else {
+      filtersObj.featuredRequestStatus = featuredRequestStatus;
+    }
   }
 
   const filters = {
@@ -311,8 +378,17 @@ export const getEvents = async (params = {}) => {
       pageSize: pageSize || 10,
     },
     populate: [
+      'club',
+      'club.sponsor',
+      'club.sponsor',
+      'club.sponsor.logo',
+      'club.logo',
       'team',
       'team.club',
+      'team.club.sponsor',
+      'team.club.sponsor',
+      'team.club.sponsor.logo',
+      'team.club.logo',
       'team.section',
       'team.category',
       'team.level',
@@ -320,14 +396,18 @@ export const getEvents = async (params = {}) => {
       'type',
       'participations',
       'missings',
+      'facility',
+      'invitedTeams',
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
+    myTeams: params.myTeams, // Pass myTeams filter to backend
   };
 
   const response = await client.get('/events', { params: filters });
+  console.log('getEvents API Response:', JSON.stringify(response.data, null, 2));
   try {
     const schema = Joi.object({
-      data: Joi.array().items(eventSchema).empty(Joi.array().length(0)),
+      data: Joi.array().items(eventSchema),
       meta: Joi.object({
         pagination: Joi.object({
           page: Joi.number().required(),
@@ -343,6 +423,9 @@ export const getEvents = async (params = {}) => {
     });
     return validationResult;
   } catch (error) {
+    if (error.isJoi) {
+      console.error('Joi Validation Error Details:', JSON.stringify(error.details, null, 2));
+    }
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch events: ${errorToDisplay}`);
   }
@@ -363,7 +446,24 @@ export const missingEvent = async (eventId) => {
  * @param {string} eventId - The ID of the event to answer to
  * @returns {Promise<Event>} - The updated event
  */
-export const remindUnansweredPlayers = async (eventId) => {
-  const response = await client.post(`/events/${eventId}/remind-unanswered-players`);
-  return response.data;
+/**
+ * Get events for a specific club
+ * @param {string} clubId
+ * @returns {Promise<any>}
+ */
+export const getClubEvents = async (clubId) => {
+  return getEvents({
+    club: { value: clubId },
+    // validationMode: 'auto' // REMOVED: We want to see ALL events (manual & auto) for the club planning
+  });
+};
+
+/**
+ * Get events for the connected user (My Planning)
+ * @returns {Promise<any>}
+ */
+export const getMyEvents = async () => {
+  return getEvents({
+    myTeams: true
+  });
 };

@@ -3,7 +3,7 @@ import Slider from '@react-native-community/slider';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import usePlaces from '@/domains/places/usePlaces';
@@ -122,13 +122,17 @@ function ClubFilters({ navigation }) {
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
+        Spaces.gap[24],
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
     >
-      <View style={[Spaces.gap[40], Spaces.marginTop[16]]}>
+      <ScrollView
+        contentContainerStyle={[Spaces.gap[40]]}
+        style={[Spaces.marginVertical[16]]}
+      >
         <Controller
           control={control}
           name="city"
@@ -203,7 +207,7 @@ function ClubFilters({ navigation }) {
             />
           )}
         />
-      </View>
+      </ScrollView>
       <View style={[Spaces.gap[24]]}>
         <Button
           onPress={handleEmptyFilters}

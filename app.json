@@ -1,4 +1,9 @@
 {
   "name": "foundclub",
-  "displayName": "foundclub"
+  "displayName": "foundclub",
+  "extra": {
+    "eas": {
+      "projectId": "99c6c767-c216-4eba-9e66-ff75d327da0e"
+    }
+  }
 }

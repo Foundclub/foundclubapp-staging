@@ -1,0 +1,206 @@
+import Joi from 'joi';
+
+import client from '../client';
+
+export const reservationSchema = Joi.object({
+  club: Joi.object().optional(),
+  currentPlayers: Joi.number().required(),
+  date: Joi.string().required(),
+  description: Joi.string().allow('', null),
+  documentId: Joi.string().required(),
+  endTime: Joi.string().optional(),
+  location: Joi.object().optional(),
+  locationDetails: Joi.string().allow('', null),
+  missingPlayers: Joi.number().required(),
+  organizer: Joi.object().optional(),
+  pricePerPerson: Joi.number().required(),
+  reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').required(),
+  startTime: Joi.string().optional(),
+  team: Joi.object().optional(),
+  totalPlayers: Joi.number().required(),
+  type: Joi.object().required(),
+}).required();
+
+/**
+ * Get reservations with filters
+ * @param {{
+ *   page?: number;
+ *   pageSize?: number;
+ *   q?: string;
+ *   type?: string;
+ *   reservationMode?: string;
+ *   club?: string;
+ * }} [filters]
+ * @returns {Promise<{data: Reservation[], meta: {pagination: {page: number, pageSize: number, pageCount: number, total: number}}}>}
+ */
+export const getReservations = async (filters = {}) => {
+  try {
+    const {
+      activity,
+      club,
+      geohash,
+      maxPricePerPerson,
+      page = 1,
+      pageSize = 15,
+      q,
+      reservationMode,
+      startTime,
+      type,
+    } = filters;
+
+    const params = {
+      filters: {
+        type: { name: { $eq: 'Réservation' } },
+      },
+      pagination: {
+        page,
+        pageSize,
+      },
+      populate: [
+        'club',
+        'club.logo',
+        'club.sponsor',
+        'club.sponsor.logo',
+        'organizer',
+        'type',
+        'team',
+        'team.activities',
+        'team.club',
+        'team.club.logo',
+        'team.club.sponsor',
+        'team.club.sponsor.logo',
+        'participations',
+      ],
+      sort: ['date:asc'],
+    };
+
+    if (q) {
+      params.filters.$or = [
+        { description: { $containsi: q } },
+        { locationDetails: { $containsi: q } },
+      ];
+    }
+
+    if (type) {
+      params.filters.type = { name: { $eq: type } };
+    }
+
+    if (reservationMode) {
+      params.filters.reservationMode = { $eq: reservationMode };
+    }
+
+    if (club) {
+      params.filters.club = { documentId: { $eq: club } };
+    }
+
+    if (activity) {
+      params.filters.team = {
+        activities: {
+          documentId: { $eq: activity },
+        },
+      };
+    }
+
+    if (maxPricePerPerson) {
+      params.filters.pricePerPerson = { $lte: maxPricePerPerson };
+    }
+
+    if (startTime) {
+      // Extract HH:mm from ISO string if needed, or use as is if it's already time string
+      // Assuming startTime comes as ISO string from filters
+      const timeString = startTime.includes('T') ? startTime.split('T')[1].substring(0, 5) : startTime;
+      params.filters.startTime = { $gte: timeString };
+    }
+
+    if (geohash) {
+      params.filters.geohash = { $contains: geohash };
+    }
+
+    const response = await client.get('/events', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    // Return empty data structure instead of throwing
+    return {
+      data: [],
+      meta: {
+        pagination: {
+          page: 1,
+          pageSize: 15,
+          pageCount: 0,
+          total: 0,
+        },
+      },
+    };
+  }
+};
+
+/**
+ * Get featured reservations
+ * Returns featured items if available, otherwise returns latest reservations chronologically
+ * @param {number} [limit=10] - Maximum number of items to return
+ * @returns {Promise<{data: Reservation[], meta: {isFeatured: boolean, pagination: object}}>}
+ */
+export const getFeaturedReservations = async (limit = 10) => {
+  try {
+    const response = await client.get('/featured-items/reservations', {
+      params: {
+        limit,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('⚠️ Featured reservations unavailable, using fallback');
+    }
+    // Return empty data structure instead of throwing
+    return {
+      data: [],
+      meta: {
+        isFeatured: false,
+        pagination: {
+          page: 1,
+          pageSize: 0,
+          pageCount: 0,
+          total: 0,
+        },
+      },
+    };
+  }
+};
+
+/**
+ * Join a reservation
+ * @param {string} reservationId
+ * @returns {Promise<{data: Reservation}>}
+ */
+export const joinReservation = async (reservationId) => {
+  const response = await client.post(`/events/${reservationId}/join-reservation`);
+  return response.data;
+};
+
+/**
+ * Create a reservation
+ * @param {{
+ *   mode: 'FULL_GROUP' | 'RECRUITING';
+ *   totalPlayers: number;
+ *   currentPlayers: number;
+ *   pricePerPerson: number;
+ *   date: string;
+ *   startTime?: string;
+ *   endTime?: string;
+ *   description?: string;
+ *   location?: object;
+ *   locationDetails?: string;
+ *   club?: string;
+ *   team?: string;
+ * }} reservationData
+ * @returns {Promise<{data: Reservation}>}
+ */
+export const createReservation = async (reservationData) => {
+  const response = await client.post('/reservations', {
+    data: reservationData,
+  });
+  return response.data;
+};
+

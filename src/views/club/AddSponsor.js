@@ -72,9 +72,8 @@ function AddSponsor({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     if (clubData && logo) {
-      const newClub = Object.assign(clubData, {
-        sponsor: (clubData?.sponsor || []).concat(Object.assign(data, { logo })),
-      });
+      const newClub = { ...clubData };
+      newClub.sponsor = (clubData.sponsor || []).concat({ ...data, logo });
       createSponsorMutation.mutate(newClub);
     }
   };

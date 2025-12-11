@@ -5,11 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import { getImageUrl } from '@/utils/imageUrl';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -59,6 +62,35 @@ function TeamListContent({
     }, [])
     || [], [requestPages]);
 
+  const { userData } = useAuth();
+
+  console.log('DEBUG: TeamListContent', {
+    clubId,
+    userDataClubId: userData?.club?.documentId,
+    teamsCount: teams.length,
+    myTeamsCount: teams.filter(t => t.trainers?.some(tr => tr.documentId === userData?.documentId)).length
+  });
+
+  const { myTeams, otherTeams } = useMemo(() => {
+    if (!userData) return { myTeams: [], otherTeams: teams };
+
+    /** @type {Team[]} */
+    const my = [];
+    /** @type {Team[]} */
+    const other = [];
+
+    teams.forEach((team) => {
+      const isTrainer = team.trainers?.some((t) => t.documentId === userData.documentId);
+      if (isTrainer) {
+        my.push(team);
+      } else {
+        other.push(team);
+      }
+    });
+
+    return { myTeams: my, otherTeams: other };
+  }, [teams, userData]);
+
   // handlers
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -99,6 +131,7 @@ function TeamListContent({
         <View style={[
           Alignments.fullWidth,
           Alignments.alignEnd,
+          Alignments.justifyCenter,
         ]}
         >
           <Tag text={item.activities[0].name} />
@@ -114,10 +147,23 @@ function TeamListContent({
         ]}
       >
         <View>
-          <TeamShield
-            initials={getClubInitials(item?.club?.name || '')}
-            isSmall
-          />
+          {item?.club?.logo?.url ? (
+            <ProfileAvatar
+              imageUrl={item.club.logo.url}
+              size={60}
+              style={[
+                ApplicationStyle.borderWidth1,
+                ApplicationStyle.borderColor.neutral00,
+                { borderRadius: 60 },
+              ]}
+              imageStyle={{ borderRadius: 60 }}
+            />
+          ) : (
+            <TeamShield
+              initials={getClubInitials(item?.club?.name || '')}
+              isSmall
+            />
+          )}
         </View>
         <View style={[
           Alignments.fill,
@@ -205,9 +251,34 @@ function TeamListContent({
           ApplicationStyle.borderRadius2]}
         >
           <FlashList
-            data={teams}
+            data={otherTeams}
+            estimatedItemSize={200}
             keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={renderEmptyList}
+            ListHeaderComponent={() => (
+              <View>
+                {/* My Teams Section */}
+                {myTeams.length > 0 && (
+                  <View>
+                    <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16]]}>
+                      Mes Équipes
+                    </Text>
+                    {myTeams.map((team) => (
+                      <View key={team.documentId}>
+                        {renderItem({ item: team })}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Other Teams Title */}
+                {myTeams.length > 0 && otherTeams.length > 0 && (
+                  <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], Spaces.marginTop[24]]}>
+                    Autres Équipes du Club
+                  </Text>
+                )}
+              </View>
+            )}
+            ListEmptyComponent={myTeams.length === 0 ? renderEmptyList : null}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refetch}

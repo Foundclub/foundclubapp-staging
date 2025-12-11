@@ -9,7 +9,13 @@ import useTheme from '@/theme/themeContext';
 import Stepper from '@/components/atoms/stepper/Stepper';
 import AddCoach from '@/views/club/AddCoach';
 import AddSponsor from '@/views/club/AddSponsor';
+import AdminDashboard from '@/views/admin/AdminDashboard';
+import AdminEvents from '@/views/admin/AdminEvents';
+import AdminReports from '@/views/admin/AdminReports';
+import AdminRevenue from '@/views/admin/AdminRevenue';
+import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
 import ClubDetails from '@/views/club/ClubDetails';
+import ClubEdit from '@/views/club/ClubEdit';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
 import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
@@ -18,6 +24,9 @@ import Conversation from '@/views/Conversation';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
+import MercatoFilters from '@/views/mercato/MercatoFilters';
+import ReservationFilters from '@/views/reservation/ReservationFilters';
+import SearchAlerts from '@/views/search/SearchAlerts';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserName from '@/views/onboarding/UserName';
@@ -32,6 +41,10 @@ import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
 import TeamList from '@/views/team/TeamList';
 import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
+import FacilityList from '@/views/facility/FacilityList';
+import FacilityForm from '@/views/facility/FacilityForm';
+import RequestsDashboard from '@/views/club/RequestsDashboard';
+import NotificationList from '@/views/notification/NotificationList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -109,7 +122,7 @@ function PrivateNavigator() {
     // console.log('canShowView', routeName, onboardingViews);
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
     const viewable = onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0;
-    return !!(view && viewable > 1);
+    return !!(view && viewable >= 1);
   }, [onboardingViews]);
 
   return userData?.documentId ? (
@@ -148,6 +161,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: t('addCoach.titles.main'),
+        }}
+      />
+      <Stack.Screen
+        component={ClubEdit}
+        name={RouteNames.ClubEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: t('clubEdit.title') || 'Modifier le club',
         }}
       />
       <Stack.Screen
@@ -239,6 +260,30 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={MercatoFilters}
+        name={RouteNames.MercatoFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={ReservationFilters}
+        name={RouteNames.ReservationFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={SearchAlerts}
+        name={RouteNames.SearchAlerts}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
         component={EventDetails}
         name={RouteNames.EventDetails}
         options={{
@@ -263,6 +308,22 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={FacilityList}
+        name={RouteNames.FacilityList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Installations',
+        }}
+      />
+      <Stack.Screen
+        component={FacilityForm}
+        name={RouteNames.FacilityForm}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
         component={Conversation}
         name={RouteNames.Conversation}
         options={{
@@ -276,6 +337,62 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={AdminDashboard}
+        name={RouteNames.AdminDashboard}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={AdminRevenue}
+        name={RouteNames.AdminRevenue}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Revenus',
+        }}
+      />
+      <Stack.Screen
+        component={AdminEvents}
+        name={RouteNames.AdminEvents}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Événements',
+        }}
+      />
+      <Stack.Screen
+        component={AdminReports}
+        name={RouteNames.AdminReports}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Signalements',
+        }}
+      />
+      <Stack.Screen
+        component={FeaturedRequestsList}
+        name={RouteNames.FeaturedRequestsList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Demandes à la une',
+        }}
+      />
+      <Stack.Screen
+        component={RequestsDashboard}
+        name={RouteNames.RequestsDashboard}
+        options={{
+          ...commonOptions,
+          headerTitle: t('requests.title', 'Demandes'),
+        }}
+      />
+      <Stack.Screen
+        component={NotificationList}
+        name={RouteNames.NotificationList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Notifications',
         }}
       />
       {canShowView(RouteNames.UserRole) ? (

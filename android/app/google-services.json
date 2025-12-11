@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "353491626274",
-    "project_id": "found-club",
-    "storage_bucket": "found-club.firebasestorage.app"
+    "project_number": "1014297503086",
+    "project_id": "foundclub-staging",
+    "storage_bucket": "foundclub-staging.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:353491626274:android:db0b7408be4cda293edd7b",
+        "mobilesdk_app_id": "1:1014297503086:android:deb349e3d3a327f5548d7f",
+        "android_client_info": {
+          "package_name": "com.foundclub.staging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7hDM3wzd-e_BE1mQ2ZGR7u2VNIiflBo4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1014297503086:android:abc123placeholder548d7f",
         "android_client_info": {
           "package_name": "com.foundclub"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD1MgrC39gTnWk66juWsJBND4hQd_sJmNA"
+          "current_key": "AIzaSyC7hDM3wzd-e_BE1mQ2ZGR7u2VNIiflBo4"
         }
       ],
       "services": {

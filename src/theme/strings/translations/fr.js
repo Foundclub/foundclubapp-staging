@@ -186,7 +186,7 @@ export default {
     phoneNumberAlreadyUsedWithClub: 'Ce numéro est déjà utilisé par un·e entraîneur·e qui appartient à un club.',
     'Request failed with status code 404': 'La ressource demandée est introuvable.',
     schemaMismatch: 'Un problème est survenu lors de la récupération des informations.'
-    + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
+      + ' Veuillez vérifier que votre application est à jour ou réessayer plus tard.',
     TEAM_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les gestionnaires d\'équipe.',
     TEAM_TRAINER_CREATE_POLICY_ERROR: 'Violation de la politique de création d\'événements par les entraîneur·e·s.',
     title: 'Erreur',
@@ -199,6 +199,7 @@ export default {
     actions: {
       contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
+      editInfo: 'Modifier',
       join: "C'est mon club !",
       manageJoinRequests: 'Voir les demandes d\'affiliation',
     },
@@ -221,9 +222,9 @@ export default {
       },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
-        + '\nVous avez été désigné comme entraineur·e dans le club {{clubName}}.'
-        + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
-        + ' et commencer à gérer vos équipes et vos évènements.',
+          + '\nVous avez été désigné comme entraineur·e dans le club {{clubName}}.'
+          + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
+          + ' et commencer à gérer vos équipes et vos évènements.',
         title: 'Bienvenue sur Found Club !',
       },
       joinClub: {
@@ -295,12 +296,38 @@ export default {
   common: {
     actions: {
       cancel: 'Annuler',
+      confirm: 'Confirmer',
+      delete: 'Supprimer',
       photoFromCamera: 'Prendre une photo',
       photoFromGallery: 'Choisir depuis la gallerie',
+      save: 'Enregistrer',
     },
     messages: {
       noData: 'Aucune donnée disponible',
     },
+  },
+  club: {
+    fields: {
+      address: {
+        label: 'Adresse',
+        placeholder: 'Adresse du club',
+      },
+      email: {
+        label: 'Email',
+        placeholder: 'Email du club',
+      },
+      name: {
+        label: 'Nom',
+        placeholder: 'Nom du club',
+      },
+      phoneNumber: {
+        label: 'Téléphone',
+        placeholder: 'Téléphone du club',
+      },
+    },
+  },
+  clubEdit: {
+    title: 'Modifier le club',
   },
   conversation: {
     messagePlaceholder: 'Message',
@@ -441,8 +468,16 @@ export default {
         label: 'Description',
         placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
       },
+      endTime: {
+        label: 'Heure de fin',
+        placeholder: 'HH:mm',
+      },
       isRecurrent: {
         label: 'Évènement récurrent',
+      },
+      pricePerPerson: {
+        label: 'Prix par personne (€)',
+        placeholder: 'Ex: 10',
       },
       location: {
         label: 'Lieu',
@@ -473,9 +508,23 @@ export default {
           open: 'Ouvert',
         },
       },
+      startTime: {
+        label: 'Heure de début',
+        placeholder: 'HH:mm',
+      },
       team: {
         label: 'Équipe',
         placeholder: 'Sélectionner une équipe',
+      },
+      invitedTeams: {
+        label: 'Inviter des équipes',
+        placeholder: 'Sélectionner des équipes',
+        myTeams: 'MES ÉQUIPES',
+        otherTeams: 'AUTRES ÉQUIPES',
+      },
+      totalPlayers: {
+        label: 'Nombre total de joueurs',
+        placeholder: 'Ex: 10',
       },
       time: {
         label: "Horaire de l'évènement",
@@ -592,8 +641,60 @@ export default {
         options: {
           club: 'un club',
           event: 'un évènement',
+          reservation: 'une réservation',
           team: 'une équipe',
         },
+      },
+    },
+  },
+  reservation: {
+    actions: {
+      participate: 'Réserver',
+      requestFeatured: 'Demander la mise à la une',
+      cancelRequest: 'Annuler la demande',
+    },
+    card: {
+      missingPlayers: 'Il manque {{count}} joueur',
+      missingPlayers_plural: 'Il manque {{count}} joueurs',
+      pricePerPerson: '{{price}}€/pers',
+    },
+    featured: 'À la une :',
+    featuredRequest: {
+      title: 'Mise en avant',
+      pending: 'Demande en attente',
+      approved: 'Approuvée',
+      rejected: 'Refusée',
+      requestSuccess: 'Demande envoyée avec succès',
+      requestError: 'Erreur lors de l\'envoi de la demande',
+      cancelSuccess: 'Demande annulée',
+      cancelError: 'Erreur lors de l\'annulation',
+    },
+    filters: {
+      detections: 'Détections',
+      openTrainings: 'Entraînements ouverts',
+      tournaments: 'Tournois',
+    },
+    mode: {
+      fullGroup: 'J\'ai déjà mon groupe complet',
+      invalidPlayerCount: 'Veuillez entrer un nombre valide',
+      playerCount: 'Combien de joueurs avez-vous ?',
+      recruiting: 'Il me manque des joueurs',
+      selectMode: 'Veuillez sélectionner un mode',
+      title: 'Comment voulez-vous participer ?',
+      tooManyPlayers: 'Le nombre doit être inférieur au total',
+    },
+    noData: 'Aucune réservation trouvée.',
+    title: 'Évènements :',
+  },
+  reservationFilters: {
+    fields: {
+      maxPrice: {
+        label: 'Prix maximum par personne',
+        placeholder: 'Ex: 20',
+      },
+      startTime: {
+        label: 'À partir de',
+        placeholder: 'Heure de début',
       },
     },
   },
@@ -665,6 +766,7 @@ export default {
   },
   profile: {
     actions: {
+      confirmDeleteAvatar: 'Êtes-vous sûr de vouloir supprimer cette image ?',
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
@@ -686,7 +788,7 @@ export default {
           confirm: 'Ouvrir le formulaire',
         },
         subtitle: 'Pour demander la suppression de votre compte merci de remplir le formulaire de contact'
-        + ' suivant en précisant votre demande.',
+          + ' suivant en précisant votre demande.',
         title: 'Supprimer votre compte ?',
       },
     },
@@ -777,7 +879,7 @@ export default {
           confirm: 'Supprimer du club',
         },
         description: 'Le compte ne sera pas supprimé mais l\'entraineur·e ne sera plus lié au club ni à aucune de ces équipes.'
-        + ' Si vous souhaitez le retirer seulement de cette équipe merci de passer par le bouton de modification de l\'équipe.',
+          + ' Si vous souhaitez le retirer seulement de cette équipe merci de passer par le bouton de modification de l\'équipe.',
         title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e de votre club.',
       },
       invitePlayers: {
@@ -785,9 +887,9 @@ export default {
         downloadOnAndroid: 'Télécharger sur Android',
         downloadOnIOS: 'Télécharger sur iOS',
         message: 'Bonjour !'
-        + '\nVotre équipe {{teamName}} de votre club {{clubName}} vous attend !'
-        + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
-        + ' et commencer accéder et participer aux évènements de votre équipe.',
+          + '\nVotre équipe {{teamName}} de votre club {{clubName}} vous attend !'
+          + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
+          + ' et commencer accéder et participer aux évènements de votre équipe.',
         title: 'Vos coéquipiers vous attendent !',
       },
       joinRequest: {

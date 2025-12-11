@@ -12,12 +12,14 @@ export const images = {
   arrowLeft: require('../assets/icons/arrowLeft.png'),
   arrowRight: require('../assets/icons/arrowRight.png'),
   calendar: require('../assets/icons/calendar.png'),
+  bell: require('../assets/icons/bell.png'),
   camera: require('../assets/icons/camera.png'),
   check: require('../assets/icons/check.png'),
   chevronDown: require('../assets/icons/chevron-down.png'),
   clock: require('../assets/icons/clock.png'),
   close: require('../assets/icons/close.png'),
   edit: require('../assets/icons/edit.png'),
+  euroCircle: require('../assets/icons/euro-circle.png'),
   envelope: require('../assets/icons/envelope.png'),
   filter: require('../assets/icons/filter.png'),
   flag: require('../assets/icons/flag.png'),
@@ -32,6 +34,8 @@ export const images = {
   stadium: require('../assets/icons/stadium.png'),
   strokeShield: require('../assets/icons/stroke-shield.png'),
   trash: require('../assets/icons/trash.png'),
+  trashAlt: require('../assets/icons/trash-alt.png'),
+  redTrash: require('../assets/icons/redtrash.png'),
   users: require('../assets/icons/users.png'),
 };
 

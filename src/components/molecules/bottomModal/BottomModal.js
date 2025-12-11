@@ -71,12 +71,14 @@ function BottomModal({
           backgroundColor: Colors.neutral800,
         }]}
       >
-        <BlurView
-          blurAmount={15}
-          blurType="dark"
-          reducedTransparencyFallbackColor="rgba(0, 0, 0, 0.5)"
-          style={Alignments.fill}
-        />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            blurAmount={15}
+            blurType="dark"
+            reducedTransparencyFallbackColor="rgba(0, 0, 0, 0.5)"
+            style={Alignments.fill}
+          />
+        )}
       </BottomSheetBackdrop>
     ),
     [close, Colors, Alignments.fill],

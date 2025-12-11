@@ -21,9 +21,22 @@ import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
 
 // Create a storage instance for notifications
-const notificationStorage = new MMKV({
-  id: 'notifications-storage',
-});
+let notificationStorageInstance = null;
+
+const getNotificationStorage = () => {
+  if (!notificationStorageInstance) {
+    notificationStorageInstance = new MMKV({
+      id: 'notifications-storage',
+    });
+  }
+  return notificationStorageInstance;
+};
+
+const notificationStorage = {
+  getString: (key) => getNotificationStorage().getString(key),
+  set: (key, value) => getNotificationStorage().set(key, value),
+  contains: (key) => getNotificationStorage().contains(key),
+};
 
 /**
  * Check if a notification is a duplicate based on its messageId

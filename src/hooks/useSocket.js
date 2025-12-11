@@ -34,17 +34,21 @@ const useSocket = () => {
 
     // Create socket connection if it doesn't exist
     if (!socketRef.current) {
-      const socket = io(process.env.SOCKET_URL, {
+      // Derive socket URL from API_URL (remove /api suffix)
+      const socketUrl = process.env.SOCKET_URL || process.env.API_URL?.replace('/api', '') || 'http://10.0.2.2:1337';
+      console.log('DEBUG: Socket URL:', socketUrl);
+
+      const socket = io(socketUrl, {
         auth: { token: auth.token },
         extraHeaders: {
           'User-Agent': 'react-native',
         },
         reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        secure: true,
-        timeout: 10000,
+        reconnectionAttempts: 5, // Limit reconnection attempts
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        secure: false, // Set to false for local development (http)
+        timeout: 20000, // Increase timeout to 20 seconds
         transports: ['websocket'],
       });
 

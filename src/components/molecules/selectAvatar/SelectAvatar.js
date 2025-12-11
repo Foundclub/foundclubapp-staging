@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, TouchableOpacity, View,
+  Alert, Image, TouchableOpacity, View,
 } from 'react-native';
 import ImagePicker from 'react-native-image-crop-picker';
 
 import useTheme from '@/theme/themeContext';
+import { getImageUrl } from '@/utils/imageUrl';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -15,15 +16,34 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {object} props Component props
  * @param {Avatar | undefined} props.currentAvatar Current avatar object with url or path property
  * @param {(avatar: Avatar) => void} props.onAvatarSelected Callback when avatar is selected
+ * @param {() => void} [props.onDelete] Callback when avatar is deleted
  * @param {number} props.size Size of the avatar in pixels
  * @returns {import('react').ReactElement} SelectAvatar component
  */
-function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
+function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const {
     Alignments, ApplicationStyle, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  const handleDelete = () => {
+    Alert.alert(
+      t('common.actions.delete'),
+      t('profile.actions.confirmDeleteAvatar'),
+      [
+        {
+          text: t('common.actions.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('common.actions.delete'),
+          onPress: onDelete,
+          style: 'destructive',
+        },
+      ],
+    );
+  };
 
   const takePicture = async () => {
     try {
@@ -38,7 +58,8 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
       onAvatarSelected(Object.assign(image, { url: '' }));
       setIsModalVisible(false);
     } catch (error) {
-      // Handle error silently
+      console.warn('Camera Error:', error);
+      Alert.alert('Erreur', `Impossible d'ouvrir la caméra : ${error.message}`);
     }
   };
 
@@ -55,7 +76,8 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
       onAvatarSelected(Object.assign(image, { url: '' }));
       setIsModalVisible(false);
     } catch (error) {
-      // Handle error silently
+      console.warn('Gallery Error:', error);
+      Alert.alert('Erreur', `Impossible d'ouvrir la galerie : ${error.message}`);
     }
   };
 
@@ -72,12 +94,38 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, size = 95 }) {
       >
         {currentAvatar?.url || currentAvatar?.path
           ? (
-            <Image
-              source={{ uri: currentAvatar.url || currentAvatar.path }}
-              style={[
-                ApplicationStyle.borderRadius24,
-                { height: size, width: size }]}
-            />
+            <>
+              <Image
+                source={{ uri: currentAvatar.path || getImageUrl(currentAvatar.url) }}
+                style={[
+                  ApplicationStyle.borderRadius24,
+                  { height: size, width: size }]}
+              />
+              {onDelete && (
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  style={[
+                    Alignments.absolute,
+                    ApplicationStyle.backgroundColor.error700,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[8],
+                    {
+                      bottom: -8,
+                      elevation: 10,
+                      right: -8,
+                      zIndex: 10,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={Images.trash}
+                    style={[
+                      ApplicationStyle.icon16,
+                      ApplicationStyle.tintColor.neutral00]}
+                  />
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
             <Image
               source={Images.camera}

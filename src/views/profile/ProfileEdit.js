@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, View,
+  KeyboardAvoidingView, Platform, Switch, Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -23,6 +23,7 @@ import { updateMe } from '@/services/auth/authService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const defaultValues = {
   birthdate: '',
@@ -33,6 +34,9 @@ const defaultValues = {
   position: '',
   section: '',
   weight: '',
+  isLookingForClub: false,
+  bestLevel: '',
+  preferredSport: '',
 };
 
 const profileSchema = Joi.object({
@@ -45,6 +49,9 @@ const profileSchema = Joi.object({
   position: Joi.string().allow(null, '').optional(),
   section: Joi.string().allow(null, '').optional(),
   weight: Joi.string().allow(null, '').optional(),
+  isLookingForClub: Joi.boolean().optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
 /**
@@ -55,7 +62,7 @@ const profileSchema = Joi.object({
 function ProfileEdit({ navigation }) {
   // hooks
   const {
-    Alignments, Spaces,
+    Alignments, Spaces, Fonts,
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -87,17 +94,22 @@ function ProfileEdit({ navigation }) {
     formState: { errors: formErrors },
     handleSubmit,
     setFocus,
+    watch,
+    setValue,
   } = useForm({
     defaultValues: {
       ...defaultValues,
       ...userData,
       birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
       section: userData?.section?.documentId || '',
+      preferredSport: userData?.preferredSport || '',
     },
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
     shouldFocusError: false,
   });
+
+  const preferredSport = watch('preferredSport');
 
   /**
    * Handle form submit
@@ -137,6 +149,7 @@ function ProfileEdit({ navigation }) {
               <SelectAvatar
                 currentAvatar={avatar}
                 onAvatarSelected={setAvatar}
+                onDelete={() => setAvatar(undefined)}
                 size={110}
               />
             </View>
@@ -251,8 +264,8 @@ function ProfileEdit({ navigation }) {
                     placeholder={t('profile.fields.section.placeholder')}
                     ref={ref}
                     setValue={
-                    (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
-                  }
+                      (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
+                    }
                     value={sectionOptions.find((option) => option.value === value)?.label || ''}
                   />
                 )}
@@ -301,7 +314,7 @@ function ProfileEdit({ navigation }) {
                     label={t('profile.fields.height.label')}
                     onBlur={onBlur}
                     onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('position')}
+                    onSubmitEditing={() => setFocus('preferredSport')}
                     placeholder={t('profile.fields.height.placeholder')}
                     ref={ref}
                     value={value}
@@ -309,6 +322,39 @@ function ProfileEdit({ navigation }) {
                 )}
               />
             ) : null}
+
+            <Controller
+              control={control}
+              name="preferredSport"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <AutocompleteSelect
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
+                  label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
+                  onBlur={onBlur}
+                  options={[
+                    { label: 'Football', value: 'football' },
+                    { label: 'Basketball', value: 'basketball' },
+                    { label: 'Handball', value: 'handball' },
+                    { label: 'Volleyball', value: 'volleyball' },
+                    { label: 'Autre', value: 'other' },
+                  ]}
+                  placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+                  ref={ref}
+                  setValue={
+                    (/** @type {{value: string, label: string}} */option) => {
+                      onChange(option?.value || '');
+                      setValue('position', '');
+                    }
+                  }
+                  value={['football', 'basketball', 'handball', 'volleyball', 'other'].find((v) => v === value) ? value : ''}
+                />
+              )}
+            />
+
             {profileFields?.includes('position') ? (
               <Controller
                 control={control}
@@ -317,20 +363,92 @@ function ProfileEdit({ navigation }) {
                   field: {
                     name, onBlur, onChange, ref, value,
                   },
-                }) => (
-                  <Input
-                    enterKeyHint="done"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('profile.fields.position.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    placeholder={t('profile.fields.position.placeholder')}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
+                }) => {
+                  const sportKey = Object.keys(SPORTS_POSITIONS).find((k) => k.toLowerCase() === preferredSport);
+                  const positions = sportKey ? SPORTS_POSITIONS[sportKey] : [];
+
+                  if (positions.length > 0) {
+                    return (
+                      <AutocompleteSelect
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.position.label')}
+                        onBlur={onBlur}
+                        options={positions.map((p) => ({ label: p, value: p }))}
+                        placeholder={t('profile.fields.position.placeholder')}
+                        ref={ref}
+                        setValue={
+                          (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
+                        }
+                        value={value}
+                      />
+                    );
+                  }
+
+                  return (
+                    <Input
+                      enterKeyHint="done"
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      label={t('profile.fields.position.label')}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      placeholder={t('profile.fields.position.placeholder')}
+                      ref={ref}
+                      value={value}
+                    />
+                  );
+                }}
               />
             ) : null}
+
+            <Controller
+              control={control}
+              name="bestLevel"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <AutocompleteSelect
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
+                  label={t('profile.fields.bestLevel.label', 'Meilleur niveau joué')}
+                  onBlur={onBlur}
+                  options={[
+                    { label: 'Départemental', value: 'Departemental' },
+                    { label: 'Pré-Régional', value: 'PreRegional' },
+                    { label: 'Régional', value: 'Regional' },
+                    { label: 'Pré-National', value: 'PreNational' },
+                    { label: 'National', value: 'National' },
+                  ]}
+                  placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
+                  ref={ref}
+                  setValue={
+                    (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
+                  }
+                  value={['Departemental', 'PreRegional', 'Regional', 'PreNational', 'National'].find((v) => v === value) ? value : ''}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="isLookingForClub"
+              render={({
+                field: {
+                  onChange, value,
+                },
+              }) => (
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral900]}>
+                    {t('profile.fields.isLookingForClub.label', 'En recherche de club')}
+                  </Text>
+                  <Switch
+                    onValueChange={onChange}
+                    trackColor={{ false: '#767577', true: '#81b0ff' }} // TODO: Use theme colors
+                    value={value}
+                  />
+                </View>
+              )}
+            />
           </View>
         </ScrollView>
 

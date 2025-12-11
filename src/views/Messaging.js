@@ -14,8 +14,10 @@ import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -92,13 +94,15 @@ function Messaging({ navigation }) {
           (p) => p.documentId !== userData?.documentId,
         ) || chat.participants?.[0];
         return (
-          <Image
-            source={participant?.avatar?.url
-              ? { uri: participant.avatar.url } : Images.roundAvatar}
+          <ProfileAvatar
+            imageUrl={participant?.avatar?.url}
+            size={40}
             style={[
-              ApplicationStyle.borderRadius24,
-              { height: 48, width: 48 },
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: 40 },
             ]}
+            imageStyle={{ borderRadius: 40 }}
           />
         );
       }
@@ -228,7 +232,10 @@ function Messaging({ navigation }) {
         Alignments.justifySpaceBetween]}
       >
         <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
-        <ProfileButton />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <NotificationBadge />
+          <ProfileButton />
+        </View>
       </View>
       <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>
         {t('messaging.title')}

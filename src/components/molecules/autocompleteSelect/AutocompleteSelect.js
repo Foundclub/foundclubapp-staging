@@ -56,7 +56,7 @@ const AutocompleteSelect = forwardRef(
    * @returns {React.ReactElement} Autocomplete select component
    */
   (props, ref) => {
-  // hooks
+    // hooks
     const {
       Alignments, Colors, Fonts, Spaces,
     } = useTheme();
@@ -159,7 +159,7 @@ const AutocompleteSelect = forwardRef(
               { zIndex: 1 },
             ]}
           >
-            {props.value ? (
+            {props.value && (!Array.isArray(props.value) || props.value.length > 0) ? (
               <Text
                 ellipsizeMode="tail"
                 numberOfLines={1}
@@ -222,21 +222,35 @@ const AutocompleteSelect = forwardRef(
                 style={{ height: 500 }}
               >
                 {props.options.map((option) => (
-                  <View
-                    key={`${option.value}-${option.label}`}
-                    style={[Alignments.row, Spaces.marginTop[8]]}
-                  >
-                    <Checkable
-                      customFillColor={Colors.neutral00}
-                      disabled={false}
-                      isChecked={handleIsChecked(option)}
-                      setIsChecked={
-                      () => (handleSelectOption(option))
-                    }
-                      text={option.label}
-                      type={props.isMulti ? 'square' : 'circle'}
-                    />
-                  </View>
+                  option.isHeader ? (
+                    <Text
+                      key={option.value}
+                      style={[
+                        Fonts.p3Bold,
+                        Fonts.neutral500,
+                        Spaces.marginTop[16],
+                        Spaces.marginBottom[8],
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  ) : (
+                    <View
+                      key={`${option.value}-${option.label}`}
+                      style={[Alignments.row, Spaces.marginTop[8]]}
+                    >
+                      <Checkable
+                        customFillColor={Colors.neutral00}
+                        disabled={false}
+                        isChecked={handleIsChecked(option)}
+                        setIsChecked={
+                          () => (handleSelectOption(option))
+                        }
+                        text={option.label}
+                        type={props.isMulti ? 'square' : 'circle'}
+                      />
+                    </View>
+                  )
                 ))}
                 {props.options.length === 0 && (props.searchValue?.length || 0) > 0
                   ? (

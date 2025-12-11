@@ -1,12 +1,12 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import DateTimePicker from '@react-native-community/datetimepicker';
+// import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, View,
+  ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +14,8 @@ import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
+
+import { formatDateWithDayPrefix } from '@/utils/date';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
@@ -31,24 +33,27 @@ import { useGetTeams } from '@/services/team/teamQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import { createSearchAlert } from '@/services/searchAlert/searchAlertService';
+import { RouteNames } from '@/navigation/routeNames';
+
 /** @typedef {{ label: string; value: string }} Option */
 
 const filtersSchema = Joi.object({
-  activity: Joi.string().allow(''),
-  category: Joi.string().allow(''),
+  activity: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
+  category: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
   city: Joi.object().allow(''),
   club: Joi.object({
     label: Joi.string(),
     value: Joi.string(),
   }).allow(null).optional(),
   date: Joi.date().allow(null).optional(),
-  level: Joi.string().allow(''),
+  level: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
   radius: Joi.number().allow(''),
   team: Joi.object({
     label: Joi.string(),
     value: Joi.string(),
   }).allow(null).optional(),
-  type: Joi.string().allow(''),
+  type: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
 });
 
 /**
@@ -66,6 +71,13 @@ function EventFilters({ navigation }) {
   const [teamSearchValue, setTeamSearchValue] = useState('');
   const [selectedClub, setSelectedClub] = useState('');
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState({ title: '', content: '' });
+
+  // Alert State
+  const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+  const [alertLabel, setAlertLabel] = useState('');
+  const [isCreatingAlert, setIsCreatingAlert] = useState(false);
 
   // hooks
   const { t } = useTranslation();
@@ -82,21 +94,66 @@ function EventFilters({ navigation }) {
     handleSubmit,
     setValue,
     watch,
+    getValues,
   } = useForm({
     defaultValues: {
-      activity: eventFilters?.activities || '',
-      category: eventFilters?.category || '',
+      activity: eventFilters?.activities || [],
+      category: eventFilters?.category || [],
       city: eventFilters?.city || { label: '', value: '' },
       club: eventFilters?.club || null,
       date: eventFilters?.date || null,
-      level: eventFilters?.level || '',
+      level: eventFilters?.level || [],
       radius: eventFilters?.radius || 20,
       team: eventFilters?.team || null,
-      type: eventFilters?.type || '',
+      type: eventFilters?.type || [],
     },
     mode: 'onBlur',
     resolver: joiResolver(filtersSchema),
   });
+
+  // Header Star Button
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ marginRight: 16 }}>
+          <TouchableOpacity
+            onPress={() => setIsSaveModalVisible(true)}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, Colors]);
+
+  const handleCreateAlert = async () => {
+    if (!alertLabel.trim()) return;
+    setIsCreatingAlert(true);
+    try {
+      // Get current form values to save as filters
+      const currentFilters = getValues();
+      await createSearchAlert({
+        label: alertLabel,
+        filters: currentFilters,
+      });
+      setIsSaveModalVisible(false);
+      setAlertLabel('');
+      // Show success feedback (Toast or Alert)
+      // For now, navigate to Alerts list as feedback
+      navigation.navigate(RouteNames.SearchAlerts);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingAlert(false);
+    }
+  };
 
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
@@ -210,12 +267,12 @@ function EventFilters({ navigation }) {
   /**
    * Handles applying the selected filters
    * @param {{
-   *   activity: string;
-   *   category: string;
+   *   activity: string | string[];
+   *   category: string | string[];
    *   club: {label: string; value: string} | null;
-   *   level: string;
+   *   level: string | string[];
    *   team: {label: string; value: string} | null;
-   *   type: string;
+   *   type: string | string[];
    *   city: { label: string; value: string };
    *   radius: number;
    *   date: string | null;
@@ -263,6 +320,23 @@ function EventFilters({ navigation }) {
     navigation.goBack();
   };
 
+  const openInfoModal = (title, content) => {
+    setInfoModalContent({ title, content });
+    setInfoModalVisible(true);
+  };
+
+  const renderLabel = (label, infoKey) => (
+    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], Spaces.marginBottom[8]]}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{label}</Text>
+      <Button
+        onPress={() => openInfoModal(label, t(`eventFilters.infos.${infoKey}`))}
+        style={{ width: 30, height: 30, padding: 0, borderRadius: 15 }}
+        title="?"
+        variant="Secondary"
+      />
+    </View>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -275,6 +349,38 @@ function EventFilters({ navigation }) {
         { paddingBottom: insets.bottom },
       ]}
     >
+      <BottomModal
+        close={() => setInfoModalVisible(false)}
+        isVisible={infoModalVisible}
+      >
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{infoModalContent.title}</Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>{infoModalContent.content}</Text>
+        </View>
+      </BottomModal>
+
+      <BottomModal
+        close={() => setIsSaveModalVisible(false)}
+        isVisible={isSaveModalVisible}
+      >
+        <View style={[Spaces.gap[16]]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('searchAlerts.create.title', 'Créer une alerte')}</Text>
+          <Text style={[Fonts.p1, Fonts.neutral00]}>
+            {t('searchAlerts.create.desc', 'Donnez un nom à votre recherche pour recevoir des notifications.')}
+          </Text>
+          <Input
+            onChangeText={setAlertLabel}
+            placeholder={t('searchAlerts.create.placeholder', 'Ex: Matchs U13 Marseille')}
+            value={alertLabel}
+          />
+          <Button
+            isLoading={isCreatingAlert}
+            onPress={handleCreateAlert}
+            title={t('common.save', 'Sauvegarder')}
+            variant="Primary"
+          />
+        </View>
+      </BottomModal>
       <ScrollView
         contentContainerStyle={[Spaces.gap[40]]}
         style={[Spaces.marginVertical[16]]}
@@ -332,17 +438,23 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'category' })}
-              isSearchable
-              label={t('eventFilters.fields.category.label')}
-              options={categories}
-              placeholder={t('eventFilters.fields.category.placeholder')}
-              searchValue={categorySearchValue}
-              setSearchValue={setCategorySearchValue}
-              setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
-              value={getOptionLabel(categories, value)}
-            />
+            <View>
+              {renderLabel(t('eventFilters.fields.category.label'), 'category')}
+              <AutocompleteSelect
+                error={getFieldError({ errors: formErrors, fieldName: 'category' })}
+                isMulti
+                isSearchable
+                options={categories}
+                placeholder={t('eventFilters.fields.category.placeholder')}
+                searchValue={categorySearchValue}
+                setSearchValue={setCategorySearchValue}
+                setValue={(/** @type {Option | undefined} */option) => {
+                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                  onChange(val);
+                }}
+                value={value}
+              />
+            </View>
           )}
         />
 
@@ -400,17 +512,23 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'level' })}
-              isSearchable
-              label={t('eventFilters.fields.level.label')}
-              options={levels}
-              placeholder={t('eventFilters.fields.level.placeholder')}
-              searchValue={levelSearchValue}
-              setSearchValue={setLevelSearchValue}
-              setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
-              value={getOptionLabel(levels, value)}
-            />
+            <View>
+              {renderLabel(t('eventFilters.fields.level.label'), 'level')}
+              <AutocompleteSelect
+                error={getFieldError({ errors: formErrors, fieldName: 'level' })}
+                isMulti
+                isSearchable
+                options={levels}
+                placeholder={t('eventFilters.fields.level.placeholder')}
+                searchValue={levelSearchValue}
+                setSearchValue={setLevelSearchValue}
+                setValue={(/** @type {Option | undefined} */option) => {
+                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                  onChange(val);
+                }}
+                value={value}
+              />
+            </View>
           )}
         />
 
@@ -422,14 +540,18 @@ function EventFilters({ navigation }) {
           }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: 'activity' })}
+              isMulti
               isSearchable
               label={t('eventFilters.fields.activity.label')}
               options={activities}
               placeholder={t('eventFilters.fields.activity.placeholder')}
               searchValue={activitySearchValue}
               setSearchValue={setActivitySearchValue}
-              setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
-              value={getOptionLabel(activities, value)}
+              setValue={(/** @type {Option | undefined} */option) => {
+                const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                onChange(val);
+              }}
+              value={value}
             />
           )}
         />
@@ -440,17 +562,23 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'type' })}
-              isSearchable
-              label={t('eventFilters.fields.type.label')}
-              options={types}
-              placeholder={t('eventFilters.fields.type.placeholder')}
-              searchValue={typeSearchValue}
-              setSearchValue={setTypeSearchValue}
-              setValue={(/** @type {Option | undefined} */option) => onChange(option?.value || '')}
-              value={getOptionLabel(types, value)}
-            />
+            <View>
+              {renderLabel(t('eventFilters.fields.type.label'), 'type')}
+              <AutocompleteSelect
+                error={getFieldError({ errors: formErrors, fieldName: 'type' })}
+                isMulti
+                isSearchable
+                options={types}
+                placeholder={t('eventFilters.fields.type.placeholder')}
+                searchValue={typeSearchValue}
+                setSearchValue={setTypeSearchValue}
+                setValue={(/** @type {Option | undefined} */option) => {
+                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                  onChange(val);
+                }}
+                value={value}
+              />
+            </View>
           )}
         />
 
@@ -469,13 +597,13 @@ function EventFilters({ navigation }) {
                 placeholder={t('eventFilters.fields.date.placeholder')}
                 readOnly
                 style={[Fonts.neutral00]}
-                value={value ? format(value, 'dd/MM/yyyy') : ''}
+                value={value ? formatDateWithDayPrefix(value) : ''}
               />
               <BottomModal
                 close={() => setIsDatePickerVisible(false)}
                 isVisible={isDatePickerVisible}
               >
-                <DateTimePicker
+                {/* <DateTimePicker
                   display="spinner"
                   minimumDate={new Date()}
                   mode="date"
@@ -486,7 +614,8 @@ function EventFilters({ navigation }) {
                     }
                   }}
                   value={value ? new Date(value) : new Date()}
-                />
+                /> */}
+                <Text style={{ color: 'white', padding: 20, textAlign: 'center' }}>Date Picker temporarily disabled</Text>
               </BottomModal>
             </>
           )}

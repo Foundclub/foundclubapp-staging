@@ -1,32 +1,43 @@
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
-import Tag from '@/components/atoms/tag/Tag';
+import { useAppContext } from '@/store/appContext';
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
+import MercatoListContent from '@/components/organisms/mercatoListContent/MercatoListContent';
+import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
+import ReservationListContent from '@/components/organisms/reservationListContent/ReservationListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import useNotifications from '@/hooks/useNotifications';
+import useAuth from '@/domains/auth/useAuth';
+import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import { useIsFocused } from '@react-navigation/native';
 
-const searchOptions = [
+const baseSearchOptions = [
   {
-    label: i18n.t('home.fields.type.options.event'),
+    label: 'Évènements',
     value: 'events',
   },
   {
-    label: i18n.t('home.fields.type.options.club'),
+    label: 'Clubs',
     value: 'clubs',
+  },
+  {
+    label: 'Réservations',
+    value: 'reservations',
   },
 ];
 
@@ -35,8 +46,9 @@ const searchOptions = [
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Home({ navigation }) {
-  const [searchType, setSearchType] = useState(searchOptions[0].value);
+function HomeContent({ navigation }) {
+  const [searchType, setSearchType] = useState(baseSearchOptions[0].value);
+  const [{ auth }] = useAppContext();
   const {
     Alignments,
     ApplicationStyle,
@@ -44,8 +56,34 @@ function Home({ navigation }) {
     Images,
     Spaces,
   } = useTheme();
+  const { userData } = useAuth();
   const { t } = useTranslation();
   useNotifications({ navigate: navigation.navigate });
+  const isFocused = useIsFocused();
+  const { startOnboarding } = useOnboarding();
+
+  useEffect(() => {
+    let timer;
+    if (isFocused) {
+      timer = setTimeout(() => {
+        // startOnboarding(); // Disabled for debugging
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [startOnboarding, isFocused]);
+
+  const searchOptions = useMemo(() => {
+    const options = [...baseSearchOptions];
+    const role = userData?.role?.name;
+
+    if (role === USER_ROLES.president || role === USER_ROLES.coach || role === USER_ROLES.superAdmin) {
+      options.push({
+        label: 'Mercato',
+        value: 'profiles',
+      });
+    }
+    return options;
+  }, [userData]);
 
   /**
    * Handle search type change
@@ -62,10 +100,14 @@ function Home({ navigation }) {
       case 'events':
         return (
           <EventListContent
-            additionalFilters={{ sessionStatus: 'open' }}
+            additionalFilters={{ sessionStatus: 'open', excludeType: 'Réservation' }}
             showFilters
           />
         );
+      case 'reservations':
+        return <ReservationListContent showFilters />;
+      case 'profiles':
+        return <MercatoListContent />;
       default:
         return null;
     }
@@ -87,47 +129,38 @@ function Home({ navigation }) {
         Alignments.justifySpaceBetween]}
       >
         <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
-        <ProfileButton />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <NotificationBadge />
+          <ProfileButton />
+        </View>
       </View>
 
-      <View style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.gap[12],
-      ]}
-      >
-        <Text style={[
-          Fonts.h4,
-          Fonts.neutral00,
-        ]}
+      {/* SegmentedControl - Figma exact design */}
+      <View style={[Alignments.alignCenter, Spaces.marginBottom[24]]}>
+        <OnboardingWrapper
+          description="Choisissez ici ce que vous cherchez : Événements, Clubs ou Profils."
+          id="search-tabs"
+          order={1}
+          title="Navigation"
         >
-          {t('home.fields.type.label')}
-        </Text>
-        <ScrollView
-          contentContainerStyle={[Spaces.gap[8]]}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={[Alignments.fill]}
-        >
-          {searchOptions.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              onPress={() => onChange(option.value)}
-              style={[
-                option.value === searchType && ApplicationStyle.backgroundColor.primary500,
-                ApplicationStyle.borderRadius8,
-              ]}
-            >
-              <Tag
-                text={option.label}
-                textColor={option.value === searchType ? 'neutral00' : 'primary500'}
-              />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <SegmentedControl
+            onChange={onChange}
+            options={searchOptions}
+            value={searchType}
+          />
+        </OnboardingWrapper>
       </View>
       {renderContent()}
+      <OnboardingOverlay />
     </ScreenContainer>
+  );
+}
+
+function Home(props) {
+  return (
+    <OnboardingProvider>
+      <HomeContent {...props} />
+    </OnboardingProvider>
   );
 }
 

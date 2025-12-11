@@ -13,6 +13,8 @@ import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -20,6 +22,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * Profile screen component. Displays user information and profile management options.
@@ -131,13 +134,26 @@ function Profile({ navigation }) {
             Spaces.gap[16],
             { marginTop: -10, maxWidth: '85%' }]}
         >
-          <TeamShield
-            initials={
-            userData?.club?.name
-              ? getClubInitials(userData.club?.name) : ''
-          }
-            isSmall
-          />
+          {userData?.club?.logo?.url ? (
+            <ProfileAvatar
+              imageUrl={userData.club.logo.url}
+              size={60}
+              style={[
+                ApplicationStyle.borderWidth1,
+                ApplicationStyle.borderColor.neutral00,
+                { borderRadius: 60 },
+              ]}
+              imageStyle={{ borderRadius: 60 }}
+            />
+          ) : (
+            <TeamShield
+              initials={
+                userData?.club?.name
+                  ? getClubInitials(userData.club?.name) : ''
+              }
+              isSmall
+            />
+          )}
           <View style={[
             { height: 40, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,
@@ -146,7 +162,7 @@ function Profile({ navigation }) {
           <Text
             numberOfLines={2}
             style={[Fonts.p1Black, Fonts.neutral00,
-              { maxWidth: '90%' }]}
+            { maxWidth: '90%' }]}
           >
             {userData?.club?.name}
           </Text>
@@ -174,13 +190,26 @@ function Profile({ navigation }) {
             Spaces.gap[16],
             { marginTop: -10, maxWidth: '85%' }]}
         >
-          <TeamShield
-            initials={
-            team?.club?.name
-              ? getClubInitials(team.club?.name) : ''
-          }
-            isSmall
-          />
+          {team?.club?.logo?.url ? (
+            <ProfileAvatar
+              imageUrl={team.club.logo.url}
+              size={60}
+              style={[
+                ApplicationStyle.borderWidth1,
+                ApplicationStyle.borderColor.neutral00,
+                { borderRadius: 60 },
+              ]}
+              imageStyle={{ borderRadius: 60 }}
+            />
+          ) : (
+            <TeamShield
+              initials={
+                team?.club?.name
+                  ? getClubInitials(team.club?.name) : ''
+              }
+              isSmall
+            />
+          )}
           <View style={[
             { height: 40, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,
@@ -263,34 +292,35 @@ function Profile({ navigation }) {
               Spaces.gap[24],
             ]}
           >
-            <Image
-              source={userData?.avatar?.url
-                ? { uri: userData.avatar?.url }
-                : Images.roundAvatar}
+            <ProfileAvatar
+              imageUrl={userData?.avatar?.url}
+              size={80}
               style={[
                 ApplicationStyle.borderColor.neutral00,
                 ApplicationStyle.borderWidth1,
-                { borderRadius: 80, height: 80, width: 80 }]}
+                { borderRadius: 80 },
+              ]}
+              imageStyle={{ borderRadius: 80 }}
             />
             {userData?.firstname && userData?.lastname && (
-            <View style={[
-              { maxWidth: '70%' },
-              Alignments.justifyStart,
-              Alignments.alignStart,
-              Spaces.gap[24],
-            ]}
-            >
-              <Text
-                numberOfLines={2}
-                style={[
-                  Fonts.textCenter,
-                  Fonts.h4Black,
-                  Fonts.neutral00]}
+              <View style={[
+                { maxWidth: '70%' },
+                Alignments.justifyStart,
+                Alignments.alignStart,
+                Spaces.gap[24],
+              ]}
               >
-                {`${userData.firstname} ${userData.lastname?.toUpperCase()}`}
-              </Text>
-              {renderUserClub()}
-            </View>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    Fonts.textCenter,
+                    Fonts.h4Black,
+                    Fonts.neutral00]}
+                >
+                  {`${userData.firstname} ${userData.lastname?.toUpperCase()}`}
+                </Text>
+                {renderUserClub()}
+              </View>
             )}
           </View>
         </WithDataWrapper>
@@ -309,6 +339,11 @@ function Profile({ navigation }) {
               title={t('profile.actions.manageClub')}
             />
           ) : null}
+          <TabButton
+            isActive={false}
+            onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
+            title={t('profile.actions.manageAlerts', 'Gérer mes alertes')}
+          />
           {canManageClub ? (
             <TabButton
               isActive={false}
@@ -316,11 +351,25 @@ function Profile({ navigation }) {
               title={t('profile.actions.manageClubJoinRequests')}
             />
           ) : null}
+          {canManageClub ? (
+            <TabButton
+              isActive={false}
+              onPress={() => navigation.navigate(RouteNames.RequestsDashboard, { clubId: userData?.club?.documentId })}
+              title={t('profile.actions.manageEventRequests', 'Gérer les demandes d\'événements')}
+            />
+          ) : null}
           {canManageTeam && userData?.club ? (
             <TabButton
               isActive={false}
               onPress={handleManageTeamMembershipRequests}
               title={t('profile.actions.manageTeamJoinRequests')}
+            />
+          ) : null}
+          {userData?.role?.name === USER_ROLES.superAdmin ? (
+            <TabButton
+              isActive={false}
+              onPress={() => navigation.navigate(RouteNames.AdminDashboard)}
+              title="Espace Administration"
             />
           ) : null}
         </View>

@@ -20,9 +20,12 @@ import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { formatDateWithDayPrefix } from '@/utils/date';
+
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
@@ -41,6 +44,8 @@ import {
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
+import { updateEvent } from '@/services/event/eventService';
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 
 /**
  * Event details screen component
@@ -156,6 +161,37 @@ function EventDetails({ navigation, route }) {
     },
   });
 
+  const updateEventMutation = useMutation({
+    mutationFn: updateEvent,
+    onSuccess: () => {
+      refetch();
+      navigation.goBack();
+    },
+  });
+
+  const handleAcceptRequest = () => {
+    if (eventId) {
+      updateEventMutation.mutate({
+        documentId: eventId,
+        eventData: {
+          isFeatured: true,
+          featuredRequestStatus: 'approved',
+        },
+      });
+    }
+  };
+
+  const handleRejectRequest = () => {
+    if (eventId) {
+      updateEventMutation.mutate({
+        documentId: eventId,
+        eventData: {
+          featuredRequestStatus: 'rejected',
+        },
+      });
+    }
+  };
+
   // memoized values
   const hasPendingRequest = useMemo(() => {
     const myParticipations = eventParticipations?.pages?.[0]?.data || [];
@@ -195,7 +231,7 @@ function EventDetails({ navigation, route }) {
       (player) => !participatingPlayers.some(
         (participation) => participation.documentId === player.documentId,
       )
-      && !missingPlayers.some((missing) => missing.documentId === player.documentId),
+        && !missingPlayers.some((missing) => missing.documentId === player.documentId),
     );
 
     return {
@@ -303,21 +339,54 @@ function EventDetails({ navigation, route }) {
 
   const handleCancelEvent = () => {
     if (!eventId) return;
-    Alert.alert(
-      t('eventDetails.modals.cancelEvent.title'),
-      t('eventDetails.modals.cancelEvent.description'),
-      [
-        {
-          style: 'cancel',
-          text: t('eventDetails.modals.actions.cancel'),
-        },
-        {
-          onPress: () => cancelEventMutation(eventId),
-          style: 'destructive',
-          text: t('eventDetails.modals.actions.confirm'),
-        },
-      ],
-    );
+
+    const cancelEventWithMode = (recurrenceMode) => {
+      cancelEventMutation({ documentId: eventId, recurrenceMode });
+    };
+
+    if (event?.recurrenceGroupId) {
+      Alert.alert(
+        t('eventDetails.modals.recurrenceCancel.title', 'Suppression récurrente'),
+        t('eventDetails.modals.recurrenceCancel.description', 'Cet événement fait partie d\'une série. Que voulez-vous supprimer ?'),
+        [
+          {
+            text: t('eventDetails.modals.actions.cancel'),
+            style: 'cancel',
+          },
+          {
+            text: t('eventDetails.modals.recurrenceCancel.options.this', 'Cet événement'),
+            onPress: () => cancelEventWithMode(),
+            style: 'destructive',
+          },
+          {
+            text: t('eventDetails.modals.recurrenceCancel.options.future', 'Cet événement et les suivants'),
+            onPress: () => cancelEventWithMode('future'),
+            style: 'destructive',
+          },
+          {
+            text: t('eventDetails.modals.recurrenceCancel.options.all', 'Tous les événements'),
+            onPress: () => cancelEventWithMode('all'),
+            style: 'destructive',
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        t('eventDetails.modals.cancelEvent.title'),
+        t('eventDetails.modals.cancelEvent.description'),
+        [
+          {
+            style: 'cancel',
+            text: t('eventDetails.modals.actions.cancel'),
+          },
+          {
+            onPress: () => cancelEventWithMode(),
+            style: 'destructive',
+            text: t('eventDetails.modals.actions.confirm'),
+          },
+        ],
+      );
+    }
   };
 
   const handleDeleteParticipation = useCallback(() => {
@@ -401,6 +470,35 @@ function EventDetails({ navigation, route }) {
   }, [missingEventMutation]);
 
   // renderers
+
+  const renderSuperAdminActions = () => {
+    const isSuperAdmin = userData?.role?.name === USER_ROLES.superAdmin;
+    const isPendingFeaturedRequest = event?.featuredRequestStatus === 'pending';
+
+    if (isSuperAdmin && isPendingFeaturedRequest) {
+      return (
+        <View style={[Alignments.row, Spaces.gap[16]]}>
+          <Button
+            icon="check"
+            isOption
+            onPress={handleAcceptRequest}
+            title="Valider"
+            variant="Primary"
+            style={{ flex: 1 }}
+          />
+          <Button
+            icon="close"
+            isOption
+            onPress={handleRejectRequest}
+            title="Refuser"
+            variant="Secondary"
+            style={{ flex: 1 }}
+          />
+        </View>
+      );
+    }
+    return null;
+  };
 
   /**
    * Renders the action button for joining an event
@@ -509,14 +607,27 @@ function EventDetails({ navigation, route }) {
                 Alignments.row,
               ]}
             >
-              <TeamShield
-                initials={
-                  event?.team?.club?.name
-                    ? getClubInitials(event?.team?.club?.name || '')
-                    : ''
-                }
-                isSmall
-              />
+              {event?.team?.club?.logo?.url ? (
+                <ProfileAvatar
+                  imageUrl={event.team.club.logo.url}
+                  size={60}
+                  style={[
+                    ApplicationStyle.borderWidth1,
+                    ApplicationStyle.borderColor.neutral00,
+                    { borderRadius: 60 },
+                  ]}
+                  imageStyle={{ borderRadius: 60 }}
+                />
+              ) : (
+                <TeamShield
+                  initials={
+                    event?.team?.club?.name
+                      ? getClubInitials(event?.team?.club?.name || '')
+                      : ''
+                  }
+                  isSmall
+                />
+              )}
               <Text style={[Fonts.p1Bold, Fonts.neutral00, { maxWidth: '75%' }]}>
                 {event?.team?.club?.name}
               </Text>
@@ -579,8 +690,8 @@ function EventDetails({ navigation, route }) {
                           ApplicationStyle.tintColor.neutral00,
                         ]}
                       />
-                      <Text style={[Fonts.p2, Fonts.primary100]}>
-                        {format(new Date(event.date), 'dd MMMM yyyy')}
+                      <Text style={[Fonts.p2, Fonts.neutral00]}>
+                        {formatDateWithDayPrefix(event.date)}
                       </Text>
                     </View>
 
@@ -593,7 +704,9 @@ function EventDetails({ navigation, route }) {
                         ]}
                       />
                       <Text style={[Fonts.p2, Fonts.primary100]}>
-                        {format(new Date(event.date), 'HH:mm')}
+                        {event?.startTime && event?.endTime
+                          ? `${event.startTime.substring(0, 5)} - ${event.endTime.substring(0, 5)}`
+                          : format(new Date(event.date), 'HH:mm')}
                       </Text>
                     </View>
                   </View>
@@ -663,17 +776,15 @@ function EventDetails({ navigation, route }) {
                         Alignments.fill,
                       ]}
                     >
-                      <Image
-                        source={
-                          participation.user.avatar
-                            ? { uri: participation.user.avatar.url }
-                            : Images.roundAvatar
-                        }
+                      <ProfileAvatar
+                        imageUrl={participation.user.avatar?.url}
+                        size={40}
                         style={[
-                          ApplicationStyle.roundIcon40,
                           ApplicationStyle.borderWidth1,
                           ApplicationStyle.borderColor.neutral00,
+                          { borderRadius: 40 },
                         ]}
+                        imageStyle={{ borderRadius: 40 }}
                       />
                       <Text
                         numberOfLines={2}
@@ -713,15 +824,14 @@ function EventDetails({ navigation, route }) {
                   </TouchableOpacity>
                 ))}
               </View>
-          )}
+            )}
           {/* Participation section */}
           <View style={[Spaces.gap[16], Alignments.fill]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               {t('eventDetails.fields.participations')}
               <Text>
-                {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${
-                  event?.capacity || ''
-                }`}
+                {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${event?.capacity || ''
+                  }`}
               </Text>
             </Text>
             {participationsByStatus ? (
@@ -754,17 +864,15 @@ function EventDetails({ navigation, route }) {
                             { flex: 0.7 },
                           ]}
                         >
-                          <Image
-                            source={
-                              player.avatar
-                                ? { uri: player?.avatar?.url }
-                                : Images.roundAvatar
-                            }
+                          <ProfileAvatar
+                            imageUrl={player?.avatar?.url}
+                            size={40}
                             style={[
-                              ApplicationStyle.roundIcon40,
                               ApplicationStyle.borderWidth1,
                               ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 40 },
                             ]}
+                            imageStyle={{ borderRadius: 40 }}
                           />
                           <Text
                             numberOfLines={2}
@@ -803,17 +911,15 @@ function EventDetails({ navigation, route }) {
                             Alignments.alignCenter,
                           ]}
                         >
-                          <Image
-                            source={
-                              player.avatar
-                                ? { uri: player?.avatar?.url }
-                                : Images.roundAvatar
-                            }
+                          <ProfileAvatar
+                            imageUrl={player?.avatar?.url}
+                            size={40}
                             style={[
-                              ApplicationStyle.roundIcon40,
                               ApplicationStyle.borderWidth1,
                               ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 40 },
                             ]}
+                            imageStyle={{ borderRadius: 40 }}
                           />
                           <Text
                             numberOfLines={1}
@@ -829,7 +935,7 @@ function EventDetails({ navigation, route }) {
                 {participationsByStatus.notAnswered.length > 0 && (
                   <>
                     <View style={[Alignments.row,
-                      Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                     >
                       <Text style={[Fonts.h4Bold, Fonts.primary500]}>
                         {t('eventDetails.participationStatus.notAnswered')}
@@ -864,17 +970,15 @@ function EventDetails({ navigation, route }) {
                             { flex: 0.7 },
                           ]}
                         >
-                          <Image
-                            source={
-                              player.avatar
-                                ? { uri: player?.avatar?.url }
-                                : Images.roundAvatar
-                            }
+                          <ProfileAvatar
+                            imageUrl={player?.avatar?.url}
+                            size={40}
                             style={[
-                              ApplicationStyle.roundIcon40,
                               ApplicationStyle.borderWidth1,
                               ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 40 },
                             ]}
+                            imageStyle={{ borderRadius: 40 }}
                           />
                           <Text
                             numberOfLines={2}
@@ -912,17 +1016,15 @@ function EventDetails({ navigation, route }) {
                       { flex: 0.7 },
                     ]}
                   >
-                    <Image
-                      source={
-                        player.avatar
-                          ? { uri: player?.avatar?.url }
-                          : Images.roundAvatar
-                      }
+                    <ProfileAvatar
+                      imageUrl={player?.avatar?.url}
+                      size={40}
                       style={[
-                        ApplicationStyle.roundIcon40,
                         ApplicationStyle.borderWidth1,
                         ApplicationStyle.borderColor.neutral00,
+                        { borderRadius: 40 },
                       ]}
+                      imageStyle={{ borderRadius: 40 }}
                     />
                     <Text
                       numberOfLines={2}
@@ -939,7 +1041,7 @@ function EventDetails({ navigation, route }) {
       </ScrollView>
 
       <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
-        {renderActionButtons()}
+        {renderSuperAdminActions() || renderActionButtons()}
       </View>
 
       <JoinEventModal
