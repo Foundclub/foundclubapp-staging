@@ -133,6 +133,16 @@ export const logout = async () => {
 };
 
 /**
+ * Subscribe to auth state changes
+ * @param {function} onAuthStateChanged
+ * @returns {function} unsubscribe
+ */
+export const subscribeToAuthState = (onAuthStateChanged) => {
+  const auth = getAuth();
+  return auth.onAuthStateChanged(onAuthStateChanged);
+};
+
+/**
  * Get current user
  * @returns {Promise<User>}
  */

@@ -11,7 +11,7 @@ import { storage, useAppContext } from '@/store/appContext';
 
 import {
   deleteDeviceToken,
-  getMe, login, logout, signInWithPhoneNumber,
+  getMe, login, logout, signInWithPhoneNumber, subscribeToAuthState,
 } from '@/services/auth/authService';
 
 import {
@@ -25,11 +25,12 @@ import {
  * @inheritdoc
  */
 const useAuth = () => {
-  // local sta
+  // local state
   const [confirm, setConfirm] = useState(/**
      @type {import('@react-native-firebase/auth')
     .FirebaseAuthTypes.ConfirmationResult | undefined} */(undefined),
   );
+  const [isRestoring, setIsRestoring] = useState(true);
 
   // hooks
   const [, appDispatch] = useAppContext();
@@ -50,7 +51,10 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onError: (error) => {
-      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
+      // Only show alert if it's not a background restoration error
+      if (!isRestoring) {
+        Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
+      }
     },
     onSuccess: async (data) => {
       queryClient.clear();
@@ -60,6 +64,26 @@ const useAuth = () => {
       });
     },
   });
+
+  // Handle session persistence
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState(async (user) => {
+      if (user) {
+        // User is authenticated in Firebase, restore Strapi session
+        try {
+          // Pass empty object to leverage existing 'currentUser' logic in authService.login
+          await loginMutation.mutateAsync({});
+        } catch (error) {
+          console.warn('Session restoration failed:', error);
+          // Optional: clear auth state if restoration fails
+          appDispatch({ type: 'DELETE_AUTHENTICATION' });
+        }
+      }
+      setIsRestoring(false);
+    });
+
+    return () => unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const logoutMutation = useMutation({
     mutationFn: async (/** @type {string} */token) => {
@@ -120,11 +144,8 @@ const useAuth = () => {
       coachName: firstname,
     });
 
-    const urls = `\n\n${
-      t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
-      appStoreUrl}
-      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${
-  googlePlayUrl}
+    const urls = `\n\n${t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${appStoreUrl}
+      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${googlePlayUrl}
       `;
 
     const encodedMessage = `${shareMessage}${urls}`;
@@ -158,11 +179,8 @@ const useAuth = () => {
       teamName,
     });
 
-    const urls = `\n\n${
-      t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${
-      appStoreUrl}
-      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${
-  googlePlayUrl}
+    const urls = `\n\n${t('teamDetails.alerts.invitePlayers.downloadOnIOS')} :  \n${appStoreUrl}
+      \n${t('teamDetails.alerts.invitePlayers.downloadOnAndroid')} :  \n${googlePlayUrl}
       `;
 
     Share.share({
@@ -184,12 +202,12 @@ const useAuth = () => {
     ?.concat(userData?.trainedTeams || []), [userData]);
 
   const canEditClub = useCallback((/** @type {string} */clubId) => userData?.role.name
- === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
+    === USER_ROLES.president && userData?.club?.documentId === clubId, [userData]);
 
   const canEditEvent = useCallback(
     (/** @type {string} */teamId) => (userData?.role.name
- === USER_ROLES.coach || userData?.role.name === USER_ROLES.president)
- && userData?.trainedTeams?.map(({ documentId }) => documentId)?.includes(teamId),
+      === USER_ROLES.coach || userData?.role.name === USER_ROLES.president)
+      && userData?.trainedTeams?.map(({ documentId }) => documentId)?.includes(teamId),
     [userData],
   );
 
@@ -216,13 +234,13 @@ const useAuth = () => {
 
   const canManageTeam = useMemo(
     () => userData?.role.name === USER_ROLES.coach
-    || userData?.role.name === USER_ROLES.president,
+      || userData?.role.name === USER_ROLES.president,
     [userData],
   );
 
   const canManageEvents = useMemo(
     () => userData?.role.name === USER_ROLES.coach
-    || userData?.role.name === USER_ROLES.president,
+      || userData?.role.name === USER_ROLES.president,
     [userData],
   );
 
@@ -264,7 +282,7 @@ const useAuth = () => {
     getNextOnboardingRoute,
     inviteTeamPlayers,
     inviteTrainer,
-    isLoading: otpMutation.isPending || loginMutation.isPending,
+    isLoading: otpMutation.isPending || loginMutation.isPending || isRestoring,
     loginMutation,
     logoutMutation,
     onboardingViews,
