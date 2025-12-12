@@ -85,4 +85,4 @@ yarn-error.log
 # Évite de commiter les configs Firebase
 android/app/google-services.json
 android/app/src/**/google-services.json
-ios/**/GoogleService-Info*.plist
+# ios/**/GoogleService-Info*.plist
