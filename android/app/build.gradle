@@ -88,16 +88,17 @@ android {
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 1
         versionName project.hasProperty('versionName') ? project.property('versionName') : "1.0.0"
     }
-
-    flavorDimensions "environment"
+    flavorDimensions "env"
     productFlavors {
         production {
-            dimension "environment"
+            dimension "env"
+            resValue "string", "app_name", "FoundClub"
         }
         staging {
-            dimension "environment"
+            dimension "env"
             applicationIdSuffix ".staging"
-            resValue "string", "build_config_package", "com.foundclub"
+            versionNameSuffix "-staging"
+            resValue "string", "app_name", "FoundClub Staging"
         }
     }
     signingConfigs {
@@ -112,6 +113,13 @@ android {
             storePassword project.hasProperty('RELEASE_STORE_PASSWORD') ? project.RELEASE_STORE_PASSWORD : ''
             keyAlias "foundclub"
             keyPassword project.hasProperty('RELEASE_KEY_PASSWORD') ? project.RELEASE_KEY_PASSWORD : ''
+        }
+        staging {
+            // Utiliser keystore staging distinct ou debug
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
         }
     }
     buildTypes {

@@ -10,12 +10,9 @@ module.exports = {
         root: ['./src'],
       },
     ],
-    [
-      'inline-dotenv',
-      {
-        path: process.env.APP_ENV === 'staging' ? '.env.staging' : '.env',
-      },
-    ],
+    ['inline-dotenv', {
+      path: process.env.APP_ENV === 'staging' ? '.env.staging' : '.env.production'
+    }],
     'react-native-reanimated/plugin',
   ],
   presets: ['module:@react-native/babel-preset'],
