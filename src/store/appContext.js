@@ -47,6 +47,14 @@ export const storage = {
  */
 const initStore = {
   auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
+  authSessions: (() => {
+    const storedSessions = storage.contains('authSessions') ? JSON.parse(storage.getString('authSessions') || '[]') : [];
+    const storedAuth = storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined;
+    if (storedSessions.length === 0 && storedAuth) {
+      return [storedAuth];
+    }
+    return storedSessions;
+  })(),
   clubFilters: undefined,
   eventFilters: undefined,
   mercatoFilters: undefined,
@@ -54,6 +62,7 @@ const initStore = {
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
   onboardingViews: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
+  isAddingAccount: false,
 };
 
 /**
@@ -82,6 +91,7 @@ function AppProvider({ children }) {
 
   useEffect(() => {
     setPersistantState('auth', JSON.stringify(state.auth));
+    setPersistantState('authSessions', JSON.stringify(state.authSessions));
     setPersistantState('fcmToken', JSON.stringify(state.fcmToken));
     setPersistantState('theme', state.theme);
   }, [state]);

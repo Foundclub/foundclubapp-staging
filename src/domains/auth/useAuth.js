@@ -30,7 +30,6 @@ const useAuth = () => {
      @type {import('@react-native-firebase/auth')
     .FirebaseAuthTypes.ConfirmationResult | undefined} */(undefined),
   );
-  const [isRestoring, setIsRestoring] = useState(true);
 
   // hooks
   const [, appDispatch] = useAppContext();
@@ -51,12 +50,10 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onError: (error) => {
-      // Only show alert if it's not a background restoration error
-      if (!isRestoring) {
-        Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
-      }
+      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
     },
     onSuccess: async (data) => {
+      console.log('[useAuth] loginMutation onSuccess, data.user:', data?.user?.documentId);
       queryClient.clear();
       appDispatch({
         payload: data,
@@ -65,25 +62,7 @@ const useAuth = () => {
     },
   });
 
-  // Handle session persistence
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthState(async (user) => {
-      if (user) {
-        // User is authenticated in Firebase, restore Strapi session
-        try {
-          // Pass empty object to leverage existing 'currentUser' logic in authService.login
-          await loginMutation.mutateAsync({});
-        } catch (error) {
-          console.warn('Session restoration failed:', error);
-          // Optional: clear auth state if restoration fails
-          appDispatch({ type: 'DELETE_AUTHENTICATION' });
-        }
-      }
-      setIsRestoring(false);
-    });
 
-    return () => unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const logoutMutation = useMutation({
     mutationFn: async (/** @type {string} */token) => {
@@ -107,6 +86,23 @@ const useAuth = () => {
       appDispatch({ type: 'DELETE_AUTHENTICATION' });
     },
   });
+
+  const { auth, authSessions } = useAppContext()[0];
+
+  const switchAccount = useCallback((session) => {
+    queryClient.clear();
+    appDispatch({
+      type: 'SWITCH_ACCOUNT',
+      payload: session
+    });
+  }, [appDispatch, queryClient]);
+
+  const addAccount = useCallback(() => {
+    queryClient.clear();
+    appDispatch({
+      type: 'PREPARE_ADD_ACCOUNT'
+    });
+  }, [appDispatch, queryClient]);
 
   const {
     data: userData,
@@ -264,6 +260,10 @@ const useAuth = () => {
     return myTeams?.some((teamId) => userToContactTeams?.includes(teamId));
   }, [userData]);
 
+  const cancelAddAccount = useCallback(() => {
+    appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
+  }, [appDispatch]);
+
   return {
     allMyTeams,
     canContactAdmin,
@@ -282,7 +282,7 @@ const useAuth = () => {
     getNextOnboardingRoute,
     inviteTeamPlayers,
     inviteTrainer,
-    isLoading: otpMutation.isPending || loginMutation.isPending || isRestoring,
+    isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,
     logoutMutation,
     onboardingViews,
@@ -294,6 +294,11 @@ const useAuth = () => {
     userData,
     userDataError,
     userDataLoading,
+    authSessions,
+    switchAccount,
+    addAccount,
+    cancelAddAccount,
+    isAddingAccount: useAppContext()[0].isAddingAccount,
   };
 };
 

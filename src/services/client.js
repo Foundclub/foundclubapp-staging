@@ -41,7 +41,8 @@ const resetAuth = async (axiosError) => {
     storage.delete('auth');
   }
 
-  return Promise.reject(axiosError?.response?.data?.error);
+  // Return the specific error object if available, otherwise the whole data, or the axios message
+  return Promise.reject(axiosError?.response?.data?.error || axiosError?.response?.data || axiosError?.message || 'Unknown error');
 };
 
 /**

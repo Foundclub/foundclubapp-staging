@@ -47,7 +47,7 @@ function UserAvatar({ navigation }) {
 
   const handleNext = () => {
     if (avatar && userData) {
-      updateUserMutation.mutate(Object.assign(userData, { avatar }));
+      updateUserMutation.mutate({ avatar });
     }
   };
 

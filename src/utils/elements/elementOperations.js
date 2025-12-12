@@ -1,4 +1,4 @@
-import { Children, cloneElement } from 'react';
+import { Children, cloneElement, Fragment } from 'react';
 
 const ELEMENTS_TO_EXCLUDE = [
   'View',
@@ -23,7 +23,17 @@ export const addBackgroundOnDeepTextChildren = (childrenToEdit) => Children.map(
     const childStyle = Array.isArray(child?.props?.style) || !child?.props?.style
       ? child?.props?.style : [child?.props?.style];
     const isChildTypeIgnored = ELEMENTS_TO_EXCLUDE?.includes(child?.type?.name)
-    || ELEMENTS_TO_EXCLUDE?.includes(child?.type?.displayName);
+      || ELEMENTS_TO_EXCLUDE?.includes(child?.type?.displayName);
+
+    // If it's a Fragment, we must not apply style, but we still process children
+    if (child.type === Fragment) {
+      return cloneElement(
+        child,
+        {},
+        addBackgroundOnDeepTextChildren(child.props.children),
+      );
+    }
+
     if (child.props?.children) {
       return cloneElement(
         child,

@@ -51,6 +51,8 @@ function OTPForm({
    * @param {typeof defaultValues} data
    */
   const handleFormSubmit = async (data) => {
+    console.log('[OTPForm] handleFormSubmit called, confirm:', JSON.stringify(confirm));
+    console.log('[OTPForm] phoneNumber prop:', phoneNumber);
     if (confirm && phoneNumber) {
       await loginMutation.mutate({ code: data.code, confirm });
     }

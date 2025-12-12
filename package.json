@@ -9,7 +9,6 @@
     "lint": "eslint .",
     "start": "react-native start",
     "start:staging": "cross-env APP_ENV=staging react-native start",
-    "android:staging": "cross-env APP_ENV=staging cd android && ./gradlew assembleStagingDebug",
     "ios:staging": "cross-env APP_ENV=staging react-native run-ios --scheme 'FoundClub Staging'",
     "test": "jest",
     "type-check": "npx -p typescript tsc --allowJs --noEmit -p jsconfig.json",

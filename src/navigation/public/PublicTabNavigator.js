@@ -9,6 +9,8 @@ import Home from '@/views/Home';
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useAppContext } from '@/store/appContext';
+
 import AuthStackNavigator from './AuthStackNavigator';
 
 const Tab = createBottomTabNavigator();
@@ -20,6 +22,7 @@ const Tab = createBottomTabNavigator();
 function PublicTabNavigator() {
   const { Colors, Images } = useTheme();
   const { t } = useTranslation();
+  const [{ isAddingAccount }] = useAppContext();
 
   /**
    * Render tab bar icon.
@@ -48,7 +51,7 @@ function PublicTabNavigator() {
   return (
     <Tab.Navigator
       id={undefined}
-      initialRouteName={RouteNames.Search}
+      initialRouteName={isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search}
       screenOptions={commonOptions}
     >
       <Tab.Screen

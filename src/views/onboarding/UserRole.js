@@ -51,9 +51,7 @@ function UserRole({ navigation }) {
   });
 
   const handleNext = () => {
-    if (role && userData) {
-      updateUserMutation.mutate(Object.assign(userData, { role }));
-    }
+    updateUserMutation.mutate({ role });
   };
 
   /**
@@ -83,7 +81,7 @@ function UserRole({ navigation }) {
             onRefresh={refetchRoles}
             refreshing={rolesLoading}
           />
-)}
+        )}
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>

@@ -74,10 +74,10 @@ function UserName({ navigation }) {
    */
   const handleFormSubmit = (data) => {
     if (userData) {
-      updateUserMutation.mutate(Object.assign(userData, {
+      updateUserMutation.mutate({
         firstname: data.firstname,
         lastname: data.lastname,
-      }));
+      });
     }
   };
 

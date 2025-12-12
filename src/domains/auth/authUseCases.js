@@ -84,7 +84,7 @@ export const getOnboardingViews = ({
     return view;
   });
 
-  const views = filteredViews?.filter((view) => view.canShow)?.length > 1 ? filteredViews
+  const views = filteredViews?.filter((view) => view.canShow)?.length > 0 ? filteredViews
     : [];
   return {
     totalViews,

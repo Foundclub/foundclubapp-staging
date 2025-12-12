@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -19,6 +19,7 @@ import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -45,7 +46,12 @@ function Profile({ navigation }) {
     userData,
     userDataError,
     userDataLoading,
+    authSessions,
+    switchAccount,
+    addAccount,
   } = useAuth();
+
+  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
 
   const canManageClub = useMemo(() => {
     if (!userData?.club?.documentId) {
@@ -121,6 +127,16 @@ function Profile({ navigation }) {
         { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
       );
     }
+  };
+
+  const handleSwitchAccount = (session) => {
+    switchAccount(session);
+    setIsAccountModalVisible(false);
+  };
+
+  const handleAddAccount = () => {
+    setIsAccountModalVisible(false);
+    addAccount();
   };
 
   const renderUserClub = () => {
@@ -372,6 +388,12 @@ function Profile({ navigation }) {
               title="Espace Administration"
             />
           ) : null}
+
+          <TabButton
+            isActive={false}
+            onPress={() => setIsAccountModalVisible(true)}
+            title={t('profile.actions.switchAccount', 'Changer de compte')}
+          />
         </View>
         <Button
           onPress={handleLogout}
@@ -386,6 +408,55 @@ function Profile({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <BottomModal
+        close={() => setIsAccountModalVisible(false)}
+        isVisible={isAccountModalVisible}
+        title={t('profile.titles.switchAccount', 'Changer de compte')}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingTop[16]]}>
+          {authSessions?.map((session, index) => {
+            const isCurrent = session?.user?.documentId === userData?.documentId;
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => !isCurrent && handleSwitchAccount(session)}
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.padding[12],
+                  ApplicationStyle.borderRadius8,
+                  isCurrent ? ApplicationStyle.backgroundColor.primary100 : ApplicationStyle.backgroundColor.neutral100
+                ]}
+              >
+                <ProfileAvatar
+                  imageUrl={session?.user?.avatar?.url}
+                  size={40}
+                  style={{ marginRight: 12 }}
+                />
+                <View>
+                  <Text style={[Fonts.p1Bold, Fonts.textBlack]}>
+                    {session?.user?.firstname} {session?.user?.lastname}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.textGrey]}>
+                    {session?.user?.role?.name}
+                  </Text>
+                </View>
+                {isCurrent && (
+                  <View style={[Alignments.absolute, { right: 10 }]}>
+                    <Text style={[Fonts.p2, Fonts.primary500]}>Actif</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+
+          <Button
+            onPress={handleAddAccount}
+            title={t('profile.actions.addAccount', 'Ajouter un compte')}
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }

@@ -19,7 +19,7 @@ import { RouteNames } from './routeNames';
  */
 function AppNavigator({ navigationIntegration }) {
   // hooks
-  const [{ auth }] = useAppContext();
+  const [{ auth, isAddingAccount }] = useAppContext();
   const { ApplicationStyle, Colors, scheme } = useTheme();
   const containerRef = useRef(null);
 
@@ -53,7 +53,7 @@ function AppNavigator({ navigationIntegration }) {
         barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
         translucent
       />
-      {auth?.token ? <PrivateNavigator /> : <PublicNavigator />}
+      {auth?.token && !isAddingAccount ? <PrivateNavigator /> : <PublicNavigator />}
     </NavigationContainer>
   );
 }

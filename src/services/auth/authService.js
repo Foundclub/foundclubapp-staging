@@ -74,21 +74,30 @@ export const login = async ({ code, confirm }) => {
   // BYPASS MODE: Skip Firebase and login directly with phone number
   if (BYPASS_FIREBASE) {
     console.log('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
-    const phoneNumber = confirm.phoneNumber || '+33600000001';
+    console.log('[BYPASS] confirm object received:', JSON.stringify(confirm));
+    const phoneNumber = confirm?.phoneNumber || '+33600000001';
+    console.log('[BYPASS] phoneNumber to send to API:', phoneNumber);
 
     try {
       const result = await client.post('/firebase-auth/login-bypass', { phoneNumber });
+      console.log('[BYPASS] Login API response received, jwt:', !!result.data?.jwt);
       const schema = Joi.object({
         data: Joi.object().required(),
         jwt: Joi.string().required(),
       }).required();
       await schema.validateAsync(result.data, { allowUnknown: true });
 
-      return {
+      const userData = result.data.data || result.data.user;
+      console.log('[BYPASS] User data extracted, documentId:', userData?.documentId);
+
+      const authResult = {
         idToken: 'bypass-token',
         idUser: { phoneNumber },
-        token: result.data.jwt
+        token: result.data.jwt,
+        user: userData,
       };
+      console.log('[BYPASS] Returning auth result with user documentId:', authResult.user?.documentId);
+      return authResult;
     } catch (error) {
       const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
       throw new Error(`Bypass login failed: ${errorToDisplay}`);
@@ -115,7 +124,12 @@ export const login = async ({ code, confirm }) => {
     }).required();
     await schema.validateAsync(result.data, { allowUnknown: true });
 
-    return { idToken, idUser: firebaseResult?.user, token: result.data.jwt };
+    return {
+      idToken,
+      idUser: firebaseResult?.user,
+      token: result.data.jwt,
+      user: result.data.data || result.data.user,
+    };
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`API response does not match getCurrentUser Schema: ${errorToDisplay}`);
@@ -185,6 +199,8 @@ export const updateMe = async (userData) => {
       }
     });
 
+    console.log('[updateMe] base payload:', JSON.stringify(userDataCopy));
+
     // Handle avatar file separately
     if (userDataCopy.avatar && userDataCopy.avatar.path) {
       const fileToUpload = {
@@ -192,6 +208,13 @@ export const updateMe = async (userData) => {
         type: userDataCopy.avatar.mime,
         uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
       };
+
+      console.log('[updateMe] Avatar file to upload:', fileToUpload);
+
+      if (!fileToUpload.uri || !fileToUpload.type || !fileToUpload.name) {
+        console.warn('[updateMe] Invalid file properties!');
+      }
+
       // @ts-expect-error because of react native image type
       formData.append('avatar', fileToUpload);
     }
@@ -200,25 +223,38 @@ export const updateMe = async (userData) => {
     // Append all other user data
     Object.entries(userDataCopy).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
+        console.log(`[updateMe] Appending ${key}: ${value}`);
         formData.append(key, value.toString());
       }
     });
 
-    const result = await client.put(
-      '/firebase-auth/update',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    console.log('[updateMe] Sending request to /firebase-auth/update via fetch');
+    const { getAuthTokens } = require('../../domains/auth/authUseCases');
+    const auth = getAuthTokens();
+
+    // Use native fetch to avoid Axios/FormData issues on Android
+    const response = await fetch(`${process.env.API_URL}/firebase-auth/update`, {
+      method: 'PUT',
+      headers: {
+        ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+        // Do NOT set Content-Type, let fetch generate the boundary
       },
-    );
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData?.error?.message || errorData?.message || `HTTP error ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    const result = { data: await response.json() };
     const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : JSON.stringify(error);
     throw new Error(`Failed to update user data: ${errorToDisplay}`);
   }
 };
@@ -265,9 +301,7 @@ export const createTrainer = async (userData) => {
     '/firebase-auth/create-trainer',
     formData,
     {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+
     },
   );
   try {

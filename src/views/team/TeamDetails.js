@@ -340,7 +340,7 @@ function TeamDetails({ navigation, route }) {
             ]}
           >
             {/* Sponsors */}
-            {(team?.club?.sponsor?.length) && (
+            {(team?.club?.sponsor?.length > 0) && (
               <ScrollView
                 contentContainerStyle={[Spaces.gap[16]]}
                 horizontal

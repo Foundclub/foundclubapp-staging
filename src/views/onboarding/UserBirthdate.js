@@ -71,7 +71,7 @@ function UserBirthdate({ navigation }) {
     mutationFn: updateMe,
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)
-       || RouteNames.UserAvatar);
+        || RouteNames.UserAvatar);
     },
   });
 
@@ -94,7 +94,7 @@ function UserBirthdate({ navigation }) {
   const handleFormSubmit = (data) => {
     if (userData && data.year && data.month && data.day) {
       const birthdate = `${data.year}-${data.month}-${data.day}`;
-      updateUserMutation.mutate(Object.assign(userData, { birthdate }));
+      updateUserMutation.mutate({ birthdate });
     }
   };
 

@@ -40,13 +40,13 @@ function UserSection({ navigation }) {
     mutationFn: updateMe,
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserSection)
-       || RouteNames.UserBirthdate);
+        || RouteNames.UserBirthdate);
     },
   });
 
   const handleNext = () => {
     if (section && userData) {
-      updateUserMutation.mutate(Object.assign(userData, { section }));
+      updateUserMutation.mutate({ section });
     }
   };
 

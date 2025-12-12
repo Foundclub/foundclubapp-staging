@@ -1,4 +1,5 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import {
   MutationCache, QueryCache, QueryClient, QueryClientProvider,
@@ -12,6 +13,7 @@ import { ThemeProvider } from '@/theme/themeContext';
 import ErrorScreen from '@/views/Error';
 
 import AppNavigator from '@/navigation/appNavigator';
+import SessionManager from '@/components/atoms/sessionManager/SessionManager';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
 
@@ -25,23 +27,23 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
 const isStaging = process.env.ENV === 'staging';
 
 Sentry.init({
-//   attachStacktrace: true,
-//   beforeSend: (event) => {
-//     // Don't send events in development mode or staging
-//     if (__DEV__ || isStaging) {
-//       return null;
-//     }
-//     return event;
-//   },
-//   debug: __DEV__,
-//   dsn: process.env.SENTRY_DSN,
-//   enableAutoSessionTracking: true,
-//   enableUserInteractionTracing: true,
-//   replaysOnErrorSampleRate: 1.0,
-//   replaysSessionSampleRate: 0.1,
-//   tracesSampleRate: 1.0,
-//   // Add integration for better React Navigation tracking
-//   integrations: [navigationIntegration],
+  //   attachStacktrace: true,
+  //   beforeSend: (event) => {
+  //     // Don't send events in development mode or staging
+  //     if (__DEV__ || isStaging) {
+  //       return null;
+  //     }
+  //     return event;
+  //   },
+  //   debug: __DEV__,
+  //   dsn: process.env.SENTRY_DSN,
+  //   enableAutoSessionTracking: true,
+  //   enableUserInteractionTracing: true,
+  //   replaysOnErrorSampleRate: 1.0,
+  //   replaysSessionSampleRate: 0.1,
+  //   tracesSampleRate: 1.0,
+  //   // Add integration for better React Navigation tracking
+  //   integrations: [navigationIntegration],
 });
 
 // Désactiver Analytics/Crashlytics en staging
@@ -69,31 +71,31 @@ const queryClient = new QueryClient({
   },
   mutationCache: new MutationCache({
     onError:
-    (error, variables, context, mutation) => {
-      if (!mutation?.options?.meta?.preventToastError) {
-        // Handle error and show Alert
-        displayErrorAlert(
-          error,
-          mutation?.options?.meta?.errorMessageFallback?.toString(),
-        );
-      }
-      // if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-      //   Sentry.captureException(error);
-      // } else {
-      //   Sentry.captureException(error);
-      // }
-    },
+      (error, variables, context, mutation) => {
+        if (!mutation?.options?.meta?.preventToastError) {
+          // Handle error and show Alert
+          displayErrorAlert(
+            error,
+            mutation?.options?.meta?.errorMessageFallback?.toString(),
+          );
+        }
+        // if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
+        //   Sentry.captureException(error);
+        // } else {
+        //   Sentry.captureException(error);
+        // }
+      },
   }),
 
   queryCache: new QueryCache({
     onError:
-    (error) => {
-      if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-        Sentry.captureException(error);
-      } else {
-        Sentry.captureException(error);
-      }
-    },
+      (error) => {
+        if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
+          Sentry.captureException(error);
+        } else {
+          Sentry.captureException(error);
+        }
+      },
   }),
 
 });
@@ -105,17 +107,20 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <GestureHandlerRootView>
-      <AppProvider>
-        <ThemeProvider>
-          <BottomSheetModalProvider>
-            <QueryClientProvider client={queryClient}>
-              <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
-                <AppNavigator navigationIntegration={navigationIntegration} />
-              </Sentry.ErrorBoundary>
-            </QueryClientProvider>
-          </BottomSheetModalProvider>
-        </ThemeProvider>
-      </AppProvider>
+      <SafeAreaProvider>
+        <AppProvider>
+          <ThemeProvider>
+            <BottomSheetModalProvider>
+              <QueryClientProvider client={queryClient}>
+                <SessionManager />
+                <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+                  <AppNavigator navigationIntegration={navigationIntegration} />
+                </Sentry.ErrorBoundary>
+              </QueryClientProvider>
+            </BottomSheetModalProvider>
+          </ThemeProvider>
+        </AppProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

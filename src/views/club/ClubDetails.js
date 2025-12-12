@@ -201,7 +201,6 @@ function ClubDetails({ navigation, route }) {
     if (canJoinClub && clubId && userData?.documentId) {
       createClubMembershipRequestMutation.mutate({
         club: clubId,
-        user: userData?.documentId,
       });
     }
   };

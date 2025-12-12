@@ -29,7 +29,7 @@ function Login({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const {
-    canShowCodeButton, confirm, isLoading, loginMutation, otpMutation,
+    canShowCodeButton, confirm, isLoading, loginMutation, otpMutation, isAddingAccount, cancelAddAccount,
   } = useAuth();
 
   /**
@@ -71,6 +71,14 @@ function Login({ navigation }) {
             <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('login.title')}</Text>
             <Text style={[Fonts.p1, Fonts.neutral00]}>{t('login.subtitle')}</Text>
           </View>
+          {isAddingAccount && (
+            <Button
+              onPress={cancelAddAccount}
+              style={[Spaces.marginTop._16, Alignments.selfStart]}
+              title={t('common.actions.cancel')}
+              variant="SecondaryLight"
+            />
+          )}
           {canShowCodeButton
             ? (
               <OTPForm

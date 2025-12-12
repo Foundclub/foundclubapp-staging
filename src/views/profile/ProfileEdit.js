@@ -118,11 +118,17 @@ function ProfileEdit({ navigation }) {
   const handleFormSubmit = (data) => {
     if (userData) {
       updateUserMutation.mutate({
-        ...userData,
-        ...data,
+        firstname: data.firstname,
+        lastname: data.lastname,
+        height: data.height,
+        weight: data.weight,
+        position: data.position,
+        isLookingForClub: data.isLookingForClub,
+        bestLevel: data.bestLevel,
+        preferredSport: data.preferredSport,
         avatar,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
-        section: sections?.find((section) => section.documentId === data.section),
+        section: data.section,
       });
     }
   };
