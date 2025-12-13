@@ -12,6 +12,15 @@
                 "APP_ENV": "staging"
             }
         },
+        "staging": {
+            "distribution": "internal",
+            "ios": {
+                "simulator": false
+            },
+            "env": {
+                "APP_ENV": "staging"
+            }
+        },
         "production": {
             "distribution": "store"
         }

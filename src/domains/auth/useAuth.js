@@ -97,7 +97,12 @@ const useAuth = () => {
     });
   }, [appDispatch, queryClient]);
 
-  const addAccount = useCallback(() => {
+  const addAccount = useCallback(async () => {
+    console.log('[useAuth] addAccount called. Dispatching PREPARE_ADD_ACCOUNT');
+    // Sign out from Firebase SDK to ensure a clean slate for the new account
+    // This does NOT remove the session from our app state (authSessions) because we don't trigger the reducer here
+    await logout().catch((e) => console.log('[useAuth] logout failed', e));
+
     queryClient.clear();
     appDispatch({
       type: 'PREPARE_ADD_ACCOUNT'

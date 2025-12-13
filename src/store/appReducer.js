@@ -44,6 +44,7 @@ export default function appReducer(state, action) {
       };
     }
     case 'CANCEL_ADD_ACCOUNT': {
+      console.log('[appReducer] CANCEL_ADD_ACCOUNT dispatched. Setting isAddingAccount to false.');
       return {
         ...state,
         isAddingAccount: false,
@@ -57,6 +58,7 @@ export default function appReducer(state, action) {
       };
     }
     case 'PREPARE_ADD_ACCOUNT': {
+      console.log('[appReducer] PREPARE_ADD_ACCOUNT dispatched. Setting isAddingAccount to true.');
       return {
         ...state,
         isAddingAccount: true,

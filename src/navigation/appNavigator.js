@@ -21,6 +21,9 @@ function AppNavigator({ navigationIntegration }) {
   // hooks
   const [{ auth, isAddingAccount }] = useAppContext();
   const { ApplicationStyle, Colors, scheme } = useTheme();
+
+  console.log('[AppNavigator] Rendering. auth.token:', !!auth?.token, 'isAddingAccount:', isAddingAccount);
+
   const containerRef = useRef(null);
 
   const navigationTheme = scheme === 'dark'

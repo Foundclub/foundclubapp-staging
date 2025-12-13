@@ -24,6 +24,8 @@ function PublicTabNavigator() {
   const { t } = useTranslation();
   const [{ isAddingAccount }] = useAppContext();
 
+  console.log('[PublicTabNavigator] Rendering. isAddingAccount:', isAddingAccount, 'Initial Route:', isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search);
+
   /**
    * Render tab bar icon.
    * @param {object} props - Component props.
