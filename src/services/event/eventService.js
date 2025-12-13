@@ -94,7 +94,9 @@ export const getEventById = async (documentId) => {
         'team.players',
         'type',
         'missings',
-        'participations'],
+        'participations',
+        'missings',
+        'participationRequests.user'],
     },
   });
   try {
@@ -398,6 +400,7 @@ export const getEvents = async (params = {}) => {
       'missings',
       'facility',
       'invitedTeams',
+      'participationRequests.user',
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
     myTeams: params.myTeams, // Pass myTeams filter to backend

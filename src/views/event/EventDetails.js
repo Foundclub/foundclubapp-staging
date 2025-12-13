@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
   useCallback, useLayoutEffect, useMemo, useState,
@@ -66,6 +66,7 @@ function EventDetails({ navigation, route }) {
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   const { canEditEvent, userData } = useAuth();
+  const queryClient = useQueryClient();
 
   const {
     data: event, error, isLoading, refetch,
@@ -89,6 +90,7 @@ function EventDetails({ navigation, route }) {
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       refetchParticipations();
       setIsJoinModalVisible(false);
@@ -98,6 +100,7 @@ function EventDetails({ navigation, route }) {
   const { mutate: acceptParticipation } = useMutation({
     mutationFn: acceptEventParticipation,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       refetchParticipations();
       setSelectedParticipationId('');
@@ -107,6 +110,7 @@ function EventDetails({ navigation, route }) {
   const { mutate: declineParticipation } = useMutation({
     mutationFn: declineEventParticipation,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetchParticipations();
       setIsRefuseModalVisible(false);
       setSelectedParticipationId('');
@@ -116,6 +120,7 @@ function EventDetails({ navigation, route }) {
   const { mutate: cancelEventMutation } = useMutation({
     mutationFn: cancelEvent,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       navigation.goBack();
     },
   });
@@ -144,6 +149,7 @@ function EventDetails({ navigation, route }) {
   const { mutate: deleteParticipation } = useMutation({
     mutationFn: deleteEventParticipation,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       refetchParticipations();
     },
@@ -156,6 +162,7 @@ function EventDetails({ navigation, route }) {
   const missingEventMutation = useMutation({
     mutationFn: missingEvent,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       refetchParticipations();
     },
@@ -164,6 +171,7 @@ function EventDetails({ navigation, route }) {
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       navigation.goBack();
     },

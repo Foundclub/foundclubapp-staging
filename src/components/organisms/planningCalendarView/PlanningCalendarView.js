@@ -47,7 +47,23 @@ LocaleConfig.defaultLocale = 'fr';
  * @param {Function} [props.onParticipate] - Callback for participation
  * @returns {React.ReactElement} PlanningCalendarView component
  */
-function PlanningCalendarView({ events = [], onEventPress, onParticipate }) {
+/**
+ * PlanningCalendarView component
+ * @param {object} props
+ * @param {any[]} props.events - List of events to display
+ * @param {Function} props.onEventPress - Callback when an event is pressed
+ * @param {Function} [props.onParticipate] - Callback for participation
+ * @param {Date} [props.currentDate] - Current selected date (controlled)
+ * @param {Function} [props.onDateSelect] - Callback when date changes
+ * @returns {React.ReactElement} PlanningCalendarView component
+ */
+function PlanningCalendarView({ 
+    events = [], 
+    onEventPress, 
+    onParticipate,
+    currentDate: propDate,
+    onDateSelect
+}) {
     const {
         Alignments,
         ApplicationStyle,
@@ -58,7 +74,21 @@ function PlanningCalendarView({ events = [], onEventPress, onParticipate }) {
     const { t } = useTranslation();
     const { userData } = useAuth();
 
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    // Use prop date if available, otherwise internal state (although parent should control it)
+    const [internalDate, setInternalDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    
+    const selectedDate = useMemo(() => {
+        if (propDate) return format(propDate, 'yyyy-MM-dd');
+        return internalDate;
+    }, [propDate, internalDate]);
+
+    const handleDateChange = (dateString) => {
+        if (onDateSelect) {
+            onDateSelect(parseISO(dateString));
+        } else {
+            setInternalDate(dateString);
+        }
+    };
 
     // Group events by date for the calendar markers
     const markedDates = useMemo(() => {
@@ -141,7 +171,8 @@ function PlanningCalendarView({ events = [], onEventPress, onParticipate }) {
     const renderItem = ({ item }) => {
         const isReservation = item?.type?.name === 'Réservation';
         const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
-        const showAbout = true; // Always show about in planning view context if needed, or follow logic
+        // Always allow seeing details/about in planning view
+        const showAbout = true; 
 
         if (isReservation) {
             return (
@@ -159,7 +190,6 @@ function PlanningCalendarView({ events = [], onEventPress, onParticipate }) {
             <EventCard
                 item={item}
                 onPress={() => onEventPress?.(item)}
-            // Pass other props if needed, but for planning view usually just viewing details
             />
         );
     };
@@ -183,7 +213,8 @@ function PlanningCalendarView({ events = [], onEventPress, onParticipate }) {
         <View style={[Alignments.fill]}>
             <Calendar
                 current={selectedDate}
-                onDayPress={(day) => setSelectedDate(day.dateString)}
+                onDayPress={(day) => handleDateChange(day.dateString)}
+                onMonthChange={(month) => handleDateChange(month.dateString)}
                 markingType={'custom'}
                 markedDates={markedDates}
                 theme={{

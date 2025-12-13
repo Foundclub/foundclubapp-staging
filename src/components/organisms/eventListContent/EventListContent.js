@@ -1,6 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   startOfDay,
 } from 'date-fns';
@@ -130,6 +130,7 @@ function EventListContent({
     refetch: refetchFeatured,
   } = useGetEvents(featuredEventsConfig, { enabled: !propEvents });
 
+  const queryClient = useQueryClient();
   /**
    * Mutation to create an event participation
    * @type {import('@tanstack/react-query').UseMutationResult<EventParticipation,
@@ -138,7 +139,8 @@ function EventListContent({
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onSuccess: () => {
-      if (!propEvents) refetch(); // Only refetch internal query
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      if (!propEvents) refetch(); // Keep local refetch for Safety
       setIsJoinModalVisible(false);
     },
   });
@@ -205,6 +207,7 @@ function EventListContent({
   const missingEventMutation = useMutation({
     mutationFn: missingEvent,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       if (!propEvents) refetch();
     },
   });

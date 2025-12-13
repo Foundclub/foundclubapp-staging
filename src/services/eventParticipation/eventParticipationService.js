@@ -44,9 +44,9 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
       event: {
         documentId: eventId,
       },
-      user: {
-        documentId: userId,
-      },
+      user: userId ? {
+        documentId: { $eq: userId },
+      } : undefined,
     },
     pagination: {
       page: page || 1,

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -44,7 +44,6 @@ function JoinEventModal({
     if (eventId && acceptResponsibility && acceptConditions && userData?.documentId) {
       createEventParticipationMutation.mutate({
         event: eventId,
-        user: userData.documentId,
       });
     }
   }, [eventId, acceptResponsibility, acceptConditions, userData, createEventParticipationMutation]);
@@ -60,9 +59,8 @@ function JoinEventModal({
       close={handleClose}
       isVisible={isVisible}
     >
-      <ScrollView
-        contentContainerStyle={[Spaces.gap[32], Spaces.padding[24]]}
-        style={[{ height: 500 }]}
+      <View
+        style={[Spaces.gap[32], Spaces.padding[24]]}
       >
         <Text style={[Fonts.p1Black, Fonts.neutral00]}>
           {t('eventList.joinModal.title')}
@@ -102,7 +100,7 @@ function JoinEventModal({
             {t('eventList.joinModal.validation')}
           </Text>
         </View>
-      </ScrollView>
+      </View>
 
       <View style={[Spaces.gap[16]]}>
         <Button

@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import PlanningWeekTimelineView from '../planningWeekTimelineView/PlanningWeekTimelineViewV2';
 import PlanningCalendarView from '../planningCalendarView/PlanningCalendarView';
 import BottomModal from '../../molecules/bottomModal/BottomModal';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, endOfDay, startOfDay } from 'date-fns';
 import { getEvents } from '@/services/event/eventService';
 import { RouteNames } from '@/navigation/routeNames';
 import Loader from '@/components/atoms/loader/Loader';
@@ -27,7 +27,13 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
                 endDate: endOfMonth(now)
             };
         }
-        // Default to week view (covers 3days as well)
+        if (viewMode === '3days') {
+            return {
+                startDate: startOfDay(now),
+                endDate: endOfDay(addDays(now, 2))
+            };
+        }
+        // Default to week view
         return {
             startDate: startOfWeek(now, { weekStartsOn: 1 }), // Monday start
             endDate: endOfWeek(now, { weekStartsOn: 1 })
@@ -35,7 +41,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
     }, [currentDate, viewMode]);
 
     const { data: eventsData, isLoading } = useQuery({
-        queryKey: ['myEvents', startDate.toISOString(), endDate.toISOString()],
+        queryKey: ['events', 'personal', startDate.toISOString(), endDate.toISOString()],
         queryFn: () => getEvents({
             myTeams: true,
             pageSize: 100,
