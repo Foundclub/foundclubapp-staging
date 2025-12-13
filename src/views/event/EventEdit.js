@@ -201,7 +201,15 @@ function EventEdit({ navigation, route }) {
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
       location: {
-        label: event?.locationDetails ? JSON.parse(event?.locationDetails)?.address : '',
+        label: (() => {
+          try {
+            const parsed = event?.locationDetails ? JSON.parse(event.locationDetails) : null;
+            const addr = parsed?.address;
+            return (typeof addr === 'object' ? addr?.description : addr) || '';
+          } catch {
+            return '';
+          }
+        })(),
         value: `${event?.location?.lat}|${event?.location?.lng}`,
       },
       facility: event?.facility?.documentId || null,

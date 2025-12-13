@@ -90,7 +90,9 @@ const FacilityList = () => {
                     <Text style={[Fonts.h3, Fonts.neutral900]}>{item.name}</Text>
                     <Tag text={`${item.maxSlots} slots`} textColor="primary500" />
                 </View>
-                <Text style={[Fonts.p2, Fonts.neutral500]}>{item.address || 'Adresse non renseignée'}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral500]}>
+                    {(typeof item.address === 'object' ? item.address?.description : item.address) || 'Adresse non renseignée'}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral500, Spaces.marginTop[4]]}>{item.type}</Text>
             </View>
             <View style={[Alignments.column, Spaces.gap[8]]}>

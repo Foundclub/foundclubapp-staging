@@ -13,6 +13,7 @@ import Input from '@/components/molecules/input/Input';
 import Select from '@/components/molecules/select/Select';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import useAuth from '@/domains/auth/useAuth';
 
 const schema = Joi.object({
@@ -22,7 +23,10 @@ const schema = Joi.object({
     type: Joi.string().required().messages({
         'string.empty': 'Le type est requis',
     }),
-    address: Joi.string().allow('').optional(),
+    address: Joi.alternatives().try(
+        Joi.string().allow('').optional(),
+        Joi.object().optional()
+    ),
     maxSlots: Joi.number().min(1).required().messages({
         'number.min': 'La capacité doit être d\'au moins 1',
         'any.required': 'La capacité est requise',
@@ -53,7 +57,7 @@ const FacilityForm = () => {
         defaultValues: {
             name: facility?.name || '',
             type: facility?.type || 'Terrain',
-            address: facility?.address || '',
+            address: facility?.address || null,
             maxSlots: facility?.maxSlots || 1,
         },
     });
@@ -72,12 +76,25 @@ const FacilityForm = () => {
             return;
         }
 
+        // Transform address for Strapi Location Picker
+        let formattedData = { ...data };
+        if (data.address && typeof data.address === 'object' && data.address.value) {
+            const [lng, lat] = data.address.value.split('|').map(Number);
+            formattedData.address = {
+                description: data.address.label,
+                geometry: {
+                    type: "Point",
+                    coordinates: [lng, lat]
+                }
+            };
+        }
+
         setLoading(true);
         try {
             if (isEdit) {
-                await updateFacility(facility.documentId, data);
+                await updateFacility(facility.documentId, formattedData);
             } else {
-                await createFacility({ ...data, club: clubId });
+                await createFacility({ ...formattedData, club: clubId });
             }
             navigation.goBack();
         } catch (error) {
@@ -132,11 +149,11 @@ const FacilityForm = () => {
                     control={control}
                     name="address"
                     render={({ field: { onChange, value } }) => (
-                        <Input
+                        <AutocompleteAddressInput
                             label="Adresse (Lieu exact)"
                             placeholder="Ex: 12 Rue du Stade..."
-                            value={value}
-                            onChangeText={onChange}
+                            address={value}
+                            setAddress={onChange}
                             error={errors.address?.message}
                         />
                     )}

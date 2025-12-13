@@ -675,7 +675,15 @@ function EventDetails({ navigation, route }) {
                     ]}
                   />
                   <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
-                    {JSON.parse(event.locationDetails)?.address}
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(event.locationDetails);
+                        const addr = parsed?.address;
+                        return (typeof addr === 'object' ? addr?.description : addr) || '';
+                      } catch (e) {
+                        return '';
+                      }
+                    })()}
                   </Text>
                 </View>
               ) : null}
