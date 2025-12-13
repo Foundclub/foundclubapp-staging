@@ -1,5 +1,5 @@
 import {
-  BottomSheetBackdrop, BottomSheetModal, BottomSheetView,
+  BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@react-native-community/blur';
 import {
@@ -118,16 +118,19 @@ function BottomModal({
           ]}
         />
       </TouchableOpacity>
-      <BottomSheetView
-        style={[
+      <BottomSheetScrollView
+        contentContainerStyle={[
           Spaces.paddingHorizontal[24],
           Spaces.paddingVertical[40],
-          { maxHeight: Dimensions.get('screen').height * 0.7 },
+          { minHeight: 100 },
           contentContainerStyle,
+        ]}
+        style={[
+          { maxHeight: Dimensions.get('screen').height * 0.7 },
         ]}
       >
         {children}
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }
