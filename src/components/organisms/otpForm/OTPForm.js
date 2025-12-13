@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { joiResolver } from '@hookform/resolvers/joi';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +35,7 @@ function OTPForm({
 }) {
   const { Alignments, Spaces } = useTheme();
   const { t } = useTranslation();
+  const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
 
   const {
     control,
@@ -51,10 +53,18 @@ function OTPForm({
    * @param {typeof defaultValues} data
    */
   const handleFormSubmit = async (data) => {
+    if (isLocalSubmitting) return;
+
     console.log('[OTPForm] handleFormSubmit called, confirm:', JSON.stringify(confirm));
-    console.log('[OTPForm] phoneNumber prop:', phoneNumber);
     if (confirm && phoneNumber) {
-      await loginMutation.mutate({ code: data.code, confirm });
+      try {
+        setIsLocalSubmitting(true);
+        await loginMutation.mutateAsync({ code: data.code, confirm });
+      } catch (error) {
+        console.log('[OTPForm] Login error:', error);
+        // Reset local state on error so user can try again
+        setIsLocalSubmitting(false);
+      }
     }
   };
 
@@ -84,8 +94,8 @@ function OTPForm({
         )}
       />
       <Button
-        disabled={isLoading}
-        isLoading={isLoading}
+        disabled={isLoading || isLocalSubmitting}
+        isLoading={isLoading || isLocalSubmitting}
         onPress={handleSubmit(handleFormSubmit)}
         style={Alignments.fullWidth}
         title={t('otp.actions.confirm')}
