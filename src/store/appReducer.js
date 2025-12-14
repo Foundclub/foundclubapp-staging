@@ -20,25 +20,52 @@ export default function appReducer(state, action) {
     }
     case 'SET_AUTHENTICATION': {
       const newAuth = action.payload;
-      console.log('[appReducer] SET_AUTHENTICATION payload:', JSON.stringify(newAuth?.user?.documentId || 'NO_USER'));
+      
+      // Sanitize user object to prevent storage overflow (RangeError) with multiple accounts
+      // We only keep fields necessary for session switching display and basic auth
+      let sanitizedAuth = newAuth;
+      if (newAuth?.user) {
+        const {
+          documentId, id, email, firstname, lastname, phoneNumber, role, avatar
+        } = newAuth.user;
+        
+        // Sanitize role to avoid large permissions arrays
+        const sanitizedRole = role ? {
+            id: role.id,
+            documentId: role.documentId,
+            name: role.name,
+            type: role.type,
+        } : role;
+
+        sanitizedAuth = {
+          token: newAuth.token,
+          idToken: newAuth.idToken,
+          // We exclude idUser (Firebase SDK Object) as it is not serializable/useful in storage
+          user: {
+            documentId, id, email, firstname, lastname, phoneNumber, role: sanitizedRole, avatar
+          },
+        };
+      }
+
+      console.log('[appReducer] SET_AUTHENTICATION payload:', JSON.stringify(sanitizedAuth?.user?.documentId || 'NO_USER'));
       // When logging in, add to sessions if not already present, or update if present
       let newSessions = [...(state.authSessions || [])];
       console.log('[appReducer] Current sessions count:', newSessions.length);
 
       // Check if session already exists for this user
-      const existingIndex = newSessions.findIndex(s => s.user?.documentId === newAuth?.user?.documentId);
+      const existingIndex = newSessions.findIndex(s => s.user?.documentId === sanitizedAuth?.user?.documentId);
 
       if (existingIndex >= 0) {
-        newSessions[existingIndex] = newAuth;
+        newSessions[existingIndex] = sanitizedAuth;
         console.log('[appReducer] Updated existing session at index:', existingIndex);
-      } else if (newAuth?.user) {
-        newSessions.push(newAuth);
+      } else if (sanitizedAuth?.user) {
+        newSessions.push(sanitizedAuth);
         console.log('[appReducer] Added new session, new count:', newSessions.length);
       }
 
       return {
         ...state,
-        auth: newAuth,
+        auth: sanitizedAuth,
         authSessions: newSessions,
         isAddingAccount: false,
       };
