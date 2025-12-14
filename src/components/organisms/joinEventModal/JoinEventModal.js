@@ -58,13 +58,28 @@ function JoinEventModal({
     <BottomModal
       close={handleClose}
       isVisible={isVisible}
-    >
-      <View
-        style={[Spaces.gap[32], Spaces.padding[24]]}
-      >
-        <Text style={[Fonts.p1Black, Fonts.neutral00]}>
+      headerComponent={(
+        <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
           {t('eventList.joinModal.title')}
         </Text>
+      )}
+      footerComponent={(
+        <View style={[Spaces.gap[16]]}>
+          <Button
+            disabled={!acceptResponsibility || !acceptConditions}
+            onPress={handleConfirmParticipation}
+            title={t('eventList.joinModal.actions.confirm')}
+            variant="Primary"
+          />
+          <Button
+            onPress={handleClose}
+            title={t('eventList.joinModal.actions.cancel')}
+            variant="Secondary"
+          />
+        </View>
+      )}
+    >
+      <View style={[Spaces.gap[32]]}>
         <Text style={[Fonts.p1, Fonts.neutral00]}>
           {t('eventList.joinModal.description', { clubName })}
         </Text>
@@ -100,20 +115,6 @@ function JoinEventModal({
             {t('eventList.joinModal.validation')}
           </Text>
         </View>
-      </View>
-
-      <View style={[Spaces.gap[16]]}>
-        <Button
-          disabled={!acceptResponsibility || !acceptConditions}
-          onPress={handleConfirmParticipation}
-          title={t('eventList.joinModal.actions.confirm')}
-          variant="Primary"
-        />
-        <Button
-          onPress={handleClose}
-          title={t('eventList.joinModal.actions.cancel')}
-          variant="Secondary"
-        />
       </View>
     </BottomModal>
   );

@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -21,6 +22,8 @@ import useTheme from '@/theme/themeContext';
  * @param {() => void} props.close - Function to close the modal
  * @param {import('@/theme/types').ColorNames} [props.closeIconTintColor]
  * @param {import('react-native').ViewStyle} [props.contentContainerStyle]
+ * @param {React.ReactNode} [props.headerComponent] - Fixed header component
+ * @param {React.ReactNode} [props.footerComponent] - Fixed footer component
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
  * @returns {import('react').ReactElement} Modal component
@@ -30,6 +33,8 @@ function BottomModal({
   close,
   closeIconTintColor = 'primary200',
   contentContainerStyle,
+  headerComponent,
+  footerComponent,
   isVisible,
   style,
 }) {
@@ -118,19 +123,42 @@ function BottomModal({
           ]}
         />
       </TouchableOpacity>
-      <BottomSheetScrollView
-        contentContainerStyle={[
-          Spaces.paddingHorizontal[24],
-          Spaces.paddingVertical[40],
-          { minHeight: 100 },
-          contentContainerStyle,
-        ]}
-        style={[
-          { maxHeight: Dimensions.get('screen').height * 0.7 },
-        ]}
-      >
-        {children}
-      </BottomSheetScrollView>
+      <View style={[Alignments.fill]}>
+        {/* Fixed Header */}
+        {headerComponent && (
+          <View style={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[16], { zIndex: 1 }]}>
+            {headerComponent}
+          </View>
+        )}
+
+        {/* Scrollable Content */}
+        <BottomSheetScrollView
+          contentContainerStyle={[
+            Spaces.paddingHorizontal[24],
+            // If there's no footer, add some bottom padding for scroll
+            footerComponent ? Spaces.paddingBottom[16] : Spaces.paddingBottom[40],
+            { minHeight: 100 },
+            contentContainerStyle,
+          ]}
+          style={[
+            { maxHeight: Dimensions.get('screen').height * 0.7 },
+          ]}
+        >
+          {children}
+        </BottomSheetScrollView>
+
+        {/* Fixed Footer */}
+        {footerComponent && (
+          <View style={[
+            Spaces.paddingHorizontal[24],
+            Spaces.paddingTop[16],
+            Spaces.paddingBottom[Platform.OS === 'ios' ? 40 : 24], // Safe area / bottom spacing
+            { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' } // Optional separator
+          ]}>
+            {footerComponent}
+          </View>
+        )}
+      </View>
     </BottomSheetModal>
   );
 }
