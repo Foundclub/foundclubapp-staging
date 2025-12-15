@@ -444,7 +444,7 @@ function ProfileEdit({ navigation }) {
                 },
               }) => (
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
-                  <Text style={[Fonts.p1Bold, Fonts.neutral900]}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
                     {t('profile.fields.isLookingForClub.label', 'En recherche de club')}
                   </Text>
                   <Switch

@@ -22,7 +22,7 @@ function ProfileButton() {
       dispatch({ type: 'CANCEL_ADD_ACCOUNT' });
       return;
     }
-    const targetRoute = userData ? RouteNames.Profile : RouteNames.AuthStackAccount;
+    const targetRoute = userData ? RouteNames.ProfileStack : RouteNames.AuthStackAccount;
     // @ts-expect-error - Navigation typing will be fixed when types are properly set up
     navigation.navigate(targetRoute);
   };

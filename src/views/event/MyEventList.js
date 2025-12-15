@@ -193,7 +193,7 @@ function MyEventList({ navigation }) {
         extraData={userData}
       />
 
-      {['Coach', 'Entraineur', 'President', 'Dirigeant'].includes(userData?.role?.name) && (
+      {canManageEvents && (
         <View style={{
           position: 'absolute',
           bottom: 20,
@@ -201,7 +201,7 @@ function MyEventList({ navigation }) {
           right: 20,
         }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate(RouteNames.EventEdit, { date: listStartDate ? listStartDate.toISOString() : undefined })}
+            onPress={() => navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType })}
             style={{
               backgroundColor: Colors.primary500,
               borderRadius: 25,

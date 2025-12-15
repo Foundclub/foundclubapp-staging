@@ -136,7 +136,7 @@ function Conversation({ navigation, route }) {
    */
   const handleAvatarPress = (user) => {
     if (user._id === userData?.documentId) {
-      navigation.navigate(RouteNames.Profile);
+      navigation.navigate(RouteNames.ProfileStack);
     } else {
       navigation.navigate(RouteNames.UserDetails, { userId: user._id });
     }

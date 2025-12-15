@@ -56,4 +56,12 @@ export const RouteNames = /** @type {const} */ ({
   TeamStack: 'TeamStack',
   AdminStack: 'AdminStack',
   ProfileStack: 'ProfileStack',
+  
+  // Event Wizard
+  EventWizardType: 'EventWizardType',
+  EventWizardTeam: 'EventWizardTeam',
+  EventWizardInvites: 'EventWizardInvites',
+  EventWizardLogistics: 'EventWizardLogistics',
+  EventWizardLocation: 'EventWizardLocation',
+  EventWizardRecap: 'EventWizardRecap',
 });

@@ -252,7 +252,7 @@ function EventDetails({ navigation, route }) {
   // handlers
 
   const handleEditEvent = useCallback(() => {
-    navigation.navigate(RouteNames.EventEdit, { eventId });
+    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventEdit, params: { eventId } });
   }, [navigation, eventId]);
 
   const handleRemindPlayers = () => {
@@ -465,7 +465,7 @@ function EventDetails({ navigation, route }) {
   const handleUserPress = (user) => {
     if (user?.documentId) {
       if (user?.documentId === userData?.documentId) {
-        navigation.navigate(RouteNames.Profile);
+        navigation.navigate(RouteNames.ProfileStack);
       } else {
         navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
       }

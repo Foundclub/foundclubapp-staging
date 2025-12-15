@@ -40,7 +40,8 @@ const useAuth = () => {
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
     onError: (error) => {
-      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
+      const message = error?.message || error?.toString() || 'Unknown error';
+      Alert.alert(t('APIerrors.OTP_ERROR'), message);
     },
     onSuccess: (data) => {
       setConfirm(data);
@@ -50,7 +51,8 @@ const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onError: (error) => {
-      Alert.alert(t('APIerrors.OTP_ERROR'), error.message || error.toString());
+      const message = error?.message || error?.toString() || 'Unknown error';
+      Alert.alert(t('APIerrors.OTP_ERROR'), message);
     },
     onSuccess: async (data) => {
       console.log('[useAuth] loginMutation onSuccess, data.user:', data?.user?.documentId);
@@ -101,7 +103,7 @@ const useAuth = () => {
     console.log('[useAuth] addAccount called. Dispatching PREPARE_ADD_ACCOUNT');
     // Sign out from Firebase SDK to ensure a clean slate for the new account
     // This does NOT remove the session from our app state (authSessions) because we don't trigger the reducer here
-    await logout().catch((e) => console.log('[useAuth] logout failed', e));
+    await logout().catch((e) => console.log('[useAuth] logout failed', e?.message || 'Unknown error'));
 
     queryClient.clear();
     appDispatch({
