@@ -50,4 +50,10 @@ export const RouteNames = /** @type {const} */ ({
   UserRole: 'UserRole',
   UserSection: 'UserSection',
   Welcome: 'Welcome',
+  // Stacks
+  EventStack: 'EventStack',
+  ClubStack: 'ClubStack',
+  TeamStack: 'TeamStack',
+  AdminStack: 'AdminStack',
+  ProfileStack: 'ProfileStack',
 });

@@ -92,7 +92,7 @@ function FeaturedRequestsList() {
     };
 
     const handleEventPress = (event) => {
-        navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
+        navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: event.documentId } });
     };
 
     /**

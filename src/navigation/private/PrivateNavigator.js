@@ -7,23 +7,6 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
-import AddCoach from '@/views/club/AddCoach';
-import AddSponsor from '@/views/club/AddSponsor';
-import AdminDashboard from '@/views/admin/AdminDashboard';
-import AdminEvents from '@/views/admin/AdminEvents';
-import AdminReports from '@/views/admin/AdminReports';
-import AdminRevenue from '@/views/admin/AdminRevenue';
-import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
-import ClubDetails from '@/views/club/ClubDetails';
-import ClubEdit from '@/views/club/ClubEdit';
-import ClubFilters from '@/views/club/ClubFilters';
-import ClubList from '@/views/club/ClubList';
-import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
-import CreateClubRequest from '@/views/club/CreateClubRequest';
-import Conversation from '@/views/Conversation';
-import EventDetails from '@/views/event/EventDetails';
-import EventEdit from '@/views/event/EventEdit';
-import EventFilters from '@/views/event/EventFilters';
 import MercatoFilters from '@/views/mercato/MercatoFilters';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
@@ -33,23 +16,18 @@ import UserName from '@/views/onboarding/UserName';
 import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
 import Welcome from '@/views/onboarding/Welcome';
-import Profile from '@/views/profile/Profile';
-import ProfileEdit from '@/views/profile/ProfileEdit';
-import UserDetails from '@/views/profile/UserDetails';
-import MyTeamList from '@/views/team/MyTeamList';
-import TeamDetails from '@/views/team/TeamDetails';
-import TeamEdit from '@/views/team/TeamEdit';
-import TeamList from '@/views/team/TeamList';
-import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
-import FacilityList from '@/views/facility/FacilityList';
-import FacilityForm from '@/views/facility/FacilityForm';
-import RequestsDashboard from '@/views/club/RequestsDashboard';
+import Conversation from '@/views/Conversation';
 import NotificationList from '@/views/notification/NotificationList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import PrivateTabNavigator from './PrivateTabNavigator';
+import AdminStack from './stacks/AdminStack';
+import ClubStack from './stacks/ClubStack';
+import EventStack from './stacks/EventStack';
+import ProfileStack from './stacks/ProfileStack';
+import TeamStack from './stacks/TeamStack';
 
 const Stack = createStackNavigator();
 
@@ -139,126 +117,41 @@ function PrivateNavigator() {
           options={{ headerShown: false }}
         />
       ) : null}
+
+      {/* Domain Stacks - These contain the refactored screens */}
+      {/* Note: We use headerShown: false because the stacks manage their own headers */}
+      
       <Stack.Screen
-        component={Profile}
-        name={RouteNames.Profile}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
+        component={ProfileStack}
+        name="ProfileStack"
+        options={{ headerShown: false }}
       />
+      
       <Stack.Screen
-        component={ProfileEdit}
-        name={RouteNames.ProfileEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: t('profile.titles.edit'),
-        }}
+        component={ClubStack}
+        name="ClubStack"
+        options={{ headerShown: false }}
       />
+      
       <Stack.Screen
-        component={AddCoach}
-        name={RouteNames.AddCoach}
-        options={{
-          ...commonOptions,
-          headerTitle: t('addCoach.titles.main'),
-        }}
+        component={TeamStack}
+        name="TeamStack"
+        options={{ headerShown: false }}
       />
+      
       <Stack.Screen
-        component={ClubEdit}
-        name={RouteNames.ClubEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: t('clubEdit.title') || 'Modifier le club',
-        }}
+        component={EventStack}
+        name="EventStack"
+        options={{ headerShown: false }}
       />
+      
       <Stack.Screen
-        component={ClubList}
-        name={RouteNames.ClubList}
-        options={{
-          ...commonOptions,
-          headerTitle: t('clubList.title'),
-        }}
+        component={AdminStack}
+        name="AdminStack"
+        options={{ headerShown: false }}
       />
-      <Stack.Screen
-        component={ClubFilters}
-        name={RouteNames.ClubFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={ClubDetails}
-        name={RouteNames.Club}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={ClubMembershipRequestList}
-        name={RouteNames.ClubMembershipRequests}
-        options={{
-          ...commonOptions,
-          headerTitle: t('clubMembershipRequestList.title'),
-        }}
-      />
-      <Stack.Screen
-        component={TeamList}
-        name={RouteNames.TeamList}
-        options={{
-          ...commonOptions,
-          headerTitle: t('teamList.title'),
-        }}
-      />
-      <Stack.Screen
-        component={MyTeamList}
-        name={RouteNames.MyTeamList}
-        options={{
-          ...commonOptions,
-          headerTitle: t('myTeamList.title'),
-        }}
-      />
-      <Stack.Screen
-        component={TeamDetails}
-        name={RouteNames.TeamDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={TeamMembershipRequestList}
-        name={RouteNames.TeamMembershipRequests}
-        options={{
-          ...commonOptions,
-          headerTitle: t('teamMembershipRequestList.title'),
-        }}
-      />
-      <Stack.Screen
-        component={TeamEdit}
-        name={RouteNames.TeamEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: t('teamEdit.title'),
-        }}
-      />
-      <Stack.Screen
-        component={EventEdit}
-        name={RouteNames.EventEdit}
-        options={{
-          ...commonOptions,
-          headerTitle: t('eventEdit.title'),
-        }}
-      />
-      <Stack.Screen
-        component={EventFilters}
-        name={RouteNames.EventFilters}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
+
+      {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
       <Stack.Screen
         component={MercatoFilters}
         name={RouteNames.MercatoFilters}
@@ -284,107 +177,11 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
-        component={EventDetails}
-        name={RouteNames.EventDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={AddSponsor}
-        name={RouteNames.AddSponsor}
-        options={{
-          ...commonOptions,
-          headerTitle: t('addSponsor.title'),
-        }}
-      />
-      <Stack.Screen
-        component={CreateClubRequest}
-        name={RouteNames.CreateClub}
-        options={{
-          ...commonOptions,
-          headerTitle: t('createClubRequest.title'),
-        }}
-      />
-      <Stack.Screen
-        component={FacilityList}
-        name={RouteNames.FacilityList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Installations',
-        }}
-      />
-      <Stack.Screen
-        component={FacilityForm}
-        name={RouteNames.FacilityForm}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
         component={Conversation}
         name={RouteNames.Conversation}
         options={{
           ...commonOptions,
           headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={UserDetails}
-        name={RouteNames.UserDetails}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={AdminDashboard}
-        name={RouteNames.AdminDashboard}
-        options={{
-          ...commonOptions,
-          headerTitle: '',
-        }}
-      />
-      <Stack.Screen
-        component={AdminRevenue}
-        name={RouteNames.AdminRevenue}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Revenus',
-        }}
-      />
-      <Stack.Screen
-        component={AdminEvents}
-        name={RouteNames.AdminEvents}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Événements',
-        }}
-      />
-      <Stack.Screen
-        component={AdminReports}
-        name={RouteNames.AdminReports}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Signalements',
-        }}
-      />
-      <Stack.Screen
-        component={FeaturedRequestsList}
-        name={RouteNames.FeaturedRequestsList}
-        options={{
-          ...commonOptions,
-          headerTitle: 'Demandes à la une',
-        }}
-      />
-      <Stack.Screen
-        component={RequestsDashboard}
-        name={RouteNames.RequestsDashboard}
-        options={{
-          ...commonOptions,
-          headerTitle: t('requests.title', 'Demandes'),
         }}
       />
       <Stack.Screen
@@ -395,6 +192,8 @@ function PrivateNavigator() {
           headerTitle: 'Notifications',
         }}
       />
+
+      {/* Onboarding Flow */}
       {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}

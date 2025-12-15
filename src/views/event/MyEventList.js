@@ -91,7 +91,7 @@ function MyEventList({ navigation }) {
       navigation.navigate(RouteNames.TrainingDetails, { trainingId: event.documentId });
     } else {
       // @ts-ignore
-      navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
+      navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: event.documentId } });
     }
   };
 

@@ -214,7 +214,7 @@ function EventListContent({
 
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
+    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: event.documentId } });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {

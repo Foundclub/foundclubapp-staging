@@ -27,7 +27,7 @@ const FeaturedEvents = ({ events = [] }) => {
             } else if (item.type?.name === 'Entraînement') {
                 navigation.navigate(RouteNames.TrainingDetails, { trainingId: item.documentId });
             } else {
-                navigation.navigate(RouteNames.EventDetails, { eventId: item.documentId });
+                navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: item.documentId } });
             }
         }
     }, [navigation]);
