@@ -113,13 +113,14 @@ function EventCardNew({
     // Sponsors
     const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
 
-    // Location
-    const locationText = getShortAddress(
-        item?.locationDetails ||
-        item?.club?.addressDetails ||
-        item?.team?.club?.addressDetails ||
-        item?.location
-    );
+    // Location - check facility first (club installation), then other options
+    const locationText = 
+        item?.facility?.name ||
+        getShortAddress(item?.locationDetails) ||
+        getShortAddress(item?.club?.addressDetails) ||
+        getShortAddress(item?.team?.club?.addressDetails) ||
+        getShortAddress(item?.location) ||
+        null;
 
     // Sport/Activity
     const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ') || item?.type?.name || 'Sport';

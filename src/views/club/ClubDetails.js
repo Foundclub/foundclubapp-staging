@@ -214,7 +214,10 @@ function ClubDetails({ navigation, route }) {
       if (user?.documentId === userData?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
       } else {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
+        navigation.navigate(RouteNames.ProfileStack, {
+          screen: RouteNames.UserDetails,
+          params: { userId: user.documentId },
+        });
       }
     }
   };
@@ -225,7 +228,10 @@ function ClubDetails({ navigation, route }) {
    */
   const handleTeamPress = (team) => {
     if (team?.documentId) {
-      navigation.navigate(RouteNames.TeamDetails, { teamId: team.documentId });
+      navigation.navigate(RouteNames.TeamStack, {
+        screen: RouteNames.TeamDetails,
+        params: { teamId: team.documentId },
+      });
     }
   };
 

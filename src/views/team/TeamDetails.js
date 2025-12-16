@@ -156,7 +156,10 @@ function TeamDetails({ navigation, route }) {
       if (user?.documentId === currentUser?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
       } else {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
+        navigation.navigate(RouteNames.ProfileStack, {
+          screen: RouteNames.UserDetails,
+          params: { userId: user.documentId },
+        });
       }
     }
   };

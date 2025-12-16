@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 import useTheme from '@/theme/themeContext';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -13,7 +13,7 @@ import { createEvent } from '@/services/event/eventService';
 import useEvent from '@/domains/event/useEvent';
 
 const EventWizardRecap = ({ navigation }) => {
-  const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
+  const { Colors, Fonts, Spaces, ApplicationStyle } = useTheme();
   const { t } = useTranslation();
   const { state, dispatch } = useEventWizard();
   const { createReccurrentEventPayload } = useEvent();
@@ -24,10 +24,8 @@ const EventWizardRecap = ({ navigation }) => {
     mutationFn: createEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      // Reset state
       dispatch({ type: 'RESET' });
-      // Navigate Home/Back
-      navigation.navigate(RouteNames.HomeTab); // Or Calendar
+      navigation.navigate(RouteNames.HomeTab);
     },
     onError: (error) => {
       console.error('Wizard Creation Error', error);
@@ -36,61 +34,85 @@ const EventWizardRecap = ({ navigation }) => {
   });
 
   const handleSubmit = async () => {
-    // Construct Payload
-    // This needs to match what EventEdit.js produces.
-    // We can reuse createReccurrentEventPayload from useEvent/eventService helper if possible
-    // But currently `useEvent` hook logic might need the form data structure.
-    
-    // Let's reconstruct the data object expected by createReccurrentEventPayload or logic manually.
-    // State has: date (Date obj), startTime (ISO string), endTime (ISO string)...
-    
-    // We need to format times to "HH:mm"
     const st = new Date(state.startTime);
     const et = new Date(state.endTime);
     const formattedStartTime = `${String(st.getHours()).padStart(2, '0')}:${String(st.getMinutes()).padStart(2, '0')}`;
     const formattedEndTime = `${String(et.getHours()).padStart(2, '0')}:${String(et.getMinutes()).padStart(2, '0')}`;
-    const formattedDate = format(new Date(state.date), 'dd/MM/yyyy'); // Assuming utility expects this or we construct payload directly
+    const formattedDate = format(new Date(state.date), 'dd/MM/yyyy');
 
-    // Recurrence
-    // If recurrent, we need specific fields.
-    
     const formData = {
-        type: state.type.documentId,
-        team: state.team.documentId,
-        invitedTeams: state.invitedTeams || [],
-        
-        date: formattedDate,
-        startTime: formattedStartTime,
-        endTime: formattedEndTime,
-        
-        location: state.location,
-        facility: state.facility,
-        
-        isRecurrent: state.isRecurrent,
-        recurrenceFrequency: state.recurrenceFrequency || 'week',
-        // Optional: Recurrence end date defaults to +3 months if not set?? Or simple infinite?
-        // Let's assume 10 occurences or calculate end date if we had the field.
-        // For MVP, if recurrent, maybe iterate 10 times or reuse helper.
-        // If helper methods are available in `useEvent`, let's try to use them.
-        
-        validationMode: 'auto',
-        sessionStatus: 'open',
+      type: state.type?.documentId,
+      team: state.team?.documentId,
+      invitedTeams: state.invitedTeams || [],
+      date: formattedDate,
+      startTime: formattedStartTime,
+      endTime: formattedEndTime,
+      location: state.location,
+      facility: state.facility,
+      isRecurrent: state.isRecurrent,
+      recurrenceFrequency: state.recurrenceFrequency || 'week',
+      validationMode: 'auto',
+      sessionStatus: 'open',
     };
 
-    // Use helper effectively
     const eventsPayload = createReccurrentEventPayload(formData);
-
-    // If multiple events (recurrence)
     const promises = eventsPayload.map(e => createEventMutation.mutateAsync(e));
-    
+
     try {
-        await Promise.all(promises);
-    } catch(e) {
-        // Handled by mutation onError usually, but Promise.all fails fast
+      await Promise.all(promises);
+    } catch (e) {
+      // Handled by mutation onError
     }
   };
 
-  const { type, team, date, startTime, location } = state;
+  // Helper function to safely get location display text
+  const getLocationDisplayText = () => {
+    const loc = state.location;
+    
+    // Debug log to see what we're dealing with
+    console.log('[EventWizardRecap] Location data:', JSON.stringify(loc, null, 2));
+    
+    if (!loc) return 'Terrain inconnu';
+    if (typeof loc === 'string') return loc;
+    
+    if (typeof loc === 'object') {
+      // Try common label properties
+      const labelValue = loc.label || loc.description || loc.name || loc.address;
+      
+      if (labelValue) {
+        // labelValue might also be an object, handle that
+        if (typeof labelValue === 'string') return labelValue;
+        if (typeof labelValue === 'object' && labelValue.label) return labelValue.label;
+        if (typeof labelValue === 'object' && labelValue.description) return labelValue.description;
+      }
+      
+      // Check for nested properties structure (from Google Places API)
+      if (loc.properties && loc.properties.label) {
+        return String(loc.properties.label);
+      }
+    }
+    
+    return 'Terrain inconnu';
+  };
+
+  // Safe date formatting
+  const getFormattedDate = () => {
+    try {
+      return format(new Date(state.date), 'EEEE d MMMM yyyy', { locale: fr });
+    } catch {
+      return 'Date non définie';
+    }
+  };
+
+  const getFormattedTime = () => {
+    try {
+      const start = format(new Date(state.startTime), 'HH:mm');
+      const end = format(new Date(state.endTime), 'HH:mm');
+      return `${start} - ${end}`;
+    } catch {
+      return 'Horaire non défini';
+    }
+  };
 
   return (
     <WizardStepLayout
@@ -102,33 +124,42 @@ const EventWizardRecap = ({ navigation }) => {
       isNextLoading={createEventMutation.isPending}
     >
       <View style={[Spaces.gap[16]]}>
-         <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.neutral800 }]}>
-            <View style={[Spaces.gap[16]]}>
-                <View>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>Type</Text>
-                    <Text style={[Fonts.h4, Fonts.neutral00]}>{type?.name}</Text>
-                </View>
-                <View>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>Équipe Organisatrice</Text>
-                    <Text style={[Fonts.h4, Fonts.neutral00]}>{team?.name}</Text>
-                </View>
-                 <View>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>Date & Heure</Text>
-                    <Text style={[Fonts.h4, Fonts.neutral00]}>
-                        {format(new Date(date), 'dd MMMM yyyy')}
-                    </Text>
-                    <Text style={[Fonts.p1, Fonts.primary500]}>
-                         {format(new Date(startTime), 'HH:mm')} to {format(new Date(state.endTime), 'HH:mm')}
-                    </Text>
-                </View>
-                 <View>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>Lieu</Text>
-                    <Text style={[Fonts.h4, Fonts.neutral00]}>
-                        {location?.label || 'Terrain inconnu'}
-                    </Text>
-                </View>
+        <View style={[ApplicationStyle.card, Spaces.padding[24], { backgroundColor: Colors.neutral800 }]}>
+          <View style={[Spaces.gap[16]]}>
+            {/* Type */}
+            <View>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>Type</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>{state.type?.name || 'Non défini'}</Text>
             </View>
-         </View>
+            
+            {/* Team */}
+            <View>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>Équipe Organisatrice</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>{state.team?.name || 'Non définie'}</Text>
+            </View>
+            
+            {/* Date & Time */}
+            <View>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>Date & Heure</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>{getFormattedDate()}</Text>
+              <Text style={[Fonts.p1, Fonts.primary500]}>{getFormattedTime()}</Text>
+            </View>
+            
+            {/* Location */}
+            <View>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>Lieu</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>{getLocationDisplayText()}</Text>
+            </View>
+
+            {/* Recurrence */}
+            {state.isRecurrent && (
+              <View>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>Récurrence</Text>
+                <Text style={[Fonts.h4, Fonts.primary500]}>Chaque semaine</Text>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     </WizardStepLayout>
   );

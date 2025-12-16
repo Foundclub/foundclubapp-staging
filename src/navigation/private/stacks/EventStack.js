@@ -7,6 +7,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
+import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
 
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
@@ -52,6 +53,13 @@ function EventStack() {
             headerTitle: '',
           }}
         />
+        <Stack.Screen
+          component={TacticalBoardScreen}
+          name={RouteNames.TacticalBoard}
+          options={{
+            headerShown: false,
+          }}
+        />
 
         {/* Wizard Screens */}
         <Stack.Screen
@@ -90,3 +98,4 @@ function EventStack() {
 }
 
 export default EventStack;
+

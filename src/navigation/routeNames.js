@@ -64,4 +64,7 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardLogistics: 'EventWizardLogistics',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardRecap: 'EventWizardRecap',
+  
+  // Tactical
+  TacticalBoard: 'TacticalBoard',
 });

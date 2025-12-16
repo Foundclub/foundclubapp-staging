@@ -219,7 +219,7 @@ function EventListContent({
 
   const handleOpenFilters = useCallback(() => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.EventFilters);
+    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventFilters });
   }, [navigation]);
 
   const handleFindEvent = () => {

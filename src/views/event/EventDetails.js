@@ -477,6 +477,63 @@ function EventDetails({ navigation, route }) {
     missingEventMutation.mutate(ev.documentId);
   }, [missingEventMutation]);
 
+  // Handle opening tactical board
+  const handleOpenTacticalBoard = useCallback(() => {
+    if (!event?.documentId) return;
+    
+    // Get players from team
+    const teamPlayers = event?.team?.players || [];
+    
+    // Get participants - participations may be user objects or have .user property
+    const participants = (event?.participations || []).map(p => {
+      // Handle both cases: direct user object or nested {user: {...}}
+      if (p?.documentId && p?.firstname) return p; // Direct user object
+      if (p?.user) return p.user; // Nested user
+      return p; // Fallback
+    }).filter(Boolean);
+    
+    console.log('[TacticalBoard] teamPlayers:', JSON.stringify(teamPlayers, null, 2));
+    console.log('[TacticalBoard] participants:', JSON.stringify(participants, null, 2));
+    
+    // Combine and deduplicate players, serializing to plain objects
+    const allPlayers = [...teamPlayers, ...participants].reduce((acc, player) => {
+      if (!player) return acc;
+      const id = player?.documentId || player?.id;
+      if (id && !acc.find(p => p.id === id)) {
+        // Extract avatar URL properly
+        const avatarUrl = typeof player?.avatar === 'string' 
+          ? player.avatar 
+          : player?.avatar?.url || null;
+          
+        acc.push({
+          id,
+          documentId: player?.documentId,
+          firstname: player?.firstname || '',
+          lastname: player?.lastname || '',
+          avatar: avatarUrl,
+        });
+      }
+      return acc;
+    }, []);
+    
+    console.log('[TacticalBoard] allPlayers:', JSON.stringify(allPlayers, null, 2));
+    
+    // Navigate through EventStack
+    navigation.navigate(RouteNames.EventStack, {
+      screen: RouteNames.TacticalBoard,
+      params: {
+        eventId: event.documentId,
+        sport: event?.team?.activities?.[0]?.name?.toLowerCase() || 
+               event?.team?.section?.name?.toLowerCase() || 
+               'generic',
+        players: allPlayers,
+        existingComposition: event?.composition ? 
+          (typeof event.composition === 'string' ? event.composition : JSON.stringify(event.composition)) 
+          : null,
+      },
+    });
+  }, [event, navigation]);
+
   // renderers
 
   const renderSuperAdminActions = () => {
@@ -515,18 +572,37 @@ function EventDetails({ navigation, route }) {
   const renderActionButtons = () => {
     const canEdit = canEditEvent(event?.team?.documentId || '');
     const hasDateInPast = event?.date ? new Date(event?.date) < new Date() : true;
+    
+    // Check if event type is a match/competition (for tactical board visibility)
+    const isCompetitionType = ['match', 'compétition', 'tournoi', 'competition'].some(
+      type => event?.type?.name?.toLowerCase()?.includes(type)
+    );
+    
     return event && !hasDateInPast ? (
-      <EventAnswerButtons
-        event={event}
-        hasPendingRequest={hasPendingRequest}
-        onCancel={canEdit ? handleCancelEvent : undefined}
-        onDecline={() => handleDeclineEvent(event)}
-        onDeleteParticipation={handleDeleteParticipation}
-        onEdit={canEdit ? handleEditEvent : undefined}
-        onJoin={handleJoinEvent}
-        onLogin={handleGoLogin}
-        onParticipate={() => handleParticipateToEvent(event)}
-      />
+      <View>
+        <EventAnswerButtons
+          event={event}
+          hasPendingRequest={hasPendingRequest}
+          onCancel={canEdit ? handleCancelEvent : undefined}
+          onDecline={() => handleDeclineEvent(event)}
+          onDeleteParticipation={handleDeleteParticipation}
+          onEdit={canEdit ? handleEditEvent : undefined}
+          onJoin={handleJoinEvent}
+          onLogin={handleGoLogin}
+          onParticipate={() => handleParticipateToEvent(event)}
+        />
+        {/* Tactical Board Button - visible only for trainers/managers and competition events */}
+        {canEdit && isCompetitionType && (
+          <View style={{ marginTop: 12 }}>
+            <Button
+              icon="team"
+              onPress={handleOpenTacticalBoard}
+              title="Gérer la Compo"
+              variant="Secondary"
+            />
+          </View>
+        )}
+      </View>
     ) : <View />;
   };
 

@@ -69,13 +69,18 @@ function ClubListContent() {
   const handleClubSelection = useCallback((/** @type {string | undefined} */ documentId) => {
     if (documentId) {
       // @ts-expect-error because of react navigation type definitions
-      navigation.navigate(RouteNames.Club, { clubId: documentId });
+      navigation.navigate(RouteNames.ClubStack, {
+        screen: RouteNames.Club,
+        params: { clubId: documentId },
+      });
     }
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.ClubFilters);
+    navigation.navigate(RouteNames.ClubStack, {
+      screen: RouteNames.ClubFilters,
+    });
   }, [navigation]);
 
   /**
@@ -91,7 +96,9 @@ function ClubListContent() {
 
   const handleCreateClub = () => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.CreateClub);
+    navigation.navigate(RouteNames.ClubStack, {
+      screen: RouteNames.CreateClub,
+    });
   };
 
   // renderers

@@ -65,7 +65,9 @@ function Profile({ navigation }) {
   };
 
   const handleFindClub = () => {
-    navigation.navigate(RouteNames.ClubList);
+    navigation.navigate(RouteNames.ClubStack, {
+      screen: RouteNames.ClubList,
+    });
   };
 
   const handleFindTeam = () => {
@@ -77,8 +79,9 @@ function Profile({ navigation }) {
   };
 
   const handleOpenClub = () => {
-    navigation.navigate(RouteNames.Club, {
-      clubId: userData?.club?.documentId,
+    navigation.navigate(RouteNames.ClubStack, {
+      screen: RouteNames.Club,
+      params: { clubId: userData?.club?.documentId },
     });
   };
 
@@ -88,8 +91,9 @@ function Profile({ navigation }) {
    * @returns {void}
    */
   const handleOpenTeam = (teamId) => {
-    navigation.navigate(RouteNames.TeamDetails, {
-      teamId,
+    navigation.navigate(RouteNames.TeamStack, {
+      screen: RouteNames.TeamDetails,
+      params: { teamId },
     });
   };
 
@@ -116,16 +120,19 @@ function Profile({ navigation }) {
 
   const handleManageClubMembershipRequests = () => {
     if (userData?.club?.documentId) {
-      navigation.navigate(RouteNames.ClubMembershipRequests, { clubId: userData.club.documentId });
+      navigation.navigate(RouteNames.ClubStack, {
+        screen: RouteNames.ClubMembershipRequests,
+        params: { clubId: userData.club.documentId },
+      });
     }
   };
 
   const handleManageTeamMembershipRequests = () => {
     if (userData?.club?.documentId) {
-      navigation.navigate(
-        RouteNames.TeamMembershipRequests,
-        { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
-      );
+      navigation.navigate(RouteNames.TeamStack, {
+        screen: RouteNames.TeamMembershipRequests,
+        params: { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
+      });
     }
   };
 
@@ -370,7 +377,10 @@ function Profile({ navigation }) {
           {canManageClub ? (
             <TabButton
               isActive={false}
-              onPress={() => navigation.navigate(RouteNames.RequestsDashboard, { clubId: userData?.club?.documentId })}
+              onPress={() => navigation.navigate(RouteNames.ClubStack, {
+                screen: RouteNames.RequestsDashboard,
+                params: { clubId: userData?.club?.documentId },
+              })}
               title={t('profile.actions.manageEventRequests', 'Gérer les demandes d\'événements')}
             />
           ) : null}
@@ -384,7 +394,9 @@ function Profile({ navigation }) {
           {userData?.role?.name === USER_ROLES.superAdmin ? (
             <TabButton
               isActive={false}
-              onPress={() => navigation.navigate(RouteNames.AdminDashboard)}
+              onPress={() => navigation.navigate(RouteNames.AdminStack, {
+                screen: RouteNames.AdminDashboard,
+              })}
               title="Espace Administration"
             />
           ) : null}

@@ -1,17 +1,29 @@
 import client from '@/services/client';
 
 /**
- * Get user notifications
+ * Get user notifications with pagination
  * @param {object} params - Query params
- * @returns {Promise<any>}
+ * @param {number} [params.page=1] - Page number
+ * @param {number} [params.pageSize=20] - Items per page
+ * @param {boolean} [params.read] - Filter by read status
+ * @returns {Promise<{data: any[], meta: {pagination: {page: number, pageSize: number, pageCount: number, total: number}}}>}
  */
 export const getNotifications = async (params = {}) => {
-    const response = await client.get('/notifications', {
-        params: {
-            sort: 'createdAt:desc',
-            ...params,
-        },
-    });
+    const { page = 1, pageSize = 20, read, ...rest } = params;
+    
+    const queryParams = {
+        sort: 'createdAt:desc',
+        'pagination[page]': page,
+        'pagination[pageSize]': pageSize,
+        ...rest,
+    };
+    
+    // Add read filter if specified
+    if (read !== undefined) {
+        queryParams['filters[read][$eq]'] = read;
+    }
+    
+    const response = await client.get('/notifications', { params: queryParams });
     return response.data;
 };
 
@@ -42,3 +54,14 @@ export const markAllAsRead = async () => {
     const response = await client.put('/notifications/read-all');
     return response.data;
 };
+
+/**
+ * Delete a notification
+ * @param {string} id - Notification ID
+ * @returns {Promise<any>}
+ */
+export const deleteNotification = async (id) => {
+    const response = await client.delete(`/notifications/${id}`);
+    return response.data;
+};
+

@@ -326,14 +326,24 @@ function EventFilters({ navigation }) {
   };
 
   const renderLabel = (label, infoKey) => (
-    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], Spaces.marginBottom[8]]}>
-      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{label}</Text>
-      <Button
+    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginBottom[8]]}>
+      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
+      <TouchableOpacity
         onPress={() => openInfoModal(label, t(`eventFilters.infos.${infoKey}`))}
-        style={{ width: 30, height: 30, padding: 0, borderRadius: 15 }}
-        title="?"
-        variant="Secondary"
-      />
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: Colors.primary500 + '20',
+          borderWidth: 1.5,
+          borderColor: Colors.primary500,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={{ color: Colors.primary500, fontSize: 13, fontWeight: '700' }}>i</Text>
+      </TouchableOpacity>
     </View>
   );
 

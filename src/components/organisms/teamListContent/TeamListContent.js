@@ -100,7 +100,10 @@ function TeamListContent({
 
   const handleTeamSelect = useCallback((/** @type {Team} */ team) => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.TeamDetails, { teamId: team.documentId });
+    navigation.navigate(RouteNames.TeamStack, {
+      screen: RouteNames.TeamDetails,
+      params: { teamId: team.documentId },
+    });
   }, [navigation]);
 
   useFocusEffect(

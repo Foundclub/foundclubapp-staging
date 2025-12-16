@@ -589,6 +589,12 @@ export default {
         placeholder: 'Sélectionner un type d\'évènement',
       },
     },
+    infos: {
+      activity: 'Le sport pratiqué par l\'équipe (football, basketball, handball, etc.).\n\nFiltrer par sport vous permet de ne voir que les événements correspondant à votre discipline.',
+      category: 'La catégorie d\'âge de l\'équipe (U7, U9, U11, U13, Senior, etc.).\n\nVous pouvez sélectionner plusieurs catégories pour voir tous les événements correspondants.',
+      level: 'Le niveau de jeu de l\'équipe (Départemental, Régional, National, etc.).\n\nCe filtre vous aide à trouver des événements adaptés à votre niveau de pratique.',
+      type: 'Le type d\'événement (Entraînement, Match, Détection, Tournoi, etc.).\n\nSélectionnez plusieurs types pour voir différentes activités.',
+    },
   },
   eventList: {
     actions: {

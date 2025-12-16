@@ -92,11 +92,12 @@ export const getEventById = async (documentId) => {
         'team.category',
         'team.level',
         'team.players',
+        'team.players.avatar',
         'type',
         'missings',
         'participations',
-        'missings',
-        'participationRequests.user'],
+        'participationRequests.user',
+        'facility'],
     },
   });
   try {
