@@ -85,9 +85,10 @@ export default function appReducer(state, action) {
       };
     }
     case 'PREPARE_ADD_ACCOUNT': {
-      console.log('[appReducer] PREPARE_ADD_ACCOUNT dispatched. Setting isAddingAccount to true.');
+      console.log('[appReducer] PREPARE_ADD_ACCOUNT dispatched. Setting isAddingAccount to true, clearing auth temporarily.');
       return {
         ...state,
+        auth: undefined, // Clear auth so PublicNavigator shows
         isAddingAccount: true,
       };
     }

@@ -99,8 +99,9 @@ const useAuth = () => {
     // This ensures Firebase SDK is synced with the new account for push notifications, etc.
     if (session?.idToken) {
       try {
-        const { signInWithCustomToken, getAuth } = await import('@react-native-firebase/auth');
-        await signInWithCustomToken(getAuth(), session.idToken);
+        // React Native Firebase uses default import, not getAuth()
+        const auth = (await import('@react-native-firebase/auth')).default;
+        await auth().signInWithCustomToken(session.idToken);
         console.log('[useAuth] Firebase re-auth successful');
       } catch (error) {
         console.warn('[useAuth] Firebase re-auth failed (token may be expired):', error?.message);
@@ -284,6 +285,7 @@ const useAuth = () => {
 
   const cancelAddAccount = useCallback(() => {
     console.log('[useAuth] cancelAddAccount called');
+    queryClient.clear(); // Clear stale data from previous partial login attempts
     // Restore the first available session from authSessions
     const previousSession = authSessions?.[0];
     if (previousSession) {
@@ -291,7 +293,7 @@ const useAuth = () => {
       appDispatch({ type: 'SWITCH_ACCOUNT', payload: previousSession });
     }
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
-  }, [appDispatch, authSessions]);
+  }, [appDispatch, authSessions, queryClient]);
 
   return {
     allMyTeams,

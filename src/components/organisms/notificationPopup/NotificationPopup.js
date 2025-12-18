@@ -59,25 +59,54 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
     const unreadCount = notifications.filter(n => !n.read).length;
 
     const handlePressNotification = (notification) => {
-        onMarkAsRead(notification.id || notification.documentId);
+        onMarkAsRead(notification.documentId);
         onClose();
 
-        if (notification.data?.route) {
-            const route = notification.data.route;
-            const params = notification.data.params || {};
-            
-            // Handle nested navigation properly
-            if (route === 'EventDetails') {
-                navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params });
-            } else if (route === 'TeamDetails') {
-                navigation.navigate(RouteNames.TeamStack, { screen: RouteNames.TeamDetails, params });
-            } else if (route === 'ClubDetails' || route === 'Club') {
-                navigation.navigate(RouteNames.ClubStack, { screen: RouteNames.Club, params });
-            } else if (route === 'Conversation') {
-                navigation.navigate(RouteNames.ChatStack, { screen: RouteNames.Conversation, params });
-            } else {
-                navigation.navigate(route, params);
-            }
+        const data = notification.data || {};
+        const type = notification.type;
+        
+        // Navigate based on notification type (same logic as NotificationList)
+        switch (type) {
+            case 'addToTeam':
+            case 'teamRequest':
+            case 'teamMembershipRequest':
+            case 'newTeam':
+                navigation.navigate(RouteNames.TeamStack, {
+                    screen: RouteNames.TeamDetails,
+                    params: { teamId: data.teamId },
+                });
+                break;
+            case 'clubMembershipRequest':
+                navigation.navigate(RouteNames.ClubStack, {
+                    screen: RouteNames.ClubMembershipRequests,
+                });
+                break;
+            case 'clubRequest':
+                navigation.navigate(RouteNames.ClubStack, {
+                    screen: RouteNames.Club,
+                    params: { clubId: data.clubId },
+                });
+                break;
+            case 'eventCancellation':
+            case 'eventReminder':
+            case 'newParticipation':
+            case 'participationRequest':
+                navigation.navigate(RouteNames.EventStack, {
+                    screen: RouteNames.EventDetails,
+                    params: { eventId: data.eventId },
+                });
+                break;
+            case 'newWhisper':
+            case 'newTeamMessage':
+                navigation.navigate(RouteNames.Conversation, {
+                    chatId: data.conversationId || data.chatId,
+                });
+                break;
+            default:
+                if (data.route) {
+                    navigation.navigate(data.route, data.params || {});
+                }
+                break;
         }
     };
 
