@@ -142,6 +142,15 @@ function Profile({ navigation }) {
   };
 
   const handleAddAccount = () => {
+    // Limit to 5 accounts maximum
+    const MAX_ACCOUNTS = 5;
+    if (authSessions?.length >= MAX_ACCOUNTS) {
+      Alert.alert(
+        t('profile.alerts.maxAccounts.title', 'Limite atteinte'),
+        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectés.`),
+      );
+      return;
+    }
     setIsAccountModalVisible(false);
     addAccount();
   };

@@ -160,7 +160,7 @@ const SearchAlerts = ({ navigation }) => {
                 isVisible={isTypeModalVisible}
             >
                 <View style={[Spaces.gap[16]]}>
-                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[16]]}>
                         {t('searchAlerts.typeSelection.title', 'Que recherchez-vous ?')}
                     </Text>
                     <Text style={[Fonts.p1, Fonts.neutral00]}>

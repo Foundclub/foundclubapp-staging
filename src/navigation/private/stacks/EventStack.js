@@ -8,6 +8,7 @@ import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
+import { TacticalSelection as TacticalSelectionV2, TacticalBoard as TacticalBoardV2 } from '@/views/tactical_v2';
 
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
@@ -59,6 +60,18 @@ function EventStack() {
           options={{
             headerShown: false,
           }}
+        />
+        
+        {/* Tactical V2 Screens */}
+        <Stack.Screen
+          component={TacticalSelectionV2}
+          name={RouteNames.TacticalSelectionV2}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={TacticalBoardV2}
+          name={RouteNames.TacticalBoardV2}
+          options={{ headerShown: false }}
         />
 
         {/* Wizard Screens */}

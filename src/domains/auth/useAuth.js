@@ -91,8 +91,23 @@ const useAuth = () => {
 
   const { auth, authSessions } = useAppContext()[0];
 
-  const switchAccount = useCallback((session) => {
+  const switchAccount = useCallback(async (session) => {
+    console.log('[useAuth] switchAccount called for:', session?.user?.email);
     queryClient.clear();
+    
+    // Re-authenticate with Firebase using the stored idToken if available
+    // This ensures Firebase SDK is synced with the new account for push notifications, etc.
+    if (session?.idToken) {
+      try {
+        const { signInWithCustomToken, getAuth } = await import('@react-native-firebase/auth');
+        await signInWithCustomToken(getAuth(), session.idToken);
+        console.log('[useAuth] Firebase re-auth successful');
+      } catch (error) {
+        console.warn('[useAuth] Firebase re-auth failed (token may be expired):', error?.message);
+        // Continue anyway - the app will work, just push may not until next full login
+      }
+    }
+    
     appDispatch({
       type: 'SWITCH_ACCOUNT',
       payload: session
@@ -268,8 +283,15 @@ const useAuth = () => {
   }, [userData]);
 
   const cancelAddAccount = useCallback(() => {
+    console.log('[useAuth] cancelAddAccount called');
+    // Restore the first available session from authSessions
+    const previousSession = authSessions?.[0];
+    if (previousSession) {
+      console.log('[useAuth] Restoring previous session:', previousSession?.user?.email);
+      appDispatch({ type: 'SWITCH_ACCOUNT', payload: previousSession });
+    }
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
-  }, [appDispatch]);
+  }, [appDispatch, authSessions]);
 
   return {
     allMyTeams,

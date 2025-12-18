@@ -1,3 +1,4 @@
+
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -8,8 +9,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
+  ImageBackground,
+  Linking,
+  Platform,
   RefreshControl,
   ScrollView,
+  Share,
   Text,
   TouchableOpacity,
   View,
@@ -21,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getImageUrl } from '@/utils/imageUrl';
 
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -47,6 +53,27 @@ import { createEventReport } from '@/services/eventReport/eventReportService';
 import { updateEvent } from '@/services/event/eventService';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 
+// Assets
+const BG_MATCH = require('@/assets/background-card-event/card-match.png');
+const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
+const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
+const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
+const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
+const SHARE_ICON = require('@/assets/icons/share2.png');
+
+/**
+ * Get background image based on event type
+ * @param {string} typeName
+ */
+const getBackgroundImage = (typeName) => {
+  const normalizedType = typeName?.toLowerCase() || '';
+  if (normalizedType.includes('match')) return BG_MATCH;
+  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return BG_TRAINING;
+  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return BG_DETECTION;
+  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return BG_RESERVATION;
+  return BG_OTHER;
+};
+
 /**
  * Event details screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -61,7 +88,7 @@ function EventDetails({ navigation, route }) {
 
   // hooks
   const {
-    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
@@ -236,10 +263,10 @@ function EventDetails({ navigation, route }) {
     /** @type {User[]} */
     const missingPlayers = event?.missings || [];
     const notAnsweredPlayers = teamPlayers.filter(
-      (player) => !participatingPlayers.some(
+      (/** @type {User} */ player) => !participatingPlayers.some(
         (participation) => participation.documentId === player.documentId,
       )
-        && !missingPlayers.some((missing) => missing.documentId === player.documentId),
+        && !missingPlayers.some((/** @type {User} */ missing) => missing.documentId === player.documentId),
     );
 
     return {
@@ -265,7 +292,7 @@ function EventDetails({ navigation, route }) {
     setIsJoinModalVisible(true);
   };
 
-  const handleParticipateToEvent = useCallback((/** @type {FCEvent} */ ev) => {
+  const handleParticipateToEvent = useCallback((/** @type {import('@/domains/event/types').FCEvent} */ ev) => {
     if (ev?.documentId && userData?.documentId) {
       createEventParticipationMutation.mutate({
         event: ev.documentId,
@@ -348,7 +375,7 @@ function EventDetails({ navigation, route }) {
   const handleCancelEvent = () => {
     if (!eventId) return;
 
-    const cancelEventWithMode = (recurrenceMode) => {
+    const cancelEventWithMode = (/** @type {'future' | 'all' | undefined} */ recurrenceMode = undefined) => {
       cancelEventMutation({ documentId: eventId, recurrenceMode });
     };
 
@@ -472,12 +499,35 @@ function EventDetails({ navigation, route }) {
     }
   };
 
-  const handleDeclineEvent = useCallback((/** @type {FCEvent} */ ev) => {
+  const handleDeclineEvent = useCallback((/** @type {import('@/domains/event/types').FCEvent} */ ev) => {
     if (!ev?.documentId) return;
     missingEventMutation.mutate(ev.documentId);
   }, [missingEventMutation]);
 
-  // Handle opening tactical board
+  const handleShare = useCallback(async () => {
+    if (!eventId) return;
+
+    const url = `foundclub://event/${eventId}`;
+    const simpleMessage = `${t('eventDetails.shareMessage', 'Rejoins-moi sur cet événement !')} ${url}`;
+
+    try {
+      if (Platform.OS === 'android') {
+        await Share.share({
+          message: simpleMessage,
+        });
+      } else {
+        await Share.share({
+          message: t('eventDetails.shareMessage', 'Rejoins-moi sur cet événement !'),
+          url: url,
+        });
+      }
+    } catch (error) {
+      console.error('Share Error:', (/** @type {Error} */(error)).message);
+      Alert.alert(t('common.error'), t('eventDetails.errors.shareFailed', 'Impossible de partager'));
+    }
+  }, [eventId, t]);
+
+  // Handle opening tactical board (V2 - Selection first, then Board)
   const handleOpenTacticalBoard = useCallback(() => {
     if (!event?.documentId) return;
     
@@ -485,21 +535,18 @@ function EventDetails({ navigation, route }) {
     const teamPlayers = event?.team?.players || [];
     
     // Get participants - participations may be user objects or have .user property
-    const participants = (event?.participations || []).map(p => {
+    const participants = (event?.participations || []).map((/** @type {any} */ p) => {
       // Handle both cases: direct user object or nested {user: {...}}
       if (p?.documentId && p?.firstname) return p; // Direct user object
       if (p?.user) return p.user; // Nested user
       return p; // Fallback
     }).filter(Boolean);
     
-    console.log('[TacticalBoard] teamPlayers:', JSON.stringify(teamPlayers, null, 2));
-    console.log('[TacticalBoard] participants:', JSON.stringify(participants, null, 2));
-    
     // Combine and deduplicate players, serializing to plain objects
     const allPlayers = [...teamPlayers, ...participants].reduce((acc, player) => {
       if (!player) return acc;
       const id = player?.documentId || player?.id;
-      if (id && !acc.find(p => p.id === id)) {
+      if (id && !acc.find((/** @type {any} */ p) => p.id === id)) {
         // Extract avatar URL properly
         const avatarUrl = typeof player?.avatar === 'string' 
           ? player.avatar 
@@ -511,25 +558,35 @@ function EventDetails({ navigation, route }) {
           firstname: player?.firstname || '',
           lastname: player?.lastname || '',
           avatar: avatarUrl,
+          number: player?.number || undefined,
         });
       }
       return acc;
     }, []);
     
-    console.log('[TacticalBoard] allPlayers:', JSON.stringify(allPlayers, null, 2));
+    // Parse existing composition if available
+    let existingComposition = null;
+    try {
+      if (event?.composition) {
+        existingComposition = typeof event.composition === 'string' 
+          ? JSON.parse(event.composition) 
+          : event.composition;
+      }
+    } catch (e) {
+      console.warn('Failed to parse composition:', e);
+    }
     
-    // Navigate through EventStack
+    // Navigate to V2 Selection screen
     navigation.navigate(RouteNames.EventStack, {
-      screen: RouteNames.TacticalBoard,
+      screen: RouteNames.TacticalSelectionV2,
       params: {
         eventId: event.documentId,
         sport: event?.team?.activities?.[0]?.name?.toLowerCase() || 
                event?.team?.section?.name?.toLowerCase() || 
-               'generic',
+               'football',
         players: allPlayers,
-        existingComposition: event?.composition ? 
-          (typeof event.composition === 'string' ? event.composition : JSON.stringify(event.composition)) 
-          : null,
+        existingComposition, // Pass existing composition for editing
+        teamId: event?.team?.documentId, // Pass teamId for loading default composition
       },
     });
   }, [event, navigation]);
@@ -595,7 +652,7 @@ function EventDetails({ navigation, route }) {
         {canEdit && isCompetitionType && (
           <View style={{ marginTop: 12 }}>
             <Button
-              icon="team"
+              icon="users"
               onPress={handleOpenTacticalBoard}
               title="Gérer la Compo"
               variant="Secondary"
@@ -629,6 +686,8 @@ function EventDetails({ navigation, route }) {
       headerRight: renderReportButton,
     });
   }, [navigation, renderReportButton]);
+
+  const backgroundImage = getBackgroundImage(event?.type?.name);
 
   return (
     <ScreenContainer
@@ -672,10 +731,12 @@ function EventDetails({ navigation, route }) {
           isLoading={isLoading}
           wrapperStyle={[Alignments.fill, Spaces.gap[24]]}
         >
-          <View
+          <ImageBackground
+            source={/** @type {any} */ (backgroundImage)}
+            imageStyle={{ borderRadius: 24 }}
+            resizeMode="cover"
             style={[
               ApplicationStyle.borderRadius24,
-              ApplicationStyle.backgroundColor.primary700,
               Alignments.alignCenter,
               Alignments.relative,
               Spaces.gap[8],
@@ -828,7 +889,63 @@ function EventDetails({ navigation, route }) {
                 ) : null}
               </View>
             </View>
-          </View>
+          </ImageBackground>
+          
+          {/* Sponsors Section */}
+          {(event?.team?.club?.sponsor?.length > 0) && (
+            <ScrollView
+              contentContainerStyle={[Spaces.gap[16]]}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[Spaces.marginTop[8], Spaces.marginBottom[8]]}
+            >
+              {event?.team?.club?.sponsor?.map((/** @type {any} */ sponsor) => (
+                <View
+                  key={sponsor.link || sponsor.title}
+                  style={[Alignments.relative, Spaces.marginTop[8], Spaces.marginRight[16]]}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (sponsor.link) {
+                        Linking.openURL(sponsor.link);
+                      }
+                    }}
+                    style={[
+                      Alignments.alignCenter,
+                    ]}
+                  >
+                    {sponsor?.logo?.url ? (
+                      <Image
+                        source={{ uri: getImageUrl(sponsor.logo.url) }}
+                        style={[
+                          ApplicationStyle.roundIcon55,
+                          ApplicationStyle.borderWidth1,
+                          ApplicationStyle.borderColor.neutral00,
+                        ]}
+                      />
+                    ) : (
+                      <View style={[
+                        ApplicationStyle.roundIcon55,
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                        Alignments.justifyCenter,
+                        Alignments.alignCenter,
+                        { backgroundColor: '#FFFFFF' }
+                      ]}>
+                        <Text style={[Fonts.h4Bold, { color: '#000000' }]}>
+                          {sponsor.title ? sponsor.title.charAt(0).toUpperCase() : '?'}
+                        </Text>
+                      </View>
+                    )}
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[4], { maxWidth: 60, textAlign: 'center' }]}>
+                      {sponsor.title}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
           {/* Description section */}
           {event?.description ? (
             <View style={[Spaces.gap[16], Alignments.fill]}>
@@ -917,15 +1034,39 @@ function EventDetails({ navigation, route }) {
                 ))}
               </View>
             )}
-          {/* Participation section */}
-          <View style={[Spaces.gap[16], Alignments.fill]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.fields.participations')}
-              <Text>
-                {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${event?.capacity || ''
-                  }`}
+
+          {/* Participation section header with Share button */}
+          <View style={[
+            Spaces.gap[16],
+            Alignments.fill,
+          ]}
+          >
+            <View style={[
+              Alignments.row,
+              Alignments.justifySpaceBetween,
+              Alignments.alignCenter,
+            ]}
+            >
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('eventDetails.fields.participations')}
+                <Text>
+                  {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${event?.capacity || ''
+                    }`}
+                </Text>
               </Text>
-            </Text>
+              <TouchableOpacity
+                onPress={handleShare}
+              >
+                <Image
+                  source={/** @type {any} */ (SHARE_ICON)}
+                  style={{
+                    height: 48,
+                    width: 48,
+                  }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
             {participationsByStatus ? (
               <>
                 {participationsByStatus.participating.length > 0 && (
@@ -982,7 +1123,7 @@ function EventDetails({ navigation, route }) {
                     <Text style={[Fonts.h4Bold, Fonts.primary500]}>
                       {t('eventDetails.participationStatus.missing')}
                     </Text>
-                    {participationsByStatus.missing.map((player) => (
+                    {participationsByStatus.missing.map((/** @type {User} */ player) => (
                       <TouchableOpacity
                         key={player.documentId}
                         onPress={() => handleUserPress(player)}
@@ -1039,7 +1180,7 @@ function EventDetails({ navigation, route }) {
                         variant="Primary"
                       />
                     </View>
-                    {participationsByStatus.notAnswered.map((player) => (
+                    {participationsByStatus.notAnswered.map((/** @type {User} */ player) => (
                       <TouchableOpacity
                         key={player.documentId}
                         onPress={() => handleUserPress(player)}

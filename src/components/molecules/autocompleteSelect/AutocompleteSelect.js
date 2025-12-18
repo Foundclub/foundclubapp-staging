@@ -196,6 +196,7 @@ const AutocompleteSelect = forwardRef(
           >
             <View style={[
               Alignments.fullSize,
+              Spaces.paddingTop[24],
             ]}
             >
               <Text style={[

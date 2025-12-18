@@ -61,24 +61,46 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
   // Wheel Picker Component
   const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80 }) => {
     const flatListRef = useRef(null);
+    const isScrolling = useRef(false);
     const selectedIndex = data.findIndex(item => 
       typeof item === 'object' ? item.value === selectedValue : item === selectedValue
     );
 
     useEffect(() => {
-      if (flatListRef.current && selectedIndex >= 0) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({ index: selectedIndex, animated: false });
-        }, 100);
+      if (flatListRef.current && selectedIndex >= 0 && modalVisible) {
+        // Use timeout to ensure FlatList is mounted
+        const timer = setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ 
+            offset: selectedIndex * ITEM_HEIGHT, 
+            animated: false 
+          });
+        }, 150);
+        return () => clearTimeout(timer);
       }
-    }, [modalVisible]);
+    }, [modalVisible, selectedIndex]);
 
-    const handleScrollEnd = (event) => {
+    const handleScroll = (event) => {
+      isScrolling.current = true;
+    };
+
+    const handleScrollComplete = (event) => {
+      isScrolling.current = false;
       const offsetY = event.nativeEvent.contentOffset.y;
       const index = Math.round(offsetY / ITEM_HEIGHT);
       const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
       const item = data[clampedIndex];
-      onValueChange(typeof item === 'object' ? item.value : item);
+      const newValue = typeof item === 'object' ? item.value : item;
+      
+      // Only update if value changed
+      if (newValue !== selectedValue) {
+        onValueChange(newValue);
+      }
+      
+      // Snap to exact position
+      flatListRef.current?.scrollToOffset({
+        offset: clampedIndex * ITEM_HEIGHT,
+        animated: true
+      });
     };
 
     const renderItem = ({ item, index }) => {
@@ -87,7 +109,17 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
       const isSelected = itemValue === selectedValue;
 
       return (
-        <View style={[styles.wheelItem, { height: ITEM_HEIGHT }]}>
+        <TouchableOpacity 
+          style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
+          onPress={() => {
+            onValueChange(itemValue);
+            flatListRef.current?.scrollToOffset({
+              offset: index * ITEM_HEIGHT,
+              animated: true
+            });
+          }}
+          activeOpacity={0.7}
+        >
           <Text style={[
             Fonts.p1,
             { color: isSelected ? Colors.primary500 : Colors.neutral500 },
@@ -95,7 +127,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
           ]}>
             {itemLabel}
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     };
 
@@ -106,7 +138,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
           top: ITEM_HEIGHT * 2,
           backgroundColor: Colors.neutral800,
           borderColor: Colors.primary500
-        }]} />
+        }]} pointerEvents="none" />
         
         <FlatList
           ref={flatListRef}
@@ -115,8 +147,20 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           snapToInterval={ITEM_HEIGHT}
+          snapToAlignment="start"
           decelerationRate="fast"
-          onMomentumScrollEnd={handleScrollEnd}
+          bounces={false}
+          overScrollMode="never"
+          onScroll={handleScroll}
+          onMomentumScrollEnd={handleScrollComplete}
+          onScrollEndDrag={(e) => {
+            // On iOS, if user releases without momentum, this fires instead
+            // Check if momentum will happen, if not handle here
+            const velocity = e.nativeEvent.velocity?.y || 0;
+            if (Math.abs(velocity) < 0.5) {
+              handleScrollComplete(e);
+            }
+          }}
           getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
           contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
           onScrollToIndexFailed={() => {}}

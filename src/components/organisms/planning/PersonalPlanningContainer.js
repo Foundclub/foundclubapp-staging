@@ -43,6 +43,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
     const { data: eventsData, isLoading } = useQuery({
         queryKey: ['events', 'personal', startDate.toISOString(), endDate.toISOString()],
         queryFn: () => getEvents({
+            // @ts-ignore
             myTeams: true,
             pageSize: 100,
             sort: 'date:asc',
@@ -53,14 +54,20 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
 
     const events = eventsData?.data || [];
 
+    /**
+     * @param {import('@/domains/event/types').FCEvent} event
+     */
     const handleEventPress = (event) => {
-        if (event.type?.name === 'Match') {
-            navigation.navigate(RouteNames.MatchDetails, { matchId: event.documentId });
-        } else if (event.type?.name === 'Entraînement') {
-            navigation.navigate(RouteNames.TrainingDetails, { trainingId: event.documentId });
-        } else {
-            navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
+        if (!event?.documentId) {
+             console.warn('PersonalPlanningContainer: Missing event documentId', event);
+             return;
         }
+        // Always navigate to generic EventDetails via EventStack
+        // @ts-ignore
+        navigation.navigate('EventStack', { 
+            screen: 'EventDetails', 
+            params: { eventId: event.documentId } 
+        });
     };
 
     const getViewLabel = (mode) => {
@@ -95,7 +102,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
                             { borderRadius: 6, backgroundColor: viewMode === 'week' ? Colors.primary500 : 'transparent' }
                         ]}
                     >
-                        <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'week' ? 1 : 0.5 }]}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'week' ? 1 : 0.5 }]}>
                             Semaine
                         </Text>
                     </TouchableOpacity>
@@ -107,7 +114,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
                             { borderRadius: 6, backgroundColor: viewMode === '3days' ? Colors.primary500 : 'transparent' }
                         ]}
                     >
-                        <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === '3days' ? 1 : 0.5 }]}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === '3days' ? 1 : 0.5 }]}>
                             3 Jours
                         </Text>
                     </TouchableOpacity>
@@ -119,7 +126,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
                             { borderRadius: 6, backgroundColor: viewMode === 'month' ? Colors.primary500 : 'transparent' }
                         ]}
                     >
-                        <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'month' ? 1 : 0.5 }]}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'month' ? 1 : 0.5 }]}>
                             Mois
                         </Text>
                     </TouchableOpacity>
@@ -129,6 +136,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
             {/* Planning Views */}
             {viewMode === 'month' ? (
                 <PlanningCalendarView
+                    // @ts-ignore
                     events={events}
                     onEventPress={handleEventPress}
                     compact={true}
@@ -137,6 +145,7 @@ const PersonalPlanningContainer = ({ onSummaryPress }) => {
                 />
             ) : (
                 <PlanningWeekTimelineView
+                    // @ts-ignore
                     events={events}
                     onEventPress={handleEventPress}
                     currentDate={currentDate}

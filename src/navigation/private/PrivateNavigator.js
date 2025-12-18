@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 import Stepper from '@/components/atoms/stepper/Stepper';
 import MercatoFilters from '@/views/mercato/MercatoFilters';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
+import EventFilters from '@/views/event/EventFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
@@ -152,6 +153,14 @@ function PrivateNavigator() {
       />
 
       {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
+      <Stack.Screen
+        component={EventFilters}
+        name={RouteNames.EventFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
       <Stack.Screen
         component={MercatoFilters}
         name={RouteNames.MercatoFilters}

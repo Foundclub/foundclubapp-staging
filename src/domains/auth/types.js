@@ -24,7 +24,7 @@
 
 /**
  * @typedef {object} Role
- * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant'} name
+ * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant' | 'SuperAdmin'} name
  * @property {string} documentId
  */
 

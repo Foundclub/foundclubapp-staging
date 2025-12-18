@@ -86,6 +86,11 @@ export const getTeams = async (params = {}) => {
       club: {
         populate: {
           logo: true,
+        sponsor: {
+          populate: {
+            logo: true,
+          },
+        },
         },
       },
       level: true,

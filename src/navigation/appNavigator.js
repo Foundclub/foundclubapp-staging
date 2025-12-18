@@ -34,6 +34,11 @@ function AppNavigator({ navigationIntegration }) {
     config: {
       screens: {
         [RouteNames.TeamDetails]: 'team/:teamId',
+        [RouteNames.EventStack]: {
+          screens: {
+            [RouteNames.EventDetails]: 'event/:eventId',
+          },
+        },
       },
     },
     prefixes: [

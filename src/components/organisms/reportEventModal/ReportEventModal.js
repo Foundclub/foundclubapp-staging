@@ -84,7 +84,7 @@ function ReportEventModal({
         keyboardShouldPersistTaps="handled"
         style={[Alignments.fullHeight]}
       >
-        <View style={[Spaces.gap[8], Spaces.marginBottom[16]]}>
+        <View style={[Spaces.gap[8], Spaces.marginBottom[16], Spaces.paddingTop[24]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('eventDetails.modals.reportEvent.title')}
           </Text>

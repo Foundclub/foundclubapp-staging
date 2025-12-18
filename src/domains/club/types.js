@@ -16,6 +16,7 @@
  * @property {string} [geohash] - Geohash representation of the club's location (optional)
  * @property {User[]} [members] - Users associated with the club (optional)
  * @property {Team[]} [teams] - Teams associated with the club (optional)
+ * @property {Avatar} [logo] - Club logo
  */
 
 /**

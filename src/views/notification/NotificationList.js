@@ -112,30 +112,66 @@ const NotificationList = () => {
     }, [groupedNotifications]);
 
     const handlePressNotification = useCallback((notification) => {
-        markAsRead(notification.id || notification.documentId);
+        // Use documentId as the backend expects documentId, not internal id
+        markAsRead(notification.documentId);
         
-        if (notification.data?.route) {
-            // Handle nested navigation properly
-            const route = notification.data.route;
-            const params = notification.data.params || {};
-            
-            // Check if it's a nested route
-            if (route.includes('Details') || route.includes('Stack')) {
-                // Try to navigate properly based on route name
-                if (route === 'EventDetails') {
-                    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params });
-                } else if (route === 'TeamDetails') {
-                    navigation.navigate(RouteNames.TeamStack, { screen: RouteNames.TeamDetails, params });
-                } else if (route === 'ClubDetails' || route === 'Club') {
-                    navigation.navigate(RouteNames.ClubStack, { screen: RouteNames.Club, params });
-                } else if (route === 'Conversation') {
-                    navigation.navigate(RouteNames.ChatStack, { screen: RouteNames.Conversation, params });
-                } else {
-                    navigation.navigate(route, params);
+        const data = notification.data || {};
+        const type = notification.type;
+        
+        // Navigate based on notification type
+        switch (type) {
+            case 'addToTeam':
+            case 'teamRequest':
+            case 'teamMembershipRequest':
+                navigation.navigate(RouteNames.TeamStack, {
+                    screen: RouteNames.TeamDetails,
+                    params: { teamId: data.teamId },
+                });
+                break;
+            case 'newTeam':
+                navigation.navigate(RouteNames.TeamStack, {
+                    screen: RouteNames.TeamDetails,
+                    params: { teamId: data.teamId },
+                });
+                break;
+            case 'clubMembershipRequest':
+                navigation.navigate(RouteNames.ClubStack, {
+                    screen: RouteNames.ClubMembershipRequests,
+                });
+                break;
+            case 'clubRequest':
+                navigation.navigate(RouteNames.ClubStack, {
+                    screen: RouteNames.Club,
+                    params: { clubId: data.clubId },
+                });
+                break;
+            case 'eventCancellation':
+            case 'eventReminder':
+                navigation.navigate(RouteNames.EventStack, {
+                    screen: RouteNames.EventDetails,
+                    params: { eventId: data.eventId },
+                });
+                break;
+            case 'newParticipation':
+            case 'participationRequest':
+                navigation.navigate(RouteNames.EventStack, {
+                    screen: RouteNames.EventDetails,
+                    params: { eventId: data.eventId },
+                });
+                break;
+            case 'newWhisper':
+            case 'newTeamMessage':
+                // Navigate directly to Conversation (it's in PrivateNavigator, not nested)
+                navigation.navigate(RouteNames.Conversation, {
+                    chatId: data.conversationId || data.chatId,
+                });
+                break;
+            default:
+                // For unknown types, try to use any available route/params
+                if (data.route) {
+                    navigation.navigate(data.route, data.params || {});
                 }
-            } else {
-                navigation.navigate(route, params);
-            }
+                break;
         }
     }, [markAsRead, navigation]);
 
@@ -148,7 +184,7 @@ const NotificationList = () => {
                 { 
                     text: 'Supprimer', 
                     style: 'destructive',
-                    onPress: () => deleteNotification(notification.id || notification.documentId)
+                    onPress: () => deleteNotification(notification.documentId)
                 },
             ]
         );
@@ -172,7 +208,7 @@ const NotificationList = () => {
 
     const renderLeftActions = useCallback((notification) => (
         <TouchableOpacity
-            onPress={() => markAsRead(notification.id || notification.documentId)}
+            onPress={() => markAsRead(notification.documentId)}
             style={{
                 backgroundColor: Colors.primary500,
                 justifyContent: 'center',
@@ -317,10 +353,10 @@ const NotificationList = () => {
                     !isLoading && (
                         <View style={{ alignItems: 'center', marginTop: 60 }}>
                             <Text style={{ fontSize: 48, marginBottom: 16 }}>🔔</Text>
-                            <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>
+                            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                                 Aucune notification
                             </Text>
-                            <Text style={[Fonts.p3, { color: Colors.neutral400, marginTop: 8, textAlign: 'center' }]}>
+                            <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 8, textAlign: 'center', opacity: 0.7 }]}>
                                 Les nouvelles notifications apparaîtront ici
                             </Text>
                         </View>

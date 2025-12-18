@@ -8,7 +8,7 @@ import {
   setBackgroundMessageHandler,
 } from '@react-native-firebase/messaging';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
@@ -129,10 +129,12 @@ const useNotifications = ({ navigate }) => {
       preventToastError: true,
     },
     mutationFn: addDeviceToken,
-    onError: () => {
+    onError: (error) => {
+      console.error('[FCM] Failed to save token to backend:', error);
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
     },
     onSuccess: (_, token) => {
+      console.log('[FCM] Token saved to backend successfully');
       dispatch({ payload: token, type: 'SET_FCM_TOKEN' });
     },
   });
@@ -140,6 +142,7 @@ const useNotifications = ({ navigate }) => {
   // api calls
   const saveToken = useCallback((/** @type {string} */token) => {
     if (token) {
+      console.log('[FCM] Calling saveTokenMutation with token:', token.substring(0, 20) + '...');
       saveTokenMutation(token);
     }
   }, [saveTokenMutation]);
@@ -196,27 +199,19 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
-        navigate(RouteNames.Chat, {
-          params: {
-            chatId: remoteMessageData.conversationId,
-          },
-          screen: RouteNames.Conversation,
+        // Conversation is a direct route in PrivateNavigator, not nested under Chat
+        navigate(RouteNames.Conversation, {
+          chatId: remoteMessageData.conversationId,
         });
         break;
       case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
-        navigate(RouteNames.Chat, {
-          params: {
-            chatId: remoteMessageData.conversationId,
-          },
-          screen: RouteNames.Conversation,
+        navigate(RouteNames.Conversation, {
+          chatId: remoteMessageData.conversationId,
         });
         break;
       case NOTIFICATION_TYPES.NEW_WHISPER:
-        navigate(RouteNames.Chat, {
-          params: {
-            chatId: remoteMessageData.conversationId,
-          },
-          screen: RouteNames.Conversation,
+        navigate(RouteNames.Conversation, {
+          chatId: remoteMessageData.conversationId,
         });
         break;
       case NOTIFICATION_TYPES.PARTICIPATION_REQUEST:
@@ -312,46 +307,62 @@ const useNotifications = ({ navigate }) => {
     }
   }));
 
+  const hasSynced = useRef(false);
+
   // Get FCM token
   useEffect(() => {
     const retreiveFCMToken = async () => {
       try {
+        console.log('[FCM] Starting token retrieval...');
         const messagingInstance = getMessaging(getApp());
 
         if (Platform.OS === 'ios') {
+          console.log('[FCM] iOS detected - requesting permissions...');
           // Ensure device is registered and has permissions
-          await requestUserPermission();
+          const permResult = await requestUserPermission();
+          console.log('[FCM] Permission result:', permResult);
 
           // Double check registration
           const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
+          console.log('[FCM] Device registered for remote messages:', registered);
           if (!registered) {
+            console.log('[FCM] Registering device for remote messages...');
             await messagingInstance.registerDeviceForRemoteMessages();
+            console.log('[FCM] Device registered successfully');
           }
         } else {
           // For Android, just request permission
           const permissionGranted = await PermissionsAndroid.check(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
           );
+          console.log('[FCM] Android permission granted:', permissionGranted);
           if (!permissionGranted) {
             await requestUserPermission();
           }
         }
 
         // Finally get FCM token
+        console.log('[FCM] Getting FCM token...');
         const token = await getToken(messagingInstance);
+        console.log('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
         if (token) {
+          console.log('[FCM] Saving token to backend...');
           saveToken(token);
         } else {
           throw new Error('Failed to get FCM token');
         }
       } catch (err) {
+        console.error('[FCM] Error retrieving token:', err);
         throw new Error(`Failed to retrieve token: ${err}`);
       }
     };
-    if (userData && !fcmToken) {
+
+    console.log('[FCM] useEffect triggered - userData:', !!userData, 'hasSynced:', hasSynced.current);
+    if (userData && !hasSynced.current) {
+      hasSynced.current = true;
       retreiveFCMToken();
     }
-  }, [fcmToken, saveToken, userData]);
+  }, [saveToken, userData]);
 
   return {
     saveToken,

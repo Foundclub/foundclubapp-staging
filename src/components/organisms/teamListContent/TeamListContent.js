@@ -2,7 +2,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image, Linking, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useClub from '@/domains/club/useClub';
 import useAuth from '@/domains/auth/useAuth';
@@ -121,9 +123,7 @@ function TeamListContent({
   const renderItem = ({ item }) => (
     <TouchableOpacity
       onPress={() => handleTeamSelect(item)}
-      style={[
-        Alignments.alignStart,
-        Alignments.justifySpaceBetween,
+        style={[
         Spaces.padding[24],
         Spaces.marginVertical[12],
         ApplicationStyle.backgroundColor.primary700,
@@ -143,7 +143,6 @@ function TeamListContent({
       <View
         style={[
           Alignments.row,
-          Alignments.fill,
           Alignments.fullWidth,
           Alignments.alignCenter,
           Spaces.gap[8],
@@ -191,7 +190,6 @@ function TeamListContent({
       />
       <View style={[
         Spaces.gap[8],
-        Alignments.fill,
         Alignments.row,
         Alignments.wrap,
       ]}
@@ -224,6 +222,69 @@ function TeamListContent({
           </Text>
         ) : null}
       </View>
+
+      {/* Sponsors Section */}
+      {(item?.club?.sponsor?.length > 0) && (
+        <View style={[Spaces.marginTop[16]]}>
+          <ScrollView
+            contentContainerStyle={[Spaces.gap[16]]}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {item?.club?.sponsor?.map((sponsor) => (
+              <View
+                key={sponsor.link || sponsor.title}
+                style={[Alignments.relative]}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    if (sponsor.link) {
+                      Linking.openURL(sponsor.link);
+                    }
+                  }}
+                  style={[Alignments.alignCenter]}
+                >
+                  {sponsor?.logo?.url ? (
+                    <Image
+                      source={{ uri: getImageUrl(sponsor.logo.url) }}
+                      style={[
+                        ApplicationStyle.roundIcon55,
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                      ]}
+                    />
+                  ) : (
+                    <View style={[
+                      ApplicationStyle.roundIcon55,
+                      ApplicationStyle.borderWidth1,
+                      ApplicationStyle.borderColor.neutral00,
+                      Alignments.justifyCenter,
+                      Alignments.alignCenter,
+                      { backgroundColor: '#FFFFFF' },
+                    ]}
+                    >
+                      <Text style={[Fonts.h4Bold, { color: '#000000' }]}>
+                        {sponsor.title ? sponsor.title.charAt(0).toUpperCase() : '?'}
+                      </Text>
+                    </View>
+                  )}
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.p2Bold,
+                      Fonts.neutral00,
+                      Spaces.marginTop[4],
+                      { maxWidth: 60, textAlign: 'center' },
+                    ]}
+                  >
+                    {sponsor.title}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
     </TouchableOpacity>
   );
 

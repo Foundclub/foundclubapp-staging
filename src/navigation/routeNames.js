@@ -67,4 +67,6 @@ export const RouteNames = /** @type {const} */ ({
   
   // Tactical
   TacticalBoard: 'TacticalBoard',
+  TacticalSelectionV2: 'TacticalSelectionV2',
+  TacticalBoardV2: 'TacticalBoardV2',
 });

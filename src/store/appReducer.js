@@ -7,7 +7,7 @@ export default function appReducer(state, action) {
     case 'DELETE_AUTHENTICATION': {
       // Remove current session from sessions list
       const currentAuth = state.auth;
-      const newSessions = state.authSessions.filter(s => s.user.documentId !== currentAuth?.user?.documentId);
+      const newSessions = (state.authSessions || []).filter(s => s?.user?.documentId && s.user.documentId !== currentAuth?.user?.documentId);
 
       // If there are other sessions, switch to the next one, otherwise logout completely
       const nextSession = newSessions.length > 0 ? newSessions[0] : undefined;

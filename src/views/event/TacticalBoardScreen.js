@@ -7,6 +7,20 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateEvent } from '@/services/event/eventService';
 
 /**
+ * @typedef {Object} TacticalBoardRouteParams
+ * @property {string} [eventId]
+ * @property {string} [sport]
+ * @property {Array<{id?: string, documentId?: string, firstname?: string, lastname?: string, avatar?: string|null}>} [players]
+ * @property {string|null} [existingComposition]
+ */
+
+/**
+ * @typedef {Object} Composition
+ * @property {string} [sportContext]
+ * @property {Array<{playerId: string, positionX: number, positionY: number}>} [placements]
+ */
+
+/**
  * TacticalBoardScreen - Screen wrapper for TacticalBoard component
  * Receives serializable params via route and handles save
  */
@@ -15,13 +29,18 @@ const TacticalBoardScreen = () => {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   
-  const { eventId, sport = 'generic', players = [], existingComposition } = route.params || {};
+  /** @type {TacticalBoardRouteParams} */
+  const params = route.params || {};
+  const { eventId, sport = 'generic', players = [], existingComposition } = params;
 
   // Mutation for saving composition
   const saveCompositionMutation = useMutation({
+    /**
+     * @param {Composition} composition
+     */
     mutationFn: async (composition) => {
       return updateEvent({
-        documentId: eventId,
+        documentId: eventId || '',
         eventData: {
           composition: JSON.stringify(composition),
         },
@@ -33,12 +52,15 @@ const TacticalBoardScreen = () => {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     },
-    onError: (error) => {
+    onError: (/** @type {any} */ error) => {
       console.error('Save composition error:', error);
       Alert.alert('Erreur', 'Impossible d\'enregistrer la composition.');
     },
   });
 
+  /**
+   * @param {Composition} composition
+   */
   const handleSave = (composition) => {
     saveCompositionMutation.mutate(composition);
   };

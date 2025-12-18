@@ -214,7 +214,12 @@ function EventListContent({
 
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: event.documentId } });
+    if (!event?.documentId) {
+      console.warn('Navigation blocked: missing event documentId', event);
+      return;
+    }
+    console.log('Navigating to event:', event.documentId);
+    navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: event.documentId } });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {

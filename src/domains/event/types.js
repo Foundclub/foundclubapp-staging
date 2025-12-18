@@ -8,15 +8,22 @@
  * @property {{
  * value?: string, label?: string, lat?: number, lng?: number
  * }} [location] - Event location
- * @property {'open' | 'closed' | 'cancelled'} sessionStatus - Current status of the event
+ * @property {'open' | 'closed' | 'cancelled'} [sessionStatus] - Current status of the event
  * @property {string} [team] - Associated team
  * @property {string} [type] - Event type
- * @property {'auto' | 'manual'} validationMode - How participation requests are validated
+ * @property {'auto' | 'manual'} [validationMode] - How participation requests are validated
  * @property {boolean} [isRecurrent]
  * @property {string} [recurrenceDay]
  * @property {string} [recurrenceEndDate]
  * @property {string} [recurrenceFrequency]
  * @property {string} [recurrenceStartDate]
+ * @property {'future' | 'all'} [recurrenceMode] - Recurrence update mode
+ * @property {boolean} [isFeatured] - Is featured event
+ * @property {'none' | 'pending' | 'approved' | 'rejected'} [featuredRequestStatus] - Featured request status
+ * @property {{documentId?: string, name?: string}} [facility] - Event facility
+ * @property {string[]} [myTeams] - User's teams filter
+ * @property {string[]} [teamIds] - Team IDs filter
+ * @property {string} [composition] - Tactical composition JSON string
  */
 
 /**
@@ -39,6 +46,13 @@
  * @property {'auto' | 'manual'} validationMode - How participation requests are validated
  * @property {User[]} participations - List of participants
  * @property {User[]} missings - List of participants who said no
+ * @property {string} [recurrenceGroupId] - Recurrence group ID for recurring events
+ * @property {any} [composition] - Tactical composition data
+ * @property {boolean} [isFeatured] - Is featured event
+ * @property {'none' | 'pending' | 'approved' | 'rejected'} [featuredRequestStatus] - Featured request status
+ * @property {string} [startTime] - Event start time
+ * @property {string} [endTime] - Event end time
+ * @property {any} [reservation] - Reservation object if applicable
  */
 
 /**
@@ -47,3 +61,5 @@
  * @property {number} lng
  * @property {string} label
  */
+
+export {};

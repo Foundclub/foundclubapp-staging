@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import { storage, useAppContext } from '@/store/appContext';
+
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -24,8 +26,12 @@ function Welcome({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const [{ auth }] = useAppContext();
 
   const handleNext = () => {
+    if (auth?.user?.documentId) {
+      storage.set(`hasSeenWelcome_${auth.user.documentId}`, true);
+    }
     navigation.reset({
       index: 0,
       routes: [{ name: RouteNames.HomeTab }],

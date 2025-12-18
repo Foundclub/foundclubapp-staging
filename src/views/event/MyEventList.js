@@ -48,6 +48,7 @@ function MyEventList({ navigation }) {
 
   // Hooks
 
+  // @ts-ignore
   const {
     data: eventsData,
     fetchNextPage,
@@ -56,6 +57,7 @@ function MyEventList({ navigation }) {
     isLoading,
     refetch,
   } = useGetEvents({
+    // @ts-ignore
     sort: 'date:asc',
     myTeams: true,
   });
@@ -80,21 +82,24 @@ function MyEventList({ navigation }) {
 
   /**
    * Handle event press
-   * @param {import('@/services/event/eventService').FCEvent} event
+   * @param {import('@/domains/event/types').FCEvent} event
    */
   const handleEventPress = (event) => {
-    if (event.type?.name === 'Match') {
-      // @ts-ignore
-      navigation.navigate(RouteNames.MatchDetails, { matchId: event.documentId });
-    } else if (event.type?.name === 'Entraînement') {
-      // @ts-ignore
-      navigation.navigate(RouteNames.TrainingDetails, { trainingId: event.documentId });
-    } else {
-      // @ts-ignore
-      navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventDetails, params: { eventId: event.documentId } });
+    if (!event?.documentId) {
+      console.warn('MyEventList: missing eventId', event);
+      return;
     }
+    console.log('MyEventList: Navigating to', event.documentId);
+    // @ts-ignore
+    navigation.navigate('EventStack', { 
+      screen: 'EventDetails', 
+      params: { eventId: event.documentId } 
+    });
   };
 
+  /**
+   * @param {{ item: import('@/domains/event/types').FCEvent }} props
+   */
   const renderItem = ({ item }) => {
     if (item.reservation) {
       return (
@@ -103,6 +108,10 @@ function MyEventList({ navigation }) {
             item={item.reservation}
             // @ts-ignore
             onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
+            onJoin={() => {}}
+            onDecline={() => {}}
+            onParticipate={() => {}}
+            onLogin={() => {}}
           />
         </View>
       );
@@ -112,11 +121,18 @@ function MyEventList({ navigation }) {
         <EventCardNew
           item={item}
           onPress={() => handleEventPress(item)}
+          onJoin={() => {}}
+          onDecline={() => {}}
+          onParticipate={() => {}}
+          onLogin={() => {}}
         />
       </View>
     );
   };
 
+  /**
+   * @param {Date} date
+   */
   const handleDateConfirm = (date) => {
     setListStartDate(date);
     setIsDatePickerVisible(false);
@@ -125,11 +141,17 @@ function MyEventList({ navigation }) {
   const openViewModal = () => setIsViewModalVisible(true);
   const closeViewModal = () => setIsViewModalVisible(false);
 
+  /**
+   * @param {string} mode
+   */
   const handleViewSelect = (mode) => {
     setCalendarViewMode(mode);
     closeViewModal();
   };
 
+  /**
+   * @param {string} mode
+   */
   const getViewLabel = (mode) => {
     switch (mode) {
       case 'month': return 'Vue : Mois';
@@ -139,42 +161,43 @@ function MyEventList({ navigation }) {
     }
   };
 
-  // ... (renderItem remains same)
 
   const handleSummaryPress = () => {
+    // @ts-ignore
     flatListRef.current?.scrollToOffset({ offset: 500, animated: true });
   };
 
-  const ListHeader = () => (
-    <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
-      {/* Top Header */}
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <NotificationBadge />
-          <ProfileButton />
+  const ListHeader = () => {
+    return (
+      <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
+        {/* Top Header */}
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          {/* @ts-ignore */}
+          <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <NotificationBadge />
+            <ProfileButton />
+          </View>
+        </View>
+
+        {/* Calendar Section */}
+        <View>
+          <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
+        </View>
+
+        {/* List Header Section */}
+        <View style={[Spaces.marginTop[16]]}>
+          <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
+            Évènements à partir de
+          </Text>
+          <DateSlider
+            selectedDate={listStartDate}
+            onDateSelected={handleDateConfirm}
+          />
         </View>
       </View>
-
-      {/* Calendar Section */}
-      <View>
-
-
-        <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
-      </View>
-
-      {/* List Header Section */}
-      <View style={[Spaces.marginTop[16]]}>
-        <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-          Évènements à partir de
-        </Text>
-        <DateSlider
-          selectedDate={listStartDate}
-          onDateSelected={handleDateConfirm}
-        />
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <ScreenContainer bgImage="bg2">
@@ -182,7 +205,8 @@ function MyEventList({ navigation }) {
         ref={flatListRef}
         data={listEvents}
         renderItem={renderItem}
-        keyExtractor={(item) => item.documentId}
+        // @ts-ignore
+        keyExtractor={(item) => item.documentId || Math.random().toString()}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={[Spaces.paddingBottom[80]]}
         showsVerticalScrollIndicator={false}
@@ -201,7 +225,8 @@ function MyEventList({ navigation }) {
           right: 20,
         }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType })}
+            // @ts-ignore
+            onPress={() => navigation.navigate('EventStack', { screen: 'EventWizardType' })}
             style={{
               backgroundColor: Colors.primary500,
               borderRadius: 25,

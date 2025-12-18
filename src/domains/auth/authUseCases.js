@@ -27,8 +27,17 @@ export const getAuthTokens = () => {
  * @returns {{totalViews: number, views: {index: number, route: string, canShow: boolean}[]}}
  */
 export const getOnboardingViews = ({
-  avatar, birthdate, firstname, lastname, role, section,
+  avatar, birthdate, firstname, lastname, role, section, documentId,
 }) => {
+  const hasSeenWelcome = (() => {
+    try {
+      if (documentId) {
+        return storage.getBoolean(`hasSeenWelcome_${documentId}`);
+      }
+      return false;
+    } catch (e) { return false; }
+  })();
+
   const baseViews = (() => {
     switch (role.name) {
       case USER_ROLES.coach:
@@ -81,6 +90,9 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserRole && role.name !== 'Authenticated') {
       return Object.assign(view, { canShow: false });
     }
+    if (view.route === RouteNames.Welcome && hasSeenWelcome) {
+      return Object.assign(view, { canShow: false });
+    }
     return view;
   });
 
@@ -91,6 +103,7 @@ export const getOnboardingViews = ({
     views,
   };
 };
+
 
 /**
  * Get the fields to display in the profile based on user role

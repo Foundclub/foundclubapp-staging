@@ -138,7 +138,11 @@ function Conversation({ navigation, route }) {
     if (user._id === userData?.documentId) {
       navigation.navigate(RouteNames.ProfileStack);
     } else {
-      navigation.navigate(RouteNames.UserDetails, { userId: user._id });
+      // UserDetails is inside ProfileStack
+      navigation.navigate(RouteNames.ProfileStack, {
+        screen: RouteNames.UserDetails,
+        params: { userId: user._id },
+      });
     }
   };
 
@@ -193,30 +197,61 @@ function Conversation({ navigation, route }) {
    * @param {import('react-native-gifted-chat').BubbleProps<any>} props - Component props
    * @returns {React.ReactNode} Rendered bubble component
    */
-  const renderBubble = (props) => (
-    <Bubble
-      {...props}
-      renderTime={renderTime}
-      textStyle={{
-        left: [Fonts.p1, Fonts.neutral00],
-        right: [Fonts.p1, Fonts.neutral00],
-      }}
-      wrapperStyle={{
-        left: {
-          backgroundColor: Colors.primary900,
-          borderRadius: 12,
-          margin: 8,
-          padding: 2,
-        },
-        right: {
-          backgroundColor: Colors.primary500,
-          borderRadius: 12,
-          margin: 8,
-          padding: 2,
-        },
-      }}
-    />
-  );
+  const renderBubble = (props) => {
+    const { currentMessage, previousMessage, nextMessage, position } = props;
+    
+    // Check if messages are from the same user
+    const isSameUserAsPrevious = previousMessage?.user?._id === currentMessage?.user?._id;
+    const isSameUserAsNext = nextMessage?.user?._id === currentMessage?.user?._id;
+    
+    // Adjust margins for grouped messages
+    const marginTop = isSameUserAsPrevious ? 2 : 8;
+    const marginBottom = isSameUserAsNext ? 2 : 8;
+    
+    // Adjust border radius for grouped messages (rounded corners at edges, flat in middle)
+    const isLeft = position === 'left';
+    const topLeftRadius = isLeft && isSameUserAsPrevious ? 4 : 12;
+    const bottomLeftRadius = isLeft && isSameUserAsNext ? 4 : 12;
+    const topRightRadius = !isLeft && isSameUserAsPrevious ? 4 : 12;
+    const bottomRightRadius = !isLeft && isSameUserAsNext ? 4 : 12;
+    
+    return (
+      <Bubble
+        {...props}
+        renderTime={renderTime}
+        textStyle={{
+          left: [Fonts.p1, Fonts.neutral00],
+          right: [Fonts.p1, Fonts.neutral00],
+        }}
+        wrapperStyle={{
+          left: {
+            backgroundColor: Colors.primary900,
+            borderTopLeftRadius: topLeftRadius,
+            borderTopRightRadius: 12,
+            borderBottomLeftRadius: bottomLeftRadius,
+            borderBottomRightRadius: 12,
+            marginTop,
+            marginBottom,
+            marginLeft: 8,
+            marginRight: 8,
+            padding: 2,
+          },
+          right: {
+            backgroundColor: Colors.primary500,
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: topRightRadius,
+            borderBottomLeftRadius: 12,
+            borderBottomRightRadius: bottomRightRadius,
+            marginTop,
+            marginBottom,
+            marginLeft: 8,
+            marginRight: 8,
+            padding: 2,
+          },
+        }}
+      />
+    );
+  };
 
   /**
    * Render a custom composer component

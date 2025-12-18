@@ -2,6 +2,11 @@ import Joi from 'joi';
 
 import client from '../client';
 
+/**
+ * @typedef {import('@/domains/event/types').FCEventForm} FCEventForm
+ * @typedef {import('@/domains/event/types').FCEvent} FCEvent
+ */
+
 export const eventSchema = Joi.object({
   capacity: Joi.number().allow(null).optional(),
   date: Joi.date().iso().required(),
@@ -97,7 +102,9 @@ export const getEventById = async (documentId) => {
         'missings',
         'participations',
         'participationRequests.user',
-        'facility'],
+        'facility',
+        'team.club.sponsor',
+        'team.club.sponsor.logo'],
     },
   });
   try {
@@ -167,9 +174,11 @@ export const getEventTypes = async () => {
  *   geohash?: string;
  *   excludeType?: string;
  *   isFeatured?: boolean;
+ *   featuredRequestStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+ *   validationMode?: 'auto' | 'manual';
+ *   facility?: {documentId?: string, name?: string};
+ *   myTeams?: string[];
  *  }} params - The parameters for filtering events
- * }} params playerEventsFilter - If true, only events where the user is a participant
- * and user's teams closed events will be returned, if true trainerEventFilter is ignored
  * @returns {Promise<{data: FCEvent[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
@@ -426,8 +435,8 @@ export const getEvents = async (params = {}) => {
       allowUnknown: true,
     });
     return validationResult;
-  } catch (error) {
-    if (error.isJoi) {
+  } catch (/** @type {any} */ error) {
+    if (error?.isJoi) {
       console.error('Joi Validation Error Details:', JSON.stringify(error.details, null, 2));
     }
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
@@ -446,6 +455,16 @@ export const missingEvent = async (eventId) => {
 };
 
 /**
+ * Send reminders to players who haven't answered
+ * @param {string} eventId - The ID of the event
+ * @returns {Promise<any>} - Response from API
+ */
+export const remindUnansweredPlayers = async (eventId) => {
+  const response = await client.post(`/events/${eventId}/remind`);
+  return response.data;
+};
+
+/**
  * Send push notification to all players that haven't respond yet to the event
  * @param {string} eventId - The ID of the event to answer to
  * @returns {Promise<Event>} - The updated event
@@ -457,17 +476,18 @@ export const missingEvent = async (eventId) => {
  */
 export const getClubEvents = async (clubId) => {
   return getEvents({
-    club: { value: clubId },
+    club: { value: clubId, label: '' },
     // validationMode: 'auto' // REMOVED: We want to see ALL events (manual & auto) for the club planning
   });
 };
 
 /**
  * Get events for the connected user (My Planning)
+ * @param {string[]} [teamIds] - Optional team IDs to filter
  * @returns {Promise<any>}
  */
-export const getMyEvents = async () => {
+export const getMyEvents = async (teamIds = []) => {
   return getEvents({
-    myTeams: true
+    myTeams: teamIds,
   });
 };

@@ -30,6 +30,7 @@ export const images = {
   search: require('../assets/icons/search.png'),
   send: require('../assets/icons/send.png'),
   share: require('../assets/icons/share.png'),
+  share2: require('../assets/icons/share2.png'),
   shield: require('../assets/icons/shield.png'),
   stadium: require('../assets/icons/stadium.png'),
   strokeShield: require('../assets/icons/stroke-shield.png'),
