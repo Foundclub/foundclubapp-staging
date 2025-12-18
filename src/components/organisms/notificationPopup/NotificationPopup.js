@@ -249,17 +249,18 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
                             {/* View All Button */}
                             <TouchableOpacity
                                 style={[
-                                    Spaces.padding[14],
+                                    Spaces.padding[16],
                                     { 
                                         alignItems: 'center', 
                                         borderTopWidth: 1, 
                                         borderTopColor: 'rgba(255,255,255,0.1)',
                                         backgroundColor: 'rgba(1, 179, 244, 0.05)',
+                                        paddingVertical: 16,
                                     }
                                 ]}
                                 onPress={handleViewAll}
                             >
-                                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                                <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
                                     Voir toutes les notifications
                                 </Text>
                             </TouchableOpacity>

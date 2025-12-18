@@ -21,6 +21,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -416,6 +417,17 @@ function Profile({ navigation }) {
             title={t('profile.actions.switchAccount', 'Changer de compte')}
           />
         </View>
+
+        {/* Sports History Section */}
+        <UserHistorySection
+          isOwnProfile={true}
+          onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
+          onEditPress={(entry) => {
+            // TODO: Pass entry to wizard for editing
+            navigation.navigate(RouteNames.HistoryWizardClub);
+          }}
+        />
+
         <Button
           onPress={handleLogout}
           title={t('profile.actions.logout')}

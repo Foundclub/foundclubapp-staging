@@ -64,9 +64,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: verticalScale(2.14),
-    paddingHorizontal: horizontalScale(16), // Increased padding for better touch target
-    height: verticalScale(23.59),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: horizontalScale(16),
+    minHeight: verticalScale(32),
     backgroundColor: 'transparent',
     borderRadius: moderateScale(33.24),
     borderWidth: 1,
@@ -90,8 +90,9 @@ const styles = StyleSheet.create({
   segmentText: {
     fontFamily: 'Montserrat-Regular',
     fontSize: moderateScale(12.87),
-    lineHeight: verticalScale(19),
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     color: '#FFFFFF',
   },
   // Texte du segment sélectionné

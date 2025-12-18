@@ -494,7 +494,11 @@ function EventDetails({ navigation, route }) {
       if (user?.documentId === userData?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
       } else {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId });
+        // UserDetails is inside ProfileStack
+        navigation.navigate(RouteNames.ProfileStack, {
+          screen: RouteNames.UserDetails,
+          params: { userId: user.documentId },
+        });
       }
     }
   };

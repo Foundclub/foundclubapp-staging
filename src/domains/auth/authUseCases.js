@@ -28,6 +28,7 @@ export const getAuthTokens = () => {
  */
 export const getOnboardingViews = ({
   avatar, birthdate, firstname, lastname, role, section, documentId,
+  preferredSport, position, height, weight, bestLevel, isLookingForClub,
 }) => {
   const hasSeenWelcome = (() => {
     try {
@@ -53,7 +54,13 @@ export const getOnboardingViews = ({
           { canShow: true, index: 2, route: RouteNames.UserSection },
           { canShow: true, index: 3, route: RouteNames.UserBirthdate },
           { canShow: true, index: 4, route: RouteNames.UserAvatar },
-          { canShow: true, index: 5, route: RouteNames.Welcome },
+          // Optional steps for players
+          { canShow: true, index: 5, route: RouteNames.UserSport },
+          { canShow: true, index: 6, route: RouteNames.UserPosition },
+          { canShow: true, index: 7, route: RouteNames.UserPhysique },
+          { canShow: true, index: 8, route: RouteNames.UserLevel },
+          { canShow: true, index: 9, route: RouteNames.UserClubSearch },
+          { canShow: true, index: 10, route: RouteNames.Welcome },
         ];
       case USER_ROLES.president:
       case USER_ROLES.superAdmin:
@@ -69,7 +76,13 @@ export const getOnboardingViews = ({
           { canShow: true, index: 3, route: RouteNames.UserSection },
           { canShow: true, index: 4, route: RouteNames.UserBirthdate },
           { canShow: true, index: 5, route: RouteNames.UserAvatar },
-          { canShow: true, index: 6, route: RouteNames.Welcome },
+          // Optional steps (will apply if user selects player role)
+          { canShow: true, index: 6, route: RouteNames.UserSport },
+          { canShow: true, index: 7, route: RouteNames.UserPosition },
+          { canShow: true, index: 8, route: RouteNames.UserPhysique },
+          { canShow: true, index: 9, route: RouteNames.UserLevel },
+          { canShow: true, index: 10, route: RouteNames.UserClubSearch },
+          { canShow: true, index: 11, route: RouteNames.Welcome },
         ];
     }
   })();
@@ -90,11 +103,44 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserRole && role.name !== 'Authenticated') {
       return Object.assign(view, { canShow: false });
     }
+    // Optional steps - skip if already filled
+    if (view.route === RouteNames.UserSport && preferredSport) {
+      return Object.assign(view, { canShow: false });
+    }
+    // Skip position if sport doesn't have positions (only football, basketball, handball, volleyball, rugby have positions)
+    const sportsWithPositions = ['football', 'basketball', 'handball', 'volleyball', 'rugby'];
+    if (view.route === RouteNames.UserPosition) {
+      if (position) {
+        return Object.assign(view, { canShow: false });
+      }
+      // If sport is set but doesn't have positions, skip this step
+      if (preferredSport && !sportsWithPositions.includes(preferredSport.toLowerCase())) {
+        return Object.assign(view, { canShow: false });
+      }
+    }
+    if (view.route === RouteNames.UserPhysique && (height || weight)) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserLevel && bestLevel) {
+      return Object.assign(view, { canShow: false });
+    }
+    if (view.route === RouteNames.UserClubSearch && isLookingForClub !== undefined && isLookingForClub !== null) {
+      return Object.assign(view, { canShow: false });
+    }
     if (view.route === RouteNames.Welcome && hasSeenWelcome) {
       return Object.assign(view, { canShow: false });
     }
     return view;
   });
+
+  // If all steps except Welcome are already completed, skip Welcome too
+  // This means it's an existing user logging in, not a new registration
+  const otherStepsCanShow = filteredViews.filter(v => v.route !== RouteNames.Welcome && v.canShow);
+  const welcomeView = filteredViews.find(v => v.route === RouteNames.Welcome);
+  if (otherStepsCanShow.length === 0 && welcomeView && !hasSeenWelcome) {
+    // All profile data is complete - this is an existing user, mark Welcome as not needed
+    welcomeView.canShow = false;
+  }
 
   const views = filteredViews?.filter((view) => view.canShow)?.length > 0 ? filteredViews
     : [];

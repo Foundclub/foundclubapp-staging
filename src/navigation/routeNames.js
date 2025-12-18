@@ -45,10 +45,15 @@ export const RouteNames = /** @type {const} */ ({
   TeamMembershipRequests: 'TeamMembershipRequests',
   UserAvatar: 'UserAvatar',
   UserBirthdate: 'UserBirthdate',
+  UserClubSearch: 'UserClubSearch',
   UserDetails: 'UserDetails',
+  UserLevel: 'UserLevel',
   UserName: 'UserName',
+  UserPhysique: 'UserPhysique',
+  UserPosition: 'UserPosition',
   UserRole: 'UserRole',
   UserSection: 'UserSection',
+  UserSport: 'UserSport',
   Welcome: 'Welcome',
   // Stacks
   EventStack: 'EventStack',
@@ -64,6 +69,14 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardLogistics: 'EventWizardLogistics',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardRecap: 'EventWizardRecap',
+  
+  // History Wizard
+  HistoryWizardStack: 'HistoryWizardStack',
+  HistoryWizardClub: 'HistoryWizardClub',
+  HistoryWizardCategory: 'HistoryWizardCategory',
+  HistoryWizardLevel: 'HistoryWizardLevel',
+  HistoryWizardPeriod: 'HistoryWizardPeriod',
+  HistoryWizardRecap: 'HistoryWizardRecap',
   
   // Tactical
   TacticalBoard: 'TacticalBoard',

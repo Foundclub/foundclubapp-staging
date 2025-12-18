@@ -37,3 +37,20 @@ export const useGetClub = (id, options = {}) => useQuery({
   queryKey: ['club', id],
   ...options,
 });
+
+/**
+ * React Query hook to search clubs by name
+ * @param {string} searchQuery - Search query
+ * @param {object} options - Query options
+ * @returns {import('@tanstack/react-query').UseQueryResult<Club[]>}
+ */
+export const useSearchClubs = (searchQuery, options = {}) => useQuery({
+  enabled: searchQuery?.length >= 2,
+  queryFn: async () => {
+    const result = await getClubs({ name: searchQuery, pageSize: 10 });
+    return result.data || [];
+  },
+  queryKey: ['clubs', 'search', searchQuery],
+  staleTime: 30000,
+  ...options,
+});

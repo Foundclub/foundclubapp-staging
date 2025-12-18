@@ -13,9 +13,14 @@ import EventFilters from '@/views/event/EventFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
+import UserClubSearch from '@/views/onboarding/UserClubSearch';
+import UserLevel from '@/views/onboarding/UserLevel';
 import UserName from '@/views/onboarding/UserName';
+import UserPhysique from '@/views/onboarding/UserPhysique';
+import UserPosition from '@/views/onboarding/UserPosition';
 import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
+import UserSport from '@/views/onboarding/UserSport';
 import Welcome from '@/views/onboarding/Welcome';
 import Conversation from '@/views/Conversation';
 import NotificationList from '@/views/notification/NotificationList';
@@ -266,6 +271,77 @@ function PrivateNavigator() {
             headerTitle: () => renderStepper(RouteNames.UserAvatar),
             headerTitleAlign: 'left',
 
+          }}
+        />
+      ) : null}
+
+      {/* Optional onboarding steps for players */}
+      {canShowView(RouteNames.UserSport) ? (
+        <Stack.Screen
+          component={UserSport}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserSport}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserSport),
+            headerTitle: () => renderStepper(RouteNames.UserSport),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserPosition) ? (
+        <Stack.Screen
+          component={UserPosition}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserPosition}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserPosition),
+            headerTitle: () => renderStepper(RouteNames.UserPosition),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserPhysique) ? (
+        <Stack.Screen
+          component={UserPhysique}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserPhysique}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserPhysique),
+            headerTitle: () => renderStepper(RouteNames.UserPhysique),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserLevel) ? (
+        <Stack.Screen
+          component={UserLevel}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserLevel}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserLevel),
+            headerTitle: () => renderStepper(RouteNames.UserLevel),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserClubSearch) ? (
+        <Stack.Screen
+          component={UserClubSearch}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserClubSearch}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserClubSearch),
+            headerTitle: () => renderStepper(RouteNames.UserClubSearch),
+            headerTitleAlign: 'left',
           }}
         />
       ) : null}
