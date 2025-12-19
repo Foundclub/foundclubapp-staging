@@ -30,6 +30,24 @@ export const getOnboardingViews = ({
   avatar, birthdate, firstname, lastname, role, section, documentId,
   preferredSport, position, height, weight, bestLevel, isLookingForClub,
 }) => {
+  // Check if user has already completed onboarding once
+  const hasCompletedOnboarding = (() => {
+    try {
+      if (documentId) {
+        return storage.getBoolean(`hasCompletedOnboarding_${documentId}`);
+      }
+      return false;
+    } catch (e) { return false; }
+  })();
+
+  // If onboarding was already completed once, skip all onboarding
+  if (hasCompletedOnboarding) {
+    return {
+      totalViews: 0,
+      views: [],
+    };
+  }
+
   const hasSeenWelcome = (() => {
     try {
       if (documentId) {
@@ -148,6 +166,17 @@ export const getOnboardingViews = ({
     totalViews,
     views,
   };
+};
+
+/**
+ * Mark onboarding as completed for a user
+ * This should be called when the user finishes or skips the last onboarding step
+ * @param {string} documentId - The user's document ID
+ */
+export const markOnboardingComplete = (documentId) => {
+  if (documentId) {
+    storage.set(`hasCompletedOnboarding_${documentId}`, true);
+  }
 };
 
 

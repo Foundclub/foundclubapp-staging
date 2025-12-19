@@ -35,7 +35,6 @@ const defaultValues = {
   section: '',
   weight: '',
   isLookingForClub: false,
-  bestLevel: '',
   preferredSport: '',
 };
 
@@ -50,7 +49,6 @@ const profileSchema = Joi.object({
   section: Joi.string().allow(null, '').optional(),
   weight: Joi.string().allow(null, '').optional(),
   isLookingForClub: Joi.boolean().optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
@@ -124,7 +122,6 @@ function ProfileEdit({ navigation }) {
         weight: data.weight,
         position: data.position,
         isLookingForClub: data.isLookingForClub,
-        bestLevel: data.bestLevel,
         preferredSport: data.preferredSport,
         avatar,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
@@ -406,34 +403,7 @@ function ProfileEdit({ navigation }) {
               />
             ) : null}
 
-            <Controller
-              control={control}
-              name="bestLevel"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.bestLevel.label', 'Meilleur niveau joué')}
-                  onBlur={onBlur}
-                  options={[
-                    { label: 'Départemental', value: 'Departemental' },
-                    { label: 'Pré-Régional', value: 'PreRegional' },
-                    { label: 'Régional', value: 'Regional' },
-                    { label: 'Pré-National', value: 'PreNational' },
-                    { label: 'National', value: 'National' },
-                  ]}
-                  placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
-                  ref={ref}
-                  setValue={
-                    (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
-                  }
-                  value={['Departemental', 'PreRegional', 'Regional', 'PreNational', 'National'].find((v) => v === value) ? value : ''}
-                />
-              )}
-            />
+
 
             <Controller
               control={control}

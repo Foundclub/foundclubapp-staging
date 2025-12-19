@@ -34,7 +34,6 @@ const filtersSchema = Joi.object({
     city: Joi.object().allow(''),
     radius: Joi.number().allow(''),
     position: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
-    bestLevel: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
 });
 
 function MercatoFilters({ navigation }) {
@@ -73,7 +72,6 @@ function MercatoFilters({ navigation }) {
             city: mercatoFilters?.city || { label: '', value: '' },
             radius: mercatoFilters?.radius || 20,
             position: mercatoFilters?.position || [],
-            bestLevel: mercatoFilters?.bestLevel || [],
         },
         mode: 'onBlur',
         resolver: joiResolver(filtersSchema),
@@ -180,13 +178,7 @@ function MercatoFilters({ navigation }) {
         return Array.from(positions).map((p) => ({ label: p, value: p }));
     }, [selectedActivityIds, allActivities]);
 
-    const levels = [
-        { label: 'Départemental', value: 'Departemental' },
-        { label: 'Pré-Régional', value: 'PreRegional' },
-        { label: 'Régional', value: 'Regional' },
-        { label: 'Pré-National', value: 'PreNational' },
-        { label: 'National', value: 'National' },
-    ];
+
 
     const handleApplyFilters = (data) => {
         // format place params
@@ -419,28 +411,7 @@ function MercatoFilters({ navigation }) {
                     />
                 ) : null}
 
-                <Controller
-                    control={control}
-                    name="bestLevel"
-                    render={({
-                        field: { onChange, value },
-                    }) => (
-                        <View>
-                            {renderLabel(t('profile.fields.bestLevel.label', 'Niveau'), 'level')}
-                            <AutocompleteSelect
-                                error={getFieldError({ errors: formErrors, fieldName: 'bestLevel' })}
-                                isMulti
-                                options={levels}
-                                placeholder="Ex: Régional, Elite..."
-                                setValue={(/** @type {Option | undefined} */option) => {
-                                    const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
-                                    onChange(val);
-                                }}
-                                value={value}
-                            />
-                        </View>
-                    )}
-                />
+
 
             </ScrollView>
 

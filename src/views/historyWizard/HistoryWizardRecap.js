@@ -51,8 +51,11 @@ const HistoryWizardRecap = ({ navigation }) => {
 
     const onSuccess = () => {
       dispatch({ type: 'RESET' });
-      // Navigate back to profile
-      navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile });
+      // Reset navigation to profile, clearing the wizard screens from the stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: RouteNames.Profile }],
+      });
     };
 
     if (isEditing) {

@@ -1,12 +1,11 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import useClub from '@/domains/club/useClub';
 
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/services/userHistory/userHistoryQueries';
-
-const defaultClubIcon = require('@/assets/icons/shield.png');
 
 /**
  * UserHistorySection - Displays user's sports history (CV)
@@ -19,6 +18,7 @@ const defaultClubIcon = require('@/assets/icons/shield.png');
 function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress }) {
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
+  const { getClubInitials } = useClub();
   
   const { data: histories, isLoading } = userId 
     ? useGetUserHistories(userId) 
@@ -49,12 +49,34 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
     return item.customClubName || 'Club inconnu';
   };
 
-  // Get club logo
-  const getClubLogo = (item) => {
+  // Render club logo or shield with initials
+  const renderClubLogo = (item) => {
+    // If club has a logo, show it
     if (item.club?.logo?.url) {
-      return { uri: item.club.logo.url };
+      return (
+        <Image
+          source={{ uri: item.club.logo.url }}
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            marginRight: 12,
+            backgroundColor: Colors.neutral700,
+          }}
+          resizeMode="contain"
+        />
+      );
     }
-    return defaultClubIcon;
+
+    // Otherwise show TeamShield with initials
+    const clubName = item.club?.name || item.customClubName || '';
+    const initials = getClubInitials(clubName);
+
+    return (
+      <View style={{ marginRight: 12 }}>
+        <TeamShield initials={initials} isSmall />
+      </View>
+    );
   };
 
   if (isLoading) {
@@ -141,18 +163,8 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
                 },
               ]}
             >
-              {/* Club logo */}
-              <Image
-                source={getClubLogo(item)}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 8,
-                  marginRight: 12,
-                  backgroundColor: Colors.neutral700,
-                }}
-                resizeMode="contain"
-              />
+              {/* Club logo or shield with initials */}
+              {renderClubLogo(item)}
 
               {/* Info */}
               <View style={[Alignments.fill, Spaces.gap[4]]}>

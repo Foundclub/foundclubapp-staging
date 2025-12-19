@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useTheme from '@/theme/themeContext';
 
 import { storage, useAppContext } from '@/store/appContext';
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -31,6 +32,8 @@ function Welcome({ navigation }) {
   const handleNext = () => {
     if (auth?.user?.documentId) {
       storage.set(`hasSeenWelcome_${auth.user.documentId}`, true);
+      // Mark onboarding as fully completed so it won't show again
+      markOnboardingComplete(auth.user.documentId);
     }
     navigation.reset({
       index: 0,

@@ -9,6 +9,7 @@ import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
 import TeamList from '@/views/team/TeamList';
 import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
+import TeamStatsScreen from '@/views/team/TeamStatsScreen';
 
 const Stack = createStackNavigator();
 
@@ -59,6 +60,14 @@ function TeamStack() {
         options={{
           ...commonOptions,
           headerTitle: t('teamEdit.title'),
+        }}
+      />
+      <Stack.Screen
+        component={TeamStatsScreen}
+        name={RouteNames.TeamStats}
+        options={{
+          ...commonOptions,
+          headerTitle: t('teamStats.title', 'Statistiques'),
         }}
       />
     </Stack.Navigator>

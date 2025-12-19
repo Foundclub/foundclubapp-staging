@@ -538,6 +538,18 @@ function TeamDetails({ navigation, route }) {
           />
         )}
       </View>
+      {/* Statistics button for coaches */}
+      {canManageTeam && isMyTeam && (
+        <Button
+          onPress={() => navigation.navigate(RouteNames.TeamStats, { 
+            teamId: team?.documentId, 
+            teamName: team?.name 
+          })}
+          style={Spaces.paddingHorizontal[16]}
+          title={t('teamDetails.actions.stats', 'Statistiques')}
+          variant="Secondary"
+        />
+      )}
       {
         isMyTeam && (
           <Button
