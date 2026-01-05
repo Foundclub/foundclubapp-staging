@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  startOfDay,
+  startOfDay, isBefore,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -158,6 +158,10 @@ function EventListContent({
       const items = page?.data || [];
       return acc.concat(items);
     }, [])
+    .filter((event) => {
+      if (!event.date) return false;
+      return !isBefore(new Date(event.date), startOfDay(new Date()));
+    })
     || [], [featuredPages]);
 
   const events = propEvents || internalEvents;

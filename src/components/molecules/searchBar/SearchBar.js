@@ -22,13 +22,15 @@ function SearchBar({
   placeholder = 'Rechercher',
   onCalendarPress,
   onFilterPress,
+  withCalendar = true,
+  withFilter = true,
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, !withCalendar && !withFilter && { width: '100%' }]}>
       {/* Input avec icône de recherche */}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, (!withCalendar && !withFilter) && { width: '100%' }]}>
         {/* Icône de recherche (loupe PNG) */}
         <Image
           source={searchIcon}
@@ -48,30 +50,34 @@ function SearchBar({
       </View>
 
       {/* Bouton Calendrier */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onCalendarPress}
-        style={styles.iconButton}
-      >
-        <Image
-          source={calendarIcon}
-          style={styles.iconImage}
-        />
-      </TouchableOpacity>
+      {withCalendar && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onCalendarPress}
+          style={styles.iconButton}
+        >
+          <Image
+            source={calendarIcon}
+            style={styles.iconImage}
+          />
+        </TouchableOpacity>
+      )}
 
       {/* Bouton Filtres */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onFilterPress}
-        style={[styles.iconButton, styles.filterButton]}
-      >
-        <Image
-          source={filterIcon}
-          style={styles.iconImageBlue}
-        />
-        {/* Notification badge (hidden par défaut) */}
-        <View style={styles.notificationBadge} />
-      </TouchableOpacity>
+      {withFilter && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onFilterPress}
+          style={[styles.iconButton, styles.filterButton]}
+        >
+          <Image
+            source={filterIcon}
+            style={styles.iconImageBlue}
+          />
+          {/* Notification badge (hidden par défaut) */}
+          <View style={styles.notificationBadge} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -82,13 +88,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
-    width: 327,
+    // Width can be overridden or handled by flex
+    width: '100%', 
     height: 48,
   },
   // Input container
   inputContainer: {
     position: 'relative',
-    width: 231,
+    flex: 1, // Changed from fixed width 231
     height: 48,
     borderBottomWidth: 1.5,
     borderBottomColor: '#FFFFFF',
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 56,
     top: 12.5,
-    width: 133,
+    right: 0, // Changed width 133 to right 0 for full width
     height: 23,
     fontFamily: 'Montserrat-Regular',
     fontSize: 16,

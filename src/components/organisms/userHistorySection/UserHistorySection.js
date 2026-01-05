@@ -124,7 +124,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
             borderStyle: 'dashed',
           }
         ]}>
-          <Text style={[Fonts.p1, { color: Colors.neutral400, textAlign: 'center' }]}>
+          <Text style={[Fonts.p1, { color: Colors.neutral00, textAlign: 'center' }]}>
             {isOwnProfile 
               ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
               : t('profile.history.emptyOther', 'Aucun historique renseigné')

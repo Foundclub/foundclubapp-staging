@@ -256,6 +256,18 @@ function ClubDetails({ navigation, route }) {
     });
   }, [userData, clubId]);
 
+  const isParentClubAdmin = useMemo(() => {
+    // Check if user is admin of the parent multisport club
+    if (!userData?.club || !club?.parentMultisport) return false;
+
+    // Normalize IDs (support objects and IDs)
+    const userClubId = userData.club.documentId || userData.club.id;
+    const parentId = club.parentMultisport.documentId || club.parentMultisport.id;
+
+    // Check if IDs match
+    return userClubId === parentId;
+  }, [userData, club]);
+
   const tabs = useMemo(() => {
     const options = [{ label: 'Informations', value: 'infos' }];
     if (isMember) {
@@ -422,7 +434,10 @@ function ClubDetails({ navigation, route }) {
               {canEdit ? (
                 <View style={[Spaces.gap[16]]}>
                   <Button
-                    onPress={() => navigation.navigate(RouteNames.FacilityList)}
+                    onPress={() => navigation.navigate(RouteNames.FacilityList, {
+                      clubId,
+                      cmId: club?.parentMultisport?.documentId,
+                    })}
                     title="Gérer les installations"
                     variant="Secondary"
                     icon="plus"
@@ -706,7 +721,7 @@ function ClubDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       {
-        canJoinClub ? (
+        canJoinClub && !isParentClubAdmin ? (
           <Button
             onPress={handleAskToJoinClub}
             style={Spaces.marginTop[12]}
@@ -716,7 +731,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canContactAdmin ? (
+        canContactAdmin && !club?.parentMultisport ? (
           <Button
             onPress={handleContactFoundClub}
             style={Spaces.marginTop[12]}

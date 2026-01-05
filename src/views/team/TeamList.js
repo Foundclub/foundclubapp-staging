@@ -35,8 +35,9 @@ function TeamList({ navigation, route }) {
   } = useTheme();
 
   const handleAddTeam = () => {
-    navigation.navigate(RouteNames.TeamEdit, {
-      clubId,
+    navigation.navigate(RouteNames.TeamStack, {
+      screen: RouteNames.TeamEdit,
+      params: { clubId },
     });
   };
 

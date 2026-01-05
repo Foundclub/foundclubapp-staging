@@ -112,7 +112,10 @@ function TeamDetails({ navigation, route }) {
   // handlers
   const handleEditTeam = useCallback(() => {
     if (currentUser) {
-      navigation.navigate(RouteNames.TeamEdit, { clubId: team?.club?.documentId, teamId });
+      navigation.navigate(RouteNames.TeamStack, {
+        screen: RouteNames.TeamEdit,
+        params: { clubId: team?.club?.documentId, teamId },
+      });
     }
   }, [navigation, team?.club?.documentId, teamId, currentUser]);
 

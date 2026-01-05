@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -7,35 +7,57 @@ import useTheme from '@/theme/themeContext';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import { getFacilities } from '@/services/facility/facilityService';
+import { getFacilities, getCMFacilities } from '@/services/facility/facilityService';
 
 /**
  * FacilitySelector component
  * @param {object} props
  * @param {string} props.clubId - The club ID to fetch facilities from
+ * @param {string} [props.cmId] - Optional CM ID to also fetch CM facilities
  * @param {object} props.location - The current location value
  * @param {string} props.facilityId - The current facility ID
  * @param {Function} props.onChange - Callback({ location, facilityId })
  * @param {string} props.error - Error message
  */
-const FacilitySelector = ({ clubId, location, facilityId, onChange, error }) => {
+const FacilitySelector = ({ clubId, cmId, location, facilityId, onChange, error }) => {
     const { t } = useTranslation();
     const { Spaces, Fonts, Colors, Alignments } = useTheme();
     const [mode, setMode] = useState(facilityId ? 'club' : 'external');
 
-    // Fetch Facilities
-    const { data: facilitiesData } = useQuery({
+    // Fetch Club Facilities
+    const { data: clubFacilitiesData } = useQuery({
         queryKey: ['facilities', clubId],
         queryFn: () => getFacilities(clubId),
         enabled: !!clubId,
     });
-    const facilities = facilitiesData?.data || [];
+    
+    // Fetch CM Facilities (shared installations)
+    const { data: cmFacilitiesData } = useQuery({
+        queryKey: ['cm-facilities', cmId],
+        queryFn: () => getCMFacilities(cmId),
+        enabled: !!cmId,
+    });
+
+    // Merge club facilities and CM facilities
+    const facilities = useMemo(() => {
+        const clubFacilities = clubFacilitiesData?.data || [];
+        const cmFacilities = cmFacilitiesData?.data || [];
+        
+        // Avoid duplicates by documentId
+        const allFacilities = [...clubFacilities];
+        cmFacilities.forEach(cmFac => {
+            if (!allFacilities.some(f => f.documentId === cmFac.documentId)) {
+                allFacilities.push({ ...cmFac, isShared: true }); // Mark as shared
+            }
+        });
+        
+        return allFacilities;
+    }, [clubFacilitiesData, cmFacilitiesData]);
 
     const facilityOptions = facilities.map(f => ({
-        label: f.name,
+        label: f.isShared ? `${f.name} (CM)` : f.name,
         value: f.documentId || f.id,
-        address: f.address, // Assuming facility has address field
-        // We might need coordinates if facility has them
+        address: f.address,
     }));
 
     useEffect(() => {

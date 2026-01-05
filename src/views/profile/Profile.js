@@ -61,6 +61,18 @@ function Profile({ navigation }) {
     return canEditClub(userData?.club?.documentId);
   }, [userData, canEditClub]);
 
+  // Check if user is admin of a MultisportClub
+  const canManageMultisportClub = useMemo(() => {
+    // @ts-expect-error multisportClubs not in User type yet
+    return (userData?.multisportClubs?.length || 0) > 0;
+  }, [userData]);
+
+  // Get the first multisport club for quick access
+  const firstMultisportClub = useMemo(() => {
+    // @ts-expect-error multisportClubs not in User type yet  
+    return userData?.multisportClubs?.[0] || null;
+  }, [userData]);
+
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
   };
@@ -84,6 +96,14 @@ function Profile({ navigation }) {
       screen: RouteNames.Club,
       params: { clubId: userData?.club?.documentId },
     });
+  };
+
+  /**
+   * Opens the multisport club dashboard screen.
+   * @param {string} cmId - The documentId of the MultisportClub
+   */
+  const handleOpenMultisportClub = (cmId) => {
+    navigation.navigate(RouteNames.CMDashboard, { cmId });
   };
 
   /**
@@ -157,6 +177,7 @@ function Profile({ navigation }) {
   };
 
   const renderUserClub = () => {
+    // Check if user has a regular club
     if (userData?.club) {
       return (
         <TouchableOpacity
@@ -202,6 +223,65 @@ function Profile({ navigation }) {
         </TouchableOpacity>
       );
     }
+    
+    // Check if user is admin of a MultisportClub (Dirigeant Omnisport)
+    if (userData?.multisportClubs?.length > 0) {
+      const cm = userData.multisportClubs[0];
+      return (
+        <TouchableOpacity
+          onPress={() => handleOpenMultisportClub(cm.documentId)}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[16],
+            { marginTop: -10, maxWidth: '85%' }]}
+        >
+          {cm?.logo?.url ? (
+            <ProfileAvatar
+              imageUrl={cm.logo.url}
+              size={60}
+              style={[
+                ApplicationStyle.borderWidth1,
+                ApplicationStyle.borderColor.primary500,
+                { borderRadius: 60 },
+              ]}
+              imageStyle={{ borderRadius: 60 }}
+            />
+          ) : (
+            <TeamShield
+              initials={cm?.name ? getClubInitials(cm.name) : 'CM'}
+              isSmall
+            />
+          )}
+          <View style={[
+            { height: 40, width: 1 },
+            ApplicationStyle.backgroundColor.primary500,
+          ]}
+          />
+          <View style={[Spaces.gap[4], { flex: 1 }]}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[Fonts.p1Black, Fonts.neutral00]}
+            >
+              {cm?.name}
+            </Text>
+            <View style={{
+              backgroundColor: '#01b3f4', // primary500
+              paddingHorizontal: 6,
+              paddingVertical: 1,
+              borderRadius: 3,
+              alignSelf: 'flex-start',
+            }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' }}>
+                CM
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+    
     if (canJoinClub || userData?.role?.name === USER_ROLES.president) {
       return (
         <Button
@@ -372,6 +452,13 @@ function Profile({ navigation }) {
               title={t('profile.actions.manageClub')}
             />
           ) : null}
+          {canManageMultisportClub && firstMultisportClub ? (
+            <TabButton
+              isActive={false}
+              onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
+              title={t('profile.actions.manageClub', 'Gérer mon club')}
+            />
+          ) : null}
           <TabButton
             isActive={false}
             onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
@@ -443,12 +530,22 @@ function Profile({ navigation }) {
       </ScrollView>
       <BottomModal
         close={() => setIsAccountModalVisible(false)}
+        hideCloseButton
         isVisible={isAccountModalVisible}
-        title={t('profile.titles.switchAccount', 'Changer de compte')}
       >
-        <View style={[Spaces.gap[16], Spaces.paddingTop[16]]}>
+        <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
           {authSessions?.map((session, index) => {
             const isCurrent = session?.user?.documentId === userData?.documentId;
+            // For current user, use userData which has full info; for others use session data
+            const user = isCurrent ? userData : session?.user;
+            const displayName = user?.firstname && user?.lastname
+              ? `${user.firstname} ${user.lastname}`
+              : user?.phone || user?.username || 'Compte';
+            const roleName = user?.role?.name === 'Authenticated' 
+              ? 'Dirigeant'
+              : user?.role?.name || 'Utilisateur';
+            const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
+            
             return (
               <TouchableOpacity
                 key={index}
@@ -458,26 +555,25 @@ function Profile({ navigation }) {
                   Alignments.alignCenter,
                   Spaces.padding[12],
                   ApplicationStyle.borderRadius8,
-                  isCurrent ? ApplicationStyle.backgroundColor.primary100 : ApplicationStyle.backgroundColor.neutral100
+                  ApplicationStyle.backgroundColor.primary700,
+                  isCurrent && { borderWidth: 1, borderColor: '#01b3f4' },
                 ]}
               >
                 <ProfileAvatar
-                  imageUrl={session?.user?.avatar?.url}
+                  imageUrl={avatarUrl}
                   size={40}
                   style={{ marginRight: 12 }}
                 />
-                <View>
-                  <Text style={[Fonts.p1Bold, Fonts.textBlack]}>
-                    {session?.user?.firstname} {session?.user?.lastname}
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]} numberOfLines={1}>
+                    {displayName}
                   </Text>
-                  <Text style={[Fonts.p2, Fonts.textGrey]}>
-                    {session?.user?.role?.name}
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {roleName}
                   </Text>
                 </View>
                 {isCurrent && (
-                  <View style={[Alignments.absolute, { right: 10 }]}>
-                    <Text style={[Fonts.p2, Fonts.primary500]}>Actif</Text>
-                  </View>
+                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>Actif</Text>
                 )}
               </TouchableOpacity>
             );

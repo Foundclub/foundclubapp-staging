@@ -51,6 +51,12 @@ import {
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
 import { updateEvent } from '@/services/event/eventService';
+import { 
+  joinReservation, 
+  bookFullReservation, 
+  openForPlayers, 
+  triggerSosAlert 
+} from '@/services/reservation/reservationService';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 
 // Assets
@@ -201,6 +207,90 @@ function EventDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       navigation.goBack();
+    },
+  });
+
+  // Mutation for joining a reservation
+  const joinReservationMutation = useMutation({
+    mutationFn: (reservationId) => joinReservation(reservationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      refetch();
+      Alert.alert(
+        t('reservation.joinSuccess.title', 'Participation confirmée'),
+        t('reservation.joinSuccess.message', 'Vous participez maintenant à cette réservation !')
+      );
+    },
+    onError: (error) => {
+      console.error('Error joining reservation:', error);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('reservation.joinError', 'Une erreur est survenue')
+      );
+    },
+  });
+
+  // Mutation for privatizing a reservation (book full)
+  const bookFullMutation = useMutation({
+    mutationFn: (reservationId) => bookFullReservation(reservationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      refetch();
+      Alert.alert(
+        t('reservation.bookFull.success.title', 'Réservation privatisée'),
+        t('reservation.bookFull.success.message', 'Votre réservation est maintenant complète.')
+      );
+    },
+    onError: (error) => {
+      console.error('Error privatizing reservation:', error);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('reservation.bookFull.error', 'Une erreur est survenue')
+      );
+    },
+  });
+
+  // Mutation for opening reservation to players (crowdsourcing)
+  const openForPlayersMutation = useMutation({
+    mutationFn: ({ reservationId, targetPlayers }) => openForPlayers(reservationId, targetPlayers),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      refetch();
+      Alert.alert(
+        t('reservation.openForPlayers.success.title', 'Réservation ouverte'),
+        t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !')
+      );
+    },
+    onError: (error) => {
+      console.error('Error opening reservation:', error);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('reservation.openForPlayers.error', 'Une erreur est survenue')
+      );
+    },
+  });
+
+  // Mutation for triggering SOS alert
+  const sosAlertMutation = useMutation({
+    mutationFn: (reservationId) => triggerSosAlert(reservationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      refetch();
+      Alert.alert(
+        t('reservation.sosAlert.success.title', 'Alerte SOS lancée ! 🔥'),
+        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiés.')
+      );
+    },
+    onError: (error) => {
+      console.error('Error triggering SOS alert:', error);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('reservation.sosAlert.error', 'Une erreur est survenue')
+      );
     },
   });
 
@@ -634,12 +724,216 @@ function EventDetails({ navigation, route }) {
     const canEdit = canEditEvent(event?.team?.documentId || '');
     const hasDateInPast = event?.date ? new Date(event?.date) < new Date() : true;
     
+    // Check if this is a reservation
+    const isReservation = event?.type?.name?.toLowerCase()?.includes('réservation') 
+      || event?.type?.name?.toLowerCase()?.includes('reservation');
+    
     // Check if event type is a match/competition (for tactical board visibility)
     const isCompetitionType = ['match', 'compétition', 'tournoi', 'competition'].some(
       type => event?.type?.name?.toLowerCase()?.includes(type)
     );
+
+    // Check if user already participates
+    const userDocumentId = userData?.documentId;
+    const hasAlreadyJoined = event?.participations?.some(p => p?.documentId === userDocumentId);
     
-    return event && !hasDateInPast ? (
+    if (!event || hasDateInPast) {
+      return <View />;
+    }
+
+    // Reservation-specific rendering - uses JoinEventModal with risk acceptance
+    if (isReservation) {
+      // Check if user is the organizer
+      const isOrganizer = event?.organizer?.documentId === userDocumentId;
+      const bookingStatus = event?.bookingStatus || 'open';
+      const isLastMinuteAlert = event?.isLastMinuteAlert || false;
+
+      // Handle booking actions
+      const handleBookFull = () => {
+        Alert.alert(
+          t('reservation.bookFull.confirm.title', 'Privatiser la réservation ?'),
+          t('reservation.bookFull.confirm.message', 'Les joueurs inscrits seront conservés. Aucun nouveau joueur ne pourra rejoindre.'),
+          [
+            { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+            { 
+              text: t('common.confirm', 'Confirmer'), 
+              onPress: () => bookFullMutation.mutate(eventId) 
+            },
+          ]
+        );
+      };
+
+      const handleOpenForPlayers = () => {
+        Alert.alert(
+          t('reservation.openForPlayers.confirm.title', 'Chercher des joueurs ?'),
+          t('reservation.openForPlayers.confirm.message', 'Votre réservation sera visible et les joueurs pourront vous rejoindre.'),
+          [
+            { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+            { 
+              text: t('common.confirm', 'Confirmer'), 
+              onPress: () => openForPlayersMutation.mutate({ reservationId: eventId, targetPlayers: event?.totalPlayers }) 
+            },
+          ]
+        );
+      };
+
+      const handleSosAlert = () => {
+        Alert.alert(
+          t('reservation.sosAlert.confirm.title', 'Lancer une alerte SOS ? 🔥'),
+          t('reservation.sosAlert.confirm.message', 'Les joueurs proches seront notifiés en urgence.'),
+          [
+            { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+            { 
+              text: t('common.confirm', 'Lancer SOS'), 
+              style: 'destructive',
+              onPress: () => sosAlertMutation.mutate(eventId) 
+            },
+          ]
+        );
+      };
+
+      return (
+        <View style={[Spaces.gap[12]]}>
+          {/* Status indicator for organizer */}
+          {isOrganizer && (
+            <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+              {bookingStatus === 'open' && (
+                <View style={{ backgroundColor: 'rgba(100, 181, 246, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                  <Text style={[Fonts.p2, { color: '#64B5F6' }]}>🟢 Ouvert</Text>
+                </View>
+              )}
+              {bookingStatus === 'shared' && (
+                <View style={{ backgroundColor: 'rgba(255, 193, 7, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                  <Text style={[Fonts.p2, { color: '#FFC107' }]}>👥 Joueurs recherchés</Text>
+                </View>
+              )}
+              {bookingStatus === 'booked' && (
+                <View style={{ backgroundColor: 'rgba(76, 175, 80, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                  <Text style={[Fonts.p2, { color: '#4CAF50' }]}>✅ Complet</Text>
+                </View>
+              )}
+              {isLastMinuteAlert && (
+                <View style={{ backgroundColor: 'rgba(255, 107, 53, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                  <Text style={[Fonts.p2, { color: '#FF6B35' }]}>🔥 SOS actif</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Participant actions */}
+          {hasAlreadyJoined ? (
+            <Button
+              disabled
+              title={t('reservation.alreadyJoined', 'Je participe !')}
+              variant="Primary"
+            />
+          ) : bookingStatus !== 'booked' && (
+            <Button
+              isLoading={createEventParticipationMutation.isPending}
+              onPress={handleJoinEvent}
+              title={t('reservation.actions.join', 'Réserver')}
+              variant="Primary"
+            />
+          )}
+
+          {/* Organizer booking actions */}
+          {isOrganizer && (
+            <View style={[Spaces.gap[8]]}>
+              {/* Status-dependent actions */}
+              {bookingStatus === 'open' && (
+                <View style={[Alignments.row, Spaces.gap[8]]}>
+                  <Button
+                    icon="lock"
+                    isLoading={bookFullMutation.isPending}
+                    onPress={handleBookFull}
+                    style={{ flex: 1 }}
+                    title={t('reservation.actions.privatize', 'Privatiser')}
+                    variant="Secondary"
+                  />
+                  <Button
+                    icon="users"
+                    isLoading={openForPlayersMutation.isPending}
+                    onPress={handleOpenForPlayers}
+                    style={{ flex: 1 }}
+                    title={t('reservation.actions.findPlayers', 'Chercher joueurs')}
+                    variant="Primary"
+                  />
+                </View>
+              )}
+              {bookingStatus === 'shared' && (
+                <View style={[Alignments.row, Spaces.gap[8]]}>
+                  <Button
+                    icon="lock"
+                    isLoading={bookFullMutation.isPending}
+                    onPress={handleBookFull}
+                    style={{ flex: 1 }}
+                    title={t('reservation.actions.privatize', 'Privatiser')}
+                    variant="Secondary"
+                  />
+                  {!isLastMinuteAlert && (
+                    <Button
+                      icon="alert"
+                      isLoading={sosAlertMutation.isPending}
+                      onPress={handleSosAlert}
+                      style={{ flex: 1, backgroundColor: '#FF6B35' }}
+                      title={t('reservation.actions.sos', 'SOS 🔥')}
+                      variant="Primary"
+                    />
+                  )}
+                </View>
+              )}
+              {bookingStatus === 'booked' && (
+                <View style={[Alignments.row, Spaces.gap[8]]}>
+                  <Button
+                    icon="users"
+                    isLoading={openForPlayersMutation.isPending}
+                    onPress={handleOpenForPlayers}
+                    style={{ flex: 1 }}
+                    title={t('reservation.actions.openAgain', 'Ouvrir aux joueurs')}
+                    variant="Secondary"
+                  />
+                  {!isLastMinuteAlert && (
+                    <Button
+                      icon="alert"
+                      isLoading={sosAlertMutation.isPending}
+                      onPress={handleSosAlert}
+                      style={{ flex: 1, backgroundColor: '#FF6B35' }}
+                      title={t('reservation.actions.sos', 'SOS 🔥')}
+                      variant="Primary"
+                    />
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Edit/Cancel for organizer */}
+          {canEdit && (
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <Button
+                icon="edit"
+                isOption
+                onPress={handleEditEvent}
+                style={{ flex: 1 }}
+                title={t('common.actions.edit', 'Modifier')}
+                variant="Secondary"
+              />
+              <Button
+                icon="close"
+                isOption
+                onPress={handleCancelEvent}
+                style={{ flex: 1 }}
+                title={t('common.actions.cancel', 'Annuler')}
+                variant="Secondary"
+              />
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    // Regular event rendering
+    return (
       <View>
         <EventAnswerButtons
           event={event}
@@ -664,7 +958,7 @@ function EventDetails({ navigation, route }) {
           </View>
         )}
       </View>
-    ) : <View />;
+    );
   };
 
   const renderReportButton = useCallback(() => (

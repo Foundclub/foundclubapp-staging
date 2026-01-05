@@ -8,6 +8,9 @@ import { Alert } from 'react-native';
  * @returns {string} The error message
  */
 export const getErrorMessage = (errorCode, genericI18nKey = 'generic') => {
+  if (!errorCode || typeof errorCode !== 'string') {
+    return i18next.t(`APIerrors.${genericI18nKey}`);
+  }
   if (errorCode.startsWith('API response do not match')) {
     return i18next.t('APIerrors.schemaMismatch');
   }

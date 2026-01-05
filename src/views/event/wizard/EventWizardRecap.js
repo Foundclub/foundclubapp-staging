@@ -16,6 +16,10 @@ const EventWizardRecap = ({ navigation }) => {
   const { Colors, Fonts, Spaces, ApplicationStyle } = useTheme();
   const { t } = useTranslation();
   const { state, dispatch } = useEventWizard();
+
+  // Check if this is a reservation
+  const isReservation = state.type?.name?.toLowerCase().includes('réservation') || 
+                        state.type?.name?.toLowerCase().includes('reservation');
   const { createReccurrentEventPayload } = useEvent();
   const queryClient = useQueryClient();
 
@@ -53,6 +57,11 @@ const EventWizardRecap = ({ navigation }) => {
       recurrenceFrequency: state.recurrenceFrequency || 'week',
       validationMode: 'auto',
       sessionStatus: 'open',
+      // Reservation-specific fields
+      ...(isReservation && {
+        pricePerPerson: state.pricePerPerson,
+        totalPlayers: state.totalPlayers,
+      }),
     };
 
     const eventsPayload = createReccurrentEventPayload(formData);
@@ -150,6 +159,20 @@ const EventWizardRecap = ({ navigation }) => {
               <Text style={[Fonts.p2, Fonts.neutral200]}>Lieu</Text>
               <Text style={[Fonts.h4, Fonts.neutral00]}>{getLocationDisplayText()}</Text>
             </View>
+
+            {/* Reservation Details */}
+            {isReservation && (
+              <>
+                <View>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>Prix par personne</Text>
+                  <Text style={[Fonts.h4, Fonts.neutral00]}>{state.pricePerPerson ? `${state.pricePerPerson}€` : 'Non défini'}</Text>
+                </View>
+                <View>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>Nombre de joueurs</Text>
+                  <Text style={[Fonts.h4, Fonts.neutral00]}>{state.totalPlayers || 'Non défini'}</Text>
+                </View>
+              </>
+            )}
 
             {/* Recurrence */}
             {state.isRecurrent && (

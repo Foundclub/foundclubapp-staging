@@ -33,15 +33,18 @@ const clubSchema = Joi.object({
 
 const clubListSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
-  address: Joi.object().required(),
+  address: Joi.object().optional(), // Optional for multisport clubs
   documentId: Joi.string().optional(),
   email: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
-  isCustomer: Joi.boolean().required().default(false),
-  maxTeamNumber: Joi.number().required().default(0),
+  isCustomer: Joi.boolean().optional().default(false), // Optional for multisport
+  maxTeamNumber: Joi.number().optional(), // Optional - multisport uses maxSectionNumber
+  maxSectionNumber: Joi.number().optional(), // For multisport clubs
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('', null).optional(),
+  _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
+  sectionsCount: Joi.number().optional(), // For multisport clubs
 }).required();
 
 /**
@@ -52,6 +55,7 @@ const clubListSchema = Joi.object({
  *   name?: string;
  *   page?: number;
  *   pageSize?: number;
+ *   includeMultisport?: boolean;
  * }} params
  * @returns {Promise<{data: Club[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -64,6 +68,7 @@ export const getClubs = async (params = {}) => {
     name,
     page,
     pageSize,
+    includeMultisport = true, // By default, include multisport clubs
   } = params;
 
   const filters = {
@@ -117,7 +122,57 @@ export const getClubs = async (params = {}) => {
     });
   }
 
-  const response = await client.get('/clubs', { params: filters });
+  // Fetch regular clubs
+  const clubsResponse = await client.get('/clubs', { params: filters });
+  
+  // Add type marker to regular clubs
+  const clubsWithType = (clubsResponse.data?.data || []).map(club => ({
+    ...club,
+    _type: 'club',
+  }));
+
+  let allData = clubsWithType;
+  let totalFromCM = 0;
+
+  // Fetch multisport clubs if requested and on first page
+  if (includeMultisport && (page || 1) === 1) {
+    try {
+      const cmFilters = {
+        pagination: { page: 1, pageSize: 10 },
+        populate: {
+          logo: true,
+          sections: { fields: ['documentId', 'name'] },
+          sponsor: { populate: ['logo'] },
+        },
+      };
+
+      if (name) {
+        cmFilters.filters = { name: { $containsi: name } };
+      }
+
+      if (geohash && geohash.length) {
+        cmFilters.filters = {
+          ...cmFilters.filters,
+          geohash: { $contains: geohash },
+        };
+      }
+
+      const cmResponse = await client.get('/multisport-clubs', { params: cmFilters });
+      const cmWithType = (cmResponse.data?.data || []).map(cm => ({
+        ...cm,
+        _type: 'multisport',
+        sectionsCount: cm.sections?.length || 0,
+      }));
+
+      // Prepend multisport clubs at the top
+      allData = [...cmWithType, ...clubsWithType];
+      totalFromCM = cmResponse.data?.meta?.pagination?.total || 0;
+    } catch (error) {
+      // If CM fetch fails, just use regular clubs
+      console.warn('Failed to fetch multisport clubs:', error.message);
+    }
+  }
+
   try {
     const schema = Joi.object({
       data: Joi.array().items(clubListSchema).empty(Joi.array().length(0)),
@@ -131,9 +186,20 @@ export const getClubs = async (params = {}) => {
       }).required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
-      allowUnknown: true,
-    });
+    // Update pagination total to include CM count
+    const originalMeta = clubsResponse.data?.meta || {};
+    const updatedMeta = {
+      ...originalMeta,
+      pagination: {
+        ...originalMeta.pagination,
+        total: (originalMeta.pagination?.total || 0) + totalFromCM,
+      },
+    };
+
+    const validationResult = await schema.validateAsync(
+      { data: allData, meta: updatedMeta },
+      { allowUnknown: true }
+    );
     return validationResult;
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
@@ -162,6 +228,9 @@ export const getClubById = async (id) => {
         },
         teams: {
           populate: '*',
+        },
+        parentMultisport: {
+          fields: ['documentId', 'name'],
         },
       },
     },

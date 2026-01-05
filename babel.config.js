@@ -11,7 +11,12 @@ module.exports = {
       },
     ],
     ['inline-dotenv', {
-      path: process.env.APP_ENV === 'production' ? '.env.production' : '.env.staging'
+      path: (() => {
+        const env = process.env.APP_ENV || 'staging';
+        if (env === 'local') return '.env.local';
+        if (env === 'production') return '.env.production';
+        return '.env.staging';
+      })()
     }],
     'react-native-reanimated/plugin',
   ],

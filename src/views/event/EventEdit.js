@@ -258,6 +258,7 @@ function EventEdit({ navigation, route }) {
   // Derive clubId from selected team or user's club (for Dirigeant)
   const selectedTeam = userData?.trainedTeams?.find(t => t.documentId === selectedTeamId);
   const clubId = selectedTeam?.club?.documentId || userData?.club?.documentId;
+  const cmId = selectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
 
   // Fetch club teams for invited teams selection
   const [clubTeams, setClubTeams] = useState([]);
@@ -643,6 +644,7 @@ function EventEdit({ navigation, route }) {
               }) => (
                 <FacilitySelector
                   clubId={clubId}
+                  cmId={cmId}
                   location={value}
                   facilityId={watch('facility')}
                   onChange={({ location: newLocation, facilityId: newFacilityId }) => {

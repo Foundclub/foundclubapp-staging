@@ -45,6 +45,8 @@ export const getReservations = async (filters = {}) => {
       q,
       reservationMode,
       startTime,
+      startDateAfter,
+      startDateBefore,
       type,
     } = filters;
 
@@ -73,6 +75,21 @@ export const getReservations = async (filters = {}) => {
       ],
       sort: ['date:asc'],
     };
+
+    // Apply date filters if provided, otherwise use default future dates filter
+    if (startDateAfter || startDateBefore) {
+      params.filters.date = {};
+      if (startDateAfter) {
+        params.filters.date.$gte = startDateAfter;
+      }
+      if (startDateBefore) {
+        params.filters.date.$lte = startDateBefore;
+      }
+    } else {
+      params.filters.date = {
+        $gte: new Date().toISOString(), // Only get future dates if no specific date filter is set
+      };
+    }
 
     if (q) {
       params.filters.$or = [
@@ -201,6 +218,40 @@ export const createReservation = async (reservationData) => {
   const response = await client.post('/reservations', {
     data: reservationData,
   });
+  return response.data;
+};
+
+/**
+ * Book full reservation (privatization)
+ * Keeps existing players, marks as booked
+ * @param {string} reservationId
+ * @returns {Promise<{data: Reservation, message: string}>}
+ */
+export const bookFullReservation = async (reservationId) => {
+  const response = await client.post(`/events/${reservationId}/book-full`);
+  return response.data;
+};
+
+/**
+ * Open reservation for players (crowdsourcing)
+ * @param {string} reservationId
+ * @param {number} [targetPlayers] - Optional target number of players
+ * @returns {Promise<{data: Reservation, message: string}>}
+ */
+export const openForPlayers = async (reservationId, targetPlayers) => {
+  const response = await client.post(`/events/${reservationId}/open-for-players`, {
+    data: { targetPlayers },
+  });
+  return response.data;
+};
+
+/**
+ * Trigger SOS alert (last-minute urgent recruitment)
+ * @param {string} reservationId
+ * @returns {Promise<{data: Reservation, message: string}>}
+ */
+export const triggerSosAlert = async (reservationId) => {
+  const response = await client.post(`/events/${reservationId}/sos-alert`);
   return response.data;
 };
 

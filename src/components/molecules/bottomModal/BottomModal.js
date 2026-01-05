@@ -35,6 +35,7 @@ function BottomModal({
   contentContainerStyle,
   headerComponent,
   footerComponent,
+  hideCloseButton = false,
   isVisible,
   style,
 }) {
@@ -106,23 +107,25 @@ function BottomModal({
       onDismiss={close}
       ref={modalRef}
     >
-      <TouchableOpacity
-        onPress={close}
-        style={[
-          Alignments.absolute,
-          Platform.OS === 'ios'
-            ? Spaces.marginHorizontal[24] : Spaces.marginHorizontal[4],
-          { right: Platform.OS === 'ios' ? 0 : 24, top: 24, zIndex: 1 },
-        ]}
-      >
-        <Image
-          source={Images.close}
+      {!hideCloseButton && (
+        <TouchableOpacity
+          onPress={close}
           style={[
-            ApplicationStyle.icon28,
-            { tintColor: Colors[closeIconTintColor] },
+            Alignments.absolute,
+            Platform.OS === 'ios'
+              ? Spaces.marginHorizontal[24] : Spaces.marginHorizontal[4],
+            { right: Platform.OS === 'ios' ? 0 : 24, top: 24, zIndex: 1 },
           ]}
-        />
-      </TouchableOpacity>
+        >
+          <Image
+            source={Images.close}
+            style={[
+              ApplicationStyle.icon28,
+              { tintColor: Colors[closeIconTintColor] },
+            ]}
+          />
+        </TouchableOpacity>
+      )}
       <View style={[Alignments.fill]}>
         {/* Fixed Header */}
         {headerComponent && (

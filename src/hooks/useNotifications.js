@@ -352,8 +352,14 @@ const useNotifications = ({ navigate }) => {
           throw new Error('Failed to get FCM token');
         }
       } catch (err) {
-        console.error('[FCM] Error retrieving token:', err);
-        throw new Error(`Failed to retrieve token: ${err}`);
+        const errorMessage = typeof err === 'string' ? err : err?.message || JSON.stringify(err);
+        if (errorMessage.includes('FIS_AUTH_ERROR')) {
+          console.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in Local). Notifications skipped.');
+        } else {
+          console.error('[FCM] Error retrieving token:', err);
+        }
+        // Do not throw error here to prevent app crash
+        // throw new Error(`Failed to retrieve token: ${err}`);
       }
     };
 

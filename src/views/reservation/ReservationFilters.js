@@ -48,6 +48,8 @@ function ReservationFilters({ navigation }) {
     // local states
     const [activitySearchValue, setActivitySearchValue] = useState('');
     const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+    const [infoModalVisible, setInfoModalVisible] = useState(false);
+    const [infoModalContent, setInfoModalContent] = useState({ title: '', content: '' });
 
     // hooks
     const { t } = useTranslation();
@@ -156,6 +158,33 @@ function ReservationFilters({ navigation }) {
         navigation.goBack();
     };
 
+    const openInfoModal = (title, content) => {
+        setInfoModalContent({ title, content });
+        setInfoModalVisible(true);
+    };
+
+    const renderLabel = (label, infoKey) => (
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
+            <TouchableOpacity
+                onPress={() => openInfoModal(label, t(`reservationFilters.infos.${infoKey}`))}
+                style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: Colors.primary500 + '20',
+                    borderWidth: 1.5,
+                    borderColor: Colors.primary500,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+                <Text style={{ color: Colors.primary500, fontSize: 13, fontWeight: '700' }}>i</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
         <ScreenContainer
             bgImage="bg2"
@@ -168,24 +197,37 @@ function ReservationFilters({ navigation }) {
                 { paddingBottom: insets.bottom },
             ]}
         >
+            {/* Info Modal */}
+            <BottomModal
+                close={() => setInfoModalVisible(false)}
+                isVisible={infoModalVisible}
+            >
+                <View style={[Spaces.gap[16]]}>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{infoModalContent.title}</Text>
+                    <Text style={[Fonts.p1, Fonts.neutral00]}>{infoModalContent.content}</Text>
+                </View>
+            </BottomModal>
+
             <ScrollView
                 contentContainerStyle={[Spaces.gap[40]]}
                 style={[Spaces.marginVertical[16]]}
             >
                 {/* City */}
-                <Controller
-                    control={control}
-                    name="city"
-                    render={({ field: { onChange, value } }) => (
-                        <AutocompleteAddressInput
-                            address={value}
-                            error={getFieldError({ errors: formErrors, fieldName: 'city' })}
-                            label={t('clubFilters.fields.city.label', 'Ville')}
-                            placeholder={t('clubFilters.fields.city.placeholder', 'Entrez une ville')}
-                            setAddress={onChange}
-                        />
-                    )}
-                />
+                <View>
+                    {renderLabel(t('clubFilters.fields.city.label', 'Ville'), 'city')}
+                    <Controller
+                        control={control}
+                        name="city"
+                        render={({ field: { onChange, value } }) => (
+                            <AutocompleteAddressInput
+                                address={value}
+                                error={getFieldError({ errors: formErrors, fieldName: 'city' })}
+                                placeholder={t('clubFilters.fields.city.placeholder', 'Entrez une ville')}
+                                setAddress={onChange}
+                            />
+                        )}
+                    />
+                </View>
 
                 {/* Radius */}
                 <Controller

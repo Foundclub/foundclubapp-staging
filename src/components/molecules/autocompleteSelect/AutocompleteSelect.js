@@ -190,15 +190,12 @@ const AutocompleteSelect = forwardRef(
           <View
             style={[
               Spaces.gap[24],
-              Alignments.fullSize,
+              { flex: 1 },
               Alignments.justifySpaceBetween,
             ]}
           >
-            <View style={[
-              Alignments.fullSize,
-              Spaces.paddingTop[24],
-            ]}
-            >
+            {/* Header and Search Input */}
+            <View style={[Spaces.paddingTop[24]]}>
               <Text style={[
                 Fonts.h3Bold,
                 Fonts.neutral00,
@@ -217,50 +214,55 @@ const AutocompleteSelect = forwardRef(
                   ref={searchInputRef}
                 />
               ) : null}
-              {/* options */}
-              <ScrollView
-                contentContainerStyle={[Spaces.gap[12], Spaces.marginTop[16]]}
-                style={{ height: 500 }}
-              >
-                {props.options.map((option) => (
-                  option.isHeader ? (
-                    <Text
-                      key={option.value}
-                      style={[
-                        Fonts.p3Bold,
-                        Fonts.neutral500,
-                        Spaces.marginTop[16],
-                        Spaces.marginBottom[8],
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  ) : (
-                    <View
-                      key={`${option.value}-${option.label}`}
-                      style={[Alignments.row, Spaces.marginTop[8]]}
-                    >
-                      <Checkable
-                        customFillColor={Colors.neutral00}
-                        disabled={false}
-                        isChecked={handleIsChecked(option)}
-                        setIsChecked={
-                          () => (handleSelectOption(option))
-                        }
-                        text={option.label}
-                        type={props.isMulti ? 'square' : 'circle'}
-                      />
-                    </View>
-                  )
-                ))}
-                {props.options.length === 0 && (props.searchValue?.length || 0) > 0
-                  ? (
-                    <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
-                      {t('common.messages.noData')}
-                    </Text>
-                  ) : null}
-              </ScrollView>
-              {/* validation */}
+            </View>
+
+            {/* Options - Scrollable area */}
+            <ScrollView
+              contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
+              keyboardShouldPersistTaps="handled"
+              style={{ flex: 1, maxHeight: 350 }}
+            >
+              {props.options.map((option) => (
+                option.isHeader ? (
+                  <Text
+                    key={option.value}
+                    style={[
+                      Fonts.p3Bold,
+                      Fonts.neutral500,
+                      Spaces.marginTop[16],
+                      Spaces.marginBottom[8],
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                ) : (
+                  <View
+                    key={`${option.value}-${option.label}`}
+                    style={[Alignments.row, Spaces.marginTop[8]]}
+                  >
+                    <Checkable
+                      customFillColor={Colors.neutral00}
+                      disabled={false}
+                      isChecked={handleIsChecked(option)}
+                      setIsChecked={
+                        () => (handleSelectOption(option))
+                      }
+                      text={option.label}
+                      type={props.isMulti ? 'square' : 'circle'}
+                    />
+                  </View>
+                )
+              ))}
+              {props.options.length === 0 && (props.searchValue?.length || 0) > 0
+                ? (
+                  <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                    {t('common.messages.noData')}
+                  </Text>
+                ) : null}
+            </ScrollView>
+
+            {/* Validation Button - Fixed at bottom */}
+            <View style={[Spaces.paddingBottom[16]]}>
               <Button
                 onPress={handleValidation}
                 title={t('modals.actions.select')}

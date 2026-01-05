@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Input from '@/components/molecules/input/Input';
 
 /**
  * ReservationModeModal component - modal for choosing participation mode
@@ -26,42 +25,34 @@ function ReservationModeModal({
   const { Alignments, ApplicationStyle, Colors, Fonts, Spaces } = useTheme();
 
   const [selectedMode, setSelectedMode] = useState(null);
-  const [playerCount, setPlayerCount] = useState('');
   const [error, setError] = useState('');
 
   const handleConfirm = () => {
     if (!selectedMode) {
-      setError(t('reservation.mode.selectMode', 'Veuillez sélectionner un mode'));
+      setError('Veuillez sélectionner un mode');
       return;
     }
 
-    if (selectedMode === 'RECRUITING') {
-      const count = parseInt(playerCount, 10);
-      if (!playerCount || Number.isNaN(count) || count <= 0) {
-        setError(t('reservation.mode.invalidPlayerCount', 'Veuillez entrer un nombre valide'));
-        return;
-      }
-      if (count >= reservation?.totalPlayers) {
-        setError(t('reservation.mode.tooManyPlayers', 'Le nombre doit être inférieur au total'));
-        return;
-      }
-      onConfirm(selectedMode, count);
-    } else {
-      onConfirm(selectedMode, reservation?.totalPlayers);
-    }
+    const playerCount = selectedMode === 'FULL_GROUP' 
+      ? (reservation?.totalPlayers || 10)
+      : 1;
+    
+    onConfirm(selectedMode, playerCount);
 
     // Reset state
     setSelectedMode(null);
-    setPlayerCount('');
     setError('');
   };
 
   const handleClose = () => {
     setSelectedMode(null);
-    setPlayerCount('');
     setError('');
     onClose();
   };
+
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <Modal
@@ -71,24 +62,24 @@ function ReservationModeModal({
       visible={isVisible}
     >
       <View
-        style={[
-          Alignments.fill,
-          Alignments.alignCenter,
-          Alignments.justifyCenter,
-          { backgroundColor: 'rgba(0,0,0,0.7)' },
-        ]}
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.7)',
+        }}
       >
         <View
-          style={[
-            ApplicationStyle.backgroundColor.primary900,
-            ApplicationStyle.borderRadius24,
-            Spaces.padding[32],
-            Spaces.gap[24],
-            { width: '85%' },
-          ]}
+          style={{
+            backgroundColor: '#173844',
+            borderRadius: 24,
+            padding: 32,
+            gap: 24,
+            width: '85%',
+          }}
         >
-          <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
-            {t('reservation.mode.title')}
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff', textAlign: 'center' }}>
+            Comment souhaitez-vous participer ?
           </Text>
 
           {/* Option FULL_GROUP */}
@@ -97,17 +88,18 @@ function ReservationModeModal({
               setSelectedMode('FULL_GROUP');
               setError('');
             }}
-            style={[
-              Spaces.padding[16],
-              ApplicationStyle.borderRadius16,
-              ApplicationStyle.borderWidth2,
-              selectedMode === 'FULL_GROUP'
-                ? ApplicationStyle.borderColor.primary500
-                : ApplicationStyle.borderColor.neutral700,
-            ]}
+            style={{
+              padding: 16,
+              borderRadius: 16,
+              borderWidth: 2,
+              borderColor: selectedMode === 'FULL_GROUP' ? '#00D1FF' : '#555',
+            }}
           >
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('reservation.mode.fullGroup')}
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
+              Je viens avec mon groupe complet
+            </Text>
+            <Text style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+              Tous les joueurs sont déjà trouvés
             </Text>
           </TouchableOpacity>
 
@@ -117,56 +109,57 @@ function ReservationModeModal({
               setSelectedMode('RECRUITING');
               setError('');
             }}
-            style={[
-              Spaces.padding[16],
-              ApplicationStyle.borderRadius16,
-              ApplicationStyle.borderWidth2,
-              selectedMode === 'RECRUITING'
-                ? ApplicationStyle.borderColor.primary500
-                : ApplicationStyle.borderColor.neutral700,
-            ]}
+            style={{
+              padding: 16,
+              borderRadius: 16,
+              borderWidth: 2,
+              borderColor: selectedMode === 'RECRUITING' ? '#00D1FF' : '#555',
+            }}
           >
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('reservation.mode.recruiting')}
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
+              Je cherche des joueurs
+            </Text>
+            <Text style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+              D'autres joueurs peuvent rejoindre
             </Text>
           </TouchableOpacity>
 
-          {/* Input nombre de joueurs si RECRUITING */}
-          {selectedMode === 'RECRUITING' && (
-            <Input
-              keyboardType="number-pad"
-              label={t('reservation.mode.playerCount')}
-              onChangeText={(text) => {
-                setPlayerCount(text);
-                setError('');
-              }}
-              placeholder="Ex: 8"
-              value={playerCount}
-            />
-          )}
-
           {/* Message d'erreur */}
           {error ? (
-            <Text style={[Fonts.p2, Fonts.error500, Fonts.textCenter]}>
+            <Text style={{ fontSize: 14, color: '#ff4444', textAlign: 'center' }}>
               {error}
             </Text>
           ) : null}
 
           {/* Boutons */}
-          <View style={[Alignments.row, Spaces.gap[12]]}>
-            <Button
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity
               onPress={handleClose}
-              style={[Alignments.fill]}
-              title={t('common.actions.cancel')}
-              variant="SecondaryLight"
-            />
-            <Button
-              isDisabled={!selectedMode}
+              style={{
+                flex: 1,
+                padding: 16,
+                borderRadius: 12,
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: '#00D1FF',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={handleConfirm}
-              style={[Alignments.fill]}
-              title={t('common.actions.confirm')}
-              variant="Primary"
-            />
+              disabled={!selectedMode}
+              style={{
+                flex: 1,
+                padding: 16,
+                borderRadius: 12,
+                backgroundColor: selectedMode ? '#00D1FF' : '#555',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#000', fontWeight: 'bold' }}>Confirmer</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -175,6 +168,3 @@ function ReservationModeModal({
 }
 
 export default ReservationModeModal;
-
-
-

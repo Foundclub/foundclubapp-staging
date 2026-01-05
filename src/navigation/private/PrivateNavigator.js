@@ -9,6 +9,14 @@ import useTheme from '@/theme/themeContext';
 import Stepper from '@/components/atoms/stepper/Stepper';
 import MercatoFilters from '@/views/mercato/MercatoFilters';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
+import MissingPlayersView from '@/views/reservation/MissingPlayersView';
+import BookingCalendar from '@/views/booking/BookingCalendar';
+import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
+import CMDashboard from '@/views/multisportClub/CMDashboard';
+import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
+import CMMembersScreen from '@/views/multisportClub/CMMembersScreen';
+import CMTeamsScreen from '@/views/multisportClub/CMTeamsScreen';
+import CreateSectionScreen from '@/views/multisportClub/CreateSectionScreen';
 import EventFilters from '@/views/event/EventFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
 import UserAvatar from '@/views/onboarding/UserAvatar';
@@ -24,6 +32,8 @@ import UserSport from '@/views/onboarding/UserSport';
 import Welcome from '@/views/onboarding/Welcome';
 import Conversation from '@/views/Conversation';
 import NotificationList from '@/views/notification/NotificationList';
+import FacilityList from '@/views/facility/FacilityList';
+import FacilityForm from '@/views/facility/FacilityForm';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -183,6 +193,70 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={MissingPlayersView}
+        name={RouteNames.MissingPlayersView}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Joueurs recherchés',
+        }}
+      />
+      <Stack.Screen
+        component={BookingCalendar}
+        name={RouteNames.BookingCalendar}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Réserver un créneau',
+        }}
+      />
+      <Stack.Screen
+        component={MultisportClubDetails}
+        name={RouteNames.MultisportClubDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Club Omnisport',
+        }}
+      />
+      <Stack.Screen
+        component={CMDashboard}
+        name="CMDashboard"
+        options={{
+          ...commonOptions,
+          headerTitle: 'Gestion CM',
+        }}
+      />
+      <Stack.Screen
+        component={CMPlanningScreen}
+        name={RouteNames.CMPlanning}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Planning',
+        }}
+      />
+      <Stack.Screen
+        component={CMMembersScreen}
+        name={RouteNames.CMMembers}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Membres',
+        }}
+      />
+      <Stack.Screen
+        component={CMTeamsScreen}
+        name={RouteNames.CMTeams}
+        options={{
+          headerShown: true,
+          title: t('common.teams'),
+        }}
+      />
+      <Stack.Screen
+        component={CreateSectionScreen}
+        name={RouteNames.CreateSection}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Nouvelle section',
+        }}
+      />
+      <Stack.Screen
         component={SearchAlerts}
         name={RouteNames.SearchAlerts}
         options={{
@@ -204,6 +278,23 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: 'Notifications',
+        }}
+      />
+
+      <Stack.Screen
+        component={FacilityList}
+        name={RouteNames.FacilityList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Installations',
+        }}
+      />
+      <Stack.Screen
+        component={FacilityForm}
+        name={RouteNames.FacilityForm}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
         }}
       />
 

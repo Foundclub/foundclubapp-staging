@@ -100,98 +100,138 @@ function ClubListContent() {
       screen: RouteNames.CreateClub,
     });
   };
-
   // renderers
+  /**
+   * Handle multisport club selection - navigates to MultisportClubDetails
+   * @param {string | undefined} documentId
+   */
+  const handleMultisportSelection = useCallback((documentId) => {
+    if (documentId) {
+      // @ts-expect-error because of react navigation type definitions
+      navigation.navigate(RouteNames.MultisportClubDetails, {
+        cmId: documentId,
+      });
+    }
+  }, [navigation]);
+
   /**
    * Render the club item
    * @param {object} param
    * @param {Club} param.item
    * @returns {import('react').ReactElement}
    */
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      key={item.id}
-      onPress={() => handleClubSelection(item.documentId)}
-      style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.gap[16],
-        Spaces.paddingLeft[16],
-        Spaces.paddingVertical[12],
-        Spaces.paddingRight[24],
-        Spaces.marginVertical[8],
-        ApplicationStyle.borderColor.primary200,
-        ApplicationStyle.borderWidth2,
-        ApplicationStyle.borderRadius8,
-      ]}
-    >
-      {item.logo?.url ? (
-        <ProfileAvatar
-          imageUrl={item.logo.url}
-          size={60}
-          style={{ borderRadius: 30 }}
-          imageStyle={{ borderRadius: 30 }}
-        />
-      ) : (
-        <TeamShield
-          initials={getClubInitials(item.name)}
-          isSmall
-          size={60}
-        />
-      )}
-      <View style={[Spaces.gap[4], { maxWidth: '80%' }]}>
-        <Text
-          ellipsizeMode="tail"
-          numberOfLines={1}
-          style={[Fonts.p1Bold, Fonts.neutral00]}
-        >
-          {item.name}
-        </Text>
-        {item.addressDetails ? (
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {getShortAddress(item.addressDetails)}
-          </Text>
-        ) : null}
-        {item.sponsor?.length > 0 && (
-          <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
-            {item.sponsor.slice(0, 5).map((sponsor, idx) => (
-              <View
-                key={sponsor.id || idx}
-                style={[Alignments.alignCenter, Spaces.gap[4], { width: 40 }]}
-              >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: 'white',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Image
-                    source={{ uri: getImageUrl(sponsor.logo?.url) }}
-                    style={{ width: 30, height: 30, resizeMode: 'contain' }}
-                  />
-                </View>
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    Fonts.p4Bold, // Assuming p4Bold exists or using a small font
-                    Fonts.neutral00,
-                    { fontSize: 10, textAlign: 'center', width: '100%' }
-                  ]}
-                >
-                  {sponsor.title || sponsor.name || 'Sponsor'}
+  const renderItem = ({ item }) => {
+    const isMultisport = item._type === 'multisport';
+    
+    return (
+      <TouchableOpacity
+        key={item.id}
+        onPress={() => isMultisport 
+          ? handleMultisportSelection(item.documentId)
+          : handleClubSelection(item.documentId)
+        }
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[16],
+          Spaces.paddingLeft[16],
+          Spaces.paddingVertical[12],
+          Spaces.paddingRight[24],
+          Spaces.marginVertical[8],
+          isMultisport 
+            ? ApplicationStyle.borderColor.primary500
+            : ApplicationStyle.borderColor.primary200,
+          ApplicationStyle.borderWidth2,
+          ApplicationStyle.borderRadius8,
+        ]}
+      >
+        {item.logo?.url ? (
+          <ProfileAvatar
+            imageUrl={item.logo.url}
+            size={60}
+            style={{ borderRadius: 30 }}
+            imageStyle={{ borderRadius: 30 }}
+          />
+        ) : (
+          <TeamShield
+            initials={getClubInitials(item.name)}
+            isSmall
+            size={60}
+          />
+        )}
+        <View style={[Spaces.gap[4], { maxWidth: '70%', flex: 1 }]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={1}
+              style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}
+            >
+              {item.name}
+            </Text>
+            {isMultisport && (
+              <View style={{
+                backgroundColor: '#00BCD4',
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}>
+                <Text style={[Fonts.p3, { color: '#FFFFFF', fontSize: 10 }]}>
+                  OMNISPORT
                 </Text>
               </View>
-            ))}
+            )}
           </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+          {item.addressDetails ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {getShortAddress(item.addressDetails)}
+            </Text>
+          ) : null}
+          {isMultisport && item.sectionsCount > 0 && (
+            <Text style={[Fonts.p2, Fonts.primary500]}>
+              {item.sectionsCount} section{item.sectionsCount > 1 ? 's' : ''}
+            </Text>
+          )}
+          {!isMultisport && item.sponsor?.length > 0 && (
+            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
+              {item.sponsor.slice(0, 5).map((sponsor, idx) => (
+                <View
+                  key={sponsor.id || idx}
+                  style={[Alignments.alignCenter, Spaces.gap[4], { width: 40 }]}
+                >
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: 'white',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <Image
+                      source={{ uri: getImageUrl(sponsor.logo?.url) }}
+                      style={{ width: 30, height: 30, resizeMode: 'contain' }}
+                    />
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.p4Bold,
+                      Fonts.neutral00,
+                      { fontSize: 10, textAlign: 'center', width: '100%' }
+                    ]}
+                  >
+                    {sponsor.title || sponsor.name || 'Sponsor'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyList = () => (
     <EmptyState

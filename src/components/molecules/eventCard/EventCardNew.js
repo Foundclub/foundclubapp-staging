@@ -16,6 +16,8 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useClub from '@/domains/club/useClub';
+import useAuth from '@/domains/auth/useAuth';
+import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -24,6 +26,7 @@ import { getShortAddress } from '@/utils/location';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import Tag from '@/components/atoms/tag/Tag';
 import { RouteNames } from '@/navigation/routeNames';
 
 // Assets
@@ -86,6 +89,24 @@ function EventCardNew({
     } = useTheme();
     const { t } = useTranslation();
     const { getClubInitials } = useClub();
+    const { userData } = useAuth();
+    const { haveIAlreadyJoined } = useEvent();
+
+    // Check if user has already joined (for reservations)
+    const alreadyJoined = haveIAlreadyJoined({
+        participations: item?.participations,
+        userId: userData?.documentId,
+    });
+
+    // Booking status for reservations
+    const bookingStatus = item?.bookingStatus || 'open';
+    const isLastMinuteAlert = item?.isLastMinuteAlert || false;
+    const currentPlayers = item?.currentPlayers || 0;
+    const totalPlayers = item?.totalPlayers || 4;
+    const missingPlayers = item?.missingPlayers || (totalPlayers - currentPlayers);
+    const fillPercentage = totalPlayers > 0 ? (currentPlayers / totalPlayers) * 100 : 0;
+    const isShared = bookingStatus === 'shared';
+    const isBooked = bookingStatus === 'booked';
 
     const scale = useSharedValue(1);
     const opacity = useSharedValue(1);
@@ -153,9 +174,9 @@ function EventCardNew({
 
                 {/* Non-interactive Content (Passes touches to background Pressable) */}
                 <View pointerEvents="none">
-                    {/* Header: Event Type */}
+                    {/* Header: Event Type or Sport for Reservations */}
                     <View style={styles.headerContainer}>
-                        <Text style={styles.headerText}>{headerTitle}</Text>
+                        <Text style={styles.headerText}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
                     </View>
 
                     {/* Club / Team Info */}
@@ -185,9 +206,11 @@ function EventCardNew({
                     {/* Date + Time (Hidden for reservations as it's in details) */}
                     {item?.date && !isReservation && (
                         <View style={styles.dateTimeContainer}>
-                            <Text style={styles.dateText}>
-                                {format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase()}
-                            </Text>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={styles.dateText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                                    {format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase()}
+                                </Text>
+                            </View>
                             <Text style={styles.timeText}>
                                 {item.startTime && item.endTime
                                     ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
@@ -200,40 +223,84 @@ function EventCardNew({
                     <View style={styles.detailsContainer}>
                         {isReservation ? (
                             <>
-                                {/* Line 1: Price + Max Participants | Sport */}
+                                {/* Reservation Layout - Similar to Events */}
+                                {/* Date Row (Prominent) */}
+                                {item?.date && (
+                                    <View style={styles.dateTimeContainer}>
+                                        <View style={{ flex: 1, marginRight: 8 }}>
+                                            <Text style={styles.dateText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                                                {format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase()}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.timeText}>
+                                            {item.startTime && item.endTime
+                                                ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
+                                                : (item.startTime ? item.startTime.substring(0, 5) : '')}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* Status Badges */}
+                                {(isLastMinuteAlert || isShared || isBooked) && (
+                                    <View style={styles.statusBadgesRow}>
+                                        {isLastMinuteAlert && (
+                                            <View style={[styles.statusBadge, styles.sosBadge]}>
+                                                <Text style={styles.statusBadgeText}>🔥 Dernière minute</Text>
+                                            </View>
+                                        )}
+                                        {isShared && !isLastMinuteAlert && (
+                                            <View style={[styles.statusBadge, styles.sharedBadge]}>
+                                                <Text style={styles.statusBadgeText}>👥 Joueurs recherchés</Text>
+                                            </View>
+                                        )}
+                                        {isBooked && (
+                                            <View style={[styles.statusBadge, styles.bookedBadge]}>
+                                                <Text style={styles.statusBadgeText}>✅ Complet</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+
+                                {/* Fill Gauge for shared reservations */}
+                                {isShared && (
+                                    <View style={styles.fillGaugeContainer}>
+                                        <View style={styles.fillGaugeBackground}>
+                                            <View 
+                                                style={[
+                                                    styles.fillGaugeFill, 
+                                                    { 
+                                                        width: `${fillPercentage}%`,
+                                                        backgroundColor: isLastMinuteAlert ? '#FF6B35' : '#01B3F4' 
+                                                    }
+                                                ]} 
+                                            />
+                                        </View>
+                                        <Text style={styles.fillGaugeText}>
+                                            {missingPlayers > 0 
+                                                ? `Il manque ${missingPlayers} joueur${missingPlayers > 1 ? 's' : ''} (${currentPlayers}/${totalPlayers})`
+                                                : `${currentPlayers}/${totalPlayers} joueurs`
+                                            }
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* Price + Players Row */}
                                 <View style={styles.detailRow}>
                                     <View style={styles.detailLeft}>
                                         <Image source={Images.euroCircle} style={styles.icon} />
                                         <Text style={styles.detailText} numberOfLines={1}>
-                                            {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€` : ''}
-                                            {item.totalPlayers ? ` - ${item.totalPlayers} personnes` : ''}
+                                            {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€ / pers` : 'Prix non défini'}
                                         </Text>
                                     </View>
                                     <View style={styles.detailRight}>
                                         <Image source={Images.running} style={styles.icon} />
                                         <Text style={styles.detailText} numberOfLines={1}>
-                                            {item.activity?.name || sportName}
+                                            {!isShared && totalPlayers ? `${totalPlayers} joueurs` : (sportName || 'Sport')}
                                         </Text>
                                     </View>
                                 </View>
 
-                                {/* Line 2: Time Range | Date */}
-                                <View style={styles.detailRow}>
-                                    <View style={styles.detailLeft}>
-                                        <Image source={Images.clock} style={styles.icon} />
-                                        <Text style={styles.detailText} numberOfLines={1}>
-                                            {item.startTime && item.endTime ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}` : (item.startTime || '')}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRight}>
-                                        <Image source={Images.calendar} style={styles.icon} />
-                                        <Text style={styles.detailText} numberOfLines={1}>
-                                            {item.date ? format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase() : ''}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {/* Line 3: Location */}
+                                {/* Location Row */}
                                 <View style={styles.detailRow}>
                                     <Image source={Images.pin} style={styles.icon} />
                                     <Text style={styles.detailText} numberOfLines={1}>
@@ -322,14 +389,23 @@ function EventCardNew({
                             </TouchableOpacity>
                         </View>
                     ) : isReservation ? (
-                        <Pressable
-                            onPress={() => onParticipate?.(item)}
-                            style={styles.reservationButton}
-                        >
-                            <Text style={styles.reservationButtonText}>
-                                {actionLabel || t('reservation.actions.participate') || 'Réserver'}
-                            </Text>
-                        </Pressable>
+                        alreadyJoined ? (
+                            <View style={[Alignments.fullWidth]}>
+                                <Tag
+                                    text={t('eventList.info.alreadyJoined', 'Je participe !')}
+                                    textStyle={Fonts.p1Bold}
+                                />
+                            </View>
+                        ) : (
+                            <Pressable
+                                onPress={() => onParticipate?.(item)}
+                                style={styles.reservationButton}
+                            >
+                                <Text style={styles.reservationButtonText}>
+                                    {actionLabel || t('reservation.actions.participate') || 'Réserver'}
+                                </Text>
+                            </Pressable>
+                        )
                     ) : (
                         <EventAnswerButtons
                             event={item}
@@ -428,6 +504,50 @@ const styles = StyleSheet.create({
     },
     detailsContainer: {
         gap: 4,
+    },
+    statusBadgesRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 8,
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    sosBadge: {
+        backgroundColor: 'rgba(255, 107, 53, 0.9)',
+    },
+    sharedBadge: {
+        backgroundColor: 'rgba(255, 193, 7, 0.9)',
+    },
+    bookedBadge: {
+        backgroundColor: 'rgba(76, 175, 80, 0.9)',
+    },
+    statusBadgeText: {
+        fontFamily: 'Montserrat-Bold',
+        fontSize: 11,
+        color: '#FFFFFF',
+    },
+    fillGaugeContainer: {
+        marginBottom: 8,
+    },
+    fillGaugeBackground: {
+        height: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 4,
+    },
+    fillGaugeFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    fillGaugeText: {
+        fontFamily: 'Montserrat-SemiBold',
+        fontSize: 12,
+        color: '#FFFFFF',
     },
     detailRow: {
         flexDirection: 'row',

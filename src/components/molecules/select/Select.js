@@ -27,7 +27,7 @@ const Select = ({ label, options, value, onSelect, error, placeholder }) => {
                     error && { borderColor: Colors.error500 },
                 ]}
             >
-                <Text style={[Fonts.p1, selectedOption ? Fonts.neutral900 : Fonts.neutral500]}>
+                <Text style={[Fonts.p1, selectedOption ? Fonts.primary500 : Fonts.neutral500]}>
                     {selectedOption ? selectedOption.label : placeholder || 'Sélectionner'}
                 </Text>
             </TouchableOpacity>
@@ -36,8 +36,9 @@ const Select = ({ label, options, value, onSelect, error, placeholder }) => {
             <BottomModal
                 isVisible={isVisible}
                 close={() => setIsVisible(false)}
+                hideCloseButton
             >
-                <ScrollView contentContainerStyle={[Spaces.gap[16]]}>
+                <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingTop[24]]}>
                     {options.map((opt) => (
                         <TouchableOpacity
                             key={opt.value}
@@ -49,7 +50,7 @@ const Select = ({ label, options, value, onSelect, error, placeholder }) => {
                                 opt.value === value && ApplicationStyle.backgroundColor.primary100,
                             ]}
                         >
-                            <Text style={[Fonts.p1Bold, Fonts.neutral900]}>{opt.label}</Text>
+                            <Text style={[Fonts.p1Bold, Fonts.primary500]}>{opt.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>

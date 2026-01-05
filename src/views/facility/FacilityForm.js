@@ -66,12 +66,15 @@ const FacilityForm = () => {
 
     const onSubmit = async (data) => {
         console.log('onSubmit triggered', data);
-        console.log('userData:', userData);
-        const clubId = userData?.club?.documentId || userData?.club?.id;
-        console.log('clubId:', clubId);
+        
+        // Priority to route params (passed from FacilityList/CMDashboard), fallback to userData
+        const clubId = route.params?.clubId || (userData?.club?.documentId || userData?.club?.id);
+        const cmId = route.params?.cmId;
+        
+        console.log('Context:', { clubId, cmId });
 
-        if (!clubId) {
-            console.error('Club ID missing', userData);
+        if (!clubId && !cmId) {
+            console.error('Club ID or CM ID missing', userData);
             Alert.alert('Erreur', 'Impossible de récupérer les informations du club.');
             return;
         }
@@ -94,7 +97,13 @@ const FacilityForm = () => {
             if (isEdit) {
                 await updateFacility(facility.documentId, formattedData);
             } else {
-                await createFacility({ ...formattedData, club: clubId });
+                if (cmId) {
+                    // Create for Multisport Club
+                    await createFacility({ ...formattedData, multisportClub: cmId });
+                } else {
+                    // Create for regular Club
+                    await createFacility({ ...formattedData, club: clubId });
+                }
             }
             navigation.goBack();
         } catch (error) {
