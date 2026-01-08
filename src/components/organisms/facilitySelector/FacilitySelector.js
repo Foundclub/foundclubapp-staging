@@ -38,6 +38,7 @@ const FacilitySelector = ({ clubId, cmId, location, facilityId, onChange, error 
         enabled: !!cmId,
     });
 
+
     // Merge club facilities and CM facilities
     const facilities = useMemo(() => {
         const clubFacilities = clubFacilitiesData?.data || [];

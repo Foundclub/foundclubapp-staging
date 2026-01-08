@@ -27,6 +27,7 @@ const initialState = {
 
   // Meta
   description: '',
+  sessionStatus: 'open', // Default to open
   capacity: null,
   pricePerPerson: null,
   totalPlayers: null,

@@ -15,6 +15,8 @@ import EventWizardType from '@/views/event/wizard/EventWizardType';
 import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
+import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
+import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
 
@@ -93,6 +95,16 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardLogistics}
           name={RouteNames.EventWizardLogistics}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardDescription}
+          name={RouteNames.EventWizardDescription}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardVisibility}
+          name={RouteNames.EventWizardVisibility}
           options={{ headerShown: false }}
         />
         <Stack.Screen

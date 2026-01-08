@@ -8,6 +8,7 @@ const chatMessageSchema = Joi.object({
   message: Joi.string().required(),
   sender: Joi.object().required(),
   updatedAt: Joi.date().required(),
+  event: Joi.object().optional().allow(null),
 }).required();
 
 const chatSchema = Joi.object({
@@ -18,7 +19,7 @@ const chatSchema = Joi.object({
     Joi.array().length(0),
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),
-  type: Joi.string().valid('whisper', 'club', 'team').required(),
+  type: Joi.string().valid('whisper', 'club', 'team', 'multisport').required(),
   updatedAt: Joi.date().required(),
 }).required();
 
@@ -75,7 +76,9 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
       },
       populate: {
         club: {
-          populate: '*',
+          populate: {
+             logo: true,
+          },
         },
         messages: {
           populate: ['sender', 'sender.avatar'],
@@ -84,12 +87,24 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         participants: {
           populate: ['avatar'],
         },
+        multisportClub: {
+          populate: {
+             logo: true,
+             admins: true,
+          },
+        },
         team: {
-          populate: '*',
+          populate: true, 
         },
       },
       sort: [
-        // Sort by type to get clubs first, then teams, then whispers
+        // Sort by type: whisper(w) > team(t) > multisport(m) > club(c)
+        // Ideally we want Multisport top.
+        // Let's try desc first? No, we might need custom sort in frontend. 
+        // For now, let's keep type:asc (c, m, t, w) or type:desc (w, t, m, c).
+        // User wants Multisport then Club.
+        // Let's change to desc hoping for M > C, but it implies W > T > M > C.
+        // We will fix sort in frontend.
         'type:asc',
         // Then sort by most recent message
         'updatedAt:desc',
@@ -123,7 +138,9 @@ export const getChatById = async (chatId) => {
       chat: chatId,
       populate: {
         club: {
-          populate: '*',
+          populate: {
+            logo: true,
+          },
         },
         messages: {
           populate: ['sender', 'sender.avatar'],
@@ -132,8 +149,14 @@ export const getChatById = async (chatId) => {
         participants: {
           populate: ['avatar'],
         },
+        multisportClub: {
+          populate: {
+            logo: true,
+            admins: true,
+          },
+        },
         team: {
-          populate: '*',
+          populate: true,
         },
       },
     },
@@ -184,6 +207,7 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
         sender: {
           populate: ['avatar'],
         },
+        event: true,
       },
       sort: ['createdAt:desc'],
     },
@@ -219,11 +243,12 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
  * @param {string} params.message - The message text
  * @returns {Promise<ChatMessage>}
  */
-export const createChatMessage = async ({ chatId, message }) => {
+export const createChatMessage = async ({ chatId, message, event }) => {
   const response = await client.post('/chat-messages', {
     data: {
       chat: chatId,
       message,
+      event,
     },
   });
 

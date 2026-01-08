@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * StatRow component - displays a player's statistics in a row
@@ -14,8 +15,8 @@ import useTheme from '@/theme/themeContext';
 const StatRow = ({ player, columns, isEven = false }) => {
   const { Alignments, Colors, Fonts, Images, Spaces } = useTheme();
 
-  const avatarSource = player.user?.avatar?.url
-    ? { uri: player.user.avatar.url }
+  const avatarSource = player.user?.avatar
+    ? { uri: getImageUrl(player.user.avatar) }
     : Images.roundAvatar;
 
   return (
@@ -26,28 +27,35 @@ const StatRow = ({ player, columns, isEven = false }) => {
         Spaces.padding[12],
         Spaces.gap[12],
         {
-          backgroundColor: isEven ? Colors.neutral800 : Colors.neutral900,
-          borderRadius: 8,
+          backgroundColor: isEven ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: isEven ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
         },
       ]}
     >
-      {/* Avatar + Name */}
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+      {/* Player Column - Bigger Avatar and Name */}
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 2 }]}>
         <Image
           source={avatarSource}
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: Colors.neutral700,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            borderColor: Colors.neutral600,
           }}
         />
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]} numberOfLines={1}>
-            {player.user?.firstname} {player.user?.lastname}
+            {player.user?.firstname}
+          </Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]} numberOfLines={1}>
+             {player.user?.lastname}
           </Text>
           {player.user?.position && (
-            <Text style={[Fonts.p3, { color: Colors.neutral400 }]} numberOfLines={1}>
+            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]} numberOfLines={1}>
               {player.user.position}
             </Text>
           )}
@@ -61,19 +69,27 @@ const StatRow = ({ player, columns, isEven = false }) => {
             key={col.key}
             style={[
               Alignments.alignCenter,
+              Alignments.justifyCenter,
               {
-                width: 40,
-                paddingVertical: 4,
-                paddingHorizontal: 2,
-                backgroundColor: col.isPrimary ? Colors.primary500 + '20' : 'transparent',
-                borderRadius: 4,
+                width: 44,
+                paddingVertical: 6,
+                backgroundColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.15)' : 'transparent', 
+                borderRadius: 8,
+                borderWidth: col.key === 'attendanceCount' ? 1 : 0,
+                borderColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.3)' : 'transparent',
               },
             ]}
           >
             <Text
               style={[
                 Fonts.p3Bold,
-                { color: col.isPrimary ? Colors.primary500 : Colors.neutral200 },
+                { 
+                  color: col.key === 'attendanceCount' ? '#4ade80' : 
+                         col.key === 'absenceCount' ? '#f87171' : // Red for Absence
+                         col.key === 'retardCount' ? '#fbbf24' : // Amber for Retard 
+                         Colors.neutral100, 
+                  textAlign: 'center' 
+                },
               ]}
             >
               {player[col.key] ?? 0}

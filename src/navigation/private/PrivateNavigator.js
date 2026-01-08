@@ -12,6 +12,7 @@ import ReservationFilters from '@/views/reservation/ReservationFilters';
 import MissingPlayersView from '@/views/reservation/MissingPlayersView';
 import BookingCalendar from '@/views/booking/BookingCalendar';
 import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
+import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScreen';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
 import CMMembersScreen from '@/views/multisportClub/CMMembersScreen';
@@ -214,6 +215,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: 'Club Omnisport',
+        }}
+      />
+      <Stack.Screen
+        component={FeaturedRequestsScreen}
+        name={RouteNames.FeaturedRequests}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Demandes à la une',
         }}
       />
       <Stack.Screen

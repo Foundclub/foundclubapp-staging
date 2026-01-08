@@ -56,7 +56,8 @@ const EventWizardRecap = ({ navigation }) => {
       isRecurrent: state.isRecurrent,
       recurrenceFrequency: state.recurrenceFrequency || 'week',
       validationMode: 'auto',
-      sessionStatus: 'open',
+      sessionStatus: state.sessionStatus || 'open',
+      description: state.description,
       // Reservation-specific fields
       ...(isReservation && {
         pricePerPerson: state.pricePerPerson,
@@ -159,6 +160,14 @@ const EventWizardRecap = ({ navigation }) => {
               <Text style={[Fonts.p2, Fonts.neutral200]}>Lieu</Text>
               <Text style={[Fonts.h4, Fonts.neutral00]}>{getLocationDisplayText()}</Text>
             </View>
+
+            {/* Description */}
+            {state.description ? (
+              <View>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>Description</Text>
+                <Text style={[Fonts.p1, Fonts.neutral00]} numberOfLines={3}>{state.description}</Text>
+              </View>
+            ) : null}
 
             {/* Reservation Details */}
             {isReservation && (

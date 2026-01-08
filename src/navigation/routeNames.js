@@ -41,6 +41,7 @@ export const RouteNames = /** @type {const} */ ({
   HighlightRequestsInbox: 'HighlightRequestsInbox',
   CreateSection: 'CreateSection',
   MultisportClubDetails: 'MultisportClubDetails',
+  FeaturedRequests: 'FeaturedRequests',
   CMDashboard: 'CMDashboard',
   CMMembers: 'CMMembers',
   CMTeams: 'CMTeams',
@@ -78,6 +79,8 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardTeam: 'EventWizardTeam',
   EventWizardInvites: 'EventWizardInvites',
   EventWizardLogistics: 'EventWizardLogistics',
+  EventWizardDescription: 'EventWizardDescription',
+  EventWizardVisibility: 'EventWizardVisibility',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardRecap: 'EventWizardRecap',
   

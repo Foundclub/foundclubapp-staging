@@ -56,7 +56,8 @@ const EventWizardLogistics = ({ navigation }) => {
       date: fullStartDate.toISOString(), // Store combined entry
       startTime: fullStartDate.toISOString(), 
       endTime: fullEndDate.toISOString(), 
-      isRecurrent 
+      isRecurrent, 
+      // description handled in next step
     };
 
     // Add reservation fields if applicable
@@ -69,7 +70,8 @@ const EventWizardLogistics = ({ navigation }) => {
       type: 'SET_LOGISTICS', 
       payload 
     });
-    navigation.navigate(RouteNames.EventWizardLocation);
+    // Navigate to Description step instead of Location
+    navigation.navigate(RouteNames.EventWizardDescription);
   };
 
   return (

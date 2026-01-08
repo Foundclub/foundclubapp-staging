@@ -1,5 +1,5 @@
 import {
-  BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView,
+  BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView, BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@react-native-community/blur';
 import {
@@ -37,6 +37,7 @@ function BottomModal({
   footerComponent,
   hideCloseButton = false,
   isVisible,
+  scrollable = true,
   style,
 }) {
   /**
@@ -134,21 +135,27 @@ function BottomModal({
           </View>
         )}
 
-        {/* Scrollable Content */}
-        <BottomSheetScrollView
-          contentContainerStyle={[
-            Spaces.paddingHorizontal[24],
-            // If there's no footer, add some bottom padding for scroll
-            footerComponent ? Spaces.paddingBottom[16] : Spaces.paddingBottom[40],
-            { minHeight: 100 },
-            contentContainerStyle,
-          ]}
-          style={[
-            { maxHeight: Dimensions.get('screen').height * 0.7 },
-          ]}
-        >
-          {children}
-        </BottomSheetScrollView>
+        {/* Content */}
+        {scrollable ? (
+          <BottomSheetScrollView
+            contentContainerStyle={[
+              Spaces.paddingHorizontal[24],
+              // If there's no footer, add some bottom padding for scroll
+              footerComponent ? Spaces.paddingBottom[16] : Spaces.paddingBottom[40],
+              { minHeight: 100 },
+              contentContainerStyle,
+            ]}
+            style={[
+              { maxHeight: Dimensions.get('screen').height * 0.7 },
+            ]}
+          >
+            {children}
+          </BottomSheetScrollView>
+        ) : (
+          <BottomSheetView style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
+            {children}
+          </BottomSheetView>
+        )}
 
         {/* Fixed Footer */}
         {footerComponent && (

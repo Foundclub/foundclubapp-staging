@@ -14,6 +14,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
+import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import { useGetEvents } from '@/services/event/eventQueries';
 import useTheme from '@/theme/themeContext';
@@ -63,6 +64,28 @@ function MyEventList({ navigation }) {
   });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
+
+  // Get user's club and CM IDs for featured events membership filtering
+  const userClubId = userData?.club?.documentId;
+  const teamCmIds = userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+  const allClubIds = [userClubId, ...teamCmIds].filter(Boolean);
+
+  // Fetch SECTION/CM featured events for Mon Planning
+  const {
+    data: featuredData,
+    isLoading: isFeaturedLoading,
+  } = useGetEvents({
+    isFeatured: true,
+    featuredScope: ['SECTION', 'CM'],
+    membershipClubIds: allClubIds.length ? allClubIds : undefined,
+    sessionStatus: 'open',
+    pageSize: 5,
+  }, { enabled: allClubIds.length > 0 });
+
+  const featuredEvents = useMemo(() => 
+    featuredData?.pages?.flatMap((page) => page.data) || [], 
+    [featuredData]
+  );
 
   // Filter events for the list (starting from listStartDate)
   const listEvents = useMemo(() => {
@@ -184,6 +207,16 @@ function MyEventList({ navigation }) {
         <View>
           <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
         </View>
+
+        {/* Featured Events Carousel */}
+        {featuredEvents.length > 0 && (
+          <View style={[Spaces.marginTop[16]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
+              ⭐ À la une dans mon club
+            </Text>
+            <FeaturedEvents events={featuredEvents} />
+          </View>
+        )}
 
         {/* List Header Section */}
         <View style={[Spaces.marginTop[16]]}>

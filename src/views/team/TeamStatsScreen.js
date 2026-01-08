@@ -15,53 +15,12 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @returns {Array<{key: string, label: string, isPrimary?: boolean}>}
  */
 const getColumnsForSport = (sport) => {
-  // Base columns (always shown)
-  const baseColumns = [
-    { key: 'attendanceCount', label: 'Prés.', isPrimary: true },
+  // We only show Presence, Absence, Retard for ALL sports as requested
+  return [
+    { key: 'attendanceCount', label: 'Prés.' },
     { key: 'absenceCount', label: 'Abs.' },
-    { key: 'convocationCount', label: 'Conv.' },
+    { key: 'retardCount', label: 'Ret.' }, // Retard
   ];
-
-  // Sport-specific performance columns (V1: show with 0 values)
-  const sportKey = (sport || 'generic').toLowerCase();
-
-  switch (sportKey) {
-    case 'football':
-      return [
-        ...baseColumns,
-        { key: 'stat1', label: 'Buts' },
-        { key: 'stat2', label: 'Passes' },
-      ];
-    case 'basket':
-    case 'basketball':
-      return [
-        ...baseColumns,
-        { key: 'stat1', label: 'Pts' },
-        { key: 'stat2', label: 'Passes' },
-      ];
-    case 'rugby':
-      return [
-        ...baseColumns,
-        { key: 'stat1', label: 'Essais' },
-        { key: 'stat2', label: 'Pts' },
-      ];
-    case 'handball':
-      return [
-        ...baseColumns,
-        { key: 'stat1', label: 'Buts' },
-        { key: 'stat2', label: 'Passes' },
-      ];
-    case 'volleyball':
-    case 'volley':
-      return [
-        ...baseColumns,
-        { key: 'stat1', label: 'Pts' },
-        { key: 'stat2', label: 'Aces' },
-      ];
-    default:
-      // Generic sports: only show base columns
-      return baseColumns;
-  }
 };
 
 /**
@@ -83,38 +42,55 @@ function TeamStatsScreen({ route }) {
   const teamName = statsData?.teamName || routeTeamName || 'Équipe';
 
   const renderHeader = () => (
-    <View style={[Spaces.marginBottom[16]]}>
-      {/* Stats Summary */}
+    <View style={[Spaces.marginBottom[24], Spaces.paddingHorizontal[4]]}>
+      {/* Stats Summary Card with Glass effect */}
       <View
         style={[
           Alignments.row,
           Alignments.justifySpaceBetween,
-          Spaces.padding[16],
+          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[20],
           {
-            backgroundColor: Colors.neutral800,
-            borderRadius: 12,
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 16,
             borderWidth: 1,
-            borderColor: Colors.neutral700,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           },
         ]}
       >
-        <View style={[Alignments.alignCenter]}>
-          <Text style={[Fonts.h2Bold, { color: Colors.primary500 }]}>
+        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+          <Text style={[Fonts.h1, { color: Colors.primary500, fontSize: 32, lineHeight: 40, textAlign: 'center' }]}>
             {statsData?.data?.length || 0}
           </Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Joueurs</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}>Joueurs</Text>
         </View>
-        <View style={[Alignments.alignCenter]}>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral100 }]}>
+        
+        <View style={{ width: 1, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+          <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32, lineHeight: 40, textAlign: 'center' }]}>
             {statsData?.totalEvents || 0}
           </Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Événements</Text>
+          <Text 
+            adjustsFontSizeToFit 
+            numberOfLines={1} 
+            style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}
+          >
+            Événements
+          </Text>
         </View>
-        <View style={[Alignments.alignCenter]}>
-          <Text style={[Fonts.h2Bold, { color: Colors.neutral100 }]}>
+        
+        <View style={{ width: 1, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+        <View style={[Alignments.alignCenter, { flex: 1 }]}>
+          <Text 
+            adjustsFontSizeToFit 
+            numberOfLines={1}
+            style={[Fonts.h3Bold, { color: Colors.neutral00, textTransform: 'capitalize', textAlign: 'center' }]}
+          >
             {statsData?.sport || '-'}
           </Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Sport</Text>
+           <Text style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}>Sport</Text>
         </View>
       </View>
 
@@ -123,18 +99,18 @@ function TeamStatsScreen({ route }) {
         style={[
           Alignments.row,
           Alignments.alignCenter,
-          Spaces.paddingHorizontal[12],
-          Spaces.paddingVertical[8],
-          Spaces.marginTop[16],
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[12],
+          Spaces.marginTop[24],
         ]}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.neutral400, flex: 1 }]}>
+        <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
           Joueur
         </Text>
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {columns.map((col) => (
-            <View key={col.key} style={[Alignments.alignCenter, { width: 40 }]}>
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
+            <View key={col.key} style={[Alignments.alignCenter, { width: 44, justifyContent: 'center' }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.neutral300, textTransform: 'uppercase', textAlign: 'center' }]}>
                 {col.label}
               </Text>
             </View>

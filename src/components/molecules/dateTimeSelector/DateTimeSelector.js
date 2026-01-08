@@ -1,18 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import useTheme from '@/theme/themeContext';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import Button from '@/components/atoms/button/Button';
 
-const ITEM_HEIGHT = 44;
+const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 
 /**
- * A Pure JavaScript Date/Time Selector with iOS-style wheel picker.
- * NO NATIVE MODULES REQUIRED.
+ * A Premium Date/Time Selector using the App's standardized BottomModal.
+ * Solves Android visibility issues by using the @gorhom/bottom-sheet Portal system.
  */
 const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
   const { Colors, Fonts, Spaces } = useTheme();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
 
   const getFormattedValue = () => {
@@ -23,14 +25,18 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
     return value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleConfirm = () => {
-    onChange(tempDate);
-    setModalVisible(false);
+  const handleOpen = () => {
+    setTempDate(value ? new Date(value) : new Date());
+    setIsOpen(true);
   };
 
-  const handleCancel = () => {
-    setTempDate(value || new Date());
-    setModalVisible(false);
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
+  const handleConfirm = () => {
+    onChange(tempDate);
+    handleClose();
   };
 
   // Generate data
@@ -46,61 +52,50 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
     });
   };
   
-  const days = generateDaysWithWeekday(tempDate.getMonth(), tempDate.getFullYear());
-  const months = [
+  const days = useMemo(() => generateDaysWithWeekday(tempDate.getMonth(), tempDate.getFullYear()), [tempDate.getMonth(), tempDate.getFullYear()]);
+  const months = useMemo(() => [
     { label: 'Jan', value: 0 }, { label: 'Fév', value: 1 }, { label: 'Mar', value: 2 },
     { label: 'Avr', value: 3 }, { label: 'Mai', value: 4 }, { label: 'Juin', value: 5 },
     { label: 'Juil', value: 6 }, { label: 'Août', value: 7 }, { label: 'Sep', value: 8 },
     { label: 'Oct', value: 9 }, { label: 'Nov', value: 10 }, { label: 'Déc', value: 11 }
-  ];
+  ], []);
+  
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
+  const years = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear + i), [currentYear]);
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
 
   // Wheel Picker Component
   const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80 }) => {
     const flatListRef = useRef(null);
-    const isScrolling = useRef(false);
     const selectedIndex = data.findIndex(item => 
       typeof item === 'object' ? item.value === selectedValue : item === selectedValue
     );
 
+    // Initial scroll
     useEffect(() => {
-      if (flatListRef.current && selectedIndex >= 0 && modalVisible) {
+      if (flatListRef.current && selectedIndex >= 0 && isOpen) {
         // Use timeout to ensure FlatList is mounted
         const timer = setTimeout(() => {
           flatListRef.current?.scrollToOffset({ 
             offset: selectedIndex * ITEM_HEIGHT, 
             animated: false 
           });
-        }, 150);
+        }, 200);
         return () => clearTimeout(timer);
       }
-    }, [modalVisible, selectedIndex]);
-
-    const handleScroll = (event) => {
-      isScrolling.current = true;
-    };
+    }, [isOpen]);
 
     const handleScrollComplete = (event) => {
-      isScrolling.current = false;
       const offsetY = event.nativeEvent.contentOffset.y;
       const index = Math.round(offsetY / ITEM_HEIGHT);
       const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
       const item = data[clampedIndex];
       const newValue = typeof item === 'object' ? item.value : item;
       
-      // Only update if value changed
       if (newValue !== selectedValue) {
         onValueChange(newValue);
       }
-      
-      // Snap to exact position
-      flatListRef.current?.scrollToOffset({
-        offset: clampedIndex * ITEM_HEIGHT,
-        animated: true
-      });
     };
 
     const renderItem = ({ item, index }) => {
@@ -150,22 +145,12 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
           snapToAlignment="start"
           decelerationRate="fast"
           bounces={false}
-          overScrollMode="never"
-          onScroll={handleScroll}
           onMomentumScrollEnd={handleScrollComplete}
           onScrollEndDrag={(e) => {
-            // On iOS, if user releases without momentum, this fires instead
-            // Check if momentum will happen, if not handle here
-            const velocity = e.nativeEvent.velocity?.y || 0;
-            if (Math.abs(velocity) < 0.5) {
-              handleScrollComplete(e);
-            }
+             handleScrollComplete(e);
           }}
           getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
           contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-          onScrollToIndexFailed={() => {}}
-          nestedScrollEnabled={true}
-          scrollEventThrottle={16}
         />
       </View>
     );
@@ -179,98 +164,92 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
         </Text>
       )}
 
+      {/* Button to open Modal */}
       <TouchableOpacity
-        onPress={() => {
-          setTempDate(value || new Date());
-          setModalVisible(true);
-        }}
+        onPress={handleOpen}
         style={[styles.inputButton, { borderColor: Colors.neutral700, backgroundColor: Colors.neutral800 }]}
+        activeOpacity={0.8}
       >
         <Text style={[Fonts.p1, Fonts.neutral00]}>{getFormattedValue()}</Text>
       </TouchableOpacity>
 
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={handleCancel}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: Colors.neutral900 }]}>
-            <View style={styles.modalHeader}>
-              <View style={[styles.modalHandle, { backgroundColor: Colors.neutral500 }]} />
-              <Text style={[Fonts.h3, Fonts.neutral00, { marginTop: 16, textAlign: 'center' }]}>
-                {mode === 'date' ? 'Choisir la date' : 'Choisir l\'heure'}
-              </Text>
-            </View>
-
-            <View style={styles.pickersRow}>
-              {mode === 'date' ? (
-                <>
-                  <WheelPicker
-                    data={days}
-                    selectedValue={tempDate.getDate()}
-                    onValueChange={(d) => {
-                      const newDate = new Date(tempDate);
-                      newDate.setDate(d);
-                      setTempDate(newDate);
-                    }}
-                    width={70}
-                  />
-                  <WheelPicker
-                    data={months}
-                    selectedValue={tempDate.getMonth()}
-                    onValueChange={(m) => {
-                      const newDate = new Date(tempDate);
-                      newDate.setMonth(m);
-                      setTempDate(newDate);
-                    }}
-                    width={90}
-                  />
-                  <WheelPicker
-                    data={years}
-                    selectedValue={tempDate.getFullYear()}
-                    onValueChange={(y) => {
-                      const newDate = new Date(tempDate);
-                      newDate.setFullYear(y);
-                      setTempDate(newDate);
-                    }}
-                    width={90}
-                  />
-                </>
-              ) : (
-                <>
-                  <WheelPicker
-                    data={hours}
-                    selectedValue={tempDate.getHours()}
-                    onValueChange={(h) => {
-                      const newDate = new Date(tempDate);
-                      newDate.setHours(h);
-                      setTempDate(newDate);
-                    }}
-                    width={80}
-                  />
-                  <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
-                  <WheelPicker
-                    data={minutes}
-                    selectedValue={tempDate.getMinutes()}
-                    onValueChange={(m) => {
-                      const newDate = new Date(tempDate);
-                      newDate.setMinutes(m);
-                      setTempDate(newDate);
-                    }}
-                    width={80}
-                  />
-                </>
-              )}
-            </View>
-
-            <View style={styles.buttonsRow}>
-              <TouchableOpacity onPress={handleCancel} style={[styles.button, { backgroundColor: Colors.neutral700 }]}>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirm} style={[styles.button, { backgroundColor: Colors.primary500 }]}>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>Confirmer</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Reusing App's BottomModal which uses @gorhom/bottom-sheet */}
+      <BottomModal
+        isVisible={isOpen}
+        close={handleClose}
+        scrollable={false}
+        hideCloseButton={true}
+        style={{ backgroundColor: Colors.neutral900 }}
+      >
+          <View style={styles.pickersRow}>
+            {mode === 'date' ? (
+              <>
+                <WheelPicker
+                  data={days}
+                  selectedValue={tempDate.getDate()}
+                  onValueChange={(d) => {
+                    const newDate = new Date(tempDate);
+                    newDate.setDate(d);
+                    setTempDate(newDate);
+                  }}
+                  width={70}
+                />
+                <WheelPicker
+                  data={months}
+                  selectedValue={tempDate.getMonth()}
+                  onValueChange={(m) => {
+                    const newDate = new Date(tempDate);
+                    newDate.setMonth(m);
+                    setTempDate(newDate);
+                  }}
+                  width={90}
+                />
+                <WheelPicker
+                  data={years}
+                  selectedValue={tempDate.getFullYear()}
+                  onValueChange={(y) => {
+                    const newDate = new Date(tempDate);
+                    newDate.setFullYear(y);
+                    setTempDate(newDate);
+                  }}
+                  width={90}
+                />
+              </>
+            ) : (
+              <>
+                <WheelPicker
+                  data={hours}
+                  selectedValue={tempDate.getHours()}
+                  onValueChange={(h) => {
+                    const newDate = new Date(tempDate);
+                    newDate.setHours(h);
+                    setTempDate(newDate);
+                  }}
+                  width={80}
+                />
+                <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
+                <WheelPicker
+                  data={minutes}
+                  selectedValue={tempDate.getMinutes()}
+                  onValueChange={(m) => {
+                    const newDate = new Date(tempDate);
+                    newDate.setMinutes(m);
+                    setTempDate(newDate);
+                  }}
+                  width={80}
+                />
+              </>
+            )}
           </View>
-        </View>
-      </Modal>
+          
+          <View style={[Spaces.marginTop[16], Spaces.marginBottom[24]]}>
+            <Button 
+                variant="Primary" 
+                title="Confirmer" 
+                onPress={handleConfirm} 
+            />
+          </View>
+      </BottomModal>
     </View>
   );
 };
@@ -284,32 +263,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
   pickersRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 24,
   },
   wheelContainer: {
     overflow: 'hidden',
@@ -331,18 +289,6 @@ const styles = StyleSheet.create({
   selectedItemText: {
     fontWeight: '700',
     fontSize: 20,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-    marginTop: 8,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
   },
 });
 

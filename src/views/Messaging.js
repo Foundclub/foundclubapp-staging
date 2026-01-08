@@ -50,11 +50,32 @@ function Messaging({ navigation }) {
     currentUserTeamIds: allMyTeams?.map((team) => team.documentId || ''),
   });
 
-  const allChats = useMemo(() => (chatsData?.pages ? chatsData?.pages?.reduce(
-    (acc, page) => acc.concat(page.data || []),
-    /** @type {Chat[]} */([]),
-  )
-    : []), [chatsData?.pages]);
+  const allChats = useMemo(() => {
+    const chats = chatsData?.pages ? chatsData?.pages?.reduce(
+      (acc, page) => acc.concat(page.data || []),
+      /** @type {Chat[]} */([]),
+    ) : [];
+    
+    // Sort: Multisport > Club > Team > Whisper
+    // We want Multisport (m) at top, then Club (c)
+    // Map types to priority
+    const priority = {
+        'multisport': 0,
+        'club': 1,
+        'team': 2,
+        'whisper': 3
+    };
+    
+    return chats.sort((a, b) => {
+        const pA = priority[a.type] ?? 99;
+        const pB = priority[b.type] ?? 99;
+        
+        if (pA !== pB) return pA - pB;
+        
+        // Secondary sort by date descending
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [chatsData?.pages]);
 
   const { getConversationName, getUnreadStatus, joinChat } = useMessaging();
 
@@ -75,6 +96,15 @@ function Messaging({ navigation }) {
   const renderConversationAvatar = (chat) => {
     switch (chat.type) {
       case 'club':
+        if (chat?.club?.logo?.url) {
+          return (
+            <ProfileAvatar
+              imageUrl={chat.club.logo.url}
+              size={48}
+              enablePreview={false}
+            />
+          );
+        }
         return (
           <TeamShield
             initials={chat?.club?.name ? getClubInitials(chat?.club?.name) : ''}
@@ -83,6 +113,15 @@ function Messaging({ navigation }) {
           />
         );
       case 'team':
+        if (chat?.team?.logo?.url) {
+          return (
+             <ProfileAvatar
+              imageUrl={chat.team.logo.url}
+              size={48}
+              enablePreview={false}
+             />
+          );
+        }
         return (
           <TeamShield
             initials={chat?.team?.name ? getClubInitials(chat?.team?.name) : ''}
@@ -106,6 +145,23 @@ function Messaging({ navigation }) {
           />
         );
       }
+      case 'multisport':
+        if (chat?.multisportClub?.logo?.url) {
+          return (
+            <ProfileAvatar
+              imageUrl={chat.multisportClub.logo.url}
+              size={48}
+              enablePreview={false}
+            />
+          );
+        }
+        return (
+          <TeamShield
+            initials={chat?.multisportClub?.name ? getClubInitials(chat?.multisportClub?.name) : ''}
+            isNeutral
+            isSmall
+          />
+        );
       default:
         return (
           <Image
@@ -166,6 +222,7 @@ function Messaging({ navigation }) {
             >
               {getConversationName({
                 chatClub: chat.club,
+                chatMultisportClub: chat.multisportClub,
                 chatParticipants: chat.participants,
                 chatTeam: chat.team,
                 chatType: chat.type,

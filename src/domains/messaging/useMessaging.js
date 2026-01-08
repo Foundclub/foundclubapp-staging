@@ -48,6 +48,7 @@ const useMessaging = (currentChatId) => {
           id: message.id,
           message: message.message,
           sender: message.sender,
+          event: message.event,
         };
 
         if (!oldData) {
@@ -172,21 +173,21 @@ const useMessaging = (currentChatId) => {
    * Send a message
    * @param {string} chatId - The chat id
    * @param {string} message - The message text
+   * @param {object} [extraData] - Extra data (e.g. { event: eventId })
    * @returns {void}
    */
   const sendMessage = useCallback((
     /** @type {string} */ chatId,
     /** @type {string} */ message,
+    /** @type {object} */ extraData = {},
   ) => {
-    if (!socket || !isConnected) {
-      // eslint-disable-next-line no-console
-      console.error('Cannot send message: socket not connected');
-      return;
-    }
+    // Check if socket is connected before sending
+    if (!isConnected || !socket) return;
 
     socket.emit(EVENTS.SEND_MESSAGE, {
       chatDocumentId: chatId,
       message,
+      ...extraData,
     });
   }, [socket, isConnected]);
 

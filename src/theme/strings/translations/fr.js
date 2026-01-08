@@ -302,9 +302,15 @@ export default {
       photoFromGallery: 'Choisir depuis la gallerie',
       save: 'Enregistrer',
     },
+    close: 'Fermer',
+    view: 'Voir',
     messages: {
       noData: 'Aucune donnée disponible',
     },
+  },
+  event: {
+    shareInChat: 'Partager dans une conversation',
+    sharedEvent: 'Événement partagé',
   },
   club: {
     fields: {

@@ -93,6 +93,7 @@ export const getEventById = async (documentId) => {
       populate: ['team',
         'team.club',
         'team.club.logo',
+        'team.club.parentMultisport',
         'team.section',
         'team.category',
         'team.level',
@@ -203,6 +204,8 @@ export const getEvents = async (params = {}) => {
     excludeType,
     isFeatured,
     featuredRequestStatus,
+    featuredScope,
+    membershipClubIds,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -382,6 +385,45 @@ export const getEvents = async (params = {}) => {
     }
   }
 
+  // Filter by featuredScope (SECTION, CM, PUBLIC)
+  if (featuredScope) {
+    if (Array.isArray(featuredScope)) {
+      filtersObj.featuredScope = {
+        $in: featuredScope,
+      };
+    } else {
+      filtersObj.featuredScope = featuredScope;
+    }
+  }
+
+  // Filter featured events by user's club/CM membership
+  // Events where team.club.documentId or team.club.parentMultisport.documentId is in membershipClubIds
+  if (membershipClubIds?.length) {
+    filtersObj.$or = [
+      ...(filtersObj.$or || []),
+      {
+        team: {
+          club: {
+            documentId: {
+              $in: membershipClubIds,
+            },
+          },
+        },
+      },
+      {
+        team: {
+          club: {
+            parentMultisport: {
+              documentId: {
+                $in: membershipClubIds,
+              },
+            },
+          },
+        },
+      },
+    ];
+  }
+
   const filters = {
     _q: q,
     filters: filtersObj,
@@ -490,4 +532,58 @@ export const getMyEvents = async (teamIds = []) => {
   return getEvents({
     myTeams: teamIds,
   });
+};
+
+/**
+ * Request to feature an event for the entire multisport club
+ * @param {string} eventId - The ID of the event
+ * @returns {Promise<any>} - The updated event
+ */
+export const requestFeatured = async (eventId) => {
+  const response = await client.post(`/events/${eventId}/request-featured`);
+  return response.data;
+};
+
+/**
+ * Approve a featured event request (multisport admin only)
+ * @param {string} eventId - The ID of the event
+ * @returns {Promise<any>} - The updated event
+ */
+export const approveFeatured = async (eventId) => {
+  const response = await client.put(`/events/${eventId}/approve-featured`);
+  return response.data;
+};
+
+/**
+ * Reject a featured event request (multisport admin only)
+ * @param {object} params
+ * @param {string} params.eventId - The ID of the event
+ * @param {string} [params.reason] - Optional reason for rejection
+ * @returns {Promise<any>} - The updated event
+ */
+export const rejectFeatured = async ({ eventId, reason }) => {
+  const response = await client.put(`/events/${eventId}/reject-featured`, {
+    data: { reason },
+  });
+  return response.data;
+};
+
+/**
+ * Get pending featured requests for a multisport club
+ * @param {string} multisportClubId - The ID of the multisport club
+ * @returns {Promise<any>} - List of events with pending featured requests
+ */
+export const getPendingFeaturedRequests = async (multisportClubId) => {
+  const response = await client.get(`/multisport-clubs/${multisportClubId}/pending-featured-requests`);
+  return response.data;
+};
+
+/**
+ * Toggle late status for an event (Trainer/Admin only)
+ * @param {string} eventId
+ * @param {string} userId
+ */
+export const toggleLateEvent = async (eventId, userId) => {
+  const { data } = await client.post(`/events/${eventId}/toggle-late`, { userId }); // Custom route
+  return data;
 };

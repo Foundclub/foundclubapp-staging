@@ -50,6 +50,7 @@ const WizardStepLayout = ({
         <ScrollView
           contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {children}
         </ScrollView>

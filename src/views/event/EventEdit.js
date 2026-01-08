@@ -24,6 +24,8 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -862,22 +864,15 @@ function EventEdit({ navigation, route }) {
               name="date"
               render={({
                 field: {
-                  name, onBlur, onChange, ref, value,
+                  name, onChange, value,
                 },
               }) => (
-                <Input
-                  enterKeyHint="next"
+                <DatePickerInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  inputMode="numeric"
-                  keyboardType="numeric"
                   label={t('eventEdit.fields.date.label')}
-                  maxLength={10}
-                  onBlur={onBlur}
-                  onChangeText={(val) => onChange(formatDateInput(val))}
-                  onSubmitEditing={() => setFocus('startTime')}
-                  placeholder="DD/MM/YYYY"
-                  ref={ref}
+                  onChange={onChange}
                   value={value}
+                  minimumDate={new Date()}
                 />
               )}
             />
@@ -887,21 +882,13 @@ function EventEdit({ navigation, route }) {
               name="startTime"
               render={({
                 field: {
-                  name, onBlur, onChange, ref, value,
+                  name, onChange, value,
                 },
               }) => (
-                <Input
-                  enterKeyHint="next"
+                <TimePickerInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  inputMode="numeric"
-                  keyboardType="numeric"
                   label={t('eventEdit.fields.startTime.label')}
-                  maxLength={5}
-                  onBlur={onBlur}
-                  onChangeText={(val) => onChange(formatTimeInput(val))}
-                  onSubmitEditing={() => setFocus('endTime')}
-                  placeholder="HH:mm"
-                  ref={ref}
+                  onChange={onChange}
                   value={value}
                 />
               )}
@@ -912,20 +899,13 @@ function EventEdit({ navigation, route }) {
               name="endTime"
               render={({
                 field: {
-                  name, onBlur, onChange, ref, value,
+                  name, onChange, value,
                 },
               }) => (
-                <Input
-                  enterKeyHint="done"
+                <TimePickerInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  inputMode="numeric"
-                  keyboardType="numeric"
                   label={t('eventEdit.fields.endTime.label')}
-                  maxLength={5}
-                  onBlur={onBlur}
-                  onChangeText={(val) => onChange(formatTimeInput(val))}
-                  placeholder="HH:mm"
-                  ref={ref}
+                  onChange={onChange}
                   value={value}
                 />
               )}

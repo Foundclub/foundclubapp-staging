@@ -17,8 +17,9 @@ const EventWizardLocation = ({ navigation }) => {
   const [location, setLocation] = useState(state.location);
   const [facilityId, setFacilityId] = useState(state.facility);
   
-  // Need clubId for FacilitySelector
+  // Need clubId and cmId for FacilitySelector
   const clubId = state.team?.club?.documentId;
+  const cmId = state.team?.club?.parentMultisport?.documentId;
 
   const handleNext = () => {
     dispatch({ 
@@ -40,6 +41,7 @@ const EventWizardLocation = ({ navigation }) => {
     >
       <FacilitySelector
          clubId={clubId}
+         cmId={cmId}
          location={location}
          facilityId={facilityId}
          onChange={({ location: newLocation, facilityId: newFacilityId }) => {

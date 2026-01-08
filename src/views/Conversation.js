@@ -3,7 +3,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import 'dayjs/locale/fr';
 import {
   Bubble,
@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -110,6 +111,7 @@ function Conversation({ navigation, route }) {
         avatar: msg.sender.avatar?.url,
         name: `${msg.sender.firstname} ${msg.sender.lastname}`,
       },
+      event: msg.event,
     }));
     return [...acc, ...formattedMessages];
   }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages]);
@@ -214,6 +216,19 @@ function Conversation({ navigation, route }) {
     const bottomLeftRadius = isLeft && isSameUserAsNext ? 4 : 12;
     const topRightRadius = !isLeft && isSameUserAsPrevious ? 4 : 12;
     const bottomRightRadius = !isLeft && isSameUserAsNext ? 4 : 12;
+
+    if (currentMessage.event) {
+        return (
+            <View style={{
+                marginBottom: marginBottom,
+                marginTop: marginTop,
+                marginLeft: isLeft ? 8 : 0,
+                marginRight: !isLeft ? 8 : 0,
+            }}>
+                <EventMessageBubble event={currentMessage.event} isMe={!isLeft} />
+            </View>
+        );
+    }
     
     return (
       <Bubble
@@ -282,7 +297,56 @@ function Conversation({ navigation, route }) {
    * @param {import('react-native-gifted-chat').InputToolbarProps<any>} props - Component props
    * @returns {React.ReactNode} Rendered input toolbar component
    */
-  const renderInputToolbar = (props) => (
+  /* Permission Check */
+  const canWrite = useMemo(() => {
+    if (!chatData || !userData) return false;
+    
+    // Whisper and Team chats: All participants can write
+    // (Assuming everyone in team chat is member/admin)
+    if (chatData.type === 'whisper' || chatData.type === 'team') return true;
+
+    // Club Chat: Only Club Admins can write
+    if (chatData.type === 'club') {
+       // Check if user is admin of this club
+       const userIsAdmin = userData.role?.type === 'dirigeant' && userData.club?.documentId === chatData.club?.documentId;
+       return userIsAdmin;
+    }
+
+    // Multisport Chat: Only Multisport Admins can write
+    if (chatData.type === 'multisport') {
+       // Check if user is in admins list of multisport club
+       // Note: chatData.multisportClub must be populated with admins
+       const admins = chatData.multisportClub?.admins || [];
+       const isMultisportAdmin = admins.some(admin => admin.documentId === userData.documentId);
+       return isMultisportAdmin;
+    }
+
+    return false;
+  }, [chatData, userData]);
+
+  /**
+   * Render a custom input toolbar component
+   * @param {import('react-native-gifted-chat').InputToolbarProps<any>} props - Component props
+   * @returns {React.ReactNode} Rendered input toolbar component
+   */
+  const renderInputToolbar = (props) => {
+    if (!canWrite) {
+      return (
+         <View style={[
+            ApplicationStyle.borderRadius32,
+            ApplicationStyle.backgroundColor.neutral100,
+            Spaces.padding[16],
+            Alignments.center,
+            { marginBottom: 10 }
+         ]}>
+            <Text style={[Fonts.p2, Fonts.neutral500]}>
+               📣 {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
+            </Text>
+         </View>
+      );
+    }
+    
+    return (
     <InputToolbar
       {...props}
       containerStyle={[
@@ -297,7 +361,7 @@ function Conversation({ navigation, route }) {
       ]}
       renderComposer={renderComposer}
     />
-  );
+  )};
 
   /**
    * Render a custom send button component

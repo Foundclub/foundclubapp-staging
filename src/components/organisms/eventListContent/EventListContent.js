@@ -105,13 +105,36 @@ function EventListContent({
     pageSize: 15,
   }), [showFilters, eventFilters, additionalFilters]);
 
-  const featuredEventsConfig = useMemo(() => ({
-    ...(showFilters ? eventFilters : {}),
-    ...additionalFilters,
-    isFeatured: true,
-    sessionStatus: 'open',
-    pageSize: 5,
-  }), [showFilters, eventFilters, additionalFilters]);
+  // Get user's club and multisport club IDs for membership filtering
+  const userClubId = userData?.club?.documentId;
+  const userCmIds = userData?.multisportClubs?.map(cm => cm.documentId) || [];
+  // Also get CM from user's teams
+  const teamCmIds = userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+  const allCmIds = [...new Set([...userCmIds, ...teamCmIds])];
+
+  const featuredEventsConfig = useMemo(() => {
+    const config = {
+      ...(showFilters ? eventFilters : {}),
+      ...additionalFilters,
+      isFeatured: true,
+      sessionStatus: 'open',
+      pageSize: 5,
+    };
+
+    if (isPlanning) {
+      // SECTION/CM featured events - filter by user's membership
+      config.featuredScope = ['SECTION', 'CM'];
+      // Add club filter to only show events from user's club/CM
+      if (userClubId || allCmIds.length) {
+        config.membershipClubIds = [userClubId, ...allCmIds].filter(Boolean);
+      }
+    } else {
+      // PUBLIC featured - visible to everyone
+      config.featuredScope = 'PUBLIC';
+    }
+
+    return config;
+  }, [showFilters, eventFilters, additionalFilters, isPlanning, userClubId, allCmIds]);
 
   // Only fetch if no external events are provided
   const {

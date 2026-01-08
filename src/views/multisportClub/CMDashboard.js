@@ -218,6 +218,12 @@ function CMDashboard({ navigation, route }) {
               </View>
             </View>
             <Button
+              onPress={() => navigation.navigate(RouteNames.FeaturedRequests, { cmId })}
+              title="Gérer les demandes à la une"
+              variant="Secondary"
+              icon="bell"
+            />
+            <Button
               onPress={handleCreateSection}
               title="Créer une section"
               variant="Primary"

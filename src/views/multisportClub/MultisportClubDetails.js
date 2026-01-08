@@ -6,6 +6,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 
 import useClub from '@/domains/club/useClub';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -28,6 +29,7 @@ function MultisportClubDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
   const { getClubInitials } = useClub();
 
   const {
@@ -65,6 +67,15 @@ function MultisportClubDetails({ navigation, route }) {
     }
   }, [navigation]);
 
+  /**
+   * Handle featured requests press - navigate to featured requests screen
+   */
+  const handleFeaturedRequestsPress = useCallback(() => {
+    if (cmId) {
+      navigation.navigate(RouteNames.FeaturedRequests, { cmId });
+    }
+  }, [cmId, navigation]);
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -101,6 +112,7 @@ function MultisportClubDetails({ navigation, route }) {
             Spaces.paddingHorizontal[24],
             Spaces.paddingBottom[40],
             Spaces.marginTop[24],
+            { overflow: 'visible' },
           ]}>
             {/* Omnisport Badge */}
             <View style={{
@@ -117,14 +129,12 @@ function MultisportClubDetails({ navigation, route }) {
               </Text>
             </View>
 
-            <View style={{ marginTop: -32 }}>
+            <View style={{ marginTop: -32, zIndex: 1 }}>
               {cm?.logo?.url ? (
                 <ProfileAvatar
                   imageUrl={cm.logo.url}
                   size={80}
                   style={[
-                    ApplicationStyle.borderWidth1,
-                    ApplicationStyle.borderColor.neutral00,
                     { borderRadius: 80 },
                   ]}
                   imageStyle={{ borderRadius: 80 }}
@@ -170,6 +180,26 @@ function MultisportClubDetails({ navigation, route }) {
             </View>
           </View>
 
+          {/* Admin Actions - Visible only to CM admins */}
+          {cm?.admins?.some(admin => admin.documentId === userData?.documentId) && (
+            <TouchableOpacity
+              onPress={handleFeaturedRequestsPress}
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.backgroundColor.primary500,
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                Spaces.padding[16],
+                Spaces.gap[8],
+              ]}
+            >
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                📢 Gérer les demandes à la une
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Sections (Child Clubs) */}
           {cm?.sections?.length > 0 && (
             <View style={[Spaces.gap[16]]}>
@@ -208,12 +238,12 @@ function MultisportClubDetails({ navigation, route }) {
                         {section.name}
                       </Text>
                       {section.activites?.[0] && (
-                        <Text style={[Fonts.p2, Fonts.primary300]}>
+                        <Text style={[Fonts.p2, Fonts.neutral00]}>
                           {section.activites[0].name}
                         </Text>
                       )}
                       {section.teams && (
-                        <Text style={[Fonts.p3, Fonts.neutral400]}>
+                        <Text style={[Fonts.p3, Fonts.neutral00]}>
                           {section.teams.length} équipe{section.teams.length > 1 ? 's' : ''}
                         </Text>
                       )}
@@ -283,8 +313,6 @@ function MultisportClubDetails({ navigation, route }) {
                       size={55}
                       enablePreview={false}
                       style={[
-                        ApplicationStyle.borderWidth1,
-                        ApplicationStyle.borderColor.neutral00,
                         { borderRadius: 55 },
                       ]}
                       imageStyle={{ borderRadius: 55 }}

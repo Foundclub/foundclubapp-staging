@@ -97,12 +97,16 @@ const FacilityForm = () => {
             if (isEdit) {
                 await updateFacility(facility.documentId, formattedData);
             } else {
-                if (cmId) {
-                    // Create for Multisport Club
+                // Priority: If clubId is present, create for the club (section)
+                // Only create for multisport if no clubId is present (pure CM context)
+                if (clubId) {
+                    // Create for Club (section)
+                    await createFacility({ ...formattedData, club: clubId });
+                } else if (cmId) {
+                    // Create for Multisport Club (only when no clubId)
                     await createFacility({ ...formattedData, multisportClub: cmId });
                 } else {
-                    // Create for regular Club
-                    await createFacility({ ...formattedData, club: clubId });
+                    throw new Error('No clubId or cmId provided');
                 }
             }
             navigation.goBack();

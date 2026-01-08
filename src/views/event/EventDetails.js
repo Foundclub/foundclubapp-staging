@@ -11,6 +11,7 @@ import {
   Image,
   ImageBackground,
   Linking,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -36,12 +37,14 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
+import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useMessaging from '@/domains/messaging/useMessaging';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
-import { cancelEvent, missingEvent, remindUnansweredPlayers } from '@/services/event/eventService';
+import { cancelEvent, missingEvent, remindUnansweredPlayers, requestFeatured } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   acceptEventParticipation,
@@ -57,6 +60,7 @@ import {
   openForPlayers, 
   triggerSosAlert 
 } from '@/services/reservation/reservationService';
+import { toggleLateEvent } from '@/services/event/eventService'; // Added
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 
 // Assets
@@ -90,6 +94,7 @@ function EventDetails({ navigation, route }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
 
   // hooks
@@ -294,6 +299,25 @@ function EventDetails({ navigation, route }) {
     },
   });
 
+  // Mutation for toggling late status
+  const toggleLateMutation = useMutation({
+    mutationFn: ({ eventId, userId }) => toggleLateEvent(eventId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      refetch();
+      // Optional: Toast
+    },
+    onError: (err) => {
+        Alert.alert(t('common.error'), "Impossible de modifier le statut de retard.");
+    }
+  });
+
+  const handleToggleLate = (userId) => {
+      if (eventId && userId) {
+          toggleLateMutation.mutate({ eventId, userId });
+      }
+  };
+
   const handleAcceptRequest = () => {
     if (eventId) {
       updateEventMutation.mutate({
@@ -316,6 +340,75 @@ function EventDetails({ navigation, route }) {
       });
     }
   };
+
+  // Mutation for requesting featured status
+  const requestFeaturedMutation = useMutation({
+    mutationFn: requestFeatured,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      refetch();
+      Alert.alert(
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise à la une a été envoyée au dirigeant du club.')
+      );
+    },
+    onError: (error) => {
+      console.error('Error requesting featured:', error);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t('eventDetails.featuredRequest.error', 'Une erreur est survenue')
+      );
+    },
+  });
+
+  const handleRequestFeatured = () => {
+    if (!eventId) return;
+    setIsFeaturedModalVisible(true);
+  };
+
+  // Handle section-only featured (immediate, no approval needed)
+  const handleFeatureInSection = () => {
+    setIsFeaturedModalVisible(false);
+    updateEventMutation.mutate({
+      documentId: eventId,
+      eventData: {
+        isFeatured: true,
+        featuredScope: 'SECTION',
+      },
+    });
+  };
+
+  // Handle CM-wide featured (request to CM manager)
+  const handleFeatureInCM = () => {
+    setIsFeaturedModalVisible(false);
+    requestFeaturedMutation.mutate(eventId);
+  };
+
+  // Handle public featured (request to admin)
+  const handleFeaturePublic = () => {
+    setIsFeaturedModalVisible(false);
+    updateEventMutation.mutate({
+      documentId: eventId,
+      eventData: {
+        featuredRequestStatus: 'pending',
+        featuredScope: 'PUBLIC',
+      },
+    });
+    Alert.alert(
+      t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
+      t('eventDetails.featuredRequest.publicMessage', 'Votre demande de mise à la une publique a été envoyée aux administrateurs.')
+    );
+  };
+
+  // Check if user can request featured (club has parent multisport and event not already featured/pending)
+  const canRequestFeatured = useMemo(() => {
+    const hasParentMultisport = !!event?.team?.club?.parentMultisport;
+    const isNotAlreadyFeatured = !event?.isFeatured;
+    const isNotPending = event?.featuredRequestStatus !== 'pending';
+    const isNotApproved = event?.featuredRequestStatus !== 'approved';
+    const isTrainer = canEditEvent(event?.team?.documentId || '');
+    return hasParentMultisport && isNotAlreadyFeatured && isNotPending && isNotApproved && isTrainer;
+  }, [event, canEditEvent]);
 
   // memoized values
   const hasPendingRequest = useMemo(() => {
@@ -598,28 +691,70 @@ function EventDetails({ navigation, route }) {
     missingEventMutation.mutate(ev.documentId);
   }, [missingEventMutation]);
 
-  const handleShare = useCallback(async () => {
-    if (!eventId) return;
+  const [isShareModalVisible, setIsShareModalVisible] = useState(false);
+  const { sendMessage } = useMessaging();
 
-    const url = `foundclub://event/${eventId}`;
-    const simpleMessage = `${t('eventDetails.shareMessage', 'Rejoins-moi sur cet événement !')} ${url}`;
+  const handleShare = useCallback(() => {
+    setIsShareModalVisible(true);
+  }, []);
 
-    try {
-      if (Platform.OS === 'android') {
-        await Share.share({
-          message: simpleMessage,
-        });
-      } else {
-        await Share.share({
-          message: t('eventDetails.shareMessage', 'Rejoins-moi sur cet événement !'),
-          url: url,
-        });
-      }
-    } catch (error) {
-      console.error('Share Error:', (/** @type {Error} */(error)).message);
-      Alert.alert(t('common.error'), t('eventDetails.errors.shareFailed', 'Impossible de partager'));
+  const handleExportParticipants = useCallback(() => {
+    // Gather all lists
+    const participating = participationsByStatus.participating.map(p => ({...p, status: 'Présent'}));
+    const missing = participationsByStatus.missing.map(p => ({...p, status: 'Absent'}));
+    const waiting = pendingParticipations.map(p => ({...p.user, status: 'En attente'}));
+    const notAnswered = participationsByStatus.notAnswered.map(p => ({...p, status: 'Sans réponse'}));
+
+    const allUsers = [...participating, ...missing, ...waiting, ...notAnswered];
+    
+    if (allUsers.length === 0) {
+      Alert.alert(t('common.info'), "Aucun participant à exporter.");
+      return;
     }
-  }, [eventId, t]);
+
+    // Generate CSV
+    const header = "Prénom,Nom,Statut,Email,Téléphone\n";
+    const csvContent = allUsers.map(u => {
+      const clean = (str) => (str || '').replace(/,/g, ' ').replace(/\n/g, ' ').trim();
+      return `${clean(u.firstname)},${clean(u.lastname)},${u.status},${clean(u.email)},${clean(u.phone)}`;
+    }).join('\n');
+
+    const finalCsv = header + csvContent;
+
+    // Share
+    Share.share({
+      message: finalCsv,
+      title: 'participants_foundclub.csv' // iOS often ignores this for text sharing, but good to have
+    });
+
+  }, [participationsByStatus, pendingParticipations]);
+
+  const handleSelectChatToShare = async (chatId) => {
+      if (chatId && eventId) {
+          try {
+            await sendMessage(chatId, "Partage d'événement", { event: eventId });
+            setIsShareModalVisible(false);
+            Alert.alert(t('common.success'), t('eventDetails.shareSuccess', 'Événement partagé avec succès !'));
+            /* Optional: Navigate to chat? navigation.navigate(RouteNames.Conversation, { chatId }); */
+          } catch (err) {
+              console.error(err);
+              Alert.alert(t('common.error'), t('eventDetails.errors.shareFailed'));
+          }
+      }
+  };
+
+  /* Old Handle Share (System Share) - Rename or Keep separate?
+   * Let's rename old one or remove it if user wants purely in-app share.
+   * User said: "rajouter une option... pouvoir partager un événement dans une conversation"
+   * Maybe keep both? 
+   * Let's replace the icon action to open OUR modal, and maybe add "System Share" inside modal or unrelated.
+   * For now, I'll replace the main share interaction to use the internal chat share as requested.
+   */
+   /*
+  const handleSystemShare = useCallback(async () => {
+    // ... old implementation
+  }, []);
+  */
 
   // Handle opening tactical board (V2 - Selection first, then Board)
   const handleOpenTacticalBoard = useCallback(() => {
@@ -724,6 +859,62 @@ function EventDetails({ navigation, route }) {
     const canEdit = canEditEvent(event?.team?.documentId || '');
     const hasDateInPast = event?.date ? new Date(event?.date) < new Date() : true;
     
+    // Featured Request Status Feedback
+    const renderFeaturedStatus = () => {
+      // Only show to trainers/managers
+      if (!canEditEvent(event?.team?.documentId || '')) return null;
+
+      if (event?.featuredRequestStatus === 'pending') {
+        return (
+          <View style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.primary200,
+            Spaces.padding[12],
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginBottom[12]
+          ]}>
+            <Text style={[Fonts.p2Bold, Fonts.primary700]}>⏳ Demande de mise à la une en attente</Text>
+          </View>
+        );
+      }
+
+      if (event?.featuredRequestStatus === 'rejected') {
+        return (
+          <View style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.error200,
+            Spaces.padding[12],
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginBottom[12]
+          ]}>
+            <Text style={[Fonts.p2Bold, Fonts.error700]}>❌ Demande de mise à la une refusée</Text>
+          </View>
+        );
+      }
+
+      if (event?.isFeatured && event?.featuredRequestStatus === 'approved') {
+        return (
+          <View style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.success200,
+            Spaces.padding[12],
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginBottom[12]
+          ]}>
+            <Text style={[Fonts.p2Bold, Fonts.success700]}>✅ Événement mis à la une</Text>
+          </View>
+        );
+      }
+
+      return null;
+    };
+
     // Check if this is a reservation
     const isReservation = event?.type?.name?.toLowerCase()?.includes('réservation') 
       || event?.type?.name?.toLowerCase()?.includes('reservation');
@@ -953,6 +1144,29 @@ function EventDetails({ navigation, route }) {
               icon="users"
               onPress={handleOpenTacticalBoard}
               title="Gérer la Compo"
+              variant="Secondary"
+            />
+          </View>
+        )}
+        {/* Featured Button - visible for trainers in multisport clubs */}
+        {canRequestFeatured && (
+          <View style={{ marginTop: 12 }}>
+            <Button
+              icon="bell"
+              isLoading={requestFeaturedMutation.isPending}
+              onPress={handleRequestFeatured}
+              title={t('eventDetails.actions.requestFeatured', '📢 Mettre à la une du club')}
+              variant="Secondary"
+            />
+          </View>
+        )}
+        {/* Show pending status if already requested */}
+        {event?.featuredRequestStatus === 'pending' && (
+          <View style={{ marginTop: 12, opacity: 0.7 }}>
+            <Button
+              disabled
+              icon="clock"
+              title={t('eventDetails.featuredRequest.pending', '⏳ Demande en attente')}
               variant="Secondary"
             />
           </View>
@@ -1365,6 +1579,16 @@ function EventDetails({ navigation, route }) {
                 />
               </TouchableOpacity>
             </View>
+            
+            {/* Export Button */}
+            {canEditEvent(event?.team?.documentId || '') && (
+              <TouchableOpacity onPress={handleExportParticipants} style={[{ alignSelf: 'flex-start' }, Spaces.marginTop[4]]}>
+                <Text style={[Fonts.p2, Fonts.primary500, { textDecorationLine: 'underline' }]}>
+                  Exporter la liste (Excel/CSV)
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {participationsByStatus ? (
               <>
                 {participationsByStatus.participating.length > 0 && (
@@ -1596,6 +1820,106 @@ function EventDetails({ navigation, route }) {
         isVisible={isReportModalVisible}
         onClose={handleCloseReportModal}
         onSubmit={handleSubmitReport}
+      />
+
+      {/* Featured Options Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isFeaturedModalVisible}
+        onRequestClose={() => setIsFeaturedModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+          activeOpacity={1}
+          onPress={() => setIsFeaturedModalVisible(false)}
+        >
+          <View style={[
+            ApplicationStyle.backgroundColor.primary700,
+            { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 }
+          ]}>
+            {/* Header */}
+            <View style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              Spaces.padding[16],
+              { borderBottomWidth: 1, borderBottomColor: Colors.neutral700 }
+            ]}>
+              <Text style={[Fonts.h3, Fonts.neutral00]}>
+                {t('eventDetails.featuredModal.title', '📢 Mettre à la une')}
+              </Text>
+              <TouchableOpacity onPress={() => setIsFeaturedModalVisible(false)}>
+                <Image source={Images.close} style={[ApplicationStyle.icon24, ApplicationStyle.tintColor.neutral300]} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Options */}
+            <View style={[Spaces.padding[16], Spaces.gap[12]]}>
+              {/* Option 1: Section */}
+              <TouchableOpacity
+                onPress={handleFeatureInSection}
+                style={[
+                  ApplicationStyle.borderRadius12,
+                  ApplicationStyle.backgroundColor.neutral700,
+                  Spaces.padding[16],
+                  Spaces.gap[4]
+                ]}
+              >
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                  🏠 {t('eventDetails.featuredModal.section.title', 'Ma section uniquement')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral300]}>
+                  {t('eventDetails.featuredModal.section.description', 'Visible par les membres de votre section. Immédiat.')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Option 2: CM (only if has parent multisport) */}
+              {event?.team?.club?.parentMultisport && (
+                <TouchableOpacity
+                  onPress={handleFeatureInCM}
+                  style={[
+                    ApplicationStyle.borderRadius12,
+                    ApplicationStyle.backgroundColor.neutral700,
+                    Spaces.padding[16],
+                    Spaces.gap[4]
+                  ]}
+                >
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                    🏟️ {t('eventDetails.featuredModal.cm.title', 'Tout le club')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    {t('eventDetails.featuredModal.cm.description', 'Demande envoyée au dirigeant du club omnisport.')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Option 3: Public */}
+              <TouchableOpacity
+                onPress={handleFeaturePublic}
+                style={[
+                  ApplicationStyle.borderRadius12,
+                  ApplicationStyle.backgroundColor.neutral700,
+                  Spaces.padding[16],
+                  Spaces.gap[4]
+                ]}
+              >
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                  🌍 {t('eventDetails.featuredModal.public.title', 'Public (toute l\'app)')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral300]}>
+                  {t('eventDetails.featuredModal.public.description', 'Demande envoyée aux administrateurs. Visible par tous.')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      <ShareEventModal
+        isVisible={isShareModalVisible}
+        onClose={() => setIsShareModalVisible(false)}
+        onSelectChat={handleSelectChatToShare}
+        event={event}
       />
     </ScreenContainer>
   );

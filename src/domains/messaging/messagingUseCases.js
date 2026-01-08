@@ -33,11 +33,13 @@ export const getUnreadStatus = (
  * @returns {string} The generated conversation name
  */
 export const getConversationName = ({
-  chatClub, chatParticipants, chatTeam, chatType, meId,
+  chatClub, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
 }) => {
   switch (chatType) {
     case 'club':
       return chatClub?.name || '';
+    case 'multisport':
+      return chatMultisportClub?.name || '';
     case 'team':
       return chatTeam?.name || '';
     case 'whisper': {
