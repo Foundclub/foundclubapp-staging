@@ -239,7 +239,7 @@ function MercatoFilters({ navigation }) {
                 close={() => setInfoModalVisible(false)}
                 isVisible={infoModalVisible}
             >
-                <View style={[Spaces.gap[16]]}>
+                <View style={[Spaces.gap[16], Spaces.paddingTop[16]]}>
                     <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{infoModalContent.title}</Text>
                     <Text style={[Fonts.p1, Fonts.neutral00]}>{infoModalContent.content}</Text>
                 </View>

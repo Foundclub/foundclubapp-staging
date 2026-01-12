@@ -41,6 +41,7 @@ export const RouteNames = /** @type {const} */ ({
   HighlightRequestsInbox: 'HighlightRequestsInbox',
   CreateSection: 'CreateSection',
   MultisportClubDetails: 'MultisportClubDetails',
+  MultisportClubEdit: 'MultisportClubEdit',
   FeaturedRequests: 'FeaturedRequests',
   CMDashboard: 'CMDashboard',
   CMMembers: 'CMMembers',

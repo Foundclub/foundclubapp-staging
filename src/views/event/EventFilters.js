@@ -300,12 +300,17 @@ function EventFilters({ navigation }) {
       data.radius,
     ) : undefined;
 
+    // Extract lat/lon for Haversine filtering
+    const lat = coordinates ? parseFloat(coordinates[1]) : undefined;
+    const lon = coordinates ? parseFloat(coordinates[0]) : undefined;
+
     const payload = {
       ...data,
       startDateAfter,
       startDateBefore,
       teamIds: data?.team?.value ? [data.team.value] : null,
       ...(geohash && { geohash }),
+      ...(lat && lon && { lat, lon, radius: data.radius }),
     };
 
     appDispatch({
@@ -363,7 +368,7 @@ function EventFilters({ navigation }) {
         close={() => setInfoModalVisible(false)}
         isVisible={infoModalVisible}
       >
-        <View style={[Spaces.gap[16]]}>
+        <View style={[Spaces.gap[16], Spaces.paddingTop[16]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{infoModalContent.title}</Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>{infoModalContent.content}</Text>
         </View>
@@ -431,7 +436,7 @@ function EventFilters({ navigation }) {
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={20}
+                minimumValue={5}
                 onValueChange={onChange}
                 step={2}
                 style={[Alignments.fullWidth, { height: 50 }]}
@@ -448,23 +453,21 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <View>
-              {renderLabel(t('eventFilters.fields.category.label'), 'category')}
-              <AutocompleteSelect
-                error={getFieldError({ errors: formErrors, fieldName: 'category' })}
-                isMulti
-                isSearchable
-                options={categories}
-                placeholder={t('eventFilters.fields.category.placeholder')}
-                searchValue={categorySearchValue}
-                setSearchValue={setCategorySearchValue}
-                setValue={(/** @type {Option | undefined} */option) => {
-                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
-                  onChange(val);
-                }}
-                value={value}
-              />
-            </View>
+            <AutocompleteSelect
+              error={getFieldError({ errors: formErrors, fieldName: 'category' })}
+              isMulti
+              label={t('eventFilters.fields.category.label')}
+              isSearchable
+              options={categories}
+              placeholder={t('eventFilters.fields.category.placeholder')}
+              searchValue={categorySearchValue}
+              setSearchValue={setCategorySearchValue}
+              setValue={(/** @type {Option | undefined} */option) => {
+                const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                onChange(val);
+              }}
+              value={value}
+            />
           )}
         />
 
@@ -522,23 +525,21 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <View>
-              {renderLabel(t('eventFilters.fields.level.label'), 'level')}
-              <AutocompleteSelect
-                error={getFieldError({ errors: formErrors, fieldName: 'level' })}
-                isMulti
-                isSearchable
-                options={levels}
-                placeholder={t('eventFilters.fields.level.placeholder')}
-                searchValue={levelSearchValue}
-                setSearchValue={setLevelSearchValue}
-                setValue={(/** @type {Option | undefined} */option) => {
-                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
-                  onChange(val);
-                }}
-                value={value}
-              />
-            </View>
+            <AutocompleteSelect
+              error={getFieldError({ errors: formErrors, fieldName: 'level' })}
+              isMulti
+              label={t('eventFilters.fields.level.label')}
+              isSearchable
+              options={levels}
+              placeholder={t('eventFilters.fields.level.placeholder')}
+              searchValue={levelSearchValue}
+              setSearchValue={setLevelSearchValue}
+              setValue={(/** @type {Option | undefined} */option) => {
+                const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                onChange(val);
+              }}
+              value={value}
+            />
           )}
         />
 
@@ -572,23 +573,21 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <View>
-              {renderLabel(t('eventFilters.fields.type.label'), 'type')}
-              <AutocompleteSelect
-                error={getFieldError({ errors: formErrors, fieldName: 'type' })}
-                isMulti
-                isSearchable
-                options={types}
-                placeholder={t('eventFilters.fields.type.placeholder')}
-                searchValue={typeSearchValue}
-                setSearchValue={setTypeSearchValue}
-                setValue={(/** @type {Option | undefined} */option) => {
-                  const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
-                  onChange(val);
-                }}
-                value={value}
-              />
-            </View>
+            <AutocompleteSelect
+              error={getFieldError({ errors: formErrors, fieldName: 'type' })}
+              isMulti
+              label={t('eventFilters.fields.type.label')}
+              isSearchable
+              options={types}
+              placeholder={t('eventFilters.fields.type.placeholder')}
+              searchValue={typeSearchValue}
+              setSearchValue={setTypeSearchValue}
+              setValue={(/** @type {Option | undefined} */option) => {
+                const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                onChange(val);
+              }}
+              value={value}
+            />
           )}
         />
 

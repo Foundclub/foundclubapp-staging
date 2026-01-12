@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
@@ -44,6 +45,7 @@ function BottomModal({
    * @type {React.MutableRefObject<import('@gorhom/bottom-sheet').BottomSheetModal | null>}
    */
   const modalRef = useRef(null);
+  const insets = useSafeAreaInsets();
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
   } = useTheme();
@@ -107,6 +109,7 @@ function BottomModal({
       keyboardBlurBehavior="restore"
       onDismiss={close}
       ref={modalRef}
+      topInset={insets.top + 20}
     >
       {!hideCloseButton && (
         <TouchableOpacity
@@ -130,7 +133,7 @@ function BottomModal({
       <View style={[Alignments.fill]}>
         {/* Fixed Header */}
         {headerComponent && (
-          <View style={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[16], { zIndex: 1 }]}>
+          <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}>
             {headerComponent}
           </View>
         )}
@@ -162,7 +165,7 @@ function BottomModal({
           <View style={[
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
-            Spaces.paddingBottom[Platform.OS === 'ios' ? 40 : 24], // Safe area / bottom spacing
+            { paddingBottom: Math.max(insets.bottom + 40, 60) }, // Dynamic safe area + large buffer
             { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' } // Optional separator
           ]}>
             {footerComponent}

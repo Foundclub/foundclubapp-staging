@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
@@ -123,78 +123,89 @@ const FacilityForm = () => {
             bgImage="bg2"
             contentContainerStyle={[Spaces.paddingVertical[24], Spaces.paddingHorizontal[16], Alignments.fill]}
         >
-            <View style={[Spaces.marginBottom[24]]}>
-                <Text style={[Fonts.h1, Fonts.neutral00]}>
-                    {isEdit ? 'Modifier l\'installation' : 'Nouvelle installation'}
-                </Text>
-            </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={[Spaces.paddingBottom[40]]}
+                >
+                    <View style={[Spaces.marginBottom[24]]}>
+                        <Text style={[Fonts.h1, Fonts.neutral00]}>
+                            {isEdit ? 'Modifier l\'installation' : 'Nouvelle installation'}
+                        </Text>
+                    </View>
 
-            <View style={[Spaces.gap[16]]}>
-                <Controller
-                    control={control}
-                    name="name"
-                    render={({ field: { onChange, value } }) => (
-                        <Input
-                            label="Nom de l'installation"
-                            placeholder="Ex: Terrain Honneur, Salle A..."
-                            value={value}
-                            onChangeText={onChange}
-                            error={errors.name?.message}
+                    <View style={[Spaces.gap[16]]}>
+                        <Controller
+                            control={control}
+                            name="name"
+                            render={({ field: { onChange, value } }) => (
+                                <Input
+                                    label="Nom de l'installation"
+                                    placeholder="Ex: Terrain Honneur, Salle A..."
+                                    value={value}
+                                    onChangeText={onChange}
+                                    error={errors.name?.message}
+                                />
+                            )}
                         />
-                    )}
-                />
 
-                <Controller
-                    control={control}
-                    name="type"
-                    render={({ field: { onChange, value } }) => (
-                        <Select
-                            label="Type"
-                            options={FACILITY_TYPES}
-                            value={value}
-                            onSelect={onChange}
-                            error={errors.type?.message}
+                        <Controller
+                            control={control}
+                            name="type"
+                            render={({ field: { onChange, value } }) => (
+                                <Select
+                                    label="Type"
+                                    options={FACILITY_TYPES}
+                                    value={value}
+                                    onSelect={onChange}
+                                    error={errors.type?.message}
+                                />
+                            )}
                         />
-                    )}
-                />
 
-                <Controller
-                    control={control}
-                    name="address"
-                    render={({ field: { onChange, value } }) => (
-                        <AutocompleteAddressInput
-                            label="Adresse (Lieu exact)"
-                            placeholder="Ex: 12 Rue du Stade..."
-                            address={value}
-                            setAddress={onChange}
-                            error={errors.address?.message}
+                        <Controller
+                            control={control}
+                            name="address"
+                            render={({ field: { onChange, value } }) => (
+                                <AutocompleteAddressInput
+                                    label="Adresse (Lieu exact)"
+                                    placeholder="Ex: 12 Rue du Stade..."
+                                    address={value}
+                                    setAddress={onChange}
+                                    error={errors.address?.message}
+                                />
+                            )}
                         />
-                    )}
-                />
 
-                <Controller
-                    control={control}
-                    name="maxSlots"
-                    render={({ field: { onChange, value } }) => (
-                        <InputStepper
-                            label="Capacité (Nombre d'équipes simultanées)"
-                            value={value}
-                            onIncrement={() => onChange(value + 1)}
-                            onDecrement={() => onChange(Math.max(1, value - 1))}
-                            min={1}
-                            max={10}
+                        <Controller
+                            control={control}
+                            name="maxSlots"
+                            render={({ field: { onChange, value } }) => (
+                                <InputStepper
+                                    label="Capacité (Nombre d'équipes simultanées)"
+                                    value={value}
+                                    onIncrement={() => onChange(value + 1)}
+                                    onDecrement={() => onChange(Math.max(1, value - 1))}
+                                    min={1}
+                                    max={10}
+                                />
+                            )}
                         />
-                    )}
-                />
 
-                <Button
-                    onPress={handleSubmit(onSubmit)}
-                    title={isEdit ? 'Enregistrer' : 'Créer'}
-                    variant="Primary"
-                    isLoading={loading}
-                    style={[Spaces.marginTop[24]]}
-                />
-            </View>
+                        <Button
+                            onPress={handleSubmit(onSubmit)}
+                            title={isEdit ? 'Enregistrer' : 'Créer'}
+                            variant="Primary"
+                            isLoading={loading}
+                            style={[Spaces.marginTop[24]]}
+                        />
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </ScreenContainer>
     );
 };

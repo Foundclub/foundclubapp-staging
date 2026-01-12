@@ -14,7 +14,23 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
  * @param {boolean} props.isMe - Whether the message is sent by current user
  * @returns {import('react').ReactElement}
  */
-const EventMessageBubble = ({ event, isMe }) => {
+/**
+ * Bubble to display an event in a chat
+ * @param {object} props
+ * @param {import('@/domains/event/types').FCEvent} props.event - The event object
+ * @param {boolean} props.isMe - Whether the message is sent by current user
+ * @param {() => void} [props.onJoin] - Handler for join action
+ * @param {() => void} [props.onParticipate] - Handler for participate action
+ * @param {() => void} [props.onDecline] - Handler for decline action
+ * @returns {import('react').ReactElement}
+ */
+const EventMessageBubble = ({ 
+  event, 
+  isMe, 
+  onJoin = () => {}, 
+  onParticipate = () => {}, 
+  onDecline = () => {} 
+}) => {
   const { Spaces } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -34,9 +50,9 @@ const EventMessageBubble = ({ event, isMe }) => {
         <EventCardNew 
             item={event}
             onPress={handlePress}
-            onJoin={() => {}}
-            onDecline={() => {}}
-            onParticipate={() => {}}
+            onJoin={onJoin}
+            onDecline={onDecline}
+            onParticipate={onParticipate}
             onLogin={() => {}}
             // @ts-ignore
             showClubHeader={false}

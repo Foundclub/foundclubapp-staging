@@ -4,6 +4,7 @@
  */
 
 import client from '../client';
+import { uploadFile } from '../club/clubService';
 
 /**
  * Get a single multisport club by ID
@@ -116,6 +117,17 @@ export const createCMSection = async (cmId, data) => {
 };
 
 /**
+ * Delete a section from a multisport club
+ * @param {string} cmId - MultisportClub documentId
+ * @param {string} sectionId - Section (Club) documentId
+ * @returns {Promise<Object>} Success message
+ */
+export const deleteCMSection = async (cmId, sectionId) => {
+  const result = await client.delete(`/cm/${cmId}/clubs/${sectionId}`);
+  return result.data;
+};
+
+/**
  * Get highlight requests for a multisport club (pending)
  * @param {string} cmId - MultisportClub documentId
  * @returns {Promise<Object>} List of pending requests
@@ -185,6 +197,44 @@ export const getCMMembers = async (cmId) => {
   return result.data;
 };
 
+/**
+ * Update a multisport club
+ * @param {string} cmId - MultisportClub documentId
+ * @param {Object} data - Update data (name, email, phone, addressLabel, coordinates, logo)
+ * @returns {Promise<Object>} Updated CM
+ */
+export const updateMultisportClub = async (cmId, data) => {
+  const dataCopy = { ...data };
+  let logoId = null;
+
+  // Handle logo file upload if it's a new file (has path)
+  if (dataCopy.logo && dataCopy.logo.path) {
+    logoId = await uploadFile(dataCopy.logo);
+  } else if (dataCopy.logo && dataCopy.logo.id) {
+    // Keep existing logo if not changed (though backend might not need this if we don't send logo field)
+    logoId = dataCopy.logo.id;
+  }
+
+  // Remove logo object from payload
+  delete dataCopy.logo;
+
+  // Prepare payload
+  const payload = {
+    ...dataCopy,
+    ...(logoId && { logo: logoId }),
+  };
+  
+  // Clean payload of undefined/null values that might override existing data
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === undefined) {
+      delete payload[key];
+    }
+  });
+
+  const result = await client.put(`/cm/${cmId}`, payload);
+  return result.data;
+};
+
 export default {
   getCMClubs,
   getCMPlanning,
@@ -194,4 +244,5 @@ export default {
   approveHighlightRequest,
   rejectHighlightRequest,
   getCMMembers,
+  updateMultisportClub,
 };

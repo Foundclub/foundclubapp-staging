@@ -23,7 +23,7 @@ function AutocompleteAddressInput({
   label,
   placeholder,
   setAddress,
-  type = 'municipality',
+  type = 'housenumber',
 }) {
   // ref
   const selectRef = useRef(null);

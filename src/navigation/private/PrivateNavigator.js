@@ -12,6 +12,7 @@ import ReservationFilters from '@/views/reservation/ReservationFilters';
 import MissingPlayersView from '@/views/reservation/MissingPlayersView';
 import BookingCalendar from '@/views/booking/BookingCalendar';
 import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
+import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
 import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScreen';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
@@ -35,6 +36,7 @@ import Conversation from '@/views/Conversation';
 import NotificationList from '@/views/notification/NotificationList';
 import FacilityList from '@/views/facility/FacilityList';
 import FacilityForm from '@/views/facility/FacilityForm';
+import NewConversation from '@/views/NewConversation';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -218,6 +220,14 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={MultisportClubEditDetails}
+        name={RouteNames.MultisportClubEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Modifier le club',
+        }}
+      />
+      <Stack.Screen
         component={FeaturedRequestsScreen}
         name={RouteNames.FeaturedRequests}
         options={{
@@ -279,6 +289,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={NewConversation}
+        name="NewConversation"
+        options={{
+          ...commonOptions,
+          headerShown: false,
         }}
       />
       <Stack.Screen

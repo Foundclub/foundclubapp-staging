@@ -15,6 +15,7 @@ import CreateClubRequest from '@/views/club/CreateClubRequest';
 import RequestsDashboard from '@/views/club/RequestsDashboard';
 import FacilityForm from '@/views/facility/FacilityForm';
 import FacilityList from '@/views/facility/FacilityList';
+import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
 
 const Stack = createStackNavigator();
 
@@ -113,6 +114,15 @@ function ClubStack() {
         options={{
           ...commonOptions,
           headerTitle: t('requests.title', 'Demandes'),
+        }}
+      />
+
+      <Stack.Screen
+        component={MultisportClubEditDetails}
+        name={RouteNames.MultisportClubEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Modifier le club',
         }}
       />
     </Stack.Navigator>

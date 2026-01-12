@@ -21,6 +21,8 @@ const chatSchema = Joi.object({
   participants: Joi.array().items(Joi.object()).required(),
   type: Joi.string().valid('whisper', 'club', 'team', 'multisport').required(),
   updatedAt: Joi.date().required(),
+  pinnedBy: Joi.array().items(Joi.object()).optional(),
+  archivedBy: Joi.array().items(Joi.object()).optional(),
 }).required();
 
 /**
@@ -77,7 +79,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
       populate: {
         club: {
           populate: {
-             logo: true,
+            logo: true,
           },
         },
         messages: {
@@ -95,6 +97,12 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         },
         team: {
           populate: true, 
+        },
+        pinnedBy: {
+            populate: ['avatar']
+        },
+        archivedBy: {
+            populate: ['avatar']
         },
       },
       sort: [
@@ -157,6 +165,12 @@ export const getChatById = async (chatId) => {
         },
         team: {
           populate: true,
+        },
+        pinnedBy: {
+            populate: ['avatar']
+        },
+        archivedBy: {
+            populate: ['avatar']
         },
       },
     },
@@ -335,4 +349,53 @@ export const createTeamChat = async (team) => {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to create chat: ${errorToDisplay}`);
   }
+};
+
+/**
+ * Delete a message
+ * @param {string} messageId - The message id
+ * @returns {Promise<void>}
+ */
+export const deleteMessage = async (messageId) => {
+  await client.delete(`/chat-messages/${messageId}`);
+};
+
+/**
+ * Pin a chat
+ * @param {string} chatId - The chat id
+ * @returns {Promise<Chat>}
+ */
+export const pinChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/pin`);
+  return response.data;
+};
+
+/**
+ * Unpin a chat
+ * @param {string} chatId - The chat id
+ * @returns {Promise<Chat>}
+ */
+export const unpinChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/unpin`);
+  return response.data;
+};
+
+/**
+ * Archive a chat
+ * @param {string} chatId - The chat id
+ * @returns {Promise<Chat>}
+ */
+export const archiveChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/archive`);
+  return response.data;
+};
+
+/**
+ * Unarchive a chat
+ * @param {string} chatId - The chat id
+ * @returns {Promise<Chat>}
+ */
+export const unarchiveChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/unarchive`);
+  return response.data;
 };

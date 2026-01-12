@@ -118,33 +118,59 @@ function MultisportClubDetails({ navigation, route }) {
             <View style={{
               position: 'absolute',
               top: 16,
-              right: 16,
+              left: 16,
               backgroundColor: '#00BCD4',
               paddingHorizontal: 12,
               paddingVertical: 4,
               borderRadius: 8,
+              zIndex: 1,
             }}>
               <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>
                 OMNISPORT
               </Text>
             </View>
 
-            <View style={{ marginTop: -32, zIndex: 1 }}>
-              {cm?.logo?.url ? (
-                <ProfileAvatar
-                  imageUrl={cm.logo.url}
-                  size={80}
+              {/* Edit Action - Visible only to CM admins */}
+              {cm?.admins?.some(admin => admin.documentId === userData?.documentId) ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate(RouteNames.MultisportClubEdit, { cmId })}
                   style={[
-                    { borderRadius: 80 },
+                    Alignments.absolute,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                    { right: 16, top: 16, zIndex: 10 }
                   ]}
-                  imageStyle={{ borderRadius: 80 }}
-                />
-              ) : (
-                <TeamShield
-                  initials={cm?.name ? getClubInitials(cm?.name) : ''}
-                />
-              )}
-            </View>
+                >
+                  <Image
+                     source={Images.edit}
+                     style={[
+                       ApplicationStyle.icon20,
+                       ApplicationStyle.tintColor.primary500
+                     ]}
+                  />
+                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                    Modifier
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <View style={{ marginTop: -32, zIndex: 1 }}>
+                {cm?.logo?.url ? (
+                  <ProfileAvatar
+                    imageUrl={cm.logo.url}
+                    size={80}
+                    style={[
+                      { borderRadius: 80 },
+                    ]}
+                    imageStyle={{ borderRadius: 80 }}
+                  />
+                ) : (
+                  <TeamShield
+                    initials={cm?.name ? getClubInitials(cm?.name) : ''}
+                  />
+                )}
+              </View>
 
             <View style={[Spaces.gap[4], Alignments.alignCenter]}>
               <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>

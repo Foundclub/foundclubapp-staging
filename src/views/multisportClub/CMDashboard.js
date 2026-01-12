@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Alert, Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import useClub from '@/domains/club/useClub';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -15,7 +16,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
-import { getMultisportClubById, getCMClubs } from '@/services/multisportClub/multisportClubService';
+import { getMultisportClubById, getCMClubs, deleteCMSection } from '@/services/multisportClub/multisportClubService';
 
 /**
  * CM Dashboard - Main management screen for Dirigeant Omnisport
@@ -27,6 +28,7 @@ function CMDashboard({ navigation, route }) {
     Alignments, ApplicationStyle, Fonts, Images, Spaces, Colors,
   } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
   const { getClubInitials } = useClub();
 
   // Fetch CM details
@@ -95,6 +97,34 @@ function CMDashboard({ navigation, route }) {
     navigation.navigate(RouteNames.CreateSection, { cmId });
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: (sectionId) => deleteCMSection(cmId, sectionId),
+    onSuccess: () => {
+      refetchSections();
+      Alert.alert(t('common.actions.delete'), t('multisport.sectionDeleted'));
+    },
+    onError: (err) => {
+      Alert.alert(t('APIerrors.title'), err.message || t('APIerrors.generic'));
+    },
+  });
+
+  const handleDeleteSection = (section) => {
+    Alert.alert(
+      t('multisport.deleteSectionTitle'),
+      t('multisport.deleteSectionConfirm', { name: section.name }),
+      [
+        { text: t('common.actions.cancel'), style: 'cancel' },
+        {
+          text: t('common.actions.delete'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(section.documentId),
+        },
+      ],
+    );
+  };
+
+  const isCmAdmin = cm?.admins?.some(admin => admin.documentId === userData?.documentId);
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -118,38 +148,104 @@ function CMDashboard({ navigation, route }) {
         >
           {/* Header */}
           <View style={[
-            ApplicationStyle.borderRadius16,
+            ApplicationStyle.borderRadius24,
             ApplicationStyle.backgroundColor.primary700,
-            Spaces.padding[16],
-            Spaces.gap[12],
+            Alignments.alignCenter,
+            Spaces.gap[16],
+            Spaces.paddingHorizontal[24],
+            Spaces.paddingBottom[40],
+            Spaces.marginTop[24],
+            { overflow: 'visible' },
           ]}>
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-              {cm?.logo?.url ? (
-                <ProfileAvatar
-                  imageUrl={cm.logo.url}
-                  size={60}
-                  style={{ borderRadius: 30 }}
-                  imageStyle={{ borderRadius: 30 }}
-                />
-              ) : (
-                <TeamShield initials={cm?.name ? getClubInitials(cm.name) : 'CM'} />
-              )}
-              <View style={[Spaces.gap[4], { flex: 1 }]}>
-                <Text style={[Fonts.h4Black, Fonts.neutral00]} numberOfLines={1}>
-                  {cm?.name}
-                </Text>
-                <View style={{
-                  backgroundColor: '#01b3f4',
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  borderRadius: 4,
-                  alignSelf: 'flex-start',
-                }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' }}>
-                    CLUB MULTISPORT
+            {/* Omnisport Badge */}
+            <View style={{
+              position: 'absolute',
+              top: 16,
+              left: 16,
+              backgroundColor: '#00BCD4',
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              borderRadius: 8,
+              zIndex: 1,
+            }}>
+              <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>
+                OMNISPORT
+              </Text>
+            </View>
+
+              {/* Edit Action - Visible only to CM admins */}
+              {isCmAdmin ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate(RouteNames.MultisportClubEdit, { cmId })}
+                  style={[
+                    Alignments.absolute,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                    { right: 16, top: 16, zIndex: 10 }
+                  ]}
+                >
+                  <Image
+                     source={Images.edit}
+                     style={[
+                       ApplicationStyle.icon20,
+                       ApplicationStyle.tintColor.primary500
+                     ]}
+                  />
+                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                    Modifier
                   </Text>
-                </View>
+                </TouchableOpacity>
+              ) : null}
+
+              <View style={{ marginTop: -32, zIndex: 1 }}>
+                {cm?.logo?.url ? (
+                  <ProfileAvatar
+                    imageUrl={cm.logo.url}
+                    size={80}
+                    style={[
+                      { borderRadius: 80 },
+                    ]}
+                    imageStyle={{ borderRadius: 80 }}
+                  />
+                ) : (
+                  <TeamShield
+                    initials={cm?.name ? getClubInitials(cm?.name) : ''}
+                  />
+                )}
               </View>
+
+            <View style={[Spaces.gap[4], Alignments.alignCenter]}>
+              <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+                {cm?.name}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {cm?.addressDetails || ''}
+              </Text>
+            </View>
+
+            {/* Contact Info */}
+            <View style={[Spaces.gap[4], Alignments.alignCenter]}>
+              {cm?.phoneNumber && (
+                <View style={[Alignments.row, Spaces.gap[4]]}>
+                  <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
+                  <TouchableOpacity onPress={() => Linking.openURL(`tel:${cm.phoneNumber}`)}>
+                    <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                      {cm.phoneNumber}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {cm?.email && (
+                <View style={[Alignments.row, Spaces.gap[4]]}>
+                  <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
+                  <TouchableOpacity onPress={() => Linking.openURL(`mailto:${cm.email}`)}>
+                    <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                      {cm.email}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
 
@@ -223,12 +319,14 @@ function CMDashboard({ navigation, route }) {
               variant="Secondary"
               icon="bell"
             />
-            <Button
-              onPress={handleCreateSection}
-              title="Créer une section"
-              variant="Primary"
-              icon="plus"
-            />
+            {isCmAdmin && (
+              <Button
+                onPress={handleCreateSection}
+                title="Créer une section"
+                variant="Primary"
+                icon="plus"
+              />
+            )}
           </View>
 
           {/* Sections List */}
@@ -281,6 +379,23 @@ function CMDashboard({ navigation, route }) {
                       </Text>
                     </View>
                   </View>
+                  
+                  {/* Delete Action */}
+                  {isCmAdmin && (
+                    <TouchableOpacity
+                      onPress={() => handleDeleteSection(section)}
+                      style={[Spaces.padding[8]]}
+                    >
+                      <Image
+                        source={Images.trash}
+                        style={[
+                          ApplicationStyle.icon20,
+                          ApplicationStyle.tintColor.error500 || { tintColor: '#FF5252' },
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  )}
+
                   <Image
                     source={Images.arrowRight}
                     style={[

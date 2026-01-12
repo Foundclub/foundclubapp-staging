@@ -12,6 +12,98 @@ const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
  * A Premium Date/Time Selector using the App's standardized BottomModal.
  * Solves Android visibility issues by using the @gorhom/bottom-sheet Portal system.
  */
+/**
+ * Internal Wheel Picker Component
+ */
+const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80, isOpen }) => {
+  const { Colors, Fonts } = useTheme();
+  const flatListRef = useRef(null);
+  const selectedIndex = data.findIndex(item => 
+    typeof item === 'object' ? item.value === selectedValue : item === selectedValue
+  );
+
+  // Initial scroll
+  useEffect(() => {
+    if (flatListRef.current && selectedIndex >= 0 && isOpen) {
+      // Use timeout to ensure FlatList is mounted
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ 
+          offset: selectedIndex * ITEM_HEIGHT, 
+          animated: false 
+        });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const handleScrollComplete = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
+    const item = data[clampedIndex];
+    if (item === undefined) return; // Guard against undefined
+    const newValue = typeof item === 'object' ? item.value : item;
+    
+    if (newValue !== selectedValue) {
+      onValueChange(newValue);
+    }
+  };
+
+  const renderItem = ({ item, index }) => {
+    const itemValue = typeof item === 'object' ? item.value : item;
+    const itemLabel = typeof item === 'object' ? item.label : formatItem ? formatItem(item) : String(item).padStart(2, '0');
+    const isSelected = itemValue === selectedValue;
+
+    return (
+      <TouchableOpacity 
+        style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
+        onPress={() => {
+          onValueChange(itemValue);
+          flatListRef.current?.scrollToOffset({
+            offset: index * ITEM_HEIGHT,
+            animated: true
+          });
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={[
+          Fonts.p1,
+          { color: isSelected ? Colors.primary500 : Colors.neutral500 },
+          isSelected && styles.selectedItemText
+        ]}>
+          {itemLabel}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={[styles.wheelContainer, { width, height: PICKER_HEIGHT }]}>
+      {/* Selection Indicator */}
+      <View style={[styles.selectionIndicator, { 
+        top: ITEM_HEIGHT * 2,
+        backgroundColor: Colors.neutral800,
+        borderColor: Colors.primary500
+      }]} pointerEvents="none" />
+      
+      <FlatList
+        ref={flatListRef}
+        data={data}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        bounces={false}
+        onMomentumScrollEnd={handleScrollComplete}
+        getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+      />
+    </View>
+  );
+};
+
 const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
   const { Colors, Fonts, Spaces } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -65,97 +157,6 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
 
-  // Wheel Picker Component
-  const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80 }) => {
-    const flatListRef = useRef(null);
-    const selectedIndex = data.findIndex(item => 
-      typeof item === 'object' ? item.value === selectedValue : item === selectedValue
-    );
-
-    // Initial scroll
-    useEffect(() => {
-      if (flatListRef.current && selectedIndex >= 0 && isOpen) {
-        // Use timeout to ensure FlatList is mounted
-        const timer = setTimeout(() => {
-          flatListRef.current?.scrollToOffset({ 
-            offset: selectedIndex * ITEM_HEIGHT, 
-            animated: false 
-          });
-        }, 200);
-        return () => clearTimeout(timer);
-      }
-    }, [isOpen]);
-
-    const handleScrollComplete = (event) => {
-      const offsetY = event.nativeEvent.contentOffset.y;
-      const index = Math.round(offsetY / ITEM_HEIGHT);
-      const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
-      const item = data[clampedIndex];
-      const newValue = typeof item === 'object' ? item.value : item;
-      
-      if (newValue !== selectedValue) {
-        onValueChange(newValue);
-      }
-    };
-
-    const renderItem = ({ item, index }) => {
-      const itemValue = typeof item === 'object' ? item.value : item;
-      const itemLabel = typeof item === 'object' ? item.label : formatItem ? formatItem(item) : String(item).padStart(2, '0');
-      const isSelected = itemValue === selectedValue;
-
-      return (
-        <TouchableOpacity 
-          style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
-          onPress={() => {
-            onValueChange(itemValue);
-            flatListRef.current?.scrollToOffset({
-              offset: index * ITEM_HEIGHT,
-              animated: true
-            });
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={[
-            Fonts.p1,
-            { color: isSelected ? Colors.primary500 : Colors.neutral500 },
-            isSelected && styles.selectedItemText
-          ]}>
-            {itemLabel}
-          </Text>
-        </TouchableOpacity>
-      );
-    };
-
-    return (
-      <View style={[styles.wheelContainer, { width, height: PICKER_HEIGHT }]}>
-        {/* Selection Indicator */}
-        <View style={[styles.selectionIndicator, { 
-          top: ITEM_HEIGHT * 2,
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.primary500
-        }]} pointerEvents="none" />
-        
-        <FlatList
-          ref={flatListRef}
-          data={data}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          snapToInterval={ITEM_HEIGHT}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          bounces={false}
-          onMomentumScrollEnd={handleScrollComplete}
-          onScrollEndDrag={(e) => {
-             handleScrollComplete(e);
-          }}
-          getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-          contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-        />
-      </View>
-    );
-  };
-
   return (
     <View style={[Spaces.marginBottom[16]]}>
       {label && (
@@ -193,6 +194,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
                     setTempDate(newDate);
                   }}
                   width={70}
+                  isOpen={isOpen}
                 />
                 <WheelPicker
                   data={months}
@@ -203,6 +205,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
                     setTempDate(newDate);
                   }}
                   width={90}
+                  isOpen={isOpen}
                 />
                 <WheelPicker
                   data={years}
@@ -213,6 +216,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
                     setTempDate(newDate);
                   }}
                   width={90}
+                  isOpen={isOpen}
                 />
               </>
             ) : (
@@ -226,6 +230,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
                     setTempDate(newDate);
                   }}
                   width={80}
+                  isOpen={isOpen}
                 />
                 <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
                 <WheelPicker
@@ -237,6 +242,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
                     setTempDate(newDate);
                   }}
                   width={80}
+                  isOpen={isOpen}
                 />
               </>
             )}

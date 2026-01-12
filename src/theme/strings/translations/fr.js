@@ -727,6 +727,7 @@ export default {
   },
   menu: {
     chat: 'Messagerie',
+    myClub: 'Mon club',
     myTeams: 'Mes équipes',
     planning: 'Mon planning',
     search: 'Rechercher',
@@ -1065,5 +1066,11 @@ export default {
     },
     subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
     title: 'Bienvenu·e sur',
+  },
+  multisport: {
+    deleteSectionTitle: 'Supprimer la section',
+    deleteSectionConfirm: 'Êtes-vous sûr de vouloir supprimer la section "{{name}}" ?\nCette action est irréversible et supprimera toutes les équipes et membres associés.',
+    sectionDeleted: 'La section a été supprimée avec succès.',
+    sectionCreated: 'La section a été créée avec succès.',
   },
 };

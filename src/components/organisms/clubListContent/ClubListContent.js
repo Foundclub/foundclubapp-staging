@@ -285,11 +285,7 @@ function ClubListContent() {
             </View>
           </WithDataWrapper>
         )}
-        <MapFloatButton
-          isMapView={isMapView}
-          onPress={() => setIsMapView(!isMapView)}
-          type="club"
-        />
+
       </View>
     </View>
   );

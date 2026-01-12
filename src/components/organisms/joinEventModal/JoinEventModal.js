@@ -57,6 +57,7 @@ function JoinEventModal({
   return (
     <BottomModal
       close={handleClose}
+      hideCloseButton
       isVisible={isVisible}
       headerComponent={(
         <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
@@ -64,7 +65,7 @@ function JoinEventModal({
         </Text>
       )}
       footerComponent={(
-        <View style={[Spaces.gap[16]]}>
+        <View style={[Spaces.gap[16], { paddingBottom: 50 }]}>
           <Button
             disabled={!acceptResponsibility || !acceptConditions}
             onPress={handleConfirmParticipation}

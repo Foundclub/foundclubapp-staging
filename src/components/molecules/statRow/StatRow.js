@@ -15,8 +15,8 @@ import { getImageUrl } from '@/utils/imageUrl';
 const StatRow = ({ player, columns, isEven = false }) => {
   const { Alignments, Colors, Fonts, Images, Spaces } = useTheme();
 
-  const avatarSource = player.user?.avatar
-    ? { uri: getImageUrl(player.user.avatar) }
+  const avatarSource = player.user?.avatar?.url
+    ? { uri: getImageUrl(player.user.avatar.url) }
     : Images.roundAvatar;
 
   return (

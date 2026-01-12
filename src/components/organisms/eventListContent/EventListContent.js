@@ -452,21 +452,7 @@ function EventListContent({
       />
 
       {/* Floating Map Button */}
-      {showFilters && (
-        <OnboardingWrapper
-          description="Basculez entre la vue liste et la carte interactive."
-          id="map-toggle"
-          order={4}
-          style={{ position: 'absolute', bottom: 20, right: 20 }} // Ensure wrapper has position
-          title="Carte"
-        >
-          <MapFloatButton
-            isMapView={isMapView}
-            onPress={() => setIsMapView(!isMapView)}
-            type="event"
-          />
-        </OnboardingWrapper>
-      )}
+
     </View>
   );
 }

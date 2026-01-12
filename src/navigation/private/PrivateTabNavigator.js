@@ -8,6 +8,8 @@ import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import MyEventsList from '@/views/event/MyEventList';
 import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
+import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
+import CMDashboard from '@/views/multisportClub/CMDashboard';
 import MyTeamList from '@/views/team/MyTeamList';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,11 +112,17 @@ function PrivateTabNavigator() {
       />
       {userData?.id ? (
         <Tab.Screen
-          component={canManageTeam && userData?.club
-            ? TeamList : MyTeamList}
+          component={
+            canManageTeam && userData?.multisportClubs?.length > 0
+              ? CMDashboard
+              : canManageTeam && userData?.club
+                ? TeamList
+                : MyTeamList
+          }
           initialParams={{
             clubId: userData?.club?.documentId,
             playerId: userData?.documentId,
+            cmId: userData?.multisportClubs?.[0]?.documentId,
           }}
           name={RouteNames.MyTeamList}
           options={{
@@ -123,7 +131,9 @@ function PrivateTabNavigator() {
               activeColor: Colors.primary500,
               bottomInset: insets.bottom,
               icon: Images.strokeShield,
-              label: t('menu.myTeams'),
+              label: canManageTeam && userData?.multisportClubs?.length > 0
+                ? t('menu.myClub')
+                : t('menu.myTeams'),
               renderTabBarIcon,
             }),
           }}

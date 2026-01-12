@@ -45,6 +45,7 @@
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.4.1",
     "react-native": "0.78.0",
+    "react-native-blob-util": "^0.24.6",
     "react-native-bouncy-checkbox": "^4.1.2",
     "react-native-calendars": "^1.1313.0",
     "react-native-device-info": "^14.0.4",

@@ -9,9 +9,15 @@ import {
   createTeamChat,
   createWhisperChat,
   getChats,
+  deleteMessage,
+  pinChat,
+  unpinChat,
+  archiveChat,
+  unarchiveChat,
 } from '@/services/chat/chatService';
 
 import useSocket, { EVENTS } from '@/hooks/useSocket';
+import useAuth from '@/domains/auth/useAuth';
 
 /**
  * Custom hook to handle messaging functionality
@@ -21,6 +27,7 @@ import useSocket, { EVENTS } from '@/hooks/useSocket';
 const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
+  const { userData } = useAuth();
 
   /**
    * Update the last read message timestamp for a chat
@@ -49,9 +56,13 @@ const useMessaging = (currentChatId) => {
           message: message.message,
           sender: message.sender,
           event: message.event,
+          attachments: message.attachments, // Handle attachments
+          replyTo: message.replyTo, // Handle reply
+          readBy: message.readBy, // Handle readBy
         };
 
-        if (!oldData) {
+        // Safety check: if oldData is missing or malformed, initialize it
+        if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
           return {
             pageParams: [null],
             pages: [{
@@ -61,27 +72,45 @@ const useMessaging = (currentChatId) => {
           };
         }
 
-        // Check if message already exists in first page
-        const messageExists = oldData.pages[0].data.some(
+        // Deep clone pages to avoid mutating unexpected references, or map safely
+        const cleanPages = oldData.pages.map(page => {
+           // Ensure page.data is an array
+           const data = Array.isArray(page?.data) ? page.data : [];
+           // Filter out pending messages that look identical to the confirmed one
+           const filteredData = data.filter(msg => {
+              if (msg.pending && msg.message === formattedMessage.message) return false;
+              // Add more duplicate checks if needed (e.g. by tempId if available)
+              return true;
+           });
+           return { ...page, data: filteredData };
+        });
+
+        // Check if message already exists in the first page (dedup)
+        const firstPage = cleanPages[0];
+        const firstPageData = firstPage?.data || [];
+        
+        const messageExists = firstPageData.some(
           (/** @type {{ id: string }} */ msg) => msg.id === formattedMessage.id,
         );
+
         if (messageExists) {
-          return oldData;
+           return { ...oldData, pages: cleanPages };
         }
 
-        // Add new message to first page
+        // Add new message to start of first page
+        const newFirstPage = {
+          ...firstPage,
+          data: [formattedMessage, ...firstPageData],
+        };
+
         return {
           ...oldData,
-          pages: [{
-            ...oldData.pages[0],
-            data: [formattedMessage, ...oldData.pages[0].data],
-          }, ...oldData.pages.slice(1)],
+          pages: [newFirstPage, ...cleanPages.slice(1)],
         };
       },
     );
 
     // Update chat list to show latest message
-    // Need to update all chat list queries regardless of params
     queryClient.setQueriesData(
       { queryKey: ['chats'] },
       (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
@@ -90,15 +119,16 @@ const useMessaging = (currentChatId) => {
           ...oldData,
           pages: oldData.pages.map((page) => ({
             ...page,
-            data: page.data.map((chat) => {
+            data: Array.isArray(page.data) ? page.data.map((chat) => {
               if (chat.documentId === message.chat?.documentId) {
                 return {
                   ...chat,
                   messages: [message],
+                  archivedBy: [], // Force unarchive locally
                 };
               }
               return chat;
-            }),
+            }) : [],
           })),
         };
       },
@@ -109,12 +139,12 @@ const useMessaging = (currentChatId) => {
     queryClient.setQueryData(
       ['chat-messages', data.chatDocumentId],
       (/** @type {any} */ oldData) => {
-        if (!oldData) return oldData;
+        if (!oldData || !oldData.pages) return oldData;
         return {
           ...oldData,
           pages: oldData.pages.map((/** @type {{ data: Array<{ id: string }> }} */ page) => ({
             ...page,
-            data: page.data.filter((msg) => msg.id !== data.messageId),
+            data: Array.isArray(page.data) ? page.data.filter((msg) => msg.id !== data.messageId && msg.documentId !== data.messageId) : [],
           })),
         };
       },
@@ -169,6 +199,33 @@ const useMessaging = (currentChatId) => {
     mutationFn: createTeamChat,
   });
 
+  const deleteMessageMutation = useMutation({
+    mutationFn: deleteMessage,
+    onSuccess: (_, messageId) => {
+       // Optimistic or Real update? The socket will handle real update for others.
+       // For me, I can remove it immediately if socket delay is high.
+       // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
+    }
+  });
+
+  const pinChatMutation = useMutation({
+    mutationFn: pinChat,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chats'] }),
+  });
+  const unpinChatMutation = useMutation({
+    mutationFn: unpinChat,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chats'] }),
+  });
+
+  const archiveChatMutation = useMutation({
+    mutationFn: archiveChat,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chats'] }),
+  });
+  const unarchiveChatMutation = useMutation({
+    mutationFn: unarchiveChat,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chats'] }),
+  });
+
   /**
    * Send a message
    * @param {string} chatId - The chat id
@@ -184,12 +241,91 @@ const useMessaging = (currentChatId) => {
     // Check if socket is connected before sending
     if (!isConnected || !socket) return;
 
+    // Optimistic Update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
+      documentId: tempId,
+      message,
+      createdAt: new Date().toISOString(),
+      sender: { documentId: 'me', ...extraData.sender }, // We need current user info here
+      event: extraData.event,
+      pending: true,
+      ...extraData,
+    };
+
+    // Update Cache Immediately
+    queryClient.setQueryData(
+      ['chat-messages', chatId],
+      (/** @type {any} */ oldData) => {
+        // Safe check for valid pages structure, init if absolutely missing
+        if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
+           return { 
+               pageParams: [null], 
+               pages: [{ 
+                   data: [optimisticMessage], 
+                   meta: { pagination: { page: 1, pageCount: 1, total: 1 } } 
+               }] 
+           };
+        }
+        
+        // Safe access to first page data
+        const firstPage = oldData.pages[0];
+        const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
+
+        return {
+          ...oldData,
+          pages: [{
+            ...firstPage,
+            data: [optimisticMessage, ...firstPageData],
+          }, ...oldData.pages.slice(1)],
+        };
+      }
+    );
+
     socket.emit(EVENTS.SEND_MESSAGE, {
       chatDocumentId: chatId,
       message,
-      ...extraData,
+      ...extraData, // files, replyTo, event
     });
-  }, [socket, isConnected]);
+
+    // Update chat list to show latest message AND unarchive
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            data: Array.isArray(page.data) ? page.data.map((chat) => {
+              if (chat.documentId === chatId) {
+                return {
+                  ...chat,
+                  messages: [optimisticMessage],
+                  archivedBy: [], // Force unarchive
+                  updatedAt: optimisticMessage.createdAt,
+                };
+              }
+              return chat;
+            }) : [],
+          })),
+        };
+      },
+    );
+  }, [socket, isConnected, queryClient]);
+
+  const sendTypingStart = useCallback((chatId) => {
+    if (socket) socket.emit(EVENTS.TYPING_START, { chatDocumentId: chatId });
+  }, [socket]);
+
+  const sendTypingStop = useCallback((chatId) => {
+    if (socket) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: chatId });
+  }, [socket]);
+
+  const sendReadReceipt = useCallback((chatId) => {
+    if (socket) socket.emit(EVENTS.READ_MESSAGE, { chatDocumentId: chatId });
+  }, [socket]);
 
   /**
    * Join a chat room
@@ -219,6 +355,12 @@ const useMessaging = (currentChatId) => {
    * @returns {Promise<Chat | undefined>} The created chat or existing chat
    */
   const startWhisperChat = async (participants) => {
+    // Check inputs
+    if (!participants || !Array.isArray(participants)) {
+       console.error("startWhisperChat called with invalid participants", participants);
+       return undefined;
+    }
+
     // Sort participants to ensure consistent comparison
     const sortedParticipants = [...participants].sort();
 
@@ -231,13 +373,16 @@ const useMessaging = (currentChatId) => {
 
       if (chatsData?.data) {
         const existingChat = chatsData.data.find((/** @type {any} */ chat) => {
+          if (!chat?.participants || !Array.isArray(chat.participants)) return false;
+          
           const chatParticipants = chat.participants
-            ?.map((/** @type {any} */ p) => (p.documentId || p))
-            .sort();
+             .filter((p) => p && (p.documentId || p)) // Filter out nulls
+             .map((/** @type {any} */ p) => (p.documentId || p))
+             .sort();
 
           return (
-            chatParticipants?.length === sortedParticipants.length
-            && chatParticipants?.every((
+            chatParticipants.length === sortedParticipants.length
+            && chatParticipants.every((
               /** @type {string} */ p,
               /** @type {number} */ i,
             ) => p === sortedParticipants[i])
@@ -245,7 +390,34 @@ const useMessaging = (currentChatId) => {
         });
 
         if (existingChat) {
-          return existingChat;
+             // Automatic Unarchive Check
+             const isArchived = existingChat.archivedBy?.some(u => u.documentId === userData?.documentId);
+             if (isArchived) {
+                  // 1. Optimistic Update (Force Visible)
+                  queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
+                      if (!oldData?.pages) return oldData;
+                      return {
+                          ...oldData,
+                          pages: oldData.pages.map(page => ({
+                              ...page,
+                              data: Array.isArray(page.data) ? page.data.map(chat => {
+                                  if (chat.documentId === existingChat.documentId) {
+                                      return { ...chat, archivedBy: [] };
+                                  }
+                                  return chat;
+                              }) : []
+                          }))
+                      };
+                  });
+
+                  // 2. Call API to unarchive
+                  try {
+                    await unarchiveChatMutation.mutateAsync(existingChat.documentId);
+                  } catch (e) {
+                     console.error("Failed to unarchive chat on open", e);
+                  }
+             }
+             return existingChat;
         }
       }
     } catch (error) {
@@ -338,7 +510,16 @@ const useMessaging = (currentChatId) => {
     startTeamChat,
     startWhisperChat,
     updateLastReadMessage,
+    sendTypingStart,
+    sendTypingStop,
+    sendReadReceipt,
+    deleteMessage: deleteMessageMutation.mutate,
+    pinChat: pinChatMutation.mutate,
+    unpinChat: unpinChatMutation.mutate,
+    archiveChat: archiveChatMutation.mutate,
+    unarchiveChat: unarchiveChatMutation.mutate,
   };
 };
 
 export default useMessaging;
+// Force Rebuild for Metro

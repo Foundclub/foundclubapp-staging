@@ -12,6 +12,10 @@ export const EVENTS = {
   MESSAGE_DELETED: 'message-deleted',
   MESSAGE_RECEIVED: 'message-received',
   SEND_MESSAGE: 'send-message',
+  TYPING_START: 'typing-start',
+  TYPING_STOP: 'typing-stop',
+  READ_MESSAGE: 'read-message',
+  MESSAGE_READ: 'message-read',
 };
 
 /**

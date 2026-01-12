@@ -60,7 +60,7 @@ import {
   openForPlayers, 
   triggerSosAlert 
 } from '@/services/reservation/reservationService';
-import { toggleLateEvent } from '@/services/event/eventService'; // Added
+import { toggleLateEvent, exportEventParticipants } from '@/services/event/eventService'; // Added
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 
 // Assets
@@ -698,7 +698,9 @@ function EventDetails({ navigation, route }) {
     setIsShareModalVisible(true);
   }, []);
 
-  const handleExportParticipants = useCallback(() => {
+  const handleExportParticipants = useCallback(async () => {
+    // OLD CSV GENERATION (Commented out)
+    /*
     // Gather all lists
     const participating = participationsByStatus.participating.map(p => ({...p, status: 'Présent'}));
     const missing = participationsByStatus.missing.map(p => ({...p, status: 'Absent'}));
@@ -711,23 +713,51 @@ function EventDetails({ navigation, route }) {
       Alert.alert(t('common.info'), "Aucun participant à exporter.");
       return;
     }
+    // ... CSV generation ...
+    */
 
-    // Generate CSV
-    const header = "Prénom,Nom,Statut,Email,Téléphone\n";
-    const csvContent = allUsers.map(u => {
-      const clean = (str) => (str || '').replace(/,/g, ' ').replace(/\n/g, ' ').trim();
-      return `${clean(u.firstname)},${clean(u.lastname)},${u.status},${clean(u.email)},${clean(u.phone)}`;
-    }).join('\n');
+    if (!eventId) return;
 
-    const finalCsv = header + csvContent;
+    try {
+      Alert.alert(
+        t('common.loading', 'Chargement'),
+        t('eventDetails.exporting', 'Génération du fichier Excel en cours...')
+      );
 
-    // Share
-    Share.share({
-      message: finalCsv,
-      title: 'participants_foundclub.csv' // iOS often ignores this for text sharing, but good to have
-    });
+      const path = await exportEventParticipants(eventId, event?.name);
 
-  }, [participationsByStatus, pendingParticipations]);
+      if (Platform.OS === 'ios') {
+        setTimeout(() => {
+          Share.share({
+            url: path,
+            title: 'Participants',
+          });
+        }, 500);
+      } else {
+         // Android: Open directly
+         const ReactNativeBlobUtil = require('react-native-blob-util').default;
+         ReactNativeBlobUtil.android.actionViewIntent(
+           path,
+           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+         ).catch((err) => {
+            console.warn('Could not open file intent', err);
+            // Fallback to alert if intent fails
+            Alert.alert(
+               t('common.success'),
+               t('eventDetails.exportSuccess', 'Fichier téléchargé dans vos téléchargements.')
+            );
+         });
+      }
+
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert(
+        t('common.error'),
+        t('eventDetails.exportError', 'Erreur lors du téléchargement.')
+      );
+    }
+
+  }, [eventId, event, t]); // Removed participationsByStatus dependency as we now fetch from backend
 
   const handleSelectChatToShare = async (chatId) => {
       if (chatId && eventId) {

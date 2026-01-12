@@ -1,5 +1,8 @@
 import Joi from 'joi';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Platform } from 'react-native';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
 import client from '../client';
 
 /**
@@ -101,7 +104,7 @@ export const getEventById = async (documentId) => {
         'team.players.avatar',
         'type',
         'missings',
-        'participations',
+        'participations.avatar',
         'participationRequests.user',
         'facility',
         'team.club.sponsor',
@@ -173,6 +176,9 @@ export const getEventTypes = async () => {
  *   startDateBefore?: Date;
  *   sort?: string;
  *   geohash?: string;
+ *   lat?: number;
+ *   lon?: number;
+ *   radius?: number;
  *   excludeType?: string;
  *   isFeatured?: boolean;
  *   featuredRequestStatus?: 'none' | 'pending' | 'approved' | 'rejected';
@@ -189,6 +195,9 @@ export const getEvents = async (params = {}) => {
     category,
     club,
     geohash,
+    lat,
+    lon,
+    radius,
     level,
     page,
     pageSize,
@@ -217,10 +226,16 @@ export const getEvents = async (params = {}) => {
   if (startDateAfter || startDateBefore) {
     filtersObj.date = {};
     if (startDateAfter) {
-      filtersObj.date.$gte = startDateAfter.toISOString();
+      // Handle both Date objects and ISO string values
+      filtersObj.date.$gte = startDateAfter instanceof Date 
+        ? startDateAfter.toISOString() 
+        : startDateAfter;
     }
     if (startDateBefore) {
-      filtersObj.date.$lte = startDateBefore.toISOString();
+      // Handle both Date objects and ISO string values
+      filtersObj.date.$lte = startDateBefore instanceof Date 
+        ? startDateBefore.toISOString() 
+        : startDateBefore;
     }
   } else {
     filtersObj.date = {
@@ -359,9 +374,11 @@ export const getEvents = async (params = {}) => {
     };
   }
 
-  if (geohash && geohash.length) {
+  // Only use geohash filter when lat/lon are NOT available (fallback mode)
+  // When coordinates are provided, skip geohash and let Haversine do precise filtering
+  if (geohash && geohash.length && (!lat || !lon || !radius)) {
     filtersObj.geohash = {
-      $contains: geohash,
+      $startsWith: geohash,
     };
   }
 
@@ -456,6 +473,8 @@ export const getEvents = async (params = {}) => {
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
     myTeams: params.myTeams, // Pass myTeams filter to backend
+    // Location-based filtering (Haversine)
+    ...(lat && lon && radius && { lat, lon, radius }),
   };
 
   const response = await client.get('/events', { params: filters });
@@ -586,4 +605,48 @@ export const getPendingFeaturedRequests = async (multisportClubId) => {
 export const toggleLateEvent = async (eventId, userId) => {
   const { data } = await client.post(`/events/${eventId}/toggle-late`, { userId }); // Custom route
   return data;
+};
+
+/**
+ * Export event participants to Excel
+ * @param {string} eventId
+ * @param {string} eventName
+ * @returns {Promise<string>} - The path to the downloaded file
+ */
+export const exportEventParticipants = async (eventId, eventName) => {
+  const token = getAuthTokens()?.token;
+  const baseURL = process.env.API_URL; // e.g. http://localhost:1337/api
+  const url = `${baseURL}/events/${eventId}/export-participants`;
+
+  const { dirs } = ReactNativeBlobUtil.fs;
+  const fileName = `participants_${eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event'}.xlsx`;
+  
+  const path = Platform.select({
+    ios: `${dirs.DocumentDir}/${fileName}`,
+    android: `${dirs.DownloadDir}/${fileName}`,
+  });
+
+  const config = {
+    fileCache: true,
+    path,
+  };
+
+  try {
+    const res = await ReactNativeBlobUtil.config(config).fetch('GET', url, {
+      Authorization: `Bearer ${token}`,
+    });
+    
+    // On Android, explicitly trying to show the file or notify
+    if (Platform.OS === 'android') {
+        try {
+            // Try to add to media scanner so it shows up
+            await ReactNativeBlobUtil.fs.scanFile([{ path: res.path(), mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }]);
+        } catch (ignored) {}
+    }
+    
+    return res.path();
+  } catch (error) {
+    console.error('[EventService] Export error:', error);
+    throw error;
+  }
 };

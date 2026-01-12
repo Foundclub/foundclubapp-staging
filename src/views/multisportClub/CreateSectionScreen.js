@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, View, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { createCMSection } from '@/services/multisportClub/multisportClubService';
+import { createCMSection, getMultisportClubById } from '@/services/multisportClub/multisportClubService';
+import { getActivities } from '@/services/activity/activityService';
 
 /**
  * Create Section - Form to create a new club section under a MultisportClub
@@ -25,15 +28,52 @@ function CreateSectionScreen({ navigation, route }) {
   const { t } = useTranslation();
 
   const [name, setName] = useState('');
-  const [sport, setSport] = useState('');
-  const [city, setCity] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [address, setAddress] = useState(null);
+  const [managerPhone, setManagerPhone] = useState('');
+
+  // Fetch activities
+  const { data: activities = [] } = useQuery({
+    queryKey: ['activities'],
+    queryFn: getActivities,
+    select: (data) => data.map((act) => ({
+      label: act.name,
+      value: act.documentId,
+    })),
+  });
+
+  // Fetch CM details for pre-filling address
+  const { data: cmDetails } = useQuery({
+    queryKey: ['multisportClub', cmId],
+    queryFn: () => getMultisportClubById(cmId),
+    enabled: !!cmId,
+  });
+
+  // Pre-fill address when cmDetails is loaded
+  useEffect(() => {
+    if (cmDetails && !address) {
+      if (cmDetails.address) {
+        // If address object exists (Location Picker)
+        setAddress({
+          label: cmDetails.addressDetails || cmDetails.address.label,
+          value: `${cmDetails.address.lng}|${cmDetails.address.lat}`, // Construct value expected by backend custom logic
+        });
+      } else if (cmDetails.addressDetails) {
+        // Fallback if only text address
+        setAddress({
+          label: cmDetails.addressDetails,
+          value: null, 
+        });
+      }
+    }
+  }, [cmDetails, address]);
 
   const createMutation = useMutation({
     mutationFn: (data) => createCMSection(cmId, data),
     onSuccess: (result) => {
       Alert.alert(
         'Section créée',
-        `La section "${result?.data?.name || name}" a été créée avec succès.`,
+        `La section "${result?.data?.name || name}" a été créée avec succès.${managerPhone ? '\nUne demande d\'adhésion a été créée pour le dirigeant.' : ''}`,
         [
           {
             text: 'OK',
@@ -55,15 +95,23 @@ function CreateSectionScreen({ navigation, route }) {
       Alert.alert('Erreur', 'Le nom de la section est obligatoire.');
       return;
     }
+    
+    // Address validation (optional, but requested precise address)
+    if (!address || !address.label) {
+      Alert.alert('Erreur', 'L\'adresse est obligatoire.');
+      return;
+    }
 
     createMutation.mutate({
       name: name.trim(),
-      sport: sport.trim() || undefined,
-      city: city.trim() || undefined,
+      activites: selectedActivity ? [selectedActivity.value] : [], 
+      addressLabel: address.label,
+      coordinates: address.value || undefined, // "lon|lat" from AutocompleteAddressInput
+      managerPhone: managerPhone.trim() || undefined,
     });
   };
 
-  const isValid = name.trim().length > 0;
+  const isValid = name.trim().length > 0 && address?.label;
 
   return (
     <ScreenContainer
@@ -116,24 +164,39 @@ function CreateSectionScreen({ navigation, route }) {
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 Sport
               </Text>
-              <Input
-                value={sport}
-                onChangeText={setSport}
-                placeholder="Ex: Football"
-                autoCapitalize="words"
+              <AutocompleteSelect
+                options={activities}
+                value={selectedActivity?.label} 
+                setValue={setSelectedActivity}
+                isSearchable
+                placeholder="Choisir un sport"
               />
             </View>
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Ville
+                Adresse / Ville *
+              </Text>
+              <AutocompleteAddressInput
+                address={address}
+                setAddress={setAddress}
+                placeholder="Ex: 10 rue de Paris..."
+              />
+            </View>
+
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                Numéro du dirigeant (Optionnel)
               </Text>
               <Input
-                value={city}
-                onChangeText={setCity}
-                placeholder="Ex: Paris"
-                autoCapitalize="words"
+                value={managerPhone}
+                onChangeText={setManagerPhone}
+                placeholder="Ex: 0612345678"
+                keyboardType="phone-pad"
               />
+              <Text style={[Fonts.p3, Fonts.neutral100]}>
+                Ce numéro sera utilisé pour assigner automatiquement le dirigeant lors de sa connexion.
+              </Text>
             </View>
           </View>
 

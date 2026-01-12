@@ -13,9 +13,9 @@ import Input from '@/components/molecules/input/Input';
 import { getDeviceLocaleCountry } from '@/utils/device/deviceInfo';
 import { DIAL_CODES } from '@/utils/dial_codes';
 
+// Default to France (+33) for all users
 const getDeviceDialCode = () => {
-  const dialCode = getCountryCallingCode(getDeviceLocaleCountry());
-  return DIAL_CODES.find(({ value }) => value === `+${dialCode}`);
+  return DIAL_CODES.find(({ value }) => value === '+33');
 };
 
 const DIALCODE_WIDTH = 72;
