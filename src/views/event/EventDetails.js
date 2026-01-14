@@ -38,6 +38,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import ShareCompositionModal from '@/components/organisms/shareCompositionModal/ShareCompositionModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useMessaging from '@/domains/messaging/useMessaging';
 
@@ -692,11 +693,62 @@ function EventDetails({ navigation, route }) {
   }, [missingEventMutation]);
 
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
+  const [isShareCompositionModalVisible, setIsShareCompositionModalVisible] = useState(false);
   const { sendMessage } = useMessaging();
 
   const handleShare = useCallback(() => {
     setIsShareModalVisible(true);
   }, []);
+
+  const handleViewComposition = useCallback(() => {
+    if (!event?.composition) return;
+    
+    // DEBUG: Log composition data
+    console.log('[EventDetails] Viewing composition:', JSON.stringify(event.composition, null, 2));
+    
+    // Navigate to Board in ReadOnly mode
+    navigation.navigate(RouteNames.TacticalBoardV2, {
+      eventId: event.documentId,
+      sport: event.sport,
+      teamId: event?.team?.documentId,
+      existingComposition: event.composition,
+      players: event?.team?.players || [], // Pass roster for names
+      manualPlayers: event?.composition?.manualPlayers || [], // Pass manual players
+      readOnly: true,
+      canEdit: canEditEvent(event?.team?.documentId || '')
+    });
+  }, [event, navigation]);
+
+  const handleShareComposition = useCallback(() => {
+    if (!event?.composition) return;
+    setIsShareCompositionModalVisible(true);
+  }, [event]);
+
+  // Handle sharing composition in a chat conversation
+  const handleSelectChatToShareComposition = async (chatId) => {
+    if (!chatId || !event?.composition || !event?.documentId) return;
+    
+    try {
+      // Build composition data for the message - include team players for reconstruction
+      const compositionData = {
+        eventId: event.documentId,
+        eventDate: event.date,
+        eventName: event.subject || event.name || '',
+        sport: event.sport || 'football',
+        sportContext: event.composition.sportContext,
+        placements: event.composition.placements || [],
+        manualPlayers: event.composition.manualPlayers || [],
+        teamPlayers: event.team?.players || [], // Include team players for TacticalBoard reconstruction
+      };
+      
+      await sendMessage(chatId, 'Composition partagée', { composition: compositionData });
+      setIsShareCompositionModalVisible(false);
+      Alert.alert('Succès', 'Composition partagée avec succès !');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Erreur', 'Erreur lors du partage');
+    }
+  };
 
   const handleExportParticipants = useCallback(async () => {
     // OLD CSV GENERATION (Commented out)
@@ -1488,6 +1540,65 @@ function EventDetails({ navigation, route }) {
             </ScrollView>
           )}
 
+          {/* Composition Section */}
+          {event?.composition && (
+             <View style={[Spaces.gap[16], Alignments.fill, Spaces.marginTop[16]]}>
+               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Composition</Text>
+                 <View style={[Alignments.row, Spaces.gap[8], Alignments.alignCenter]}>
+                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
+                   <Text style={[Fonts.p2, { color: '#22C55E' }]}>Validée</Text>
+                 </View>
+               </View>
+               
+               <View style={[
+                 { backgroundColor: '#262626' }, // Neutral 800 approx
+                 ApplicationStyle.borderRadius16,
+                 Spaces.padding[16],
+                 Spaces.gap[16]
+               ]}>
+                 <View style={[Alignments.row, Spaces.gap[12], Alignments.alignCenter]}>
+                    <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {event.composition.placements?.length || 0} Titulaires
+                    </Text>
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>•</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                       {Math.max(0, (event?.team?.players?.length || 0) - (event.composition.placements?.length || 0))} Remplaçants
+                    </Text>
+                 </View>
+
+                 <View style={[Alignments.row, Spaces.gap[12]]}>
+                   {canEditEvent(event?.team?.documentId) ? (
+                     <>
+                        <View style={{ flex: 1 }}>
+                          <Button 
+                            title="Partager" 
+                            variant="Secondary" 
+                            onPress={handleShareComposition} 
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Button 
+                            title="Voir la compo" 
+                            variant="Primary" 
+                            onPress={handleViewComposition} 
+                          />
+                        </View>
+                     </>
+                   ) : (
+                      <View style={{ flex: 1 }}>
+                        <Button 
+                          title="Voir la composition" 
+                          variant="Primary"
+                          onPress={handleViewComposition} 
+                        />
+                      </View>
+                   )}
+                 </View>
+               </View>
+             </View>
+          )}
+
           {/* Description section */}
           {event?.description ? (
             <View style={[Spaces.gap[16], Alignments.fill]}>
@@ -1949,6 +2060,21 @@ function EventDetails({ navigation, route }) {
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleSelectChatToShare}
+        event={event}
+      />
+      <ShareCompositionModal
+        isVisible={isShareCompositionModalVisible}
+        onClose={() => setIsShareCompositionModalVisible(false)}
+        onSelectChat={handleSelectChatToShareComposition}
+        composition={event?.composition ? {
+          eventId: event.documentId,
+          eventDate: event.date,
+          eventName: event.subject || event.name || '',
+          sport: event.sport,
+          sportContext: event.composition.sportContext,
+          placements: event.composition.placements,
+          manualPlayers: event.composition.manualPlayers,
+        } : undefined}
         event={event}
       />
     </ScreenContainer>

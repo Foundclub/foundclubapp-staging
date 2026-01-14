@@ -30,3 +30,25 @@ export const deleteSearchAlert = async (id) => {
     const response = await client.delete(`/search-alerts/${id}`);
     return response.data;
 };
+
+/**
+ * Update a search alert
+ * @param {string} id
+ * @param {object} data
+ * @returns {Promise<any>}
+ */
+export const updateSearchAlert = async (id, data) => {
+    const response = await client.put(`/search-alerts/${id}`, { data });
+    return response.data;
+};
+
+/**
+ * Get preview count of matching items for given filters
+ * @param {object} filters - The search filters
+ * @param {string} type - 'event' or 'mercato'
+ * @returns {Promise<{count: number}>}
+ */
+export const getPreviewCount = async (filters, type) => {
+    const response = await client.post('/search-alerts/preview-count', { filters, type });
+    return response.data;
+};

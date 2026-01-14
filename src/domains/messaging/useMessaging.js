@@ -56,6 +56,7 @@ const useMessaging = (currentChatId) => {
           message: message.message,
           sender: message.sender,
           event: message.event,
+          composition: message.composition, // Handle composition
           attachments: message.attachments, // Handle attachments
           replyTo: message.replyTo, // Handle reply
           readBy: message.readBy, // Handle readBy

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Image, Text, StyleSheet, Vibration, Animated, Easing } from 'react-native';
+import { TouchableOpacity, Image, Text, StyleSheet, Vibration, Animated } from 'react-native';
 import useTheme from '@/theme/themeContext';
 import { useNotificationController } from '@/hooks/useNotificationController';
 import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
@@ -9,7 +9,7 @@ import NotificationPopup from '@/components/organisms/notificationPopup/Notifica
  * Displays a bell icon with a red dot if there are unread notifications.
  * Features a pulse animation when new notifications arrive.
  */
-const NotificationBadge = () => {
+const NotificationBadge = ({ onPress }) => {
     const { Images, Colors } = useTheme();
     const { unreadCount, notifications, markAsRead } = useNotificationController();
     const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -17,24 +17,25 @@ const NotificationBadge = () => {
 
     // Animation values
     const scaleValue = useRef(new Animated.Value(1)).current;
+    
+    /* ... (animations omitted for brevity, they are preserved inside component logic via keep-same or full replace? I should replace the block) */
+    
+    // Pulse animation values need to be re-declared if I replace the whole function body or verify context.
+    // I will replace the main component logic to insert the prop check.
+    
     const pulseValue = useRef(new Animated.Value(1)).current;
     const rotateValue = useRef(new Animated.Value(0)).current;
 
     // Pulse animation when unread count increases
     useEffect(() => {
         if (unreadCount > prevUnreadCount && prevUnreadCount !== 0) {
-            // New notification arrived - trigger pulse and shake
             Vibration.vibrate(50);
-            
-            // Shake animation
             Animated.sequence([
                 Animated.timing(rotateValue, { toValue: 1, duration: 50, useNativeDriver: true }),
                 Animated.timing(rotateValue, { toValue: -1, duration: 100, useNativeDriver: true }),
                 Animated.timing(rotateValue, { toValue: 0.5, duration: 50, useNativeDriver: true }),
                 Animated.timing(rotateValue, { toValue: 0, duration: 50, useNativeDriver: true }),
             ]).start();
-
-            // Pulse animation on badge
             Animated.sequence([
                 Animated.timing(pulseValue, { toValue: 1.3, duration: 150, useNativeDriver: true }),
                 Animated.timing(pulseValue, { toValue: 1, duration: 150, useNativeDriver: true }),
@@ -44,24 +45,21 @@ const NotificationBadge = () => {
     }, [unreadCount, prevUnreadCount]);
 
     const handlePressIn = () => {
-        Animated.spring(scaleValue, {
-            toValue: 0.85,
-            useNativeDriver: true,
-        }).start();
+        Animated.spring(scaleValue, { toValue: 0.85, useNativeDriver: true }).start();
     };
 
     const handlePressOut = () => {
-        Animated.spring(scaleValue, {
-            toValue: 1,
-            friction: 3,
-            tension: 40,
-            useNativeDriver: true,
-        }).start();
+        Animated.spring(scaleValue, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
     };
 
     const handlePress = () => {
+        console.log('NotificationBadge pressed');
         Vibration.vibrate(10);
-        setIsPopupVisible(true);
+        if (onPress) {
+            onPress();
+        } else {
+            setIsPopupVisible(true);
+        }
     };
 
     const handleClose = () => {
@@ -117,12 +115,14 @@ const NotificationBadge = () => {
                 </Animated.View>
             </TouchableOpacity>
 
-            <NotificationPopup
-                isVisible={isPopupVisible}
-                onClose={handleClose}
-                notifications={notifications}
-                onMarkAsRead={markAsRead}
-            />
+            {!onPress && (
+                <NotificationPopup
+                    isVisible={isPopupVisible}
+                    onClose={handleClose}
+                    notifications={notifications}
+                    onMarkAsRead={markAsRead}
+                />
+            )}
         </>
     );
 };
@@ -149,4 +149,3 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationBadge;
-

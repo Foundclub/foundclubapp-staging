@@ -1,10 +1,11 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
-import React, { useMemo, useState } from 'react';
+import { useRoute } from '@react-navigation/native';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-    ScrollView, Text, TouchableOpacity, View,
+    Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,7 +26,7 @@ import { useGetSections } from '@/services/section/sectionQueries';
 import { getFieldError } from '@/utils/form/formUtils';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
-import { createSearchAlert } from '@/services/searchAlert/searchAlertService';
+import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert } from '@/services/searchAlert/searchAlertService';
 import { RouteNames } from '@/navigation/routeNames';
 
 const filtersSchema = Joi.object({
@@ -37,6 +38,14 @@ const filtersSchema = Joi.object({
 });
 
 function MercatoFilters({ navigation }) {
+    const route = useRoute();
+    const createAlertMode = route.params?.createAlertMode || false;
+    const editAlertMode = route.params?.editAlertMode || false;
+    const initialAlertLabel = route.params?.alertLabel || '';
+    const alertDocumentId = route.params?.alertDocumentId;
+
+    const isAlertMode = createAlertMode || editAlertMode;
+
     // local states
     const [activitySearchValue, setActivitySearchValue] = useState('');
     const [categorySearchValue, setCategorySearchValue] = useState('');
@@ -48,6 +57,7 @@ function MercatoFilters({ navigation }) {
     const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
     const [alertLabel, setAlertLabel] = useState('');
     const [isCreatingAlert, setIsCreatingAlert] = useState(false);
+    const [previewCount, setPreviewCount] = useState(null);
 
     // hooks
     const { t } = useTranslation();
@@ -77,49 +87,52 @@ function MercatoFilters({ navigation }) {
         resolver: joiResolver(filtersSchema),
     });
 
-    // Header Star Button
-    React.useLayoutEffect(() => {
-        navigation.setOptions({
-            headerRight: () => (
-                <View style={{ marginRight: 16 }}>
-                    <TouchableOpacity
-                        onPress={() => setIsSaveModalVisible(true)}
-                        style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
-                    </TouchableOpacity>
-                </View>
-            ),
-        });
-    }, [navigation, Colors]);
-
-    const handleCreateAlert = async () => {
-        if (!alertLabel.trim()) return;
-        setIsCreatingAlert(true);
+    // Header Star Button (only show when NOT in createAlertMode)
+    const handleOpenSaveModal = async () => {
+        setIsSaveModalVisible(true);
+        // Fetch preview count
         try {
-            // Get current form values to save as filters
             const currentFilters = getValues();
-            await createSearchAlert({
-                label: alertLabel,
-                filters: currentFilters,
-            });
-            setIsSaveModalVisible(false);
-            setAlertLabel('');
-            // Show success feedback (Toast or Alert)
-            // For now, navigate to Alerts list as feedback
-            navigation.navigate(RouteNames.SearchAlerts);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsCreatingAlert(false);
+            const result = await getPreviewCount(currentFilters, 'mercato');
+            setPreviewCount(result.count);
+        } catch (error) {
+            console.error('Error fetching preview count:', error);
+            setPreviewCount(null);
         }
     };
+
+    // Set header title and optionally hide star button in isAlertMode
+    useEffect(() => {
+        if (isAlertMode) {
+            navigation.setOptions({
+                headerTitle: editAlertMode ? 'Modifier l\'alerte' : 'Créer une alerte',
+                headerRight: () => null,
+            });
+        }
+    }, [isAlertMode, editAlertMode, navigation]);
+
+    React.useLayoutEffect(() => {
+        if (!isAlertMode) {
+            navigation.setOptions({
+                headerRight: () => (
+                    <View style={{ marginRight: 16, alignItems: 'center' }}>
+                        <TouchableOpacity
+                            onPress={handleOpenSaveModal}
+                            style={{
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
+                            <Text style={{ color: Colors.primary500, fontSize: 10, marginTop: 2 }}>Créer alerte</Text>
+                        </TouchableOpacity>
+                    </View>
+                ),
+            });
+        }
+    }, [navigation, Colors, createAlertMode]);
+
+
 
     const { data: allActivities } = useGetActivities();
     const { data: allSections } = useGetSections();
@@ -206,6 +219,90 @@ function MercatoFilters({ navigation }) {
         navigation.goBack();
     };
 
+    // Direct alert creation/update for createAlertMode
+    const handleSaveAlert = async () => {
+        const currentFilters = getValues();
+        
+        // Validate city and radius
+        if (!currentFilters.city?.value || !currentFilters.radius) {
+            Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
+            return;
+        }
+        
+        if (editAlertMode) {
+            // In edit mode, use the existing label initially
+            setAlertLabel(initialAlertLabel);
+        } else {
+            // Auto-generate alert name based on type + city
+            const cityName = currentFilters.city?.label || 'Recherche';
+            const baseLabel = `Mercato · ${cityName}`;
+            
+            // Check for duplicates and add suffix if needed
+            try {
+                const existingAlerts = await getSearchAlerts();
+                const alerts = existingAlerts.data || [];
+                let duplicateCount = 0;
+                
+                alerts.forEach((alert) => {
+                    if (alert.label === baseLabel || alert.label.startsWith(baseLabel + ' (')) {
+                        duplicateCount++;
+                    }
+                });
+                
+                const finalLabel = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
+                setAlertLabel(finalLabel);
+            } catch (error) {
+                console.error('Error checking duplicates:', error);
+                setAlertLabel(baseLabel);
+            }
+        }
+        
+        // Show modal to confirm/edit alert name
+        setIsSaveModalVisible(true);
+        // Fetch preview count
+        try {
+            const result = await getPreviewCount(currentFilters, 'mercato');
+            setPreviewCount(result.count);
+        } catch (error) {
+            console.error('Error fetching preview count:', error);
+            setPreviewCount(null);
+        }
+    };
+
+    const handleCreateAlert = async () => {
+        if (!alertLabel.trim()) {
+            Alert.alert('Erreur', 'Veuillez saisir un nom pour l\'alerte');
+            return;
+        }
+
+        setIsCreatingAlert(true);
+        try {
+            if (editAlertMode && alertDocumentId) {
+                await updateSearchAlert(alertDocumentId, {
+                    label: alertLabel,
+                    filters: getValues(),
+                    isActive: true,
+                });
+                Alert.alert('Succès', 'Alerte modifiée avec succès');
+            } else {
+                await createSearchAlert({
+                    label: alertLabel,
+                    type: 'mercato',
+                    filters: getValues(),
+                    isActive: true,
+                });
+                Alert.alert('Succès', 'Alerte créée avec succès');
+            }
+            setIsSaveModalVisible(false);
+            navigation.goBack();
+        } catch (error) {
+            console.error('Error saving alert:', error);
+            Alert.alert('Erreur', 'Impossible d\'enregistrer l\'alerte');
+        } finally {
+            setIsCreatingAlert(false);
+        }
+    };
+
     const openInfoModal = (title, content) => {
         setInfoModalContent({ title, content });
         setInfoModalVisible(true);
@@ -250,7 +347,9 @@ function MercatoFilters({ navigation }) {
                 isVisible={isSaveModalVisible}
             >
                 <View style={[Spaces.gap[16]]}>
-                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('searchAlerts.create.title', 'Créer une alerte')}</Text>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                        {editAlertMode ? "Modifier l'alerte" : t('searchAlerts.create.title', 'Créer une alerte')}
+                    </Text>
                     <Text style={[Fonts.p1, Fonts.neutral00]}>
                         {t('searchAlerts.create.desc', 'Donnez un nom à votre recherche pour recevoir des notifications.')}
                     </Text>
@@ -259,6 +358,11 @@ function MercatoFilters({ navigation }) {
                         placeholder={t('searchAlerts.create.placeholder', 'Ex: Attaquants U13')}
                         value={alertLabel}
                     />
+                    {previewCount !== null && (
+                        <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
+                            Pour le moment, {previewCount} profil{previewCount > 1 ? 's' : ''} correspond{previewCount > 1 ? 'ent' : ''}
+                        </Text>
+                    )}
                     <Button
                         isLoading={isCreatingAlert}
                         onPress={handleCreateAlert}
@@ -416,16 +520,33 @@ function MercatoFilters({ navigation }) {
             </ScrollView>
 
             <View style={[Spaces.gap[24]]}>
-                <Button
-                    onPress={handleEmptyFilters}
-                    title={t('eventFilters.actions.clear')}
-                    variant="Secondary"
-                />
-                <Button
-                    onPress={handleSubmit(handleApplyFilters)}
-                    title={t('eventFilters.actions.apply')}
-                    variant="Primary"
-                />
+                {isAlertMode ? (
+                    <>
+                        <Button
+                            onPress={() => navigation.goBack()}
+                            title="Annuler"
+                            variant="Secondary"
+                        />
+                        <Button
+                            onPress={handleSaveAlert}
+                            title={editAlertMode ? "Enregistrer les modifications" : "Créer l'alerte ★"}
+                            variant="Primary"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <Button
+                            onPress={handleEmptyFilters}
+                            title={t('eventFilters.actions.clear')}
+                            variant="Secondary"
+                        />
+                        <Button
+                            onPress={handleSubmit(handleApplyFilters)}
+                            title={t('eventFilters.actions.apply')}
+                            variant="Primary"
+                        />
+                    </>
+                )}
             </View>
         </ScreenContainer>
     );

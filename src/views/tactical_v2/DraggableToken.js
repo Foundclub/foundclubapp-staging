@@ -5,6 +5,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import useTheme from '@/theme/themeContext';
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {import('./types').TacticalPlayer} TacticalPlayer
@@ -41,6 +42,30 @@ const DraggableToken = ({
     return first + last || '?';
   }, [player]);
 
+  // Check if player is manually added (no profile photo for manual players)
+  const isManualPlayer = useMemo(() => {
+    return player?.isManual || String(player?.id || '').startsWith('manual_');
+  }, [player]);
+
+  // Handle avatar source (string vs object vs null)
+  // Manual players always show initials, never a photo
+  const avatarUri = useMemo(() => {
+    if (isManualPlayer) return null; // Force initials for manual players
+    if (!player?.avatar) return null;
+    
+    let rawUrl = null;
+    if (typeof player.avatar === 'string') {
+      rawUrl = player.avatar;
+    } else if (player.avatar?.url && typeof player.avatar.url === 'string') {
+      rawUrl = player.avatar.url;
+    } else if (player.avatar?.formats?.thumbnail?.url && typeof player.avatar.formats.thumbnail.url === 'string') {
+      rawUrl = player.avatar.formats.thumbnail.url;
+    }
+    
+    // Use getImageUrl to properly prefix relative URLs
+    return rawUrl ? getImageUrl(rawUrl) : null;
+  }, [player?.avatar, isManualPlayer]);
+
   // Animated style for ghost token (follows finger)
   const animatedStyle = useAnimatedStyle(() => {
     'worklet';
@@ -72,8 +97,8 @@ const DraggableToken = ({
         pointerEvents="none"
       >
         <View style={styles.ghostAvatarContainer}>
-          {player?.avatar ? (
-            <Image source={{ uri: player.avatar }} style={styles.ghostAvatar} />
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.ghostAvatar} />
           ) : (
             <Text style={styles.ghostInitials}>{initials}</Text>
           )}
@@ -97,8 +122,8 @@ const DraggableToken = ({
         ]}
       >
         <View style={styles.fieldAvatarContainer}>
-          {player?.avatar ? (
-            <Image source={{ uri: player.avatar }} style={styles.fieldAvatar} />
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.fieldAvatar} />
           ) : (
             <View style={[styles.fieldInitialsContainer, { backgroundColor: '#0088CC' }]}>
               <Text style={styles.fieldInitials}>{initials}</Text>
@@ -133,8 +158,8 @@ const DraggableToken = ({
       ]}
     >
       <View style={[styles.benchAvatarCircle, { backgroundColor: Colors.neutral700 }]}>
-        {player?.avatar ? (
-          <Image source={{ uri: player.avatar }} style={styles.benchAvatar} />
+        {avatarUri ? (
+          <Image source={{ uri: avatarUri }} style={styles.benchAvatar} />
         ) : (
           <Text style={[styles.benchInitials, { color: Colors.neutral00 }]}>{initials}</Text>
         )}

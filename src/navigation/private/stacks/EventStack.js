@@ -8,7 +8,8 @@ import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
-import { TacticalSelection as TacticalSelectionV2, TacticalBoard as TacticalBoardV2 } from '@/views/tactical_v2';
+import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
+import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
 
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardType from '@/views/event/wizard/EventWizardType';

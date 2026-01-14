@@ -26,6 +26,10 @@ import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import { useIsFocused } from '@react-navigation/native';
 
+// Notification imports (Fix for Popup issue)
+import { useNotificationController } from '@/hooks/useNotificationController';
+import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
+
 const baseSearchOptions = [
   {
     label: 'Évènements',
@@ -48,6 +52,9 @@ const baseSearchOptions = [
  */
 function HomeContent({ navigation }) {
   const [searchType, setSearchType] = useState(baseSearchOptions[0].value);
+  const [isNotifVisible, setIsNotifVisible] = useState(false);
+  const { notifications, markAsRead } = useNotificationController();
+
   const [{ auth }] = useAppContext();
   const {
     Alignments,
@@ -130,7 +137,7 @@ function HomeContent({ navigation }) {
       >
         <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <NotificationBadge />
+          <NotificationBadge onPress={() => setIsNotifVisible(true)} />
           <ProfileButton />
         </View>
       </View>
@@ -152,6 +159,14 @@ function HomeContent({ navigation }) {
       </View>
       {renderContent()}
       <OnboardingOverlay />
+
+      {/* Notification Popup at Root Level ensuring it appears above everything */}
+      <NotificationPopup
+        isVisible={isNotifVisible}
+        onClose={() => setIsNotifVisible(false)}
+        notifications={notifications}
+        onMarkAsRead={markAsRead}
+      />
     </ScreenContainer>
   );
 }

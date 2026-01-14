@@ -28,6 +28,7 @@ import DraggableToken from './DraggableToken';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { updateEvent } from '@/services/event/eventService';
+import { RouteNames } from '@/navigation/routeNames';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,7 +48,7 @@ const FIELD_ASPECT_RATIOS = {
 // Field images
 /** @type {Record<string, any>} */
 const FIELD_IMAGES = {
-  football: require('@/assets/fields/field_football.png'),
+  football: require('@/assets/fields/field_generic.png'),
   rugby: require('@/assets/fields/field_rugby.png'),
   basket: require('@/assets/fields/field_basket.png'),
   basketball: require('@/assets/fields/field_basket.png'),
@@ -85,31 +86,60 @@ const TacticalBoard = () => {
   const route = useRoute();
   
   // Get params
-  /** @type {{selectedPlayers?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string}} */
+  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[]}} */
   const params = route.params || {};
   const { 
     selectedPlayers = [], 
+    players = [],
     eventId, 
     sport = 'football',
     existingComposition,
     teamId, 
+    readOnly = false,
+    canEdit = false,
+    manualPlayers = [],
   } = params;
+  
+  // Use poolPlayers for reconstruction (selectedPlayers from editor, players from viewer)
+  const poolPlayers = useMemo(() => {
+    const base = selectedPlayers.length > 0 ? selectedPlayers : players;
+    // Include manual players from composition
+    const manuals = existingComposition?.manualPlayers || manualPlayers || [];
+    const baseIds = new Set(base.map(p => p.id || p.documentId));
+    const uniqueManuals = manuals.filter(m => !baseIds.has(m.id || m.documentId));
+    return [...base, ...uniqueManuals];
+  }, [selectedPlayers, players, existingComposition, manualPlayers]);
+
+  // DEBUG: Log reconstruction data
+  console.log('[TacticalBoard] Params:', { 
+    selectedPlayersCount: selectedPlayers.length, 
+    playersCount: players.length, 
+    existingComposition,
+    manualPlayersParam: manualPlayers,
+    poolPlayersCount: poolPlayers.length 
+  });
   
   // Initialize players from existing composition
   const { initialFieldPlayers, initialBenchPlayers } = useMemo(() => {
     if (existingComposition?.placements?.length) {
-      // Build field players from composition
+      // Build field players from composition with FULL player data
       const fieldFromCompo = existingComposition.placements
-        .filter(p => selectedPlayers.some(sp => (sp.id === p.playerId) || (sp.documentId === p.playerId)))
-        .map(p => ({
-          id: p.playerId,
-          x: p.positionX,
-          y: p.positionY,
-        }));
+        .map(p => {
+          const original = poolPlayers.find(sp => (sp.id === p.playerId) || (sp.documentId === p.playerId));
+          if (!original) return null;
+          return {
+            ...original,
+            id: original.id || p.playerId,
+            documentId: original.documentId || p.playerId,
+            x: p.positionX,
+            y: p.positionY,
+          };
+        })
+        .filter(Boolean);
       
       // Players not in composition go to bench
-      const placedIds = new Set(fieldFromCompo.map(fp => fp.id));
-      const benchFromCompo = selectedPlayers.filter(p => {
+      const placedIds = new Set(fieldFromCompo.map(fp => fp.id || fp.documentId));
+      const benchFromCompo = poolPlayers.filter(p => {
         const id = p.id || p.documentId;
         return !placedIds.has(id);
       });
@@ -123,9 +153,9 @@ const TacticalBoard = () => {
     // No existing composition - all players on bench
     return { 
       initialFieldPlayers: [], 
-      initialBenchPlayers: selectedPlayers,
+      initialBenchPlayers: poolPlayers,
     };
-  }, [existingComposition, selectedPlayers]);
+  }, [existingComposition, poolPlayers]);
   
   // Field ref using Reanimated for UI Thread measurements
   const fieldRef = useAnimatedRef();
@@ -192,10 +222,10 @@ const TacticalBoard = () => {
     }, 100);
   }, [fieldRef, fieldX, fieldY, fieldW, fieldH]);
 
-  // Get player by ID from either bench or selected
+  // Get player by ID from pool (includes team players + manual players)
   const getPlayerById = useCallback((/** @type {string} */ id) => {
-    return selectedPlayers.find(p => (p.id || p.documentId) === id);
-  }, [selectedPlayers]);
+    return poolPlayers.find(p => (p.id || p.documentId) === id);
+  }, [poolPlayers]);
 
   // === DRAG HANDLERS ===
   
@@ -278,10 +308,13 @@ const TacticalBoard = () => {
       
       console.log('[TacticalBoard] Storing position:', { clampedX, clampedY });
       
-      // Update field players
+      // Update field players - store full player data with coordinates
       setFieldPlayers(prev => {
-        const filtered = prev.filter(p => p.id !== playerId);
-        return [...filtered, { id: playerId, x: clampedX, y: clampedY }];
+        const filtered = prev.filter(p => (p.id || p.documentId) !== playerId);
+        // Get full player data
+        const fullPlayer = getPlayerById(playerId) || activeDragPlayer;
+        if (!fullPlayer) return prev;
+        return [...filtered, { ...fullPlayer, id: playerId, x: clampedX, y: clampedY }];
       });
       
       // Remove from bench if coming from bench
@@ -360,13 +393,28 @@ const TacticalBoard = () => {
     
     setIsSaving(true);
     try {
+      // Extract manual players from all players (field + bench)
+      const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
+      const extractedManualPlayers = allCurrentPlayers
+        .filter(p => p.isManual || (p.id && String(p.id).startsWith('manual_')) || (p.documentId && String(p.documentId).startsWith('manual_')))
+        .map(p => ({
+          id: p.id,
+          documentId: p.documentId || p.id,
+          firstname: p.firstname,
+          lastname: p.lastname,
+          number: p.number,
+          avatar: p.avatar,
+          isManual: true,
+        }));
+
       const compositionData = {
         sportContext: sport,
         placements: fieldPlayers.map(fp => ({
-          playerId: fp.id,
+          playerId: fp.documentId || fp.id,
           positionX: fp.x,
           positionY: fp.y,
         })),
+        manualPlayers: extractedManualPlayers,
       };
       
       await updateEvent({
@@ -377,7 +425,7 @@ const TacticalBoard = () => {
       });
       
       Alert.alert('Succès', 'Composition enregistrée !', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId }) }
       ]);
     } catch (error) {
       console.error('Save error:', error);
@@ -399,20 +447,9 @@ const TacticalBoard = () => {
     <GestureHandlerRootView style={Alignments.fill}>
       <ImageBackground
         source={Images.bg1}
-        style={[Alignments.fill, { paddingTop: insets.top }]}
+        style={[Alignments.fill, { paddingTop: insets.top + 8 }]}
         resizeMode="cover"
       >
-        {/* Header with safe area */}
-        <View style={styles.header}>
-          <HeaderBackButton onPress={() => navigation.goBack()} />
-          <View style={styles.headerCenter}>
-            <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Composition</Text>
-            <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
-              <Text style={[Fonts.p3, { color: '#FFF', fontWeight: '700' }]}>{fieldPlayers.length}/{selectedPlayers.length}</Text>
-            </View>
-          </View>
-          <View style={styles.headerSpacer} />
-        </View>
 
         {/* Field Area */}
         <View style={styles.fieldContainer}>
@@ -435,8 +472,8 @@ const TacticalBoard = () => {
             
             {/* Placed players */}
             {fieldPlayers.map((fp) => {
-              const player = getPlayerById(fp.id);
-              if (!player) return null;
+              // fp already has full player data from reconstruction
+              if (!fp.firstname && !fp.lastname && !fp.id) return null;
               
               // Use React state for consistent display
               // fp.x/y are percentages where the finger was (center of ghost)
@@ -449,14 +486,15 @@ const TacticalBoard = () => {
               const top = pixelY - FIELD_TOKEN_HEIGHT / 2;
               
               // Hide if currently being dragged
-              const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === fp.id;
+              const playerId = fp.id || fp.documentId;
+              const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
               
-              const panGesture = createFieldPanGesture(fp.id);
+              const panGesture = createFieldPanGesture(playerId);
               
               return (
-                <GestureDetector key={fp.id} gesture={panGesture}>
+                <GestureDetector key={playerId} gesture={panGesture}>
                   <View style={[styles.fieldPlayerWrapper, { left, top, opacity: isDragging ? 0 : 1 }]}>
-                    <DraggableToken player={player} isOnField />
+                    <DraggableToken player={fp} isOnField />
                   </View>
                 </GestureDetector>
               );
@@ -507,14 +545,31 @@ const TacticalBoard = () => {
           <View style={{ flex: 1 }}>
             <Button title="Retour" variant="Secondary" onPress={() => navigation.goBack()} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Button 
-              title={isSaving ? 'Enregistrement...' : `Enregistrer (${fieldPlayers.length})`}
-              variant="Primary"
-              onPress={handleSave}
-              disabled={isSaving}
-            />
-          </View>
+          {!readOnly && (
+            <View style={{ flex: 1 }}>
+              <Button 
+                title={isSaving ? 'Enregistrement...' : `Enregistrer (${fieldPlayers.length})`}
+                variant="Primary"
+                onPress={handleSave}
+                disabled={isSaving}
+              />
+            </View>
+          )}
+          {readOnly && canEdit && (
+            <View style={{ flex: 1 }}>
+              <Button 
+                title="Modifier"
+                variant="Primary"
+                onPress={() => navigation.navigate(RouteNames.TacticalSelectionV2, {
+                  eventId,
+                  sport,
+                  teamId,
+                  players: poolPlayers,
+                  existingComposition,
+                })}
+              />
+            </View>
+          )}
         </View>
 
         {/* Ghost Token Overlay */}
@@ -545,12 +600,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: 16,
+    justifyContent: 'center',
     paddingVertical: 8,
+    minHeight: 48,
+    position: 'relative',
   },
-  headerSpacer: {
-    width: 44,
+  headerBackButtonContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    zIndex: 10,
   },
   headerCenter: {
     flexDirection: 'row',

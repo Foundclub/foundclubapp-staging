@@ -27,7 +27,7 @@ const HistoryWizardPeriod = ({ navigation }) => {
       subtitle="Indique les années de ta présence dans ce club"
       onBack={() => navigation.goBack()}
       onNext={() => navigation.navigate(RouteNames.HistoryWizardRecap)}
-      nextLabel="Voir le récapitulatif"
+      nextLabel="Continuer"
     >
       <View style={[Spaces.gap[24]]}>
         {/* Start Year */}

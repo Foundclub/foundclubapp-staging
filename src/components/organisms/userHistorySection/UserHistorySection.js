@@ -106,7 +106,11 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
               justifyContent: 'center',
             }}
           >
-            <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>+</Text>
+            <Image 
+              source={require('@/assets/icons/plus.png')} 
+              style={{ width: 14, height: 14, tintColor: '#FFF' }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         )}
       </View>

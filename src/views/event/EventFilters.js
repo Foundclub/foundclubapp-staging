@@ -1,12 +1,13 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
+import { useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,7 +34,7 @@ import { useGetTeams } from '@/services/team/teamQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
-import { createSearchAlert } from '@/services/searchAlert/searchAlertService';
+import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert } from '@/services/searchAlert/searchAlertService';
 import { RouteNames } from '@/navigation/routeNames';
 
 /** @typedef {{ label: string; value: string }} Option */
@@ -62,6 +63,15 @@ const filtersSchema = Joi.object({
  * @returns {import('react').ReactElement} EventFilters component
  */
 function EventFilters({ navigation }) {
+  const route = useRoute();
+  const createAlertMode = route.params?.createAlertMode || false;
+  const editAlertMode = route.params?.editAlertMode || false;
+  const initialAlertLabel = route.params?.alertLabel || '';
+  const alertDocumentId = route.params?.alertDocumentId;
+  const savedFilters = route.params?.savedFilters;
+
+  const isAlertMode = createAlertMode || editAlertMode;
+
   // local states
   const [activitySearchValue, setActivitySearchValue] = useState('');
   const [categorySearchValue, setCategorySearchValue] = useState('');
@@ -76,8 +86,9 @@ function EventFilters({ navigation }) {
 
   // Alert State
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
-  const [alertLabel, setAlertLabel] = useState('');
+  const [alertLabel, setAlertLabel] = useState(initialAlertLabel || '');
   const [isCreatingAlert, setIsCreatingAlert] = useState(false);
+  const [previewCount, setPreviewCount] = useState(null);
 
   // hooks
   const { t } = useTranslation();
@@ -88,15 +99,21 @@ function EventFilters({ navigation }) {
   const { getGeohashForPointAndRadius } = usePlaces();
   const insets = useSafeAreaInsets();
 
-  const {
-    control,
-    formState: { errors: formErrors },
-    handleSubmit,
-    setValue,
-    watch,
-    getValues,
-  } = useForm({
-    defaultValues: {
+  const defaultValues = useMemo(() => {
+    if (savedFilters) {
+      return {
+        activity: savedFilters.activity || [],
+        category: savedFilters.category || [],
+        city: savedFilters.city || { label: '', value: '' },
+        club: savedFilters.club || null,
+        date: savedFilters.date || null,
+        level: savedFilters.level || [],
+        radius: savedFilters.radius || 20,
+        team: savedFilters.team || null,
+        type: savedFilters.type || [],
+      };
+    }
+    return {
       activity: eventFilters?.activities || [],
       category: eventFilters?.category || [],
       city: eventFilters?.city || { label: '', value: '' },
@@ -106,50 +123,113 @@ function EventFilters({ navigation }) {
       radius: eventFilters?.radius || 20,
       team: eventFilters?.team || null,
       type: eventFilters?.type || [],
-    },
+    };
+  }, [savedFilters, eventFilters]);
+
+  const {
+    control,
+    formState: { errors: formErrors },
+    handleSubmit,
+    setValue,
+    watch,
+    getValues,
+  } = useForm({
+    defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(filtersSchema),
   });
 
-  // Header Star Button
+  // Header Star Button (only show when NOT in createAlertMode)
+  const handleOpenSaveModal = async () => {
+    setIsSaveModalVisible(true);
+    // Fetch preview count
+    try {
+      const currentFilters = getValues();
+      const result = await getPreviewCount(currentFilters, 'event');
+      setPreviewCount(result.count);
+    } catch (error) {
+      console.error('Error fetching preview count:', error);
+      setPreviewCount(null);
+    }
+  };
+
+  // Set header title and optionally hide star button in isAlertMode
+  useEffect(() => {
+    if (isAlertMode) {
+      navigation.setOptions({
+        headerTitle: editAlertMode ? 'Modifier l\'alerte' : 'Créer une alerte',
+        headerRight: () => null,
+      });
+    }
+  }, [isAlertMode, editAlertMode, navigation]);
+
   React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={{ marginRight: 16 }}>
-          <TouchableOpacity
-            onPress={() => setIsSaveModalVisible(true)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, Colors]);
+    if (!isAlertMode) {
+      navigation.setOptions({
+        headerRight: () => (
+          <View style={{ marginRight: 16, alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={handleOpenSaveModal}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
+              <Text style={{ color: Colors.primary500, fontSize: 10, marginTop: 2 }}>Créer alerte</Text>
+            </TouchableOpacity>
+          </View>
+        ),
+      });
+    }
+  }, [navigation, Colors, createAlertMode]);
 
   const handleCreateAlert = async () => {
     if (!alertLabel.trim()) return;
+    
+    // Validate city and radius
+    const currentFilters = getValues();
+    if (!currentFilters.city?.value || !currentFilters.radius) {
+      Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
+      return;
+    }
+    
     setIsCreatingAlert(true);
     try {
-      // Get current form values to save as filters
-      const currentFilters = getValues();
-      await createSearchAlert({
-        label: alertLabel,
-        filters: currentFilters,
-      });
+      // Generate geohash for location filtering
+      const filtersToSave = { ...currentFilters };
+      if (currentFilters.city?.value && typeof currentFilters.city.value === 'string') {
+        const coords = currentFilters.city.value.split('|');
+        if (coords.length === 2) {
+          const lng = parseFloat(coords[0]);
+          const lat = parseFloat(coords[1]);
+          const geohash = getGeohashForPointAndRadius(lat, lng, currentFilters.radius);
+          filtersToSave.geohash = geohash;
+        }
+      }
+
+      if (editAlertMode && alertDocumentId) {
+        await updateSearchAlert(alertDocumentId, {
+          label: alertLabel,
+          filters: filtersToSave,
+          isActive: true,
+        });
+        Alert.alert('Succès', 'Alerte modifiée avec succès !');
+      } else {
+        await createSearchAlert({
+          label: alertLabel,
+          filters: filtersToSave,
+          type: 'event', // Add type field
+          isActive: true,
+        });
+        Alert.alert('Succès', 'Alerte créée avec succès !');
+      }
       setIsSaveModalVisible(false);
       setAlertLabel('');
-      // Show success feedback (Toast or Alert)
-      // For now, navigate to Alerts list as feedback
-      navigation.navigate(RouteNames.SearchAlerts);
+      navigation.goBack();
     } catch (err) {
       console.error(err);
+      Alert.alert('Erreur', err?.response?.data?.error?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setIsCreatingAlert(false);
     }
@@ -325,6 +405,56 @@ function EventFilters({ navigation }) {
     navigation.goBack();
   };
 
+  // Direct alert creation for createAlertMode (without modal, uses screen as alert name input)
+  const handleSaveAlert = async () => {
+    const currentFilters = getValues();
+    
+    // Validate city and radius
+    if (!currentFilters.city?.value || !currentFilters.radius) {
+      Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
+      return;
+    }
+
+    if (editAlertMode) {
+      // In edit mode, use the existing label initially
+      setAlertLabel(initialAlertLabel);
+    } else {
+      // Auto-generate alert name based on type + city
+      const cityName = currentFilters.city?.label || 'Recherche';
+      const baseLabel = `Événement · ${cityName}`;
+      
+      // Check for duplicates and add suffix if needed
+      try {
+        const existingAlerts = await getSearchAlerts();
+        const alerts = existingAlerts.data || [];
+        let duplicateCount = 0;
+        
+        alerts.forEach((alert) => {
+          if (alert.label === baseLabel || alert.label.startsWith(baseLabel + ' (')) {
+            duplicateCount++;
+          }
+        });
+        
+        const finalLabel = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
+        setAlertLabel(finalLabel);
+      } catch (error) {
+        console.error('Error checking duplicates:', error);
+        setAlertLabel(baseLabel);
+      }
+    }
+    
+    // Show modal to confirm/edit alert name
+    setIsSaveModalVisible(true);
+    // Fetch preview count
+    try {
+      const result = await getPreviewCount(currentFilters, 'event');
+      setPreviewCount(result.count);
+    } catch (error) {
+      console.error('Error fetching preview count:', error);
+      setPreviewCount(null);
+    }
+  };
+
   const openInfoModal = (title, content) => {
     setInfoModalContent({ title, content });
     setInfoModalVisible(true);
@@ -379,7 +509,9 @@ function EventFilters({ navigation }) {
         isVisible={isSaveModalVisible}
       >
         <View style={[Spaces.gap[16]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('searchAlerts.create.title', 'Créer une alerte')}</Text>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {editAlertMode ? "Modifier l'alerte" : t('searchAlerts.create.title', 'Créer une alerte')}
+          </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {t('searchAlerts.create.desc', 'Donnez un nom à votre recherche pour recevoir des notifications.')}
           </Text>
@@ -388,6 +520,11 @@ function EventFilters({ navigation }) {
             placeholder={t('searchAlerts.create.placeholder', 'Ex: Matchs U13 Marseille')}
             value={alertLabel}
           />
+          {previewCount !== null && (
+            <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
+              Pour le moment, {previewCount} événement{previewCount > 1 ? 's' : ''} correspond{previewCount > 1 ? 'ent' : ''}
+            </Text>
+          )}
           <Button
             isLoading={isCreatingAlert}
             onPress={handleCreateAlert}
@@ -632,16 +769,33 @@ function EventFilters({ navigation }) {
       </ScrollView>
 
       <View style={[Spaces.gap[24]]}>
-        <Button
-          onPress={handleEmptyFilters}
-          title={t('eventFilters.actions.clear')}
-          variant="Secondary"
-        />
-        <Button
-          onPress={handleSubmit(handleApplyFilters)}
-          title={t('eventFilters.actions.apply')}
-          variant="Primary"
-        />
+        {isAlertMode ? (
+          <>
+            <Button
+              onPress={() => navigation.goBack()}
+              title="Annuler"
+              variant="Secondary"
+            />
+            <Button
+              onPress={handleSaveAlert}
+              title={editAlertMode ? "Enregistrer les modifications" : "Créer l'alerte ★"}
+              variant="Primary"
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              onPress={handleEmptyFilters}
+              title={t('eventFilters.actions.clear')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={handleSubmit(handleApplyFilters)}
+              title={t('eventFilters.actions.apply')}
+              variant="Primary"
+            />
+          </>
+        )}
       </View>
     </ScreenContainer>
   );

@@ -26,6 +26,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
+import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -319,6 +320,7 @@ function Conversation({ navigation, route }) {
                : `${process.env.API_URL || 'http://10.0.2.2:1337'}${msg.attachments[0].url}`)
             : undefined,
       event: msg.event,
+      composition: msg.composition,
       pending: msg.pending,
       replyTo: msg.replyTo,
       readBy: msg.readBy,
@@ -481,6 +483,21 @@ function Conversation({ navigation, route }) {
                   onJoin={() => handleJoinEvent(currentMessage.event)}
                   onParticipate={() => handleParticipateToEvent(currentMessage.event)}
                   onDecline={() => {}}
+                />
+            </View>
+        );
+    }
+
+    // Composition message
+    if (currentMessage.composition) {
+        return (
+            <View style={{
+                marginBottom: marginBottom,
+                marginTop: marginTop,
+            }}>
+                <CompositionMessageBubble 
+                  composition={currentMessage.composition} 
+                  isMe={!isLeft} 
                 />
             </View>
         );
