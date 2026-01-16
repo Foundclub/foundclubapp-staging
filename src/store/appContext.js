@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useReducer } from 'react';
 import { MMKV } from 'react-native-mmkv';
-
 import appReducer from '@/store/appReducer';
 
 const AppStateContext = React.createContext(/** @type {Store} */({}));
@@ -63,6 +62,7 @@ const initStore = {
   onboardingViews: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
   isAddingAccount: false,
+  pendingNotification: null,
 };
 
 /**

@@ -149,6 +149,12 @@ const useNotifications = ({ navigate }) => {
 
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {remoteMessageData} */remoteMessageData) => {
+    console.log('[useNotifications] handleNavigateOnOpen triggered with:', remoteMessageData);
+    if (!remoteMessageData?.type) {
+        console.warn('[useNotifications] No type in notification data, cannot navigate');
+        return;
+    }
+
     switch (remoteMessageData.type) {
       case NOTIFICATION_TYPES.ADD_TO_TEAM:
         navigate(RouteNames.TeamStack, {
@@ -161,6 +167,9 @@ const useNotifications = ({ navigate }) => {
       case NOTIFICATION_TYPES.CLUB_MEMBERSHIP_REQUEST:
         navigate(RouteNames.ClubStack, {
           screen: RouteNames.ClubMembershipRequests,
+          params: {
+            clubId: remoteMessageData.clubId,
+          },
         });
         break;
       case NOTIFICATION_TYPES.CLUB_REQUEST:
@@ -236,12 +245,12 @@ const useNotifications = ({ navigate }) => {
         });
         break;
       default:
+        console.warn('[useNotifications] Unknown notification type:', remoteMessageData.type);
         break;
     }
   }, [navigate]);
 
   // listeners
-
   // Handle foreground notif display
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
@@ -368,9 +377,26 @@ const useNotifications = ({ navigate }) => {
       hasSynced.current = true;
       retreiveFCMToken();
     }
-  }, [saveToken, userData]);
+
+    // Check for initial notification (Cold Start)
+    getMessaging().getInitialNotification().then(remoteMessage => {
+      if (remoteMessage) {
+        console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
+        if (remoteMessage.data?.type) {
+           // Store it in context to be handled when navigation is ready
+           console.log('[FCM] Storing pending notification in context');
+           dispatch({ 
+              type: 'SET_PENDING_NOTIFICATION', 
+              payload: remoteMessage.data 
+           });
+        }
+      }
+    });
+
+  }, [saveToken, userData, dispatch]);
 
   return {
+    handleNavigateOnOpen,
     saveToken,
   };
 };

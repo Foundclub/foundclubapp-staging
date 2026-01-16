@@ -113,6 +113,9 @@ export default function appReducer(state, action) {
     case 'SET_THEME': {
       return { ...state, theme: action.payload };
     }
+    case 'SET_PENDING_NOTIFICATION': {
+      return { ...state, pendingNotification: action.payload };
+    }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`);
     }

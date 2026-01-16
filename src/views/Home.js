@@ -65,7 +65,7 @@ function HomeContent({ navigation }) {
   } = useTheme();
   const { userData } = useAuth();
   const { t } = useTranslation();
-  useNotifications({ navigate: navigation.navigate });
+  // removed duplicate useNotifications call
   const isFocused = useIsFocused();
   const { startOnboarding } = useOnboarding();
 
@@ -78,6 +78,22 @@ function HomeContent({ navigation }) {
     }
     return () => clearTimeout(timer);
   }, [startOnboarding, isFocused]);
+
+  // Handle Pending Notification (Cold Start)
+  const [{ pendingNotification }, dispatch] = useAppContext();
+  const { handleNavigateOnOpen } = useNotifications({ navigate: navigation.navigate }); // Destructure new handler
+
+  useEffect(() => {
+    if (pendingNotification && isFocused) {
+      console.log('[Home] Processing pending notification:', pendingNotification);
+      
+      // Navigate
+      handleNavigateOnOpen(pendingNotification);
+      
+      // Clear pending notification to avoid loops
+      dispatch({ type: 'SET_PENDING_NOTIFICATION', payload: null });
+    }
+  }, [pendingNotification, isFocused, handleNavigateOnOpen, dispatch]);
 
   const searchOptions = useMemo(() => {
     const options = [...baseSearchOptions];

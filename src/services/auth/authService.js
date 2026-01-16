@@ -387,7 +387,7 @@ export const getUserById = async (id) => {
  * @returns {Promise<object>} The promise
  */
 export const addDeviceToken = async (token) => {
-  const result = await client.post('/firebase-auth/me/device', {
+  const result = await client.post('/user-fcm-token/me/device', {
     data: {
       device: getDeviceId(),
       platform: Platform.OS,
@@ -403,6 +403,6 @@ export const addDeviceToken = async (token) => {
  * @returns {Promise<object>} The promise
  */
 export const deleteDeviceToken = async (token) => {
-  const result = await client.delete(`/firebase-auth/me/device/${token}`);
+  const result = await client.delete(`/user-fcm-token/me/device/${token}`);
   return result.data;
 };

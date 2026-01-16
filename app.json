@@ -5,5 +5,13 @@
     "eas": {
       "projectId": "99c6c767-c216-4eba-9e66-ff75d327da0e"
     }
+  },
+  "android": {
+    "googleServicesFile": "./google-services.json",
+    "package": "com.foundclub"
+  },
+  "ios": {
+    "bundleIdentifier": "com.foundclub.app",
+    "googleServicesFile": "./GoogleService-Info.plist"
   }
 }
