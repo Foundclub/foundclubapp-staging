@@ -131,4 +131,5 @@ export const RouteNames = /** @type {const} */ ({
   LeagueRanking: 'LeagueRanking', // Ranking Screen
   LeagueMatchDetails: 'LeagueMatchDetails', // Standalone match details
   MatchDetails: 'MatchDetails',
+  PastMatchDetails: 'PastMatchDetails', // Completed match details with ELO delta
 });

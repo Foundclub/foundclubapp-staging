@@ -36,6 +36,7 @@ function ScreenContainer({
   if (gradient) {
     var LinearGradient = require('react-native-linear-gradient').default;
     return (
+      <View style={[Alignments.fill, ...style]}>
         <LinearGradient
             colors={gradient}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -43,13 +44,13 @@ function ScreenContainer({
                 Alignments.fill,
                 Spaces.paddingHorizontal[24],
                 containerSpaces,
-                ...style,
             ]}
         >
             <View style={[Alignments.grow1, ...contentContainerStyle]}>
                 {children}
             </View>
         </LinearGradient>
+      </View>
     );
   }
 

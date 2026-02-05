@@ -45,6 +45,27 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const matchDate = new Date(event?.date || match.date);
     const hoursUntilMatch = (matchDate - new Date()) / (1000 * 60 * 60);
 
+    // ELO Prediction: Calculate expected win/loss points
+    const eloPrediction = useMemo(() => {
+        const myElo = myTeam.elo || 1200;
+        const oppElo = opponent.elo || 1200;
+        const K = 32;
+        
+        // Expected score using Elo formula
+        const expectedWin = 1 / (1 + Math.pow(10, (oppElo - myElo) / 400));
+        
+        // Points if you win (result=1) or lose (result=0)
+        const pointsIfWin = Math.round(K * (1 - expectedWin));
+        const pointsIfLoss = Math.round(K * (0 - expectedWin));
+        
+        return {
+            ifWin: pointsIfWin > 0 ? `+${pointsIfWin}` : pointsIfWin,
+            ifLoss: pointsIfLoss,
+            myElo,
+            oppElo
+        };
+    }, [myTeam.elo, opponent.elo]);
+
     // Handlers
     const handleConfirm = async () => {
         try {
@@ -179,6 +200,21 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     </View>
                 </View>
 
+                {/* ELO Prediction */}
+                <View style={styles.eloPrediction}>
+                    <Text style={styles.eloPredictionTitle}>📊 ENJEU ELO</Text>
+                    <View style={styles.eloPredictionRow}>
+                        <View style={[styles.eloPredictionBadge, { backgroundColor: 'rgba(76, 175, 80, 0.2)' }]}>
+                            <Text style={{ color: '#4CAF50', fontWeight: 'bold' }}>Victoire: {eloPrediction.ifWin}</Text>
+                        </View>
+                        <View style={[styles.eloPredictionBadge, { backgroundColor: 'rgba(244, 67, 54, 0.2)' }]}>
+                            <Text style={{ color: '#F44336', fontWeight: 'bold' }}>Défaite: {eloPrediction.ifLoss}</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.eloPredictionDetails}>
+                        {myTeam.name} ({eloPrediction.myElo}) vs {opponent.name} ({eloPrediction.oppElo})
+                    </Text>
+                </View>
                 {/* Captain Booking Section */}
                 {isCaptain && !isVenueBooked && (
                     <TouchableOpacity 
@@ -394,6 +430,34 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 12,
         fontFamily: 'Montserrat-Bold'
+    },
+    eloPrediction: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 15,
+        alignItems: 'center'
+    },
+    eloPredictionTitle: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 12,
+        marginBottom: 8,
+        fontFamily: 'Montserrat-Bold'
+    },
+    eloPredictionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 8
+    },
+    eloPredictionBadge: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 8
+    },
+    eloPredictionDetails: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 10
     }
 });
 

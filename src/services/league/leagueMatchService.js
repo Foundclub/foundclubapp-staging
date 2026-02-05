@@ -172,3 +172,45 @@ export const getMatchHistory = async (teamId, limit = 10) => {
   });
 };
 
+/**
+ * Get a single match by ID
+ * @param {string} matchId - The match documentId
+ */
+export const getMatch = async (matchId) => {
+  const response = await client.get(`/league-matches/${matchId}`, {
+    params: {
+      populate: ['team_a', 'team_a.captain', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.crest', 'winner', 'chat']
+    }
+  });
+  return response.data?.data || response.data;
+};
+
+/**
+ * Request a rematch against a specific opponent
+ * @param {string} teamId - Your team documentId
+ * @param {string} opponentTeamId - Opponent team documentId  
+ * @param {string} matchId - Original match documentId (optional)
+ */
+export const requestRematch = async (teamId, opponentTeamId, matchId = null) => {
+  const response = await client.post('/matchmaking-request/rematch', {
+    teamId,
+    opponentTeamId,
+    matchId
+  });
+  return response.data;
+};
+
+/**
+ * Submit player goals for a match
+ * @param {string} matchId - The match documentId
+ * @param {Object} goals - Object mapping player documentIds to goal counts
+ */
+export const submitPlayerGoals = async (matchId, goals) => {
+  const response = await client.put(`/league-matches/${matchId}`, {
+    data: {
+      player_goals: goals
+    }
+  });
+  return response.data;
+};
+
