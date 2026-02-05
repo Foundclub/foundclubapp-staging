@@ -12,9 +12,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetActivities } from '@/services/activity/activityQueries';
+import { getOnboardingViews } from '@/domains/auth/authUseCases';
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetActivities } from '@/services/activity/activityQueries';
 
 const searchIcon = require('@/assets/icons/search.png');
 
@@ -39,9 +40,22 @@ function UserSport({ navigation }) {
     onSuccess: () => {
       // Invalidate user query to refresh data
       queryClient.invalidateQueries({ queryKey: ['me'] });
-      // Navigate with the selected sport as param
-      const nextRoute = getNextOnboardingRoute(RouteNames.UserSport) || RouteNames.Welcome;
-      navigation.navigate(nextRoute, { selectedSport });
+
+      // Calculate next route based on the NEW sport, not the old userData
+      const tempUserData = { ...userData, preferredSport: selectedSport.trim() };
+      const views = getOnboardingViews(tempUserData);
+      
+      // Find current view index
+      const currentView = views.views.find(v => v.route === RouteNames.UserSport);
+      const currentIndex = currentView?.index || 0;
+      
+      // Get next view that canShow
+      // We look for the first view with index > currentIndex that has canShow !== false
+      // Note: getOnboardingViews returns views with canShow property
+      const nextView = views.views.find(v => v.index > currentIndex && v.canShow !== false);
+      const nextRoute = nextView?.route || RouteNames.Welcome;
+
+      navigation.navigate(nextRoute, { selectedSport: selectedSport.trim() });
     },
   });
 
@@ -57,7 +71,7 @@ function UserSport({ navigation }) {
 
   const handleNext = () => {
     if (selectedSport && userData) {
-      updateUserMutation.mutate({ preferredSport: selectedSport });
+      updateUserMutation.mutate({ preferredSport: selectedSport.trim() });
     }
   };
 

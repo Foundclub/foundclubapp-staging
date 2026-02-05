@@ -206,6 +206,9 @@ const AutocompleteSelect = forwardRef(
               {/* search input */}
               {props.isSearchable ? (
                 <Input
+                  autoCorrect={false}
+                  autoComplete="off"
+                  autoCapitalize="none"
                   enterKeyHint="search"
                   icon="search"
                   inputMode="search"

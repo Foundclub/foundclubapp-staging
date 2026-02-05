@@ -209,14 +209,47 @@ export const updateMultisportClub = async (cmId, data) => {
 
   // Handle logo file upload if it's a new file (has path)
   if (dataCopy.logo && dataCopy.logo.path) {
-    logoId = await uploadFile(dataCopy.logo);
+    const uploadResult = await uploadFile(dataCopy.logo);
+    logoId = uploadResult.documentId;
   } else if (dataCopy.logo && dataCopy.logo.id) {
-    // Keep existing logo if not changed (though backend might not need this if we don't send logo field)
+    // Keep existing logo if not changed
     logoId = dataCopy.logo.id;
+  }
+  else if (dataCopy.logo && dataCopy.logo.documentId) {
+    // Keep existing logo if using documentId
+    logoId = dataCopy.logo.documentId;
   }
 
   // Remove logo object from payload
   delete dataCopy.logo;
+
+  // Handle Sponsors Uploads
+  if (dataCopy.sponsor && Array.isArray(dataCopy.sponsor)) {
+    const processedSponsors = [];
+    for (const sponsor of dataCopy.sponsor) {
+      const newSponsor = { ...sponsor };
+      
+      // If logo is a new file (has path), upload it
+      if (newSponsor.logo && newSponsor.logo.path) {
+        const uploadResult = await uploadFile(newSponsor.logo);
+        // For components media fields, we use the Integer ID
+        newSponsor.logo = uploadResult.id; 
+      } 
+      // If existing logo (has documentId or id)
+      else if (newSponsor.logo && (newSponsor.logo.documentId || newSponsor.logo.id)) {
+        // For existing, we might need ID or DocumentId. Let's try ID if available, else DocumentId
+        // Actually, if we send the object or ID? 
+        // If we send just the ID (int), Strapi should handle it.
+        // If we send documentId?
+        // Let's safe bet on ID (int) if available, or just keeping what we have.
+        // Usually existing returns object with id and documentId.
+        newSponsor.logo = newSponsor.logo.id || newSponsor.logo.documentId;
+      }
+      
+      processedSponsors.push(newSponsor);
+    }
+    dataCopy.sponsor = processedSponsors;
+  }
 
   // Prepare payload
   const payload = {
@@ -224,7 +257,7 @@ export const updateMultisportClub = async (cmId, data) => {
     ...(logoId && { logo: logoId }),
   };
   
-  // Clean payload of undefined/null values that might override existing data
+  // Clean payload of undefined/null values
   Object.keys(payload).forEach(key => {
     if (payload[key] === undefined) {
       delete payload[key];

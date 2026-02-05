@@ -18,6 +18,8 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
+
 import { createTrainer, linkTrainerToClub } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -31,9 +33,9 @@ const defaultValues = {
 
 const addCoachSchema = Joi.object({
   birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
-  firstname: Joi.string().required(),
-  lastname: Joi.string().required(),
-  phoneNumber: Joi.string(),
+  firstname: Joi.string().allow('').optional(),
+  lastname: Joi.string().allow('').optional(),
+  phoneNumber: Joi.string().required(),
 }).unknown(true);
 
 /**
@@ -41,12 +43,15 @@ const addCoachSchema = Joi.object({
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Add coach screen component
  */
-function AddCoach({ navigation }) {
+function AddCoach({ navigation, route }) {
 // local state
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
     (undefined),
   );
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [createdTrainer, setCreatedTrainer] = useState(null);
+
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
   const { formatBirthdateToDisplay } = useAuth();
@@ -70,15 +75,18 @@ function AddCoach({ navigation }) {
     },
   });
 
+  const { inviteTrainer } = useAuth();
+  const { clubName } = route?.params || {};
+
   const createTrainerMutation = useMutation({
     mutationFn: createTrainer,
     onError: (/** @type {import('axios').AxiosError} */error) => {
       const errorResponse = error?.response?.data?.error;
-      if (errorResponse.message === 'Uniqueness check failed' && errorResponse.details?.user) {
+      if (errorResponse?.message === 'Uniqueness check failed' && errorResponse?.details?.user) {
         const { user } = errorResponse.details;
         if (user?.club) {
           Alert.alert(
-            t('addCoach.alert@s.alreadyInClub.title'),
+            t('addCoach.alerts.alreadyInClub.title'),
             t(
               'addCoach.alerts.alreadyInClub.description',
               {
@@ -109,10 +117,17 @@ function AddCoach({ navigation }) {
             ],
           );
         }
+      } else {
+        // Fallback generic error
+        Alert.alert(
+           t('APIerrors.error'), // Or a generic title
+           error?.response?.data?.error?.message || error.message || t('APIerrors.unknown')
+        );
       }
     },
-    onSuccess: () => {
-      navigation.goBack();
+    onSuccess: (data, variables) => {
+      setCreatedTrainer({ ...(data?.data || {}), ...variables });
+      setIsSuccessModalVisible(true);
     },
   });
 
@@ -168,6 +183,7 @@ function AddCoach({ navigation }) {
               }) => (
                 <PhoneInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
+                  label={`${t('profile.fields.phoneNumber.label')} *`}
                   onBlur={onBlur}
                   onChange={onChange}
                   ref={ref}
@@ -251,6 +267,25 @@ function AddCoach({ navigation }) {
           variant="Primary"
         />
       </KeyboardAvoidingView>
+      <TrainerInvitedModal
+        isVisible={isSuccessModalVisible}
+        onClose={() => {
+          setIsSuccessModalVisible(false);
+          navigation.goBack();
+        }}
+        onInvite={() => {
+          if (createdTrainer) {
+            inviteTrainer({
+              clubName: clubName || 'Club',
+              firstname: createdTrainer.firstname || 'Coach',
+              phoneNumber: createdTrainer.phoneNumber,
+            });
+          }
+          setIsSuccessModalVisible(false);
+          navigation.goBack();
+        }}
+        trainerName={createdTrainer?.firstname || ''}
+      />
     </ScreenContainer>
   );
 }

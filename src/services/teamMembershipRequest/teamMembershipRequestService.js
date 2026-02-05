@@ -93,3 +93,13 @@ export const rejectTeamMembershipRequest = async (requestId) => {
   const response = await client.post(`/team-membership-requests/${requestId}/refuse`);
   return response.data;
 };
+
+/**
+ * Delete a team membership request
+ * @param {string} requestId - The ID of the request to delete
+ * @returns {Promise<any>} - The response
+ */
+export const deleteTeamMembershipRequest = async (requestId) => {
+  const response = await client.post(`/team-membership-requests/${requestId}/cancel`);
+  return response.data;
+};

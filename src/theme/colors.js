@@ -22,6 +22,16 @@ export const colors = {
   success100: '#d4fcf0',
   success500: '#27d6a3',
   success700: '#399379',
+  
+  warning100: '#fff4e5',
+  warning500: '#ffa115',
+  warning700: '#cc7a00',
+
+  gold100: '#FFF8E1',
+  gold200: '#FFE082',
+  gold500: '#FFD700',
+  gold700: '#C5A000',
+  gold900: '#3D2E0F',
 
   transparent: 'transparent',
 };

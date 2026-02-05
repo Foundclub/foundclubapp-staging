@@ -11,7 +11,7 @@ const activitySchema = Joi.object({
  * Get all activities
  * @returns {Promise<Activity[]>}
  */
-export const getActivities = async () => {
+export const getActivities = async (params = {}) => {
   try {
     const response = await client.get('/activities', {
       params: {
@@ -20,6 +20,7 @@ export const getActivities = async () => {
           pageSize: 200,
         },
         sort: ['name:asc'],
+        ...params,
       },
     });
 

@@ -8,7 +8,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { useGetEvents } from '@/services/event/eventQueries';
-import { useGetAdminStats } from '@/services/admin/adminQueries';
+import { useGetAdminStats, useGetPendingClubClaims } from '@/services/admin/adminQueries';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -48,11 +48,20 @@ function AdminDashboard() {
     const caGenerated = stats?.revenue || 0;
     const reportsCount = stats?.reportsCount || 0;
 
+    const {
+        data: claimsData,
+        isLoading: isClaimsLoading,
+        refetch: refetchClaims,
+    } = useGetPendingClubClaims();
+
+    const claimsCount = claimsData?.meta?.pagination?.total || 0;
+
     useFocusEffect(
         useCallback(() => {
             refetchFeatured();
             refetchStats();
-        }, [refetchFeatured, refetchStats])
+            refetchClaims();
+        }, [refetchFeatured, refetchStats, refetchClaims])
     );
 
     const DashboardCard = ({ title, value, onPress, color = Colors.primary500 }) => (
@@ -116,6 +125,32 @@ function AdminDashboard() {
                         value={featuredCount}
                         color={Colors.primary200}
                         onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
+                    />
+
+
+
+                    {/* Revendications Cards */}
+                    <DashboardCard
+                        title="Revendications"
+                        value={claimsCount}
+                        color={Colors.warning500 || '#f59e0b'} // Orange for pending
+                        onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
+                    />
+
+                    {/* Gestion Utilisateurs */}
+                    <DashboardCard
+                        title="Utilisateurs"
+                        value="👤"
+                        color={Colors.neutral100}
+                        onPress={() => navigation.navigate(RouteNames.AdminUserList)}
+                    />
+
+                    {/* Gestion Clubs */}
+                    <DashboardCard
+                        title="Clubs"
+                        value="🏟️"
+                        color={Colors.neutral100}
+                        onPress={() => navigation.navigate(RouteNames.AdminClubList)}
                     />
 
                 </View>

@@ -1,10 +1,17 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
 
+// Fix for Android Emulator Localhost
+// Only use 10.0.2.2 fallback if NO environment variable is provided
+const baseURL = (__DEV__ && Platform.OS === 'android') 
+  ? (process.env.API_URL || 'http://10.0.2.2:1337/api') 
+  : process.env.API_URL;
+
 const instance = axios.create({
-  baseURL: process.env.API_URL,
+  baseURL,
   timeout: 5000,
 });
 

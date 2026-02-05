@@ -1,10 +1,10 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, View,
+  KeyboardAvoidingView, Platform, View, Alert
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -17,6 +17,7 @@ import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -24,7 +25,7 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetTeam } from '@/services/team/teamQueries';
-import { createTeam, updateTeam } from '@/services/team/teamService';
+import { createTeam, updateTeam, previewScraping } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -38,6 +39,10 @@ const defaultValues = {
   name: '',
   section: '',
   trainers: /** @type {string[]} */ ([]),
+  address: null,
+  city: '',
+  geohash: '',
+  externalStandingUrl: '',
 };
 
 const teamSchema = Joi.object({
@@ -48,6 +53,10 @@ const teamSchema = Joi.object({
   name: Joi.string().required(),
   section: Joi.string().required(),
   trainers: Joi.array().items(Joi.string()).optional(),
+  address: Joi.object().allow(null).optional(),
+  city: Joi.string().allow('', null).optional(),
+  geohash: Joi.string().allow('', null).optional(),
+  externalStandingUrl: Joi.string().allow('', null).uri({ allowRelative: false }).optional().label('Lien FFBB'),
 }).unknown(true);
 
 /**
@@ -61,15 +70,25 @@ function TeamEdit({ navigation, route }) {
   const [activitySearch, setActivitySearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
   // hooks
-  const { data: clubData } = useGetClub(clubId);
+  // Determine effective club ID (from params or team data)
+  const { data: teamData } = useGetTeam(teamId, {
+    enabled: !!teamId,
+  });
+
+  const effectiveClubId = clubId || teamData?.club?.documentId;
+  const { data: clubData } = useGetClub(effectiveClubId);
+
+  // Track if we have already initialized the form to avoid overwrites
+  const isInitialized = useRef(false);
+
   const { data: activities } = useGetActivities();
   const { data: categories } = useGetCategories();
   const { data: levels } = useGetLevels();
   const { data: sections } = useGetSections();
-  const { data: teamData } = useGetTeam(teamId, {
-    enabled: !!teamId,
-  });
+  
   const {
     Alignments, Spaces,
   } = useTheme();
@@ -89,6 +108,7 @@ function TeamEdit({ navigation, route }) {
     handleSubmit,
     reset,
     setFocus,
+    getValues
   } = useForm({
     defaultValues,
     mode: 'onBlur',
@@ -96,9 +116,55 @@ function TeamEdit({ navigation, route }) {
     shouldFocusError: false,
   });
 
-  // Populate form with team data when editing
+  // Helper to normalize address structure (GeoJSON vs Flat)
+  const formatAddress = (addr) => {
+      if (!addr) return null;
+      if (addr.label && !addr.properties) return addr;
+      if (addr.properties?.label) {
+          return {
+              label: addr.properties.label,
+              value: addr.geometry?.coordinates ? addr.geometry.coordinates.join('|') : '',
+              ...addr,
+          };
+      }
+      return null;
+  };
+
+  const getClubAddress = (club) => {
+      if (!club) return null;
+      const formatted = formatAddress(club.address);
+      if (formatted) return formatted;
+      if (club.addressDetails) {
+          try {
+              const details = typeof club.addressDetails === 'string' 
+                ? JSON.parse(club.addressDetails) 
+                : club.addressDetails;
+              
+              if (details?.address) {
+                  return {
+                      label: details.address,
+                      city: details.city,
+                      postcode: details.postcode,
+                      value: club.address?.lat && club.address?.lng 
+                        ? `${club.address.lng}|${club.address.lat}`
+                        : '',
+                      ...club.address
+                  };
+              }
+          } catch (e) {
+              console.warn('Failed to parse club addressDetails', e);
+          }
+      }
+      return null;
+  };
+
+  // Populate form with team data when editing OR pre-fill when creating
   useEffect(() => {
-    if (teamData) {
+    if (teamId && teamData) {
+      const teamAddress = formatAddress(teamData.address) 
+                       || getClubAddress(teamData.club) 
+                       || getClubAddress(clubData);
+
       reset({
         activities: teamData.activities?.[0]?.documentId || '',
         category: teamData.category?.documentId || '',
@@ -107,9 +173,52 @@ function TeamEdit({ navigation, route }) {
         name: teamData.name || '',
         section: teamData.section?.documentId || '',
         trainers: teamData.trainers?.map((trainer) => trainer.documentId) || [],
+        address: teamAddress || null,
+        city: teamData.city || teamData.club?.city || clubData?.city || '',
+        geohash: teamData.geohash || teamData.club?.geohash || clubData?.geohash || '',
+        externalStandingUrl: teamData.externalStandingUrl || '',
       });
+      isInitialized.current = true;
+    } 
+    else if (!teamId && clubData && !isInitialized.current) {
+        const clubAddress = getClubAddress(clubData);
+        if (clubAddress) {
+            reset({
+                ...defaultValues,
+                address: clubAddress,
+                city: clubData.city || '',
+                geohash: clubData.geohash || '',
+            });
+            isInitialized.current = true;
+        }
     }
-  }, [teamData, reset]);
+  }, [teamData, clubData, reset, teamId]);
+
+  const handlePreviewScraping = async () => {
+    const url = getValues('externalStandingUrl');
+    if (!url) {
+        Alert.alert('Erreur', 'Veuillez entrer une URL valide.');
+        return;
+    }
+    setIsPreviewLoading(true);
+    try {
+        const result = await previewScraping(url);
+        // Scraper now returns { standings: [...], calendar: [...] }
+        const standings = result?.data?.standings || result?.data?.data || [];
+        
+         if (standings.length > 0) {
+            const firstTeam = standings[0];
+            Alert.alert('Succès', `Classement trouvé !\n1er: ${firstTeam.teamName} (${firstTeam.points} pts)`);
+         } else {
+            Alert.alert('Info', 'Aucune donnée de classement trouvée pour cette URL.');
+         }
+    } catch (e) {
+        Alert.alert('Erreur', 'Impossible de récupérer les données. Vérifiez l\'URL.');
+        console.error(e);
+    } finally {
+        setIsPreviewLoading(false);
+    }
+  };
 
   const sectionOptions = useMemo(() => (
     sections?.map((section) => ({
@@ -164,7 +273,6 @@ function TeamEdit({ navigation, route }) {
         value: trainer.documentId || '',
       })) || [];
 
-    // Always add current user if they are a president or coach and not already in the list
     if (userData && (userData.role?.name === USER_ROLES.president || userData.role?.name === USER_ROLES.coach)) {
       const userAlreadyInList = members.some((m) => m.value === userData.documentId);
       if (!userAlreadyInList) {
@@ -178,34 +286,44 @@ function TeamEdit({ navigation, route }) {
     return members;
   }, [clubData?.members, userData]);
 
-  /**
-   * Handle form submit
-   * @param {typeof defaultValues} data
-   */
   const handleFormSubmit = (data) => {
-    // Format trainers for Strapi v5 relation format
+    // Helper to format relation for Strapi v5 connect syntax
+    const toConnect = (id) => (id ? { connect: [{ documentId: id }] } : undefined);
+    
+    // Trainers is array
     const formattedTrainers = data.trainers?.length
       ? { connect: data.trainers.map((id) => ({ documentId: id })) }
       : undefined;
 
+    // Activities is a single string ID in form but array relation
+    const formattedActivities = data.activities
+      ? { connect: [{ documentId: data.activities }] }
+      : undefined;
+
+    const finalData = {
+        ...data,
+        activities: formattedActivities, // Array relation via connect
+        category: toConnect(data.category),
+        level: toConnect(data.level),
+        section: toConnect(data.section),
+        trainers: formattedTrainers,
+        city: data.address?.city || data.city,
+        geohash: data.address?.geohash || data.geohash,
+    };
+
     if (teamId) {
       teamMutation.mutate({
-        ...data,
-        activities: [data.activities],
+        ...finalData,
         documentId: teamId,
-        trainers: formattedTrainers,
       });
     } else {
       teamMutation.mutate({
-        ...data,
-        activities: [data.activities],
+        ...finalData,
         club: clubId,
-        trainers: formattedTrainers,
       });
     }
   };
 
-  // Set navigation options to change the header title based on whether editing or creating
   useEffect(() => {
     navigation.setOptions({
       headerTitle: teamId
@@ -251,6 +369,21 @@ function TeamEdit({ navigation, route }) {
                   ref={ref}
                   value={value}
                 />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="address"
+              render={({ field: { onChange, value } }) => (
+                  <AutocompleteAddressInput
+                    label={t('teamEdit.fields.address.label', 'Adresse de l\'équipe')}
+                    placeholder={t('teamEdit.fields.address.placeholder', 'Rechercher une adresse')}
+                    address={value}
+                    setAddress={(newAddress) => {
+                         onChange(newAddress);
+                    }}
+                  />
               )}
             />
 
@@ -372,6 +505,38 @@ function TeamEdit({ navigation, route }) {
                   )}
                   value={levels?.find((opt) => opt.documentId === value)?.name || ''}
                 />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="externalStandingUrl"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <View style={[Spaces.gap[8]]}>
+                    <Input
+                      enterKeyHint="done"
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      label={t('teamEdit.fields.externalStandingUrl.label', 'Lien Classement (FFBB)')}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      placeholder="https://resultats.ffbb.com/..."
+                      ref={ref}
+                      value={value}
+                      autoCapitalize="none"
+                      keyboardType="url"
+                    />
+                     <Button
+                        title={isPreviewLoading ? "Test en cours..." : "Tester le lien"}
+                        onPress={handlePreviewScraping}
+                        disabled={isPreviewLoading || !value}
+                        variant="SecondaryLight"
+                        style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8 }}
+                     />
+                </View>
               )}
             />
 

@@ -22,7 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
-import { updateClub } from '@/services/club/clubService';
+import { updateClub, claimClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -46,6 +46,7 @@ function ClubDetails({ navigation, route }) {
     canEditClub,
     canJoinClub,
     inviteTrainer,
+    refetchUserData,
     USER_ROLES,
     userData,
   } = useAuth();
@@ -91,6 +92,53 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
+  const claimClubMutation = useMutation({
+    mutationFn: claimClub,
+    onSuccess: () => {
+      Alert.alert(
+        t('clubDetails.alerts.claimClub.title', 'Demande envoyée'),
+        t('clubDetails.alerts.claimClub.description', 'Votre demande pour revendiquer ce club a été envoyée aux administrateurs.'),
+        [
+          {
+            onPress: () => {
+              refetch();
+              refetchUserData();
+            },
+            text: t('common.ok', 'OK'),
+          },
+        ]
+      );
+    },
+    onError: (err) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        err.message || t('clubDetails.alerts.claimClub.error', 'Une erreur est survenue.'),
+        [{ text: 'OK' }]
+      );
+    }
+  });
+
+  const handleClaimClub = () => {
+    Alert.alert(
+      t('clubDetails.alerts.claimClub.confirmTitle', "C'est votre club ?"),
+      t('clubDetails.alerts.claimClub.confirmDescription', "Voulez-vous revendiquer la gestion de ce club ? Une vérification sera effectuée."),
+      [
+        {
+          text: t('common.cancel', 'Annuler'),
+          style: 'cancel',
+        },
+        {
+          text: t('common.confirm', 'Confirmer'),
+          onPress: () => {
+            if (clubId) {
+              claimClubMutation.mutate(clubId);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const coachs = useMemo(() => club?.members?.filter(
     (user) => user.role.name === USER_ROLES.coach,
   ), [club, USER_ROLES.coach]);
@@ -113,7 +161,7 @@ function ClubDetails({ navigation, route }) {
 
   const handleCreateCoach = () => {
     if (userData) {
-      navigation.navigate(RouteNames.AddCoach, { clubId });
+      navigation.navigate(RouteNames.AddCoach, { clubId, clubName: club?.name });
     }
   };
 
@@ -527,11 +575,11 @@ function ClubDetails({ navigation, route }) {
                             style={[
                               ApplicationStyle.borderWidth1,
                               ApplicationStyle.borderColor.neutral00,
-                              { borderRadius: 55 },
+                              { borderRadius: 8, width: 110, height: 55 },
                             ]}
-                            imageStyle={{ borderRadius: 55 }}
+                            imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
                           />
-                          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
                             {sponsor.title}
                           </Text>
                         </TouchableOpacity>
@@ -731,7 +779,7 @@ function ClubDetails({ navigation, route }) {
         ) : null
       }
       {
-        canContactAdmin && !club?.parentMultisport ? (
+        canContactAdmin && !club?.parentMultisport && owners?.length > 0 ? (
           <Button
             onPress={handleContactFoundClub}
             style={Spaces.marginTop[12]}
@@ -748,6 +796,35 @@ function ClubDetails({ navigation, route }) {
             title={t('clubDetails.actions.contactTrainers')}
             variant="Primary"
           />
+        ) : null
+      }
+      {
+        /* Claim Club Button - Show if not member, not admin, and club has no owners */
+        !isMember && !canEdit && owners?.length === 0 && userData ? (
+          (() => {
+            const hasPendingClubRequest = (userData.clubMembershipRequests || [])
+              .some((r) => (r.club?.documentId === clubId || r.club?.id === clubId) && r.state === 'pending');
+
+            if (hasPendingClubRequest) {
+              return (
+                <Button
+                  disabled
+                  style={[Spaces.marginTop[12], Spaces.marginBottom[24], { opacity: 0.6 }]}
+                  title={t('clubDetails.actions.requestPending', 'Demande en attente')}
+                  variant="Secondary"
+                />
+              );
+            }
+
+            return (
+              <Button
+                onPress={handleClaimClub}
+                style={[Spaces.marginTop[12], Spaces.marginBottom[24]]}
+                title={t('clubDetails.actions.claimClub', "C'est mon club")}
+                variant="Secondary"
+              />
+            );
+          })()
         ) : null
       }
     </ScreenContainer >

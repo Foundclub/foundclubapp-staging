@@ -1,7 +1,7 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -14,14 +14,9 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetLevels } from '@/services/level/levelQueries';
 
-const LEVELS = [
-  { label: 'Départemental', value: 'Departemental' },
-  { label: 'Pré-Régional', value: 'PreRegional' },
-  { label: 'Régional', value: 'Regional' },
-  { label: 'Pré-National', value: 'PreNational' },
-  { label: 'National', value: 'National' },
-];
+
 
 /**
  * User best level selection screen
@@ -34,11 +29,14 @@ function UserLevel({ navigation }) {
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
+  const { data: levels, isLoading: levelsLoading } = useGetLevels();
   const insets = useSafeAreaInsets();
 
+  const queryClient = useQueryClient();
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || RouteNames.Welcome);
     },
   });
@@ -53,6 +51,8 @@ function UserLevel({ navigation }) {
     navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || RouteNames.Welcome);
   };
 
+  const sortedLevels = levels || [];
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -64,7 +64,7 @@ function UserLevel({ navigation }) {
         Alignments.fill,
       ]}
     >
-      <View style={[Spaces.gap[40]]}>
+      <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.level.title', 'Ton meilleur niveau ?')}
@@ -74,27 +74,31 @@ function UserLevel({ navigation }) {
           </Text>
         </View>
 
-        <View style={[Spaces.gap[12]]}>
-          {LEVELS.map((level) => (
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[20]]}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          {sortedLevels.map((level) => (
             <TouchableOpacity
-              key={level.value}
-              onPress={() => setSelectedLevel(level.value)}
+              key={level.documentId || level.id}
+              onPress={() => setSelectedLevel(level.name)}
               style={[
                 Spaces.padding[16],
                 {
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: selectedLevel === level.value ? Colors.primary500 : Colors.neutral700,
-                  backgroundColor: selectedLevel === level.value ? Colors.primary500 + '20' : Colors.neutral800,
+                  borderColor: selectedLevel === level.name ? Colors.primary500 : Colors.neutral700,
+                  backgroundColor: selectedLevel === level.name ? Colors.primary500 + '20' : Colors.neutral800,
                 },
               ]}
             >
-              <Text style={[Fonts.p1Bold, { color: selectedLevel === level.value ? Colors.primary500 : Colors.neutral00 }]}>
-                {level.label}
+              <Text style={[Fonts.p1Bold, { color: selectedLevel === level.name ? Colors.primary500 : Colors.neutral00 }]}>
+                {level.name}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       <View style={[Spaces.gap[16]]}>

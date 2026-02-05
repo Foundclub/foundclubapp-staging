@@ -10,7 +10,7 @@ import useTheme from '@/theme/themeContext';
  * @param {import('react-native').TextStyle} [props.textStyle] - Additional styles for the text
  * @returns {import('react').ReactElement} Tag component
  */
-function Tag({ text, textColor = 'primary500', textStyle }) {
+function Tag({ text, textColor = 'primary500', textStyle, style }) {
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
@@ -24,6 +24,7 @@ function Tag({ text, textColor = 'primary500', textStyle }) {
         Spaces.paddingVertical[4],
         Spaces.paddingHorizontal[8],
         Alignments.alignCenter,
+        style, 
       ]}
     >
       <Text

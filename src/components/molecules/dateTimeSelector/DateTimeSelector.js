@@ -1,47 +1,45 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import useTheme from '@/theme/themeContext';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Button from '@/components/atoms/button/Button';
 
+// Move constants inside component or calculate dynamically
 const ITEM_HEIGHT = 50;
-const VISIBLE_ITEMS = 5;
-const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 
-/**
- * A Premium Date/Time Selector using the App's standardized BottomModal.
- * Solves Android visibility issues by using the @gorhom/bottom-sheet Portal system.
- */
 /**
  * Internal Wheel Picker Component
  */
-const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80, isOpen }) => {
+export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 80, isOpen, visibleItems = 5 }) => {
+  const PICKER_HEIGHT = ITEM_HEIGHT * visibleItems;
+  const centerOffset = (visibleItems - 1) * ITEM_HEIGHT / 2;
   const { Colors, Fonts } = useTheme();
-  const flatListRef = useRef(null);
+  const scrollRef = useRef(null);
   const selectedIndex = data.findIndex(item => 
     typeof item === 'object' ? item.value === selectedValue : item === selectedValue
   );
 
   // Initial scroll
   useEffect(() => {
-    if (flatListRef.current && selectedIndex >= 0 && isOpen) {
-      // Use timeout to ensure FlatList is mounted
+    if (scrollRef.current && selectedIndex >= 0 && isOpen) {
+        // For inline usage, we might not need isOpen check, but let's keep it safe
+        // Use timeout to ensure layout is ready
       const timer = setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ 
-          offset: selectedIndex * ITEM_HEIGHT, 
+        scrollRef.current?.scrollTo({ 
+          y: selectedIndex * ITEM_HEIGHT, 
           animated: false 
         });
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen]); // If used inline, isOpen might always be true or undefined. If undefined, we might need another trigger.
 
   const handleScrollComplete = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const index = Math.round(offsetY / ITEM_HEIGHT);
     const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
     const item = data[clampedIndex];
-    if (item === undefined) return; // Guard against undefined
+    if (item === undefined) return;
     const newValue = typeof item === 'object' ? item.value : item;
     
     if (newValue !== selectedValue) {
@@ -49,57 +47,54 @@ const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, width = 8
     }
   };
 
-  const renderItem = ({ item, index }) => {
-    const itemValue = typeof item === 'object' ? item.value : item;
-    const itemLabel = typeof item === 'object' ? item.label : formatItem ? formatItem(item) : String(item).padStart(2, '0');
-    const isSelected = itemValue === selectedValue;
-
-    return (
-      <TouchableOpacity 
-        style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
-        onPress={() => {
-          onValueChange(itemValue);
-          flatListRef.current?.scrollToOffset({
-            offset: index * ITEM_HEIGHT,
-            animated: true
-          });
-        }}
-        activeOpacity={0.7}
-      >
-        <Text style={[
-          Fonts.p1,
-          { color: isSelected ? Colors.primary500 : Colors.neutral500 },
-          isSelected && styles.selectedItemText
-        ]}>
-          {itemLabel}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={[styles.wheelContainer, { width, height: PICKER_HEIGHT }]}>
       {/* Selection Indicator */}
       <View style={[styles.selectionIndicator, { 
-        top: ITEM_HEIGHT * 2,
+        top: centerOffset,
         backgroundColor: Colors.neutral800,
         borderColor: Colors.primary500
       }]} pointerEvents="none" />
       
-      <FlatList
-        ref={flatListRef}
-        data={data}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderItem}
+      <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         snapToAlignment="start"
         decelerationRate="fast"
         bounces={false}
         onMomentumScrollEnd={handleScrollComplete}
-        getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-      />
+        contentContainerStyle={{ paddingVertical: centerOffset }}
+        nestedScrollEnabled={true} // Important for nesting in Android
+      >
+        {data.map((item, index) => {
+            const itemValue = typeof item === 'object' ? item.value : item;
+            const itemLabel = typeof item === 'object' ? item.label : formatItem ? formatItem(item) : String(item).padStart(2, '0');
+            const isSelected = itemValue === selectedValue;
+            return (
+                <TouchableOpacity 
+                    key={index}
+                    style={[styles.wheelItem, { height: ITEM_HEIGHT }]}
+                    onPress={() => {
+                        onValueChange(itemValue);
+                        scrollRef.current?.scrollTo({
+                            y: index * ITEM_HEIGHT,
+                            animated: true
+                        });
+                    }}
+                    activeOpacity={0.7}
+                >
+                    <Text style={[
+                        Fonts.p1,
+                        { color: isSelected ? Colors.primary500 : Colors.neutral500 },
+                        isSelected && styles.selectedItemText
+                    ]}>
+                        {itemLabel}
+                    </Text>
+                </TouchableOpacity>
+            );
+        })}
+      </ScrollView>
     </View>
   );
 };

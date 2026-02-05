@@ -83,7 +83,7 @@ const getStyle = (colors) => ({
     borderWidth: 1,
   },
   buttonTextPrimary: {
-    color: colors.primary900,
+    color: colors.neutral00,
   },
 
   buttonTextPrimaryLight: {

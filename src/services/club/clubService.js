@@ -383,7 +383,25 @@ export const updateClub = async (clubData) => {
 
     // Handle club logo
     if (clubDataCopy.logo) {
-      if (clubDataCopy.logo.documentId) {
+      // If it's a new file (has path/uri), append it as a file
+      if (clubDataCopy.logo.path || clubDataCopy.logo.uri) {
+        const fileToUpload = {
+          name: clubDataCopy.logo.filename || 'club_logo.jpg',
+          type: clubDataCopy.logo.mime || 'image/jpeg',
+          uri: Platform.OS === 'android' 
+            ? (clubDataCopy.logo.path || clubDataCopy.logo.uri) 
+            : (clubDataCopy.logo.path || clubDataCopy.logo.uri).replace('file://', ''),
+        };
+        // Use 'files.logo' if Strapi controller expects files.field
+        // OR just 'logo' if using standard upload middleware.
+        // Usually for custom controllers, we might need to handle 'files' manually or use 'files.logo'.
+        // Based on sponsor logic `sponsor[${i}][logo]`, let's try appending to `files.logo` or `logo`.
+        // Strapi default upload usually looks for `files` key.
+        // Let's assume standard multipart: `logo` as key for file.
+        formData.append('files.logo', fileToUpload); 
+      } 
+      // Existing logo (sent as ID)
+      else if (clubDataCopy.logo.documentId) {
         formData.append('logo', clubDataCopy.logo.documentId);
       } else if (clubDataCopy.logo.id) {
         formData.append('logo', clubDataCopy.logo.id);
@@ -431,28 +449,74 @@ export const updateClub = async (clubData) => {
  */
 export const uploadFile = async (file) => {
   try {
+    console.log('[DEBUG] Uploading file payload:', JSON.stringify(file));
+
+    // Safety check for file object
+    // @ts-expect-error - file type definition is partial
+    if (!file || !file.path) {
+      throw new Error('Invalid file object provided for upload');
+    }
+
     const formData = new FormData();
+
+    // Robust name generation
+    // @ts-expect-error - file type definition
+    const extension = file.path.split('.').pop() || 'jpg';
+    // @ts-expect-error - file type definition
+    const fileName = file.filename || `upload_${Date.now()}.${extension}`;
+
+    // Robust mime type
+    // @ts-expect-error - file type definition
+    const mimeType = file.mime || 'image/jpeg';
+
     const fileToUpload = {
-      name: file.filename || `image.${file.path.split('.').pop()}`,
-      type: file.mime,
+      name: fileName,
+      type: mimeType,
+      // @ts-expect-error - file type definition
       uri: Platform.OS === 'ios' ? file.path.replace('file://', '') : file.path,
     };
+
+    console.log('[DEBUG] FormData file:', JSON.stringify(fileToUpload));
+
     // @ts-expect-error because of react native image type
     formData.append('files', fileToUpload);
 
-    const response = await client.post('/upload', formData, {
+    const { getAuthTokens } = require('../../domains/auth/authUseCases');
+    const auth = getAuthTokens();
+    const token = auth?.token;
+    
+    console.log('[DEBUG] UPLOAD URL:', `${process.env.API_URL}/upload`);
+    console.log('[DEBUG] UPLOAD Headers:', JSON.stringify({ Authorization: token ? 'Bearer [HIDDEN]' : 'None' }));
+
+    // Use native fetch to avoid Axios issues with FormData on Android
+    const response = await fetch(`${process.env.API_URL}/upload`, {
+      method: 'POST',
       headers: {
-        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // Do NOT set Content-Type manually, fetch sets it with boundary
       },
+      body: formData,
     });
 
-    if (response.data && response.data.length > 0) {
-      return response.data[0].documentId || response.data[0].id;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData?.error?.message || errorData?.message || `HTTP ${response.status}`);
     }
-    throw new Error('Upload failed: No data received');
-  } catch (error) {
 
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : 'Unknown error';
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      console.log('[DEBUG] Upload success. ID:', data[0].id);
+      return {
+        id: data[0].id,
+        documentId: data[0].documentId || data[0].id,
+      };
+    }
+    throw new Error('Upload failed: No data received from server');
+  } catch (error) {
+    console.error('[DEBUG] Upload Error Full:', error);
+    // @ts-expect-error - unknown error type
+    const errorToDisplay = error?.message || 'Unknown upload error';
     throw new Error(`Failed to upload file: ${errorToDisplay}`);
   }
 };
@@ -469,7 +533,8 @@ export const updateClubInfo = async (clubData) => {
 
     // Handle logo file upload if it's a new file (has path)
     if (clubDataCopy.logo && clubDataCopy.logo.path) {
-      logoId = await uploadFile(clubDataCopy.logo);
+      const uploadResult = await uploadFile(clubDataCopy.logo);
+      logoId = uploadResult.id; // Use INTERNAL ID for strapi.db relations
     } else if (clubDataCopy.logo && clubDataCopy.logo.id) {
       // Keep existing logo if not changed
       logoId = clubDataCopy.logo.id;
@@ -508,5 +573,20 @@ export const updateClubInfo = async (clubData) => {
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to update club info: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Claim a club
+ * @param {string|number} clubId - The club ID
+ * @returns {Promise<any>} - The response
+ */
+export const claimClub = async (clubId) => {
+  try {
+    const response = await client.post(`/clubs/${clubId}/claim`);
+    return response.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to claim club: ${errorToDisplay}`);
   }
 };

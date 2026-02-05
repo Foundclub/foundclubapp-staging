@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 
+import { getImageUrl } from '@/utils/imageUrl';
 import useTheme from '@/theme/themeContext';
 import useClub from '@/domains/club/useClub';
 
@@ -15,8 +16,8 @@ import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/serv
  * @param {Function} props.onAddPress - Callback when add button is pressed
  * @param {Function} props.onEditPress - Callback when edit button is pressed
  */
-function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress }) {
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress, bestLevel, preferredSport }) {
+  const { Alignments, ApplicationStyle, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   
@@ -46,16 +47,21 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
     if (item.club?.name) {
       return item.club.name;
     }
+    if (item.multisport_club?.name) {
+      return item.multisport_club.name;
+    }
     return item.customClubName || 'Club inconnu';
   };
 
   // Render club logo or shield with initials
   const renderClubLogo = (item) => {
     // If club has a logo, show it
-    if (item.club?.logo?.url) {
+    const logoUrl = item.club?.logo?.url || item.multisport_club?.logo?.url;
+    
+    if (logoUrl) {
       return (
         <Image
-          source={{ uri: item.club.logo.url }}
+          source={{ uri: getImageUrl(logoUrl) }}
           style={{
             width: 48,
             height: 48,
@@ -69,7 +75,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
     }
 
     // Otherwise show TeamShield with initials
-    const clubName = item.club?.name || item.customClubName || '';
+    const clubName = item.club?.name || item.multisport_club?.name || item.customClubName || '';
     const initials = getClubInitials(clubName);
 
     return (
@@ -114,6 +120,36 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Best Level & Sport Info */}
+      {(bestLevel || preferredSport) && (
+        <View style={[
+          Spaces.padding[12],
+          ApplicationStyle.backgroundColor.neutral800,
+          ApplicationStyle.borderRadius8,
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[12]
+        ]}>
+          <Image
+            source={require('@/assets/icons/flag.png')}
+            style={{ width: 20, height: 20, tintColor: Colors.primary500 }}
+            resizeMode="contain"
+          />
+          <View>
+            {preferredSport && (
+              <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
+                {preferredSport}
+              </Text>
+            )}
+            {bestLevel && (
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                {t('profile.history.bestLevel', 'Meilleur niveau')} : {bestLevel}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Empty state */}
       {(!histories || histories.length === 0) && (

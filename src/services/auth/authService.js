@@ -22,6 +22,18 @@ const userSchema = Joi.object({
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
   section: Joi.object().allow(null).optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  category: Joi.string().allow(null, '').optional(),
+  weight: Joi.number().allow(null, '').optional(),
+  height: Joi.number().allow(null, '').optional(),
+  position: Joi.string().allow(null, '').optional(),
+  isLookingForClub: Joi.boolean().allow(null).optional(),
+  clubMembershipRequests: Joi.array().items(Joi.object({
+    documentId: Joi.string().required(),
+    state: Joi.string().required(),
+    club: Joi.object().optional(),
+  })).optional(),
 }).required();
 
 /**
@@ -160,6 +172,7 @@ export const subscribeToAuthState = (onAuthStateChanged) => {
  * Get current user
  * @returns {Promise<User>}
  */
+// ... existing code ...
 export const getMe = async () => {
   const result = await client.get('/firebase-auth/me');
   try {
@@ -168,6 +181,7 @@ export const getMe = async () => {
     });
     return validationResult;
   } catch (error) {
+// ... existing code ...
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch user data: ${errorToDisplay}`);
   }
@@ -223,8 +237,14 @@ export const updateMe = async (userData) => {
     // Append all other user data
     Object.entries(userDataCopy).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
-        console.log(`[updateMe] Appending ${key}: ${value}`);
-        formData.append(key, value.toString());
+        let valueToSend = value;
+        if (typeof value === 'object' && !(value instanceof Date) && key !== 'avatar') {
+          valueToSend = JSON.stringify(value);
+        } else {
+          valueToSend = value.toString();
+        }
+        console.log(`[updateMe] Appending ${key}: ${valueToSend}`);
+        formData.append(key, valueToSend);
       }
     });
 
@@ -267,7 +287,34 @@ export const updateMe = async (userData) => {
 export const createTrainer = async (userData) => {
   const formData = new FormData();
 
-  const userDataCopy = { ...userData, username: userData.phoneNumber };
+  const userDataCopy = {
+    ...userData,
+    username: userData.phoneNumber
+  };
+
+  if (userData.birthdate) {
+    // Parser la date DD/MM/YYYY manuellement car new Date() peut échouer
+    const [day, month, year] = userData.birthdate.split('/');
+    if (day && month && year) {
+      const dateObject = new Date(`${year}-${month}-${day}`);
+      if (!isNaN(dateObject.getTime())) {
+        userDataCopy.birthdate = format(dateObject, 'yyyy-MM-dd');
+      } else {
+        delete userDataCopy.birthdate; // Date invalide
+      }
+    } else {
+       // Format peut-être déjà YYYY-MM-DD ou invalide ?
+       // On essaie de l'utiliser tel quel si valide, sinon on supprime
+       const fallbackDate = new Date(userData.birthdate);
+       if (!isNaN(fallbackDate.getTime())) {
+         userDataCopy.birthdate = format(fallbackDate, 'yyyy-MM-dd');
+       } else {
+         delete userDataCopy.birthdate;
+       }
+    }
+  } else {
+    delete userDataCopy.birthdate;
+  }
 
   // Remove empty properties (undefined, null, or empty string)
   Object.keys(userDataCopy).forEach((key) => {
@@ -297,14 +344,21 @@ export const createTrainer = async (userData) => {
     }
   });
 
-  const result = await client.post(
-    '/firebase-auth/create-trainer',
-    formData,
-    {
+  console.log('[createTrainer] Sending formData:', JSON.stringify(userDataCopy)); // Only logging text fields, file param is hidden in formData object handling
 
-    },
-  );
+  console.log('[createTrainer] Sending formData:', JSON.stringify(userDataCopy));
+
   try {
+    const result = await client.post(
+      '/firebase-auth/create-trainer',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+
     const validationResult = await userSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
@@ -405,4 +459,13 @@ export const addDeviceToken = async (token) => {
 export const deleteDeviceToken = async (token) => {
   const result = await client.delete(`/user-fcm-token/me/device/${token}`);
   return result.data;
+};
+
+/**
+ * Delete account (anonymize)
+ * @returns {Promise<any>} Response
+ */
+export const deleteAccount = async () => {
+  const response = await client.delete('/firebase-auth/delete');
+  return response.data;
 };

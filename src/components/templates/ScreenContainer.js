@@ -18,6 +18,7 @@ function ScreenContainer({
   bgImage = 'bg1',
   children,
   contentContainerStyle = [],
+  gradient = ['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)'],
   style = [],
 }) {
   // hooks
@@ -31,6 +32,26 @@ function ScreenContainer({
   const containerSpaces = useMemo(() => ({
     paddingTop: headerHeightNative || insets.top,
   }), [headerHeightNative, insets.top]);
+
+  if (gradient) {
+    var LinearGradient = require('react-native-linear-gradient').default;
+    return (
+        <LinearGradient
+            colors={gradient}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={[
+                Alignments.fill,
+                Spaces.paddingHorizontal[24],
+                containerSpaces,
+                ...style,
+            ]}
+        >
+            <View style={[Alignments.grow1, ...contentContainerStyle]}>
+                {children}
+            </View>
+        </LinearGradient>
+    );
+  }
 
   return (
     <ImageBackground

@@ -7,9 +7,12 @@ import { RouteNames } from '@/navigation/routeNames';
 import MyTeamList from '@/views/team/MyTeamList';
 import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
+import CreateSquadWizard from '@/views/team/createSquad/CreateSquadWizard';
 import TeamList from '@/views/team/TeamList';
 import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
 import TeamStatsScreen from '@/views/team/TeamStatsScreen';
+import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
+import SquadEditScreen from '@/views/league/edit/SquadEditScreen';
 
 const Stack = createStackNavigator();
 
@@ -47,6 +50,22 @@ function TeamStack() {
         }}
       />
       <Stack.Screen
+        component={SquadEditScreen}
+        name={RouteNames.SquadEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={SquadDetailsScreen}
+        name={RouteNames.SquadDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
         component={TeamMembershipRequestList}
         name={RouteNames.TeamMembershipRequests}
         options={{
@@ -54,12 +73,21 @@ function TeamStack() {
           headerTitle: t('teamMembershipRequestList.title'),
         }}
       />
+
       <Stack.Screen
         component={TeamEdit}
         name={RouteNames.TeamEdit}
         options={{
           ...commonOptions,
           headerTitle: t('teamEdit.title'),
+        }}
+      />
+      <Stack.Screen
+        component={CreateSquadWizard}
+        name={RouteNames.CreateSquad}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Créer une Squad',
         }}
       />
       <Stack.Screen

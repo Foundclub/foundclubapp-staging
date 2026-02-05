@@ -138,7 +138,7 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
         <DateTimePicker
           value={getDateFromValue()}
           mode="time"
-          display="spinner"
+          display="default"
           onChange={handleChange}
           is24Hour={true}
         />

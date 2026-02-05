@@ -14,18 +14,23 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import usePlaces from '@/domains/places/usePlaces';
+
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetSections } from '@/services/section/sectionQueries';
+import { useGetLevels } from '@/services/level/levelQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const defaultValues = {
+  address: null,
   birthdate: '',
   firstname: '',
   height: '',
@@ -36,9 +41,12 @@ const defaultValues = {
   weight: '',
   isLookingForClub: false,
   preferredSport: '',
+  bestLevel: '',
+  category: '',
 };
 
 const profileSchema = Joi.object({
+  address: Joi.object().allow(null).optional(),
   birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   documentId: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().required(),
@@ -50,6 +58,8 @@ const profileSchema = Joi.object({
   weight: Joi.string().allow(null, '').optional(),
   isLookingForClub: Joi.boolean().optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  category: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
 /**
@@ -65,9 +75,11 @@ function ProfileEdit({ navigation }) {
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const { data: sections } = useGetSections();
+  const { data: levels } = useGetLevels();
   const {
     formatBirthdateToDisplay, formatBirthdateToSend, profileFields,
   } = useAuth();
+  const { getGeohashForPointAndRadius } = usePlaces();
 
   // local state
   const [avatar, setAvatar] = useState(
@@ -78,6 +90,11 @@ function ProfileEdit({ navigation }) {
   const sectionOptions = sections?.map((section) => ({
     label: section.name,
     value: section.documentId,
+  })) || [];
+
+  const levelOptions = levels?.map((level) => ({
+    label: level.name,
+    value: level.name,
   })) || [];
 
   const updateUserMutation = useMutation({
@@ -98,9 +115,14 @@ function ProfileEdit({ navigation }) {
     defaultValues: {
       ...defaultValues,
       ...userData,
+      address: userData?.address || null,
       birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
       section: userData?.section?.documentId || '',
       preferredSport: userData?.preferredSport || '',
+      bestLevel: userData?.bestLevel || '',
+      category: userData?.category || '',
+      height: userData?.height ? String(userData.height) : '',
+      weight: userData?.weight ? String(userData.weight) : '',
     },
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
@@ -115,6 +137,20 @@ function ProfileEdit({ navigation }) {
    */
   const handleFormSubmit = (data) => {
     if (userData) {
+      // Compute geohash
+      let geohash = null;
+      if (data.address && data.address.value) {
+        const coords = data.address.value.split('|');
+        if (coords.length === 2) {
+           // Value is "lon|lat" based on MercatoFilters usage
+           geohash = getGeohashForPointAndRadius(
+             parseFloat(coords[1]), // lat
+             parseFloat(coords[0]), // lon
+             0.001 // High precision (point)
+           );
+        }
+      }
+
       updateUserMutation.mutate({
         firstname: data.firstname,
         lastname: data.lastname,
@@ -126,8 +162,31 @@ function ProfileEdit({ navigation }) {
         avatar,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
         section: data.section,
+        bestLevel: data.bestLevel,
+        category: data.category,
+        address: data.address,
+        geohash,
       });
     }
+  };
+
+  const getSportOptions = () => {
+    const defaultSports = [
+      { label: 'Football', value: 'football' },
+      { label: 'Basketball', value: 'basketball' },
+      { label: 'Handball', value: 'handball' },
+      { label: 'Volleyball', value: 'volleyball' },
+      { label: 'Autre', value: 'other' },
+    ];
+    
+    // Add current user sport if not in list
+    if (userData?.preferredSport && !defaultSports.find(s => s.value === userData.preferredSport)) {
+      // Format label (capitalize first letter)
+      const label = userData.preferredSport.charAt(0).toUpperCase() + userData.preferredSport.slice(1);
+      defaultSports.unshift({ label, value: userData.preferredSport });
+    }
+    
+    return defaultSports;
   };
 
   return (
@@ -274,6 +333,7 @@ function ProfileEdit({ navigation }) {
                 )}
               />
             ) : null}
+
             {profileFields?.includes('weight') ? (
               <Controller
                 control={control}
@@ -299,6 +359,77 @@ function ProfileEdit({ navigation }) {
                 )}
               />
             ) : null}
+            
+            {profileFields?.includes('bestLevel') ? (
+              <Controller
+                control={control}
+                name="bestLevel"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <AutocompleteSelect
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('profile.fields.bestLevel.label', 'Meilleur niveau')}
+                    onBlur={onBlur}
+                    options={levelOptions}
+                    placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
+                    ref={ref}
+                    setValue={
+                      (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
+                    }
+                    value={value}
+                  />
+                )}
+              />
+            ) : null}
+
+            {/* Category Selector */}
+            <Controller
+              control={control}
+              name="category"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <AutocompleteSelect
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
+                  isMulti
+                  label={t('profile.fields.category.label', 'Catégorie')}
+                  onBlur={onBlur}
+                  options={[
+                    { label: 'U7', value: 'U7' },
+                    { label: 'U8', value: 'U8' },
+                    { label: 'U9', value: 'U9' },
+                    { label: 'U10', value: 'U10' },
+                    { label: 'U11', value: 'U11' },
+                    { label: 'U12', value: 'U12' },
+                    { label: 'U13', value: 'U13' },
+                    { label: 'U14', value: 'U14' },
+                    { label: 'U15', value: 'U15' },
+                    { label: 'U16', value: 'U16' },
+                    { label: 'U17', value: 'U17' },
+                    { label: 'U18', value: 'U18' },
+                    { label: 'U19', value: 'U19' },
+                    { label: 'U20', value: 'U20' },
+                    { label: 'U21', value: 'U21' },
+                    { label: 'U23', value: 'U23' },
+                    { label: 'Senior', value: 'Senior' },
+                    { label: 'Vétéran', value: 'Veteran' },
+                  ]}
+                  placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                  ref={ref}
+                  setValue={
+                    (/** @type {{value: string, label: string}[]} */options) => { 
+                      onChange(options?.map(o => o.value).join(', ') || ''); 
+                    }
+                  }
+                  value={value ? value.split(', ') : []}
+                />
+              )}
+            />
 
             {profileFields?.includes('height') ? (
               <Controller
@@ -338,13 +469,7 @@ function ProfileEdit({ navigation }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
                   onBlur={onBlur}
-                  options={[
-                    { label: 'Football', value: 'football' },
-                    { label: 'Basketball', value: 'basketball' },
-                    { label: 'Handball', value: 'handball' },
-                    { label: 'Volleyball', value: 'volleyball' },
-                    { label: 'Autre', value: 'other' },
-                  ]}
+                  options={getSportOptions()}
                   placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
                   ref={ref}
                   setValue={
@@ -353,7 +478,7 @@ function ProfileEdit({ navigation }) {
                       setValue('position', '');
                     }
                   }
-                  value={['football', 'basketball', 'handball', 'volleyball', 'other'].find((v) => v === value) ? value : ''}
+                  value={value}
                 />
               )}
             />
@@ -407,6 +532,24 @@ function ProfileEdit({ navigation }) {
 
             <Controller
               control={control}
+              name="address"
+              render={({
+                field: {
+                  onChange, value,
+                },
+              }) => (
+                <AutocompleteAddressInput
+                  address={value}
+                  error={getFieldError({ errors: formErrors, fieldName: 'address' })}
+                  label={t('profile.fields.city.label', 'Ville')}
+                  placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
+                  setAddress={onChange}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
               name="isLookingForClub"
               render={({
                 field: {
@@ -415,7 +558,7 @@ function ProfileEdit({ navigation }) {
               }) => (
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
                   <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                    {t('profile.fields.isLookingForClub.label', 'En recherche de club')}
+                    {t('profile.fields.isLookingForClub.label', 'Profil visible')}
                   </Text>
                   <Switch
                     onValueChange={onChange}

@@ -14,6 +14,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 /**
  * User club search status screen
@@ -31,7 +32,13 @@ function UserClubSearch({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserClubSearch) || RouteNames.Welcome);
+      const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
+      if (!nextRoute) {
+        markOnboardingComplete(userData?.documentId);
+        navigation.navigate(RouteNames.HomeTab);
+      } else {
+        navigation.navigate(nextRoute);
+      }
     },
   });
 
@@ -42,7 +49,13 @@ function UserClubSearch({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserClubSearch) || RouteNames.Welcome);
+    const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
+    if (!nextRoute) {
+      markOnboardingComplete(userData?.documentId);
+      navigation.navigate(RouteNames.HomeTab);
+    } else {
+      navigation.navigate(nextRoute);
+    }
   };
 
   return (

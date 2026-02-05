@@ -14,6 +14,7 @@ import {
   unpinChat,
   archiveChat,
   unarchiveChat,
+  updateMessage,
 } from '@/services/chat/chatService';
 
 import useSocket, { EVENTS } from '@/hooks/useSocket';
@@ -339,6 +340,19 @@ const useMessaging = (currentChatId) => {
     }
   }, [socket]);
 
+  /* UPDATE MESSAGE MUTATION */
+  const updateMessageMutation = useMutation({
+    mutationFn: ({ messageId, data }) => updateMessage(messageId, data),
+    onSuccess: (data) => {
+      // Optimistically we might have already updated, but let's confirm
+       queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId || data.chat?.documentId] });
+    },
+    onError: (error) => {
+        // eslint-disable-next-line no-console
+       console.error('Error updating message:', error);
+    }
+  });
+
   /**
    * Leave a chat room
    * @param {string} chatId - The chat id to leave
@@ -519,6 +533,7 @@ const useMessaging = (currentChatId) => {
     unpinChat: unpinChatMutation.mutate,
     archiveChat: archiveChatMutation.mutate,
     unarchiveChat: unarchiveChatMutation.mutate,
+    updateMessage: updateMessageMutation.mutateAsync,
   };
 };
 

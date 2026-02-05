@@ -20,6 +20,8 @@ import useTheme from '../../theme/themeContext';
 import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
 
+import LinearGradient from 'react-native-linear-gradient';
+
 const Tab = createBottomTabNavigator();
 
 /**
@@ -80,7 +82,16 @@ function PrivateTabNavigator() {
     <Tab.Navigator
       id={undefined}
       initialRouteName={RouteNames.Search}
-      screenOptions={commonOptions}
+      screenOptions={{
+        ...commonOptions,
+        tabBarBackground: () => (
+            <LinearGradient
+                colors={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ height: '100%', width: '100%' }}
+            />
+        ),
+      }}
     >
       <Tab.Screen
         component={Home}

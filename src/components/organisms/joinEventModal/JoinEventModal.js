@@ -40,32 +40,35 @@ function JoinEventModal({
     Spaces,
   } = useTheme();
 
-  const handleConfirmParticipation = useCallback(() => {
-    if (eventId && acceptResponsibility && acceptConditions && userData?.documentId) {
-      createEventParticipationMutation.mutate({
-        event: eventId,
-      });
-    }
-  }, [eventId, acceptResponsibility, acceptConditions, userData, createEventParticipationMutation]);
-
   const handleClose = useCallback(() => {
     onClose();
     setAcceptResponsibility(false);
     setAcceptConditions(false);
   }, [onClose]);
 
+  const handleConfirmParticipation = useCallback(() => {
+    if (eventId && acceptResponsibility && acceptConditions && userData?.documentId) {
+      createEventParticipationMutation.mutate({
+        event: eventId,
+        user: userData.documentId,
+      });
+      handleClose(); // Force close on confirm
+    }
+  }, [eventId, acceptResponsibility, acceptConditions, userData, createEventParticipationMutation, handleClose]);
+
   return (
     <BottomModal
       close={handleClose}
       hideCloseButton
       isVisible={isVisible}
+      snapPoints={['90%']}
       headerComponent={(
         <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
           {t('eventList.joinModal.title')}
         </Text>
       )}
       footerComponent={(
-        <View style={[Spaces.gap[16], { paddingBottom: 50 }]}>
+        <View style={[Spaces.gap[16]]}>
           <Button
             disabled={!acceptResponsibility || !acceptConditions}
             onPress={handleConfirmParticipation}

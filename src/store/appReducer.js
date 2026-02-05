@@ -1,3 +1,5 @@
+import { sanitizeUser } from '@/domains/auth/authUseCases';
+
 /**
  * Reducer for the global application context.
  * @type {AppReducer} appReducer
@@ -25,25 +27,11 @@ export default function appReducer(state, action) {
       // We only keep fields necessary for session switching display and basic auth
       let sanitizedAuth = newAuth;
       if (newAuth?.user) {
-        const {
-          documentId, id, email, firstname, lastname, phoneNumber, role, avatar
-        } = newAuth.user;
-        
-        // Sanitize role to avoid large permissions arrays
-        const sanitizedRole = role ? {
-            id: role.id,
-            documentId: role.documentId,
-            name: role.name,
-            type: role.type,
-        } : role;
-
         sanitizedAuth = {
           token: newAuth.token,
           idToken: newAuth.idToken,
           // We exclude idUser (Firebase SDK Object) as it is not serializable/useful in storage
-          user: {
-            documentId, id, email, firstname, lastname, phoneNumber, role: sanitizedRole, avatar
-          },
+          user: sanitizeUser(newAuth.user),
         };
       }
 
@@ -75,6 +63,39 @@ export default function appReducer(state, action) {
       return {
         ...state,
         isAddingAccount: false,
+      };
+    }
+    case 'UPDATE_USER_DATA': {
+      const updatedUserData = action.payload;
+      if (!updatedUserData?.documentId) return state;
+
+      // Sanitize user object similar to SET_AUTHENTICATION
+      const sanitizedUser = sanitizeUser(updatedUserData);
+
+      // Update auth if it matches current user
+      let newAuth = state.auth;
+      if (state.auth?.user?.documentId === sanitizedUser.documentId) {
+        newAuth = {
+          ...state.auth,
+          user: sanitizedUser,
+        };
+      }
+
+      // Update session in authSessions
+      const newSessions = (state.authSessions || []).map(session => {
+        if (session?.user?.documentId === sanitizedUser.documentId) {
+          return {
+            ...session,
+            user: sanitizedUser,
+          };
+        }
+        return session;
+      });
+
+      return {
+        ...state,
+        auth: newAuth,
+        authSessions: newSessions,
       };
     }
     case 'SWITCH_ACCOUNT': {

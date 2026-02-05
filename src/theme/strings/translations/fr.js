@@ -2,8 +2,13 @@ export default {
   addCoach: {
     actions: {
       save: 'Ajouter',
+      invite: 'Inviter',
     },
     alerts: {
+      success: {
+        title: 'Ajout réussi !',
+        description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à votre club.",
+      },
       alreadyExist: {
         actions: {
           addToClub: 'Ajouter au club',
@@ -179,6 +184,8 @@ export default {
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+    error: 'Erreur',
+    unknown: 'Une erreur inconnue est survenue.',
     HAD_PENDING_MEMBERSHIP_REQUEST_POLICY_ERROR: "Vous avez déjà une demande d'adhésion en attente.",
     MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et dirigeant·e·s du club.',
     MANAGER_WITH_CLUB_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s avec club.',
@@ -295,9 +302,11 @@ export default {
   },
   common: {
     actions: {
+      askLater: 'Plus tard',
       cancel: 'Annuler',
       confirm: 'Confirmer',
       delete: 'Supprimer',
+      ok: 'OK',
       photoFromCamera: 'Prendre une photo',
       photoFromGallery: 'Choisir depuis la gallerie',
       save: 'Enregistrer',
@@ -307,6 +316,7 @@ export default {
     messages: {
       noData: 'Aucune donnée disponible',
     },
+    error: 'Erreur',
   },
   event: {
     shareInChat: 'Partager dans une conversation',
@@ -412,6 +422,10 @@ export default {
         title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
       },
       deleteParticipation: {
+        actions: {
+          cancel: 'Non, retour',
+          confirm: 'Oui, annuler',
+        },
         description: 'Êtes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
         title: 'Annuler ma participation',
       },
@@ -777,6 +791,13 @@ export default {
     subtitle: 'Entre le code reçu par SMS.',
     title: 'Confirme ton numéro',
   },
+  permissions: {
+    camera: {
+      denied: 'Permission caméra refusée',
+      message: 'L\'application a besoin d\'accéder à votre caméra pour prendre une photo.',
+      title: 'Permission Caméra',
+    },
+  },
   profile: {
     actions: {
       confirmDeleteAvatar: 'Êtes-vous sûr de vouloir supprimer cette image ?',
@@ -798,7 +819,7 @@ export default {
       deleteAlert: {
         actions: {
           cancel: 'Annuler',
-          confirm: 'Ouvrir le formulaire',
+          confirm: 'Supprimer',
         },
         subtitle: 'Pour demander la suppression de votre compte merci de remplir le formulaire de contact'
           + ' suivant en précisant votre demande.',

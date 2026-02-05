@@ -5,6 +5,12 @@ export const RouteNames = /** @type {const} */ ({
   AdminEvents: 'AdminEvents',
   AdminReports: 'AdminReports',
   AdminRevenue: 'AdminRevenue',
+  AdminClaimList: 'AdminClaimList',
+  AdminClaimDetail: 'AdminClaimDetail',
+  AdminUserList: 'AdminUserList',
+  AdminUserDetail: 'AdminUserDetail',
+  AdminClubList: 'AdminClubList',
+  AdminClubDetail: 'AdminClubDetail',
   AuthStackAccount: 'AuthStackAccount',
   AuthStackMessaging: 'AuthStackMessaging',
   AuthStackPlanning: 'AuthStackPlanning',
@@ -16,6 +22,7 @@ export const RouteNames = /** @type {const} */ ({
   ClubMembershipRequests: 'ClubMembershipRequests',
   Conversation: 'Conversation',
   CreateClub: 'CreateClub',
+  CreateSquad: 'CreateSquad',
   EventDetails: 'EventDetails',
   EventEdit: 'EventEdit',
   EventFilters: 'EventFilters',
@@ -51,14 +58,18 @@ export const RouteNames = /** @type {const} */ ({
   SearchAlerts: 'SearchAlerts',
   Team: 'Team',
   TeamDetails: 'TeamDetails',
+  SquadDetails: 'SquadDetails', // New route for League Squad Details
+  SquadEdit: 'SquadEdit',
   TeamEdit: 'TeamEdit',
   TeamFilters: 'TeamFilters',
   TeamList: 'TeamList',
   TeamMembershipRequests: 'TeamMembershipRequests',
   TeamStats: 'TeamStats',
   UserAvatar: 'UserAvatar',
+  UserAddress: 'UserAddress',
   UserBirthdate: 'UserBirthdate',
   UserClubSearch: 'UserClubSearch',
+  UserCategory: 'UserCategory',
   UserDetails: 'UserDetails',
   UserLevel: 'UserLevel',
   UserName: 'UserName',
@@ -67,6 +78,7 @@ export const RouteNames = /** @type {const} */ ({
   UserRole: 'UserRole',
   UserSection: 'UserSection',
   UserSport: 'UserSport',
+  UserSportHistory: 'UserSportHistory',
   Welcome: 'Welcome',
   // Stacks
   EventStack: 'EventStack',
@@ -97,4 +109,26 @@ export const RouteNames = /** @type {const} */ ({
   TacticalBoard: 'TacticalBoard',
   TacticalSelectionV2: 'TacticalSelectionV2',
   TacticalBoardV2: 'TacticalBoardV2',
+  
+  // Recruitment Wizard
+  AdWizardTeam: 'AdWizardTeam',
+  AdWizardInfo: 'AdWizardInfo',
+  AdWizardPositions: 'AdWizardPositions',
+  AdWizardValidation: 'AdWizardValidation',
+  AdWizardDescription: 'AdWizardDescription',
+  AdWizardRecap: 'AdWizardRecap',
+  AdWizardStack: 'AdWizardStack',
+  RecruitmentAdDetails: 'RecruitmentAdDetails',
+  RecruitmentAdEdit: 'RecruitmentAdEdit',
+  
+  // League Tabs (Gold Mode)
+  LeagueHomeTab: 'LeagueHomeTab',
+  LeagueDashboard: 'LeagueDashboard', // Dedicated screen name
+  LeagueSquadTab: 'LeagueSquadTab',
+  LeagueMatchTab: 'LeagueMatchTab',
+  LeagueStandingsTab: 'LeagueStandingsTab',
+  LeagueStack: 'LeagueStack', // Container for Wizard etc.
+  LeagueRanking: 'LeagueRanking', // Ranking Screen
+  LeagueMatchDetails: 'LeagueMatchDetails', // Standalone match details
+  MatchDetails: 'MatchDetails',
 });

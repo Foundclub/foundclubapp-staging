@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -15,60 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
-// Positions by sport (without Polyvalent)
-const POSITIONS_BY_SPORT = {
-  football: [
-    { label: 'Gardien', value: 'Gardien' },
-    { label: 'Défenseur central', value: 'Défenseur central' },
-    { label: 'Latéral droit', value: 'Latéral droit' },
-    { label: 'Latéral gauche', value: 'Latéral gauche' },
-    { label: 'Milieu défensif', value: 'Milieu défensif' },
-    { label: 'Milieu central', value: 'Milieu central' },
-    { label: 'Milieu offensif', value: 'Milieu offensif' },
-    { label: 'Ailier droit', value: 'Ailier droit' },
-    { label: 'Ailier gauche', value: 'Ailier gauche' },
-    { label: 'Attaquant', value: 'Attaquant' },
-    { label: 'Avant-centre', value: 'Avant-centre' },
-  ],
-  basketball: [
-    { label: 'Meneur', value: 'Meneur' },
-    { label: 'Arrière', value: 'Arrière' },
-    { label: 'Ailier', value: 'Ailier' },
-    { label: 'Ailier fort', value: 'Ailier fort' },
-    { label: 'Pivot', value: 'Pivot' },
-  ],
-  handball: [
-    { label: 'Gardien', value: 'Gardien' },
-    { label: 'Arrière gauche', value: 'Arrière gauche' },
-    { label: 'Arrière droit', value: 'Arrière droit' },
-    { label: 'Demi-centre', value: 'Demi-centre' },
-    { label: 'Ailier gauche', value: 'Ailier gauche' },
-    { label: 'Ailier droit', value: 'Ailier droit' },
-    { label: 'Pivot', value: 'Pivot' },
-  ],
-  volleyball: [
-    { label: 'Pointu (Opposite)', value: 'Pointu' },
-    { label: 'Réceptionneur-attaquant', value: 'Réceptionneur-attaquant' },
-    { label: 'Central', value: 'Central' },
-    { label: 'Passeur (Setter)', value: 'Passeur' },
-    { label: 'Libéro', value: 'Libéro' },
-  ],
-  rugby: [
-    { label: 'Pilier', value: 'Pilier' },
-    { label: 'Talonneur', value: 'Talonneur' },
-    { label: 'Deuxième ligne', value: 'Deuxième ligne' },
-    { label: 'Troisième ligne aile', value: 'Troisième ligne aile' },
-    { label: 'Troisième ligne centre', value: 'Troisième ligne centre' },
-    { label: 'Demi de mêlée', value: 'Demi de mêlée' },
-    { label: 'Demi d\'ouverture', value: 'Demi d\'ouverture' },
-    { label: 'Centre', value: 'Centre' },
-    { label: 'Ailier', value: 'Ailier' },
-    { label: 'Arrière', value: 'Arrière' },
-  ],
-};
-
-// Sports that have positions
-const SPORTS_WITH_POSITIONS = Object.keys(POSITIONS_BY_SPORT);
+// Import positions from centralized constants
+import { SPORTS_WITH_POSITIONS, getPositionsForSport } from '@/constants/positions';
 
 /**
  * User position selection screen
@@ -82,18 +30,16 @@ function UserPosition({ navigation, route }) {
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   // Get sport from route params (passed from UserSport) or fall back to userData
   const userSport = route?.params?.selectedSport || userData?.preferredSport;
 
   // Get positions based on user's preferred sport
   const positions = useMemo(() => {
-    const sport = userSport?.toLowerCase();
-    if (sport && POSITIONS_BY_SPORT[sport]) {
-      return POSITIONS_BY_SPORT[sport];
-    }
+    const sportPositions = getPositionsForSport(userSport);
     // Default to football if sport not found
-    return POSITIONS_BY_SPORT.football;
+    return sportPositions.length > 0 ? sportPositions : getPositionsForSport('football');
   }, [userSport]);
 
   // Check if we should skip this step
@@ -108,6 +54,7 @@ function UserPosition({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || RouteNames.Welcome);
     },
   });

@@ -23,6 +23,7 @@ function AutocompleteAddressInput({
   label,
   placeholder,
   setAddress,
+  onSelect,
   type = 'housenumber',
 }) {
   // ref
@@ -68,7 +69,7 @@ function AutocompleteAddressInput({
       placeholder={placeholder}
       ref={selectRef}
       setSearchValue={setAddressSearch}
-      setValue={setAddress}
+      setValue={setAddress || onSelect || (() => {})}
       value={address?.label}
     />
   );

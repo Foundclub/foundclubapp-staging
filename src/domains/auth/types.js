@@ -16,15 +16,26 @@
  * @property {Club} [club]
  * @property {Team[]} [myTeams]
  * @property {Team[]} [trainedTeams]
+ * @property {Team[]} [teamMembershipRequests]
+ * @property {boolean} [isLookingForClub]
+ * @property {string} [bestLevel]
+ * @property {string} [category]
+ * @property {string} [preferredSport]
+ * @property {string} [sportsHistory]
+ * @property {string | object} [address]
+ * @property {object[]} [multisportClubs]
+ * @property {object} [geohash]
  */
 
 /**
- * @typedef {{url: string, id?:string} & import("react-native-image-crop-picker").Image} Avatar
+ * @typedef {{url: string, id?:string, path?: string, uri?: string, mime?: string, filename?: string}} Avatar
  */
 
 /**
  * @typedef {object} Role
+ * @property {number} id
  * @property {'Entraineur' | 'Authenticated' | 'Joueur' | 'Dirigeant' | 'SuperAdmin'} name
+ * @property {string} type
  * @property {string} documentId
  */
 

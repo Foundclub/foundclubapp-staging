@@ -108,9 +108,12 @@ function AppProvider({ children }) {
     return () => listener.remove();
   });
 
+  const contextValue = React.useMemo(() => state, [state]);
+  const dispatchValue = React.useMemo(() => dispatch, []);
+
   return (
-    <AppStateContext.Provider value={state}>
-      <AppDispatchContext.Provider value={dispatch}>
+    <AppStateContext.Provider value={contextValue}>
+      <AppDispatchContext.Provider value={dispatchValue}>
         {children}
       </AppDispatchContext.Provider>
     </AppStateContext.Provider>

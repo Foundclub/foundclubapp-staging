@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * MercatoCard component
@@ -18,7 +19,7 @@ const MercatoCard = ({ user, onPress }) => {
     } = useTheme();
 
     const avatarSource = user.avatar?.url
-        ? { uri: user.avatar.url }
+        ? { uri: getImageUrl(user.avatar.url) }
         : Images.roundAvatar;
 
     // Data for badges

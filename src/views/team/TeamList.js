@@ -9,6 +9,8 @@ import Button from '@/components/atoms/button/Button';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -58,8 +60,11 @@ function TeamList({ navigation, route }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
-        <ProfileButton />
+        <LeagueHeaderSwitch />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <NotificationBadge />
+          <ProfileButton />
+        </View>
       </View>
       <TeamListContent clubId={clubId} />
       {

@@ -10,6 +10,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -31,6 +32,12 @@ function MultisportClubDetails({ navigation, route }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
+
+  const canEdit = useMemo(() => cm?.admins?.some(admin => admin.documentId === userData?.documentId), [cm, userData]);
+
+  const handleCreateSponsor = useCallback(() => {
+    navigation.navigate(RouteNames.AddSponsor, { cmId });
+  }, [navigation, cmId]);
 
   const {
     data: cm,
@@ -203,8 +210,55 @@ function MultisportClubDetails({ navigation, route }) {
                   </TouchableOpacity>
                 </View>
               )}
-            </View>
           </View>
+          </View>
+
+          {/* Sponsors */}
+          {(cm?.sponsor?.length > 0 || canEdit) && (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween]}>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  Partenaires
+                </Text>
+                {canEdit && (
+                  <Button
+                    icon="plus"
+                    isOption
+                    onPress={handleCreateSponsor}
+                    variant="Primary"
+                  />
+                )}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[Spaces.gap[16]]}
+              >
+                {cm?.sponsor?.map((sponsor, idx) => (
+                  <TouchableOpacity
+                    key={sponsor.link || idx}
+                    onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
+                    style={[Alignments.alignCenter]}
+                  >
+                    <ProfileAvatar
+                      imageUrl={sponsor.logo?.url}
+                      size={55}
+                      enablePreview={false}
+                      style={[
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                        { borderRadius: 8, width: 110, height: 55 },
+                      ]}
+                      imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
+                      {sponsor.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Admin Actions - Visible only to CM admins */}
           {cm?.admins?.some(admin => admin.documentId === userData?.documentId) && (
@@ -317,40 +371,7 @@ function MultisportClubDetails({ navigation, route }) {
             </View>
           )}
 
-          {/* Sponsors */}
-          {cm?.sponsor?.length > 0 && (
-            <View style={[Spaces.gap[16]]}>
-              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                Partenaires
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[Spaces.gap[16]]}
-              >
-                {cm.sponsor.map((sponsor, idx) => (
-                  <TouchableOpacity
-                    key={sponsor.link || idx}
-                    onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
-                    style={[Alignments.alignCenter]}
-                  >
-                    <ProfileAvatar
-                      imageUrl={sponsor.logo?.url}
-                      size={55}
-                      enablePreview={false}
-                      style={[
-                        { borderRadius: 55 },
-                      ]}
-                      imageStyle={{ borderRadius: 55 }}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      {sponsor.title}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+
         </WithDataWrapper>
       </ScrollView>
     </ScreenContainer>

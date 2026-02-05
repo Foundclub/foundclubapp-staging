@@ -28,6 +28,7 @@ function Button({
   isOption = false,
   onPress,
   style,
+  textStyle,
   title,
   variant,
 }) {
@@ -38,7 +39,7 @@ function Button({
   const imageStyle = {
     aspectRatio: 1,
     height: 20,
-    tintColor: ApplicationStyle[`buttonText${variant}`].color,
+    tintColor: ApplicationStyle[`buttonText${variant}`]?.color,
     width: 20,
   };
 
@@ -69,6 +70,7 @@ function Button({
                 style={[
                   Fonts.p1Bold,
                   ApplicationStyle[`buttonText${variant}`],
+                  textStyle,
                 ]}
               >
                 {title}

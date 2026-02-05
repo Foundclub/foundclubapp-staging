@@ -244,6 +244,9 @@ const useNotifications = ({ navigate }) => {
           screen: RouteNames.TeamMembershipRequests,
         });
         break;
+      case NOTIFICATION_TYPES.MATCH_FOUND:
+        navigate(RouteNames.LeagueMatchTab);
+        break;
       default:
         console.warn('[useNotifications] Unknown notification type:', remoteMessageData.type);
         break;

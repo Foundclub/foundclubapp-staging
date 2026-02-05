@@ -15,7 +15,7 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
-import MercatoListContent from '@/components/organisms/mercatoListContent/MercatoListContent';
+import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 import ReservationListContent from '@/components/organisms/reservationListContent/ReservationListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -25,6 +25,8 @@ import useAuth from '@/domains/auth/useAuth';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import { useIsFocused } from '@react-navigation/native';
+import ModeSwitch from '@/components/atoms/ModeSwitch/ModeSwitch';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 
 // Notification imports (Fix for Popup issue)
 import { useNotificationController } from '@/hooks/useNotificationController';
@@ -50,10 +52,17 @@ const baseSearchOptions = [
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function HomeContent({ navigation }) {
+function HomeContent({ navigation, route }) {
   const [searchType, setSearchType] = useState(baseSearchOptions[0].value);
   const [isNotifVisible, setIsNotifVisible] = useState(false);
   const { notifications, markAsRead } = useNotificationController();
+
+  useEffect(() => {
+    if (route.params?.initialSearchType) {
+      setSearchType(route.params.initialSearchType);
+      // Reset params to avoid stuck state if needed, or just let it be superseded by user action
+    }
+  }, [route.params?.initialSearchType]);
 
   const [{ auth }] = useAppContext();
   const {
@@ -97,16 +106,13 @@ function HomeContent({ navigation }) {
 
   const searchOptions = useMemo(() => {
     const options = [...baseSearchOptions];
-    const role = userData?.role?.name;
-
-    if (role === USER_ROLES.president || role === USER_ROLES.coach || role === USER_ROLES.superAdmin) {
-      options.push({
-        label: 'Mercato',
-        value: 'profiles',
-      });
-    }
+    // Recrutement tab is available for all users
+    options.push({
+      label: 'Recrutement',
+      value: 'recrutement',
+    });
     return options;
-  }, [userData]);
+  }, []);
 
   /**
    * Handle search type change
@@ -116,6 +122,8 @@ function HomeContent({ navigation }) {
     setSearchType(value);
   };
 
+  const eventFiltersProps = useMemo(() => ({ sessionStatus: 'open', excludeType: 'Réservation' }), []);
+
   const renderContent = () => {
     switch (searchType) {
       case 'clubs':
@@ -123,14 +131,19 @@ function HomeContent({ navigation }) {
       case 'events':
         return (
           <EventListContent
-            additionalFilters={{ sessionStatus: 'open', excludeType: 'Réservation' }}
+            additionalFilters={eventFiltersProps}
             showFilters
           />
         );
       case 'reservations':
         return <ReservationListContent showFilters />;
-      case 'profiles':
-        return <MercatoListContent />;
+      case 'recrutement':
+        return (
+          <RecrutementListContent 
+            initialTab={route.params?.initialRecruitmentTab} 
+            timestamp={route.params?.timestamp}
+          />
+        );
       default:
         return null;
     }
@@ -151,7 +164,7 @@ function HomeContent({ navigation }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
+        <LeagueHeaderSwitch />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <NotificationBadge onPress={() => setIsNotifVisible(true)} />
           <ProfileButton />

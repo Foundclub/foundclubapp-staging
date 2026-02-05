@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Image, View } from 'react-native';
+import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -8,6 +8,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 
 /**
  * Team list screen component
@@ -16,7 +17,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  */
 function MyTeamList({ route }) {
   const { Images } = useTheme();
-  const { playerId } = route?.params ?? {};
+  const { playerId, isLeagueMode } = route?.params ?? {};
   const { refetchUserData, userData } = useAuth();
   // Effects
   useFocusEffect(() => {
@@ -31,7 +32,7 @@ function MyTeamList({ route }) {
 
   return (
     <ScreenContainer
-      bgImage="bg2"
+      gradient={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         Alignments.justifySpaceBetween,
@@ -46,7 +47,7 @@ function MyTeamList({ route }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
+        <LeagueHeaderSwitch />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <NotificationBadge />
           <ProfileButton />
@@ -54,6 +55,7 @@ function MyTeamList({ route }) {
       </View>
       <TeamListContent
         clubId={userData?.club?.documentId}
+        isLeagueMode={isLeagueMode}
         playerId={playerId}
       />
     </ScreenContainer>

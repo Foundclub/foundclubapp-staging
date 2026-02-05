@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Modal,
     Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -130,25 +131,29 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
         navigation.navigate(RouteNames.NotificationList);
     };
 
-    // REPLACEMENT OF NATIVE MODAL WITH ABSOLUTE VIEW
+    // REPLACEMENT: USING NATIVE MODAL TO FIX Z-INDEX/POSITION ISSUES
     return (
-        <View style={[styles.absoluteContainer, { width, height }]}>
-            <View style={[
-                styles.modalOverlay,
-                { paddingTop: insets.top + 50 } // Adjusted top offset to be closer to header
-            ]}>
+        <Modal
+            visible={isVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={onClose}
+        >
+            <View style={[styles.modalOverlay, { paddingTop: insets.top + 50 }]}>
+                {/* Backdrop - Click to close */}
                 <TouchableOpacity 
                     style={styles.touchableBackground} 
                     activeOpacity={1} 
                     onPress={onClose}
                 />
                 
+                {/* Popup Content */}
                 <View style={[
                     styles.popup,
                     {
                         backgroundColor: '#1E1E1E',
                         borderColor: '#01B3F4',
-                        marginRight: 50, // Shift left to align with bell icon (skipping profile)
+                        marginRight: 16, // Standard margin from right edge
                     }
                 ]}>
                     {/* Header */}
@@ -261,30 +266,21 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </Modal>
     );
 };
 
 const styles = StyleSheet.create({
-    absoluteContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 99999, // Max Z-Index
-        elevation: 1000, // Max Elevation for Android
-    },
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-start',
         alignItems: 'flex-end',
-        paddingRight: 16,
+        paddingRight: 0, 
     },
     touchableBackground: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)', // Darker background
+        backgroundColor: 'rgba(0,0,0,0.6)', 
     },
     popup: {
         width: 320,

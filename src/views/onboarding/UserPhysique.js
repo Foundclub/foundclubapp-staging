@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -36,10 +36,12 @@ function UserPhysique({ navigation }) {
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || RouteNames.Welcome);
     },
   });

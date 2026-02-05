@@ -14,7 +14,7 @@ import {
   MessageImage,
   Time,
 } from 'react-native-gifted-chat';
-import ImagePicker from 'react-native-image-crop-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 import client from '@/services/client';
 import useSocket, { EVENTS } from '@/hooks/useSocket';
 
@@ -27,6 +27,8 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
+import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import ProposalModal from '@/components/organisms/proposalModal/ProposalModal';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -35,6 +37,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
+import { confirmMatch } from '@/services/league/MatchService';
 
 /**
  * Chat conversation screen component
@@ -50,10 +53,9 @@ function Conversation({ navigation, route }) {
      getConversationName, 
      sendMessage, 
      updateLastReadMessage,
-     deleteMessage 
+     deleteMessage,
+     updateMessage 
   } = useMessaging(chatId);
-
-  // ...
 
   /**
    * Handle message long press event to show actions modal
@@ -143,6 +145,7 @@ function Conversation({ navigation, route }) {
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [replyingTo, setReplyingTo] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
   const { sendTypingStart, sendTypingStop, sendReadReceipt } = useMessaging(chatId);
 
   // Event Participation Logic
@@ -228,45 +231,111 @@ function Conversation({ navigation, route }) {
 
   const handleChoosePhoto = async () => {
     try {
-      const image = await ImagePicker.openPicker({
-        width: 1000,
-        height: 1000,
-        cropping: false, // Set to true if cropping is desired
-        compressImageQuality: 0.8,
+      const response = await launchImageLibrary({
         mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        includeBase64: false,
       });
 
-      setIsUploading(true);
-
-      const formData = new FormData();
-      formData.append('files', {
-        uri: image.path,
-        type: image.mime,
-        name: `upload_${Date.now()}.jpg`,
-      });
-
-      const response = await client.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data && response.data.length > 0) {
-         // Send message with attachment
-         // We send a text message with attachment, or just attachment
-         sendMessage(chatId, '', { 
-            attachments: response.data,
-            sender: userData // Optimistic needs this
-         });
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la sélection');
+        return;
       }
-      setIsUploading(false);
+
+      if (response.assets && response.assets.length > 0) {
+        const image = response.assets[0];
+        
+        setIsUploading(true);
+
+        const formData = new FormData();
+        formData.append('files', {
+          uri: image.uri,
+          type: image.type,
+          name: image.fileName || `upload_${Date.now()}.jpg`,
+        });
+
+        const uploadResponse = await client.post('/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (uploadResponse.data && uploadResponse.data.length > 0) {
+           // Send message with attachment
+           sendMessage(chatId, '', { 
+              attachments: uploadResponse.data,
+              sender: userData 
+           });
+        }
+        setIsUploading(false);
+      }
     } catch (error) {
       setIsUploading(false);
-      // Ignore user cancelled
-      if (error?.message !== 'User cancelled image selection') {
-         Alert.alert('Erreur', 'Impossible d\'envoyer l\'image');
-      }
+      console.warn('ImagePicker Error', error);
+      Alert.alert('Erreur', 'Impossible d\'envoyer l\'image');
     }
+  };
+
+
+
+  /* Proposal Logic */
+  const handleRespondProposal = async (message, status) => {
+      const matchId = message?.composition?.matchId;
+      if (!matchId) {
+          Alert.alert("Erreur", "Impossible de retrouver le match associé.");
+          return;
+      }
+
+      // Optimistic update of the message bubble
+      const updatedComposition = { ...message.composition, status };
+      
+      // Update local cache immediately (Optimistic)
+      queryClient.setQueryData(['chat-messages', chatId], (oldData) => {
+          if (!oldData?.pages) return oldData;
+          return {
+              ...oldData,
+              pages: oldData.pages.map(page => ({
+                  ...page,
+                  data: page.data.map(msg => 
+                      msg.id === message._id ? { ...msg, composition: updatedComposition } : msg
+                  )
+              }))
+          };
+      });
+
+      try {
+          if (status === 'accepted') {
+              await confirmMatch(matchId);
+              // Persist message update
+              await updateMessage({
+                  messageId: message.documentId || message._id || message.id,
+                  data: {
+                      composition: updatedComposition
+                  }
+              });
+              Alert.alert("Match Confirmé", "Le match est validé !");
+          } else {
+              // Handle Decline
+              await updateMessage({
+                  messageId: message.documentId || message._id || message.id,
+                  data: {
+                      composition: updatedComposition
+                  }
+              });
+              console.log("Proposal Declined");
+          }
+          
+          // Invalidate to refresh match status elsewhere
+          queryClient.invalidateQueries({ queryKey: ['league-matches'] }); 
+          
+      } catch (error) {
+          console.error("Proposal Action Error:", error);
+          Alert.alert("Erreur", "Une erreur est survenue.");
+          // Rollback optimistic update if needed, but for now we keep it simple
+      }
   };
 
   const headerLeft = useMemo(() => (
@@ -281,26 +350,68 @@ function Conversation({ navigation, route }) {
 
   // Set navigation options
   useEffect(() => {
-    if (chatData) {
-      navigation.setOptions({
-        headerLeft: () => headerLeft,
-        headerTitle: getConversationName({
-          chatClub: chatData?.club,
-          chatParticipants: chatData?.participants,
-          chatTeam: chatData?.team,
-          chatType: chatData?.type || '',
-          meId: userData?.documentId,
-        }),
-      });
+     // Priority: Route Param Title > Messaging Hook Title > Default
+     const title = route.params?.title || getConversationName({
+       chatClub: chatData?.club,
+       chatParticipants: chatData?.participants,
+       chatTeam: chatData?.team,
+       chatType: chatData?.type || '',
+       meId: userData?.documentId,
+     }) || t('common.chat');
+
+     const subtitle = route.params?.subTitle || '';
+
+     navigation.setOptions({
+       headerTitle: () => (
+         <View style={{ alignItems: 'center' }}>
+           <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>{title}</Text>
+           {!!subtitle && (
+             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
+           )}
+         </View>
+       ),
+    });
+  }, [navigation, headerLeft, chatData, getConversationName, userData, route.params]);
+
+  // Anonymization helper for league_match chats
+  const getAnonymizedName = (sender, senderIndex) => {
+    // If not a league match chat, show real name
+    if (chatData?.type !== 'league_match') {
+      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
     }
-  }, [navigation,
-    headerLeft,
-    chatData,
-    getConversationName,
-    userData]);
+
+    // Check if the sender is the current user
+    if (sender?.documentId === userData?.documentId) {
+      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
+    }
+
+    // For league match chats, check if event has passed
+    const eventDate = chatData?.league_match?.event?.date;
+    const hasEventPassed = eventDate && new Date(eventDate) < new Date();
+    
+    if (hasEventPassed) {
+      // Event passed, reveal real names
+      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
+    }
+
+    // Get my team's members to determine if sender is opponent
+    const myTeamMembers = chatData?.myTeamMembers || [];
+    const isMyTeamMember = myTeamMembers.some(m => m.documentId === sender?.documentId);
+    
+    if (isMyTeamMember) {
+      // Show real name for teammates
+      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
+    }
+
+    // This is an opponent - anonymize
+    const isCaptain = chatData?.league_match?.team_a?.captain?.documentId === sender?.documentId ||
+                      chatData?.league_match?.team_b?.captain?.documentId === sender?.documentId;
+    
+    return isCaptain ? 'Capitaine Adverse' : `Joueur Adverse`;
+  };
 
   const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
-    const formattedMessages = page.data.map((msg) => ({
+    const formattedMessages = page.data.map((msg, index) => ({
       _id: msg.id,
       createdAt: new Date(msg.createdAt),
       documentId: msg.documentId,
@@ -312,7 +423,7 @@ function Conversation({ navigation, route }) {
                ? msg.sender.avatar.url 
                : `${process.env.API_URL || 'http://10.0.2.2:1337'}${msg.sender.avatar.url}`)
             : undefined,
-        name: `${msg.sender?.firstname || ''} ${msg.sender?.lastname || ''}`,
+        name: getAnonymizedName(msg.sender, index),
       },
       image: msg.attachments?.[0]?.url 
             ? (msg.attachments[0].url.startsWith('http')
@@ -326,7 +437,7 @@ function Conversation({ navigation, route }) {
       readBy: msg.readBy,
     }));
     return [...acc, ...formattedMessages];
-  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages]);
+  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, chatData, userData]);
 
   const canShowUsernameOnMessage = useMemo(() => {
     const hasMultipleParticpants = chatData?.participants && chatData?.participants.length > 2;
@@ -490,6 +601,18 @@ function Conversation({ navigation, route }) {
 
     // Composition message
     if (currentMessage.composition) {
+        if (currentMessage.composition.type === 'proposal') {
+            return (
+                <View style={{ marginBottom: marginBottom, marginTop: marginTop }}>
+                    <ProposalMessageBubble
+                        proposal={currentMessage.composition}
+                        isMe={!isLeft}
+                        onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
+                        onDecline={() => handleRespondProposal(currentMessage, 'declined')}
+                    />
+                </View>
+            );
+        }
         return (
             <View style={{
                 marginBottom: marginBottom,
@@ -612,8 +735,8 @@ function Conversation({ navigation, route }) {
   const canWrite = useMemo(() => {
     if (!chatData || !userData) return false;
     
-    // Whisper and Team chats: All participants can write
-    if (chatData.type === 'whisper' || chatData.type === 'team') return true;
+    // Whisper, Team, and League Match chats: All participants can write
+    if (chatData.type === 'whisper' || chatData.type === 'team' || chatData.type === 'league_match') return true;
 
     // Club Chat: Only Club Admins can write
     if (chatData.type === 'club') {
@@ -634,27 +757,31 @@ function Conversation({ navigation, route }) {
   /**
    * Render custom actions (attachment button)
    */
-  /* Custom Actions (Plus Button) */
   const renderActions = (props) => (
-       <TouchableOpacity 
-          onPress={handleChoosePhoto}
-          style={{ 
-             width: 32, 
-             height: 32, 
-             borderRadius: 16, 
-             backgroundColor: Colors.primary500, // PhoneClub Color
-             justifyContent: 'center',
-             alignItems: 'center',
-             marginBottom: 0, 
-             marginLeft: 8, 
-             marginRight: 8, 
-             alignSelf: 'center', // important for centering in toolbar
-          }}
-       >
-          {/* We use a text plus or an image if available */}
-          <View style={{ width: 16, height: 2, backgroundColor: 'white', position: 'absolute' }} />
-          <View style={{ width: 2, height: 16, backgroundColor: 'white', position: 'absolute' }} />
-       </TouchableOpacity>
+       <View style={{ flexDirection: 'row', alignItems: 'center', height: 44 }}>
+            <TouchableOpacity 
+                onPress={() => setIsProposalModalVisible(true)}
+                style={{ 
+                    width: 32, height: 32, borderRadius: 16, 
+                    backgroundColor: Colors.gold500,
+                    justifyContent: 'center', alignItems: 'center', marginHorizontal: 4
+                }}
+            >
+                <Text style={{ fontSize: 16 }}>🤝</Text>
+            </TouchableOpacity>
+           <TouchableOpacity 
+              onPress={handleChoosePhoto}
+              style={{ 
+                 width: 32, height: 32, borderRadius: 16, 
+                 backgroundColor: Colors.primary500,
+                 justifyContent: 'center', alignItems: 'center', marginHorizontal: 4
+              }}
+           >
+              {/* We use a text plus or an image if available */}
+              <View style={{ width: 16, height: 2, backgroundColor: 'white', position: 'absolute' }} />
+              <View style={{ width: 2, height: 16, backgroundColor: 'white', position: 'absolute' }} />
+           </TouchableOpacity>
+       </View>
   );
 
   const renderAccessory = () => {
@@ -795,28 +922,15 @@ function Conversation({ navigation, route }) {
         messages={messages}
         onLoadEarlier={() => fetchNextPage()}
         onPress={handleMessagePress}
-        onPressAvatar={handleAvatarPress}
         onSend={onSend}
-        placeholder={t('conversation.messagePlaceholder')}
-        renderAvatarOnTop
+        user={{
+          _id: userData?.documentId,
+          name: `${userData?.firstname || ''} ${userData?.lastname || ''}`,
+          avatar: userData?.avatar?.url,
+        }}
         renderBubble={renderBubble}
         renderInputToolbar={renderInputToolbar}
         renderSend={renderSend}
-        renderUsernameOnMessage={false}
-        timeFormat="HH:mm"
-        timeTextStyle={{
-          left: { ...Fonts.p3, color: Colors.neutral500 },
-          right: { ...Fonts.p3, color: Colors.neutral500 },
-        }}
-        user={{
-          _id: userData?.documentId || '',
-          avatar: userData?.avatar?.url,
-          name: `${userData?.firstname} ${userData?.lastname}`,
-        }}
-        onInputTextChanged={handleInputTextChanged}
-        renderFooter={renderFooter}
-        isTyping={typingUsers.size > 0}
-        showUserAvatar
       />
       <BottomModal
         close={() => {

@@ -19,7 +19,7 @@ const chatSchema = Joi.object({
     Joi.array().length(0),
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),
-  type: Joi.string().valid('whisper', 'club', 'team', 'multisport').required(),
+  type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match').required(),
   updatedAt: Joi.date().required(),
   pinnedBy: Joi.array().items(Joi.object()).optional(),
   archivedBy: Joi.array().items(Joi.object()).optional(),
@@ -221,7 +221,9 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
         sender: {
           populate: ['avatar'],
         },
-        event: true,
+        event: {
+            populate: ['facility', 'league_match', 'league_match.team_a', 'league_match.team_b']
+        },
       },
       sort: ['createdAt:desc'],
     },
@@ -257,12 +259,13 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
  * @param {string} params.message - The message text
  * @returns {Promise<ChatMessage>}
  */
-export const createChatMessage = async ({ chatId, message, event }) => {
+export const createChatMessage = async ({ chatId, message, event, composition }) => {
   const response = await client.post('/chat-messages', {
     data: {
       chat: chatId,
       message,
       event,
+      composition,
     },
   });
 
@@ -398,4 +401,17 @@ export const archiveChat = async (chatId) => {
 export const unarchiveChat = async (chatId) => {
   const response = await client.post(`/chats/${chatId}/unarchive`);
   return response.data;
+};
+
+/**
+ * Update a chat message
+ * @param {string} messageId - The message id
+ * @param {object} data - The data to update
+ * @returns {Promise<ChatMessage>} The updated message
+ */
+export const updateMessage = async (messageId, data) => {
+  const response = await client.put(`/chat-messages/${messageId}`, {
+    data,
+  });
+  return response.data.data;
 };

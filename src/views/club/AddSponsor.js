@@ -1,5 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,8 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetClub } from '@/services/club/clubQueries';
-import { updateClub } from '@/services/club/clubService';
+import { getClubById, updateClub } from '@/services/club/clubService';
+import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -36,8 +37,13 @@ const addSponsorSchema = Joi.object({
  * @returns {import('react').ReactElement} Add sponsor screen component
  */
 function AddSponsor({ navigation, route }) {
-  const { clubId } = route?.params ?? {};
-  const { data: clubData } = useGetClub(clubId);
+  const { clubId, cmId } = route?.params ?? {};
+  
+  const { data: clubData } = useQuery({
+    queryKey: clubId ? ['club', clubId] : ['multisport-club', cmId],
+    queryFn: () => (clubId ? getClubById(clubId) : getMultisportClubById(cmId)),
+    enabled: !!(clubId || cmId),
+  });
 
   // local state
   const [logo, setLogo] = useState(
@@ -60,7 +66,7 @@ function AddSponsor({ navigation, route }) {
   });
 
   const createSponsorMutation = useMutation({
-    mutationFn: updateClub,
+    mutationFn: (data) => (clubId ? updateClub(data) : updateMultisportClub(cmId, data)),
     onSuccess: () => {
       navigation.goBack();
     },
@@ -72,7 +78,16 @@ function AddSponsor({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     if (clubData && logo) {
+      // Logic is same for both: sponsor is an array of objects
       const newClub = { ...clubData };
+      
+      // Sanitize payload to avoid sending populated objects that updateClub doesn't handle correctly
+      // (It would stringify them, causing "Document not found" errors in Strapi)
+      delete newClub.parentMultisport;
+      delete newClub.sections;
+      delete newClub.admins;
+      delete newClub.user; // If present
+
       newClub.sponsor = (clubData.sponsor || []).concat({ ...data, logo });
       createSponsorMutation.mutate(newClub);
     }
@@ -106,7 +121,11 @@ function AddSponsor({ navigation, route }) {
                 {t('addSponsor.fields.logo')}
               </Text>
               <SelectAvatar
+                containerStyle={{ height: 150, width: 300 }}
+                cropHeight={400}
+                cropWidth={800}
                 currentAvatar={logo}
+                imageStyle={{ height: 150, width: 300 }}
                 onAvatarSelected={setLogo}
                 size={80}
               />

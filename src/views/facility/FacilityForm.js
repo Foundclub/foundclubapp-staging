@@ -157,13 +157,28 @@ const FacilityForm = () => {
                             control={control}
                             name="type"
                             render={({ field: { onChange, value } }) => (
-                                <Select
-                                    label="Type"
-                                    options={FACILITY_TYPES}
-                                    value={value}
-                                    onSelect={onChange}
-                                    error={errors.type?.message}
-                                />
+                                <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
+                                    {FACILITY_TYPES.map((type) => (
+                                        <Button
+                                            key={type.value}
+                                            onPress={() => onChange(type.value)}
+                                            style={[
+                                                value === type.value ? null : {
+                                                    backgroundColor: Colors.neutral100,
+                                                    borderColor: Colors.neutral300,
+                                                }
+                                            ]}
+                                            textStyle={[
+                                                value === type.value ? null : {
+                                                    color: Colors.neutral900
+                                                }
+                                            ]}
+                                            title={type.label}
+                                            variant={value === type.value ? 'Primary' : 'SecondaryLight'}
+                                            size="sm"
+                                        />
+                                    ))}
+                                </View>
                             )}
                         />
 

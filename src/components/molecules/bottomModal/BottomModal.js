@@ -25,7 +25,10 @@ import useTheme from '@/theme/themeContext';
  * @param {import('react-native').ViewStyle} [props.contentContainerStyle]
  * @param {React.ReactNode} [props.headerComponent] - Fixed header component
  * @param {React.ReactNode} [props.footerComponent] - Fixed footer component
+ * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
+ * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
+ * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
  * @returns {import('react').ReactElement} Modal component
  */
@@ -40,6 +43,7 @@ function BottomModal({
   isVisible,
   scrollable = true,
   style,
+  snapPoints,
 }) {
   /**
    * @type {React.MutableRefObject<import('@gorhom/bottom-sheet').BottomSheetModal | null>}
@@ -101,7 +105,8 @@ function BottomModal({
         ApplicationStyle.backgroundColor.primary700,
         style]}
       enableContentPanningGesture={Platform.OS === 'ios'}
-      enableDynamicSizing
+      enableDynamicSizing={!snapPoints}
+      snapPoints={snapPoints}
       enablePanDownToClose
       handleComponent={null}
       index={0}
@@ -118,7 +123,7 @@ function BottomModal({
             Alignments.absolute,
             Platform.OS === 'ios'
               ? Spaces.marginHorizontal[24] : Spaces.marginHorizontal[4],
-            { right: Platform.OS === 'ios' ? 0 : 24, top: 24, zIndex: 1 },
+            { right: Platform.OS === 'ios' ? 0 : 24, top: 24, zIndex: 10 },
           ]}
         >
           <Image
@@ -130,7 +135,7 @@ function BottomModal({
           />
         </TouchableOpacity>
       )}
-      <View style={[Alignments.fill]}>
+      <View style={[snapPoints ? Alignments.fill : undefined]}>
         {/* Fixed Header */}
         {headerComponent && (
           <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}>
@@ -149,15 +154,15 @@ function BottomModal({
               contentContainerStyle,
             ]}
             style={[
-              { maxHeight: Dimensions.get('screen').height * 0.7 },
+              snapPoints ? Alignments.fill : { maxHeight: Dimensions.get('screen').height * 0.7 },
             ]}
           >
             {children}
           </BottomSheetScrollView>
         ) : (
-          <BottomSheetView style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
+          <View style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
             {children}
-          </BottomSheetView>
+          </View>
         )}
 
         {/* Fixed Footer */}
@@ -165,7 +170,7 @@ function BottomModal({
           <View style={[
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
-            { paddingBottom: Math.max(insets.bottom + 40, 60) }, // Dynamic safe area + large buffer
+            { paddingBottom: insets.bottom + 40 },
             { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' } // Optional separator
           ]}>
             {footerComponent}

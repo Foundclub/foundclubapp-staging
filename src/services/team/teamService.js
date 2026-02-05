@@ -6,16 +6,20 @@ import { levelSchema } from '../level/levelService';
 import { sectionSchema } from '../section/sectionService';
 
 const teamSchema = Joi.object({
-  activities: Joi.array().allow(null).optional(),
-  category: categorySchema.allow(null).optional(),
-  club: Joi.object().allow(null).optional(),
+  activities: Joi.any().allow(null).optional(), // Relaxed validation for Strapi v5 connect syntax
+  category: Joi.any().allow(null).optional(),
+  club: Joi.any().allow(null).optional(),
   description: Joi.string().allow('', null).optional(),
   documentId: Joi.string().allow('', null).optional(),
-  level: levelSchema.allow(null).optional(),
+  externalCalendarData: Joi.array().allow(null).optional(),
+  externalDataLastUpdate: Joi.string().allow('', null).optional(),
+  externalStandingData: Joi.array().allow(null).optional(),
+  externalStandingUrl: Joi.string().allow('', null).optional(),
+  level: Joi.any().allow(null).optional(),
   name: Joi.string().required(),
-  players: Joi.array().allow(null).optional(),
-  section: sectionSchema.allow(null).optional(),
-  trainers: Joi.array().allow(null).optional(),
+  players: Joi.any().allow(null).optional(),
+  section: Joi.any().allow(null).optional(),
+  trainers: Joi.any().allow(null).optional(),
 }).required();
 
 /**
@@ -159,6 +163,11 @@ export const getTeamById = async (teamId) => {
         trainers: {
           populate: '*',
         },
+        slots: {
+          populate: {
+            participants: true,
+          }
+        },
       },
     },
   });
@@ -179,15 +188,83 @@ export const getTeamById = async (teamId) => {
 };
 
 /**
+ * @typedef {Object} StrapiRelationConnect
+ * @property {{ documentId: string }[]} connect - Array of document IDs to connect
+ */
+
+/**
+ * @typedef {Object} TeamPayload
+ * @property {string} name - Team name (required)
+ * @property {string[]|StrapiRelationConnect} [activities] - Activity document IDs (array or connect format)
+ * @property {string|StrapiRelationConnect} [level] - Level document ID (string or connect format)
+ * @property {string|StrapiRelationConnect} [section] - Section document ID
+ * @property {string|StrapiRelationConnect} [category] - Category document ID
+ * @property {string} [club] - Club document ID
+ * @property {string} [city] - City name
+ * @property {Object} [address] - Address object
+ * @property {boolean} [isLeague] - Whether this is a League team
+ * @property {string[]|StrapiRelationConnect} [trainers] - Trainer IDs (array or connect format)
+ * @property {string[]|StrapiRelationConnect} [players] - Player IDs (array or connect format)
+ * @property {string} [description] - Team description
+ * @property {string} [documentId] - Document ID (for updates)
+ * @property {object} [logo] - Logo file object
+ * @property {object} [cover] - Cover file object
+ */
+
+/**
  * Create a new team
  * @param {TeamPayload} teamData - The team data to create
- * @returns {Promise<Team>} The created team data
+ * @returns {Promise<{data: Object}>} The created team data
  */
 export const createTeam = async (teamData) => {
-  const response = await client.post('/teams', {
-    data: teamData,
-  });
+  // Check if we need to upload files (logo or cover)
+  const hasFiles = teamData.logo || teamData.cover;
+
+  let response;
+  
+  if (hasFiles) {
+    const formData = new FormData();
+    
+    // Separate files from data
+    const { logo, cover, ...data } = teamData;
+    
+    // Append data as JSON string
+    formData.append('data', JSON.stringify(data));
+    
+    // Append files if they exist
+    if (logo) {
+      // @ts-ignore
+      formData.append('files.logo', {
+        uri: logo.uri,
+        name: logo.filename || 'logo.jpg',
+        type: logo.mime || 'image/jpeg',
+      });
+    }
+
+    if (cover) {
+      // @ts-ignore
+      formData.append('files.cover', {
+        uri: cover.uri,
+        name: cover.filename || 'cover.jpg',
+        type: cover.mime || 'image/jpeg',
+      });
+    }
+    
+    response = await client.post('/teams', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  } else {
+    // Standard JSON request
+    response = await client.post('/teams', {
+      data: teamData,
+    });
+  }
+
   try {
+    // Note: When using FormData, response structure might differ slightly or validation needs to be loose
+    // The returned structure from Strapi is usually the same { data: ... }
     const schema = Joi.object({
       data: teamSchema.required(),
     }).required();
@@ -210,11 +287,55 @@ export const createTeam = async (teamData) => {
  */
 export const updateTeam = async (teamData) => {
   const id = teamData.documentId;
-  const dataToSend = teamData;
-  delete dataToSend.documentId;
-  const response = await client.put(`/teams/${id}`, {
-    data: dataToSend,
-  });
+  
+  // Check if we need to upload files (logo or cover)
+  const hasFiles = teamData.logo || teamData.cover;
+
+  let response;
+  
+  if (hasFiles) {
+    const formData = new FormData();
+    
+    // Separate files and documentId from data
+    const { logo, cover, documentId, ...data } = teamData;
+    
+    // Append data as JSON string
+    formData.append('data', JSON.stringify(data));
+    
+    // Append files if they exist
+    if (logo) {
+      // @ts-ignore
+      formData.append('files.logo', {
+        uri: logo.uri,
+        name: logo.filename || 'logo.jpg',
+        type: logo.mime || 'image/jpeg',
+      });
+    }
+
+    if (cover) {
+      // @ts-ignore
+      formData.append('files.cover', {
+        uri: cover.uri,
+        name: cover.filename || 'cover.jpg',
+        type: cover.mime || 'image/jpeg',
+      });
+    }
+    
+    response = await client.put(`/teams/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  } else {
+    // Standard JSON request
+    const dataToSend = { ...teamData };
+    delete dataToSend.documentId;
+    
+    response = await client.put(`/teams/${id}`, {
+      data: dataToSend,
+    });
+  }
+
   try {
     const schema = Joi.object({
       data: teamSchema.required(),
@@ -238,5 +359,82 @@ export const updateTeam = async (teamData) => {
  */
 export const leaveTeam = async (teamId) => {
   const response = await client.post(`/teams/${teamId}/quit`);
+  return response.data;
+};
+
+/**
+ * Remove a player from a team
+ * @param {string} teamId
+ * @param {string} playerId
+ * @returns {Promise<object>}
+ */
+export const removePlayerFromTeam = async (teamId, playerId) => {
+  const response = await client.put(`/teams/${teamId}/remove-player`, {
+    data: { playerId },
+  });
+  return response.data;
+};
+
+/**
+ * Preview scraping data
+ * @param {string} url
+ * @returns {Promise<object>}
+ */
+export const previewScraping = async (url) => {
+  const response = await client.post('/teams/preview-scraping', { 
+    url // Sending direct body as controller expects ctx.request.body.url
+  });
+  return response.data;
+};
+
+/**
+ * Refresh team scraping data
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const refreshTeamScraping = async (teamId) => {
+  const response = await client.post(`/teams/${teamId}/refresh-scraping`);
+  return response.data;
+};
+
+/**
+ * Set FFBB URL for a team and get list of teams in poule
+ * @param {string} teamId
+ * @param {string} url
+ * @returns {Promise<{success: boolean, pouleName: string, teams: Array<{teamId: string, teamName: string}>}>}
+ */
+export const setTeamFFBBUrl = async (teamId, url) => {
+  const response = await client.post(`/teams/${teamId}/set-ffbb-url`, { url });
+  return response.data;
+};
+
+/**
+ * Select which FFBB team corresponds to this FoundClub team
+ * @param {string} teamId
+ * @param {string} ffbbTeamId
+ * @param {string} ffbbTeamName
+ * @returns {Promise<{success: boolean}>}
+ */
+export const selectTeamFFBBTeam = async (teamId, ffbbTeamId, ffbbTeamName) => {
+  const response = await client.post(`/teams/${teamId}/select-ffbb-team`, {
+    teamId: ffbbTeamId,
+    teamName: ffbbTeamName,
+  });
+  return response.data;
+};
+
+/**
+ * Create an FFBB error report
+ * @param {{teamId: string, problemType: string, description?: string}} data
+ * @returns {Promise<{success: boolean}>}
+ */
+export const createFFBBErrorReport = async ({ teamId, problemType, description }) => {
+  const response = await client.post('/ffbb-error-reports', {
+    data: {
+      team: teamId,
+      problemType,
+      description: description || ''
+    }
+  });
   return response.data;
 };

@@ -1,10 +1,12 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
+import { useAppMode } from '@/context/AppModeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
 import MercatoFilters from '@/views/mercato/MercatoFilters';
@@ -21,9 +23,11 @@ import CMTeamsScreen from '@/views/multisportClub/CMTeamsScreen';
 import CreateSectionScreen from '@/views/multisportClub/CreateSectionScreen';
 import EventFilters from '@/views/event/EventFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
+import UserAddress from '@/views/onboarding/UserAddress';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
 import UserClubSearch from '@/views/onboarding/UserClubSearch';
+import UserCategory from '@/views/onboarding/UserCategory';
 import UserLevel from '@/views/onboarding/UserLevel';
 import UserName from '@/views/onboarding/UserName';
 import UserPhysique from '@/views/onboarding/UserPhysique';
@@ -31,12 +35,17 @@ import UserPosition from '@/views/onboarding/UserPosition';
 import UserType from '@/views/onboarding/UserRole';
 import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
+import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
 import Conversation from '@/views/Conversation';
 import NotificationList from '@/views/notification/NotificationList';
 import FacilityList from '@/views/facility/FacilityList';
 import FacilityForm from '@/views/facility/FacilityForm';
 import NewConversation from '@/views/NewConversation';
+import AdWizardStack from './stacks/AdWizardStack';
+import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
+import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
+import AddSponsor from '@/views/club/AddSponsor';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -47,95 +56,78 @@ import ClubStack from './stacks/ClubStack';
 import EventStack from './stacks/EventStack';
 import ProfileStack from './stacks/ProfileStack';
 import TeamStack from './stacks/TeamStack';
+import LeagueTabNavigator from './LeagueTabNavigator';
 
 const Stack = createStackNavigator();
 
-/**
- * PrivateNavigator component, with routes available for authenticated users.
- * Handles onboarding flow based on user data.
- * @returns {import('react').ReactElement | null} PrivateNavigator component.
- */
 function PrivateNavigator() {
-  // hooks
-  const { Fonts, Spaces } = useTheme();
-  const { onboardingViews, userData } = useAuth();
+  const { Fonts, Spaces, Colors } = useTheme();
+  const { onboardingViews, userData, userDataLoading, userDataError } = useAuth();
+  const { isGold } = useAppMode();
   const { t } = useTranslation();
 
-  // methods
-  /**
-   * Get the step number based on the current route name.
-   * @param {string} routeName
-   * @returns {number} Step number
-   */
-  const getStepNumber = (routeName) => onboardingViews?.views?.find(
-    (view) => view.route === routeName,
-  )?.index || 0;
-
-  /**
-   * Get the total number of steps in the onboarding process.
-   * @returns {number} Total steps
-   */
+  const getStepNumber = (routeName) => onboardingViews?.views?.find((view) => view.route === routeName)?.index || 0;
   const getTotalSteps = () => onboardingViews?.totalViews || 0;
-
-  // renderers
-  /**
-   * Render the stepper component.
-   * @param {string} routeName
-   * @returns {import('react').ReactElement}
-   */
-  const renderStepper = (routeName) => (
-    <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />
-  );
-
-  /**
-   * Render the stepper indicator.
-   * @param {string} routeName
-   * @returns {import('react').ReactElement}
-   */
+  const renderStepper = (routeName) => <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />;
   const renderStepperIndicator = (routeName) => (
     <View style={[Spaces.marginHorizontal[12]]}>
-      <Text style={[Fonts.p2, Fonts.neutral300]}>
-        {getStepNumber(routeName)}
-        /
-        {getTotalSteps()}
-      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral300]}>{getStepNumber(routeName)}/{getTotalSteps()}</Text>
     </View>
   );
 
   const initialRouteName = useMemo(() => {
     const route = onboardingViews?.views?.reduce((acc, view) => {
-      if (view.index < acc.index && view.canShow) {
-        return view;
-      }
+      if (view.index < acc.index && view.canShow) { return view; }
       return acc;
     }, { index: 100, route: '' })?.route;
-    return route || RouteNames.HomeTab;
-  }, [onboardingViews]);
+    
+    if (route) return route;
+    if (isGold) return RouteNames.LeagueHomeTab;
+    return RouteNames.HomeTab;
+  }, [onboardingViews, isGold]);
 
-  const canShowHome = useMemo(() => !!(onboardingViews?.views
-    ?.filter(({ canShow }) => canShow)?.length || 0 <= 2), [onboardingViews]);
-
-  const canShowView = useCallback((/** @type {string} */routeName) => {
-    // console.log('canShowView', routeName, onboardingViews);
+  const canShowHome = useMemo(() => !!(onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0 <= 2), [onboardingViews]);
+  
+  const canShowView = useCallback((routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
     const viewable = onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0;
     return !!(view && viewable >= 1);
   }, [onboardingViews]);
 
+  if (userDataLoading) {
+    return (
+      <View style={{ alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center' }}>
+        <ActivityIndicator color={Colors.primary500 || '#000'} size="large" />
+      </View>
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <View style={{ alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center', padding: 20 }}>
+        <Text style={{ color: 'red' }}>Erreur de connexion</Text>
+      </View>
+    );
+  }
+
   return userData?.documentId ? (
-    <Stack.Navigator
-      id={undefined}
-      initialRouteName={initialRouteName}
-      key={userData?.documentId}
-      screenOptions={commonOptions}
-    >
+    <Stack.Navigator id={undefined} initialRouteName={initialRouteName} key={userData?.documentId} screenOptions={commonOptions}>
       {canShowHome ? (
-        <Stack.Screen
-          component={PrivateTabNavigator}
-          name={RouteNames.HomeTab}
-          options={{ headerShown: false }}
-        />
+        isGold ? (
+           <Stack.Screen
+            component={LeagueTabNavigator}
+            name={RouteNames.LeagueHomeTab}
+            options={{ headerShown: false }}
+          />
+        ) : (
+          <Stack.Screen
+            component={PrivateTabNavigator}
+            name={RouteNames.HomeTab}
+            options={{ headerShown: false }}
+          />
+        )
       ) : null}
+
 
       {/* Domain Stacks - These contain the refactored screens */}
       {/* Note: We use headerShown: false because the stacks manage their own headers */}
@@ -164,11 +156,13 @@ function PrivateNavigator() {
         options={{ headerShown: false }}
       />
       
-      <Stack.Screen
-        component={AdminStack}
-        name="AdminStack"
-        options={{ headerShown: false }}
-      />
+      {userData?.role?.name === USER_ROLES.superAdmin ? (
+        <Stack.Screen
+          component={AdminStack}
+          name="AdminStack"
+          options={{ headerShown: false }}
+        />
+      ) : null}
 
       {/* Remaining Screens (Filters, Chat, Alerts, Notifications) */}
       <Stack.Screen
@@ -186,6 +180,11 @@ function PrivateNavigator() {
           ...commonOptions,
           headerTitle: '',
         }}
+      />
+      <Stack.Screen
+        component={AdWizardStack}
+        name="AdWizardStack"
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         component={ReservationFilters}
@@ -249,6 +248,14 @@ function PrivateNavigator() {
         options={{
           ...commonOptions,
           headerTitle: 'Planning',
+        }}
+      />
+      <Stack.Screen
+        component={AddSponsor}
+        name={RouteNames.AddSponsor}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Ajouter un partenaire',
         }}
       />
       <Stack.Screen
@@ -317,6 +324,24 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={RecruitmentAdDetails}
+        name={RouteNames.RecruitmentAdDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+          headerTransparent: true,
+          headerTintColor: '#fff',
+        }}
+      />
+      <Stack.Screen
+        component={RecruitmentAdEdit}
+        name={RouteNames.RecruitmentAdEdit}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Modifier l\'annonce',
+        }}
+      />
+      <Stack.Screen
         component={FacilityForm}
         name={RouteNames.FacilityForm}
         options={{
@@ -325,7 +350,15 @@ function PrivateNavigator() {
         }}
       />
 
-      {/* Onboarding Flow */}
+      {/* League Screens */}
+      <Stack.Screen
+        component={require('@/views/league/match/MatchDetailsScreen').default}
+        name={RouteNames.MatchDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Détails du match',
+        }}
+      />
       {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}
@@ -373,7 +406,20 @@ function PrivateNavigator() {
             headerRight: () => renderStepperIndicator(RouteNames.UserBirthdate),
             headerTitle: () => renderStepper(RouteNames.UserBirthdate),
             headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
 
+      {canShowView(RouteNames.UserAddress) ? (
+        <Stack.Screen
+          component={UserAddress}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserAddress}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserAddress),
+            headerTitle: () => renderStepper(RouteNames.UserAddress),
+            headerTitleAlign: 'left',
           }}
         />
       ) : null}
@@ -445,6 +491,34 @@ function PrivateNavigator() {
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserLevel),
             headerTitle: () => renderStepper(RouteNames.UserLevel),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserCategory) ? (
+        <Stack.Screen
+          component={UserCategory}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserCategory}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserCategory),
+            headerTitle: () => renderStepper(RouteNames.UserCategory),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserSportHistory) ? (
+        <Stack.Screen
+          component={UserSportHistory}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserSportHistory}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserSportHistory),
+            headerTitle: () => renderStepper(RouteNames.UserSportHistory),
             headerTitleAlign: 'left',
           }}
         />

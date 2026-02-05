@@ -32,11 +32,12 @@ const PhoneInput = forwardRef(
    * @param {Function} props.onChange - The function to call on change.
    * @param {Function} props.onBlur - The function to call on blur.
    * @param {string} [props.error] - The error of the input.
+   * @param {string} [props.label] - The label of the input.
    * @param {React.ForwardedRef<import('react-native').TextInput>} ref
    * @returns {React.ReactElement} Phone input component.
    */
   ({
-    error, onBlur, onChange, value,
+    error, onBlur, onChange, value, label,
   }, ref) => {
     const {
       Alignments, ApplicationStyle, Spaces,
@@ -105,7 +106,7 @@ const PhoneInput = forwardRef(
             error={error}
             inputMode="tel"
             keyboardType="phone-pad"
-            label={t('login.fields.phoneNumber.label')}
+            label={label || t('login.fields.phoneNumber.label')}
             labelStyle={{
               left: -DIALCODE_WIDTH,
             }}

@@ -46,7 +46,7 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user'],
+    populate: ['user', 'user.avatar'],
   };
 
   const response = await client.get('/club-membership-requests', { params: filters });

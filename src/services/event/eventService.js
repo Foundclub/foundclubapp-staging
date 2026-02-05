@@ -127,6 +127,21 @@ export const getEventById = async (documentId) => {
 };
 
 /**
+ * Mark event venue as booked (by captain)
+ * @param {string} eventDocumentId - The event ID
+ * @returns {Promise<any>} Updated event
+ */
+export const markVenueBooked = async (eventDocumentId) => {
+  const response = await client.put(`/events/${eventDocumentId}`, {
+    data: {
+      venueBooked: true,
+      venueBookedAt: new Date().toISOString(),
+    },
+  });
+  return response.data;
+};
+
+/**
  * Get event types
  * @returns {Promise<Array<{documentId: string, name: string}>>} List of event types
  */

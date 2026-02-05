@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer } from 'react';
 
 const initialState = {
   club: null,
+  multisportClub: null,
   customClubName: '',
   useCustomClub: false,
   category: null,
@@ -10,14 +11,19 @@ const initialState = {
   endYear: new Date().getFullYear(),
   isCurrentlyActive: false,
   editingEntry: null,
+  returnRoute: null,
 };
 
 function historyWizardReducer(state, action) {
   switch (action.type) {
+    case 'SET_RETURN_ROUTE':
+      return { ...state, returnRoute: action.payload };
     case 'SET_CLUB':
-      return { ...state, club: action.payload, useCustomClub: false, customClubName: '' };
+      return { ...state, club: action.payload, multisportClub: null, useCustomClub: false, customClubName: '' };
+    case 'SET_MULTISPORT_CLUB':
+      return { ...state, multisportClub: action.payload, club: null, useCustomClub: false, customClubName: '' };
     case 'SET_CUSTOM_CLUB':
-      return { ...state, customClubName: action.payload, useCustomClub: true, club: null };
+      return { ...state, customClubName: action.payload, useCustomClub: true, club: null, multisportClub: null };
     case 'SET_CATEGORY':
       return { ...state, category: action.payload };
     case 'SET_LEVEL':
@@ -34,6 +40,7 @@ function historyWizardReducer(state, action) {
           ...state,
           editingEntry: action.payload,
           club: action.payload.club || null,
+          multisportClub: action.payload.multisport_club || null,
           customClubName: action.payload.customClubName || '',
           useCustomClub: !action.payload.club && !!action.payload.customClubName,
           category: action.payload.category || null,
@@ -41,6 +48,7 @@ function historyWizardReducer(state, action) {
           startYear: action.payload.startYear || new Date().getFullYear(),
           endYear: action.payload.endYear || new Date().getFullYear(),
           isCurrentlyActive: action.payload.isCurrentlyActive || false,
+          returnRoute: null, // Reset return route when editing
         };
       }
       return initialState;

@@ -5,6 +5,7 @@ import Register from '@/views/Register';
 
 import { commonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
+import ClubStack from '@/navigation/private/stacks/ClubStack';
 
 const Stack = createStackNavigator();
 
@@ -22,6 +23,11 @@ function AuthStackNavigator() {
       <Stack.Screen
         component={Register}
         name={RouteNames.Register}
+      />
+      <Stack.Screen
+        component={ClubStack}
+        name={RouteNames.ClubStack}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

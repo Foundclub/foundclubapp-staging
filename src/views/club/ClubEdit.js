@@ -58,7 +58,7 @@ function ClubEdit({ navigation, route }) {
 
     useEffect(() => {
         if (clubData?.logo?.url) {
-            setLogo({ url: clubData.logo.url });
+            setLogo(clubData.logo);
         } else if (clubData?.sponsor?.[0]?.logo?.url) {
             // Fallback to first sponsor logo if no club logo? 
             // Or maybe we don't want that. 

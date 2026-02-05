@@ -15,6 +15,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 /**
  * User avatar selection screen component
@@ -41,7 +42,13 @@ function UserAvatar({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onSuccess: () => {
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserAvatar) || RouteNames.UserName);
+      const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
+      if (!nextRoute) {
+        markOnboardingComplete(userData?.documentId);
+        navigation.navigate(RouteNames.HomeTab);
+      } else {
+        navigation.navigate(nextRoute);
+      }
     },
   });
 
@@ -52,7 +59,13 @@ function UserAvatar({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserAvatar) || RouteNames.UserName);
+    const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
+    if (!nextRoute) {
+      markOnboardingComplete(userData?.documentId);
+      navigation.navigate(RouteNames.HomeTab);
+    } else {
+      navigation.navigate(nextRoute);
+    }
   };
 
   return (

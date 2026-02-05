@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -405,7 +406,7 @@ function Messaging({ navigation }) {
         Alignments.alignCenter,
         Alignments.justifySpaceBetween]}
       >
-        <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
+        <LeagueHeaderSwitch />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <NotificationBadge />
           <ProfileButton />

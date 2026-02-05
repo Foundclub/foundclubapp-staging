@@ -7,6 +7,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { useHistoryWizard } from './HistoryWizardContext';
 import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
 import { RouteNames } from '@/navigation/routeNames';
+import { getImageUrl } from '@/utils/imageUrl';
 
 const defaultClubIcon = require('@/assets/icons/shield.png');
 const calendarIcon = require('@/assets/icons/calendar.png');
@@ -24,6 +25,7 @@ const HistoryWizardRecap = ({ navigation }) => {
 
   const getClubName = () => {
     if (state.club?.name) return state.club.name;
+    if (state.multisportClub?.name) return state.multisportClub.name;
     if (state.customClubName) return state.customClubName;
     return 'Club non défini';
   };
@@ -39,8 +41,11 @@ const HistoryWizardRecap = ({ navigation }) => {
   };
 
   const handleSubmit = () => {
+    console.log('DEBUG: HistoryWizardRecap state:', JSON.stringify(state, null, 2));
+    
     const data = {
       club: state.club?.documentId || null,
+      multisport_club: state.multisportClub?.documentId || null,
       customClubName: state.useCustomClub ? state.customClubName : null,
       category: state.category?.documentId || null,
       level: state.level?.documentId || null,
@@ -49,13 +54,22 @@ const HistoryWizardRecap = ({ navigation }) => {
       isCurrentlyActive: state.isCurrentlyActive,
     };
 
+    console.log('DEBUG: HistoryWizardRecap submitting data:', JSON.stringify(data, null, 2));
+
+
     const onSuccess = () => {
       dispatch({ type: 'RESET' });
-      // Reset navigation to profile, clearing the wizard screens from the stack
-      navigation.reset({
-        index: 0,
-        routes: [{ name: RouteNames.Profile }],
-      });
+      
+      if (state.returnRoute) {
+        // If a specific return route was asked (e.g. Onboarding), go there
+        navigation.navigate(state.returnRoute);
+      } else {
+        // Default behavior: Reset navigation to profile
+        navigation.reset({
+          index: 0,
+          routes: [{ name: RouteNames.Profile }],
+        });
+      }
     };
 
     if (isEditing) {
@@ -93,18 +107,20 @@ const HistoryWizardRecap = ({ navigation }) => {
               width: 80,
               height: 80,
               borderRadius: 20,
-              backgroundColor: Colors.neutral700,
+              backgroundColor: '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 2,
-              borderColor: Colors.primary500 + '50',
+              borderColor: Colors.primary500,
             }}>
               <Image
-                source={state.club?.logo?.url ? { uri: state.club.logo.url } : defaultClubIcon}
+                source={(state.club?.logo?.url || state.multisportClub?.logo?.url) 
+                  ? { uri: getImageUrl(state.club?.logo?.url || state.multisportClub?.logo?.url) } 
+                  : defaultClubIcon}
                 style={{
                   width: 56,
                   height: 56,
-                  tintColor: state.club?.logo?.url ? undefined : Colors.primary500,
+                  tintColor: (state.club?.logo?.url || state.multisportClub?.logo?.url) ? undefined : Colors.primary500,
                 }}
                 resizeMode="contain"
               />

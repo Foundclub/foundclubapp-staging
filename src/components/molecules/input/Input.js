@@ -137,6 +137,9 @@ const Input = forwardRef(
                 ]}
                 textAlignVertical={props.textAlignVertical}
                 value={props.value}
+                autoCorrect={props.autoCorrect}
+                autoComplete={props.autoComplete}
+                autoCapitalize={props.autoCapitalize}
               />
               {
               props.iconBottom

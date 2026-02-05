@@ -108,6 +108,10 @@ function CMDashboard({ navigation, route }) {
     },
   });
 
+  const handleCreateSponsor = useCallback(() => {
+    navigation.navigate(RouteNames.AddSponsor, { cmId });
+  }, [navigation, cmId]);
+
   const handleDeleteSection = (section) => {
     Alert.alert(
       t('multisport.deleteSectionTitle'),
@@ -248,6 +252,53 @@ function CMDashboard({ navigation, route }) {
               )}
             </View>
           </View>
+
+          {/* Sponsors */}
+          {(cm?.sponsor?.length > 0 || isCmAdmin) && (
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween]}>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  Partenaires
+                </Text>
+                {isCmAdmin && (
+                  <Button
+                    icon="plus"
+                    isOption
+                    onPress={handleCreateSponsor}
+                    variant="Primary"
+                  />
+                )}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[Spaces.gap[16]]}
+              >
+                {cm?.sponsor?.map((sponsor, idx) => (
+                  <TouchableOpacity
+                    key={sponsor.link || idx}
+                    onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
+                    style={[Alignments.alignCenter]}
+                  >
+                    <ProfileAvatar
+                      imageUrl={sponsor.logo?.url}
+                      size={55}
+                      enablePreview={false}
+                      style={[
+                        ApplicationStyle.borderWidth1,
+                        ApplicationStyle.borderColor.neutral00,
+                        { borderRadius: 8, width: 110, height: 55 },
+                      ]}
+                      imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
+                    />
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
+                      {sponsor.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Stats Cards */}
           <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -407,6 +458,8 @@ function CMDashboard({ navigation, route }) {
               ))}
             </View>
           </View>
+
+
         </WithDataWrapper>
       </ScrollView>
     </ScreenContainer>

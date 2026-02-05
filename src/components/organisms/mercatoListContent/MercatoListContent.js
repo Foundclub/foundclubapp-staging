@@ -44,7 +44,11 @@ const MercatoListContent = () => {
     }, [searchValue, mercatoFilters]);
 
     const handleCardPress = (user) => {
-        navigation.navigate(RouteNames.UserDetails, { userId: user.documentId || user.id });
+        // UserDetails is inside ProfileStack, so navigate through the parent stack
+        navigation.navigate(RouteNames.ProfileStack, {
+            screen: RouteNames.UserDetails,
+            params: { userId: user.documentId || user.id },
+        });
     };
 
     const filtersCount = Object.keys(mercatoFilters || {}).filter((key) => {

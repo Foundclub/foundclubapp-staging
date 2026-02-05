@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
+import { AppModeProvider } from '@/context/AppModeContext';
 
 import ErrorScreen from '@/views/Error';
 
@@ -26,25 +27,27 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
 // Désactiver Sentry en staging ou utiliser un projet Sentry séparé
 const isStaging = process.env.ENV === 'staging';
 
-Sentry.init({
-  //   attachStacktrace: true,
-  //   beforeSend: (event) => {
-  //     // Don't send events in development mode or staging
-  //     if (__DEV__ || isStaging) {
-  //       return null;
-  //     }
-  //     return event;
-  //   },
-  //   debug: __DEV__,
-  //   dsn: process.env.SENTRY_DSN,
-  //   enableAutoSessionTracking: true,
-  //   enableUserInteractionTracing: true,
-  //   replaysOnErrorSampleRate: 1.0,
-  //   replaysSessionSampleRate: 0.1,
-  //   tracesSampleRate: 1.0,
-  //   // Add integration for better React Navigation tracking
-  //   integrations: [navigationIntegration],
-});
+const sentryDsn = process.env.SENTRY_DSN;
+
+if (sentryDsn) {
+  Sentry.init({
+    attachStacktrace: true,
+    beforeSend: (event) => {
+      // Don't send events in development mode or staging if desired
+      if (__DEV__ || isStaging) {
+        return null;
+      }
+      return event;
+    },
+    debug: __DEV__,
+    dsn: sentryDsn,
+    enableAutoSessionTracking: true,
+    enableUserInteractionTracing: true,
+    tracesSampleRate: 1.0,
+    // Add integration for better React Navigation tracking
+    integrations: [navigationIntegration],
+  });
+}
 
 // Désactiver Analytics/Crashlytics en staging
 // Note: Installer les packages si nécessaire: npm install @react-native-firebase/analytics @react-native-firebase/crashlytics
@@ -88,14 +91,13 @@ const queryClient = new QueryClient({
   }),
 
   queryCache: new QueryCache({
-    onError:
-      (error) => {
-        if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-          Sentry.captureException(error);
-        } else {
-          Sentry.captureException(error);
-        }
-      },
+    onError: (error) => {
+      // Capture exceptions to Sentry unless in allow list
+      const shouldSkip = isAxiosError(error) && isInSentryExceptionsAllowList(error);
+      if (!shouldSkip) {
+        Sentry.captureException(error);
+      }
+    },
   }),
 
 });
@@ -106,18 +108,20 @@ const queryClient = new QueryClient({
  */
 function App() {
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AppProvider>
           <ThemeProvider>
-            <BottomSheetModalProvider>
-              <QueryClientProvider client={queryClient}>
-                <SessionManager />
-                <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
-                  <AppNavigator navigationIntegration={navigationIntegration} />
-                </Sentry.ErrorBoundary>
-              </QueryClientProvider>
-            </BottomSheetModalProvider>
+            <AppModeProvider>
+                <QueryClientProvider client={queryClient}>
+                  <BottomSheetModalProvider>
+                    <SessionManager />
+                    <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+                      <AppNavigator navigationIntegration={navigationIntegration} />
+                    </Sentry.ErrorBoundary>
+                  </BottomSheetModalProvider>
+                </QueryClientProvider>
+            </AppModeProvider>
           </ThemeProvider>
         </AppProvider>
       </SafeAreaProvider>

@@ -107,10 +107,10 @@ function EventListContent({
 
   // Get user's club and multisport club IDs for membership filtering
   const userClubId = userData?.club?.documentId;
-  const userCmIds = userData?.multisportClubs?.map(cm => cm.documentId) || [];
+  const userCmIds = useMemo(() => userData?.multisportClubs?.map(cm => cm.documentId) || [], [userData?.multisportClubs]);
   // Also get CM from user's teams
-  const teamCmIds = userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
-  const allCmIds = [...new Set([...userCmIds, ...teamCmIds])];
+  const teamCmIds = useMemo(() => userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [], [userData?.trainedTeams]);
+  const allCmIds = useMemo(() => [...new Set([...userCmIds, ...teamCmIds])], [userCmIds, teamCmIds]);
 
   const featuredEventsConfig = useMemo(() => {
     const config = {
@@ -301,9 +301,10 @@ function EventListContent({
     const start = startOfDay(date).toISOString();
 
     appDispatch({
-      payload: Object.assign(eventFilters || {}, {
+      payload: {
+        ...(eventFilters || {}),
         startDateAfter: start,
-      }),
+      },
       type: 'SET_EVENT_FILTERS',
     });
   }, [appDispatch, eventFilters]);

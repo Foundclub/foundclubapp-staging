@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
+import { deleteAccount } from '@/services/auth/authService';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
@@ -118,6 +120,21 @@ function Profile({ navigation }) {
     });
   };
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => {
+      logoutMutation.mutate(fcmToken || '');
+    },
+    onError: (error) => {
+      // Extract specific error message if available
+      const errorMessage = error?.response?.data?.error?.message 
+        || error?.message 
+        || t('profile.alerts.deleteError', 'Une erreur est survenue lors de la suppression du compte.');
+
+      Alert.alert(t('common.error'), errorMessage);
+    },
+  });
+
   const handleDeleteAccount = () => {
     Alert.alert(
       t('profile.alerts.deleteAlert.title'),
@@ -129,10 +146,9 @@ function Profile({ navigation }) {
         },
         {
           onPress: () => {
-            if (process.env.DELETE_ACCOUNT_URL) {
-              Linking.openURL(process.env.DELETE_ACCOUNT_URL);
-            }
+            deleteAccountMutation.mutate();
           },
+          style: 'destructive',
           text: t('profile.alerts.deleteAlert.actions.confirm'),
         },
       ],
@@ -329,7 +345,7 @@ function Profile({ navigation }) {
           ]}
           />
           <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
-            {team?.name}
+            {team?.club?.name || team?.name}
           </Text>
         </TouchableOpacity>
       ) : null;
@@ -508,6 +524,8 @@ function Profile({ navigation }) {
         {/* Sports History Section */}
         <UserHistorySection
           isOwnProfile={true}
+          bestLevel={userData?.bestLevel}
+          preferredSport={userData?.preferredSport}
           onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
           onEditPress={(entry) => {
             // TODO: Pass entry to wizard for editing

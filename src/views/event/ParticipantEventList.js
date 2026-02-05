@@ -15,6 +15,7 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
@@ -264,8 +265,7 @@ function ParticipantEventList({ navigation }) {
       <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
         {/* Top Header */}
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          {/* @ts-ignore */}
-          <Image source={Images.logo} style={{ height: 30, resizeMode: 'contain', width: 222 }} />
+          <LeagueHeaderSwitch />
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <NotificationBadge />
             <ProfileButton />

@@ -60,7 +60,7 @@ const ProfileAvatar = ({
 
             <ProfilePicturePreviewOverlay
                 isVisible={isPreviewVisible}
-                imageUrl={processedUrl}
+                imageUrl={processedUrl || ''}
                 onClose={() => setIsPreviewVisible(false)}
             />
         </>

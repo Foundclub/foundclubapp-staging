@@ -38,6 +38,10 @@ export const images = {
   trashAlt: require('../assets/icons/trash-alt.png'),
   redTrash: require('../assets/icons/redtrash.png'),
   users: require('../assets/icons/users.png'),
+  // League Icons (Mapped to existing until assets are added)
+  trophy: require('../assets/icons/flag.png'), // Temp mapping
+  whistle: require('../assets/icons/stadium.png'), // Temp mapping
+  chart: require('../assets/icons/filter.png'), // Temp mapping
 };
 
 /**

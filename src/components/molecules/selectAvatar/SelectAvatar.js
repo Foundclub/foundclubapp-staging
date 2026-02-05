@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, TouchableOpacity, View,
+  Alert, Image, TouchableOpacity, View, PermissionsAndroid, Platform,
 } from 'react-native';
-import ImagePicker from 'react-native-image-crop-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -18,9 +18,15 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {(avatar: Avatar) => void} props.onAvatarSelected Callback when avatar is selected
  * @param {() => void} [props.onDelete] Callback when avatar is deleted
  * @param {number} props.size Size of the avatar in pixels
+ * @param {number} [props.cropWidth] Width of the crop area
+ * @param {number} [props.cropHeight] Height of the crop area
+ * @param {import('react-native').ViewStyle} [props.containerStyle] Custom container style
+ * @param {import('react-native').ImageStyle} [props.imageStyle] Custom image style
  * @returns {import('react').ReactElement} SelectAvatar component
  */
-function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) {
+function SelectAvatar({
+  containerStyle, cropHeight, cropWidth, currentAvatar, imageStyle, onAvatarSelected, onDelete, size = 95,
+}) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const {
     Alignments, ApplicationStyle, Images, Spaces,
@@ -45,18 +51,61 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) 
     );
   };
 
+  const handleResponse = (response) => {
+    if (response.didCancel) {
+      return;
+    }
+    if (response.errorCode) {
+      console.warn('ImagePicker Error:', response.errorMessage);
+      Alert.alert('Erreur', `Erreur lors de la sélection : ${response.errorMessage}`);
+      return;
+    }
+
+    if (response.assets && response.assets.length > 0) {
+      const asset = response.assets[0];
+      // Map to format expected by Upload Service (path, mime, filename)
+      const mappedImage = {
+        path: asset.uri,
+        uri: asset.uri,
+        mime: asset.type,
+        filename: asset.fileName,
+        width: asset.width,
+        height: asset.height,
+        size: asset.fileSize,
+        url: '', // Clear url to indicate new file
+      };
+      onAvatarSelected(mappedImage);
+      setIsModalVisible(false);
+    }
+  };
+
   const takePicture = async () => {
     try {
-      const image = await ImagePicker.openCamera({
-        cropping: true,
-        forceJpg: true,
-        height: size * 2,
-        includeBase64: true,
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: t('permissions.camera.title', 'Permission Caméra'),
+            message: t('permissions.camera.message', 'L\'application a besoin d\'accéder à votre caméra pour prendre une photo.'),
+            buttonNeutral: t('common.actions.askLater', 'Plus tard'),
+            buttonNegative: t('common.actions.cancel', 'Annuler'),
+            buttonPositive: t('common.actions.ok', 'OK'),
+          },
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert(t('common.error'), t('permissions.camera.denied', 'Permission caméra refusée'));
+          return;
+        }
+      }
+
+      const result = await launchCamera({
         mediaType: 'photo',
-        width: size * 2,
+        includeBase64: false,
+        maxWidth: cropWidth || 1000,
+        maxHeight: cropHeight || 1000,
+        quality: 0.8,
       });
-      onAvatarSelected(Object.assign(image, { url: '' }));
-      setIsModalVisible(false);
+      handleResponse(result);
     } catch (error) {
       console.warn('Camera Error:', error);
       Alert.alert('Erreur', `Impossible d'ouvrir la caméra : ${error.message}`);
@@ -65,16 +114,14 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) 
 
   const selectFromGallery = async () => {
     try {
-      const image = await ImagePicker.openPicker({
-        cropping: true,
-        forceJpg: true,
-        height: size * 2,
-        includeBase64: true,
+      const result = await launchImageLibrary({
         mediaType: 'photo',
-        width: size * 2,
+        includeBase64: false,
+        maxWidth: cropWidth || 1000,
+        maxHeight: cropHeight || 1000,
+        quality: 0.8,
       });
-      onAvatarSelected(Object.assign(image, { url: '' }));
-      setIsModalVisible(false);
+      handleResponse(result);
     } catch (error) {
       console.warn('Gallery Error:', error);
       Alert.alert('Erreur', `Impossible d'ouvrir la galerie : ${error.message}`);
@@ -90,6 +137,7 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) 
         Alignments.alignCenter,
         Alignments.justifyCenter,
         { height: size, width: size },
+        containerStyle,
       ]}
       >
         {currentAvatar?.url || currentAvatar?.path
@@ -99,7 +147,9 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) 
                 source={{ uri: currentAvatar.path || getImageUrl(currentAvatar.url) }}
                 style={[
                   ApplicationStyle.borderRadius24,
-                  { height: size, width: size }]}
+                  { height: size, width: size },
+                  imageStyle,
+                ]}
               />
               {onDelete && (
                 <TouchableOpacity
@@ -156,6 +206,7 @@ function SelectAvatar({ currentAvatar, onAvatarSelected, onDelete, size = 95 }) 
 
       <BottomModal
         close={() => { setIsModalVisible(false); }}
+        hideCloseButton
         isVisible={isModalVisible}
       >
         <View style={[

@@ -3,7 +3,7 @@ import Slider from '@react-native-community/slider';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import usePlaces from '@/domains/places/usePlaces';
@@ -39,7 +39,7 @@ function ClubFilters({ navigation }) {
   // hooks
   const { t } = useTranslation();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const [{ clubFilters }, appDispatch] = useAppContext();
   const { getGeohashForPointAndRadius } = usePlaces();
@@ -162,16 +162,16 @@ function ClubFilters({ navigation }) {
                 Fonts.p1Bold,
                 Fonts.neutral00]}
               >
-                {`${t('clubFilters.fields.radius.label')}${value}km`}
+                {`${t('clubFilters.fields.radius.label')} : ${value}km`}
               </Text>
               <Slider
                 disabled={!watch('city')?.value}
                 maximumTrackTintColor={Colors.primary700}
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
-                minimumValue={20}
+                minimumValue={2}
                 onValueChange={onChange}
-                step={2}
+                step={1}
                 style={[Alignments.fullWidth, { height: 50 }]}
                 tapToSeek
                 thumbTintColor={Colors.primary500}
