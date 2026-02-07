@@ -42,7 +42,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const isQuorumReached = confirmedCount >= 5;
 
     // Calculate hours until match
-    const matchDate = new Date(event?.date || match.date);
+    const matchDate = new Date(event?.date || match?.date || new Date());
     const hoursUntilMatch = (matchDate - new Date()) / (1000 * 60 * 60);
 
     // ELO Prediction: Calculate expected win/loss points
@@ -189,7 +189,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     <View style={styles.row}>
                         <Image source={ThemeImages.calendar} style={styles.icon} />
                         <Text style={styles.detailText}>
-                            {format(new Date(event.date || match.date), 'EEEE d MMMM à HH:mm', { locale: fr }).toUpperCase()}
+                            {format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM à HH:mm', { locale: fr }).toUpperCase()}
                         </Text>
                     </View>
                     <View style={styles.row}>

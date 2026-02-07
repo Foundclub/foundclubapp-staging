@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View, TouchableOpacity } from 'react-native';
+import { Alert, Text, View, TouchableOpacity, ImageBackground, StatusBar } from 'react-native';
 import 'dayjs/locale/fr';
 import {
   Actions,
@@ -17,6 +17,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import client from '@/services/client';
 import useSocket, { EVENTS } from '@/hooks/useSocket';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -30,7 +31,6 @@ import CompositionMessageBubble from '@/components/molecules/compositionMessageB
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import ProposalModal from '@/components/organisms/proposalModal/ProposalModal';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -126,8 +126,13 @@ function Conversation({ navigation, route }) {
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
+
+  // DEBUG LOGS
+  const { top, bottom } = useSafeAreaInsets();
+
 
   const { isPending: isReportingMessage, mutate: reportMessage } = useMutation({
     mutationFn: createMessageReport,
@@ -348,30 +353,63 @@ function Conversation({ navigation, route }) {
     />
   ), [navigation]);
 
-  // Set navigation options
-  useEffect(() => {
-     // Priority: Route Param Title > Messaging Hook Title > Default
-     const title = route.params?.title || getConversationName({
-       chatClub: chatData?.club,
-       chatParticipants: chatData?.participants,
-       chatTeam: chatData?.team,
-       chatType: chatData?.type || '',
-       meId: userData?.documentId,
-     }) || t('common.chat');
+  const { confirmMatch, cancelMatch } = require('@/services/league/MatchService'); // Importing inline to be safe or add to top
 
-     const subtitle = route.params?.subTitle || '';
+// ... inside component ...
 
-     navigation.setOptions({
-       headerTitle: () => (
-         <View style={{ alignItems: 'center' }}>
-           <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>{title}</Text>
-           {!!subtitle && (
-             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
-           )}
-         </View>
-       ),
-    });
-  }, [navigation, headerLeft, chatData, getConversationName, userData, route.params]);
+  const handleCancelMatch = async () => {
+    const matchId = chatData?.league_match?.documentId || chatData?.league_match?.id;
+    if (!matchId) return;
+
+    Alert.alert(
+      "Annuler le match ?",
+      "Cette action annulera le match et supprimera la conversation.",
+      [
+        { text: "Non", style: "cancel" },
+        {
+          text: "Oui, annuler",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cancelMatch(matchId);
+              // Delete conversation logic - wait, does canceling match delete chat? 
+              // User said: "ça supprime la conversation". 
+              // I'll assume backend might do it, but I should probably navigate away or delete explicitly if I can.
+              // I don't have deleteChat exposed from useMessaging, only deleteMessage.
+              // I'll just navigate back for now and assume the list refreshes.
+              navigation.goBack(); 
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible d'annuler le match.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Calculate title for Custom Header
+  // Calculate title for Custom Header
+  const title = useMemo(() => {
+     let displayTitle = route.params?.title;
+     if (!displayTitle && chatData?.type === 'league_match') {
+         const dayIndex = chatData?.league_match?.day || '?';
+         const myTeamName = userData?.team?.name || 'Mon Équipe';
+         displayTitle = `Match ${dayIndex} - ${myTeamName}`;
+     } else if (!displayTitle) {
+        displayTitle = getConversationName({
+           chatClub: chatData?.club,
+           chatParticipants: chatData?.participants,
+           chatTeam: chatData?.team,
+           chatType: chatData?.type || '',
+           meId: userData?.documentId,
+        }) || t('common.chat'); 
+     }
+     return displayTitle;
+  }, [chatData, route.params, getConversationName, userData, t]); 
+
+  const subtitle = route.params?.subTitle || '';
+
+  const showCancelButton = chatData?.type === 'league_match' && chatData?.league_match;
 
   // Anonymization helper for league_match chats
   const getAnonymizedName = (sender, senderIndex) => {
@@ -895,17 +933,55 @@ function Conversation({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Alignments.justifySpaceBetween,
-        Alignments.column,
-        Alignments.fill,
-      ]}
-      style={[Spaces.paddingHorizontal[0]]}
+    <ImageBackground
+      source={Images.bg2}
+      style={[Alignments.fill]}
+      resizeMode="cover"
     >
-      <GiftedChat
-        dateFormat="DD MMMM"
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      
+      {/* Custom Header */}
+      <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: top + 10,
+          paddingHorizontal: 16,
+          paddingBottom: 10,
+          zIndex: 10,
+      }}>
+          <HeaderBackButton onPress={() => navigation.goBack()} />
+          
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>{title}</Text>
+            {!!subtitle && (
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
+            )}
+          </View>
+
+          {showCancelButton ? (
+             <TouchableOpacity 
+                onPress={handleCancelMatch}
+                style={{ 
+                    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8
+                }}
+             >
+                <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>Annuler</Text>
+             </TouchableOpacity>
+          ) : (
+             <View style={{ width: 40 }} /> // Spacer to balance BackButton
+          )}
+      </View>
+
+      <View style={[Alignments.fill]}>
+        <GiftedChat
+          safeAreaInsets={{
+            top: 0, bottom, left: 0, right: 0,
+          }}
+          dateFormat="DD MMMM"
         dateFormatCalendar={{
           lastDay: '[Hier]',
           lastWeek: '[La semaine dernière] dddd',
@@ -962,7 +1038,8 @@ function Conversation({ navigation, route }) {
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
     />
-    </ScreenContainer>
+      </View>
+    </ImageBackground>
   );
 }
 

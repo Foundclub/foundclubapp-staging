@@ -77,7 +77,7 @@ const ProposalMessageBubble = ({ proposal, isMe = false, onAccept, onDecline }) 
     }
     return (
         <View style={[styles.statusBadge, { backgroundColor: Colors.warning500 }]}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>EN ATTENTE ⏳</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>EN ATTENTE ⏳</Text>
         </View>
     );
   };
@@ -161,7 +161,7 @@ const ProposalMessageBubble = ({ proposal, isMe = false, onAccept, onDecline }) 
       {/* Message for sender */}
       {status === 'pending' && isMe && (
            <View style={[styles.footer, { borderTopColor: Colors.neutral700 }]}>
-                <Text style={[Fonts.p4, { color: Colors.neutral400, fontStyle: 'italic' }]}>
+                <Text style={[Fonts.p4, { color: Colors.neutral00, fontStyle: 'italic' }]}>
                     En attente de la réponse adverse...
                 </Text>
            </View>

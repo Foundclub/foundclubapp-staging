@@ -153,7 +153,6 @@ function HomeContent({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      gradient={null} // Disable gradient to test pure background image
       contentContainerStyle={[
         Alignments.column,
         Alignments.fill,

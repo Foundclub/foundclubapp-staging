@@ -99,7 +99,7 @@ export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, wi
   );
 };
 
-const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
+const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'modal' }) => {
   const { Colors, Fonts, Spaces } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -160,7 +160,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
         </Text>
       )}
 
-      {/* Button to open Modal */}
+      {/* Button to open Modal/Toggle Inline */}
       <TouchableOpacity
         onPress={handleOpen}
         style={[styles.inputButton, { borderColor: Colors.neutral700, backgroundColor: Colors.neutral800 }]}
@@ -169,88 +169,172 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label }) => {
         <Text style={[Fonts.p1, Fonts.neutral00]}>{getFormattedValue()}</Text>
       </TouchableOpacity>
 
-      {/* Reusing App's BottomModal which uses @gorhom/bottom-sheet */}
-      <BottomModal
-        isVisible={isOpen}
-        close={handleClose}
-        scrollable={false}
-        hideCloseButton={true}
-        style={{ backgroundColor: Colors.neutral900 }}
-      >
-          <View style={styles.pickersRow}>
-            {mode === 'date' ? (
-              <>
-                <WheelPicker
-                  data={days}
-                  selectedValue={tempDate.getDate()}
-                  onValueChange={(d) => {
-                    const newDate = new Date(tempDate);
-                    newDate.setDate(d);
-                    setTempDate(newDate);
-                  }}
-                  width={70}
-                  isOpen={isOpen}
-                />
-                <WheelPicker
-                  data={months}
-                  selectedValue={tempDate.getMonth()}
-                  onValueChange={(m) => {
-                    const newDate = new Date(tempDate);
-                    newDate.setMonth(m);
-                    setTempDate(newDate);
-                  }}
-                  width={90}
-                  isOpen={isOpen}
-                />
-                <WheelPicker
-                  data={years}
-                  selectedValue={tempDate.getFullYear()}
-                  onValueChange={(y) => {
-                    const newDate = new Date(tempDate);
-                    newDate.setFullYear(y);
-                    setTempDate(newDate);
-                  }}
-                  width={90}
-                  isOpen={isOpen}
-                />
-              </>
-            ) : (
-              <>
-                <WheelPicker
-                  data={hours}
-                  selectedValue={tempDate.getHours()}
-                  onValueChange={(h) => {
-                    const newDate = new Date(tempDate);
-                    newDate.setHours(h);
-                    setTempDate(newDate);
-                  }}
-                  width={80}
-                  isOpen={isOpen}
-                />
-                <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
-                <WheelPicker
-                  data={minutes}
-                  selectedValue={tempDate.getMinutes()}
-                  onValueChange={(m) => {
-                    const newDate = new Date(tempDate);
-                    newDate.setMinutes(m);
-                    setTempDate(newDate);
-                  }}
-                  width={80}
-                  isOpen={isOpen}
-                />
-              </>
-            )}
-          </View>
-          
-          <View style={[Spaces.marginTop[16], Spaces.marginBottom[24]]}>
+      {/* Inline Content */}
+      {display === 'inline' && isOpen && (
+          <View style={{ backgroundColor: Colors.neutral900, borderRadius: 12, marginTop: 8, padding: 16 }}>
+             <View style={styles.pickersRow}>
+                {mode === 'date' ? (
+                <>
+                    <WheelPicker
+                    data={days}
+                    selectedValue={tempDate.getDate()}
+                    onValueChange={(d) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setDate(d);
+                        setTempDate(newDate);
+                        if(display === 'inline') onChange(newDate); // Immediate update for inline
+                    }}
+                    width={70}
+                    isOpen={isOpen}
+                    />
+                    <WheelPicker
+                    data={months}
+                    selectedValue={tempDate.getMonth()}
+                    onValueChange={(m) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMonth(m);
+                        setTempDate(newDate);
+                        if(display === 'inline') onChange(newDate); // Immediate update for inline
+                    }}
+                    width={90}
+                    isOpen={isOpen}
+                    />
+                    <WheelPicker
+                    data={years}
+                    selectedValue={tempDate.getFullYear()}
+                    onValueChange={(y) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setFullYear(y);
+                        setTempDate(newDate);
+                        if(display === 'inline') onChange(newDate); // Immediate update for inline
+                    }}
+                    width={90}
+                    isOpen={isOpen}
+                    />
+                </>
+                ) : (
+                <>
+                    <WheelPicker
+                    data={hours}
+                    selectedValue={tempDate.getHours()}
+                    onValueChange={(h) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setHours(h);
+                        setTempDate(newDate);
+                        if(display === 'inline') onChange(newDate); // Immediate update for inline
+                    }}
+                    width={80}
+                    isOpen={isOpen}
+                    />
+                    <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
+                    <WheelPicker
+                    data={minutes}
+                    selectedValue={tempDate.getMinutes()}
+                    onValueChange={(m) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMinutes(m);
+                        setTempDate(newDate);
+                        if(display === 'inline') onChange(newDate); // Immediate update for inline
+                    }}
+                    width={80}
+                    isOpen={isOpen}
+                    />
+                </>
+                )}
+            </View>
             <Button 
-                variant="Primary" 
-                title="Confirmer" 
-                onPress={handleConfirm} 
+                variant="Secondary" 
+                title="Valider" 
+                onPress={handleClose} 
+                style={{ marginTop: 16 }}
             />
           </View>
-      </BottomModal>
+      )}
+
+      {/* Modal Content */}
+      {display !== 'inline' && (
+        <BottomModal
+            isVisible={isOpen}
+            close={handleClose}
+            scrollable={false}
+            hideCloseButton={true}
+            style={{ backgroundColor: Colors.neutral900 }}
+        >
+            <View style={styles.pickersRow}>
+                {mode === 'date' ? (
+                <>
+                    <WheelPicker
+                    data={days}
+                    selectedValue={tempDate.getDate()}
+                    onValueChange={(d) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setDate(d);
+                        setTempDate(newDate);
+                    }}
+                    width={70}
+                    isOpen={isOpen}
+                    />
+                    <WheelPicker
+                    data={months}
+                    selectedValue={tempDate.getMonth()}
+                    onValueChange={(m) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMonth(m);
+                        setTempDate(newDate);
+                    }}
+                    width={90}
+                    isOpen={isOpen}
+                    />
+                    <WheelPicker
+                    data={years}
+                    selectedValue={tempDate.getFullYear()}
+                    onValueChange={(y) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setFullYear(y);
+                        setTempDate(newDate);
+                    }}
+                    width={90}
+                    isOpen={isOpen}
+                    />
+                </>
+                ) : (
+                <>
+                    <WheelPicker
+                    data={hours}
+                    selectedValue={tempDate.getHours()}
+                    onValueChange={(h) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setHours(h);
+                        setTempDate(newDate);
+                    }}
+                    width={80}
+                    isOpen={isOpen}
+                    />
+                    <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
+                    <WheelPicker
+                    data={minutes}
+                    selectedValue={tempDate.getMinutes()}
+                    onValueChange={(m) => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMinutes(m);
+                        setTempDate(newDate);
+                    }}
+                    width={80}
+                    isOpen={isOpen}
+                    />
+                </>
+                )}
+            </View>
+            
+            <View style={[Spaces.marginTop[16], Spaces.marginBottom[24]]}>
+                <Button 
+                    variant="Primary" 
+                    title="Confirmer" 
+                    onPress={handleConfirm} 
+                />
+            </View>
+        </BottomModal>
+      )}
     </View>
   );
 };

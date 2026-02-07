@@ -105,6 +105,14 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         team: {
           populate: true, 
         },
+        league_match: {
+            populate: {
+                team_a: { populate: ['captain'] },
+                team_b: { populate: ['captain'] },
+                event: true,
+                winner: true
+            }
+        },
         pinnedBy: {
             populate: ['avatar']
         },

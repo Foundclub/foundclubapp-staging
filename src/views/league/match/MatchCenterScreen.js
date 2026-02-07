@@ -418,12 +418,21 @@ const MatchCenterScreen = () => {
             // 3. Send Formatted Message in Chat
             if (currentMatch.chat) {
                 const chatId = currentMatch.chat.documentId || currentMatch.chat.id;
-                const formattedDate = new Date(proposalData.date).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+                
+                const startDate = new Date(proposalData.date);
+                const endDate = proposalData.endDate ? new Date(proposalData.endDate) : null;
+                
+                const dateStr = startDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                const startStr = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const endStr = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?';
+                
+                const timeStr = `de ${startStr} à ${endStr}`;
                 
                 const messageText = `📍 **Proposition de Match**\n` +
                     `Je propose de jouer à :\n` +
                     `**${proposalData.venue}**\n` +
-                    `📅 **${formattedDate}**\n\n` +
+                    `📅 **${dateStr}**\n` +
+                    `🕒 **${timeStr}**\n\n` +
                     `Cela vous convient-il ?`;
 
                 await createChatMessage({
@@ -433,6 +442,7 @@ const MatchCenterScreen = () => {
                         type: 'proposal',
                         venue: proposalData.venue,
                         date: proposalData.date,
+                        endDate: proposalData.endDate,
                         status: 'pending',
                         matchId: matchId 
                     }

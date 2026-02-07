@@ -294,8 +294,7 @@ function PrivateNavigator() {
         component={Conversation}
         name={RouteNames.Conversation}
         options={{
-          ...commonOptions,
-          headerTitle: '',
+          headerShown: false,
         }}
       />
       <Stack.Screen

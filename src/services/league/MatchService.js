@@ -85,3 +85,8 @@ export const disputeMatch = async (matchId) => {
     const response = await client.post(`/league-matches/${matchId}/dispute`);
     return response.data;
 };
+
+export const cancelMatch = async (matchId) => {
+    const response = await client.post(`/league-matches/${matchId}/cancel`);
+    return response.data;
+};

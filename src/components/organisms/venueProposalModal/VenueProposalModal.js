@@ -5,31 +5,55 @@ import Button from '@/components/atoms/button/Button';
 import useTheme from '@/theme/themeContext';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import Input from '@/components/molecules/input/Input';
 
 const VenueProposalModal = ({ isVisible, onClose, onSend, onSkip }) => {
     const { Colors, Fonts, Spaces } = useTheme();
-    const [venue, setVenue] = useState(null); // { address: '', location: { lat, lng }, label: '' }
+    
+    // Form State
+    const [venueName, setVenueName] = useState('');
+    const [venueAddress, setVenueAddress] = useState(null); // { address: '', location: { lat, lng }, label: '' }
+    
+    // Date & Time State
     const [date, setDate] = useState(new Date());
-    const [time, setTime] = useState(new Date());
+    const [startTime, setStartTime] = useState(() => {
+        const d = new Date();
+        d.setHours(20, 0, 0, 0); // Default 20:00
+        return d;
+    });
+    const [endTime, setEndTime] = useState(() => {
+        const d = new Date();
+        d.setHours(21, 0, 0, 0); // Default 21:00
+        return d;
+    });
 
     const handleSend = () => {
-        if (!venue || !venue.label) return;
+        // Validation: Need at least a location (Name OR Address) and valid times
+        if ((!venueName && !venueAddress)) return;
         
-        // Merge Date and Time
-        const finalDate = new Date(date);
-        finalDate.setHours(time.getHours());
-        finalDate.setMinutes(time.getMinutes());
+        // Merge Date and Time to create ISO strings
+        const finalStartDate = new Date(date);
+        finalStartDate.setHours(startTime.getHours());
+        finalStartDate.setMinutes(startTime.getMinutes());
+
+        const finalEndDate = new Date(date);
+        finalEndDate.setHours(endTime.getHours());
+        finalEndDate.setMinutes(endTime.getMinutes());
+        
+        // Safety: If end < start, assumed next day? No, match usually same day. 
+        // Just enforce end > start or ignore. User responsibility for now or visual validation.
 
         onSend({
-            venue: venue.label,
-            address: venue,
-            date: finalDate.toISOString()
+            venue: venueName || venueAddress?.label || "Terrain", // Priority to custom name
+            address: venueAddress,
+            date: finalStartDate.toISOString(),
+            endDate: finalEndDate.toISOString()
         });
-        onClose();
         
-        // Reset (optional, or keep for next time)
-        setVenue(null);
-        setDate(new Date());
+        // Cleanup and Close
+        onClose();
+        setVenueName('');
+        setVenueAddress(null);
     };
 
     return (
@@ -37,6 +61,7 @@ const VenueProposalModal = ({ isVisible, onClose, onSend, onSkip }) => {
             isVisible={isVisible}
             close={onClose}
             snapPoints={['85%']}
+            contentContainerStyle={{ paddingBottom: 32, gap: 24 }}
             headerComponent={
                 <View>
                     <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', marginBottom: 4 }]}>
@@ -48,56 +73,79 @@ const VenueProposalModal = ({ isVisible, onClose, onSend, onSkip }) => {
                 </View>
             }
         >
-            <ScrollView contentContainerStyle={{ paddingBottom: 32, gap: 24 }} keyboardShouldPersistTaps="handled">
-                {/* 1. Lieu */}
+            {/* 1. Lieu */}
+            <View style={{ zIndex: 100 }}>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Lieu</Text>
+                
+                <Input
+                    placeholder="Nom du lieu (ex: Urban Soccer)"
+                    value={venueName}
+                    onChangeText={setVenueName}
+                    wrapperStyle={{ marginBottom: 16 }}
+                />
+                
                 <View style={{ zIndex: 100 }}>
-                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Lieu proposé</Text>
                     <AutocompleteAddressInput
-                        placeholder="Ex: Stade Municipal, Urban Soccer..."
-                        setAddress={setVenue}
-                        value={venue}
-                        isDark
+                        placeholder="Adresse précise (si nécessaire)"
+                        setAddress={setVenueAddress}
+                        address={venueAddress}
                     />
                 </View>
+            </View>
 
-                {/* 2. Date */}
-                <View>
-                    <DateTimeSelector
-                        label="Date"
-                        value={date}
-                        onChange={setDate}
-                        mode="date"
-                    />
-                </View>
+            {/* 2. Date & Heure */}
+            <View>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Créneau</Text>
+                
+                {/* Date Picker */}
+                <DateTimeSelector
+                    label="Date"
+                    value={date}
+                    onChange={setDate}
+                    mode="date"
+                    display="inline"
+                />
 
-                {/* 3. Heure */}
-                <View>
-                    <DateTimeSelector
-                        label="Heure"
-                        value={time}
-                        onChange={setTime}
-                        mode="time"
-                    />
+                {/* Time Range Row */}
+                <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <View style={{ flex: 1 }}>
+                        <DateTimeSelector
+                            label="Début"
+                            value={startTime}
+                            onChange={setStartTime}
+                            mode="time"
+                            display="inline"
+                        />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                            <DateTimeSelector
+                            label="Fin"
+                            value={endTime}
+                            onChange={setEndTime}
+                            mode="time"
+                            display="inline"
+                        />
+                    </View>
                 </View>
+            </View>
 
-                {/* Actions */}
-                <View style={{ gap: 12, marginTop: 16 }}>
-                    <Button 
-                        title="ENVOYER LA PROPOSITION"
-                        variant="Primary"
-                        onPress={handleSend}
-                        disabled={!venue}
-                        style={{ backgroundColor: Colors.gold500 }}
-                        textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
-                    />
-                    
-                    <TouchableOpacity onPress={onSkip} style={{ padding: 12, alignItems: 'center' }}>
-                        <Text style={[Fonts.p2, { color: Colors.neutral400, textDecorationLine: 'underline' }]}>
-                            Passer et accéder au chat
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+            {/* Actions */}
+            <View style={{ gap: 12, marginTop: 16 }}>
+                <Button 
+                    title="ENVOYER LA PROPOSITION"
+                    variant="Primary"
+                    onPress={handleSend}
+                    disabled={!venueName && !venueAddress}
+                    style={{ backgroundColor: Colors.gold500 }}
+                    textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
+                />
+                
+                <TouchableOpacity onPress={onSkip} style={{ padding: 12, alignItems: 'center' }}>
+                    <Text style={[Fonts.p2, { color: Colors.neutral400, textDecorationLine: 'underline' }]}>
+                        Passer et accéder au chat
+                    </Text>
+                </TouchableOpacity>
+            </View>
         </BottomModal>
     );
 };
