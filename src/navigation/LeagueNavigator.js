@@ -14,6 +14,7 @@ import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
 import MatchDetailsScreen from '@/views/league/match/MatchDetailsScreen';
 import LeagueDashboard from '@/views/league/dashboard/LeagueDashboard';
 import RankingScreen from '@/views/league/ranking/RankingScreen';
+import MatchHistoryScreen from '@/views/league/match/MatchHistoryScreen';
 import LeagueMatchDetails from '@/views/league/match/LeagueMatchDetails';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -36,6 +37,11 @@ export default function LeagueNavigator() {
       <Stack.Screen
         component={RankingScreen}
         name={RouteNames.LeagueRanking}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={MatchHistoryScreen}
+        name="MatchHistoryScreen"
         options={{ headerShown: false }}
       />
       <Stack.Screen

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Image } from 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
 import useAuth from '@/domains/auth/useAuth';
-import { getMyLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
+import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 import { getMatchHistory } from '@/services/league/leagueMatchService';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -25,24 +25,33 @@ const LeagueDashboard = () => {
 
     const [userTeam, setUserTeam] = useState(null);
     const [matchHistory, setMatchHistory] = useState([]);
+    const [rankingData, setRankingData] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const loadDashboard = async () => {
         if (!userData) return;
         setLoading(true);
         try {
+            // 1. Get User Team
             const squads = await getMyLeagueTeam(userData.documentId);
             const team = squads && squads.length > 0 ? squads[0] : null;
             setUserTeam(team);
             
-            // Load match history if team exists
+            // 2. Load match history & Rankings if team exists
             if (team) {
                 try {
                     const history = await getMatchHistory(team.documentId || team.id, 5);
                     setMatchHistory(history);
+
+                    // Fetch Ranking for current division
+                    const division = team.division || 10;
+                    const rankings = await getRanking(division);
+                    setRankingData(rankings);
+
                 } catch (historyErr) {
-                    console.log("Match history not available:", historyErr);
+                    console.log("Data fetch error:", historyErr);
                     setMatchHistory([]);
+                    setRankingData([]);
                 }
             }
         } catch (error) {
@@ -112,24 +121,31 @@ const LeagueDashboard = () => {
         </LeagueCard>
     );
 
-    // Mock "Top of League" + User logic
+    // Real "Top of League" + User logic
     const renderLeaderboard = () => {
-        const topTeams = [
-            { rank: 1, name: 'Galacticos', points: 2100, form: '✅✅✅' },
-            { rank: 2, name: 'Red Star', points: 2050, form: '✅✅➖' },
-            { rank: 3, name: 'Olympique', points: 1980, form: '✅❌✅' },
-        ];
+        if (!rankingData || rankingData.length === 0) return null;
 
-        const userRank = 42; 
-        const isUserInTop = userRank <= 3;
+        // 1. Get Top 3
+        const topTeams = rankingData.slice(0, 3).map((t, i) => ({
+            rank: i + 1,
+            name: t.name,
+            points: t.elo,
+            form: '✅✅❓', // TODO: Compute form
+            isMe: t.documentId === userTeam?.documentId
+        }));
+
+        // 2. Add User if not in Top 3
+        const userIndex = rankingData.findIndex(t => t.documentId === userTeam?.documentId);
+        const isUserInTop = userIndex >= 0 && userIndex < 3;
 
         let displayTeams = [...topTeams];
-        if (!isUserInTop && userTeam) {
+        
+        if (userTeam && !isUserInTop && userIndex !== -1) {
             displayTeams.push({ type: 'separator' });
             displayTeams.push({ 
-                rank: userRank, 
-                name: userTeam.name || 'Mon Équipe', 
-                points: userTeam.elo || 1200, 
+                rank: userIndex + 1, 
+                name: userTeam.name, 
+                points: userTeam.elo, 
                 form: '✅✅❓', 
                 isMe: true 
             });
@@ -139,7 +155,7 @@ const LeagueDashboard = () => {
             <View>
                 <SectionHeader 
                     title="LEADERBOARD" 
-                    subtitle="TOP ÉQUIPES"
+                    subtitle={`DIVISION ${userTeam?.division || 10}`}
                 />
                 
                 <LeagueCard style={{ padding: 0, overflow: 'hidden' }}>
@@ -180,7 +196,10 @@ const LeagueDashboard = () => {
                         );
                     })}
                     
-                    <TouchableOpacity style={{ padding: 12, alignItems: 'center', backgroundColor: Colors.neutral800 }}>
+                    <TouchableOpacity 
+                        style={{ padding: 12, alignItems: 'center', backgroundColor: Colors.neutral800 }}
+                        onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
+                    >
                         <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>VOIR LE CLASSEMENT COMPLET</Text>
                     </TouchableOpacity>
                 </LeagueCard>
@@ -205,7 +224,7 @@ const LeagueDashboard = () => {
                         <CompetitiveHero 
                             elo={userTeam.elo} 
                             division={userTeam.division} 
-                            rank={42}
+                            rank={rankingData.findIndex(t => t.documentId === userTeam?.documentId) + 1 || '-'}
                             teamName={userTeam.name}
                             nextDivisionElo={1300}
                         />

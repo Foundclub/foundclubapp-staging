@@ -70,6 +70,13 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
             },
             type: 'team',
           })) || []),
+          // Get league matches where user is a participant
+          filters.currentUserId ? {
+            participants: {
+              documentId: filters.currentUserId,
+            },
+            type: 'league_match',
+          } : null,
         ].filter(Boolean),
       },
       pagination: {
@@ -106,15 +113,9 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         },
       },
       sort: [
-        // Sort by type: whisper(w) > team(t) > multisport(m) > club(c)
-        // Ideally we want Multisport top.
-        // Let's try desc first? No, we might need custom sort in frontend. 
-        // For now, let's keep type:asc (c, m, t, w) or type:desc (w, t, m, c).
-        // User wants Multisport then Club.
-        // Let's change to desc hoping for M > C, but it implies W > T > M > C.
-        // We will fix sort in frontend.
-        'type:asc',
-        // Then sort by most recent message
+        // Sort by type: league_match(l) > ...
+        // We will rely on updatedAt primarily, but could prioritize types if needed.
+        // For now sticking to simple sort, frontend does the grouping/sorting.
         'updatedAt:desc',
       ],
     },

@@ -69,6 +69,7 @@ function Messaging({ navigation }) {
     const priority = {
         'multisport': 0,
         'club': 1,
+        'league_match': 1.5, // High priority but after club/multisport? Or top? Let's put it high.
         'team': 2,
         'whisper': 3
     };
@@ -158,6 +159,17 @@ function Messaging({ navigation }) {
           />
         );
       }
+      case 'league_match':
+        return (
+            <View style={{
+                width: 48, height: 48, borderRadius: 24,
+                backgroundColor: Colors.neutral900,
+                borderWidth: 2, borderColor: Colors.gold500,
+                justifyContent: 'center', alignItems: 'center'
+            }}>
+                <Text style={{ fontSize: 20 }}>🏆</Text>
+            </View>
+        );
       case 'multisport':
         if (chat?.multisportClub?.logo?.url) {
           return (
@@ -305,8 +317,9 @@ function Messaging({ navigation }) {
             Spaces.marginBottom[8],
             hasUnread
               ? ApplicationStyle.backgroundColor.primary700
-              : ApplicationStyle.backgroundColor.transparent,
-            isPinned && { borderLeftWidth: 4, borderLeftColor: Colors.primary500 }
+              : (chat.type === 'league_match' ? 'rgba(212, 175, 55, 0.1)' : ApplicationStyle.backgroundColor.transparent),
+            isPinned && { borderLeftWidth: 4, borderLeftColor: Colors.primary500 },
+            chat.type === 'league_match' && { borderLeftWidth: 4, borderLeftColor: Colors.gold500 }
           ]}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
@@ -339,6 +352,11 @@ function Messaging({ navigation }) {
                         meId: userData?.documentId,
                     })}
                     </Text>
+                    {chat.type === 'league_match' && (
+                         <View style={{ backgroundColor: Colors.gold500, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
+                             <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
+                         </View>
+                    )}
                     {isPinned && (
                          <View style={{ backgroundColor: Colors.primary500, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
                              <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÉ</Text>

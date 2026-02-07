@@ -153,7 +153,7 @@ function HomeContent({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      style={[{ backgroundColor: Colors.primary900 }]} // Fix: Force dark background for iOS consistency
+      gradient={null} // Disable gradient to test pure background image
       contentContainerStyle={[
         Alignments.column,
         Alignments.fill,
