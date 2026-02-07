@@ -37,7 +37,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
-import { confirmMatch } from '@/services/league/MatchService';
+import { confirmMatch, cancelMatch } from '@/services/league/MatchService';
 
 /**
  * Chat conversation screen component
@@ -361,6 +361,25 @@ function Conversation({ navigation, route }) {
     const matchId = chatData?.league_match?.documentId || chatData?.league_match?.id;
     if (!matchId) return;
 
+    // Determine teamId of the current user
+    const userId = userData?.documentId;
+    let teamId = null;
+    const teamA = chatData?.league_match?.team_a;
+    const teamB = chatData?.league_match?.team_b;
+
+    if (teamA?.captain?.documentId === userId) {
+        teamId = teamA.documentId;
+    } else if (teamB?.captain?.documentId === userId) {
+        teamId = teamB.documentId;
+    } else {
+        teamId = userData?.team?.documentId;
+    }
+
+    if (!teamId) {
+        Alert.alert("Erreur", "Impossible d'identifier votre équipe pour l'annulation.");
+        return;
+    }
+
     Alert.alert(
       "Annuler le match ?",
       "Cette action annulera le match et supprimera la conversation.",
@@ -371,14 +390,11 @@ function Conversation({ navigation, route }) {
           style: "destructive",
           onPress: async () => {
             try {
-              await cancelMatch(matchId);
-              // Delete conversation logic - wait, does canceling match delete chat? 
-              // User said: "ça supprime la conversation". 
-              // I'll assume backend might do it, but I should probably navigate away or delete explicitly if I can.
-              // I don't have deleteChat exposed from useMessaging, only deleteMessage.
-              // I'll just navigate back for now and assume the list refreshes.
+              console.log('[Conversation] Cancelling match:', matchId, 'Team:', teamId);
+              await cancelMatch(matchId, teamId, 'Demande capitaine');
               navigation.goBack(); 
             } catch (error) {
+              console.error('[Conversation] Cancel match failed:', error);
               Alert.alert("Erreur", "Impossible d'annuler le match.");
             }
           }
@@ -390,11 +406,18 @@ function Conversation({ navigation, route }) {
   // Calculate title for Custom Header
   // Calculate title for Custom Header
   const title = useMemo(() => {
+     console.log('[Conversation] Debug Title Calc:', {
+        type: chatData?.type,
+        league_match: chatData?.league_match,
+        participantsCount: chatData?.participants?.length
+     });
      let displayTitle = route.params?.title;
      if (!displayTitle && chatData?.type === 'league_match') {
-         const dayIndex = chatData?.league_match?.day || '?';
-         const myTeamName = userData?.team?.name || 'Mon Équipe';
-         displayTitle = `Match ${dayIndex} - ${myTeamName}`;
+         const matchDate = chatData?.league_match?.date;
+         const dateDisplay = matchDate 
+            ? new Date(matchDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) 
+            : '?';
+         displayTitle = `Match ${dateDisplay}`;
      } else if (!displayTitle) {
         displayTitle = getConversationName({
            chatClub: chatData?.club,
@@ -410,6 +433,7 @@ function Conversation({ navigation, route }) {
   const subtitle = route.params?.subTitle || '';
 
   const showCancelButton = chatData?.type === 'league_match' && chatData?.league_match;
+  console.log('[Conversation] showCancelButton:', showCancelButton, 'type:', chatData?.type, 'hasLeagueMatch:', !!chatData?.league_match);
 
   // Anonymization helper for league_match chats
   const getAnonymizedName = (sender, senderIndex) => {
@@ -424,7 +448,7 @@ function Conversation({ navigation, route }) {
     }
 
     // For league match chats, check if event has passed
-    const eventDate = chatData?.league_match?.event?.date;
+    const eventDate = chatData?.league_match?.date;
     const hasEventPassed = eventDate && new Date(eventDate) < new Date();
     
     if (hasEventPassed) {
@@ -969,7 +993,7 @@ function Conversation({ navigation, route }) {
                     borderRadius: 8
                 }}
              >
-                <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>Annuler</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Annuler</Text>
              </TouchableOpacity>
           ) : (
              <View style={{ width: 40 }} /> // Spacer to balance BackButton

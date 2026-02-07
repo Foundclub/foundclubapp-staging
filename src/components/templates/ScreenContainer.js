@@ -15,7 +15,7 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
-  bgImage = 'bg1',
+  bgImage = 'bg2', // Default to bg2 per user request
   children,
   contentContainerStyle = [],
   gradient = null, // Default to no gradient

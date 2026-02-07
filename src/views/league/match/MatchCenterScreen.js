@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Alert, Modal, StyleSheet, ActivityIndicator, ImageBackground, Image, RefreshControl, FlatList, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, Alert, Modal, StyleSheet, ActivityIndicator, ImageBackground, Image, RefreshControl, FlatList, Dimensions, AppState } from 'react-native';
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
@@ -36,7 +36,7 @@ const MatchCenterScreen = () => {
     // Data State
     const [mySquad, setMySquad] = useState(null);
     const [allSquads, setAllSquads] = useState([]); // Store all user squads
-    const [viewState, setViewState] = useState('loading'); // loading, no_squad, locker_room, lobby, radar, match_found
+    const [viewState, setViewState] = useState('loading'); // loading, no_squad, locker_room, lobby, radar, match_found, connection_error
     const [activeSlot, setActiveSlot] = useState(null);
     const [squadSlots, setSquadSlots] = useState([]); // Store all available slots for carousel
     const [matchRequest, setMatchRequest] = useState(null);
@@ -112,7 +112,25 @@ const MatchCenterScreen = () => {
          }
     }, [homeBase]);
 
-    const lastMatchRef = React.useRef(null);
+    const lastMatchRef = useRef(null);
+    const appState = useRef(AppState.currentState);
+    const failureCount = useRef(0);
+
+    // AppState Listener
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            appState.current = nextAppState;
+            // Auto-retry on return to active if we were in error state
+            if (nextAppState === 'active' && viewState === 'connection_error') {
+                setViewState('radar'); // Try again
+                failureCount.current = 0;
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [viewState]);
 
     const fetchMatchData = useCallback(async (squad) => {
         setMySquad(squad);
@@ -298,24 +316,44 @@ const MatchCenterScreen = () => {
         if ((viewState === 'radar' || viewState === 'locker_room') && mySquad) {
             // A. Status Check Logic (Backend)
             interval = setInterval(async () => {
-                const statusData = await MatchmakingService.getActiveRequest(mySquad.documentId);
-                
-                // Case 1: Match Found
-                if (statusData && statusData.state === 'matched') {
-                    setMatchRequest(statusData.request);
-                    setCurrentMatch(statusData.match);
-                    setOpponentDetails(statusData.opponentDetails);
-                    setViewState('match_found');
-                    clearInterval(interval);
-                    Alert.alert("🔔 Match Trouvé !", "Un adversaire a été trouvé.");
+                // Skip if backgrounded
+                if (appState.current.match(/inactive|background/)) {
+                    console.log("[POLLING] Paused (Background)");
+                    return;
                 }
-                
-                // Case 2: Auto-Start Detection (Transition from Locker to Radar)
-                else if (viewState === 'locker_room' && statusData && statusData.state === 'searching') {
-                    console.log("Auto-Start Detected! Switching to Radar.");
-                    setMatchRequest(statusData.request);
-                    setViewState('radar');
-                    // Do not clear interval, let it continue for match detection
+
+                try {
+                    const statusData = await MatchmakingService.getActiveRequest(mySquad.documentId);
+                    
+                    // Success - Reset failure count
+                    failureCount.current = 0;
+
+                    // Case 1: Match Found
+                    if (statusData && statusData.state === 'matched') {
+                        setMatchRequest(statusData.request);
+                        setCurrentMatch(statusData.match);
+                        setOpponentDetails(statusData.opponentDetails);
+                        setViewState('match_found');
+                        clearInterval(interval);
+                        Alert.alert("🔔 Match Trouvé !", "Un adversaire a été trouvé.");
+                    }
+                    
+                    // Case 2: Auto-Start Detection (Transition from Locker to Radar)
+                    else if (viewState === 'locker_room' && statusData && statusData.state === 'searching') {
+                        console.log("Auto-Start Detected! Switching to Radar.");
+                        setMatchRequest(statusData.request);
+                        setViewState('radar');
+                        // Do not clear interval, let it continue for match detection
+                    }
+                } catch (err) {
+                    console.error("[POLLING] Error:", err);
+                    failureCount.current += 1;
+                    
+                    // If 3 consecutive failures, assume connection issue
+                    if (failureCount.current >= 3) {
+                       clearInterval(interval);
+                       setViewState('connection_error');
+                    }
                 }
             }, 5000);
 
@@ -553,6 +591,46 @@ const MatchCenterScreen = () => {
                      <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
                          Nous identifions les adversaires potentiels.
                      </Text>
+                </View>
+            );
+        }
+
+        if (viewState === 'connection_error') {
+            return (
+                <View style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
+                     <View style={{ 
+                         width: 80, height: 80, borderRadius: 40, 
+                         backgroundColor: Colors.neutral800, 
+                         justifyContent: 'center', alignItems: 'center',
+                         marginBottom: 24,
+                         borderWidth: 2, borderColor: Colors.error500 
+                     }}>
+                        <Text style={{ fontSize: 32 }}>⚠️</Text>
+                     </View>
+                     <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8, textAlign:'center' }]}>
+                         CONNEXION PERDUE
+                     </Text>
+                     <Text style={[Fonts.p1, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24 }]}>
+                         Impossible de joindre le serveur.
+                     </Text>
+                     <Button
+                        title="RÉESSAYER"
+                        variant="Primary"
+                        onPress={() => {
+                            setViewState('radar');
+                            failureCount.current = 0;
+                        }}
+                    />
+                     <Button
+                        title="ANNULER"
+                        variant="Secondary"
+                        style={{ marginTop: 12 }}
+                        onPress={() => {
+                            // Reset everything
+                            setViewState('locker_room');
+                            setMatchRequest(null);
+                        }}
+                    />
                 </View>
             );
         }

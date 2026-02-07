@@ -335,7 +335,7 @@ const TacticalSelection = () => {
   }, [selectedIds, Colors, Fonts, toggleSelection, handleEditPlayer, numberOverrides]);
 
   return (
-    <ScreenContainer bgImage="bg1" style={[{ paddingHorizontal: 0 }]}>
+    <ScreenContainer bgImage="bg2" style={[{ paddingHorizontal: 0 }]}>
       {/* Header */}
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />

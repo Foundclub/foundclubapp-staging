@@ -32,7 +32,6 @@ function MyTeamList({ route }) {
 
   return (
     <ScreenContainer
-      gradient={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         Alignments.justifySpaceBetween,

@@ -43,7 +43,7 @@ function Welcome({ navigation }) {
 
   return (
     <ScreenContainer
-      bgImage="bg3"
+      bgImage="bg2"
       contentContainerStyle={[
         Spaces.padding[24],
         Alignments.justifySpaceBetween,

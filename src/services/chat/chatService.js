@@ -109,7 +109,6 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
             populate: {
                 team_a: { populate: ['captain'] },
                 team_b: { populate: ['captain'] },
-                event: true,
                 winner: true
             }
         },
@@ -175,6 +174,13 @@ export const getChatById = async (chatId) => {
         team: {
           populate: true,
         },
+        league_match: {
+            populate: {
+                team_a: { populate: ['captain'] },
+                team_b: { populate: ['captain'] },
+                winner: true
+            }
+        },
         pinnedBy: {
             populate: ['avatar']
         },
@@ -185,12 +191,44 @@ export const getChatById = async (chatId) => {
     },
   });
 
+
+  let chatData = response.data.data;
+
+  // Fallback for league_match if relation is missing in one direction (legacy data)
+  if (chatData?.type === 'league_match' && !chatData?.league_match) {
+      try {
+          // Attempt to find the match that links to this chat
+          const matchResponse = await client.get('/league-matches', {
+              params: {
+                  filters: {
+                      chat: {
+                          documentId: chatId
+                      }
+                  },
+                  populate: {
+                      team_a: { populate: ['captain'] },
+                      team_b: { populate: ['captain'] },
+                      winner: true
+                  }
+              }
+          });
+          
+          if (matchResponse.data?.data?.length > 0) {
+              console.log('[getChatById] Recovered missing league_match relation');
+              chatData.league_match = matchResponse.data.data[0];
+          }
+      } catch (err) {
+          console.warn('[getChatById] Failed to fetch fallback league_match', err);
+      }
+  }
+
   try {
     const schema = Joi.object({
       data: chatSchema.required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    // Validate the modified data
+    const validationResult = await schema.validateAsync({ data: chatData }, {
       allowUnknown: true,
     });
     return validationResult.data;
@@ -263,9 +301,11 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
 
 /**
  * Create a new chat message
- * @param {object} params - The chat id
+ * @param {object} params
  * @param {string} params.chatId - The chat id
  * @param {string} params.message - The message text
+ * @param {object} [params.event] - The event object (optional)
+ * @param {object} [params.composition] - The composition object (optional)
  * @returns {Promise<ChatMessage>}
  */
 export const createChatMessage = async ({ chatId, message, event, composition }) => {
