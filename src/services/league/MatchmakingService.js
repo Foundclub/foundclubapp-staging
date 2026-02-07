@@ -20,20 +20,18 @@ const MatchmakingService = {
     },
 
     /**
-     * Launch a new search
+     * Launch a new search with recurring slot IDs
      * @param {string} teamId 
-     * @param {string} slotId 
-     * @param {object} params { radius, location, startTime, endTime }
+     * @param {Array} selectedSlotIds - Array of slot IDs to include in search
+     * @param {object} params { radius, location }
      */
-    triggerSearch: async (teamId, slotId, params) => {
+    triggerSearch: async (teamId, selectedSlotIds, params) => {
         try {
             const payload = {
                 teamId,
-                slotId,
+                selectedSlotIds, // Array of recurring slot IDs
                 radius: params.radius,
                 location: params.location,
-                start_time: params.startTime || new Date(), 
-                end_time: params.endTime || new Date(new Date().getTime() + 60*60*1000)
             };
             
             const response = await axiosInstance.post(`/matchmaking-request/search`, payload);
@@ -43,6 +41,7 @@ const MatchmakingService = {
             throw error;
         }
     },
+
 
     /**
      * Cancel an active request

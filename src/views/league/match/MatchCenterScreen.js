@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Alert, Modal, StyleSheet, ActivityIndicator, ImageBackground, Image, RefreshControl } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, Alert, Modal, StyleSheet, ActivityIndicator, ImageBackground, Image, RefreshControl, FlatList, Dimensions } from 'react-native';
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
@@ -38,9 +38,11 @@ const MatchCenterScreen = () => {
     const [allSquads, setAllSquads] = useState([]); // Store all user squads
     const [viewState, setViewState] = useState('loading'); // loading, no_squad, locker_room, lobby, radar, match_found
     const [activeSlot, setActiveSlot] = useState(null);
+    const [squadSlots, setSquadSlots] = useState([]); // Store all available slots for carousel
     const [matchRequest, setMatchRequest] = useState(null);
     const [currentMatch, setCurrentMatch] = useState(null);
     const [opponentDetails, setOpponentDetails] = useState(null);
+    const screenWidth = React.useRef(Dimensions.get('window').width).current;
     
     // UI State
     const [loading, setLoading] = useState(false);
@@ -53,6 +55,10 @@ const MatchCenterScreen = () => {
     const [tempSearchLocation, setTempSearchLocation] = useState(null);
     const [isEditingLocation, setIsEditingLocation] = useState(false);
     const [searchStatus, setSearchStatus] = useState("Initialisation..."); // Dynamic status message
+    const [selectedSlotIds, setSelectedSlotIds] = useState([]); // IDs of slots to include in search
+
+    // DAY_MAP for display
+    const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
 
     // Robust Home Base Parsing (Memoized)
     const homeBase = React.useMemo(() => {
@@ -106,14 +112,63 @@ const MatchCenterScreen = () => {
          }
     }, [homeBase]);
 
-    // 1. Load Squads & State on Focus
-    useFocusEffect(
-        useCallback(() => {
-            loadMatchCenter();
-        }, [userData])
-    );
+    const lastMatchRef = React.useRef(null);
 
-    const loadMatchCenter = async () => {
+    const fetchMatchData = useCallback(async (squad) => {
+        setMySquad(squad);
+        setLoading(true);
+        try {
+            // B. Check Active Matchmaking Request for THIS squad
+            const activeReq = await MatchmakingService.getActiveRequest(squad.documentId);
+            
+            // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
+            if (activeReq && (activeReq.state === 'searching' || activeReq.state === 'matched')) {
+                setMatchRequest(activeReq.request);
+                if (activeReq.state === 'matched') {
+                    setViewState('match_found');
+                    setCurrentMatch(activeReq.match);
+                    lastMatchRef.current = activeReq.match; // Track match
+                } else {
+                    setViewState('radar');
+                    setCurrentMatch(null);
+                    // Match disappeared or switched to searching?
+                    if (lastMatchRef.current) {
+                        if (lastMatchRef.current.status === 'provisionary' || lastMatchRef.current.status === 'scheduled') {
+                             Alert.alert("Match annulé", "Le match précédent a été annulé.");
+                        }
+                        lastMatchRef.current = null;
+                    }
+                }
+            } else {
+                // No active request/match
+                if (lastMatchRef.current) {
+                     // We had a match, now nothing. It was cancelled.
+                     Alert.alert("Match annulé", "Votre match a été annulé par l'adversaire ou le système.");
+                     lastMatchRef.current = null;
+                     setCurrentMatch(null);
+                }
+
+                // C. Check Next Available Slot
+                const slots = await getAvailableSlots(squad.documentId);
+                setSquadSlots(slots || []);
+                
+                if (slots && slots.length > 0) {
+                    setActiveSlot(slots[0]);
+                    setViewState('locker_room');
+                } else {
+                    // No slots available
+                    setViewState('locker_room'); 
+                    setActiveSlot(null);
+                }
+            }
+        } catch (error) {
+             console.error("Fetch Match Data Error:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [userData, searchRadius]);
+
+    const loadMatchCenter = useCallback(async () => {
         if (!userData) return;
         setLoading(true);
         try {
@@ -140,44 +195,14 @@ const MatchCenterScreen = () => {
             Alert.alert("Erreur", "Impossible de charger le Match Center");
             setLoading(false);
         }
-    };
+    }, [userData, mySquad, fetchMatchData]);
 
-    const fetchMatchData = async (squad) => {
-        setMySquad(squad);
-        setLoading(true);
-        try {
-            // B. Check Active Matchmaking Request for THIS squad
-            const activeReq = await MatchmakingService.getActiveRequest(squad.documentId);
-            
-            // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
-            if (activeReq && (activeReq.state === 'searching' || activeReq.state === 'matched')) {
-                setMatchRequest(activeReq.request);
-                if (activeReq.state === 'matched') {
-                    setViewState('match_found');
-                    setCurrentMatch(activeReq.match);
-                } else {
-                    setViewState('radar');
-                    setCurrentMatch(null);
-                }
-            } else {
-                // C. Check Next Available Slot
-                const slots = await getAvailableSlots(squad.documentId);
-                
-                if (slots && slots.length > 0) {
-                    setActiveSlot(slots[0]);
-                    setViewState('locker_room');
-                } else {
-                    // No slots available
-                    setViewState('locker_room'); 
-                    setActiveSlot(null);
-                }
-            }
-        } catch (error) {
-             console.error("Fetch Match Data Error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // 1. Load Squads & State on Focus
+    useFocusEffect(
+        useCallback(() => {
+            loadMatchCenter();
+        }, [loadMatchCenter])
+    );
 
     const handleSquadSwitch = async (squad) => {
         setIsSquadSelectorVisible(false);
@@ -199,16 +224,9 @@ const MatchCenterScreen = () => {
         // 2. Artificial Delay for UX (let user appreciate the transition)
         setTimeout(async () => {
             try {
-                // Fix: Use start_time from Strapi object, fallback to date if mapped, else Now
-                const slotTime = activeSlot ? (activeSlot.start_time || activeSlot.date) : null;
-                const startTime = slotTime ? slotTime : new Date().toISOString();
-                
-                const endTime = activeSlot 
-                    ? new Date(new Date(startTime).getTime() + 60*60*1000) 
-                    : new Date(new Date().getTime() + 60*60*1000);
-
                 // Determine Location
                 let searchLocation = { lat: 48.8566, lng: 2.3522 };
+
 
                 if (tempSearchLocation && tempSearchLocation.lat && tempSearchLocation.lng) {
                      searchLocation = { lat: tempSearchLocation.lat, lng: tempSearchLocation.lng };
@@ -249,16 +267,13 @@ const MatchCenterScreen = () => {
 
                 const params = {
                     teamId: mySquad.documentId,
-                    slotId: activeSlot ? activeSlot.id : null,
+                    selectedSlotIds: selectedSlotIds, // Array of selected recurring slot IDs
                     radius: searchRadius, 
                     location: searchLocation,
-                    firstName: mySquad.name,
-                    startTime: startTime,
-                    endTime: endTime,
-                    elo: mySquad.elo || 1200
                 };
 
-                const result = await MatchmakingService.triggerSearch(params.teamId, params.slotId, params);
+                const result = await MatchmakingService.triggerSearch(params.teamId, params.selectedSlotIds, params);
+
                 
                 if (result && result.status === 'matched') {
                      Alert.alert("🎯 Match Trouvé !", "Un adversaire a été trouvé instantanément !");
@@ -280,10 +295,12 @@ const MatchCenterScreen = () => {
         let interval;
         let timerInterval;
 
-        if (viewState === 'radar' && mySquad) {
+        if ((viewState === 'radar' || viewState === 'locker_room') && mySquad) {
             // A. Status Check Logic (Backend)
             interval = setInterval(async () => {
                 const statusData = await MatchmakingService.getActiveRequest(mySquad.documentId);
+                
+                // Case 1: Match Found
                 if (statusData && statusData.state === 'matched') {
                     setMatchRequest(statusData.request);
                     setCurrentMatch(statusData.match);
@@ -291,6 +308,14 @@ const MatchCenterScreen = () => {
                     setViewState('match_found');
                     clearInterval(interval);
                     Alert.alert("🔔 Match Trouvé !", "Un adversaire a été trouvé.");
+                }
+                
+                // Case 2: Auto-Start Detection (Transition from Locker to Radar)
+                else if (viewState === 'locker_room' && statusData && statusData.state === 'searching') {
+                    console.log("Auto-Start Detected! Switching to Radar.");
+                    setMatchRequest(statusData.request);
+                    setViewState('radar');
+                    // Do not clear interval, let it continue for match detection
                 }
             }, 5000);
 
@@ -331,6 +356,25 @@ const MatchCenterScreen = () => {
          }
     }, [mySquad]);
 
+    // Initialize selectedSlotIds with ALL squad slots (pre-select all)
+    // Initialize selectedSlotIds with ALL squad slots (pre-select all)
+    useEffect(() => {
+        if (squadSlots && squadSlots.length > 0) {
+            setSelectedSlotIds(squadSlots.map(s => s.id || s.documentId));
+        }
+    }, [squadSlots]);
+
+    // Toggle slot selection for matchmaking
+    const toggleSlotSelection = (slotId) => {
+        setSelectedSlotIds(prev => 
+            prev.includes(slotId) 
+                ? prev.filter(id => id !== slotId) 
+                : [...prev, slotId]
+        );
+    };
+
+
+
 
     const handleCancelSearch = async () => {
         if (!matchRequest) return;
@@ -339,6 +383,8 @@ const MatchCenterScreen = () => {
             const reqId = matchRequest.documentId || matchRequest.id;
             await MatchmakingService.cancelRequest(reqId);
             setMatchRequest(null);
+            // Refresh data to ensure consistent state
+            await loadMatchCenter();
             setViewState('locker_room');
         } catch (error) {
             console.error("Cancel Error:", error);
@@ -548,9 +594,14 @@ const MatchCenterScreen = () => {
                 );
             }
             // Helpers for display
-            const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?';
+            const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
+            const formatHour = (h) => h ? h.substring(0, 5) : '?';
             const city = opponentDetails?.home_base?.label ? opponentDetails.home_base.label.split('(')[0].trim() : (opponentDetails?.location?.city || "Zone Inconnue");
             const division = opponentDetails?.division || '?';
+            // Recurring slot display
+            const recurringDay = DAY_MAP[opponentDetails?.recurring_day] || currentMatch?.recurring_day || '?';
+            const recurringStart = formatHour(opponentDetails?.recurring_start_hour || currentMatch?.recurring_start_hour);
+            const recurringEnd = formatHour(opponentDetails?.recurring_end_hour || currentMatch?.recurring_end_hour);
             // Sport/Category handling (Relation objects or strings)
             const sportLabel = opponentDetails?.sport?.label || opponentDetails?.sport?.name || "Sport"; 
             const catLabel = opponentDetails?.category?.label || opponentDetails?.category?.name || "Senior";
@@ -603,19 +654,35 @@ const MatchCenterScreen = () => {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
                                 <View style={{ alignItems: 'center', flex: 1 }}>
                                     <Text style={{ fontSize: 20, marginBottom: 4 }}>📍</Text>
-                                    <Text style={[Fonts.p2Bold, { color: 'white' }]}>{city}</Text>
+                                    <Text style={[Fonts.p2Bold, { color: 'white' }]}>
+                                        {city || (opponentDetails?.home_base?.city) || (typeof opponentDetails?.home_base === 'string' ? opponentDetails.home_base : "Zone Inconnue")}
+                                    </Text>
                                     <Text style={[Fonts.p3, { color: '#bbb' }]}>+/- {opponentDetails?.radius || '?'} km</Text>
                                 </View>
                                 <View style={{ width: 1, height: '100%', backgroundColor: Colors.neutral700 }} />
                                 <View style={{ alignItems: 'center', flex: 1 }}>
                                     <Text style={{ fontSize: 20, marginBottom: 4 }}>🕒</Text>
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
-                                        {formatTime(opponentDetails?.start_time)}
+                                        {/* Translate Day */}
+                                        {(() => {
+                                            const dayMap = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
+                                            const rDay = recurringDay?.toLowerCase();
+                                            return dayMap[rDay] || rDay || "Date Inconnue";
+                                        })()}
                                     </Text>
-                                    <Text style={[Fonts.p3, { color: '#bbb' }]}>à {formatTime(opponentDetails?.end_time)}</Text>
+                                    <Text style={[Fonts.p3, { color: '#bbb' }]}>{recurringStart} - {recurringEnd}</Text>
                                 </View>
                             </View>
                         </View>
+
+                        {/* Common Slots Negotiation Text */}
+                         {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
+                            <View style={{ marginTop: 12, padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
+                                <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
+                                    ℹ️ {currentMatch.common_slots.length - 1} autre(s) créneau(x) commun(s) disponible(s)
+                                </Text>
+                            </View>
+                        )}
                      </View>
 
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 }]}>
@@ -646,6 +713,78 @@ const MatchCenterScreen = () => {
                         style={{ width: '100%', backgroundColor: Colors.gold500 }}
                         textStyle={{ color: Colors.neutral900, fontWeight: 'bold', fontSize: 16 }}
                     />
+
+                    {/* Cancel Button - Captain Only */}
+                    {mySquad?.captain?.documentId === userData?.documentId && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                Alert.alert(
+                                    "Annuler le match ?",
+                                    "Êtes-vous sûr de vouloir annuler ce match ? Votre équipe reviendra en mode recherche.",
+                                    [
+                                        { text: "Non", style: "cancel" },
+                                        {
+                                            text: "Annuler et Relancer",
+                                            onPress: async () => {
+                                                try {
+                                                    if (currentMatch?.documentId) {
+                                                        const { cancelMatch } = await import('../../../services/league/leagueMatchService');
+                                                        await cancelMatch(currentMatch.documentId, mySquad.documentId, 'captain_request');
+                                                        
+                                                        // Trigger new search immediately
+                                                        setViewState('searching_start');
+                                                        setTimeout(async () => {
+                                                            try {
+                                                                // Re-use current params if available or re-trigger logic
+                                                                // Ideally we call handleConfirmSearch logic but access is tricky.
+                                                                // Simpler: Trigger search with current params from squad
+                                                                const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
+                                                                await MatchmakingService.triggerSearch(
+                                                                    mySquad.documentId, 
+                                                                    [], // Slots ? Ideally reuse previously selected. But empty = any available.
+                                                                    { radius: searchRadius, location: userLoc }
+                                                                );
+                                                                loadMatchCenter(); // Refresh state to show searching
+                                                            } catch(e) {
+                                                                console.error("Restart search failed", e);
+                                                                Alert.alert("Erreur", "Match annulé mais impossible de relancer la recherche.");
+                                                                loadMatchCenter();
+                                                            }
+                                                        }, 500);
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Cancel/Restart error:", err);
+                                                    Alert.alert("Erreur", "Impossible d'annuler le match.");
+                                                }
+                                            }
+                                        },
+                                        {
+                                            text: "Annuler seulement",
+                                            style: "destructive",
+                                            onPress: async () => {
+                                                try {
+                                                    if (currentMatch?.documentId) {
+                                                        const { cancelMatch } = await import('../../../services/league/leagueMatchService');
+                                                        await cancelMatch(currentMatch.documentId, mySquad.documentId, 'captain_request');
+                                                        Alert.alert("Match annulé", "Vous pouvez relancer une recherche.");
+                                                        loadMatchCenter();
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Cancel match error:", err);
+                                                    Alert.alert("Erreur", "Impossible d'annuler le match.");
+                                                }
+                                            }
+                                        }
+                                    ]
+                                );
+                            }}
+                            style={{ marginTop: 16, paddingVertical: 12 }}
+                        >
+                            <Text style={[Fonts.p2, { color: Colors.error500, textAlign: 'center' }]}>
+                                Annuler le match
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             );
         }
@@ -669,42 +808,99 @@ const MatchCenterScreen = () => {
         // DEFAULT: Locker Room / Ticket View
         return (
             <View>
-                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <View>
-                         {/* Date & Time Display */}
-                         {activeSlot ? (
-                            <View>
-                                 <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
-                                    {formatDate(activeSlot.start_time || activeSlot.date).split(' ')[0]}
-                                 </Text>
-                                 <Text style={[Fonts.p1, { color: Colors.primary500, marginTop: 2 }]}>
-                                     {new Date(activeSlot.start_time || activeSlot.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(new Date(activeSlot.start_time || activeSlot.date).getTime() + 60*60*1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                 </Text>
-                            </View>
-                         ) : (
-                             <View>
-                                 <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                                 <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau réservé</Text>
-                             </View>
-                         )}
-                    </View>
-                    {/* Status Chip */}
-                     <View style={{ 
-                         backgroundColor: activeSlot ? 'rgba(1, 179, 244, 0.1)' : 'rgba(255, 255, 255, 0.05)', 
-                         paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 
-                    }}>
-                          <Text style={[Fonts.p3Bold, { color: activeSlot ? Colors.primary500 : Colors.neutral500 }]}>
-                              {activeSlot ? "CONFIRMÉ" : "VIDE"}
-                          </Text>
-                     </View>
-                 </View>
+                 {/* Carousel of Slots */}
+                 <View>
+                     <FlatList
+                        data={squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : [])}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        snapToInterval={screenWidth - 40 + 16} // Card width + margin
+                        decelerationRate="fast"
+                        pagingEnabled={false} // Disable standard paging to allow custom snap
+                        keyExtractor={(item) => item.id || item.documentId || Math.random().toString()}
+                        onMomentumScrollEnd={(e) => {
+                            const cardWidth = screenWidth - 40 + 16;
+                            const index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                            if (squadSlots[index]) {
+                                setActiveSlot(squadSlots[index]);
+                            }
+                        }}
+                        contentContainerStyle={!squadSlots.length && !activeSlot ? {} : { paddingHorizontal: 0 }}
+                        renderItem={({ item, index }) => {
+                            const isActive = activeSlot && (activeSlot.id === item.id || activeSlot.documentId === item.documentId);
+                            if (!item) return null;
 
-                 {/* Visual Roster */}
-                 <View style={{ marginTop: 16 }}>
-                    <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
-                        EFFECTIF {activeSlot?.rsvp_count || 0}/5
-                    </Text>
-                    <VisualRoster rsvpCount={activeSlot?.rsvp_count || 0} />
+                            return (
+                                <View style={{ width: screenWidth - 40, marginRight: 16 }}>
+                                    <View style={{ marginBottom: 8 }}>
+                                            {/* Date & Time Display */}
+                                           <View>
+                                                <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
+                                                   {item.recurrence_day ? (DAY_MAP[item.recurrence_day] || item.recurrence_day) : formatDate(item.start_time || item.date).split(' ')[0]}
+                                                </Text>
+                                                <Text style={[Fonts.p1, { color: Colors.primary500, marginTop: 2 }]}>
+                                                    {item.start_hour ? 
+                                                       `${item.start_hour.substring(0,5)} - ${item.end_hour.substring(0,5)}` 
+                                                       : 
+                                                       `${new Date(item.start_time || item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(new Date(item.start_time || item.date).getTime() + 60*60*1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                                                    }
+                                                </Text>
+                                           </View>
+                                       </View>
+                                       {/* Status Chip */}
+                                        <View style={{ 
+                                            position: 'absolute', right: 60, top: 0,
+                                            backgroundColor: 'rgba(1, 179, 244, 0.1)', 
+                                            paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 
+                                       }}>
+                                             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                                                 OUVERT
+                                             </Text>
+                                        </View>
+                    
+                                     {/* Visual Roster */}
+                                     <View style={{ marginTop: 16 }}>
+                                        <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
+                                            EFFECTIF {item.rsvp_count || 0}/5
+                                        </Text>
+                                        <VisualRoster rsvpCount={item.rsvp_count || 0} />
+                                     </View>
+
+                                     {/* Navigation Indicators (Dots) */}
+                                     {squadSlots.length > 1 && (
+                                         <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+                                             {squadSlots.map((_, i) => (
+                                                 <View 
+                                                    key={i} 
+                                                    style={{ 
+                                                        width: 6, height: 6, borderRadius: 3, 
+                                                        backgroundColor: i === index ? Colors.gold500 : Colors.neutral700,
+                                                        marginHorizontal: 4 
+                                                    }} 
+                                                 />
+                                             ))}
+                                         </View>
+                                     )}
+                                </View>
+                            );
+                        }}
+                        ListEmptyComponent={
+                            <View style={{ width: screenWidth - 40 }}>
+                                 <View>
+                                     <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
+                                     <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau réservé</Text>
+                                 </View>
+                                  <View style={{ position: 'absolute', right: 0, top: 0,
+                                     backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+                                     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 
+                                }}>
+                                      <Text style={[Fonts.p3Bold, { color: Colors.neutral500 }]}>
+                                          VIDE
+                                      </Text>
+                                 </View>
+                            </View>
+                        }
+                     />
                  </View>
 
                  <View style={{ height: 1, backgroundColor: Colors.neutral800, marginVertical: 16 }} />
@@ -712,7 +908,7 @@ const MatchCenterScreen = () => {
                  {/* Actions */}
                  {activeSlot ? (
                     <View>
-                        {activeSlot.rsvp_count >= 5 ? (
+                        {(activeSlot.rsvp_count || 0) >= 5 ? (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
                                      ✅ Équipe complète
@@ -727,14 +923,21 @@ const MatchCenterScreen = () => {
                         ) : (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
-                                     Il manque {5 - activeSlot.rsvp_count} joueurs pour lancer la recherche.
+                                     Il manque {5 - (activeSlot.rsvp_count || 0)} joueurs pour être au complet.
                                  </Text>
                                  <Button 
                                     title="INVITER DES JOUEURS" 
                                     variant="Primary"
                                     onPress={() => navigation.navigate('LeagueSquadTab')}
-                                    style={{ backgroundColor: Colors.neutral800, borderColor: Colors.primary500, borderWidth: 1 }}
+                                    style={{ backgroundColor: Colors.neutral800, borderColor: Colors.primary500, borderWidth: 1, marginBottom: 12 }}
                                     textStyle={{ color: Colors.primary500 }}
+                                />
+                                <Button 
+                                    title="LANCER LA RECHERCHE" 
+                                    variant="Primary"
+                                    onPress={handleLaunchLobby}
+                                    style={{ backgroundColor: Colors.gold500, marginTop: 8, borderColor: Colors.gold500 }}
+                                    textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
                                 />
                             </View>
                         )}
@@ -851,19 +1054,13 @@ const MatchCenterScreen = () => {
         return (
         <BottomModal 
             isVisible={viewState === 'lobby'} 
-            close={() => {
-                // Only go back to locker_room if we are effectively canceling (i.e. still in lobby or closing from lobby)
-                // If we switched to 'radar', this onDismiss event fires because visible becomes false,
-                // but we DO NOT want to override 'radar' state.
-                if (viewState === 'lobby') {
-                    setViewState('locker_room');
-                }
-            }}
-            snapPoints={['55%']} // Slightly taller for search config
+            isVisible={viewState === 'lobby'} 
+            close={() => setViewState('locker_room')}
+            snapPoints={['90%']}
             scrollable={true}
             headerComponent={
                 <View>
-                    <Text style={[Fonts.h2, { color: Colors.gold500 || '#D4AF37', textAlign: 'center' }]}>CONFIGURATION</Text>
+                    <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', letterSpacing: 1 }]}>CONFIGURATION</Text>
                      <Text style={[Fonts.p1, { color: Colors.textSecondary || '#aaa', textAlign: 'center', marginBottom: 8 }]}>
                         {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : "Recherche immédiate"}
                     </Text>
@@ -937,6 +1134,71 @@ const MatchCenterScreen = () => {
                     <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>5 km</Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>100 km</Text>
                 </View>
+            </View>
+
+            {/* SECTION: Sélection des Créneaux Récurrents */}
+            <View style={{ marginBottom: 24 }}>
+                <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>
+                    Vos disponibilités ({selectedSlotIds.length}/{squadSlots.length || 0})
+                </Text>
+
+                {/* SECTION: Autres créneaux communs (Négociation) */}
+                {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
+                    <View style={{ marginTop: 16, padding: 12, backgroundColor: Colors.neutral800, borderRadius: 8, borderWidth: 1, borderColor: Colors.neutral700 }}>
+                        <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
+                            🔄 Autres créneaux communs possibles :
+                        </Text>
+                        {currentMatch.common_slots.map((slot, index) => {
+                             // Skip the currently selected slot
+                             if (slot.day === (currentMatch.recurring_day || opponentDetails.recurring_day)) return null;
+
+                             const dayName = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' }[slot.day] || slot.day;
+                             return (
+                                <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                    <Text style={{ fontSize: 14 }}>📅</Text>
+                                    <Text style={[Fonts.p2, { color: Colors.neutral100, marginLeft: 8 }]}>
+                                        {dayName} {slot.startHour}-{slot.endHour}
+                                    </Text>
+                                </View>
+                             );
+                        })}
+                    </View>
+                )}
+
+                {(squadSlots || []).map((slot) => {
+                    const slotId = slot.id || slot.documentId;
+                    const isSelected = selectedSlotIds.includes(slotId);
+                    const formatHour = (h) => h ? h.substring(0, 5) : '?';
+                    return (
+                        <TouchableOpacity
+                            key={slotId}
+                            onPress={() => toggleSlotSelection(slotId)}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center',
+                                padding: 12, backgroundColor: Colors.neutral800,
+                                borderRadius: 8, marginBottom: 8,
+                                borderWidth: isSelected ? 1 : 0,
+                                borderColor: Colors.primary500
+                            }}
+                        >
+                            <View style={{ 
+                                width: 24, height: 24, borderRadius: 12,
+                                backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                                justifyContent: 'center', alignItems: 'center', marginRight: 12
+                            }}>
+                                {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>✓</Text>}
+                            </View>
+                            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                                {DAY_MAP[slot.recurrence_day] || slot.recurrence_day} {formatHour(slot.start_hour)} - {formatHour(slot.end_hour)}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+                {(!squadSlots || squadSlots.length === 0) && (
+                    <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center', padding: 16 }]}>
+                        Aucun créneau défini. Ajoutez-en depuis la page d'équipe.
+                    </Text>
+                )}
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.neutral800, paddingBottom: 16, marginBottom: 24  }}>

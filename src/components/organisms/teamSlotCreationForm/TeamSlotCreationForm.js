@@ -26,19 +26,38 @@ const DAYS = [
  * @param {(slot: { day: string, startTime: string, endTime: string }) => void} props.onAdd
  * @param {() => void} props.onCancel
  */
-const TeamSlotCreationForm = ({ onAdd, onCancel }) => {
+const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete }) => {
   const { Colors, Fonts } = useTheme();
   
-  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(() => {
+    if (initialValues?.day) {
+        return DAYS.find(d => d.value === initialValues.day) || null;
+    }
+    return null;
+  });
   
-  // Initialize times with Date objects (default 20:00 - 22:00)
-  const defaultStart = new Date();
-  defaultStart.setHours(20, 0, 0, 0);
-  const defaultEnd = new Date();
-  defaultEnd.setHours(22, 0, 0, 0);
+  // Initialize times with Date objects
+  const [startTimeDate, setStartTimeDate] = useState(() => {
+    const d = new Date();
+    if (initialValues?.startTime) {
+        const [h, m] = initialValues.startTime.split(':');
+        d.setHours(parseInt(h), parseInt(m), 0, 0);
+    } else {
+        d.setHours(20, 0, 0, 0);
+    }
+    return d;
+  });
 
-  const [startTimeDate, setStartTimeDate] = useState(defaultStart);
-  const [endTimeDate, setEndTimeDate] = useState(defaultEnd);
+  const [endTimeDate, setEndTimeDate] = useState(() => {
+    const d = new Date();
+    if (initialValues?.endTime) {
+        const [h, m] = initialValues.endTime.split(':');
+        d.setHours(parseInt(h), parseInt(m), 0, 0);
+    } else {
+        d.setHours(22, 0, 0, 0);
+    }
+    return d;
+  });
 
   // Time Picker Data
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
@@ -148,23 +167,36 @@ const TeamSlotCreationForm = ({ onAdd, onCancel }) => {
                         visibleItems={3}
                     />
                 </View>
+
             </View>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-             <Button
-                title="Annuler"
-                onPress={onCancel}
-                variant="Secondary"
-                style={{ flex: 1 }}
-            />
-            <Button
-                title="Ajouter"
-                onPress={handleAdd}
-                variant="Primary"
-                disabled={!isFormValid}
-                style={{ flex: 1 }}
-            />
+        <View style={{ gap: 12, marginTop: 24 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+                 <Button
+                    title="Annuler"
+                    onPress={onCancel}
+                    variant="Secondary"
+                    style={{ flex: 1 }}
+                />
+                <Button
+                    title={initialValues ? "Modifier" : "Ajouter"}
+                    onPress={handleAdd}
+                    variant="Primary"
+                    disabled={!isFormValid}
+                    style={{ flex: 1 }}
+                />
+            </View>
+
+            {initialValues && onDelete && (
+                 <Button
+                    title="Supprimer ce créneau"
+                    onPress={onDelete}
+                    variant="Secondary"
+                    style={{ borderColor: Colors.error500, borderWidth: 1 }}
+                    textStyle={{ color: Colors.error500 }}
+                />
+            )}
         </View>
     </View>
   );

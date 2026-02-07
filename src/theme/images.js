@@ -6,6 +6,8 @@ export const images = {
   bg1: require('../assets/pictures/bg-1.png'),
   bg2: require('../assets/pictures/bg-2.png'),
   bg3: require('../assets/pictures/bg-3.png'),
+  bg4: require('../assets/pictures/bg-4.png'),
+  bg5: require('../assets/pictures/bg-5.png'),
   logo: require('../assets/pictures/logo.png'),
   roundAvatar: require('../assets/pictures/avatar-round.png'),
   // icon

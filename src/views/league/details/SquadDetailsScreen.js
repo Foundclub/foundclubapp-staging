@@ -17,7 +17,8 @@ import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { RouteNames } from '@/navigation/routeNames';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
-import { createTeamSlot, updateTeamSlot } from '@/services/teamSlot/teamSlotService';
+import { createTeamSlot, updateTeamSlot, deleteTeamSlot } from '@/services/teamSlot/teamSlotService';
+import Button from '@/components/atoms/button/Button';
 
 /**
  * Squad Details Screen for FC League
@@ -34,7 +35,9 @@ const SquadDetailsScreen = ({ navigation, route }) => {
   const { data: team, isLoading, refetch } = useGetLeagueTeam(teamId);
   
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
+
   const [isUpdating, setIsUpdating] = useState(false);
+  const [editingSlot, setEditingSlot] = useState(null);
 
   const [isCoverPreviewVisible, setIsCoverPreviewVisible] = useState(false);
 
@@ -44,7 +47,8 @@ const SquadDetailsScreen = ({ navigation, route }) => {
     }, [refetch])
   );
 
-  const snapPoints = useMemo(() => ['60%'], []);
+  const snapPoints = useMemo(() => ['85%'], []);
+
 
   // Calculate isCaptain
   const isCaptain = useMemo(() => {
@@ -127,57 +131,60 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       }
   };
 
-  const handleAddSlot = async (slotData) => {
+  const handleSaveSlot = async (slotData) => {
       try {
           setIsUpdating(true);
           
-          // 1. Calculate Date Objects
           // slotData = { day: 'monday', startTime: '20:00', endTime: '22:00' }
-          const now = new Date();
-          const targetDayIndex = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(slotData.day);
-          const currentDayIndex = now.getDay();
-          
-          let dayDiff = targetDayIndex - currentDayIndex;
-          if (dayDiff <= 0) dayDiff += 7; // Next occurrence
-          
-          const nextDate = new Date(now);
-          nextDate.setDate(now.getDate() + dayDiff);
-          
-          const [startHour, startMinute] = slotData.startTime.split(':').map(Number);
-          const [endHour, endMinute] = slotData.endTime.split(':').map(Number);
-          
-          const startDate = new Date(nextDate);
-          startDate.setHours(startHour, startMinute, 0, 0);
-          
-          const endDate = new Date(nextDate);
-          endDate.setHours(endHour, endMinute, 0, 0);
-          
-          // 2. Prepare Payload
+          // New recurring format: just send hours, no date calculation
           const payload = {
-              start_time: startDate.toISOString(),
-              end_time: endDate.toISOString(),
-              is_recurring: true,
+              start_hour: slotData.startTime + ':00', // "20:00" -> "20:00:00"
+              end_hour: slotData.endTime + ':00',     // "22:00" -> "22:00:00"
               recurrence_day: slotData.day,
-              league_team: teamId, // Link to LeagueTeam
+              league_team: teamId,
               status: 'open'
           };
 
-          // 3. Call Service
-          await createTeamSlot(payload);
+          if (editingSlot) {
+              await updateTeamSlot(editingSlot.documentId, payload);
+              Alert.alert('Succès', 'Créneau modifié');
+          } else {
+              await createTeamSlot(payload);
+              Alert.alert('Succès', 'Créneau ajouté');
+          }
           
-          // 4. Refresh & Close
           await refetch();
           setIsSlotModalVisible(false);
+          setEditingSlot(null);
           setIsUpdating(false);
-          Alert.alert('Succès', 'Créneau ajouté');
 
       } catch (e) {
           console.error(e);
           setIsUpdating(false);
-          Alert.alert('Erreur', 'Impossible d\'ajouter le créneau');
+          Alert.alert('Erreur', 'Impossible de sauvegarder le créneau');
       }
   };
 
+  const handleDeleteSlot = async (slot) => {
+      try {
+          setIsUpdating(true);
+          await deleteTeamSlot(slot.documentId);
+          await refetch();
+          setIsSlotModalVisible(false);
+          setEditingSlot(null);
+          setIsUpdating(false);
+          Alert.alert('Succès', 'Créneau supprimé');
+      } catch (e) {
+          console.error(e);
+          setIsUpdating(false);
+          Alert.alert('Erreur', 'Impossible de supprimer le créneau');
+      }
+  };
+
+  const handleSlotPress = (slot) => {
+      setEditingSlot(slot);
+      setIsSlotModalVisible(true);
+  };
 
   const handleCheckIn = async (slot) => {
       try {
@@ -333,6 +340,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 onAddSlot={() => setIsSlotModalVisible(true)}
                 onCheckIn={handleCheckIn}
                 currentUserId={currentUser?.documentId}
+                onSlotPress={handleSlotPress}
             />
         </View>
 
@@ -374,21 +382,41 @@ const SquadDetailsScreen = ({ navigation, route }) => {
 
       </ScrollView>
 
-      <BottomModal
+  <BottomModal
          isVisible={isSlotModalVisible}
          close={() => setIsSlotModalVisible(false)}
          headerComponent={
              <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-                 Ajouter un créneau
+                 {editingSlot ? 'Modifier le créneau' : 'Ajouter un créneau'}
              </Text>
          }
          snapPoints={snapPoints}
       >
            <TeamSlotCreationForm 
-              onAdd={handleAddSlot}
+              onAdd={handleSaveSlot}
               onCancel={() => setIsSlotModalVisible(false)}
-           />
+               initialValues={editingSlot ? {
+                   day: editingSlot.recurrence_day,
+                   startTime: editingSlot.start_hour?.substring(0, 5),
+                   endTime: editingSlot.end_hour?.substring(0, 5)
+               } : null}
+                onDelete={() => {
+                   // Fix for "Alert not attached to Activity" on Android
+                   setTimeout(() => {
+                       Alert.alert(
+                           'Confirmation',
+                           'Voulez-vous vraiment supprimer ce créneau ?',
+                           [
+                               { text: 'Annuler', style: 'cancel' },
+                               { text: 'Supprimer', style: 'destructive', onPress: () => handleDeleteSlot(editingSlot) }
+                           ]
+                       );
+                   }, 500);
+                }}
+            />
       </BottomModal>
+
+
       
       <ProfilePicturePreviewOverlay
             isVisible={isCoverPreviewVisible}

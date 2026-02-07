@@ -37,6 +37,7 @@ function ScreenContainer({
     var LinearGradient = require('react-native-linear-gradient').default;
     return (
       <View style={[Alignments.fill, ...style]}>
+
         <LinearGradient
             colors={gradient}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}

@@ -10,7 +10,8 @@ import useTheme from '@/theme/themeContext';
  * @param {Function} props.onAddSlot - Handler to add a new slot
  * @param {Function} props.onCheckIn - Handler to toggle check-in status
  */
-export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheckIn, currentUserId }) {
+export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheckIn, currentUserId, onSlotPress }) {
+  console.log('TeamSlotList render:', { isCaptain, slotsCount: slots.length, hasOnSlotPress: !!onSlotPress });
   const { Colors, Fonts, Spaces } = useTheme();
 
   const dayMap = {
@@ -61,11 +62,14 @@ export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheck
                      // IMPORTANT: I will ask the user's ID to be passed to this component in the next tool call or assume it's passed.
                      // Actually, I can construct the render function to expect `currentUserId`.
                      
-                     // Time Formatting
-                     const startDate = new Date(slot.start_time);
-                     const endDate = new Date(slot.end_time);
-                     const startTimeStr = `${startDate.getHours()}h${startDate.getMinutes().toString().padStart(2, '0')}`;
-                     const endTimeStr = `${endDate.getHours()}h${endDate.getMinutes().toString().padStart(2, '0')}`;
+                     // Time Formatting (new recurring format: start_hour/end_hour are strings like "20:00:00")
+                     const formatHour = (timeStr) => {
+                         if (!timeStr) return "?";
+                         const parts = timeStr.split(':');
+                         return `${parseInt(parts[0])}h${parts[1]}`;
+                     };
+                     const startTimeStr = formatHour(slot.start_hour);
+                     const endTimeStr = formatHour(slot.end_hour);
 
                      // Status Text Logic
                      let statusText = `${participantsCount}/5 Prêts`;
@@ -119,16 +123,25 @@ export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheck
                      const isCheckedIn = slot.participants?.some(p => p.documentId === currentUserId);
 
                      return (
-                        <View key={index} style={{ 
-                            padding: 12, 
-                            backgroundColor: Colors.neutral800, 
-                            borderRadius: 12, 
-                            borderWidth: 1, 
-                            borderColor: isReady ? Colors.primary500 : Colors.neutral700,
-                            width: 170
-                        }}>
+                        <TouchableOpacity 
+                            key={index} 
+                            onPress={() => {
+                                if (isCaptain && onSlotPress) {
+                                    onSlotPress(slot);
+                                }
+                            }}
+                            activeOpacity={isCaptain ? 0.7 : 1}
+                            style={{ 
+                                padding: 12, 
+                                backgroundColor: Colors.neutral800, 
+                                borderRadius: 12, 
+                                borderWidth: 1, 
+                                borderColor: isReady ? Colors.primary500 : Colors.neutral700,
+                                width: 170
+                            }}
+                        >
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                                {slot.is_recurring ? `Tous les ${dayMap[slot.recurrence_day] || slot.recurrence_day}s` : new Date(slot.start_time).toLocaleDateString()}
+                                {dayMap[slot.recurrence_day] || slot.recurrence_day || 'Jour ?'}
                             </Text>
                             
                             {/* Time Display with End Time */}
@@ -162,7 +175,7 @@ export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheck
                                     )}
                                 </TouchableOpacity>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     );
                 })
             )}

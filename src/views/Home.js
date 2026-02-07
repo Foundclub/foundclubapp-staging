@@ -68,6 +68,7 @@ function HomeContent({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
+    Colors,
     Fonts,
     Images,
     Spaces,
@@ -152,6 +153,7 @@ function HomeContent({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      style={[{ backgroundColor: Colors.primary900 }]} // Fix: Force dark background for iOS consistency
       contentContainerStyle={[
         Alignments.column,
         Alignments.fill,

@@ -25,20 +25,41 @@ export const updateTeamSlot = async (documentId, slotData) => {
 };
 
 /**
- * Get available slots for a team
+ * Delete a team slot
+ * @param {string} documentId - The slot documentId
+ * @returns {Promise<void>}
+ */
+export const deleteTeamSlot = async (documentId) => {
+  await client.delete(`/team-slots/${documentId}`);
+};
+
+/**
+ * Get available slots for a team (recurring format)
  * @param {string} teamId - The team documentId
- * @returns {Promise<Array>} - List of slots
+ * @returns {Promise<Array>} - List of slots sorted by day of week
  */
 export const getAvailableSlots = async (teamId) => {
-    // Fetch slots for the team that are in the future
-    const now = new Date();
+    // Fetch all open/matchmaking slots for the team (recurring format)
     const { data } = await client.get('/team-slots', {
         params: {
-            'filters[team][documentId]': teamId,
-            'filters[start_time][$gt]': now.toISOString(),
-            'sort': 'start_time:asc',
-            'pagination[limit]': 1
+            'filters[league_team][documentId]': teamId,
+            'filters[status][$in][0]': 'open',
+            'filters[status][$in][1]': 'matchmaking',
+            'pagination[limit]': 20
         }
     });
-    return data.data;
+    
+    // Sort by day of week (Monday first)
+    const DAY_ORDER = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
+    const slots = data.data || [];
+    slots.sort((a, b) => {
+        const dayA = DAY_ORDER[a.recurrence_day?.toLowerCase()] || 8;
+        const dayB = DAY_ORDER[b.recurrence_day?.toLowerCase()] || 8;
+        if (dayA !== dayB) return dayA - dayB;
+        // Same day, sort by start_hour
+        return (a.start_hour || '').localeCompare(b.start_hour || '');
+    });
+    
+    return slots;
 };
+
