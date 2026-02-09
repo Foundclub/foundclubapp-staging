@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, ScrollView, RefreshControl, Alert, TouchableOpacity, ImageBackground, Image } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Alert, TouchableOpacity, ImageBackground, Image, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -55,21 +55,101 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       return team?.captain?.documentId === currentUser?.documentId;
   }, [team, currentUser]);
 
+  const isMember = useMemo(() => {
+    return team?.roster?.some(p => p.documentId === currentUser?.documentId) || isCaptain;
+  }, [team, currentUser, isCaptain]);
+
+  const hasPendingRequest = useMemo(() => {
+    return team?.join_requests?.some(u => u.documentId === currentUser?.documentId);
+  }, [team, currentUser]);
+
   useEffect(() => { 
-      // TEMPORARY DEBUG: Show button for everyone
+      // Header Options
+      const headerRight = [];
+
+      // Share Button (For everyone)
+      headerRight.push(
+          <TouchableOpacity 
+              key="share"
+              onPress={() => {
+                  Share.share({
+                      message: `Rejoins mon équipe ${team?.name} sur FC League !`,
+                      title: `Rejoins ${team?.name} !`
+                  });
+              }}
+              style={{ marginRight: 16 }}
+          >
+              <Image 
+                  source={Images.share} 
+                  style={[ApplicationStyle.icon24, { tintColor: Colors.primary500 }]} 
+              />
+          </TouchableOpacity>
+      );
+
       if (isCaptain) {
-        navigation.setOptions({
-            headerRight: () => (
-                <TouchableOpacity 
-                    onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
-                    style={{ marginRight: 16 }}
-                >
-                    <Text style={{ color: Colors.primary500, fontWeight: 'bold' }}>Modifier</Text>
-                </TouchableOpacity>
-            )
-        });
+          headerRight.push(
+            <TouchableOpacity 
+                key="requests"
+                onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId })}
+                style={{ marginRight: 16 }}
+            >
+                <View>
+                     <Text style={{ color: Colors.gold500, fontWeight: 'bold' }}>Demandes</Text>
+                     {/* Badge if requests exist */}
+                     {team?.join_requests?.length > 0 && (
+                         <View style={{ 
+                             position: 'absolute', 
+                             top: -5, 
+                             right: -10, 
+                             backgroundColor: Colors.error500, 
+                             width: 8, 
+                             height: 8, 
+                             borderRadius: 4 
+                         }} />
+                     )}
+                </View>
+            </TouchableOpacity>
+          );
+
+          headerRight.push(
+            <TouchableOpacity 
+                key="edit"
+                onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
+                style={{ marginRight: 16 }}
+            >
+                <Text style={{ color: Colors.primary500, fontWeight: 'bold' }}>Modifier</Text>
+            </TouchableOpacity>
+          );
       }
+
+      navigation.setOptions({
+          headerRight: () => <View style={{ flexDirection: 'row' }}>{headerRight}</View>
+      });
   }, [navigation, isCaptain, teamId, Colors]);
+
+
+
+
+
+
+
+
+
+
+  const handleRequestJoin = async () => {
+    try {
+        setIsUpdating(true);
+        const { requestToJoinSquad } = require('@/services/leagueTeam/leagueTeamService');
+        await requestToJoinSquad(teamId, currentUser?.documentId);
+        await refetch();
+        Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a reçu votre demande.'));
+    } catch (error) {
+        console.error(error);
+        Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
+    } finally {
+        setIsUpdating(false);
+    }
+  };
 
   const handleImageUpload = (type) => { // type: 'logo' (mapped to crest) | 'cover'
       Alert.alert(
@@ -210,7 +290,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingBottom[40], Spaces.paddingVertical[16], Spaces.paddingHorizontal[4]]}
+        contentContainerStyle={[Spaces.paddingBottom[100], Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 120 }]}
         refreshControl={<RefreshControl refreshing={isLoading || isUpdating} onRefresh={refetch} />}
         showsVerticalScrollIndicator={false}
       >
@@ -222,6 +302,25 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>{team.activities[0].name.toUpperCase()}</Text>
            )}
         </View>
+
+        {/* Join Action for Non-Members */}
+        {!isMember && !isCaptain && (
+            <View style={[Spaces.marginBottom[16], Alignments.alignCenter]}>
+                {hasPendingRequest ? (
+                    <View style={{ backgroundColor: Colors.neutral800, padding: 12, borderRadius: 8 }}>
+                        <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>Demande en attente...</Text>
+                    </View>
+                ) : (
+                    <Button 
+                        title="Demander à rejoindre" 
+                        onPress={handleRequestJoin} 
+                        isLoading={isUpdating}
+                        style={{ width: '60%' }}
+                        variant="Primary"
+                    />
+                )}
+            </View>
+        )}
 
 
         {/* Info Card */}
@@ -381,6 +480,60 @@ const SquadDetailsScreen = ({ navigation, route }) => {
         </View>
 
       </ScrollView>
+
+      {/* Delete Team Button (Captain Only) - Fixed at bottom */}
+      {isCaptain && (
+          <View style={[
+              Spaces.padding[16],
+              {
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'rgba(239, 68, 68, 0.0)', // Transparent, or semi-transparent if needed
+                  paddingBottom: 40 // Safe area
+              }
+          ]}>
+              <TouchableOpacity
+                  onPress={() => {
+                      Alert.alert(
+                          t('squad.delete.title', 'Supprimer l\'équipe'),
+                          t('squad.delete.confirmation', 'Êtes-vous sûr de vouloir supprimer votre équipe ? Cette action est irréversible.'),
+                          [
+                              { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+                              { 
+                                  text: t('common.delete', 'Supprimer'), 
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                      try {
+                                          setIsUpdating(true);
+                                          const { deleteLeagueTeam } = require('@/services/leagueTeam/leagueTeamService');
+                                          await deleteLeagueTeam(teamId);
+                                          navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
+                                      } catch (error) {
+                                          console.error(error);
+                                          Alert.alert('Erreur', 'Impossible de supprimer l\'équipe.');
+                                      } finally {
+                                          setIsUpdating(false);
+                                      }
+                                  }
+                              }
+                          ]
+                      );
+                  }}
+                  style={[
+                      Alignments.alignCenter,
+                      Spaces.padding[16],
+                      ApplicationStyle.borderRadius16,
+                      { borderWidth: 1, borderColor: Colors.error500, backgroundColor: 'rgba(239, 68, 68, 0.1)' }
+                  ]}
+              >
+                  <Text style={[Fonts.p1Bold, { color: Colors.error500 }]}>
+                      {t('squad.delete.button', 'Supprimer l\'équipe')}
+                  </Text>
+              </TouchableOpacity>
+          </View>
+      )}
 
   <BottomModal
          isVisible={isSlotModalVisible}

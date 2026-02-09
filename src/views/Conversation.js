@@ -48,6 +48,9 @@ function Conversation({ navigation, route }) {
   const { chatId } = route.params ?? {};
   const { t } = useTranslation();
   const { userData } = useAuth();
+  
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+
   /* import deleteMessage from useMessaging hook */
   const { 
      getConversationName, 
@@ -353,7 +356,7 @@ function Conversation({ navigation, route }) {
     />
   ), [navigation]);
 
-  const { confirmMatch, cancelMatch } = require('@/services/league/MatchService'); // Importing inline to be safe or add to top
+  // Removed inline require
 
 // ... inside component ...
 
@@ -977,27 +980,23 @@ function Conversation({ navigation, route }) {
           <HeaderBackButton onPress={() => navigation.goBack()} />
           
           <View style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>{title}</Text>
+            <Text style={[Fonts.h3, { color: Colors.neutral00 }]} numberOfLines={1}>{title}</Text>
             {!!subtitle && (
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
             )}
           </View>
 
-          {showCancelButton ? (
-             <TouchableOpacity 
-                onPress={handleCancelMatch}
-                style={{ 
-                    backgroundColor: 'rgba(255, 59, 48, 0.2)',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 8
-                }}
-             >
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Annuler</Text>
-             </TouchableOpacity>
-          ) : (
-             <View style={{ width: 40 }} /> // Spacer to balance BackButton
-          )}
+          <TouchableOpacity 
+              onPress={() => setIsMenuVisible(true)}
+              style={{ 
+                  width: 40, height: 40,
+                  justifyContent: 'center', alignItems: 'center',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: 20
+              }}
+          >
+             <Text style={{ fontSize: 20, color: Colors.neutral00, fontWeight: 'bold' }}>⋮</Text>
+          </TouchableOpacity>
       </View>
 
       <View style={[Alignments.fill]}>
@@ -1032,6 +1031,46 @@ function Conversation({ navigation, route }) {
         renderInputToolbar={renderInputToolbar}
         renderSend={renderSend}
       />
+      
+      {/* Menu Modal */}
+      <BottomModal
+        close={() => setIsMenuVisible(false)}
+        isVisible={isMenuVisible}
+      >
+         <View style={[Spaces.gap[16], Spaces.marginTop[32]]}>
+             {showCancelButton && (
+                 <Button
+                    onPress={() => {
+                        setIsMenuVisible(false);
+                        setTimeout(() => {
+                           handleCancelMatch();
+                        }, 300);
+                    }}
+                    title={t('common.cancelMatch', 'Annuler le match')}
+                    variant="Secondary"
+                    textColor={Colors.error500}
+                 />
+             )}
+             
+             <Button
+                onPress={() => {
+                    setIsMenuVisible(false);
+                    setTimeout(() => {
+                        Alert.alert("Signaler", "Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.");
+                    }, 300);
+                }}
+                title={t('conversation.actions.report', 'Signaler')}
+                variant="SecondaryLight"
+             />
+
+             <Button
+                onPress={() => setIsMenuVisible(false)}
+                title={t('common.cancel', 'Fermer')}
+                variant="PrimaryLight" // Or Ghost/Simple
+             />
+         </View>
+      </BottomModal>
+
       <BottomModal
         close={() => {
           setIsReportModalVisible(false);

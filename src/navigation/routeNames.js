@@ -132,4 +132,6 @@ export const RouteNames = /** @type {const} */ ({
   LeagueMatchDetails: 'LeagueMatchDetails', // Standalone match details
   MatchDetails: 'MatchDetails',
   PastMatchDetails: 'PastMatchDetails', // Completed match details with ELO delta
+  SquadSearch: 'SquadSearch',
+  SquadRequests: 'SquadRequests',
 });

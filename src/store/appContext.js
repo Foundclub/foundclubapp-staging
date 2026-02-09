@@ -58,6 +58,7 @@ const initStore = {
   eventFilters: undefined,
   mercatoFilters: undefined,
   reservationFilters: undefined,
+  squadFilters: undefined,
   fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
   onboardingViews: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,

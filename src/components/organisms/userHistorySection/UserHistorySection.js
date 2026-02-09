@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { getImageUrl } from '@/utils/imageUrl';
 import useTheme from '@/theme/themeContext';
@@ -17,7 +17,7 @@ import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/serv
  * @param {Function} props.onEditPress - Callback when edit button is pressed
  */
 function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress, bestLevel, preferredSport }) {
-  const { Alignments, ApplicationStyle, Colors, Fonts, Spaces } = useTheme();
+  const { Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   
@@ -28,7 +28,21 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
   const deleteHistoryMutation = useDeleteHistory();
 
   const handleDelete = (historyId) => {
-    deleteHistoryMutation.mutate(historyId);
+    Alert.alert(
+      t('common.actions.delete', 'Supprimer'),
+      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
+      [
+        {
+          text: t('common.actions.cancel', 'Annuler'),
+          style: 'cancel',
+        },
+        {
+          text: t('common.actions.delete', 'Supprimer'),
+          onPress: () => deleteHistoryMutation.mutate(historyId),
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   // Format year range display
@@ -241,6 +255,27 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
                 }}>
                   <Text style={[Fonts.p3, { color: Colors.primary500 }]}>Actif</Text>
                 </View>
+              )}
+
+              {/* Delete Button */}
+              {isOwnProfile && (
+                <TouchableOpacity
+                  onPress={() => handleDelete(item.documentId || item.id)}
+                  style={[
+                    Spaces.padding[8],
+                    { marginRight: -8 }
+                  ]}
+                >
+                  <Image
+                    source={Images.trash}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      tintColor: '#FF4D4D',
+                    }}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
               )}
             </TouchableOpacity>
           ))}

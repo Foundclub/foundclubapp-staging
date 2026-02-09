@@ -44,9 +44,23 @@ export default function LeagueNavigator() {
         name="MatchHistoryScreen"
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        component={LeagueMatchDetails}
-        name={RouteNames.LeagueMatchDetails}
+      <Stack.Screen 
+        component={require('@/views/league/details/SquadDetailsScreen').default} 
+        name={RouteNames.SquadDetails} 
+      />
+      <Stack.Screen 
+        component={require('@/views/league/search/SquadSearchScreen').default} 
+        name={RouteNames.SquadSearch} 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        component={require('@/views/league/search/SquadFiltersScreen').default} 
+        name="SquadFilters" 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        component={require('@/views/league/details/SquadRequestsScreen').default} 
+        name={RouteNames.SquadRequests} 
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

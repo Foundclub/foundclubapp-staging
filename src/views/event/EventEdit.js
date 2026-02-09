@@ -559,6 +559,7 @@ function EventEdit({ navigation, route }) {
             Spaces.gap[24],
             Spaces.paddingBottom[40],
           ]}
+          keyboardShouldPersistTaps="handled"
           style={[Alignments.fill]}
         >
           <View style={[Alignments.fill, Spaces.gap[24]]}>

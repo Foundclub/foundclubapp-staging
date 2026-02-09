@@ -199,7 +199,8 @@ export const getLeagueTeamById = async (id) => {
                     roster: { populate: ['avatar'] },
                     slots: { populate: ['participants'] },
                     crest: true,
-                    cover: true
+                    cover: true,
+                    join_requests: true
                 }
             }
         });
@@ -228,6 +229,117 @@ export const getRanking = async (division = 10) => {
         return response.data?.data || [];
     } catch (error) {
         console.error('Error fetching ranking:', error);
+        throw error;
+    }
+};
+/**
+ * Delete a league team
+ * @param {string} documentId
+ * @returns {Promise<void>}
+ */
+// ... existing exports ...
+
+export const deleteLeagueTeam = async (documentId) => {
+    try {
+        await client.delete(`/league-teams/${documentId}`);
+    } catch (error) {
+        console.error('Error deleting league team:', error);
+        throw error;
+    }
+};
+
+/**
+ * Search squads with filters
+ * @param {object} filters
+ * @param {string} [filters.city]
+ * @param {number} [filters.radius]
+ * @param {string} [filters.category]
+ * @param {number} [filters.division]
+ * @returns {Promise<any[]>}
+ */
+export const searchSquads = async (filters) => {
+    try {
+        const query = {
+            populate: ['logo', 'home_base'],
+            filters: {},
+        };
+
+        if (filters.city) {
+            query.filters.home_base = {
+                city: { $containsi: filters.city }
+            };
+        }
+
+        if (filters.category) {
+            query.filters.category = { $eq: filters.category };
+        }
+
+        if (filters.division) {
+            query.filters.division = { $eq: filters.division };
+        }
+
+        // Note: Radius filtering would typically require a geospatial query or post-filtering.
+        // For now, we'll rely on city matching. Use a specialized endpoint for radius if needed.
+
+        const response = await client.get('/league-teams', { params: query });
+        return response.data.data;
+    } catch (error) {
+        console.error('Error searching squads:', error);
+        throw error;
+    }
+};
+
+/**
+ * Request to join a squad
+ * @param {string} teamId
+ * @param {string} userId
+ */
+export const requestToJoinSquad = async (teamId, userId) => {
+    try {
+       // We need to fetch the current requests first to append the new one, 
+       // OR use a custom endpoint if Strapi's default update replaces the relation.
+       // Here we assume we can just 'connect' via update/PUT if using Document Service API under the hood,
+       // but with standard REST populate, we often need to be careful. 
+       // However, Strapi v4/v5 'connect' syntax in update usually works.
+       
+       await client.put(`/league-teams/${teamId}`, {
+           data: {
+               join_requests: {
+                   connect: [userId]
+               }
+           }
+       });
+    } catch (error) {
+        console.error('Error requesting to join squad:', error);
+        throw error;
+    }
+};
+
+/**
+ * Respond to a join request
+ * @param {string} teamId
+ * @param {string} userId
+ * @param {boolean} accept
+ */
+export const respondToJoinRequest = async (teamId, userId, accept) => {
+    try {
+        const updateData = {
+            join_requests: {
+                disconnect: [userId]
+            }
+        };
+
+        if (accept) {
+            updateData.roster = {
+                connect: [userId]
+            };
+        }
+
+        await client.put(`/league-teams/${teamId}`, {
+            data: updateData
+        });
+    } catch (error) {
+        console.error('Error responding to join request:', error);
         throw error;
     }
 };

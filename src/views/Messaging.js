@@ -213,6 +213,7 @@ function Messaging({ navigation }) {
           chatParticipants: chat.participants,
           chatTeam: chat.team,
           chatType: chat.type,
+          chatLeagueMatch: chat.league_match,
           meId: userData?.documentId,
        });
        return name?.toLowerCase()?.includes(lowerQuery);
@@ -349,6 +350,7 @@ function Messaging({ navigation }) {
                         chatParticipants: chat.participants,
                         chatTeam: chat.team,
                         chatType: chat.type,
+                        chatLeagueMatch: chat.league_match,
                         meId: userData?.documentId,
                     })}
                     </Text>

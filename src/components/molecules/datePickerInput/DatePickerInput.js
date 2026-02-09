@@ -75,7 +75,7 @@ const DatePickerInput = ({
   };
 
   return (
-    <View style={[Spaces.gap[4]]}>
+    <View style={[Spaces.gap[4], { zIndex: 1 }]}>
       {label && (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {label}

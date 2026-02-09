@@ -168,25 +168,28 @@ const CreateSquadWizard = ({ navigation }) => {
                  * @param {Date|string} time
                  * @returns {string}
                  */
-                const formatTime = (time) => {
+                const formatForStrapiTime = (time) => {
                     if (time instanceof Date) {
-                        return time.toISOString();
+                        const hours = time.getHours().toString().padStart(2, '0');
+                        const minutes = time.getMinutes().toString().padStart(2, '0');
+                        return `${hours}:${minutes}:00`;
                     }
                     if (typeof time === 'string') {
-                        const today = new Date();
-                        const [hours, minutes] = time.split(':');
-                        today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                        return today.toISOString();
+                         // Check if already HH:mm or HH:mm:ss
+                        if (time.includes(':')) {
+                            const parts = time.split(':');
+                            if (parts.length === 2) return `${time}:00`;
+                            return time;
+                        }
                     }
-                    return new Date().toISOString();
+                    return '00:00:00';
                 };
 
                 return createTeamSlot({
                     league_team: { connect: [{ documentId: teamId }] }, // Link to LeagueTeam
                     recurrence_day: slot.day,
-                    start_time: formatTime(slot.startTime),
-                    end_time: formatTime(slot.endTime),
-                    is_recurring: true,
+                    start_hour: formatForStrapiTime(slot.startTime),
+                    end_hour: formatForStrapiTime(slot.endTime),
                     status: 'open'
                 });
             });

@@ -1,14 +1,20 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import useAuth from '@/domains/auth/useAuth';
-import { missingEvent, markVenueBooked } from '@/services/event/eventService';
+import { missingEvent, markVenueBooked as markEventVenueBooked } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-import { cancelMatch, getCancellationPenalty } from '@/services/league/leagueMatchService';
+import { 
+    cancelMatch, 
+    getCancellationPenalty, 
+    markVenueBooked as markLeagueMatchVenueBooked,
+    confirmParticipation,
+    declineParticipation
+} from '@/services/league/leagueMatchService';
 import Button from '@/components/atoms/button/Button';
 
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
@@ -18,23 +24,33 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const { userData } = useAuth();
 
     // Identify Teams
-    const isTeamA = match.team_a.documentId === myTeamId;
+    // Safe chaining for team_a/team_b in case they are just IDs or partial objects
+    const teamAId = match.team_a?.documentId || match.team_a?.id;
+    const isTeamA = teamAId === myTeamId;
     const myTeam = isTeamA ? match.team_a : match.team_b;
     const opponent = isTeamA ? match.team_b : match.team_a;
 
     // Check if current user is captain
-    const isCaptain = myTeam.captain?.documentId === userData?.documentId;
+    const isCaptain = myTeam?.captain?.documentId === userData?.documentId || myTeam?.captain?.id === userData?.id;
 
     // Venue booking status
-    const isVenueBooked = event?.venueBooked === true;
+    // Use match.venue_booked (if exists in future schema) or event.venueBooked
+    const isVenueBooked = event?.venueBooked === true || match.venue_booked === true;
 
     // Match cancellation status
     const isCancelledOrForfeit = match.status === 'cancelled' || match.status === 'forfeit' || match.status === 'no_show';
 
     // Participations
-    // event.participations contains user details.
-    // We check if current user is in there.
-    const participations = event?.participations || [];
+    // SOT: use event.participations if available (Event Mode)
+    // OR match.participations_a / match.participations_b (League Mode)
+    let participations = [];
+    if (event && event.participations) {
+        participations = event.participations;
+    } else {
+        // League Match Mode
+        participations = isTeamA ? (match.participations_a || []) : (match.participations_b || []);
+    }
+
     const myParticipation = participations.find(p => p.documentId === userData?.documentId || p.id === userData?.id);
     
     // Count confirmed
@@ -47,8 +63,8 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
 
     // ELO Prediction: Calculate expected win/loss points
     const eloPrediction = useMemo(() => {
-        const myElo = myTeam.elo || 1200;
-        const oppElo = opponent.elo || 1200;
+        const myElo = myTeam?.elo || 1200;
+        const oppElo = opponent?.elo || 1200;
         const K = 32;
         
         // Expected score using Elo formula
@@ -64,42 +80,56 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             myElo,
             oppElo
         };
-    }, [myTeam.elo, opponent.elo]);
+    }, [myTeam?.elo, opponent?.elo]);
 
     // Handlers
     const handleConfirm = async () => {
         try {
-            await createEventParticipation({
-                event: event.documentId,
-                user: userData.documentId,
-                participationStatus: 'accepted' // Optional depending on schema, but good to be explicit
-            });
+            if (event) {
+                // Event Mode
+                await createEventParticipation({
+                    event: event.documentId,
+                    user: userData.documentId,
+                    participationStatus: 'accepted' 
+                });
+            } else {
+                // League Match Mode
+                await confirmParticipation(match.documentId || match.id, isTeamA ? 'a' : 'b');
+            }
             Alert.alert("Succès", "Présence confirmée !");
             onRefresh && onRefresh();
         } catch (error) {
-            console.error(error);
-            Alert.alert("Erreur", "Impossible de confirmer");
+            console.error("Confirm participation error:", error);
+            Alert.alert("Erreur", error.response?.data?.error?.message || "Impossible de confirmer");
         }
     };
 
     const handleDecline = async () => {
         try {
-            await missingEvent(event.documentId);
+            if (event) {
+                 await missingEvent(event.documentId);
+            } else {
+                 await declineParticipation(match.documentId || match.id, isTeamA ? 'a' : 'b');
+            }
             Alert.alert("Noté", "Absence notée.");
             onRefresh && onRefresh();
         } catch (error) {
-            console.error(error);
-            Alert.alert("Erreur", "Impossible de décliner");
+            console.error("Decline participation error:", error);
+            Alert.alert("Erreur", error.response?.data?.error?.message || "Impossible de décliner");
         }
     };
 
     const handleMarkVenueBooked = async () => {
         try {
-            await markVenueBooked(event.documentId);
+            if (event) {
+                await markEventVenueBooked(event.documentId);
+            } else {
+                await markLeagueMatchVenueBooked(match.documentId || match.id);
+            }
             Alert.alert("Terrain Réservé ✅", "Le terrain est confirmé !");
             onRefresh && onRefresh();
         } catch (error) {
-            console.error(error);
+            console.error("Mark venue booked error:", error);
             Alert.alert("Erreur", "Impossible de confirmer la réservation");
         }
     };
@@ -117,14 +147,18 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const result = await cancelMatch(match.documentId, myTeam.documentId, 'captain_request');
+                            // Ensure we use the correct team ID (myTeam.documentId)
+                            const teamIdToUse = myTeam.documentId || myTeam.id;
+                            const matchIdToUse = match.documentId || match.id;
+                            
+                            const result = await cancelMatch(matchIdToUse, teamIdToUse, 'captain_request');
                             Alert.alert(
                                 result.penalty > 0 ? "Match Annulé ⚠️" : "Match Annulé",
-                                result.message
+                                result.message || "Le match a été annulé."
                             );
                             onRefresh && onRefresh();
                         } catch (error) {
-                            console.error(error);
+                            console.error("Cancel match error:", error);
                             Alert.alert("Erreur", "Impossible d'annuler le match");
                         }
                     }
@@ -132,6 +166,8 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             ]
         );
     };
+
+    if (!myTeam || !opponent) return null;
 
     return (
         <TouchableOpacity 
@@ -142,7 +178,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             <ImageBackground
                 source={BG_MATCH}
                 style={StyleSheet.absoluteFill}
-                imageStyle={{ borderRadius: 24, padding: 10}}
+                imageStyle={{ borderRadius: 24 }}
                 resizeMode="cover"
             />
             
@@ -170,7 +206,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                 {/* Matchup */}
                 <View style={styles.matchup}>
                     <View style={styles.teamContainer}>
-                        <TeamShield initials={myTeam.name.substring(0,2)} size={50} />
+                        <TeamShield initials={myTeam.name?.substring(0,2) || '??'} size={50} />
                         <Text style={styles.teamName} numberOfLines={1}>{myTeam.name}</Text>
                     </View>
                     <Text style={styles.vsText}>VS</Text>
@@ -178,7 +214,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                          {opponent.crest?.url ? ( 
                              <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
                          ) : (
-                             <TeamShield initials={opponent.name.substring(0,2)} size={50} />
+                             <TeamShield initials={opponent.name?.substring(0,2) || '??'} size={50} />
                          )}
                         <Text style={styles.teamName} numberOfLines={1}>{opponent.name}</Text>
                     </View>
@@ -215,13 +251,16 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                         {myTeam.name} ({eloPrediction.myElo}) vs {opponent.name} ({eloPrediction.oppElo})
                     </Text>
                 </View>
+
                 {/* Captain Booking Section */}
-                {isCaptain && !isVenueBooked && (
+                {isCaptain && !isVenueBooked && match.status !== 'cancelled' && (
                     <TouchableOpacity 
                         onPress={handleMarkVenueBooked}
                         style={styles.bookingButton}
                     >
-                        <Text style={styles.bookingButtonText}>🏟️ MARQUER TERRAIN RÉSERVÉ</Text>
+                        <Text style={styles.bookingButtonText} numberOfLines={1} adjustsFontSizeToFit>
+                            🏟️ MARQUER TERRAIN RÉSERVÉ
+                        </Text>
                     </TouchableOpacity>
                 )}
 
@@ -248,25 +287,31 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     {myParticipation ? (
                          <View style={styles.statusContainer}>
                              <Text style={styles.statusText}>✅ Vous participez</Text>
-                             <TouchableOpacity onPress={handleDecline}>
+                             <TouchableOpacity onPress={handleDecline} style={{ padding: 8 }}>
                                  <Text style={styles.linkText}>Annuler</Text>
                              </TouchableOpacity>
                          </View>
                     ) : (
                         <View style={styles.buttonRow}>
-                            <Button 
-                                label="Confirmer" 
-                                onPress={handleConfirm} 
-                                size="s" 
-                                style={{ backgroundColor: '#01B3F4', flex: 1 }} 
-                            />
-                            <Button 
-                                label="Absents" 
-                                onPress={handleDecline} 
-                                size="s" 
-                                variant="outline" 
-                                style={{ flex: 1, borderColor: '#F44336' }}
-                            />
+                            <View style={{ flex: 1 }}>
+                                <Button 
+                                    title="Confirmer"
+                                    onPress={handleConfirm} 
+                                    variant="Primary" 
+                                    style={{ backgroundColor: '#01B3F4', width: '100%', height: 44 }}
+                                    textStyle={{ fontSize: 13 }}
+                                />
+                            </View>
+                            <View style={{ width: 10 }} />
+                            <View style={{ flex: 1 }}>
+                                <Button 
+                                    title="Absents"
+                                    onPress={handleDecline} 
+                                    variant="Secondary" 
+                                    style={{ borderColor: '#F44336', width: '100%', height: 44 }}
+                                    textStyle={{ color: '#F44336', fontSize: 13 }}
+                                />
+                            </View>
                         </View>
                     )}
                 </View>
@@ -285,10 +330,11 @@ const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.7)'
+        backgroundColor: 'rgba(0,0,0,0.85)' // Slightly darker for better contrast
     },
     content: {
         padding: 20,
+        paddingBottom: 25 // Ensure padding at bottom for buttons
     },
     header: {
         flexDirection: 'row',
@@ -374,17 +420,18 @@ const styles = StyleSheet.create({
         borderRadius: 3
     },
     actions: {
-        marginTop: 5
+        marginTop: 10
     },
     buttonRow: {
         flexDirection: 'row',
-        gap: 10
+        alignItems: 'center',
+        justifyContent: 'space-between'
     },
     statusContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 10,
+        padding: 12,
         backgroundColor: 'rgba(76, 175, 80, 0.1)',
         borderRadius: 12,
         borderWidth: 1,

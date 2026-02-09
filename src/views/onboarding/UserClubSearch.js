@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -28,14 +28,18 @@ function UserClubSearch({ navigation }) {
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
-    onSuccess: () => {
+    onSuccess: async () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
       if (!nextRoute) {
         markOnboardingComplete(userData?.documentId);
-        navigation.navigate(RouteNames.HomeTab);
+        // Invalidate get-me to trigger PrivateNavigator re-evaluation
+        // This will update onboardingViews -> canShowHome -> render HomeTab
+        // And unmount this screen (UserClubSearch) as it's removed from valid views
+        await queryClient.invalidateQueries({ queryKey: ['get-me'] });
       } else {
         navigation.navigate(nextRoute);
       }
@@ -48,11 +52,11 @@ function UserClubSearch({ navigation }) {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
     if (!nextRoute) {
       markOnboardingComplete(userData?.documentId);
-      navigation.navigate(RouteNames.HomeTab);
+      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
     } else {
       navigation.navigate(nextRoute);
     }

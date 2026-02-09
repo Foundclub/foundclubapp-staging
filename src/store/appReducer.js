@@ -137,6 +137,9 @@ export default function appReducer(state, action) {
     case 'SET_PENDING_NOTIFICATION': {
       return { ...state, pendingNotification: action.payload };
     }
+    case 'SET_SQUAD_FILTERS': {
+      return { ...state, squadFilters: action.payload };
+    }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`);
     }

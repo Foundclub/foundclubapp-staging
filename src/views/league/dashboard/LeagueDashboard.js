@@ -91,10 +91,22 @@ const LeagueDashboard = () => {
                     Crée ton équipe pour rejoindre la compétition officielle.
                 </Text>
                 <Button 
-                    title="CRÉER UNE ÉQUIPE" 
+                    title="CRÉER UNE SQUAD" 
                     variant="Primary" 
-                    onPress={() => navigation.navigate('SquadName')}
-                    style={{ width: '100%' }}
+                    icon="plus"
+                    iconColor={Colors.primary500}
+                    onPress={() => navigation.navigate(RouteNames.TeamStack, { screen: RouteNames.CreateSquad })}
+                    style={{ 
+                        width: '100%',
+                        backgroundColor: Colors.gold500,
+                        borderRadius: 30,
+                        shadowColor: Colors.gold500,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 5,
+                        elevation: 5
+                    }}
+                    textStyle={{ color: Colors.neutral900 }}
                 />
             </LeagueCard>
         </View>
