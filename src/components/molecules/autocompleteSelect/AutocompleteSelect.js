@@ -225,10 +225,10 @@ const AutocompleteSelect = forwardRef(
               keyboardShouldPersistTaps="handled"
               style={{ flex: 1, maxHeight: 350 }}
             >
-              {props.options.map((option) => (
+              {props.options.map((option, index) => (
                 option.isHeader ? (
                   <Text
-                    key={option.value}
+                    key={`${option.value}-${index}`}
                     style={[
                       Fonts.p3Bold,
                       Fonts.neutral500,
@@ -240,7 +240,7 @@ const AutocompleteSelect = forwardRef(
                   </Text>
                 ) : (
                   <View
-                    key={`${option.value}-${option.label}`}
+                    key={`${option.value}-${option.label}-${index}`}
                     style={[Alignments.row, Spaces.marginTop[8]]}
                   >
                     <Checkable

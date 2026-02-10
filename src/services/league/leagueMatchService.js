@@ -101,19 +101,19 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
 export const fetchMatch = async (matchId) => {
   const response = await client.get(`/league-matches/${matchId}`, {
     params: {
-      populate: [
-        'team_a',
-        'team_a.captain',
-        'team_a.crest',
-        'team_b',
-        'team_b.captain',
-        'team_b.crest',
-        'participations_a',
-        'participations_b',
-        'chat',
-        'winner',
-        'cancelled_by',
-      ].join(',')
+      populate: {
+        team_a: {
+          populate: ['captain', 'crest']
+        },
+        team_b: {
+          populate: ['captain', 'crest']
+        },
+        participations_a: true,
+        participations_b: true,
+        chat: true,
+        winner: true,
+        cancelled_by: true,
+      }
     }
   });
   return response.data?.data || response.data;
@@ -212,5 +212,45 @@ export const submitPlayerGoals = async (matchId, goals) => {
     }
   });
   return response.data;
+};
+
+/**
+ * Submit match score
+ * @param {string} matchId - The match documentId
+ * @param {number} scoreA - Score of Team A
+ * @param {number} scoreB - Score of Team B
+ * @param {boolean} [dispute] - Whether there is a dispute
+ * @param {object} [proof] - Proof file (image) { uri, name, type }
+ */
+export const submitMatchScore = async (matchId, scoreA, scoreB, dispute = false, proof = null) => {
+  const formData = new FormData();
+  formData.append('data', JSON.stringify({
+    score_a: scoreA,
+    score_b: scoreB,
+    dispute
+  }));
+
+  if (proof) {
+    formData.append('files.proof', {
+      uri: proof.uri,
+      name: proof.name || 'proof.jpg',
+      type: proof.type || 'image/jpeg',
+    });
+  }
+
+  if (proof) {
+      return client.post(`/league-matches/${matchId}/submit-score`, formData, {
+          headers: {
+              'Content-Type': 'multipart/form-data',
+          },
+      }).then(res => res.data);
+  } else {
+      const response = await client.post(`/league-matches/${matchId}/submit-score`, {
+        scoreA,
+        scoreB,
+        dispute
+      });
+      return response.data;
+  }
 };
 

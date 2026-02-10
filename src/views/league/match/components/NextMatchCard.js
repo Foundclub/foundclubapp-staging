@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Image, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import useTheme from '@/theme/themeContext';
@@ -21,6 +22,7 @@ const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 
 const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const { Colors, Fonts, Images: ThemeImages, Spaces } = useTheme();
+    const navigation = useNavigation();
     const { userData } = useAuth();
 
     // Identify Teams
@@ -192,7 +194,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                         {isVenueBooked && (
                             <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
-                                <Text style={styles.badgeText}>RÉSERVÉ ✅</Text>
+                                <Text style={styles.badgeText}>À VENIR ✅</Text>
                             </View>
                         )}
                         {match.status === 'scheduled' && !isVenueBooked && (
@@ -211,12 +213,24 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     </View>
                     <Text style={styles.vsText}>VS</Text>
                     <View style={styles.teamContainer}>
-                         {opponent.crest?.url ? ( 
-                             <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
+                         {/* Anonymization Logic */}
+                         {!isVenueBooked && match.status === 'scheduled' ? (
+                             <>
+                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#555' }}>
+                                    <Text style={{ fontSize: 24 }}>❓</Text>
+                                </View>
+                                <Text style={[styles.teamName, { fontStyle: 'italic', color: '#AAA' }]} numberOfLines={1}>Adversaire Mystère</Text>
+                             </>
                          ) : (
-                             <TeamShield initials={opponent.name?.substring(0,2) || '??'} size={50} />
+                             <>
+                                {opponent.crest?.url ? ( 
+                                    <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
+                                ) : (
+                                    <TeamShield initials={opponent.name?.substring(0,2) || '??'} size={50} />
+                                )}
+                                <Text style={styles.teamName} numberOfLines={1}>{opponent.name}</Text>
+                             </>
                          )}
-                        <Text style={styles.teamName} numberOfLines={1}>{opponent.name}</Text>
                     </View>
                 </View>
 
@@ -230,9 +244,17 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     </View>
                     <View style={styles.row}>
                         <Image source={ThemeImages.pin} style={styles.icon} />
-                        <Text style={styles.detailText}>
-                            {match.venue || match.proposed_venue || "Lieu à définir"}
-                        </Text>
+                        <View>
+                            <Text style={styles.detailText}>
+                                {match.venue || match.proposed_venue || "Lieu à définir"}
+                            </Text>
+                            {/* Address Display */}
+                            {(match.location?.address || match.address) && (
+                                <Text style={[styles.detailText, { fontSize: 12, color: '#AAA', marginTop: 2 }]}>
+                                    {match.location?.address || match.address}
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 </View>
 
@@ -248,7 +270,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                         </View>
                     </View>
                     <Text style={styles.eloPredictionDetails}>
-                        {myTeam.name} ({eloPrediction.myElo}) vs {opponent.name} ({eloPrediction.oppElo})
+                        {myTeam.name} ({eloPrediction.myElo}) vs {!isVenueBooked && match.status === 'scheduled' ? "???" : `${opponent.name} (${eloPrediction.oppElo})`}
                     </Text>
                 </View>
 
@@ -260,6 +282,25 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     >
                         <Text style={styles.bookingButtonText} numberOfLines={1} adjustsFontSizeToFit>
                             🏟️ MARQUER TERRAIN RÉSERVÉ
+                        </Text>
+                    </TouchableOpacity>
+                )}
+
+                {/* Score Entry Section (Post-Match) */}
+                {isCaptain && isVenueBooked && new Date() > matchDate && match.status !== 'cancelled' && (
+                     <TouchableOpacity 
+                        onPress={() => {
+                            // Navigate to EndMatchScreen
+                            // Assuming navigation is available via hook
+                            navigation.navigate('LeagueMatch', { 
+                                screen: 'EndMatchScreen', 
+                                params: { matchId: match.documentId || match.id } 
+                            });
+                        }}
+                        style={[styles.bookingButton, { borderColor: Colors.primary500, backgroundColor: 'rgba(1, 179, 244, 0.15)' }]}
+                    >
+                        <Text style={[styles.bookingButtonText, { color: Colors.primary500 }]}>
+                            ⚽ SAISIR LE SCORE
                         </Text>
                     </TouchableOpacity>
                 )}

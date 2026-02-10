@@ -358,6 +358,14 @@ function PrivateNavigator() {
           headerTitle: 'Détails du match',
         }}
       />
+      <Stack.Screen
+        component={require('@/views/league/match/LeagueMatchDetails').default}
+        name={RouteNames.LeagueMatchDetails}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
       {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}

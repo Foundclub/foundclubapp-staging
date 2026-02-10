@@ -29,7 +29,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
-import ProposalModal from '@/components/organisms/proposalModal/ProposalModal';
+import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
@@ -290,11 +290,42 @@ function Conversation({ navigation, route }) {
 
 
   /* Proposal Logic */
+  const handleSendProposal = async (proposalData) => {
+      try {
+          // Construct the message content
+          const messageText = "📅 Nouvelle proposition de match";
+          const proposalComposition = {
+              type: 'proposal',
+              status: 'pending',
+              venue: proposalData.venue,
+              address: proposalData.address,
+              date: proposalData.date,
+              endDate: proposalData.endDate,
+              matchId: chatData?.league_match?.documentId || chatData?.league_match?.id || null 
+          };
+
+          // Send message
+          await sendMessage(chatId, messageText, {
+              composition: proposalComposition,
+              sender: userData
+          });
+          
+          Alert.alert("Envoyé", "Votre proposition a été envoyée !");
+      } catch (error) {
+          console.error("Send Proposal Error:", error);
+          Alert.alert("Erreur", "Impossible d'envoyer la proposition.");
+      }
+  };
+
   const handleRespondProposal = async (message, status) => {
-      const matchId = message?.composition?.matchId;
-      if (!matchId) {
-          Alert.alert("Erreur", "Impossible de retrouver le match associé.");
-          return;
+      const matchId = message?.composition?.matchId || chatData?.league_match?.documentId || chatData?.league_match?.id;
+      
+      if (!matchId && status === 'accepted') {
+          // If matchId is missing in composition, try fallback to chat's match
+          if (!chatData?.league_match) {
+             Alert.alert("Erreur", "Impossible de retrouver le match associé.");
+             return;
+          }
       }
 
       // Optimistic update of the message bubble
@@ -316,6 +347,7 @@ function Conversation({ navigation, route }) {
 
       try {
           if (status === 'accepted') {
+              console.log("[Proposal] Accepting match:", matchId);
               await confirmMatch(matchId);
               // Persist message update
               await updateMessage({
@@ -341,8 +373,8 @@ function Conversation({ navigation, route }) {
           
       } catch (error) {
           console.error("Proposal Action Error:", error);
-          Alert.alert("Erreur", "Une erreur est survenue.");
-          // Rollback optimistic update if needed, but for now we keep it simple
+          Alert.alert("Erreur", "Une erreur est survenue lors de la réponse.");
+          // Rollback could go here
       }
   };
 
@@ -1100,6 +1132,12 @@ function Conversation({ navigation, route }) {
         eventId={selectedEvent?.documentId || ''}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
+    />
+    
+    <VenueProposalModal
+        isVisible={isProposalModalVisible}
+        onClose={() => setIsProposalModalVisible(false)}
+        onSend={handleSendProposal}
     />
       </View>
     </ImageBackground>

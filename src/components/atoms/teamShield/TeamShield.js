@@ -17,7 +17,7 @@ function TeamShield({ initials, isNeutral = false, isSmall = false }) {
   } = useTheme();
 
   // Format initials to max 3 letters uppercase
-  const formattedInitials = initials.slice(0, 3).toUpperCase();
+  const formattedInitials = (initials || '?').slice(0, 3).toUpperCase();
   const size = isSmall ? 60 : 90;
 
   return (

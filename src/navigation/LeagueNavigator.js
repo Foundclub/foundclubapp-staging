@@ -28,6 +28,11 @@ export default function LeagueNavigator() {
             <Stack.Screen name="SquadName" component={SquadNameScreen} />
             <Stack.Screen name="SquadHomeBase" component={SquadHomeBaseScreen} />
             <Stack.Screen name="SquadSummary" component={SquadSummaryScreen} />
+            <Stack.Screen 
+                component={require('@/views/league/match/EndMatchScreen').default} 
+                name="EndMatchScreen" 
+                options={{ headerShown: false }}
+            />
 
       <Stack.Screen
         component={MatchDetailsScreen}
@@ -42,6 +47,11 @@ export default function LeagueNavigator() {
       <Stack.Screen
         component={MatchHistoryScreen}
         name="MatchHistoryScreen"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={LeagueMatchDetails}
+        name="LeagueMatchDetails"
         options={{ headerShown: false }}
       />
       <Stack.Screen 

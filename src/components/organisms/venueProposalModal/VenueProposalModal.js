@@ -140,11 +140,13 @@ const VenueProposalModal = ({ isVisible, onClose, onSend, onSkip }) => {
                     textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
                 />
                 
-                <TouchableOpacity onPress={onSkip} style={{ padding: 12, alignItems: 'center' }}>
-                    <Text style={[Fonts.p2, { color: Colors.neutral400, textDecorationLine: 'underline' }]}>
-                        Passer et accéder au chat
-                    </Text>
-                </TouchableOpacity>
+                {onSkip && (
+                    <TouchableOpacity onPress={onSkip} style={{ padding: 12, alignItems: 'center' }}>
+                        <Text style={[Fonts.p2, { color: Colors.neutral400, textDecorationLine: 'underline' }]}>
+                            Passer et accéder au chat
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </BottomModal>
     );

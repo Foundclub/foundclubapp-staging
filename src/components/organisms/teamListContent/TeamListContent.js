@@ -81,8 +81,8 @@ function TeamListContent({
   } = useGetMyLeagueTeam(userData?.documentId, { enabled: isLeagueMode && !!userData });
 
   const teams = useMemo(() => {
-      if (isLeagueMode) return leagueData || [];
-      return classicData?.pages?.flatMap((page) => page.data) || [];
+      if (isLeagueMode) return (leagueData || []).filter(Boolean);
+      return classicData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
   }, [classicData, leagueData, isLeagueMode]);
 
   const isLoadingTeams = isLeagueMode ? isLoadingLeague : isLoadingClassic;

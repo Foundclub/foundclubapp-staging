@@ -60,6 +60,11 @@ const PlanningWeekTimelineView = ({
     ];
 
     const getEventColor = (event) => {
+        // 1. Gold for League Matches
+        if (event.league_match) {
+            return '#FFD700'; // Gold
+        }
+
         const type = event.type?.name || event.type;
         if (type) {
             switch (type) {

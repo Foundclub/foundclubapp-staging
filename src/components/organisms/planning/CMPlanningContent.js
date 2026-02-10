@@ -88,6 +88,7 @@ function CMPlanningContent({ cmId, navigation }) {
             team: { name: slot.title }, // Fallback for title display logic in component
             // We need original event ID for navigation
             documentId: slot.eventId, 
+            league_match: slot.leagueMatch,
         }));
     }, [rawSlots]);
 
