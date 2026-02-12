@@ -8,6 +8,7 @@
     "android:local": "cross-env APP_ENV=local react-native run-android --mode=stagingDebug --appId com.foundclub.staging",
     "ios": "react-native run-ios",
     "ios:local": "cross-env APP_ENV=local react-native run-ios",
+    "secrets:sync": "powershell -ExecutionPolicy Bypass -File ./scripts/secrets/sync-mobile-secrets.ps1",
     "lint": "eslint .",
     "start": "react-native start",
     "start:staging": "cross-env APP_ENV=staging react-native start",

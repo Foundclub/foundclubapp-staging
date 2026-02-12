@@ -16,6 +16,7 @@ import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
+import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
 
 const schema = Joi.object({
   name: Joi.string().required().min(3).label('Nom'),
@@ -99,15 +100,16 @@ const SquadEditScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (team) {
+      const normalizedHomeBase = normalizeLocationInput(team.home_base);
       reset({
         name: team.name || '',
-        address: team.home_base || null,
+        address: normalizedHomeBase || null,
         division: team.division ? String(team.division) : '',
         elo: team.elo ? String(team.elo) : '',
         sport: team.sport || 'Football',
         section: team.section || 'Male',
         category: team.category || 'Senior',
-        radius: team.home_base?.radius || 20 
+        radius: normalizedHomeBase?.radius || 20
       });
     }
   }, [team, reset]);
@@ -115,11 +117,12 @@ const SquadEditScreen = ({ navigation, route }) => {
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
-      
-      const homeBasePayload = data.address ? {
-          ...data.address,
-          radius: data.radius
-      } : { radius: data.radius };
+
+      const homeBasePayload = buildHomeBasePayload(data.address, data.radius);
+      if (!homeBasePayload) {
+        Alert.alert('Adresse invalide', 'Selectionnez une adresse avec des coordonnees valides.');
+        return;
+      }
 
       await updateLeagueTeam({
         documentId: teamId,

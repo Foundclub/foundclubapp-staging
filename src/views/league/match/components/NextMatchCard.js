@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import useAuth from '@/domains/auth/useAuth';
+import { RouteNames } from '@/navigation/routeNames';
 import { missingEvent, markVenueBooked as markEventVenueBooked } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { 
@@ -17,30 +18,54 @@ import {
     declineParticipation
 } from '@/services/league/leagueMatchService';
 import Button from '@/components/atoms/button/Button';
+import {
+    getMatchDerivedPhase,
+    isMatchPastEnd,
+    normalizeMatchStatus,
+    shouldMaskOpponentIdentity,
+} from '@/views/league/match/utils/matchStatus';
 
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 
+const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
+const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
+
+const resolveAddressLabel = (match) => {
+    const location = match?.location;
+    if (typeof location === 'string') return location;
+    if (location && typeof location === 'object') {
+        return location.address || location.label || location.city || '';
+    }
+    return match?.address || '';
+};
+
+const normalizeComparableLabel = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
 const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
-    const { Colors, Fonts, Images: ThemeImages, Spaces } = useTheme();
+    const { Colors, Fonts, Images: ThemeImages } = useTheme();
     const navigation = useNavigation();
     const { userData } = useAuth();
 
     // Identify Teams
     // Safe chaining for team_a/team_b in case they are just IDs or partial objects
     const teamAId = match.team_a?.documentId || match.team_a?.id;
-    const isTeamA = teamAId === myTeamId;
+    const isTeamA = isSameId(teamAId, myTeamId);
     const myTeam = isTeamA ? match.team_a : match.team_b;
     const opponent = isTeamA ? match.team_b : match.team_a;
 
     // Check if current user is captain
-    const isCaptain = myTeam?.captain?.documentId === userData?.documentId || myTeam?.captain?.id === userData?.id;
+    const isCaptain = isSameId(myTeam?.captain?.documentId || myTeam?.captain?.id, userData?.documentId || userData?.id);
 
-    // Venue booking status
-    // Use match.venue_booked (if exists in future schema) or event.venueBooked
-    const isVenueBooked = event?.venueBooked === true || match.venue_booked === true;
-
-    // Match cancellation status
-    const isCancelledOrForfeit = match.status === 'cancelled' || match.status === 'forfeit' || match.status === 'no_show';
+    const normalizedStatus = normalizeMatchStatus(match?.status);
+    const derivedPhase = getMatchDerivedPhase(match, event);
+    const isAnonymous = shouldMaskOpponentIdentity(match, event);
+    const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
+    const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
+    const hasMatchEnded = isMatchPastEnd(match, event);
+    const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !hasMatchEnded;
 
     // Participations
     // SOT: use event.participations if available (Event Mode)
@@ -53,7 +78,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
         participations = isTeamA ? (match.participations_a || []) : (match.participations_b || []);
     }
 
-    const myParticipation = participations.find(p => p.documentId === userData?.documentId || p.id === userData?.id);
+    const myParticipation = participations.find((p) => isSameId(p?.documentId || p?.id, userData?.documentId || userData?.id));
     
     // Count confirmed
     const confirmedCount = participations.length; 
@@ -62,6 +87,29 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     // Calculate hours until match
     const matchDate = new Date(event?.date || match?.date || new Date());
     const hoursUntilMatch = (matchDate - new Date()) / (1000 * 60 * 60);
+    const matchAddressLabel = resolveAddressLabel(match);
+    const venueLabel = match.venue || match.proposed_venue || "Lieu à définir";
+    const showAddressDetails = Boolean(
+        matchAddressLabel
+        && normalizeComparableLabel(matchAddressLabel) !== normalizeComparableLabel(venueLabel)
+    );
+    const startTimeLabel = format(matchDate, 'HH:mm', { locale: fr });
+    const endTimeLabel = useMemo(() => {
+        const explicitEndDate = event?.endDate || match?.location?.proposed_end_time || null;
+        if (explicitEndDate) {
+            const parsed = new Date(explicitEndDate);
+            if (!Number.isNaN(parsed.getTime())) {
+                return format(parsed, 'HH:mm', { locale: fr });
+            }
+        }
+
+        if (match?.recurring_end_hour) {
+            return String(match.recurring_end_hour).slice(0, 5);
+        }
+
+        const plusOneHour = new Date(matchDate.getTime() + (60 * 60 * 1000));
+        return format(plusOneHour, 'HH:mm', { locale: fr });
+    }, [event?.endDate, match?.location?.proposed_end_time, match?.recurring_end_hour, matchDate]);
 
     // ELO Prediction: Calculate expected win/loss points
     const eloPrediction = useMemo(() => {
@@ -83,6 +131,21 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             oppElo
         };
     }, [myTeam?.elo, opponent?.elo]);
+
+    const progressSteps = useMemo(() => {
+        const matchPlayed = hasMatchEnded
+            || ['waiting_score', 'pending_validation', 'disputed'].includes(derivedPhase)
+            || ['valid', 'forfeit', 'no_show'].includes(normalizedStatus);
+        const resultSubmitted = ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled']
+            .includes(normalizedStatus) || ['pending_validation', 'disputed'].includes(derivedPhase);
+
+        return [
+            { done: true, key: 'found', label: 'Trouve' },
+            { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain reserve' },
+            { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match joue' },
+            { done: resultSubmitted, key: 'result', label: 'Resultat' },
+        ];
+    }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus]);
 
     // Handlers
     const handleConfirm = async () => {
@@ -192,17 +255,48 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>PROCHAIN MATCH</Text>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                        {isVenueBooked && (
-                            <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
-                                <Text style={styles.badgeText}>À VENIR ✅</Text>
+                        {derivedPhase === 'confirmed_upcoming' && (
+                            <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}> 
+                                <Text style={styles.badgeText}>A VENIR</Text>
                             </View>
                         )}
-                        {match.status === 'scheduled' && !isVenueBooked && (
-                            <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
-                                <Text style={[styles.badgeText, { color: '#000' }]}>EN ATTENTE</Text>
+                        {derivedPhase === 'waiting_venue' && (
+                            <View style={[styles.badge, { backgroundColor: '#FFC107' }]}> 
+                                <Text style={[styles.badgeText, { color: '#0B1820' }]}>EN ATTENTE TERRAIN</Text>
+                            </View>
+                        )}
+                        {derivedPhase === 'pending_validation' && (
+                            <View style={[styles.badge, { backgroundColor: '#FFC107' }]}> 
+                                <Text style={[styles.badgeText, { color: '#0B1820' }]}>SCORE EN ATTENTE</Text>
+                            </View>
+                        )}
+                        {derivedPhase === 'disputed' && (
+                            <View style={[styles.badge, { backgroundColor: '#EF4444' }]}> 
+                                <Text style={styles.badgeText}>LITIGE</Text>
                             </View>
                         )}
                     </View>
+                </View>
+                <View style={styles.progressChipsRow}>
+                    {progressSteps.map((step) => (
+                        <View
+                            key={step.key}
+                            style={[
+                                styles.progressChip,
+                                step.done ? styles.progressChipDone : styles.progressChipTodo,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.progressChipText,
+                                    step.done ? styles.progressChipTextDone : styles.progressChipTextTodo,
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {step.label}
+                            </Text>
+                        </View>
+                    ))}
                 </View>
 
                 {/* Matchup */}
@@ -214,12 +308,12 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     <Text style={styles.vsText}>VS</Text>
                     <View style={styles.teamContainer}>
                          {/* Anonymization Logic */}
-                         {!isVenueBooked && match.status === 'scheduled' ? (
+                         {isAnonymous ? (
                              <>
-                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#333', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#555' }}>
+                                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)' }}>
                                     <Text style={{ fontSize: 24 }}>❓</Text>
                                 </View>
-                                <Text style={[styles.teamName, { fontStyle: 'italic', color: '#AAA' }]} numberOfLines={1}>Adversaire Mystère</Text>
+                                <Text style={[styles.teamName, { fontStyle: 'italic', color: '#ADB1B2' }]} numberOfLines={1}>Adversaire Mystère</Text>
                              </>
                          ) : (
                              <>
@@ -239,21 +333,21 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     <View style={styles.row}>
                         <Image source={ThemeImages.calendar} style={styles.icon} />
                         <Text style={styles.detailText}>
-                            {format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM à HH:mm', { locale: fr }).toUpperCase()}
+                            {`${format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM', { locale: fr }).toUpperCase()} • ${startTimeLabel}-${endTimeLabel}`}
                         </Text>
                     </View>
                     <View style={styles.row}>
                         <Image source={ThemeImages.pin} style={styles.icon} />
                         <View>
                             <Text style={styles.detailText}>
-                                {match.venue || match.proposed_venue || "Lieu à définir"}
+                                {venueLabel}
                             </Text>
                             {/* Address Display */}
-                            {(match.location?.address || match.address) && (
-                                <Text style={[styles.detailText, { fontSize: 12, color: '#AAA', marginTop: 2 }]}>
-                                    {match.location?.address || match.address}
+                            {showAddressDetails ? (
+                                <Text style={styles.detailSubText}>
+                                    {matchAddressLabel}
                                 </Text>
-                            )}
+                            ) : null}
                         </View>
                     </View>
                 </View>
@@ -270,12 +364,12 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                         </View>
                     </View>
                     <Text style={styles.eloPredictionDetails}>
-                        {myTeam.name} ({eloPrediction.myElo}) vs {!isVenueBooked && match.status === 'scheduled' ? "???" : `${opponent.name} (${eloPrediction.oppElo})`}
+                        {myTeam.name} ({eloPrediction.myElo}) vs {isAnonymous ? "???" : `${opponent.name} (${eloPrediction.oppElo})`}
                     </Text>
                 </View>
 
                 {/* Captain Booking Section */}
-                {isCaptain && !isVenueBooked && match.status !== 'cancelled' && (
+                {isCaptain && derivedPhase === 'waiting_venue' && !isTerminalStatus && (
                     <TouchableOpacity 
                         onPress={handleMarkVenueBooked}
                         style={styles.bookingButton}
@@ -287,37 +381,44 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                 )}
 
                 {/* Score Entry Section (Post-Match) */}
-                {isCaptain && isVenueBooked && new Date() > matchDate && match.status !== 'cancelled' && (
+                {isCaptain && (['waiting_score', 'pending_validation', 'disputed'].includes(derivedPhase) || isScoreLockedByTime) && !isTerminalStatus && (
                      <TouchableOpacity 
                         onPress={() => {
-                            // Navigate to EndMatchScreen
-                            // Assuming navigation is available via hook
-                            navigation.navigate('LeagueMatch', { 
+                            if (isScoreLockedByTime) {
+                                Alert.alert(
+                                    'Score indisponible',
+                                    "Vous pourrez saisir le score une fois l'heure de fin du match dépassée."
+                                );
+                                return;
+                            }
+                            // Match tab is not inside LeagueNavigator stack.
+                            // Navigate through the LeagueDashboard tab, then open EndMatchScreen.
+                            navigation.navigate(RouteNames.LeagueDashboard, { 
                                 screen: 'EndMatchScreen', 
                                 params: { matchId: match.documentId || match.id } 
                             });
                         }}
-                        style={[styles.bookingButton, { borderColor: Colors.primary500, backgroundColor: 'rgba(1, 179, 244, 0.15)' }]}
+                        style={[
+                            styles.bookingButton,
+                            isScoreLockedByTime
+                                ? { borderColor: Colors.neutral600, backgroundColor: 'rgba(255,255,255,0.06)' }
+                                : { borderColor: Colors.primary500, backgroundColor: 'rgba(1, 179, 244, 0.15)' }
+                        ]}
                     >
-                        <Text style={[styles.bookingButtonText, { color: Colors.primary500 }]}>
-                            ⚽ SAISIR LE SCORE
+                        <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
+                            {isScoreLockedByTime ? '⚽ SCORE VERROUILLE (MATCH EN COURS)' : '⚽ SAISIR LE SCORE'}
                         </Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* Captain Cancel Match */}
-                {isCaptain && !isCancelledOrForfeit && (
-                    <TouchableOpacity 
-                        onPress={handleCancelMatch}
-                        style={styles.cancelButton}
-                    >
-                        <Text style={styles.cancelButtonText}>❌ ANNULER LE MATCH</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Attendance Gauge */}
                 <View style={styles.attendance}>
-                    <Text style={styles.attendanceTitle}>Présence d'équipe ({confirmedCount}/5)</Text>
+                    <Text style={styles.attendanceTitle}>Presences joueurs confirmees ({confirmedCount}/5)</Text>
+                    <Text style={styles.attendanceHint}>
+                        {isQuorumReached
+                            ? "Quorum atteint. Equipe prete."
+                            : `Minimum requis: 5 joueurs. Il manque ${Math.max(5 - confirmedCount, 0)} joueur(s).`}
+                    </Text>
                     <View style={styles.gaugeBg}>
                         <View style={[styles.gaugeFill, { width: `${Math.min((confirmedCount/5)*100, 100)}%`, backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107' }]} />
                     </View>
@@ -339,23 +440,33 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                                     title="Confirmer"
                                     onPress={handleConfirm} 
                                     variant="Primary" 
-                                    style={{ backgroundColor: '#01B3F4', width: '100%', height: 44 }}
+                                    style={{ backgroundColor: '#01B3F4', borderRadius: 14, width: '100%', height: 48 }}
                                     textStyle={{ fontSize: 13 }}
                                 />
                             </View>
                             <View style={{ width: 10 }} />
                             <View style={{ flex: 1 }}>
                                 <Button 
-                                    title="Absents"
+                                    title="Absent"
                                     onPress={handleDecline} 
                                     variant="Secondary" 
-                                    style={{ borderColor: '#F44336', width: '100%', height: 44 }}
+                                    style={{ borderColor: '#F44336', borderRadius: 14, width: '100%', height: 48 }}
                                     textStyle={{ color: '#F44336', fontSize: 13 }}
                                 />
                             </View>
                         </View>
                     )}
                 </View>
+
+                {/* Captain Cancel Match (Secondary Action) */}
+                {isCaptain && !isTerminalStatus && (
+                    <TouchableOpacity
+                        onPress={handleCancelMatch}
+                        style={styles.cancelLinkButton}
+                    >
+                        <Text style={styles.cancelLinkText}>Annuler ce match</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -366,28 +477,62 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         overflow: 'hidden',
         minHeight: 220,
-        marginBottom: 20,
-        backgroundColor: '#1E1E1E'
+        marginBottom: 24,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.16)',
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.85)' // Slightly darker for better contrast
+        backgroundColor: 'rgba(11, 18, 32, 0.78)',
     },
     content: {
-        padding: 20,
-        paddingBottom: 25 // Ensure padding at bottom for buttons
+        padding: 22,
+        paddingBottom: 24, // Ensure padding at bottom for buttons
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15
+        marginBottom: 12,
     },
     headerTitle: {
         fontFamily: 'Montserrat-Bold',
         fontSize: 14,
         color: '#01B3F4',
         letterSpacing: 1
+    },
+    progressChipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 16,
+    },
+    progressChip: {
+        borderRadius: 999,
+        borderWidth: 1,
+        minWidth: 66,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    progressChipDone: {
+        backgroundColor: 'rgba(1, 179, 244, 0.14)',
+        borderColor: 'rgba(1, 179, 244, 0.45)',
+    },
+    progressChipTodo: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.18)',
+    },
+    progressChipText: {
+        fontFamily: 'Montserrat-SemiBold',
+        fontSize: 10,
+        textAlign: 'center',
+    },
+    progressChipTextDone: {
+        color: '#01B3F4',
+    },
+    progressChipTextTodo: {
+        color: '#A7B0BF',
     },
     badge: {
         backgroundColor: '#4CAF50',
@@ -404,7 +549,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20
+        marginBottom: 18,
     },
     teamContainer: {
         alignItems: 'center',
@@ -425,11 +570,11 @@ const styles = StyleSheet.create({
     },
     details: {
         gap: 8,
-        marginBottom: 15
+        marginBottom: 18,
     },
     row: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 10
     },
     icon: {
@@ -442,17 +587,28 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'Montserrat-Medium'
     },
+    detailSubText: {
+        color: '#A7B0BF',
+        fontSize: 12,
+        marginTop: 2,
+    },
     attendance: {
-        marginBottom: 15
+        marginBottom: 16,
+        marginTop: 2,
     },
     attendanceTitle: {
-        color: '#AAA',
+        color: '#C0C8D6',
         fontSize: 12,
-        marginBottom: 5
+        marginBottom: 4,
+    },
+    attendanceHint: {
+        color: '#8E9AAD',
+        fontSize: 11,
+        marginBottom: 10,
     },
     gaugeBg: {
-        height: 6,
-        backgroundColor: '#333',
+        height: 8,
+        backgroundColor: 'rgba(255,255,255,0.12)',
         borderRadius: 3,
         overflow: 'hidden'
     },
@@ -461,7 +617,7 @@ const styles = StyleSheet.create({
         borderRadius: 3
     },
     actions: {
-        marginTop: 10
+        marginTop: 12,
     },
     buttonRow: {
         flexDirection: 'row',
@@ -491,11 +647,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 193, 7, 0.15)',
         borderWidth: 1,
         borderColor: '#FFC107',
-        borderRadius: 12,
+        borderRadius: 14,
+        minHeight: 48,
         paddingVertical: 12,
         paddingHorizontal: 16,
         alignItems: 'center',
-        marginBottom: 15
+        marginBottom: 16,
     },
     bookingButtonText: {
         color: '#FFC107',
@@ -503,27 +660,22 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'Montserrat-Bold'
     },
-    cancelButton: {
-        backgroundColor: 'rgba(244, 67, 54, 0.15)',
-        borderWidth: 1,
-        borderColor: '#F44336',
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
+    cancelLinkButton: {
         alignItems: 'center',
-        marginBottom: 15
+        marginTop: 14,
+        paddingVertical: 6,
     },
-    cancelButtonText: {
+    cancelLinkText: {
         color: '#F44336',
-        fontWeight: 'bold',
+        fontFamily: 'Montserrat-SemiBold',
         fontSize: 12,
-        fontFamily: 'Montserrat-Bold'
+        textDecorationLine: 'underline',
     },
     eloPrediction: {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
         padding: 12,
-        marginBottom: 15,
+        marginBottom: 18,
         alignItems: 'center'
     },
     eloPredictionTitle: {
@@ -550,3 +702,5 @@ const styles = StyleSheet.create({
 });
 
 export default NextMatchCard;
+
+

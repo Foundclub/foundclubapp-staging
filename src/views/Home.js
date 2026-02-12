@@ -8,7 +8,6 @@ import {
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
-import { useAppContext } from '@/store/appContext';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -20,7 +19,6 @@ import OnboardingOverlay from '@/components/molecules/onboardingOverlay/Onboardi
 import ReservationListContent from '@/components/organisms/reservationListContent/ReservationListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import useNotifications from '@/hooks/useNotifications';
 import useAuth from '@/domains/auth/useAuth';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -64,7 +62,6 @@ function HomeContent({ navigation, route }) {
     }
   }, [route.params?.initialSearchType]);
 
-  const [{ auth }] = useAppContext();
   const {
     Alignments,
     ApplicationStyle,
@@ -88,22 +85,6 @@ function HomeContent({ navigation, route }) {
     }
     return () => clearTimeout(timer);
   }, [startOnboarding, isFocused]);
-
-  // Handle Pending Notification (Cold Start)
-  const [{ pendingNotification }, dispatch] = useAppContext();
-  const { handleNavigateOnOpen } = useNotifications({ navigate: navigation.navigate }); // Destructure new handler
-
-  useEffect(() => {
-    if (pendingNotification && isFocused) {
-      console.log('[Home] Processing pending notification:', pendingNotification);
-      
-      // Navigate
-      handleNavigateOnOpen(pendingNotification);
-      
-      // Clear pending notification to avoid loops
-      dispatch({ type: 'SET_PENDING_NOTIFICATION', payload: null });
-    }
-  }, [pendingNotification, isFocused, handleNavigateOnOpen, dispatch]);
 
   const searchOptions = useMemo(() => {
     const options = [...baseSearchOptions];

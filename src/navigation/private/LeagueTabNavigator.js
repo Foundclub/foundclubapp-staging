@@ -1,5 +1,6 @@
 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Image, View, Text } from 'react-native';
 // hooks
@@ -59,15 +60,23 @@ export default function LeagueTabNavigator() {
       <Tab.Screen
         component={LeagueNavigator}
         name={RouteNames.LeagueDashboard}
-        options={{
-          headerShown: false,
-          ...getTabScreenCommonOptions({
+        options={({ route }) => {
+          const baseOptions = getTabScreenCommonOptions({
             activeColor: Colors.gold500, // GOLD ACCENT
             bottomInset: insets.bottom,
             icon: Images.trophy, // Reuse Trophy or similar
             label: 'League', // TODO: Translate keys
             renderTabBarIcon,
-          }),
+          });
+          const focusedRouteName = getFocusedRouteNameFromRoute(route) || RouteNames.LeagueDashboard;
+          const hideTabBar = focusedRouteName === 'EndMatchScreen';
+          return {
+            headerShown: false,
+            ...baseOptions,
+            tabBarStyle: hideTabBar
+              ? { ...baseOptions.tabBarStyle, display: 'none' }
+              : baseOptions.tabBarStyle,
+          };
         }}
       />
 

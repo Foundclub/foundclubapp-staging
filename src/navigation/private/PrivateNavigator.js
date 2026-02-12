@@ -351,7 +351,7 @@ function PrivateNavigator() {
 
       {/* League Screens */}
       <Stack.Screen
-        component={require('@/views/league/match/MatchDetailsScreen').default}
+        component={require('@/views/league/match/LeagueMatchDetails').default}
         name={RouteNames.MatchDetails}
         options={{
           ...commonOptions,

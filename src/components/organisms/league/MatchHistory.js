@@ -10,13 +10,17 @@ import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
  */
 const MatchHistory = ({ matches = [], onViewAll, onMatchPress }) => {
     const { Colors, Fonts } = useTheme();
+    const leagueSurface = {
+        backgroundColor: 'rgba(10, 28, 43, 0.82)',
+        borderColor: 'rgba(1, 179, 244, 0.22)',
+    };
 
     const getResultStyle = (result) => {
         switch(result) {
             case 'win': return { bg: 'rgba(76, 175, 80, 0.15)', text: Colors.success500 || '#4caf50', icon: '✅' };
             case 'loss': return { bg: 'rgba(244, 67, 54, 0.15)', text: Colors.error500 || '#f44336', icon: '❌' };
             case 'draw': return { bg: 'rgba(255, 193, 7, 0.15)', text: Colors.warning500 || '#ffc107', icon: '➖' };
-            default: return { bg: Colors.neutral800, text: Colors.neutral300, icon: '⏳' };
+            default: return { bg: 'rgba(255,255,255,0.05)', text: Colors.neutral300, icon: '⏳' };
         }
     };
 
@@ -35,7 +39,7 @@ const MatchHistory = ({ matches = [], onViewAll, onMatchPress }) => {
         return (
             <View style={{ marginBottom: 24 }}>
                 <SectionHeader title="DERNIERS MATCHS" subtitle="HISTORIQUE" />
-                <LeagueCard style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <LeagueCard style={{ alignItems: 'center', paddingVertical: 32, ...leagueSurface }}>
                     <Text style={{ fontSize: 40, marginBottom: 12 }}>🏆</Text>
                     <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
                         Aucun match joué pour l'instant.{'\n'}Lance une recherche !
@@ -49,7 +53,7 @@ const MatchHistory = ({ matches = [], onViewAll, onMatchPress }) => {
         <View style={{ marginBottom: 24 }}>
             <SectionHeader title="DERNIERS MATCHS" subtitle="HISTORIQUE" />
             
-            <LeagueCard style={{ padding: 0, overflow: 'hidden' }}>
+            <LeagueCard style={{ padding: 0, overflow: 'hidden', ...leagueSurface }}>
                 {matches.slice(0, 5).map((match, index) => {
                     const result = getResultStyle(match.result);
                     const eloChange = getEloChange(match);
@@ -63,7 +67,7 @@ const MatchHistory = ({ matches = [], onViewAll, onMatchPress }) => {
                                 { 
                                     backgroundColor: result.bg,
                                     borderBottomWidth: index < Math.min(matches.length, 5) - 1 ? 1 : 0,
-                                    borderBottomColor: Colors.neutral800
+                                    borderBottomColor: 'rgba(255,255,255,0.08)'
                                 }
                             ]}
                         >
@@ -99,9 +103,9 @@ const MatchHistory = ({ matches = [], onViewAll, onMatchPress }) => {
                 {matches.length > 5 && (
                     <TouchableOpacity 
                         onPress={onViewAll}
-                        style={[styles.viewAllButton, { backgroundColor: Colors.neutral800 }]}
+                        style={[styles.viewAllButton, { backgroundColor: 'rgba(255,255,255,0.04)' }]}
                     >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
                             VOIR TOUT L'HISTORIQUE ({matches.length})
                         </Text>
                     </TouchableOpacity>
@@ -137,3 +141,5 @@ const styles = StyleSheet.create({
 });
 
 export default MatchHistory;
+
+

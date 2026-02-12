@@ -77,7 +77,7 @@ const MatchHistoryScreen = () => {
         return (
             <TouchableOpacity 
                 style={[styles.row, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral800 }]}
-                onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: item.id })}
+                onPress={() => navigation.navigate(RouteNames.PastMatchDetails, { matchId: item.id, myTeamId: teamId })}
             >
                 <View style={[styles.resultBadge, { backgroundColor: result.bg }]}>
                     <Text style={{ fontSize: 16 }}>{result.icon}</Text>

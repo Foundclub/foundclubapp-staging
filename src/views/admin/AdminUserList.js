@@ -30,6 +30,7 @@ const AdminUserList = () => {
 
     const getRoleBadgeColor = (roleType) => {
         switch (roleType) {
+            case 'admin': return Colors.error500;
             case 'superadmin': return Colors.error500;
             case 'dirigeant': return Colors.primary500;
             case 'entraineur': return Colors.warning500;

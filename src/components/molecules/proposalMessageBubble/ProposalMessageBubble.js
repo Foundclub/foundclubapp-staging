@@ -1,225 +1,332 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Linking, Platform } from 'react-native';
 import dayjs from 'dayjs';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import 'dayjs/locale/fr';
 
 import useTheme from '@/theme/themeContext';
 
+const resolveAddressLabel = (address) => {
+  if (!address) return '';
+  if (typeof address === 'string') return address;
+  if (typeof address === 'object') {
+    return address.label || address.address || address.city || '';
+  }
+  return '';
+};
+
+const STATUS_CONFIG = {
+  accepted: {
+    bg: 'rgba(76, 175, 80, 0.18)',
+    border: 'rgba(76, 175, 80, 0.45)',
+    colorToken: 'success500',
+    label: 'Accepte',
+  },
+  declined: {
+    bg: 'rgba(244, 67, 54, 0.18)',
+    border: 'rgba(244, 67, 54, 0.45)',
+    colorToken: 'error500',
+    label: 'Refuse',
+  },
+  pending: {
+    bg: 'rgba(212, 175, 55, 0.18)',
+    border: 'rgba(212, 175, 55, 0.45)',
+    colorToken: 'gold500',
+    label: 'En attente',
+  },
+};
+
+const styles = StyleSheet.create({
+  addressDot: {
+    backgroundColor: '#ff4d4f',
+    borderRadius: 3.5,
+    height: 7,
+    width: 7,
+  },
+  addressRow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(1, 179, 244, 0.1)',
+    borderColor: 'rgba(1, 179, 244, 0.28)',
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: '100%',
+  },
+  button: {
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 38,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  container: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginVertical: 6,
+    maxWidth: '90%',
+    minWidth: 260,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  content: {
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  fieldLabel: {
+    minWidth: 48,
+    paddingTop: 1,
+  },
+  fieldRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    width: '100%',
+  },
+  fieldValue: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  footer: {
+    alignItems: 'stretch',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    width: '100%',
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: '100%',
+  },
+  headerTitle: {
+    flex: 1,
+    marginRight: 10,
+  },
+  separator: {
+    alignSelf: 'stretch',
+    height: StyleSheet.hairlineWidth,
+    width: '100%',
+  },
+  statusBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    flexShrink: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+});
+
 /**
- * Bubble to display a Match Proposal in a chat
+ * Bubble to display a Match Proposal in chat.
  * @param {object} props
- * @param {object} props.proposal - The proposal data { venue, address, date, endDate, status }
- * @param {boolean} [props.isMe] - Whether sent by current user
- * @param {function} [props.onAccept] - Function called when accepted
- * @param {function} [props.onDecline] - Function called when declined
- * @returns {import('react').ReactElement}
+ * @param {object} props.proposal
+ * @param {boolean} [props.isMe]
+ * @param {Function} [props.onAccept]
+ * @param {Function} [props.onDecline]
+ * @returns {import('react').ReactElement | null}
  */
-const ProposalMessageBubble = ({ proposal, isMe = false, onAccept, onDecline }) => {
-  const { Colors, Fonts, Spaces } = useTheme();
+function ProposalMessageBubble({
+  isMe = false, onAccept, onDecline, proposal,
+}) {
+  const { Colors, Fonts } = useTheme();
   const [loading, setLoading] = useState(false);
 
   if (!proposal) return null;
 
   const {
-    venue = "Lieu à définir",
     address,
     date,
     endDate,
-    status = 'pending' // pending, accepted, declined
+    status = 'pending',
+    venue = 'Lieu a definir',
   } = proposal;
 
-  const formattedDate = date ? dayjs(date).locale('fr').format('dddd D MMMM') : 'Date à définir';
+  const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
+  const addressLabel = resolveAddressLabel(address);
+
+  const formattedDate = date
+    ? dayjs(date).locale('fr').format('dddd D MMMM')
+    : 'Date a definir';
   const formattedStartTime = date ? dayjs(date).format('HH:mm') : '--:--';
   const formattedEndTime = endDate ? dayjs(endDate).format('HH:mm') : '--:--';
-  const timeRange = `${formattedStartTime} → ${formattedEndTime}`;
+  const timeRange = `${formattedStartTime} -> ${formattedEndTime}`;
 
   const handleAction = async (actionFn) => {
-    if (!actionFn) return;
+    if (!actionFn || loading) return;
     setLoading(true);
-    await actionFn();
-    setLoading(false);
+    try {
+      await actionFn();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openMaps = () => {
-    const addressToOpen = address || venue;
+    const addressToOpen = addressLabel || venue;
     if (!addressToOpen) return;
-    
-    const encodedAddress = encodeURIComponent(addressToOpen);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${encodedAddress}`,
-      android: `geo:0,0?q=${encodedAddress}`,
-    });
-    
-    // Try native maps first, fallback to Google Maps web
-    Linking.canOpenURL(url).then((supported) => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
-      }
-    });
-  };
 
-  const renderStatus = () => {
-    if (status === 'accepted') {
-      return (
-        <View style={[styles.statusBadge, { backgroundColor: Colors.success500 }]}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>ACCEPTÉ ✅</Text>
-        </View>
-      );
-    }
-    if (status === 'declined') {
-      return (
-        <View style={[styles.statusBadge, { backgroundColor: Colors.error500 }]}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>REFUSÉ ❌</Text>
-        </View>
-      );
-    }
-    return (
-        <View style={[styles.statusBadge, { backgroundColor: Colors.warning500 }]}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>EN ATTENTE ⏳</Text>
-        </View>
-    );
+    const encodedAddress = encodeURIComponent(addressToOpen);
+    const nativeUrl = Platform.select({
+      android: `geo:0,0?q=${encodedAddress}`,
+      default: `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`,
+      ios: `maps:0,0?q=${encodedAddress}`,
+    });
+
+    Linking.canOpenURL(nativeUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(nativeUrl);
+        }
+        return Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
+      })
+      .catch(() => {
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
+      });
   };
 
   return (
-    <View style={[
-      styles.container,
-      {
-        backgroundColor: Colors.neutral800,
-        borderColor: Colors.gold500,
-        alignSelf: isMe ? 'flex-end' : 'flex-start',
-      },
-    ]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
-        <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
-          🤝 Proposition de Match
+    <View
+      style={[
+        styles.container,
+        {
+          alignSelf: isMe ? 'flex-end' : 'flex-start',
+          backgroundColor: 'rgba(20, 39, 52, 0.92)',
+          borderColor: 'rgba(212, 175, 55, 0.9)',
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.86}
+          numberOfLines={1}
+          style={[Fonts.p2Bold, styles.headerTitle, { color: Colors.gold500 }]}
+        >
+          Proposition de match
         </Text>
-        {renderStatus()}
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: statusConfig.bg,
+              borderColor: statusConfig.border,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p4Bold, { color: statusColor }]}>{statusConfig.label}</Text>
+        </View>
       </View>
+      <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
 
-      {/* Content */}
       <View style={styles.content}>
-        <View style={styles.row}>
-            <Text style={{ fontSize: 16 }}>📅</Text>
-            <Text style={[Fonts.h3, { color: Colors.neutral00, marginLeft: 8 }]}>
-                {formattedDate}
-            </Text>
+        <View style={styles.fieldRow}>
+          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Date</Text>
+          <Text style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}>
+            {formattedDate}
+          </Text>
         </View>
-        <View style={styles.row}>
-            <Text style={{ fontSize: 16 }}>⏰</Text>
-            <Text style={[Fonts.h3, { color: Colors.primary500, marginLeft: 8 }]}>
-                {timeRange}
-            </Text>
+
+        <View style={styles.fieldRow}>
+          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Heure</Text>
+          <Text style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.primary500 }]}>
+            {timeRange}
+          </Text>
         </View>
-        
-        {/* Venue Name */}
-        <View style={styles.row}>
-            <Text style={{ fontSize: 16 }}>🏟️</Text>
-            <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginLeft: 8, flex: 1 }]} numberOfLines={1}>
-                {venue}
-            </Text>
+
+        <View style={styles.fieldRow}>
+          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Lieu</Text>
+          <Text
+            numberOfLines={2}
+            style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}
+          >
+            {venue}
+          </Text>
         </View>
-        
-        {/* Address - Clickable */}
-        {address && (
-          <TouchableOpacity onPress={openMaps} style={styles.addressRow}>
-            <Text style={{ fontSize: 16 }}>📍</Text>
-            <Text style={[Fonts.p2, { color: Colors.primary400, marginLeft: 8, flex: 1, textDecorationLine: 'underline' }]} numberOfLines={2}>
-                {address}
+
+        {addressLabel ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={openMaps} style={styles.addressRow}>
+            <View style={styles.addressDot} />
+            <Text
+              numberOfLines={2}
+              style={[Fonts.p2, {
+                color: Colors.neutral100,
+                flex: 1,
+                marginLeft: 8,
+              }]}
+            >
+              {addressLabel}
             </Text>
-            <Text style={{ fontSize: 12, marginLeft: 4 }}>🗺️</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginLeft: 10 }]}>Ouvrir</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
-      {/* Actions (Only if Pending and NOT ME) */}
       {status === 'pending' && !isMe && (
-        <View style={[styles.footer, { borderTopColor: Colors.neutral700 }]}>
+        <>
+          <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
+          <View style={styles.footer}>
             {loading ? (
-                <ActivityIndicator color={Colors.primary500} />
+              <ActivityIndicator color={Colors.primary500} />
             ) : (
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <TouchableOpacity 
-                        onPress={() => handleAction(onDecline)}
-                        style={[styles.button, { backgroundColor: Colors.error500 }]}
-                    >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>REFUSER</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        onPress={() => handleAction(onAccept)}
-                        style={[styles.button, { backgroundColor: Colors.success500 }]}
-                    >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>ACCEPTER</Text>
-                    </TouchableOpacity>
-                </View>
+              <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => handleAction(onDecline)}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
+                      borderColor: Colors.error500,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Refuser</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleAction(onAccept)}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: 'rgba(76, 175, 80, 0.15)',
+                      borderColor: Colors.success500,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>Accepter</Text>
+                </TouchableOpacity>
+              </View>
             )}
-        </View>
+          </View>
+        </>
       )}
-      
-      {/* Message for sender */}
+
       {status === 'pending' && isMe && (
-           <View style={[styles.footer, { borderTopColor: Colors.neutral700 }]}>
-                <Text style={[Fonts.p4, { color: Colors.neutral00, fontStyle: 'italic' }]}>
-                    En attente de la réponse adverse...
-                </Text>
-           </View>
+        <>
+          <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
+          <View style={styles.footer}>
+            <Text style={[Fonts.p4, { color: Colors.neutral300, fontStyle: 'italic' }]}>
+              En attente de la reponse adverse
+            </Text>
+          </View>
+        </>
       )}
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    width: 280,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    marginVertical: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  content: {
-    padding: 16,
-    gap: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(1, 179, 244, 0.1)',
-    padding: 8,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  footer: {
-    padding: 12,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  button: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      minWidth: 100,
-      alignItems: 'center',
-  }
-});
+}
 
 export default ProposalMessageBubble;

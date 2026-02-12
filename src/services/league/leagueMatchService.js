@@ -1,6 +1,16 @@
 import client from '@/services/client';
 
 /**
+ * Generic partial update for a league match (proposal, metadata, etc.)
+ * @param {string} matchId
+ * @param {object} data
+ */
+export const updateMatch = async (matchId, data) => {
+  const response = await client.put(`/league-matches/${matchId}`, { data });
+  return response.data;
+};
+
+/**
  * Confirm participation for a match
  * @param {string} matchId - The match documentId
  * @param {'a' | 'b'} teamSide - Which team the user is part of
@@ -103,10 +113,10 @@ export const fetchMatch = async (matchId) => {
     params: {
       populate: {
         team_a: {
-          populate: ['captain', 'crest']
+          populate: ['captain', 'crest', 'roster']
         },
         team_b: {
-          populate: ['captain', 'crest']
+          populate: ['captain', 'crest', 'roster']
         },
         participations_a: true,
         participations_b: true,
@@ -125,14 +135,25 @@ export const fetchMatch = async (matchId) => {
  * @param {number} limit - Max number of matches to return (default 10)
  */
 export const getMatchHistory = async (teamId, limit = 10) => {
+  const normalizedTeamId = String(teamId);
+  const parsedNumericId = Number.parseInt(normalizedTeamId, 10);
+  const isNumericTeamId = Number.isFinite(parsedNumericId) && String(parsedNumericId) === normalizedTeamId;
+  const teamFilterOr = [
+    { team_a: { documentId: { $eq: normalizedTeamId } } },
+    { team_b: { documentId: { $eq: normalizedTeamId } } },
+  ];
+  if (isNumericTeamId) {
+    teamFilterOr.push({ team_a: { id: { $eq: parsedNumericId } } });
+    teamFilterOr.push({ team_b: { id: { $eq: parsedNumericId } } });
+  }
+
   const response = await client.get('/league-matches', {
     params: {
       filters: {
-        $or: [
-          { team_a: teamId },
-          { team_b: teamId }
+        $and: [
+          { $or: teamFilterOr },
+          { status: { $in: ['valid', 'cancelled', 'forfeit', 'no_show'] } },
         ],
-        status: { $in: ['valid', 'cancelled', 'forfeit', 'no_show'] }
       },
       populate: ['team_a', 'team_a.crest', 'team_b', 'team_b.crest', 'winner'],
       sort: 'date:desc',
@@ -141,10 +162,16 @@ export const getMatchHistory = async (teamId, limit = 10) => {
   });
 
   const matches = response.data?.data || [];
+  const isSameId = (left, right) => {
+    if (left === null || left === undefined || right === null || right === undefined) return false;
+    return String(left) === String(right);
+  };
   
   // Transform to a simpler format with result/opponent perspective
   return matches.map(match => {
-    const isTeamA = match.team_a?.documentId === teamId || match.team_a?.id === teamId;
+    const isTeamA = isSameId(match.team_a?.documentId, normalizedTeamId)
+      || isSameId(match.team_a?.id, normalizedTeamId)
+      || (isNumericTeamId && isSameId(match.team_a?.id, parsedNumericId));
     const myScore = isTeamA ? match.score_a : match.score_b;
     const opponentScore = isTeamA ? match.score_b : match.score_a;
     const opponent = isTeamA ? match.team_b : match.team_a;
@@ -156,7 +183,9 @@ export const getMatchHistory = async (teamId, limit = 10) => {
       else result = 'draw';
     } else if (match.status === 'forfeit' || match.status === 'no_show') {
       const winnerId = match.winner?.documentId || match.winner?.id;
-      result = winnerId === teamId ? 'win' : 'loss';
+      result = isSameId(winnerId, normalizedTeamId) || (isNumericTeamId && isSameId(winnerId, parsedNumericId))
+        ? 'win'
+        : 'loss';
     }
 
     return {
@@ -220,37 +249,66 @@ export const submitPlayerGoals = async (matchId, goals) => {
  * @param {number} scoreA - Score of Team A
  * @param {number} scoreB - Score of Team B
  * @param {boolean} [dispute] - Whether there is a dispute
- * @param {object} [proof] - Proof file (image) { uri, name, type }
+ * @param {object} [proof] - Optional proof file (image) { uri, name, type }
  */
-export const submitMatchScore = async (matchId, scoreA, scoreB, dispute = false, proof = null) => {
+export const submitMatchProof = async (matchId, proof) => {
+  if (!proof?.uri) {
+    throw new Error('Proof file is required');
+  }
+
   const formData = new FormData();
-  formData.append('data', JSON.stringify({
-    score_a: scoreA,
-    score_b: scoreB,
-    dispute
-  }));
+  formData.append('proof', {
+    uri: proof.uri,
+    name: proof.name || 'proof.jpg',
+    type: proof.type || 'image/jpeg',
+  });
+  if (proof?.source) {
+    formData.append('source', proof.source);
+  }
 
-  if (proof) {
-    formData.append('files.proof', {
-      uri: proof.uri,
-      name: proof.name || 'proof.jpg',
-      type: proof.type || 'image/jpeg',
-    });
+  const response = await client.post(`/league-matches/${matchId}/proof`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return response.data;
+};
+
+export const submitMatchScore = async (
+  matchId,
+  scoreA,
+  scoreB,
+  dispute = false,
+  proof = null,
+  extras = {},
+) => {
+  const normalizedScoreA = Number.parseInt(scoreA, 10);
+  const normalizedScoreB = Number.parseInt(scoreB, 10);
+
+  if (Number.isNaN(normalizedScoreA) || Number.isNaN(normalizedScoreB)) {
+    throw new Error('Invalid scores payload');
   }
 
   if (proof) {
-      return client.post(`/league-matches/${matchId}/submit-score`, formData, {
-          headers: {
-              'Content-Type': 'multipart/form-data',
-          },
-      }).then(res => res.data);
-  } else {
-      const response = await client.post(`/league-matches/${matchId}/submit-score`, {
-        scoreA,
-        scoreB,
-        dispute
-      });
-      return response.data;
+    await submitMatchProof(matchId, proof);
   }
+
+  const payload = {
+    score_a: normalizedScoreA,
+    score_b: normalizedScoreB,
+    dispute: Boolean(dispute),
+  };
+
+  if (extras?.disputeType) {
+    payload.dispute_type = extras.disputeType;
+  }
+  if (extras?.disputeComment) {
+    payload.dispute_comment = extras.disputeComment;
+  }
+
+  const response = await client.post(`/league-matches/${matchId}/submit-score`, payload);
+
+  return response.data;
 };
 

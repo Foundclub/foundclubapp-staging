@@ -7,11 +7,11 @@
     }
   },
   "android": {
-    "googleServicesFile": "./google-services.json",
+    "googleServicesFile": "./android/app/google-services.json",
     "package": "com.foundclub"
   },
   "ios": {
     "bundleIdentifier": "com.foundclub.app",
-    "googleServicesFile": "./GoogleService-Info.plist"
+    "googleServicesFile": "./ios/GoogleService-Info.plist"
   }
 }

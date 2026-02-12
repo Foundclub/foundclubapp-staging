@@ -12,7 +12,7 @@ import { getPlacesFromCoordinates, searchPlaces } from './placesService';
  */
 export const useGetPlaces = ({ options, searchParam, type }) => useQuery({
   queryFn: () => searchPlaces(searchParam, type),
-  queryKey: ['places', searchParam],
+  queryKey: ['places', searchParam, type],
   ...options,
 });
 

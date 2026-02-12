@@ -12,7 +12,8 @@ const baseURL = (__DEV__ && Platform.OS === 'android')
 
 const instance = axios.create({
   baseURL,
-  timeout: 5000,
+  // Some custom actions (league score/validation) can exceed 5s on local dev.
+  timeout: 15000,
 });
 
 /**
@@ -48,8 +49,18 @@ const resetAuth = async (axiosError) => {
     storage.delete('auth');
   }
 
+  const timeoutMessage = axiosError?.code === 'ECONNABORTED'
+    ? 'Request timeout - please retry.'
+    : null;
+
   // Return the specific error object if available, otherwise the whole data, or the axios message
-  return Promise.reject(axiosError?.response?.data?.error || axiosError?.response?.data || axiosError?.message || 'Unknown error');
+  return Promise.reject(
+    axiosError?.response?.data?.error
+    || axiosError?.response?.data
+    || timeoutMessage
+    || axiosError?.message
+    || 'Unknown error'
+  );
 };
 
 /**

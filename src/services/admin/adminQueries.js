@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAdminStats, getPendingClubClaims, getClubClaimsRequestList } from './adminService';
+import { getAdminStats, getPendingClubClaims, getClubClaimsRequestList, getLeagueDisputes } from './adminService';
 
 // ... existing hooks
 
@@ -25,7 +25,7 @@ export const useGetClubClaimRequest = (documentId) => useQuery({
 });
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { approveClubClaim, refuseClubClaim, getClubClaimRequest } from './adminService';
+import { approveClubClaim, refuseClubClaim, getClubClaimRequest, resolveLeagueDispute } from './adminService';
 
 /**
  * Hook to approve claim
@@ -135,6 +135,34 @@ export const useUpdateAdminClub = () => {
         mutationFn: ({ documentId, data }) => updateAdminClub(documentId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'clubs'] });
+        },
+    });
+};
+
+// ================== LEAGUE DISPUTES ==================
+
+/**
+ * Hook to get League disputes list
+ */
+export const useGetLeagueDisputes = (params) => useQuery({
+    queryKey: ['admin', 'league-disputes', params],
+    queryFn: () => getLeagueDisputes(params),
+});
+
+/**
+ * Hook to resolve a League dispute
+ */
+export const useResolveLeagueDispute = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ matchId, scoreA, scoreB, reason }) => resolveLeagueDispute(matchId, {
+            scoreA,
+            scoreB,
+            reason,
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin', 'league-disputes'] });
+            queryClient.invalidateQueries({ queryKey: ['league-matches'] });
         },
     });
 };

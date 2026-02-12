@@ -15,6 +15,7 @@ import AdminUserList from '@/views/admin/AdminUserList';
 import AdminUserDetail from '@/views/admin/AdminUserDetail';
 import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubDetail from '@/views/admin/AdminClubDetail';
+import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
 
 const Stack = createStackNavigator();
 
@@ -114,6 +115,14 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Détail Club',
+        }}
+      />
+      <Stack.Screen
+        component={AdminLeagueDisputes}
+        name={RouteNames.AdminLeagueDisputes}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Litiges League',
         }}
       />
     </Stack.Navigator>

@@ -1,6 +1,6 @@
 ﻿import LocationIcon from '../../../assets/icons/location.png';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Alert, Modal, StyleSheet, ActivityIndicator, ImageBackground, Image, RefreshControl, FlatList, Dimensions, AppState } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Image, RefreshControl, FlatList, Dimensions, AppState } from 'react-native';
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
@@ -11,6 +11,12 @@ import { getMyLeagueTeam } from '../../../services/leagueTeam/leagueTeamService'
 import { getAvailableSlots } from '../../../services/teamSlot/teamSlotService';
 import useAuth from '../../../domains/auth/useAuth';
 import { formatDateWithDayPrefix as formatDate } from '../../../utils/date';
+import {
+    getLocationCoordinates,
+    hasValidLocationCoordinates,
+    normalizeLocationInput,
+    normalizeRadius,
+} from '@/utils/location';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -18,16 +24,20 @@ import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import LeagueCard from '../../../components/atoms/league/LeagueCard';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import EndGameModal from '@/components/organisms/endGameModal/EndGameModal';
 import { RouteNames } from '@/navigation/routeNames'; // Import RouteNames
 
 import Slider from '@react-native-community/slider';
 
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
-import { updateMatch } from '@/services/league/MatchService';
+import { getMatchHistory, updateMatch } from '@/services/league/leagueMatchService';
 import { createChatMessage } from '@/services/chat/chatService';
 import NextMatchCard from './components/NextMatchCard';
 import SearchCountdown from '@/components/organisms/league/SearchCountdown';
+import { shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
+import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
+
+const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
+const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
 
 const MatchCenterScreen = () => {
     const navigation = useNavigation();
@@ -43,13 +53,13 @@ const MatchCenterScreen = () => {
     const [matchRequest, setMatchRequest] = useState(null);
     const [currentMatch, setCurrentMatch] = useState(null);
     const [opponentDetails, setOpponentDetails] = useState(null); // Add state
+    const [recentMatches, setRecentMatches] = useState([]);
 
     const screenWidth = React.useRef(Dimensions.get('window').width).current;
     
     // UI State
     const [loading, setLoading] = useState(false);
     const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
-    const [isEndGameModalVisible, setIsEndGameModalVisible] = useState(false);
     const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
 
     // Search Config State
@@ -62,56 +72,34 @@ const MatchCenterScreen = () => {
     // DAY_MAP for display
     const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
 
-    // Robust Home Base Parsing (Memoized)
-    const homeBase = React.useMemo(() => {
-        let hb = mySquad?.home_base;
-        if (typeof hb === 'string') {
-            try { hb = JSON.parse(hb); } catch (e) { hb = null; }
-        }
-        return hb;
-    }, [mySquad?.home_base]);
+    // Normalized home base shape shared across all league screens.
+    const homeBase = React.useMemo(
+        () => normalizeLocationInput(mySquad?.home_base),
+        [mySquad?.home_base]
+    );
 
     // Initialize temp location from homeBase or User Location
     useEffect(() => {
         // console.log('[DEBUG] MatchCenter - Init Location', { homeBase, userLoc: userData?.location });
         if (!tempSearchLocation) {
-             if (homeBase) {
-                 // Check if homeBase is in { label, value: "lng|lat" } format from Autocomplete
-                 if (homeBase.value && typeof homeBase.value === 'string' && homeBase.value.includes('|')) {
-                    const parts = homeBase.value.split('|');
-                    if (parts.length === 2) {
-                        setTempSearchLocation({
-                            lat: parseFloat(parts[1]),
-                            lng: parseFloat(parts[0]),
-                            address: homeBase.label,
-                            city: homeBase.label ? homeBase.label.split('(')[0].trim() : '',
-                            ...homeBase
-                        });
-                    } else {
-                        setTempSearchLocation(homeBase);
-                    }
-                 } else {
-                     setTempSearchLocation(homeBase);
-                 }
-             } else if (userData?.location) {
-                 // Fallback to Captain's location if team has none
-                 let userLoc = userData.location;
-                 // Parse if string
-                 if (typeof userLoc === 'string') {
-                     try { userLoc = JSON.parse(userLoc); } catch(e) {}
-                 }
-                 if (userLoc?.lat && userLoc?.lng) {
-                     setTempSearchLocation(userLoc);
-                 }
-             }
+            const normalizedHomeBase = normalizeLocationInput(homeBase);
+            if (normalizedHomeBase && hasValidLocationCoordinates(normalizedHomeBase)) {
+                setTempSearchLocation(normalizedHomeBase);
+                return;
+            }
+
+            const normalizedUserLocation = normalizeLocationInput(userData?.location);
+            if (normalizedUserLocation && hasValidLocationCoordinates(normalizedUserLocation)) {
+                setTempSearchLocation(normalizedUserLocation);
+            }
         }
     }, [homeBase, userData]);
 
     // Initialize searchRadius from homeBase
     useEffect(() => {
-         if (homeBase?.radius) {
-             setSearchRadius(homeBase.radius);
-         }
+        if (homeBase?.radius) {
+            setSearchRadius(normalizeRadius(homeBase.radius, 20));
+        }
     }, [homeBase]);
 
     const lastMatchRef = useRef(null);
@@ -138,6 +126,14 @@ const MatchCenterScreen = () => {
         setMySquad(squad);
         setLoading(true);
         try {
+            try {
+                const history = await getMatchHistory(squad.documentId, 5);
+                setRecentMatches(Array.isArray(history) ? history : []);
+            } catch (historyError) {
+                console.error('Fetch match history error:', historyError);
+                setRecentMatches([]);
+            }
+
             // B. Check Active Matchmaking Request for THIS squad
             const activeReq = await MatchmakingService.getActiveRequest(squad.documentId);
             
@@ -199,6 +195,7 @@ const MatchCenterScreen = () => {
             
             if (squads.length === 0) {
                 setViewState('no_squad');
+                setRecentMatches([]);
                 setLoading(false);
                 return;
             }
@@ -245,51 +242,55 @@ const MatchCenterScreen = () => {
         // 2. Artificial Delay for UX (let user appreciate the transition)
         setTimeout(async () => {
             try {
-                // Determine Location
-                let searchLocation = { lat: 48.8566, lng: 2.3522 };
+                const locationCandidates = [
+                    tempSearchLocation,
+                    mySquad?.home_base,
+                    mySquad?.address,
+                    userData?.location,
+                ];
 
-
-                if (tempSearchLocation && tempSearchLocation.lat && tempSearchLocation.lng) {
-                     searchLocation = { lat: tempSearchLocation.lat, lng: tempSearchLocation.lng };
-                } else {
-                    // Fallback to Saved Squad Preference
-                    let homeBase = mySquad.home_base;
-                    if (typeof homeBase === 'string') {
-                        try { homeBase = JSON.parse(homeBase); } catch (e) {}
-                    }
-
-                    if (homeBase && homeBase.lat && homeBase.lng) {
-                         searchLocation = { lat: homeBase.lat, lng: homeBase.lng };
-                    }
-                    // Fix: Parse homeBase.value (lng|lat) if lat/lng not present directly
-                    else if (homeBase && homeBase.value && homeBase.value.includes('|')) {
-                        const parts = homeBase.value.split('|');
-                        if (parts.length === 2) {
-                            searchLocation = { lng: parseFloat(parts[0]), lat: parseFloat(parts[1]) };
-                        }
-                    }
-                    else if (mySquad.address && mySquad.address.value) {
-                        const parts = mySquad.address.value.split('|');
-                        if (parts.length === 2) {
-                            searchLocation = { lng: parseFloat(parts[0]), lat: parseFloat(parts[1]) };
-                        }
-                    }
-                    // Fallback to User Location (Captain)
-                    else if (userData?.location) {
-                         let userLoc = userData.location;
-                         if (typeof userLoc === 'string') {
-                             try { userLoc = JSON.parse(userLoc); } catch(e) {}
-                         }
-                         if (userLoc?.lat && userLoc?.lng) {
-                             searchLocation = { lat: userLoc.lat, lng: userLoc.lng };
-                         }
+                let normalizedLocation = null;
+                for (const candidate of locationCandidates) {
+                    const current = normalizeLocationInput(candidate);
+                    if (current && hasValidLocationCoordinates(current)) {
+                        normalizedLocation = current;
+                        break;
                     }
                 }
+
+                if (!normalizedLocation) {
+                    Alert.alert(
+                        'Localisation requise',
+                        'Ajoutez une adresse de squad valide (coordonnees GPS) avant de lancer la recherche.'
+                    );
+                    setViewState('lobby');
+                    return;
+                }
+
+                const coordinates = getLocationCoordinates(normalizedLocation);
+                if (!coordinates) {
+                    Alert.alert(
+                        'Localisation invalide',
+                        'Impossible de lire les coordonnees de votre localisation.'
+                    );
+                    setViewState('lobby');
+                    return;
+                }
+
+                const searchLocation = {
+                    address: normalizedLocation.address || normalizedLocation.label || null,
+                    city: normalizedLocation.city || null,
+                    label: normalizedLocation.label || normalizedLocation.address || null,
+                    lat: coordinates.lat,
+                    lng: coordinates.lng,
+                    postcode: normalizedLocation.postcode || null,
+                    value: `${coordinates.lng}|${coordinates.lat}`,
+                };
 
                 const params = {
                     teamId: mySquad.documentId,
                     selectedSlotIds: selectedSlotIds, // Array of selected recurring slot IDs
-                    radius: searchRadius, 
+                    radius: normalizeRadius(searchRadius, normalizedLocation.radius || 20),
                     location: searchLocation,
                 };
 
@@ -392,9 +393,10 @@ const MatchCenterScreen = () => {
 
     // Ensure searchRadius is initialized from squad preferences 
     useEffect(() => {
-         if (mySquad?.home_base?.radius) {
-             setSearchRadius(mySquad.home_base.radius);
-         }
+        const normalized = normalizeLocationInput(mySquad?.home_base);
+        if (normalized?.radius) {
+            setSearchRadius(normalizeRadius(normalized.radius, 20));
+        }
     }, [mySquad]);
 
     // Initialize selectedSlotIds with ALL squad slots (pre-select all)
@@ -440,19 +442,32 @@ const MatchCenterScreen = () => {
         setLoading(true);
         try {
             const matchId = currentMatch.documentId || currentMatch.id;
+            const addressLabel = typeof proposalData?.address === 'string'
+                ? proposalData.address
+                : proposalData?.addressObject?.label
+                    || proposalData?.addressObject?.address
+                    || null;
+
+            const nextLocation = {
+                ...(currentMatch?.location && typeof currentMatch.location === 'object' ? currentMatch.location : {}),
+                ...(proposalData?.addressObject && typeof proposalData.addressObject === 'object' ? proposalData.addressObject : {}),
+                ...(addressLabel ? { address: addressLabel, label: addressLabel } : {}),
+                ...(proposalData?.endDate ? { proposed_end_time: proposalData.endDate } : {}),
+            };
             
             // 1. Update Match with Proposal
             await updateMatch(matchId, {
                 proposed_venue: proposalData.venue,
                 proposed_time: proposalData.date,
-                location: proposalData.address // Store full address object if needed
+                location: nextLocation
             });
 
             // 2. Refresh Match Data Locally (Optimistic or fetch)
             const updatedMatch = { 
                 ...currentMatch, 
                 proposed_venue: proposalData.venue, 
-                proposed_time: proposalData.date 
+                proposed_time: proposalData.date,
+                location: nextLocation,
             };
             setCurrentMatch(updatedMatch);
 
@@ -461,19 +476,23 @@ const MatchCenterScreen = () => {
                 const chatId = currentMatch.chat.documentId || currentMatch.chat.id;
                 
                 const startDate = new Date(proposalData.date);
-                const endDate = proposalData.endDate ? new Date(proposalData.endDate) : null;
+                const endDate = proposalData.endDate
+                    ? new Date(proposalData.endDate)
+                    : new Date(startDate.getTime() + (60 * 60 * 1000));
                 
                 const dateStr = startDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
                 const startStr = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                 const endStr = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?';
                 
-                const timeStr = `de ${startStr} Ã  ${endStr}`;
+                const timeStr = `de ${startStr} à ${endStr}`;
+                const placeLine = addressLabel
+                    ? `${proposalData.venue} (${addressLabel})`
+                    : proposalData.venue;
                 
-                const messageText = `�� **Proposition de Match**\n` +
-                    `Je propose de jouer Ã  :\n` +
-                    `**${proposalData.venue}**\n` +
-                    `📅 **${dateStr}**\n` +
-                    `🕒 **${timeStr}**\n\n` +
+                const messageText = `Proposition de match\n` +
+                    `${placeLine}\n` +
+                    `${dateStr}\n` +
+                    `${timeStr}\n\n` +
                     `Cela vous convient-il ?`;
 
                 await createChatMessage({
@@ -482,8 +501,10 @@ const MatchCenterScreen = () => {
                     composition: {
                         type: 'proposal',
                         venue: proposalData.venue,
+                        address: addressLabel,
+                        addressObject: nextLocation,
                         date: proposalData.date,
-                        endDate: proposalData.endDate,
+                        endDate: endDate.toISOString(),
                         status: 'pending',
                         matchId: matchId 
                     }
@@ -550,7 +571,7 @@ const MatchCenterScreen = () => {
                         marginRight: -8,
                         backgroundColor: Colors.neutral800,
                         borderWidth: 2,
-                        borderColor: Colors.card || '#222',
+                        borderColor: 'rgba(255,255,255,0.14)',
                         justifyContent: 'center', alignItems: 'center',
                         overflow: 'hidden'
                     }}
@@ -684,58 +705,67 @@ const MatchCenterScreen = () => {
 
         if (viewState === 'match_found') {
             // CRITICAL FIX: If match is already scheduled/pending, Show NextMatchCard instead of Mystery Card
-            if (currentMatch && (currentMatch.status === 'scheduled' || currentMatch.status === 'pending_validation')) {
-                // Navigate to standalone LeagueMatchDetails (no event dependency)
+            if (shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
                 return (
-                    <ScreenContainer bgImage="bg2">
-                        <ScrollView contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 10, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-                            <NextMatchCard 
-                                match={currentMatch}
-                                event={currentMatch.event}
-                                myTeamId={mySquad?.documentId}
-                                onRefresh={loadMatchCenter}
-                                onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId })}
-                            />
-                        </ScrollView>
-                    </ScreenContainer>
+                    <NextMatchCard 
+                        match={currentMatch}
+                        event={currentMatch.event}
+                        myTeamId={mySquad?.documentId || mySquad?.id}
+                        onRefresh={loadMatchCenter}
+                        onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId || currentMatch.id })}
+                    />
                 );
             }
             // Helpers for display
             const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
             const formatHour = (h) => h ? h.substring(0, 5) : '?';
-            // Robust City Extraction
-            // Robust City Extraction
+            const cleanLabel = (value) => {
+                if (typeof value !== 'string') return null;
+                const trimmed = value.trim();
+                if (!trimmed) return null;
+                return trimmed.split('(')[0].trim();
+            };
+
+            const parseMaybeJson = (value) => {
+                if (value && typeof value === 'object') return value;
+                if (typeof value !== 'string') return value;
+                try {
+                    return JSON.parse(value);
+                } catch (_err) {
+                    return value;
+                }
+            };
+
             const getOpponentCity = (details) => {
-                if (!details) return "Zone Inconnue";
-                
-                // 1. Try to use home_base
-                if (details.home_base) {
-                    let hb = details.home_base;
-                    // Handle stringified JSON
-                    if (typeof hb === 'string') {
-                        try { hb = JSON.parse(hb); } catch (e) {
-                             // If it's just a string city name
-                             if (!hb.includes('{')) return hb;
-                        }
-                    }
-                    
-                    if (hb.city) return hb.city;
-                    if (hb.label) return hb.label.split('(')[0].trim();
-                    // If we only have coordinates, return a generic text
-                    if (hb.lat || hb.lng) return "Zone Approximative";
+                if (!details) return "Zone inconnue";
+
+                const homeBase = parseMaybeJson(details.home_base);
+                const location = parseMaybeJson(details.location);
+                const homeBaseAddress = parseMaybeJson(homeBase?.address);
+
+                const candidates = [
+                    homeBase?.city,
+                    homeBaseAddress?.city,
+                    homeBaseAddress?.properties?.city,
+                    homeBaseAddress?.properties?.context,
+                    homeBaseAddress?.label,
+                    homeBaseAddress?.address,
+                    homeBase?.label,
+                    location?.city,
+                    location?.label,
+                    details?.city,
+                ];
+
+                for (const candidate of candidates) {
+                    const cleaned = cleanLabel(candidate);
+                    if (cleaned) return cleaned;
                 }
 
-                // 2. Fallback to location object (User location)
-                if (details.location) {
-                     let loc = details.location;
-                     if (typeof loc === 'string') {
-                        try { loc = JSON.parse(loc); } catch (e) {}
-                     }
-                     if (loc.city) return loc.city;
-                     if (loc.label) return loc.label.split('(')[0].trim();
+                if (homeBase?.lat || homeBase?.lng || location?.lat || location?.lng) {
+                    return "Zone approximative";
                 }
-                
-                return "Zone Inconnue";
+
+                return "Zone inconnue";
             };
 
             const city = getOpponentCity(opponentDetails);
@@ -748,6 +778,16 @@ const MatchCenterScreen = () => {
             // Sport/Category handling (Relation objects or strings)
             const sportLabel = opponentDetails?.sport?.label || opponentDetails?.sport?.name || "Sport"; 
             const catLabel = opponentDetails?.category?.label || opponentDetails?.category?.name || "Senior";
+            const allCommonSlots = Array.isArray(currentMatch?.common_slots) ? currentMatch.common_slots : [];
+            const commonSlotsSummary = allCommonSlots
+                .map((slot) => {
+                    const dayLabel = DAY_MAP[String(slot?.day || '').toLowerCase()] || slot?.day || '';
+                    const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
+                    const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
+                    if (!dayLabel) return null;
+                    return `${dayLabel} ${startLabel}-${endLabel}`;
+                })
+                .filter(Boolean);
             
             console.log('[DEBUG] MatchCenter Opponent Details:', JSON.stringify(opponentDetails, null, 2));
 
@@ -784,7 +824,7 @@ const MatchCenterScreen = () => {
                                 position: 'absolute', bottom: 8, right: -4, 
                                 backgroundColor: Colors.gold500, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 
                             }}>
-                                <Text style={[Fonts.p3Bold, { color: 'black' }]}>DIV {division}</Text>
+                                <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>DIV {division}</Text>
                             </View>
                         </View>
 
@@ -821,11 +861,16 @@ const MatchCenterScreen = () => {
                         </View>
 
                         {/* Common Slots Negotiation Text */}
-                         {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
-                            <View style={{ marginTop: 12, padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
-                                <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-                                    ℹ️ {currentMatch.common_slots.length - 1} autre(s) créneau(x) commun(s) disponible(s)
+                        {commonSlotsSummary.length > 0 && (
+                            <View style={{ marginTop: 12, width: '100%', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                                <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
+                                    Créneaux en commun
                                 </Text>
+                                {commonSlotsSummary.map((slotLabel) => (
+                                    <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
+                                        • {slotLabel}
+                                    </Text>
+                                ))}
                             </View>
                         )}
                      </View>
@@ -860,7 +905,7 @@ const MatchCenterScreen = () => {
                     />
 
                     {/* Cancel Button - Captain Only */}
-                    {mySquad?.captain?.documentId === userData?.documentId && (
+                    {isSameId(mySquad?.captain?.documentId || mySquad?.captain?.id, userData?.documentId || userData?.id) && (
                         <TouchableOpacity
                             onPress={() => {
                                 Alert.alert(
@@ -872,9 +917,10 @@ const MatchCenterScreen = () => {
                                             text: "Annuler et Relancer",
                                             onPress: async () => {
                                                 try {
-                                                    if (currentMatch?.documentId) {
+                                                    const currentMatchId = currentMatch?.documentId || currentMatch?.id;
+                                                    if (currentMatchId) {
                                                         const { cancelMatch } = await import('../../../services/league/leagueMatchService');
-                                                        await cancelMatch(currentMatch.documentId, mySquad.documentId, 'captain_request');
+                                                        await cancelMatch(currentMatchId, mySquad.documentId || mySquad.id, 'captain_request');
                                                         
                                                         // Trigger new search immediately
                                                         setViewState('searching_start');
@@ -908,9 +954,10 @@ const MatchCenterScreen = () => {
                                             style: "destructive",
                                             onPress: async () => {
                                                 try {
-                                                    if (currentMatch?.documentId) {
+                                                    const currentMatchId = currentMatch?.documentId || currentMatch?.id;
+                                                    if (currentMatchId) {
                                                         const { cancelMatch } = await import('../../../services/league/leagueMatchService');
-                                                        await cancelMatch(currentMatch.documentId, mySquad.documentId, 'captain_request');
+                                                        await cancelMatch(currentMatchId, mySquad.documentId || mySquad.id, 'captain_request');
                                                         Alert.alert("Match annulé", "Vous pouvez relancer une recherche.");
                                                         loadMatchCenter();
                                                     }
@@ -937,15 +984,15 @@ const MatchCenterScreen = () => {
 
 
         // If Match Scheduled / Validated
-        if (currentMatch && (currentMatch.status === 'scheduled' || currentMatch.status === 'pending_validation')) {
+        if (shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
              // Navigate to standalone LeagueMatchDetails (no event dependency)
              return (
                  <NextMatchCard 
                     match={currentMatch}
                     event={currentMatch.event}
-                    myTeamId={mySquad?.documentId}
+                    myTeamId={mySquad?.documentId || mySquad?.id}
                     onRefresh={loadMatchCenter}
-                    onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId })}
+                    onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId || currentMatch.id })}
                  />
              );
         }
@@ -1101,9 +1148,20 @@ const MatchCenterScreen = () => {
     }
 
 
-    const renderLockerRoom = () => (
+    const renderLockerRoom = () => {
+        const rawStreak = Number(mySquad?.streak || 0);
+        const streakValue = Number.isFinite(rawStreak) && rawStreak !== 0
+            ? `${rawStreak > 0 ? '+' : ''}${rawStreak}`
+            : '-';
+        const showEmptyHistoryCta = !currentMatch && viewState !== 'radar' && viewState !== 'searching_start';
+        const leagueSurface = {
+            backgroundColor: 'rgba(10, 28, 43, 0.82)',
+            borderColor: 'rgba(1, 179, 244, 0.22)',
+        };
+
+        return (
         <View style={styles.container}>
-            
+             
              {/* 1. IDENTITY HEADER - NOW WITH SWITCHER */}
              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32, marginTop: 16 }}>
                 <View style={{ 
@@ -1140,30 +1198,45 @@ const MatchCenterScreen = () => {
              </View>
 
             <SectionHeader title={viewState === 'radar' ? "RECHERCHE..." : (viewState === 'match_found' ? "ACTION REQUISE" : "PROCHAIN MATCH")} />
-            
-            <LeagueCard style={{ marginBottom: 24, padding: 0, overflow: 'hidden' }}>
-                <View style={{ padding: 20 }}>
-                     {renderMatchCardContent()}
+
+            {shouldShowNextMatchCard(currentMatch, currentMatch?.event) ? (
+                <View style={{ marginTop: 8, marginBottom: 26 }}>
+                    {renderMatchCardContent()}
                 </View>
-            </LeagueCard>
+            ) : (
+                <LeagueCard style={{ marginTop: 8, marginBottom: 26, padding: 0, overflow: 'hidden' }}>
+                    <View style={{ padding: 20 }}>
+                         {renderMatchCardContent()}
+                    </View>
+                </LeagueCard>
+            )}
 
             {/* 3. SEASON STATS */}
-            <SectionHeader title="SAISON EN COURS" />
-            <LeagueCard>
-                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ marginTop: 4 }}>
+                <SectionHeader title="SAISON EN COURS" />
+            </View>
+            <LeagueCard style={{ marginTop: 8, marginBottom: 6, ...leagueSurface }}>
+                 <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
                       <View style={{ alignItems: 'center', flex: 1 }}>
                           <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{mySquad?.wins || 0}</Text>
-                          <Text style={[Fonts.p3Bold, { color: Colors.neutral300, marginTop: 4 }]}>VICTOIRES</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
                       </View>
-                      <View style={{ width: 1, height: 40, backgroundColor: Colors.neutral800 }} />
+                      <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                       <View style={{ alignItems: 'center', flex: 1 }}>
-                          <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>-</Text>
-                          <Text style={[Fonts.p3Bold, { color: Colors.neutral300, marginTop: 4 }]}>SÉRIE</Text>
+                          <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{streakValue}</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
                       </View>
-                      <View style={{ width: 1, height: 40, backgroundColor: Colors.neutral800 }} />
+                      <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                        <View style={{ alignItems: 'center', flex: 1 }}>
                             <TouchableOpacity 
-                                style={{ padding: 8, backgroundColor: Colors.neutral800, borderRadius: 8 }}
+                                style={{
+                                    backgroundColor: 'rgba(1, 179, 244, 0.14)',
+                                    borderColor: 'rgba(1, 179, 244, 0.48)',
+                                    borderRadius: 10,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 8,
+                                }}
                                 onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
                             >
                                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>CLASSEMENT</Text>
@@ -1171,8 +1244,114 @@ const MatchCenterScreen = () => {
                        </View>
                  </View>
             </LeagueCard>
+
+            <View style={{ marginTop: 14 }}>
+                <SectionHeader title="DERNIERS MATCHS" />
+            </View>
+            <LeagueCard style={{ marginTop: 8, marginBottom: 8, ...leagueSurface }}>
+                {recentMatches.length === 0 ? (
+                    <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+                        <View
+                            style={{
+                                alignItems: 'center',
+                                backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                                borderColor: 'rgba(1, 179, 244, 0.32)',
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                height: 40,
+                                justifyContent: 'center',
+                                marginBottom: 10,
+                                width: 40,
+                            }}
+                        >
+                            <Text style={{ fontSize: 16 }}>🗂️</Text>
+                        </View>
+                        <Text style={[Fonts.p2, { color: Colors.neutral100, textAlign: 'center' }]}>
+                            Aucun match termine pour le moment.
+                        </Text>
+                        <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
+                            Terminez un premier match pour alimenter votre historique.
+                        </Text>
+                        {showEmptyHistoryCta && (
+                            <TouchableOpacity
+                                onPress={() => setViewState('lobby')}
+                                style={{
+                                    backgroundColor: 'rgba(1, 179, 244, 0.15)',
+                                    borderColor: 'rgba(1, 179, 244, 0.42)',
+                                    borderRadius: 10,
+                                    borderWidth: 1,
+                                    marginTop: 12,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                }}
+                            >
+                                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                                    Lancer une recherche
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    recentMatches.map((item, index) => {
+                        const resultColor = item.result === 'win'
+                            ? Colors.success500
+                            : item.result === 'loss'
+                                ? Colors.error500
+                                : Colors.neutral300;
+                        const resultLabel = item.result === 'win'
+                            ? 'Victoire'
+                            : item.result === 'loss'
+                                ? 'Defaite'
+                                : item.result === 'draw'
+                                    ? 'Nul'
+                                    : item.status;
+                        const matchDate = item.date ? new Date(item.date) : null;
+                        const dateLabel = matchDate && !Number.isNaN(matchDate.getTime())
+                            ? matchDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : 'Date inconnue';
+
+                        return (
+                            <TouchableOpacity
+                                key={item.id}
+                                onPress={() => navigation.navigate(RouteNames.LeagueDashboard, {
+                                    screen: RouteNames.PastMatchDetails,
+                                    params: {
+                                        matchId: item.id,
+                                        myTeamId: mySquad?.documentId || mySquad?.id,
+                                    },
+                                })}
+                                style={{
+                                    paddingVertical: 12,
+                                    borderBottomWidth: index === recentMatches.length - 1 ? 0 : 1,
+                                    borderBottomColor: 'rgba(255,255,255,0.09)',
+                                }}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <View style={{ flex: 1, marginRight: 12 }}>
+                                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]} numberOfLines={1}>
+                                            vs {item.opponent?.name || 'Adversaire'}
+                                        </Text>
+                                        <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
+                                            {dateLabel}
+                                        </Text>
+                                    </View>
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                                            {item.score_a ?? '-'} - {item.score_b ?? '-'}
+                                        </Text>
+                                        <Text style={[Fonts.p3Bold, { color: resultColor, marginTop: 2 }]}>
+                                            {resultLabel}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })
+                )}
+            </LeagueCard>
         </View>
     );
+    };
 
 
 
@@ -1222,19 +1401,9 @@ const MatchCenterScreen = () => {
                         <AutocompleteAddressInput
                             placeholder="Entrez une nouvelle adresse..."
                             onSelect={(data) => {
-                                // data: { label: "Address...", value: "lng|lat" }
-                                if (data && data.value) {
-                                    const parts = data.value.split('|');
-                                    if (parts.length === 2) {
-                                        const lng = parseFloat(parts[0]);
-                                        const lat = parseFloat(parts[1]);
-                                        setTempSearchLocation({
-                                            lat: lat,
-                                            lng: lng,
-                                            address: data.label,
-                                            city: data.label.split('(')[0].trim()
-                                        });
-                                    }
+                                const normalized = normalizeLocationInput(data);
+                                if (normalized && hasValidLocationCoordinates(normalized)) {
+                                    setTempSearchLocation(normalized);
                                 }
                                 setIsEditingLocation(false);
                             }}
@@ -1423,6 +1592,8 @@ const MatchCenterScreen = () => {
         </BottomModal>
     );
 
+    const proposalDefaults = React.useMemo(() => buildProposalDefaultsFromMatch(currentMatch), [currentMatch]);
+
     if (viewState === 'loading' && !mySquad) { return <View style={[styles.screen, {justifyContent:'center'}]}><ActivityIndicator color={Colors.gold500 || '#D4AF37'} /></View>; }
     if (viewState === 'no_squad') return <View style={styles.screen}>{renderNoSquad()}</View>;
     
@@ -1441,18 +1612,6 @@ const MatchCenterScreen = () => {
                 </View>
 
                 {renderLockerRoom()}
-                
-                <EndGameModal 
-                    isVisible={isEndGameModalVisible}
-                    onClose={() => setIsEndGameModalVisible(false)}
-                    onSubmit={async (scoreA, scoreB) => {
-                         // TODO: Call API
-                         // await MatchmakingService.submitScore(currentMatch.id, scoreA, scoreB);
-                         Alert.alert("Score envoyé", `Score A: ${scoreA} - Score B: ${scoreB}\n(Backend non connecté)`);
-                    }}
-                    teamNameA={currentMatch?.team_a?.name}
-                    teamNameB={currentMatch?.team_b?.name}
-                />
             </ScrollView>
             
             {/* MODALS OUTSIDE SCROLLVIEW */}
@@ -1463,6 +1622,9 @@ const MatchCenterScreen = () => {
                 isVisible={isProposalModalVisible}
                 onClose={() => setIsProposalModalVisible(false)}
                 onSend={handleSendProposal}
+                initialDate={proposalDefaults.date}
+                initialStartTime={proposalDefaults.start}
+                initialEndTime={proposalDefaults.end}
                 onSkip={() => {
                     setIsProposalModalVisible(false);
                     if (currentMatch && currentMatch.chat) {

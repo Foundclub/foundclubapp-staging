@@ -5,89 +5,78 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 
 /**
  * SearchCountdown Component
- * Shows remaining time before matchmaking request expires (24h timeout)
+ * Displays elapsed search time (no auto-expiration).
  */
-const SearchCountdown = ({ createdAt, onExpired }) => {
+const SearchCountdown = ({ createdAt }) => {
     const { Colors, Fonts } = useTheme();
-    const [timeRemaining, setTimeRemaining] = useState(null);
-
-    const TIMEOUT_HOURS = 24;
+    const [elapsed, setElapsed] = useState(null);
+    const leagueSurface = {
+        backgroundColor: 'rgba(10, 28, 43, 0.82)',
+        borderColor: 'rgba(1, 179, 244, 0.22)',
+    };
 
     useEffect(() => {
         if (!createdAt) return;
 
-        const calculateRemaining = () => {
+        const updateElapsed = () => {
             const created = new Date(createdAt).getTime();
-            const expiresAt = created + (TIMEOUT_HOURS * 60 * 60 * 1000);
-            const now = Date.now();
-            const remaining = expiresAt - now;
-
-            if (remaining <= 0) {
-                setTimeRemaining(null);
-                onExpired?.();
+            if (Number.isNaN(created)) {
+                setElapsed(null);
                 return;
             }
 
-            const hours = Math.floor(remaining / (1000 * 60 * 60));
-            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+            const diff = Math.max(0, Date.now() - created);
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-            setTimeRemaining({ hours, minutes, seconds, total: remaining });
+            setElapsed({ hours, minutes, seconds });
         };
 
-        calculateRemaining();
-        const interval = setInterval(calculateRemaining, 1000);
+        updateElapsed();
+        const interval = setInterval(updateElapsed, 1000);
         return () => clearInterval(interval);
     }, [createdAt]);
 
-    if (!timeRemaining) return null;
-
-    const isUrgent = timeRemaining.hours < 2;
-    const urgentColor = isUrgent ? Colors.error500 || '#f44336' : Colors.primary500 || '#d4af37';
+    if (!elapsed) return null;
 
     const formatNumber = (num) => String(num).padStart(2, '0');
 
     return (
-        <LeagueCard style={[styles.container, isUrgent && { borderColor: urgentColor, borderWidth: 1 }]}>
+        <LeagueCard style={[styles.container, leagueSurface]}>
             <View style={styles.header}>
                 <Text style={{ fontSize: 16, marginRight: 8 }}>⏱️</Text>
                 <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                    TEMPS RESTANT
+                    TEMPS DE RECHERCHE
                 </Text>
             </View>
 
             <View style={styles.timerRow}>
                 <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: urgentColor }]}>
-                        {formatNumber(timeRemaining.hours)}
+                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
+                        {formatNumber(elapsed.hours)}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>H</Text>
                 </View>
 
-                <Text style={[styles.separator, { color: urgentColor }]}>:</Text>
+                <Text style={[styles.separator, { color: Colors.primary500 || '#01B3F4' }]}>:</Text>
 
                 <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: urgentColor }]}>
-                        {formatNumber(timeRemaining.minutes)}
+                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
+                        {formatNumber(elapsed.minutes)}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>M</Text>
                 </View>
 
-                <Text style={[styles.separator, { color: urgentColor }]}>:</Text>
+                <Text style={[styles.separator, { color: Colors.primary500 || '#01B3F4' }]}>:</Text>
 
                 <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: urgentColor }]}>
-                        {formatNumber(timeRemaining.seconds)}
+                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
+                        {formatNumber(elapsed.seconds)}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>S</Text>
                 </View>
             </View>
-
-            {isUrgent && (
-                <Text style={[Fonts.p3, { color: Colors.error500, textAlign: 'center', marginTop: 8 }]}>
-                    ⚠️ La recherche expire bientôt !
-                </Text>
-            )}
         </LeagueCard>
     );
 };
@@ -119,7 +108,7 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontWeight: 'bold',
         marginHorizontal: 2,
-    }
+    },
 });
 
 export default SearchCountdown;

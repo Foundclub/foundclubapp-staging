@@ -196,3 +196,54 @@ export const updateAdminClub = async (documentId, data) => {
     const response = await client.put(`/clubs/${documentId}`, { data });
     return response.data;
 };
+
+// ================== LEAGUE DISPUTES ==================
+
+/**
+ * Get League disputes list
+ * @param {object} params
+ * @returns {Promise<any>}
+ */
+export const getLeagueDisputes = async (params = {}) => {
+    const defaultParams = {
+        filters: {
+            status: { $eq: 'disputed' },
+        },
+        populate: [
+            'team_a',
+            'team_a.captain',
+            'team_b',
+            'team_b.captain',
+            'chat',
+        ],
+        sort: ['updatedAt:desc'],
+        pagination: {
+            page: 1,
+            pageSize: 25,
+        },
+    };
+
+    const response = await client.get('/league-matches', {
+        params: {
+            ...defaultParams,
+            ...params,
+        },
+    });
+
+    return response.data;
+};
+
+/**
+ * Resolve a League dispute
+ * @param {string} matchId
+ * @param {{scoreA:number|string, scoreB:number|string, reason?:string}} payload
+ * @returns {Promise<any>}
+ */
+export const resolveLeagueDispute = async (matchId, payload) => {
+    const response = await client.post(`/league-matches/${matchId}/resolve-dispute`, {
+        score_a: Number.parseInt(payload.scoreA, 10),
+        score_b: Number.parseInt(payload.scoreB, 10),
+        reason: payload.reason || 'Décision SuperAdmin',
+    });
+    return response.data;
+};

@@ -8,7 +8,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { useGetEvents } from '@/services/event/eventQueries';
-import { useGetAdminStats, useGetPendingClubClaims } from '@/services/admin/adminQueries';
+import { useGetAdminStats, useGetPendingClubClaims, useGetLeagueDisputes } from '@/services/admin/adminQueries';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -55,13 +55,24 @@ function AdminDashboard() {
     } = useGetPendingClubClaims();
 
     const claimsCount = claimsData?.meta?.pagination?.total || 0;
+    const disputeCountParams = useMemo(() => ({
+        pagination: { page: 1, pageSize: 1 },
+    }), []);
+
+    const {
+        data: leagueDisputesData,
+        refetch: refetchLeagueDisputes,
+    } = useGetLeagueDisputes(disputeCountParams);
+
+    const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
 
     useFocusEffect(
         useCallback(() => {
             refetchFeatured();
             refetchStats();
             refetchClaims();
-        }, [refetchFeatured, refetchStats, refetchClaims])
+            refetchLeagueDisputes();
+        }, [refetchFeatured, refetchStats, refetchClaims, refetchLeagueDisputes])
     );
 
     const DashboardCard = ({ title, value, onPress, color = Colors.primary500 }) => (
@@ -135,6 +146,13 @@ function AdminDashboard() {
                         value={claimsCount}
                         color={Colors.warning500 || '#f59e0b'} // Orange for pending
                         onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
+                    />
+
+                    <DashboardCard
+                        title="Litiges League"
+                        value={leagueDisputesCount}
+                        color={Colors.error500}
+                        onPress={() => navigation.navigate(RouteNames.AdminLeagueDisputes)}
                     />
 
                     {/* Gestion Utilisateurs */}

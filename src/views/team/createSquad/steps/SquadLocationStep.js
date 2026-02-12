@@ -4,6 +4,7 @@ import useTheme from '@/theme/themeContext';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import Button from '@/components/atoms/button/Button';
 import Slider from '@react-native-community/slider';
+import { hasValidLocationCoordinates, normalizeLocationInput } from '@/utils/location';
 
 const SquadLocationStep = ({ data, updateData, onNext, onPrev }) => {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -12,7 +13,7 @@ const SquadLocationStep = ({ data, updateData, onNext, onPrev }) => {
   const radius = data.radius || 20;
 
   const isValid = useMemo(() => {
-    return !!data.address;
+    return hasValidLocationCoordinates(data.address);
   }, [data.address]);
 
   return (
@@ -26,7 +27,11 @@ const SquadLocationStep = ({ data, updateData, onNext, onPrev }) => {
             <AutocompleteAddressInput
                 placeholder="Rechercher une ville..."
                 address={data.address}
-                setAddress={(addr) => updateData('address', addr)}
+                setAddress={(addr) => {
+                  updateData('address', addr);
+                  const normalized = normalizeLocationInput(addr);
+                  updateData('city', normalized?.city || '');
+                }}
             />
           </View>
 

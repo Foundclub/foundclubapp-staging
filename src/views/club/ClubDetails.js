@@ -291,7 +291,9 @@ function ClubDetails({ navigation, route }) {
 
   const isMember = useMemo(() => {
     if (!userData) return false;
-    if (userData.role?.name === 'admin' || userData.role?.name === 'SuperAdmin') return true;
+    const roleName = String(userData.role?.name || '').toLowerCase();
+    const roleType = String(userData.role?.type || '').toLowerCase();
+    if (roleName === 'superadmin' || roleType === 'superadmin' || roleType === 'admin') return true;
 
     // Check direct club membership
     const userClubId = userData.club?.documentId || userData.club?.id;

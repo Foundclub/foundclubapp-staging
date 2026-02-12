@@ -96,25 +96,23 @@ const useAuth = () => {
   const switchAccount = useCallback(async (session) => {
     console.log('[useAuth] switchAccount called for:', session?.user?.email);
     queryClient.clear();
-    
-    // Re-authenticate with Firebase using the stored idToken if available
-    // This ensures Firebase SDK is synced with the new account for push notifications, etc.
+
+    // Switch app session immediately so UI reacts on first tap.
+    appDispatch({
+      type: 'SWITCH_ACCOUNT',
+      payload: session
+    });
+
+    // Re-authenticate with Firebase in background for push/SDK sync.
     if (session?.idToken) {
       try {
-        // React Native Firebase uses default import, not getAuth()
         const auth = (await import('@react-native-firebase/auth')).default;
         await auth().signInWithCustomToken(session.idToken);
         console.log('[useAuth] Firebase re-auth successful');
       } catch (error) {
         console.warn('[useAuth] Firebase re-auth failed (token may be expired):', error?.message);
-        // Continue anyway - the app will work, just push may not until next full login
       }
     }
-    
-    appDispatch({
-      type: 'SWITCH_ACCOUNT',
-      payload: session
-    });
   }, [appDispatch, queryClient]);
 
   const addAccount = useCallback(async () => {

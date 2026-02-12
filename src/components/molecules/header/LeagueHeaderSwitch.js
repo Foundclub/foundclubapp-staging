@@ -1,11 +1,20 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
+import {
+    TouchableOpacity,
+    View,
+    Text,
+    Image,
+    StyleSheet,
+} from 'react-native';
 import useTheme from '@/theme/themeContext';
 import { useAppMode } from '@/context/AppModeContext';
 
 const LeagueHeaderSwitch = () => {
     const { Colors, Fonts, Images } = useTheme();
     const { isGold, toggleMode } = useAppMode();
+    const logoWidth = isGold ? 100 : 140;
+    const logoHeight = isGold ? 18 : 26;
+    const leagueSectionWidth = isGold ? 118 : 92;
 
     return (
         <TouchableOpacity 
@@ -14,41 +23,53 @@ const LeagueHeaderSwitch = () => {
             style={styles.container}
         >
             <View style={styles.logoContainer}>
-                {/* FOUNDCLUB Logo */}
-                {/* In Classic (Standard), it's big and white. In Gold (League), it's smaller/dimmed. */}
-                <Image 
-                    source={Images.logo} 
-                    style={[
-                        styles.logo,
-                        isGold ? { width: 100, height: 18, opacity: 0.6 } : { width: 140, height: 26, opacity: 1 }
-                    ]} 
-                />
-
-                {/* Vertical Separator (Optional, maybe just spacing) */}
-                <View style={{ width: 1, height: 20, backgroundColor: Colors.neutral700, marginHorizontal: 12, display: 'none' }} />
-
-                {/* LEAGUE Text */}
-                {/* In Classic, it's small and dimmed. In Gold, it's big and Gold. */}
-                <Text style={[
-                    Fonts.h1Bold, 
-                    { 
-                        marginLeft: 8,
-                        transform: [{ translateY: isGold ? 0 : 2 }], // Alignment fix
-                    },
-                    isGold ? { 
-                        fontSize: 24, 
-                        color: Colors.gold500, 
-                        opacity: 1,
-                        letterSpacing: 2
-                    } : { 
-                        fontSize: 14, 
-                        color: Colors.gold500, 
-                        opacity: 0.4,
-                        letterSpacing: 1
-                    }
-                ]}>
-                    LEAGUE
-                </Text>
+                <View style={[styles.brandSection, { width: logoWidth }]}>
+                    <Image
+                        source={Images.logo}
+                        style={[
+                            styles.logo,
+                            { height: logoHeight, opacity: isGold ? 0.6 : 1, width: logoWidth },
+                        ]}
+                    />
+                </View>
+                <View style={styles.sectionSpacer} />
+                <View style={[styles.leagueSection, { width: leagueSectionWidth }]}>
+                    <Text style={[
+                        Fonts.h1Bold,
+                        styles.leagueTitle,
+                        isGold
+                            ? { color: Colors.gold500, fontSize: 24, letterSpacing: 2, opacity: 1 }
+                            : { color: Colors.gold500, fontSize: 14, letterSpacing: 1, opacity: 0.4 },
+                    ]}
+                    >
+                        LEAGUE
+                    </Text>
+                </View>
+            </View>
+            <View style={styles.modeIndicator}>
+                <View style={[styles.brandSection, { width: logoWidth }]}>
+                    <View
+                        style={[
+                            styles.modeDot,
+                            {
+                                backgroundColor: isGold ? 'transparent' : Colors.primary500,
+                                borderColor: Colors.primary500,
+                            },
+                        ]}
+                    />
+                </View>
+                <View style={styles.sectionSpacer} />
+                <View style={[styles.leagueSection, { width: leagueSectionWidth }]}>
+                    <View
+                        style={[
+                            styles.modeDot,
+                            {
+                                backgroundColor: isGold ? Colors.gold500 : 'transparent',
+                                borderColor: Colors.gold500,
+                            },
+                        ]}
+                    />
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -57,16 +78,40 @@ const LeagueHeaderSwitch = () => {
 const styles = StyleSheet.create({
     container: {
         paddingVertical: 8,
-        // No horizontal padding here, let the parent handle it or align naturally
+    },
+    brandSection: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    leagueSection: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    leagueTitle: {
+        textAlign: 'center',
+        transform: [{ translateY: 1 }],
     },
     logoContainer: {
-        flexDirection: 'row',
         alignItems: 'center',
+        flexDirection: 'row',
     },
     logo: {
         resizeMode: 'contain',
-        // Transition handled via style prop updates, LayoutAnimation could be added for smoothness
-    }
+    },
+    modeIndicator: {
+        flexDirection: 'row',
+        marginTop: 6,
+        width: 'auto',
+    },
+    sectionSpacer: {
+        width: 6,
+    },
+    modeDot: {
+        borderRadius: 6,
+        borderWidth: 1.5,
+        height: 12,
+        width: 12,
+    },
 });
 
 export default LeagueHeaderSwitch;

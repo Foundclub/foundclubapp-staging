@@ -32,12 +32,13 @@ import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
-import { confirmMatch, cancelMatch } from '@/services/league/MatchService';
+import { confirmMatch, cancelMatch, updateMatch } from '@/services/league/leagueMatchService';
 
 /**
  * Chat conversation screen component
@@ -292,28 +293,58 @@ function Conversation({ navigation, route }) {
   /* Proposal Logic */
   const handleSendProposal = async (proposalData) => {
       try {
+          const proposalStartDate = new Date(proposalData.date);
+          const proposalEndDate = proposalData.endDate
+            ? new Date(proposalData.endDate)
+            : new Date(proposalStartDate.getTime() + (60 * 60 * 1000));
+          const matchId = chatData?.league_match?.documentId || chatData?.league_match?.id || null;
+          const addressLabel = typeof proposalData?.address === 'string'
+            ? proposalData.address
+            : proposalData?.addressObject?.label
+              || proposalData?.addressObject?.address
+              || null;
+          const nextLocation = {
+            ...(chatData?.league_match?.location && typeof chatData.league_match.location === 'object'
+              ? chatData.league_match.location
+              : {}),
+            ...(proposalData?.addressObject && typeof proposalData.addressObject === 'object'
+              ? proposalData.addressObject
+              : {}),
+            ...(addressLabel ? { address: addressLabel, label: addressLabel } : {}),
+            proposed_end_time: proposalEndDate.toISOString(),
+          };
+
+          if (matchId) {
+            await updateMatch(matchId, {
+              proposed_venue: proposalData.venue,
+              proposed_time: proposalStartDate.toISOString(),
+              location: nextLocation,
+            });
+          }
+
           // Construct the message content
-          const messageText = "📅 Nouvelle proposition de match";
+          const messageText = 'Nouvelle proposition de match';
           const proposalComposition = {
               type: 'proposal',
               status: 'pending',
               venue: proposalData.venue,
-              address: proposalData.address,
-              date: proposalData.date,
-              endDate: proposalData.endDate,
-              matchId: chatData?.league_match?.documentId || chatData?.league_match?.id || null 
+              address: addressLabel,
+              addressObject: nextLocation,
+              date: proposalStartDate.toISOString(),
+              endDate: proposalEndDate.toISOString(),
+              matchId,
           };
 
           // Send message
           await sendMessage(chatId, messageText, {
               composition: proposalComposition,
-              sender: userData
+              sender: userData,
           });
-          
-          Alert.alert("Envoyé", "Votre proposition a été envoyée !");
+
+          Alert.alert('Envoye', 'Votre proposition a ete envoyee !');
       } catch (error) {
-          console.error("Send Proposal Error:", error);
-          Alert.alert("Erreur", "Impossible d'envoyer la proposition.");
+          console.error('Send Proposal Error:', error);
+          Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
       }
   };
 
@@ -466,6 +497,10 @@ function Conversation({ navigation, route }) {
   }, [chatData, route.params, getConversationName, userData, t]); 
 
   const subtitle = route.params?.subTitle || '';
+  const proposalDefaults = useMemo(
+    () => buildProposalDefaultsFromMatch(chatData?.league_match),
+    [chatData?.league_match],
+  );
 
   const showCancelButton = chatData?.type === 'league_match' && chatData?.league_match;
   console.log('[Conversation] showCancelButton:', showCancelButton, 'type:', chatData?.type, 'hasLeagueMatch:', !!chatData?.league_match);
@@ -1138,6 +1173,9 @@ function Conversation({ navigation, route }) {
         isVisible={isProposalModalVisible}
         onClose={() => setIsProposalModalVisible(false)}
         onSend={handleSendProposal}
+        initialDate={proposalDefaults.date}
+        initialStartTime={proposalDefaults.start}
+        initialEndTime={proposalDefaults.end}
     />
       </View>
     </ImageBackground>

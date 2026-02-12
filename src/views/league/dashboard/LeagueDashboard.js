@@ -27,6 +27,10 @@ const LeagueDashboard = () => {
     const [matchHistory, setMatchHistory] = useState([]);
     const [rankingData, setRankingData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const leagueSurface = {
+        backgroundColor: 'rgba(10, 28, 43, 0.82)',
+        borderColor: 'rgba(1, 179, 244, 0.22)',
+    };
 
     const loadDashboard = async () => {
         if (!userData) return;
@@ -68,7 +72,10 @@ const LeagueDashboard = () => {
     );
 
     const handleMatchPress = (match) => {
-        navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: match.id });
+        navigation.navigate(RouteNames.PastMatchDetails, {
+            matchId: match.id,
+            myTeamId: userTeam?.documentId || userTeam?.id,
+        });
     };
 
     // --- Components ---
@@ -85,7 +92,7 @@ const LeagueDashboard = () => {
 
     const renderNoTeamState = () => (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 }}>
-            <LeagueCard style={{ width: '100%', alignItems: 'center', paddingVertical: 40 }}>
+            <LeagueCard style={{ width: '100%', alignItems: 'center', paddingVertical: 40, ...leagueSurface }}>
                 <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÊT À L'ACTION ?</Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24 }]}>
                     Crée ton équipe pour rejoindre la compétition officielle.
@@ -113,21 +120,21 @@ const LeagueDashboard = () => {
     );
 
     const renderStats = () => (
-        <LeagueCard>
+        <LeagueCard style={leagueSurface}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
                     <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.wins || 0}</Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>VICTOIRES</Text>
+                    <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
                 </View>
-                <View style={{ width: 1, backgroundColor: Colors.neutral800 }} />
+                <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                 <View style={{ alignItems: 'center', flex: 1 }}>
                     <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.streak || 0}</Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>SÉRIE</Text>
+                    <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
                 </View>
-                <View style={{ width: 1, backgroundColor: Colors.neutral800 }} />
+                <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                 <View style={{ alignItems: 'center', flex: 1 }}>
                     <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.losses || 0}</Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>DÉFAITES</Text>
+                    <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
                 </View>
             </View>
         </LeagueCard>
@@ -170,11 +177,11 @@ const LeagueDashboard = () => {
                     subtitle={`DIVISION ${userTeam?.division || 10}`}
                 />
                 
-                <LeagueCard style={{ padding: 0, overflow: 'hidden' }}>
+                <LeagueCard style={{ padding: 0, overflow: 'hidden', ...leagueSurface }}>
                     {displayTeams.map((team, index) => {
                         if (team.type === 'separator') {
                             return (
-                                <View key="sep" style={{ paddingVertical: 8, alignItems: 'center', backgroundColor: Colors.neutral900 }}>
+                                <View key="sep" style={{ paddingVertical: 8, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)' }}>
                                     <View style={{ height: 4, width: 4, borderRadius: 2, backgroundColor: Colors.neutral500, marginVertical: 2 }} />
                                     <View style={{ height: 4, width: 4, borderRadius: 2, backgroundColor: Colors.neutral500, marginVertical: 2 }} />
                                     <View style={{ height: 4, width: 4, borderRadius: 2, backgroundColor: Colors.neutral500, marginVertical: 2 }} />
@@ -189,9 +196,9 @@ const LeagueDashboard = () => {
                                     flexDirection: 'row', 
                                     padding: 16, 
                                     alignItems: 'center',
-                                    backgroundColor: team.isMe ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
+                                    backgroundColor: team.isMe ? 'rgba(212, 175, 55, 0.14)' : 'transparent',
                                     borderBottomWidth: (index < displayTeams.length - 1 && displayTeams[index + 1].type !== 'separator') ? 1 : 0,
-                                    borderColor: Colors.neutral800
+                                    borderColor: 'rgba(255,255,255,0.08)',
                                 }}
                             >
                                 <Text style={[Fonts.h4, { width: 35, color: team.rank <= 3 ? Colors.gold500 : Colors.neutral300 }]}>
@@ -209,10 +216,10 @@ const LeagueDashboard = () => {
                     })}
                     
                     <TouchableOpacity 
-                        style={{ padding: 12, alignItems: 'center', backgroundColor: Colors.neutral800 }}
+                        style={{ padding: 12, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}
                         onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
                     >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>VOIR LE CLASSEMENT COMPLET</Text>
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>VOIR LE CLASSEMENT COMPLET</Text>
                     </TouchableOpacity>
                 </LeagueCard>
             </View>
@@ -292,4 +299,5 @@ const LeagueDashboard = () => {
 };
 
 export default LeagueDashboard;
+
 

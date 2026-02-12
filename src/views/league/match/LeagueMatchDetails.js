@@ -1,54 +1,71 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Image,
   RefreshControl,
-  SafeAreaView
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-import useTheme from '@/theme/themeContext';
-import useAuth from '@/domains/auth/useAuth';
 import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
-
+import ScreenContainer from '@/components/templates/ScreenContainer';
+import useAuth from '@/domains/auth/useAuth';
+import { RouteNames } from '@/navigation/routeNames';
 import {
-  fetchMatch,
+  cancelMatch,
   confirmParticipation,
   declineParticipation,
+  fetchMatch,
   markVenueBooked,
-  cancelMatch,
 } from '@/services/league/leagueMatchService';
+import useTheme from '@/theme/themeContext';
+import {
+  canCaptainSubmitScore,
+  getMatchStatusBadgeConfig,
+  isMatchPastEnd,
+  isVenueBookedForMatch,
+  normalizeMatchStatus,
+  shouldMaskOpponentIdentity,
+} from '@/views/league/match/utils/matchStatus';
 
-const LeagueMatchDetails = ({ navigation, route }) => {
+const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
+const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
+const normalizeComparableText = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .trim();
+const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
+const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
+
+function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = useAuth();
-  
-  const [match, setMatch] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  // Determine user context
+  const [actionLoading, setActionLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [match, setMatch] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
   const userId = userData?.documentId || userData?.id;
-  
+
   const loadMatch = useCallback(async () => {
     try {
       const data = await fetchMatch(matchId);
       setMatch(data);
-    } catch (err) {
-      console.error('Error loading match:', err);
+    } catch (error) {
+      console.error('Error loading match:', error);
       Alert.alert('Erreur', 'Impossible de charger le match');
     } finally {
       setLoading(false);
@@ -62,80 +79,113 @@ const LeagueMatchDetails = ({ navigation, route }) => {
     }, [loadMatch])
   );
 
-  // --- Derived State ---
-  const isInTeamA = useMemo(() => match?.team_a?.members?.some(m => m.documentId === userId || m.id === userId) ||
-                    match?.team_a?.captain?.documentId === userId, [match, userId]);
+  const isInTeamA = useMemo(() => {
+    const rosterA = match?.team_a?.roster || [];
+    const membersA = match?.team_a?.members || [];
+    return (
+      rosterA.some((m) => isSameId(m.documentId || m.id, userId))
+      || membersA.some((m) => isSameId(m.documentId || m.id, userId))
+      || isSameId(match?.team_a?.captain?.documentId || match?.team_a?.captain?.id, userId)
+    );
+  }, [match, userId]);
 
-  const isInTeamB = useMemo(() => match?.team_b?.members?.some(m => m.documentId === userId || m.id === userId) ||
-                    match?.team_b?.captain?.documentId === userId, [match, userId]);
+  const isInTeamB = useMemo(() => {
+    const rosterB = match?.team_b?.roster || [];
+    const membersB = match?.team_b?.members || [];
+    return (
+      rosterB.some((m) => isSameId(m.documentId || m.id, userId))
+      || membersB.some((m) => isSameId(m.documentId || m.id, userId))
+      || isSameId(match?.team_b?.captain?.documentId || match?.team_b?.captain?.id, userId)
+    );
+  }, [match, userId]);
 
   const teamSide = isInTeamA ? 'a' : (isInTeamB ? 'b' : null);
   const myTeam = teamSide === 'a' ? match?.team_a : (teamSide === 'b' ? match?.team_b : null);
-  
-  const isCaptainA = match?.team_a?.captain?.documentId === userId;
-  const isCaptainB = match?.team_b?.captain?.documentId === userId;
+
+  const isCaptainA = isSameId(match?.team_a?.captain?.documentId || match?.team_a?.captain?.id, userId);
+  const isCaptainB = isSameId(match?.team_b?.captain?.documentId || match?.team_b?.captain?.id, userId);
   const isCaptain = isCaptainA || isCaptainB;
 
-  const participations = teamSide === 'a' ? match?.participations_a : match?.participations_b;
-  const hasConfirmed = participations?.some(p => p.documentId === userId || p.id === userId);
-  const participationCount = participations?.length || 0;
+  const participations = teamSide === 'a' ? (match?.participations_a || []) : (match?.participations_b || []);
+  const hasConfirmed = participations.some((p) => isSameId(p.documentId || p.id, userId));
+  const participationCount = participations.length;
 
-  const isVenueBooked = match?.venueBooked;
-  const isAnonymous = !isVenueBooked && match?.status === 'scheduled';
+  const normalizedStatus = useMemo(() => normalizeMatchStatus(match?.status), [match?.status]);
+  const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
+  const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
+  const canSubmitScore = useMemo(
+    () => canCaptainSubmitScore({ isCaptain, match }),
+    [isCaptain, match]
+  );
+  const isScoreLockedByTime = useMemo(
+    () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !isMatchPastEnd(match),
+    [isCaptain, isVenueBooked, match, normalizedStatus]
+  );
 
-  // Format date
+  const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
+  const addressLabel = useMemo(() => resolveAddressLabel(match), [match]);
+  const showAddressLine = useMemo(
+    () => Boolean(addressLabel && normalizeComparableText(addressLabel) !== normalizeComparableText(venueLabel)),
+    [addressLabel, venueLabel]
+  );
+
   const formattedDate = useMemo(() => {
-    if (!match?.date) return 'Date à définir';
+    if (!match?.date) return 'Date a definir';
     try {
-      return format(new Date(match.date), "EEEE d MMMM 'à' HH'h'mm", { locale: fr });
-    } catch {
+      return format(new Date(match.date), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
+    } catch (_error) {
       return match.date;
     }
   }, [match?.date]);
 
-  // Status badge config
-  const statusConfig = useMemo(() => {
-    if (!match) return {};
-    if (match.status === 'scheduled' && !match.venueBooked) {
-        return { label: 'En attente terrain', color: Colors.warning500 || '#f59e0b', bg: (Colors.warning500 || '#f59e0b') + '20' };
-    }
-    const map = {
-      scheduled: { label: 'Programmé', color: Colors.primary500, bg: Colors.primary500 + '20' },
-      pending_validation: { label: 'En attente', color: Colors.warning500, bg: Colors.warning500 + '20' },
-      negotiating: { label: 'Négociation', color: Colors.warning500, bg: Colors.warning500 + '20' },
-      valid: { label: 'Validé', color: Colors.success500, bg: Colors.success500 + '20' },
-      cancelled: { label: 'Annulé', color: Colors.error500, bg: Colors.error500 + '20' },
-      forfeit: { label: 'Forfait', color: Colors.error500, bg: Colors.error500 + '20' },
-      no_show: { label: 'No-show', color: Colors.error500, bg: Colors.error500 + '20' },
-    };
-    return map[match.status] || { label: match.status, color: Colors.neutral500, bg: Colors.neutral500 + '20' };
-  }, [match, Colors]);
+  const statusConfig = useMemo(() => getMatchStatusBadgeConfig(match, Colors), [Colors, match]);
 
-  // Elo Calculation
   const eloPrediction = useMemo(() => {
     if (!match?.team_a?.elo || !match?.team_b?.elo) return null;
     const eloA = match.team_a.elo;
     const eloB = match.team_b.elo;
-    
-    const K = 32;
+    const k = 32;
     const expectedA = 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
-    const winA = Math.round(K * (1 - expectedA));
-    const lossA = Math.round(K * (0 - expectedA));
-    
-    return { winA, lossA, winB: -lossA, lossB: -winA }; // Symmetric
+    const winA = Math.round(k * (1 - expectedA));
+    const lossA = Math.round(k * (0 - expectedA));
+    return {
+      lossA,
+      lossB: -winA,
+      winA,
+      winB: -lossA,
+    };
   }, [match]);
 
-  // Handlers
-    const handleConfirmParticipation = async () => {
+  const matchEndedOrScored = useMemo(
+    () => isMatchPastEnd(match) || ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled'].includes(normalizedStatus),
+    [match, normalizedStatus]
+  );
+
+  const progressSteps = useMemo(() => ([
+    { done: true, key: 'found', label: 'Trouve' },
+    { done: isVenueBooked || matchEndedOrScored, key: 'booked', label: 'Terrain reserve' },
+    { done: matchEndedOrScored, key: 'played', label: 'Match joue' },
+    { done: ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled'].includes(normalizedStatus), key: 'result', label: 'Resultat' },
+  ]), [isVenueBooked, matchEndedOrScored, normalizedStatus]);
+
+  const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || (normalizedStatus === 'scheduled' && !isVenueBooked);
+  const canShowCaptainCancel = normalizedStatus === 'scheduled';
+  const hasBottomPresenceBar = Boolean(teamSide && normalizedStatus === 'scheduled');
+  const scrollBottomPadding = hasBottomPresenceBar
+    ? ((isCaptain && (canShowCaptainPrimary || canShowCaptainCancel)) ? 320 : 250)
+    : 52;
+  const isScoreToSubmitBadge = statusConfig.label === 'Score a saisir';
+
+  const handleConfirmParticipation = async () => {
     if (!teamSide) return;
     setActionLoading(true);
     try {
       const result = await confirmParticipation(matchId, teamSide);
-      Alert.alert('✅ Confirmé', result.message);
-      loadMatch();
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Erreur', 'Échec confirmation');
+      Alert.alert('Confirme', result.message || 'Presence confirmee');
+      await loadMatch();
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erreur', 'Echec confirmation');
     } finally {
       setActionLoading(false);
     }
@@ -146,11 +196,11 @@ const LeagueMatchDetails = ({ navigation, route }) => {
     setActionLoading(true);
     try {
       await declineParticipation(matchId, teamSide);
-      Alert.alert('Décliné', 'Votre participation a été annulée');
-      loadMatch();
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Erreur', 'Échec annulation');
+      Alert.alert('Decline', 'Votre participation a ete annulee');
+      await loadMatch();
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erreur', 'Echec annulation');
     } finally {
       setActionLoading(false);
     }
@@ -160,57 +210,98 @@ const LeagueMatchDetails = ({ navigation, route }) => {
     setActionLoading(true);
     try {
       await markVenueBooked(matchId);
-      Alert.alert('Succès', 'Terrain marqué comme réservé');
-      loadMatch();
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
+      Alert.alert('Succes', 'Terrain marque comme reserve');
+      await loadMatch();
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erreur', 'Impossible de mettre a jour le statut');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleCancelMatch = async () => {
+  const handleCancelMatch = () => {
     Alert.alert(
       'Annuler le match ?',
-      'Action irréversible. Êtes-vous sûr ?',
+      'Action irreversible. Etes-vous sur ?',
       [
         { text: 'Non', style: 'cancel' },
-        { 
-          text: 'Oui, annuler', 
-          style: 'destructive',
+        {
           onPress: async () => {
-              setActionLoading(true);
-              try {
-                  await cancelMatch(matchId, myTeam?.documentId, "Annulé par le capitaine");
-                  Alert.alert('Match annulé', 'Le match a été annulé.');
-                  navigation.goBack();
-              } catch (err) {
-                  Alert.alert('Erreur', 'Échec annulation');
-              } finally {
-                  setActionLoading(false);
-              }
-          }
-        }
+            setActionLoading(true);
+            try {
+              await cancelMatch(matchId, myTeam?.documentId, 'Annule par le capitaine');
+              Alert.alert('Match annule', 'Le match a ete annule.');
+              navigation.goBack();
+            } catch (_error) {
+              Alert.alert('Erreur', 'Echec annulation');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+          style: 'destructive',
+          text: 'Oui, annuler',
+        },
       ]
     );
   };
 
   const handleOpenChat = () => {
-    if (match?.chat?.documentId) {
-      navigation.navigate('Conversation', {
-        chatId: match.chat.documentId,
-        title: `${match.team_a?.name} vs ${match.team_b?.name}`,
-      });
-    }
+    if (!match?.chat?.documentId) return;
+    navigation.navigate('Conversation', {
+      chatId: match.chat.documentId,
+      title: `${match.team_a?.name} vs ${match.team_b?.name}`,
+    });
   };
 
+  const handleGoToScoreEntry = () => {
+    if (isScoreLockedByTime) {
+      Alert.alert(
+        'Score indisponible',
+        "Vous pourrez saisir le score une fois l'heure de fin du match depassee."
+      );
+      return;
+    }
+
+    const params = { matchId };
+    const currentRouteNames = navigation?.getState?.()?.routeNames || [];
+    if (currentRouteNames.includes('EndMatchScreen')) {
+      navigation.navigate('EndMatchScreen', params);
+      return;
+    }
+
+    const parentNavigation = navigation?.getParent?.();
+    const parentRouteNames = parentNavigation?.getState?.()?.routeNames || [];
+    if (parentRouteNames.includes('EndMatchScreen')) {
+      parentNavigation.navigate('EndMatchScreen', params);
+      return;
+    }
+    if (parentRouteNames.includes(RouteNames.LeagueDashboard)) {
+      parentNavigation.navigate(RouteNames.LeagueDashboard, {
+        params,
+        screen: 'EndMatchScreen',
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.LeagueHomeTab, {
+      params: {
+        params,
+        screen: 'EndMatchScreen',
+      },
+      screen: RouteNames.LeagueDashboard,
+    });
+  };
+
+  const screenContainerStyle = useMemo(() => ({
+    paddingHorizontal: 0,
+  }), []);
 
   if (loading) {
     return (
-      <ScreenContainer bgImage="bg2">
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.primary500} />
+      <ScreenContainer bgImage="bg2" style={[screenContainerStyle]}>
+        <View style={styles.centered}>
+          <ActivityIndicator color={Colors.primary500} size="large" />
         </View>
       </ScreenContainer>
     );
@@ -218,13 +309,21 @@ const LeagueMatchDetails = ({ navigation, route }) => {
 
   if (!match) {
     return (
-      <ScreenContainer bgImage="bg2">
-         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>← Retour</Text>
-          </TouchableOpacity>
+      <ScreenContainer bgImage="bg2" style={[screenContainerStyle]}>
+        <View style={styles.header}>
+          <View style={styles.headerSide}>
+            <HeaderBackButton
+              borderColor="primary500"
+              color="primary500"
+              onPress={() => navigation.goBack()}
+              style={styles.headerBackButton}
+              withDefaultMargin={false}
+            />
+          </View>
+          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Details du match</Text>
+          <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={styles.centered}>
           <Text style={[Fonts.p1, { color: Colors.neutral500 }]}>Match introuvable</Text>
         </View>
       </ScreenContainer>
@@ -232,336 +331,480 @@ const LeagueMatchDetails = ({ navigation, route }) => {
   }
 
   return (
-    <ScreenContainer bgImage="bg2">
-        <SafeAreaView style={{ flex: 1 }}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Image source={Images.arrowLeft} style={{ width: 24, height: 24, tintColor: Colors.neutral00 }} />
-                </TouchableOpacity>
-                <Text style={[Fonts.h3, { color: Colors.gold500, textTransform: 'uppercase', letterSpacing: 1 }]}>
-                    Détails du match
-                </Text>
-                {match.chat ? (
-                    <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
-                         <Image source={Images.chat} style={{ width: 24, height: 24, tintColor: Colors.gold500 }} />
-                    </TouchableOpacity>
-                ) : <View style={{ width: 44 }} />}
+    <ScreenContainer bgImage="bg2" style={[screenContainerStyle]}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <View style={styles.headerSide}>
+            <HeaderBackButton
+              borderColor="primary500"
+              color="primary500"
+              onPress={() => navigation.goBack()}
+              style={styles.headerBackButton}
+              withDefaultMargin={false}
+            />
+          </View>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Details du match</Text>
+          <View style={[styles.headerSide, styles.headerSideRight]}>
+            {match.chat ? (
+              <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
+                <Image source={Images.envelope} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: scrollBottomPadding, paddingHorizontal: 16 }}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={() => {
+                setRefreshing(true);
+                loadMatch();
+              }}
+              refreshing={refreshing}
+              tintColor={Colors.primary500}
+            />
+          )}
+        >
+          <View style={styles.heroSection}>
+            <View style={styles.teamColumn}>
+              <TeamShield initials={match.team_a?.initials || match.team_a?.name || '?'} size={80} />
+              <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
             </View>
 
-            <ScrollView 
-                contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 16 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadMatch(); }} tintColor={Colors.primary500} />}
-            >
-                {/* Hero Section */}
-                <View style={styles.heroSection}>
-                    <View style={styles.teamColumn}>
-                        <TeamShield initials={match.team_a?.initials || match.team_a?.name || '?'} size={80} />
-                        <Text style={[Fonts.h4, styles.teamName]}>{match.team_a?.name || 'Équipe A'}</Text>
-                    </View>
-
-                    <View style={styles.scoreColumn}>
-                        {match.score_a !== null ? (
-                             <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32 }]}>
-                                {match.score_a} - {match.score_b}
-                             </Text>
-                        ) : (
-                            <Text style={[Fonts.h1, { color: Colors.gold500, fontSize: 24, fontStyle: 'italic' }]}>VS</Text>
-                        )}
-                        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                            <Text style={[Fonts.label, { color: statusConfig.color, textTransform: 'uppercase' }]}>{statusConfig.label}</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.teamColumn}>
-                         {isAnonymous ? (
-                             <>
-                                <View style={[styles.mysteryShield, { borderColor: Colors.gold500 }]}>
-                                    <Text style={{ fontSize: 30 }}>❓</Text>
-                                </View>
-                                <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>Mystère</Text>
-                             </>
-                         ) : (
-                            <>
-                                <TeamShield initials={match.team_b?.initials || match.team_b?.name || '?'} size={80} isNeutral={true} />
-                                <Text style={[Fonts.h4, styles.teamName]}>{match.team_b?.name || 'Équipe B'}</Text>
-                            </>
-                         )}
-                    </View>
-                </View>
-
-                {/* Info Card */}
-                <LeagueCard isGold>
-                    <View style={styles.infoRow}>
-                        <Image source={Images.calendar} style={{ width: 20, height: 20, tintColor: Colors.gold500 }} />
-                        <Text style={[Fonts.p1, { color: Colors.neutral00, marginLeft: 12, flex: 1 }]}>
-                            {formattedDate}
-                        </Text>
-                    </View>
-                    <View style={[styles.separator, { backgroundColor: Colors.neutral800 }]} />
-                    
-                    <View style={styles.infoRow}>
-                        <Image source={Images.location} style={{ width: 20, height: 20, tintColor: Colors.gold500 }} />
-                        <View style={{ marginLeft: 12, flex: 1 }}>
-                            <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
-                                {match.venue || match.proposed_venue || 'Lieu à définir'}
-                            </Text>
-                            {(match.location?.address || match.address) && (
-                                <Text style={[Fonts.p2, { color: Colors.neutral400, marginTop: 4 }]}>
-                                    {match.location?.address || match.address}
-                                </Text>
-                            )}
-                        </View>
-                    </View>
-                    
-                    {eloPrediction && (
-                        <>
-                            <View style={[styles.separator, { backgroundColor: Colors.neutral800 }]} />
-                            <View style={styles.eloContainer}>
-                                <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 8, textAlign: 'center' }]}>ENJEUX DU MATCH (ELO)</Text>
-                                <View style={styles.eloRow}>
-                                    <View style={styles.eloTeam}>
-                                        <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{match.team_a?.name}</Text>
-                                        <Text style={[Fonts.p1, { color: Colors.success500 }]}>+{eloPrediction.winA} / <Text style={{ color: Colors.error500 }}>{eloPrediction.lossA}</Text></Text>
-                                    </View>
-                                    <View style={[styles.verticalSep, { backgroundColor: Colors.neutral700 }]} />
-                                    <View style={styles.eloTeam}>
-                                        <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
-                                        <Text style={[Fonts.p1, { color: Colors.success500 }]}>+{eloPrediction.winB} / <Text style={{ color: Colors.error500 }}>{eloPrediction.lossB}</Text></Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </>
-                    )}
-                </LeagueCard>
-
-                {/* Participations Section */}
-                 <Text style={[Fonts.h4, { color: Colors.neutral100, marginTop: 24, marginBottom: 12 }]}>
-                    Compositions ({match.participations_a?.length || 0} vs {match.participations_b?.length || 0})
+            <View style={styles.scoreColumn}>
+              {match.score_a !== null && match.score_b !== null ? (
+                <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32 }]}>
+                  {match.score_a} - {match.score_b}
                 </Text>
-                
-                <LeagueCard>
-                    <View style={styles.compoRow}>
-                         {/* Team A */}
-                         <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
-                            {match.participations_a?.map((p, i) => (
-                                <View key={i} style={styles.playerRow}>
-                                    <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
-                                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                                        {p.firstName || p.username}
-                                    </Text>
-                                    {p.isCaptain && <Text style={{ fontSize: 10, marginLeft: 4 }}>👑</Text>}
-                                </View>
-                            ))}
-                            {(!match.participations_a || match.participations_a.length === 0) && (
-                                <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
-                            )}
-                         </View>
+              ) : (
+                <Text style={[Fonts.h1, { color: Colors.gold500, fontSize: 24, fontStyle: 'italic' }]}>VS</Text>
+              )}
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: isScoreToSubmitBadge ? 'rgba(255, 215, 0, 0.18)' : statusConfig.bg,
+                    borderColor: isScoreToSubmitBadge ? 'rgba(255, 215, 0, 0.45)' : 'transparent',
+                    borderWidth: isScoreToSubmitBadge ? 1 : 0,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.label, { color: statusConfig.color, textTransform: 'uppercase' }]}>
+                  {statusConfig.label}
+                </Text>
+              </View>
+            </View>
 
-                         {/* Separator */}
-                         <View style={{ width: 1, backgroundColor: Colors.neutral800, marginHorizontal: 16 }} />
+            <View style={styles.teamColumn}>
+              {isAnonymous ? (
+                <>
+                  <View style={[styles.mysteryShield, { borderColor: Colors.gold500 }]}>
+                    <Text style={{ color: Colors.neutral200, fontSize: 30 }}>{'?'}</Text>
+                  </View>
+                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>
+                    Mystère
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <TeamShield initials={match.team_b?.initials || match.team_b?.name || '?'} isNeutral={true} size={80} />
+                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Equipe B'}</Text>
+                </>
+              )}
+            </View>
+          </View>
 
-                         {/* Team B */}
-                         <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.label, { color: Colors.neutral400, marginBottom: 12 }]}>
-                                {isAnonymous ? 'Adversaire' : match.team_b?.name}
-                            </Text>
-                            {isAnonymous ? (
-                                <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Masqué</Text>
-                            ) : (
-                                <>
-                                    {match.participations_b?.map((p, i) => (
-                                        <View key={i} style={styles.playerRow}>
-                                            <View style={[styles.dot, { backgroundColor: Colors.neutral400 }]} />
-                                            <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                                                {p.firstName || p.username}
-                                            </Text>
-                                        </View>
-                                    ))}
-                                    {(!match.participations_b || match.participations_b.length === 0) && (
-                                        <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
-                                    )}
-                                </>
-                            )}
-                         </View>
+          <View style={styles.progressChipsRow}>
+            {progressSteps.map((step) => (
+              <View
+                key={step.key}
+                style={[
+                  styles.progressChip,
+                  step.done ? styles.progressChipDone : styles.progressChipTodo,
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.progressChipText,
+                    { color: step.done ? Colors.primary500 : Colors.neutral300 },
+                  ]}
+                >
+                  {step.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <LeagueCard isGold>
+            <View style={styles.infoRow}>
+              <Image source={Images.calendar} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
+              <Text style={[Fonts.p1, { color: Colors.neutral00, flex: 1, marginLeft: 12 }]}>
+                {formattedDate}
+              </Text>
+            </View>
+            <View style={[styles.separator, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+
+            <View style={styles.infoRow}>
+              <Image source={Images.location} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{venueLabel}</Text>
+                {showAddressLine ? (
+                  <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 4 }]}>
+                    {addressLabel}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            {eloPrediction ? (
+              <>
+                <View style={[styles.separator, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                <View style={styles.eloContainer}>
+                  <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 8, textAlign: 'center' }]}>
+                    ENJEUX DU MATCH (ELO)
+                  </Text>
+                  <View style={styles.eloRow}>
+                    <View style={styles.eloTeam}>
+                      <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{match.team_a?.name}</Text>
+                      <Text style={[Fonts.p1, { color: Colors.success500 }]}>
+                        +{eloPrediction.winA}
+                        {' / '}
+                        <Text style={{ color: Colors.error500 }}>{eloPrediction.lossA}</Text>
+                      </Text>
                     </View>
-                </LeagueCard>
+                    <View style={[styles.verticalSep, { backgroundColor: 'rgba(255,255,255,0.16)' }]} />
+                    <View style={styles.eloTeam}>
+                      <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
+                      <Text style={[Fonts.p1, { color: Colors.success500 }]}>
+                        +{eloPrediction.winB}
+                        {' / '}
+                        <Text style={{ color: Colors.error500 }}>{eloPrediction.lossB}</Text>
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </>
+            ) : null}
+          </LeagueCard>
 
-                {/* Captain Actions */}
-                {isCaptain && match.status === 'scheduled' && (
-                    <>
-                        <Text style={[Fonts.h4, { color: Colors.neutral100, marginTop: 24, marginBottom: 12 }]}>
-                             Zone Capitaine
-                        </Text>
-                        <LeagueCard style={{ borderColor: Colors.error500 }}>
-                            {!isVenueBooked && (
-                                <Button
-                                    title="Marquer terrain réservé"
-                                    variant="Primary"
-                                    onPress={handleMarkVenueBooked}
-                                    disabled={actionLoading}
-                                    style={{ marginBottom: 12, backgroundColor: Colors.gold500 }}
-                                    textStyle={{ color: Colors.black }}
-                                />
-                            )}
-                            <Button
-                                title="Annuler le match"
-                                variant="Secondary"
-                                onPress={handleCancelMatch}
-                                disabled={actionLoading}
-                                style={{ borderColor: Colors.error500 }}
-                                textStyle={{ color: Colors.error500 }}
-                            />
-                        </LeagueCard>
-                    </>
+          <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
+            Compositions ({match.participations_a?.length || 0} vs {match.participations_b?.length || 0})
+          </Text>
+
+          <LeagueCard>
+            <View style={styles.compoRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
+                {(match.participations_a || []).map((p, i) => (
+                  <View key={`${p.documentId || p.id || i}-a`} style={styles.playerRow}>
+                    <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
+                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{p.firstName || p.username}</Text>
+                    {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>{'C'}</Text> : null}
+                  </View>
+                ))}
+                {(!match.participations_a || match.participations_a.length === 0) ? (
+                  <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                ) : null}
+              </View>
+
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 16, width: 1 }} />
+
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.label, { color: Colors.neutral300, marginBottom: 12 }]}>
+                  {isAnonymous ? 'Adversaire' : match.team_b?.name}
+                </Text>
+                {isAnonymous ? (
+                  <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Masque</Text>
+                ) : (
+                  <>
+                    {(match.participations_b || []).map((p, i) => (
+                      <View key={`${p.documentId || p.id || i}-b`} style={styles.playerRow}>
+                        <View style={[styles.dot, { backgroundColor: Colors.neutral300 }]} />
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{p.firstName || p.username}</Text>
+                      </View>
+                    ))}
+                    {(!match.participations_b || match.participations_b.length === 0) ? (
+                      <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                    ) : null}
+                  </>
                 )}
+              </View>
+            </View>
+          </LeagueCard>
 
-            </ScrollView>
+          {isCaptain && (canShowCaptainPrimary || canShowCaptainCancel) ? (
+            <>
+              <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
+                Zone Capitaine
+              </Text>
+              <LeagueCard>
+                {canSubmitScore || isScoreLockedByTime ? (
+                  <Button
+                    disabled={actionLoading}
+                    onPress={handleGoToScoreEntry}
+                    style={{
+                      backgroundColor: isScoreLockedByTime ? 'rgba(255,255,255,0.08)' : Colors.primary500,
+                      borderColor: isScoreLockedByTime ? 'rgba(255,255,255,0.2)' : Colors.primary500,
+                      marginBottom: 12,
+                    }}
+                    textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
+                    title={isScoreLockedByTime ? 'Score verrouille (match en cours)' : 'Saisir le score final'}
+                    variant="Primary"
+                  />
+                ) : null}
+                {isScoreLockedByTime ? (
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
+                    Le score sera disponible apres l'heure de fin du match.
+                  </Text>
+                ) : null}
+                {normalizedStatus === 'scheduled' && !isVenueBooked ? (
+                  <Button
+                    disabled={actionLoading}
+                    onPress={handleMarkVenueBooked}
+                    style={{ backgroundColor: Colors.gold500, marginBottom: 10 }}
+                    textStyle={{ color: Colors.primary900 }}
+                    title="Marquer terrain reserve"
+                    variant="Primary"
+                  />
+                ) : null}
+                {canShowCaptainCancel ? (
+                  <TouchableOpacity
+                    disabled={actionLoading}
+                    onPress={handleCancelMatch}
+                    style={{ alignItems: 'center', paddingVertical: 6 }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
+                      Annuler le match
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </LeagueCard>
+            </>
+          ) : null}
+        </ScrollView>
 
-            {teamSide && match.status === 'scheduled' && (
-                 <View style={[styles.bottomBar, { backgroundColor: Colors.card, borderTopColor: Colors.gold500 }]}>
-                    {hasConfirmed ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                             <Text style={[Fonts.p1, { color: Colors.success500 }]}>✅ Présence confirmée</Text>
-                             <Button
-                                title="Passer Absent"
-                                variant="Secondary"
-                                size="small"
-                                onPress={handleDeclineParticipation}
-                                disabled={actionLoading}
-                                style={{ minWidth: 120, borderColor: Colors.neutral700, backgroundColor: Colors.neutral900 }}
-                             />
-                        </View>
-                    ) : (
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
-                            <Button
-                                title="Absent"
-                                variant="Secondary"
-                                onPress={handleDeclineParticipation}
-                                disabled={actionLoading}
-                                style={{ flex: 1, borderColor: Colors.error500, backgroundColor: Colors.neutral900 }}
-                                textStyle={{ color: Colors.error500 }}
-                            />
-                            <Button
-                                title={`Présent (${participationCount}/5)`}
-                                variant="Primary"
-                                onPress={handleConfirmParticipation}
-                                disabled={actionLoading || participationCount >= 5}
-                                style={{ flex: 2, backgroundColor: Colors.gold500 }}
-                                textStyle={{ color: Colors.black }}
-                            />
-                        </View>
-                    )}
-                 </View>
+        {teamSide && normalizedStatus === 'scheduled' ? (
+          <View style={styles.bottomBar}>
+            <View style={styles.bottomBarContent}>
+            {hasConfirmed ? (
+              <View style={styles.confirmedRow}>
+                <Text style={[Fonts.p1, { color: Colors.success500 }]}>{'Presence confirmee'}</Text>
+                <Button
+                  disabled={actionLoading}
+                  onPress={handleDeclineParticipation}
+                  size="small"
+                  style={{ backgroundColor: 'transparent', borderColor: Colors.error500, minWidth: 132 }}
+                  textStyle={{ color: Colors.error500 }}
+                  title="Passer absent"
+                  variant="Secondary"
+                />
+              </View>
+            ) : (
+              <View style={styles.presenceActionsRow}>
+                <Button
+                  disabled={actionLoading}
+                  onPress={handleDeclineParticipation}
+                  style={{ backgroundColor: 'transparent', borderColor: Colors.error500, flex: 1 }}
+                  textStyle={{ color: Colors.error500 }}
+                  title="Absent"
+                  variant="Secondary"
+                />
+                <Button
+                  disabled={actionLoading || participationCount >= 5}
+                  onPress={handleConfirmParticipation}
+                  style={{ backgroundColor: Colors.gold500, flex: 1.35 }}
+                  textStyle={{ color: Colors.primary900 }}
+                  title={`Présent (${participationCount}/5)`}
+                  variant="Primary"
+                />
+              </View>
             )}
-        </SafeAreaView>
+            </View>
+          </View>
+        ) : null}
+      </SafeAreaView>
     </ScreenContainer>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
+  bottomBar: {
+    backgroundColor: 'rgba(10, 28, 43, 0.96)',
+    borderTopColor: 'rgba(1, 179, 244, 0.25)',
+    borderTopWidth: 1,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 30,
+    position: 'absolute',
+    right: 0,
+  },
+  bottomBarContent: {
+    width: '100%',
+  },
+  centered: {
     alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  chatButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.42)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  compoRow: {
+    flexDirection: 'row',
+  },
+  confirmedRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  dot: {
+    borderRadius: 3,
+    height: 6,
+    marginRight: 8,
+    width: 6,
+  },
+  eloContainer: {
+    marginTop: 8,
+  },
+  eloRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  eloTeam: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backButton: {
-    padding: 8,
+  headerBackButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 0,
   },
-  chatButton: {
-    padding: 8,
+  headerSide: {
+    alignItems: 'flex-start',
+    minWidth: 42,
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
+  },
+  headerTitle: {
+    flex: 1,
+    letterSpacing: 1,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   heroSection: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 24,
+    marginBottom: 18,
+    marginTop: 10,
   },
-  teamColumn: {
+  infoRow: {
     alignItems: 'center',
-    width: '30%',
+    flexDirection: 'row',
+    paddingVertical: 8,
+  },
+  mysteryShield: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 40,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    height: 80,
+    justifyContent: 'center',
+    width: 80,
+  },
+  playerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  presenceActionsRow: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  progressChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    minWidth: 70,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  progressChipDone: {
+    backgroundColor: 'rgba(1, 179, 244, 0.14)',
+    borderColor: 'rgba(1, 179, 244, 0.42)',
+  },
+  progressChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 18,
+  },
+  progressChipText: {
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  progressChipTodo: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   scoreColumn: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '40%',
   },
-  teamName: {
-    marginTop: 8,
-    textAlign: 'center',
-    color: 'white',
-    fontSize: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginTop: 8,
-  },
-  mysteryShield: {
-    width: 80, 
-    height: 80, 
-    borderRadius: 40, 
-    backgroundColor: '#333', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderWidth: 2, 
-    borderStyle: 'dashed'
-  },
-  infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 8,
+  sectionTitle: {
+    marginBottom: 12,
+    marginTop: 24,
   },
   separator: {
-      height: 1,
-      width: '100%',
-      marginVertical: 8,
+    height: 1,
+    marginVertical: 8,
+    width: '100%',
   },
-  eloContainer: {
-      marginTop: 8,
+  statusBadge: {
+    borderRadius: 4,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  eloRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      alignItems: 'center',
+  teamColumn: {
+    alignItems: 'center',
+    width: '30%',
   },
-  eloTeam: {
-      alignItems: 'center',
-      flex: 1,
+  teamName: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   verticalSep: {
-      width: 1,
-      height: 30,
-      marginHorizontal: 16,
+    height: 30,
+    marginHorizontal: 16,
+    width: 1,
   },
-  compoRow: {
-      flexDirection: 'row',
-  },
-  playerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-  },
-  dot: {
-      width: 6, 
-      height: 6, 
-      borderRadius: 3, 
-      marginRight: 8 
-  },
-  bottomBar: {
-      padding: 16,
-      borderTopWidth: 1,
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: '#1A1A1A', // Colors.card fallback
-      paddingBottom: 30, // Safe area hint
-  }
 });
 
 export default LeagueMatchDetails;

@@ -316,6 +316,15 @@ export const NOTIFICATION_TYPES = {
   NEW_WHISPER: 'newWhisper',
 
   // Matchmaking
+  LEAGUE_MATCH_FOUND: 'leagueMatchFound',
+  LEAGUE_PROPOSAL_RECEIVED: 'leagueProposalReceived',
+  LEAGUE_PROPOSAL_ACCEPTED: 'leagueProposalAccepted',
+  LEAGUE_VENUE_BOOKED: 'leagueVenueBooked',
+  LEAGUE_SCORE_DUE: 'leagueScoreDue',
+  LEAGUE_MATCH_VALIDATED: 'leagueMatchValidated',
+  LEAGUE_MATCH_DISPUTED: 'leagueMatchDisputed',
+  LEAGUE_SEARCH_RELAUNCH_PROMPT: 'leagueSearchRelaunchPrompt',
+  // Legacy alias kept for backward compatibility
   MATCH_FOUND: 'MATCH_FOUND',
 };
 

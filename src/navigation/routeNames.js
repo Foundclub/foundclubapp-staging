@@ -11,6 +11,7 @@ export const RouteNames = /** @type {const} */ ({
   AdminUserDetail: 'AdminUserDetail',
   AdminClubList: 'AdminClubList',
   AdminClubDetail: 'AdminClubDetail',
+  AdminLeagueDisputes: 'AdminLeagueDisputes',
   AuthStackAccount: 'AuthStackAccount',
   AuthStackMessaging: 'AuthStackMessaging',
   AuthStackPlanning: 'AuthStackPlanning',

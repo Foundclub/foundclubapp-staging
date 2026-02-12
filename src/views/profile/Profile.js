@@ -55,6 +55,7 @@ function Profile({ navigation }) {
   } = useAuth();
 
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
+  const [switchingAccountId, setSwitchingAccountId] = useState(null);
 
   const canManageClub = useMemo(() => {
     if (!userData?.club?.documentId) {
@@ -173,9 +174,17 @@ function Profile({ navigation }) {
     }
   };
 
-  const handleSwitchAccount = (session) => {
-    switchAccount(session);
-    setIsAccountModalVisible(false);
+  const handleSwitchAccount = async (session) => {
+    const targetId = session?.user?.documentId || session?.user?.id;
+    if (!targetId || switchingAccountId) return;
+
+    setSwitchingAccountId(targetId);
+    try {
+      await switchAccount(session);
+      setIsAccountModalVisible(false);
+    } finally {
+      setSwitchingAccountId(null);
+    }
   };
 
   const handleAddAccount = () => {
@@ -567,7 +576,8 @@ function Profile({ navigation }) {
             return (
               <TouchableOpacity
                 key={index}
-                onPress={() => !isCurrent && handleSwitchAccount(session)}
+                disabled={Boolean(switchingAccountId)}
+                onPress={() => !isCurrent && !switchingAccountId && handleSwitchAccount(session)}
                 style={[
                   Alignments.row,
                   Alignments.alignCenter,
@@ -575,6 +585,7 @@ function Profile({ navigation }) {
                   ApplicationStyle.borderRadius8,
                   ApplicationStyle.backgroundColor.primary700,
                   isCurrent && { borderWidth: 1, borderColor: '#01b3f4' },
+                  switchingAccountId && { opacity: 0.6 },
                 ]}
               >
                 <ProfileAvatar
@@ -590,7 +601,10 @@ function Profile({ navigation }) {
                     {roleName}
                   </Text>
                 </View>
-                {isCurrent && (
+                {switchingAccountId === (session?.user?.documentId || session?.user?.id) && (
+                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>Changement...</Text>
+                )}
+                {isCurrent && switchingAccountId !== (session?.user?.documentId || session?.user?.id) && (
                   <Text style={[Fonts.p2Bold, Fonts.primary500]}>Actif</Text>
                 )}
               </TouchableOpacity>

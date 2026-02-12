@@ -37,6 +37,43 @@ const userSchema = Joi.object({
 }).required();
 
 /**
+ * Public user profile schema (for getUserById on another user profile)
+ * Keep this schema independent from "me" to allow strict field minimization
+ * on backend without breaking profile views.
+ */
+const publicUserSchema = Joi.object({
+  id: Joi.number().required(),
+  documentId: Joi.string().allow(null, '').optional(),
+  firstname: Joi.string().allow(null, '').optional(),
+  lastname: Joi.string().allow(null, '').optional(),
+  birthdate: Joi.string().isoDate().allow(null).optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  position: Joi.string().allow(null, '').optional(),
+  weight: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
+  height: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
+  isLookingForClub: Joi.boolean().allow(null).optional(),
+  avatar: Joi.object({
+    url: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  role: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+    name: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  section: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+    name: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  club: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+    name: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  parentAccount: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+}).required();
+
+/**
  * Role validation schema
  */
 const roleSchema = Joi.object({
@@ -425,7 +462,7 @@ export const getAllRoles = async () => {
 export const getUserById = async (id) => {
   const result = await client.get(`/firebase-auth/${id}`);
   try {
-    const validationResult = await userSchema.validateAsync(result.data.data, {
+    const validationResult = await publicUserSchema.validateAsync(result.data.data, {
       allowUnknown: true,
     });
     return validationResult;

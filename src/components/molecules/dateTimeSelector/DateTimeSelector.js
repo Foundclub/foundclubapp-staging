@@ -52,7 +52,7 @@ export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, wi
       {/* Selection Indicator */}
       <View style={[styles.selectionIndicator, { 
         top: centerOffset,
-        backgroundColor: Colors.neutral800,
+        backgroundColor: 'rgba(1, 179, 244, 0.14)',
         borderColor: Colors.primary500
       }]} pointerEvents="none" />
       
@@ -86,7 +86,7 @@ export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, wi
                 >
                     <Text style={[
                         Fonts.p1,
-                        { color: isSelected ? Colors.primary500 : Colors.neutral500 },
+                        { color: isSelected ? Colors.primary500 : Colors.neutral300 },
                         isSelected && styles.selectedItemText
                     ]}>
                         {itemLabel}
@@ -99,7 +99,16 @@ export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, wi
   );
 };
 
-const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'modal' }) => {
+const DateTimeSelector = ({
+  buttonStyle,
+  buttonTextStyle,
+  display = 'modal',
+  label,
+  labelStyle,
+  mode = 'date',
+  onChange,
+  value,
+}) => {
   const { Colors, Fonts, Spaces } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -151,11 +160,28 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
   const years = useMemo(() => Array.from({ length: 5 }, (_, i) => currentYear + i), [currentYear]);
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
+  const isInlineTimeMode = display === 'inline' && mode === 'time';
+  const timeWheelWidth = isInlineTimeMode ? 56 : 80;
+  const timeSeparatorMargin = isInlineTimeMode ? 4 : 8;
+  const inlinePickerPanelStyle = useMemo(() => ({
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.30)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+    padding: isInlineTimeMode ? 10 : 16,
+    shadowColor: Colors.primary500,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 2,
+    overflow: 'hidden',
+  }), [Colors.primary500, isInlineTimeMode]);
 
   return (
     <View style={[Spaces.marginBottom[16]]}>
       {label && (
-        <Text style={[Fonts.p1Bold, Fonts.neutral00, Spaces.marginBottom[8]]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00, Spaces.marginBottom[8], labelStyle]}>
           {label}
         </Text>
       )}
@@ -163,16 +189,20 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
       {/* Button to open Modal/Toggle Inline */}
       <TouchableOpacity
         onPress={handleOpen}
-        style={[styles.inputButton, { borderColor: Colors.neutral700, backgroundColor: Colors.neutral800 }]}
+        style={[
+          styles.inputButton,
+          { borderColor: Colors.neutral700, backgroundColor: Colors.neutral800 },
+          buttonStyle,
+        ]}
         activeOpacity={0.8}
       >
-        <Text style={[Fonts.p1, Fonts.neutral00]}>{getFormattedValue()}</Text>
+        <Text style={[Fonts.p1, Fonts.neutral00, buttonTextStyle]}>{getFormattedValue()}</Text>
       </TouchableOpacity>
 
       {/* Inline Content */}
       {display === 'inline' && isOpen && (
-          <View style={{ backgroundColor: Colors.neutral900, borderRadius: 12, marginTop: 8, padding: 16 }}>
-             <View style={styles.pickersRow}>
+          <View style={inlinePickerPanelStyle}>
+             <View style={[styles.pickersRow, isInlineTimeMode && styles.inlineTimePickersRow]}>
                 {mode === 'date' ? (
                 <>
                     <WheelPicker
@@ -223,10 +253,10 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
                         setTempDate(newDate);
                         if(display === 'inline') onChange(newDate); // Immediate update for inline
                     }}
-                    width={80}
+                    width={timeWheelWidth}
                     isOpen={isOpen}
                     />
-                    <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: 8 }]}>:</Text>
+                    <Text style={[Fonts.h2, Fonts.neutral00, { alignSelf: 'center', marginHorizontal: timeSeparatorMargin }]}>:</Text>
                     <WheelPicker
                     data={minutes}
                     selectedValue={tempDate.getMinutes()}
@@ -236,7 +266,7 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
                         setTempDate(newDate);
                         if(display === 'inline') onChange(newDate); // Immediate update for inline
                     }}
-                    width={80}
+                    width={timeWheelWidth}
                     isOpen={isOpen}
                     />
                 </>
@@ -246,7 +276,13 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
                 variant="Secondary" 
                 title="Valider" 
                 onPress={handleClose} 
-                style={{ marginTop: 16 }}
+                style={{
+                  marginTop: 16,
+                  backgroundColor: 'rgba(1, 179, 244, 0.10)',
+                  borderColor: Colors.primary500,
+                  borderWidth: 1,
+                }}
+                textStyle={{ color: Colors.primary500 }}
             />
           </View>
       )}
@@ -258,7 +294,11 @@ const DateTimeSelector = ({ value, onChange, mode = 'date', label, display = 'mo
             close={handleClose}
             scrollable={false}
             hideCloseButton={true}
-            style={{ backgroundColor: Colors.neutral900 }}
+            style={{
+              backgroundColor: 'rgba(5, 24, 38, 0.98)',
+              borderColor: 'rgba(1, 179, 244, 0.24)',
+              borderWidth: 1,
+            }}
         >
             <View style={styles.pickersRow}>
                 {mode === 'date' ? (
@@ -354,9 +394,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
   },
+  inlineTimePickersRow: {
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
   wheelContainer: {
     overflow: 'hidden',
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
   wheelItem: {
     justifyContent: 'center',
@@ -364,8 +408,8 @@ const styles = StyleSheet.create({
   },
   selectionIndicator: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 2,
+    right: 2,
     height: ITEM_HEIGHT,
     borderRadius: 8,
     borderWidth: 1.5,

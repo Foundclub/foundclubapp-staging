@@ -1,11 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
-import { useRef } from 'react';
 import { StatusBar } from 'react-native';
 
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
+import { navigationRef } from '@/navigation/navigationService';
 
 import PublicNavigator from './public/PublicMainNavigator';
 import { RouteNames } from './routeNames';
@@ -23,8 +23,6 @@ function AppNavigator({ navigationIntegration }) {
   const { ApplicationStyle, Colors, scheme } = useTheme();
 
   console.log('[AppNavigator] Rendering. auth.token:', !!auth?.token, 'isAddingAccount:', isAddingAccount);
-
-  const containerRef = useRef(null);
 
   const navigationTheme = scheme === 'dark'
     ? ApplicationStyle.darkNavigationTheme
@@ -52,9 +50,9 @@ function AppNavigator({ navigationIntegration }) {
       key={auth?.token || 'no-token'}
       linking={linking}
       onReady={() => {
-        navigationIntegration.registerNavigationContainer(containerRef);
+        navigationIntegration.registerNavigationContainer(navigationRef);
       }}
-      ref={containerRef}
+      ref={navigationRef}
       theme={navigationTheme}
     >
       <StatusBar

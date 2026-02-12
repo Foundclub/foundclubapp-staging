@@ -86,3 +86,17 @@ yarn-error.log
 android/app/google-services.json
 android/app/src/**/google-services.json
 # ios/**/GoogleService-Info*.plist
+
+# Local mobile secrets (must stay out of git)
+/google-services.json
+/GoogleService-Info.plist
+ios/GoogleService-Info.plist
+android/app/keystore
+android/app/*.keystore
+android/private-key.json
+ios/private-key.json
+*.p8
+
+# Scratch/debug artifacts should never live under product source
+src/debug_*
+src/inspect_*

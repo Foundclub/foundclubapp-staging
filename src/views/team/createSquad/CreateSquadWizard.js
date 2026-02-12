@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useTheme from '@/theme/themeContext';
@@ -16,6 +16,7 @@ import { createLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 import useAuth from '@/domains/auth/useAuth';
 import { RouteNames } from '@/navigation/routeNames';
+import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
 
 /**
  * @typedef {Object} AddressProperties
@@ -108,12 +109,14 @@ const CreateSquadWizard = ({ navigation }) => {
         // 1. Prepare League Team Payload
         // Ensure Enums match Schema exactly
         const sportEnumMap = {
-            'Football': 'Football',
-            'Football à 5': 'Football à 5',
+            'Football': 'Football à 5',
+            'Football Ã  5': 'Football Ã  5',
             'Padel': 'Padel',
             // Default fallback if label differs slightly, though Autocomplete usage suggests direct mapping
-            'Five': 'Football à 5',
-            'Urban Soccer': 'Football à 5' 
+            'Five': 'Football Ã  5',
+            'Urban Soccer': 'Football Ã  5',
+            'Foot': 'Football à 5',
+            'Futsal': 'Football à 5'
         };
         const genderEnumMap = {
             'male': 'Male',
@@ -128,26 +131,32 @@ const CreateSquadWizard = ({ navigation }) => {
         
         switch (levelValue) {
             case 'beginner': elo = 1000; division = 10; break;
-            case 'intermediate': elo = 1200; division = 8; break;
-            case 'advanced': elo = 1400; division = 5; break;
-            case 'expert': elo = 1600; division = 3; break;
+            case 'intermediate': elo = 1200; division = 9; break;
+            case 'advanced': elo = 1300; division = 8; break;
+            case 'expert': elo = 1400; division = 7; break;
             default: elo = 1000; division = 10;
         }
+
+        const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
+        if (!homeBasePayload) {
+            throw new Error('Adresse invalide: selectionnez une adresse avec des coordonnees.');
+        }
+
+        const normalizedAddress = normalizeLocationInput(squadData.address);
 
         const leagueTeamPayload = {
             name: squadData.name,
             captain: user?.documentId ? { connect: [{ documentId: user.documentId }] } : undefined,
             roster: user?.documentId ? { connect: [{ documentId: user.documentId }] } : [],
-            sport: sportEnumMap[squadData.sport?.label] || squadData.sport?.label || 'Football', // Fallback
+            sport: sportEnumMap[squadData.sport?.label] || squadData.sport?.label || 'Football à 5', // Fallback
             section: genderEnumMap[squadData.section?.value] || 'Male',
             category: squadData.category?.label || 'Senior',
             // level: levelValue, // REMOVED to avoid 400 Invalid Key
             elo: elo,
             division: division,
             home_base: {
-                address: squadData.address,
-                city: squadData.city || squadData.address?.properties?.city || '',
-                radius: squadData.radius
+                ...homeBasePayload,
+                city: homeBasePayload.city || normalizedAddress?.city || '',
             },
             logo: squadData.logo,
             cover: squadData.cover,
@@ -211,7 +220,7 @@ const CreateSquadWizard = ({ navigation }) => {
         console.error('Full Error:', JSON.stringify(errorData, null, 2));
 
         if (errorMessage?.includes('unique') || errorMessage?.includes('already taken')) {
-            alert("Ce nom d'équipe est déjà pris. Veuillez en choisir un autre.");
+            alert("Ce nom d'Ã©quipe est dÃ©jÃ  pris. Veuillez en choisir un autre.");
         } else {
              alert(`Erreur: ${errorMessage}\n${errorDetails}`);
         }
@@ -318,3 +327,4 @@ const CreateSquadWizard = ({ navigation }) => {
 };
 
 export default CreateSquadWizard;
+

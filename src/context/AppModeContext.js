@@ -28,8 +28,13 @@ const AppModeContext = createContext({});
 export function AppModeProvider({ children }) {
   const { changeTheme } = useTheme();
 
-  // Load initial mode - defaults to 'classic' per user request (always start in classic)
-  const [mode, setMode] = useState('classic');
+  const getInitialMode = () => {
+    const storedMode = storage.getString(STORAGE_KEY);
+    return storedMode === 'gold' ? 'gold' : 'classic';
+  };
+
+  // Persisted mode between app restarts
+  const [mode, setMode] = useState(getInitialMode);
 
   // Sync theme with mode
   useEffect(() => {

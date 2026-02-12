@@ -5,7 +5,6 @@ import {
   getToken,
   onMessage,
   requestPermission,
-  setBackgroundMessageHandler,
 } from '@react-native-firebase/messaging';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
@@ -51,6 +50,28 @@ const isNotificationDuplicate = (messageId) => {
   }
   notificationStorage.set('last-notification-id', messageId);
   return false;
+};
+
+const parseMaybeJson = (value) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (_error) {
+      return value;
+    }
+  }
+  return value;
+};
+
+const normalizeNotificationData = (value) => {
+  if (!value || typeof value !== 'object') return {};
+  return Object.entries(value).reduce((acc, [key, raw]) => {
+    acc[key] = parseMaybeJson(raw);
+    return acc;
+  }, {});
 };
 
 const requestUserPermission = async () => {
@@ -117,11 +138,12 @@ const onDisplayNotification = async ({ body, data, title }) => {
  * Handle notifications for the application
  * @param {object} props - The props
  * @param {Function} props.navigate - The navigation prop
+ * @param {(payload: any) => void} [props.onSmartNotification] - In-app smart notification callback
  * @inheritdoc
  */
-const useNotifications = ({ navigate }) => {
+const useNotifications = ({ navigate, onSmartNotification }) => {
   // hooks
-  const [{ fcmToken }, dispatch] = useAppContext();
+  const [{ pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
 
   const { mutate: saveTokenMutation } = useMutation({
@@ -147,117 +169,159 @@ const useNotifications = ({ navigate }) => {
     }
   }, [saveTokenMutation]);
 
+  const smartNotifEnabled = useRef((() => {
+    const raw = process.env.LEAGUE_SMART_NOTIF_V1;
+    if (typeof raw === 'string' && raw.length > 0) {
+      return raw.trim().toLowerCase() === 'true';
+    }
+    return __DEV__;
+  })());
+
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {remoteMessageData} */remoteMessageData) => {
-    console.log('[useNotifications] handleNavigateOnOpen triggered with:', remoteMessageData);
-    if (!remoteMessageData?.type) {
+    const notificationData = normalizeNotificationData(remoteMessageData);
+    console.log('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
+    if (!notificationData?.type) {
         console.warn('[useNotifications] No type in notification data, cannot navigate');
-        return;
+        return false;
     }
 
-    switch (remoteMessageData.type) {
+    const tryNavigate = (routeName, params) => {
+      const navigated = navigate(routeName, params);
+      if (navigated === false) {
+        const fallback = navigate(RouteNames.NotificationList);
+        return fallback !== false;
+      }
+      return true;
+    };
+
+    if (notificationData.ctaRoute) {
+      const ctaOk = tryNavigate(notificationData.ctaRoute, notificationData.ctaParams || {});
+      if (ctaOk) return true;
+    }
+
+    switch (notificationData.type) {
       case NOTIFICATION_TYPES.ADD_TO_TEAM:
-        navigate(RouteNames.TeamStack, {
+        return tryNavigate(RouteNames.TeamStack, {
           params: {
-            teamId: remoteMessageData.teamId,
+            teamId: notificationData.teamId,
           },
           screen: RouteNames.TeamDetails,
         });
-        break;
       case NOTIFICATION_TYPES.CLUB_MEMBERSHIP_REQUEST:
-        navigate(RouteNames.ClubStack, {
+        return tryNavigate(RouteNames.ClubStack, {
           screen: RouteNames.ClubMembershipRequests,
           params: {
-            clubId: remoteMessageData.clubId,
+            clubId: notificationData.clubId,
           },
         });
-        break;
       case NOTIFICATION_TYPES.CLUB_REQUEST:
-        navigate(RouteNames.ClubStack, {
+        return tryNavigate(RouteNames.ClubStack, {
           params: {
-            clubId: remoteMessageData.clubId,
+            clubId: notificationData.clubId,
           },
           screen: RouteNames.Club,
         });
-        break;
       case NOTIFICATION_TYPES.EVENT_CANCELLATION:
-        navigate(RouteNames.MyEventList);
-        break;
+        return tryNavigate(RouteNames.MyEventList);
       case NOTIFICATION_TYPES.EVENT_REMINDER:
-        navigate(RouteNames.EventStack, {
+        return tryNavigate(RouteNames.EventStack, {
           params: {
-            eventId: remoteMessageData.eventId,
+            eventId: notificationData.eventId,
           },
           screen: RouteNames.EventDetails,
         });
-        break;
       case NOTIFICATION_TYPES.NEW_PARTICIPATION:
-        navigate(RouteNames.EventStack, {
+        return tryNavigate(RouteNames.EventStack, {
           params: {
-            eventId: remoteMessageData.eventId,
+            eventId: notificationData.eventId,
           },
           screen: RouteNames.EventDetails,
         });
-        break;
       case NOTIFICATION_TYPES.NEW_TEAM:
-        navigate(RouteNames.TeamStack, {
+        return tryNavigate(RouteNames.TeamStack, {
           params: {
-            teamId: remoteMessageData.teamId,
+            teamId: notificationData.teamId,
           },
           screen: RouteNames.TeamDetails,
         });
-        break;
       case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
-        // Conversation is a direct route in PrivateNavigator, not nested under Chat
-        navigate(RouteNames.Conversation, {
-          chatId: remoteMessageData.conversationId,
+        return tryNavigate(RouteNames.Conversation, {
+          chatId: notificationData.conversationId,
         });
-        break;
       case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
-        navigate(RouteNames.Conversation, {
-          chatId: remoteMessageData.conversationId,
+        return tryNavigate(RouteNames.Conversation, {
+          chatId: notificationData.conversationId,
         });
-        break;
       case NOTIFICATION_TYPES.NEW_WHISPER:
-        navigate(RouteNames.Conversation, {
-          chatId: remoteMessageData.conversationId,
+        return tryNavigate(RouteNames.Conversation, {
+          chatId: notificationData.conversationId,
         });
-        break;
       case NOTIFICATION_TYPES.PARTICIPATION_REQUEST:
-        navigate(RouteNames.EventStack, {
+        return tryNavigate(RouteNames.EventStack, {
           params: {
-            eventId: remoteMessageData.eventId,
+            eventId: notificationData.eventId,
           },
           screen: RouteNames.EventDetails,
         });
-        break;
       case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
-        navigate(RouteNames.TeamStack, {
+        return tryNavigate(RouteNames.TeamStack, {
           params: {
-            teamId: remoteMessageData.teamId,
+            teamId: notificationData.teamId,
           },
           screen: RouteNames.TeamDetails,
         });
-        break;
       case NOTIFICATION_TYPES.TEAM_REQUEST:
-        navigate(RouteNames.TeamStack, {
+        return tryNavigate(RouteNames.TeamStack, {
           screen: RouteNames.TeamMembershipRequests,
         });
-        break;
+      case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
       case NOTIFICATION_TYPES.MATCH_FOUND:
-        navigate(RouteNames.LeagueMatchTab);
-        break;
+        return tryNavigate(RouteNames.LeagueMatchTab);
+      case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
+      case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
+      case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
+        if (notificationData.chatId || notificationData.conversationId) {
+          return tryNavigate(RouteNames.Conversation, {
+            chatId: notificationData.chatId || notificationData.conversationId,
+          });
+        }
+        return tryNavigate(RouteNames.LeagueMatchTab);
+      case NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED:
+      case NOTIFICATION_TYPES.LEAGUE_SCORE_DUE:
+      case NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT:
+        return tryNavigate(RouteNames.LeagueMatchTab);
+      case NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED:
+        if (notificationData.matchId) {
+          return tryNavigate(RouteNames.PastMatchDetails, {
+            matchId: notificationData.matchId,
+          });
+        }
+        return tryNavigate(RouteNames.LeagueMatchTab);
       default:
-        console.warn('[useNotifications] Unknown notification type:', remoteMessageData.type);
-        break;
+        console.warn('[useNotifications] Unknown notification type:', notificationData.type);
+        return false;
     }
   }, [navigate]);
+
+  const smartForegroundTypes = useRef(new Set([
+    NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND,
+    NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED,
+    NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED,
+    NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
+    NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT,
+    NOTIFICATION_TYPES.MATCH_FOUND,
+  ]));
 
   // listeners
   // Handle foreground notif display
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
+      const normalizedData = normalizeNotificationData(remoteMessage.data || {});
       // Skip notification display for message types that shouldn't show in foreground
       const skipTypes = [
         '',
@@ -266,8 +330,22 @@ const useNotifications = ({ navigate }) => {
         // NOTIFICATION_TYPES.NEW_WHISPER,
       ];
 
-      const messageType = remoteMessage.data?.type;
+      const messageType = normalizedData?.type;
       if (messageType && typeof messageType === 'string' && skipTypes.includes(messageType)) {
+        return;
+      }
+
+      if (
+        smartNotifEnabled.current
+        && messageType
+        && smartForegroundTypes.current.has(messageType)
+        && onSmartNotification
+      ) {
+        onSmartNotification({
+          ...normalizedData,
+          body: remoteMessage.notification?.body || '',
+          title: remoteMessage.notification?.title || '',
+        });
         return;
       }
 
@@ -284,40 +362,29 @@ const useNotifications = ({ navigate }) => {
       });
     });
     return unsubscribe;
-  }, []);
-
-  // open notification press event
-  useEffect(() => {
-    const messagingInstance = getMessaging(getApp());
-    const unsubscribe = setBackgroundMessageHandler(messagingInstance, async (remoteMessage) => {
-      if (remoteMessage.data?.type) {
-        handleNavigateOnOpen(/** @type {{type: string, bookingId: string}} */(remoteMessage.data));
-      }
-    });
-    return unsubscribe;
-  });
+  }, [onSmartNotification]);
 
   // open notification when app is in foreground
   useEffect(() => notifee.onForegroundEvent(({ detail, type }) => {
     if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(detail.notification.data),
+          /** @type {{type: string, bookingId: string}} */(normalizeNotificationData(detail.notification.data)),
         );
       }
     }
-  }));
+  }), [handleNavigateOnOpen]);
 
   // open notification when app is in background (notifee part to use custom display)
   useEffect(() => notifee.onBackgroundEvent(async ({ detail, type }) => {
     if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(detail.notification.data),
+          /** @type {{type: string, bookingId: string}} */(normalizeNotificationData(detail.notification.data)),
         );
       }
     }
-  }));
+  }), [handleNavigateOnOpen]);
 
   const hasSynced = useRef(false);
 
@@ -385,18 +452,34 @@ const useNotifications = ({ navigate }) => {
     getMessaging().getInitialNotification().then(remoteMessage => {
       if (remoteMessage) {
         console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
-        if (remoteMessage.data?.type) {
+        const normalizedData = normalizeNotificationData(remoteMessage.data || {});
+        if (normalizedData?.type) {
            // Store it in context to be handled when navigation is ready
            console.log('[FCM] Storing pending notification in context');
            dispatch({ 
               type: 'SET_PENDING_NOTIFICATION', 
-              payload: remoteMessage.data 
+              payload: normalizedData,
            });
         }
       }
     });
 
   }, [saveToken, userData, dispatch]);
+
+  useEffect(() => {
+    if (!pendingNotification?.type) return undefined;
+    let attempts = 0;
+    const maxAttempts = 20;
+    const interval = setInterval(() => {
+      const handled = handleNavigateOnOpen(pendingNotification);
+      if (handled || attempts >= maxAttempts) {
+        dispatch({ type: 'SET_PENDING_NOTIFICATION', payload: null });
+        clearInterval(interval);
+      }
+      attempts += 1;
+    }, 500);
+    return () => clearInterval(interval);
+  }, [pendingNotification, handleNavigateOnOpen, dispatch]);
 
   return {
     handleNavigateOnOpen,

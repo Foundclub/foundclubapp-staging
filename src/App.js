@@ -10,11 +10,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
 import { AppModeProvider } from '@/context/AppModeContext';
+import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
 import ErrorScreen from '@/views/Error';
 
 import AppNavigator from '@/navigation/appNavigator';
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
+import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
+import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
 
@@ -113,14 +116,18 @@ function App() {
         <AppProvider>
           <ThemeProvider>
             <AppModeProvider>
+              <SmartNotificationProvider>
                 <QueryClientProvider client={queryClient}>
                   <BottomSheetModalProvider>
                     <SessionManager />
                     <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
                       <AppNavigator navigationIntegration={navigationIntegration} />
+                      <NotificationBootstrap />
+                      <SmartNotificationHost />
                     </Sentry.ErrorBoundary>
                   </BottomSheetModalProvider>
                 </QueryClientProvider>
+              </SmartNotificationProvider>
             </AppModeProvider>
           </ThemeProvider>
         </AppProvider>
