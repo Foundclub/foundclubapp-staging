@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View, TouchableOpacity, ImageBackground, StatusBar } from 'react-native';
+import { Alert, ImageBackground, Linking, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import 'dayjs/locale/fr';
 import {
   Actions,
@@ -33,6 +33,7 @@ import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueP
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -51,6 +52,47 @@ function Conversation({ navigation, route }) {
   const { userData } = useAuth();
   
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const formatDateForGoogleCalendar = (dateInput) => {
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) return null;
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+  };
+
+  const promptAddMatchToCalendar = (message) => {
+    const startIso = message?.composition?.date || chatData?.league_match?.date;
+    const venue = message?.composition?.venue || chatData?.league_match?.venue || chatData?.league_match?.proposed_venue || '';
+    if (!startIso) return;
+
+    const startDate = new Date(startIso);
+    if (Number.isNaN(startDate.getTime())) return;
+    const endDate = new Date(startDate.getTime() + (60 * 60 * 1000));
+    const startParam = formatDateForGoogleCalendar(startDate);
+    const endParam = formatDateForGoogleCalendar(endDate);
+    if (!startParam || !endParam) return;
+
+    Alert.alert(
+      'Match confirme',
+      'Ajouter ce match a votre agenda ?',
+      [
+        { text: 'Plus tard', style: 'cancel' },
+        {
+          text: 'Ajouter',
+          onPress: async () => {
+            const text = encodeURIComponent('Match FoundClub League');
+            const details = encodeURIComponent('Match confirme depuis la messagerie League');
+            const location = encodeURIComponent(venue);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+            try {
+              await Linking.openURL(url);
+            } catch (error) {
+              console.warn('[Conversation][Calendar] Failed to open URL:', error);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   /* import deleteMessage from useMessaging hook */
   const { 
@@ -297,7 +339,7 @@ function Conversation({ navigation, route }) {
           const proposalEndDate = proposalData.endDate
             ? new Date(proposalData.endDate)
             : new Date(proposalStartDate.getTime() + (60 * 60 * 1000));
-          const matchId = chatData?.league_match?.documentId || chatData?.league_match?.id || null;
+          const matchId = getEntityDocumentId(chatData?.league_match);
           const addressLabel = typeof proposalData?.address === 'string'
             ? proposalData.address
             : proposalData?.addressObject?.label
@@ -349,7 +391,7 @@ function Conversation({ navigation, route }) {
   };
 
   const handleRespondProposal = async (message, status) => {
-      const matchId = message?.composition?.matchId || chatData?.league_match?.documentId || chatData?.league_match?.id;
+      const matchId = message?.composition?.matchId || getEntityDocumentId(chatData?.league_match);
       
       if (!matchId && status === 'accepted') {
           // If matchId is missing in composition, try fallback to chat's match
@@ -387,7 +429,8 @@ function Conversation({ navigation, route }) {
                       composition: updatedComposition
                   }
               });
-              Alert.alert("Match Confirmé", "Le match est validé !");
+              Alert.alert('Match confirme', 'Le match est valide !');
+              promptAddMatchToCalendar(message);
           } else {
               // Handle Decline
               await updateMessage({
@@ -424,7 +467,7 @@ function Conversation({ navigation, route }) {
 // ... inside component ...
 
   const handleCancelMatch = async () => {
-    const matchId = chatData?.league_match?.documentId || chatData?.league_match?.id;
+    const matchId = getEntityDocumentId(chatData?.league_match);
     if (!matchId) return;
 
     // Determine teamId of the current user
@@ -433,10 +476,10 @@ function Conversation({ navigation, route }) {
     const teamA = chatData?.league_match?.team_a;
     const teamB = chatData?.league_match?.team_b;
 
-    if (teamA?.captain?.documentId === userId) {
-        teamId = teamA.documentId;
-    } else if (teamB?.captain?.documentId === userId) {
-        teamId = teamB.documentId;
+    if (areSameEntityId(teamA?.captain?.documentId, userId)) {
+        teamId = getEntityDocumentId(teamA);
+    } else if (areSameEntityId(teamB?.captain?.documentId, userId)) {
+        teamId = getEntityDocumentId(teamB);
     } else {
         teamId = userData?.team?.documentId;
     }
@@ -536,8 +579,8 @@ function Conversation({ navigation, route }) {
     }
 
     // This is an opponent - anonymize
-    const isCaptain = chatData?.league_match?.team_a?.captain?.documentId === sender?.documentId ||
-                      chatData?.league_match?.team_b?.captain?.documentId === sender?.documentId;
+    const isCaptain = areSameEntityId(chatData?.league_match?.team_a?.captain?.documentId, sender?.documentId)
+      || areSameEntityId(chatData?.league_match?.team_b?.captain?.documentId, sender?.documentId);
     
     return isCaptain ? 'Capitaine Adverse' : `Joueur Adverse`;
   };

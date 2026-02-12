@@ -366,6 +366,38 @@ function PrivateNavigator() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        component={require('@/views/league/match/PastMatchDetails').default}
+        name={RouteNames.PastMatchDetails}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={require('@/views/league/details/SquadDetailsScreen').default}
+        name={RouteNames.SquadDetails}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={require('@/views/league/search/SquadSearchScreen').default}
+        name={RouteNames.SquadSearch}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={require('@/views/league/details/SquadRequestsScreen').default}
+        name={RouteNames.SquadRequests}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
       {canShowView(RouteNames.UserRole) ? (
         <Stack.Screen
           component={UserType}

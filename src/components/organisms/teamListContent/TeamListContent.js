@@ -319,6 +319,17 @@ function TeamListContent({
 
   const headerComponent = useMemo(() => (
     <View>
+      {isLeagueMode && (
+        <View style={[Spaces.marginBottom[16], { flexDirection: 'row', gap: 10 }]}>
+          <Button
+            title="RECHERCHER UNE SQUAD"
+            variant="Secondary"
+            onPress={() => navigation.navigate(RouteNames.SquadSearch)}
+            style={{ flex: 1 }}
+          />
+        </View>
+      )}
+
       {/* Search Bar */}
       <View style={[Spaces.marginBottom[16]]}>
         {/* Create Team Button - Persistent in League Mode */}
@@ -366,7 +377,7 @@ function TeamListContent({
         </Text>
       )}
     </View>
-  ), [pendingTeams, myTeams, otherTeams.length, Fonts, Spaces, renderItem, searchValue, t]);
+  ), [pendingTeams, myTeams, otherTeams.length, Fonts, Spaces, renderItem, searchValue, t, isLeagueMode, navigation]);
 
   const renderEmptyList = () => (
     <View style={[
@@ -380,6 +391,14 @@ function TeamListContent({
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
         {t('teamList.noData')}
       </Text>
+      {isLeagueMode && (
+        <Button
+          title="RECHERCHER UNE SQUAD"
+          variant="Secondary"
+          onPress={() => navigation.navigate(RouteNames.SquadSearch)}
+          style={{ minWidth: 220 }}
+        />
+      )}
     </View>
   );
 

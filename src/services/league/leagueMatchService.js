@@ -1,4 +1,5 @@
 import client from '@/services/client';
+import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils/entityId';
 
 /**
  * Generic partial update for a league match (proposal, metadata, etc.)
@@ -6,7 +7,8 @@ import client from '@/services/client';
  * @param {object} data
  */
 export const updateMatch = async (matchId, data) => {
-  const response = await client.put(`/league-matches/${matchId}`, { data });
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.put(`/league-matches/${normalizedMatchId}`, { data });
   return response.data;
 };
 
@@ -16,7 +18,8 @@ export const updateMatch = async (matchId, data) => {
  * @param {'a' | 'b'} teamSide - Which team the user is part of
  */
 export const confirmParticipation = async (matchId, teamSide) => {
-  const response = await client.post(`/league-matches/${matchId}/confirm-participation`, {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/confirm-participation`, {
     teamSide,
   });
   return response.data;
@@ -28,7 +31,8 @@ export const confirmParticipation = async (matchId, teamSide) => {
  * @param {'a' | 'b'} teamSide - Which team the user is part of
  */
 export const declineParticipation = async (matchId, teamSide) => {
-  const response = await client.post(`/league-matches/${matchId}/decline-participation`, {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/decline-participation`, {
     teamSide,
   });
   return response.data;
@@ -39,7 +43,8 @@ export const declineParticipation = async (matchId, teamSide) => {
  * @param {string} matchId - The match documentId
  */
 export const markVenueBooked = async (matchId) => {
-  const response = await client.post(`/league-matches/${matchId}/venue-booked`);
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/venue-booked`);
   return response.data;
 };
 
@@ -48,7 +53,8 @@ export const markVenueBooked = async (matchId) => {
  * @param {string} matchId - The match documentId
  */
 export const confirmMatch = async (matchId) => {
-  const response = await client.post(`/league-matches/${matchId}/confirm`);
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/confirm`);
   return response.data;
 };
 
@@ -59,8 +65,10 @@ export const confirmMatch = async (matchId) => {
  * @param {string} reason - Reason for cancellation (optional)
  */
 export const cancelMatch = async (matchId, teamId, reason = 'captain_request') => {
-  const response = await client.post(`/league-matches/${matchId}/cancel`, {
-    teamId,
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const normalizedTeamId = requireDocumentId(teamId, 'team');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/cancel`, {
+    teamId: normalizedTeamId,
     reason,
   });
   return response.data;
@@ -72,8 +80,10 @@ export const cancelMatch = async (matchId, teamId, reason = 'captain_request') =
  * @param {string} teamId - The team documentId claiming the no-show
  */
 export const claimNoShow = async (matchId, teamId) => {
-  const response = await client.post(`/league-matches/${matchId}/claim-no-show`, {
-    teamId,
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const normalizedTeamId = requireDocumentId(teamId, 'team');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/claim-no-show`, {
+    teamId: normalizedTeamId,
   });
   return response.data;
 };
@@ -109,7 +119,8 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
  * @param {string} matchId - The match documentId
  */
 export const fetchMatch = async (matchId) => {
-  const response = await client.get(`/league-matches/${matchId}`, {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.get(`/league-matches/${normalizedMatchId}`, {
     params: {
       populate: {
         team_a: {
@@ -135,7 +146,7 @@ export const fetchMatch = async (matchId) => {
  * @param {number} limit - Max number of matches to return (default 10)
  */
 export const getMatchHistory = async (teamId, limit = 10) => {
-  const normalizedTeamId = String(teamId);
+  const normalizedTeamId = requireDocumentId(teamId, 'team');
   const parsedNumericId = Number.parseInt(normalizedTeamId, 10);
   const isNumericTeamId = Number.isFinite(parsedNumericId) && String(parsedNumericId) === normalizedTeamId;
   const teamFilterOr = [
@@ -162,16 +173,10 @@ export const getMatchHistory = async (teamId, limit = 10) => {
   });
 
   const matches = response.data?.data || [];
-  const isSameId = (left, right) => {
-    if (left === null || left === undefined || right === null || right === undefined) return false;
-    return String(left) === String(right);
-  };
-  
   // Transform to a simpler format with result/opponent perspective
   return matches.map(match => {
-    const isTeamA = isSameId(match.team_a?.documentId, normalizedTeamId)
-      || isSameId(match.team_a?.id, normalizedTeamId)
-      || (isNumericTeamId && isSameId(match.team_a?.id, parsedNumericId));
+    const isTeamA = areSameEntityId(getEntityDocumentId(match.team_a), normalizedTeamId)
+      || (isNumericTeamId && areSameEntityId(match.team_a?.id, parsedNumericId));
     const myScore = isTeamA ? match.score_a : match.score_b;
     const opponentScore = isTeamA ? match.score_b : match.score_a;
     const opponent = isTeamA ? match.team_b : match.team_a;
@@ -182,14 +187,14 @@ export const getMatchHistory = async (teamId, limit = 10) => {
       else if (myScore < opponentScore) result = 'loss';
       else result = 'draw';
     } else if (match.status === 'forfeit' || match.status === 'no_show') {
-      const winnerId = match.winner?.documentId || match.winner?.id;
-      result = isSameId(winnerId, normalizedTeamId) || (isNumericTeamId && isSameId(winnerId, parsedNumericId))
+      const winnerId = getEntityDocumentId(match.winner);
+      result = areSameEntityId(winnerId, normalizedTeamId) || (isNumericTeamId && areSameEntityId(match.winner?.id, parsedNumericId))
         ? 'win'
         : 'loss';
     }
 
     return {
-      id: match.documentId || match.id,
+      id: getEntityDocumentId(match),
       date: match.date,
       score_a: myScore,
       score_b: opponentScore,
@@ -206,7 +211,8 @@ export const getMatchHistory = async (teamId, limit = 10) => {
  * @param {string} matchId - The match documentId
  */
 export const getMatch = async (matchId) => {
-  const response = await client.get(`/league-matches/${matchId}`, {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.get(`/league-matches/${normalizedMatchId}`, {
     params: {
       populate: ['team_a', 'team_a.captain', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.crest', 'winner', 'chat']
     }
@@ -221,10 +227,13 @@ export const getMatch = async (matchId) => {
  * @param {string} matchId - Original match documentId (optional)
  */
 export const requestRematch = async (teamId, opponentTeamId, matchId = null) => {
+  const normalizedTeamId = requireDocumentId(teamId, 'team');
+  const normalizedOpponentTeamId = requireDocumentId(opponentTeamId, 'opponentTeam');
+  const normalizedMatchId = matchId ? requireDocumentId(matchId, 'match') : null;
   const response = await client.post('/matchmaking-request/rematch', {
-    teamId,
-    opponentTeamId,
-    matchId
+    teamId: normalizedTeamId,
+    opponentTeamId: normalizedOpponentTeamId,
+    matchId: normalizedMatchId
   });
   return response.data;
 };
@@ -235,7 +244,8 @@ export const requestRematch = async (teamId, opponentTeamId, matchId = null) => 
  * @param {Object} goals - Object mapping player documentIds to goal counts
  */
 export const submitPlayerGoals = async (matchId, goals) => {
-  const response = await client.put(`/league-matches/${matchId}`, {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.put(`/league-matches/${normalizedMatchId}`, {
     data: {
       player_goals: goals
     }
@@ -252,6 +262,7 @@ export const submitPlayerGoals = async (matchId, goals) => {
  * @param {object} [proof] - Optional proof file (image) { uri, name, type }
  */
 export const submitMatchProof = async (matchId, proof) => {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
   if (!proof?.uri) {
     throw new Error('Proof file is required');
   }
@@ -266,7 +277,7 @@ export const submitMatchProof = async (matchId, proof) => {
     formData.append('source', proof.source);
   }
 
-  const response = await client.post(`/league-matches/${matchId}/proof`, formData, {
+  const response = await client.post(`/league-matches/${normalizedMatchId}/proof`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -307,7 +318,8 @@ export const submitMatchScore = async (
     payload.dispute_comment = extras.disputeComment;
   }
 
-  const response = await client.post(`/league-matches/${matchId}/submit-score`, payload);
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/submit-score`, payload);
 
   return response.data;
 };

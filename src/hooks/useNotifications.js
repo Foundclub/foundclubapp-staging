@@ -8,7 +8,7 @@ import {
 } from '@react-native-firebase/messaging';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Alert, Linking, PermissionsAndroid, Platform } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
 import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
@@ -72,6 +72,13 @@ const normalizeNotificationData = (value) => {
     acc[key] = parseMaybeJson(raw);
     return acc;
   }, {});
+};
+
+const formatDateForGoogleCalendar = (dateInput) => {
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return null;
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
 
 const requestUserPermission = async () => {
@@ -176,6 +183,46 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
     return __DEV__;
   })());
+  const promptedCalendarMatchesRef = useRef(new Set());
+
+  const openCalendarFromNotification = useCallback(async (notificationData) => {
+    const startIso = notificationData?.matchDate || notificationData?.date;
+    const startDate = startIso ? new Date(startIso) : new Date();
+    const endDate = new Date(startDate.getTime() + (60 * 60 * 1000));
+    const startParam = formatDateForGoogleCalendar(startDate);
+    const endParam = formatDateForGoogleCalendar(endDate);
+    if (!startParam || !endParam) return;
+
+    const text = encodeURIComponent(`Match FoundClub League - ${notificationData?.teamName || 'Squad'}`);
+    const details = encodeURIComponent(`Match confirme contre ${notificationData?.opponentName || 'adversaire'}`);
+    const location = encodeURIComponent(notificationData?.venue || notificationData?.location || '');
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.warn('[Calendar] Failed to open calendar URL:', error);
+    }
+  }, []);
+
+  const maybePromptAddToCalendar = useCallback((notificationData) => {
+    if (!notificationData || notificationData.type !== NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) return;
+    const key = notificationData.matchId || notificationData.dedupeKey;
+    if (!key) return;
+    if (promptedCalendarMatchesRef.current.has(key)) return;
+    promptedCalendarMatchesRef.current.add(key);
+
+    Alert.alert(
+      'Match confirme',
+      'Ajouter ce match a votre agenda ?',
+      [
+        { text: 'Plus tard', style: 'cancel' },
+        {
+          text: 'Ajouter',
+          onPress: () => openCalendarFromNotification(notificationData),
+        },
+      ],
+    );
+  }, [openCalendarFromNotification]);
 
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {remoteMessageData} */remoteMessageData) => {
@@ -184,6 +231,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!notificationData?.type) {
         console.warn('[useNotifications] No type in notification data, cannot navigate');
         return false;
+    }
+
+    if (notificationData.type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
+      maybePromptAddToCalendar(notificationData);
     }
 
     const tryNavigate = (routeName, params) => {
@@ -302,7 +353,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         console.warn('[useNotifications] Unknown notification type:', notificationData.type);
         return false;
     }
-  }, [navigate]);
+  }, [navigate, maybePromptAddToCalendar]);
 
   const smartForegroundTypes = useRef(new Set([
     NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND,
@@ -335,6 +386,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         return;
       }
 
+      if (messageType === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
+        maybePromptAddToCalendar(normalizedData);
+      }
+
       if (
         smartNotifEnabled.current
         && messageType
@@ -362,7 +417,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       });
     });
     return unsubscribe;
-  }, [onSmartNotification]);
+  }, [onSmartNotification, maybePromptAddToCalendar]);
 
   // open notification when app is in foreground
   useEffect(() => notifee.onForegroundEvent(({ detail, type }) => {

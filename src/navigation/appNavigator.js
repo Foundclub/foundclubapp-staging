@@ -32,7 +32,8 @@ function AppNavigator({ navigationIntegration }) {
     config: {
       screens: {
         [RouteNames.TeamDetails]: 'team/:teamId',
-        [RouteNames.ClubDetails]: 'club/:clubId',
+        [RouteNames.SquadDetails]: 'squad/:teamId',
+        [RouteNames.Club]: 'club/:clubId',
         [RouteNames.EventStack]: {
           screens: {
             [RouteNames.EventDetails]: 'event/:eventId',

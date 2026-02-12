@@ -9,7 +9,6 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import Input from '@/components/molecules/input/Input';
-import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 const buildDefaultStartTime = (sourceDate = new Date()) => {
   const date = new Date(sourceDate);
@@ -36,15 +35,6 @@ const safeDate = (value, fallback = new Date()) => {
   return parsed;
 };
 
-const parseCoordsFromValue = (value) => {
-  if (!value || typeof value !== 'string' || !value.includes('|')) return null;
-  const [lngRaw, latRaw] = value.split('|');
-  const lng = Number.parseFloat(lngRaw);
-  const lat = Number.parseFloat(latRaw);
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
-  return { lat, lng };
-};
-
 const isSameCalendarDay = (left, right) => (
   left.getFullYear() === right.getFullYear()
   && left.getMonth() === right.getMonth()
@@ -53,15 +43,7 @@ const isSameCalendarDay = (left, right) => (
 
 /**
  * Proposal modal used to negotiate venue/date/time for a league match.
- * @param {object} root0 Component props.
- * @param {Date|string|number} [root0.initialDate] Initial day suggestion.
- * @param {Date|string|number} [root0.initialEndTime] Initial end time suggestion.
- * @param {Date|string|number} [root0.initialStartTime] Initial start time suggestion.
- * @param {boolean} root0.isVisible Whether modal is open.
- * @param {() => void} root0.onClose Close callback.
- * @param {(payload: object) => void} root0.onSend Submit callback.
- * @param {() => void} [root0.onSkip] Optional skip callback.
- * @returns {import('react').ReactElement}
+ * V1 simplification: one free text field for place/address.
  */
 function VenueProposalModal({
   initialDate,
@@ -74,10 +56,7 @@ function VenueProposalModal({
 }) {
   const { Colors, Fonts } = useTheme();
 
-  const [venueAddress, setVenueAddress] = useState(null);
-  const [fallbackVenue, setFallbackVenue] = useState('');
-  const [isFallbackVisible, setIsFallbackVisible] = useState(false);
-
+  const [venueInput, setVenueInput] = useState('');
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState(() => buildDefaultStartTime());
   const [endTime, setEndTime] = useState(() => buildDefaultEndTime());
@@ -106,9 +85,7 @@ function VenueProposalModal({
       ? safeDate(initialEndTime, nextStart)
       : new Date(nextStart.getTime() + (60 * 60 * 1000));
 
-    setVenueAddress(null);
-    setFallbackVenue('');
-    setIsFallbackVisible(false);
+    setVenueInput('');
     setDate(baseDate);
     setStartTime(nextStart);
     setEndTime(nextEnd > nextStart ? nextEnd : new Date(nextStart.getTime() + (60 * 60 * 1000)));
@@ -120,14 +97,8 @@ function VenueProposalModal({
     setEndTime(nextEnd);
   }, [startTime]);
 
-  const isSendDisabled = useMemo(
-    () => !venueAddress && !fallbackVenue?.trim(),
-    [venueAddress, fallbackVenue],
-  );
-  const venueSummary = useMemo(
-    () => venueAddress?.label || venueAddress?.address || fallbackVenue?.trim() || 'A definir',
-    [venueAddress, fallbackVenue],
-  );
+  const isSendDisabled = useMemo(() => !venueInput?.trim(), [venueInput]);
+  const venueSummary = useMemo(() => venueInput?.trim() || 'A definir', [venueInput]);
   const dateSummary = useMemo(
     () => date.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -154,8 +125,8 @@ function VenueProposalModal({
   }), [Colors.neutral00]);
 
   const handleSend = () => {
-    const trimmedFallback = fallbackVenue?.trim() || '';
-    if (!venueAddress && !trimmedFallback) return;
+    const venue = venueInput?.trim();
+    if (!venue) return;
 
     const finalStartDate = new Date(date);
     finalStartDate.setHours(startTime.getHours());
@@ -172,42 +143,21 @@ function VenueProposalModal({
 
     const finalEndDate = new Date(finalStartDate.getTime() + (60 * 60 * 1000));
 
-    const autoAddressLabel = venueAddress?.label || venueAddress?.address || '';
-    const hasAutoAddress = Boolean(autoAddressLabel);
-    const addressLabel = hasAutoAddress ? autoAddressLabel : trimmedFallback;
-    const venueLabel = trimmedFallback || autoAddressLabel || 'Terrain';
-    const parsedCoords = parseCoordsFromValue(venueAddress?.value);
-
-    let addressObject = null;
-    if (hasAutoAddress) {
-      addressObject = {
-        ...(venueAddress && typeof venueAddress === 'object' ? venueAddress : {}),
-        ...(parsedCoords || {}),
-        address: autoAddressLabel,
-        fallback_label: trimmedFallback || null,
-        label: autoAddressLabel,
-      };
-    } else if (trimmedFallback) {
-      addressObject = {
-        address: trimmedFallback,
-        fallback_label: trimmedFallback,
-        label: trimmedFallback,
-      };
-    }
-
     onSend({
-      address: addressLabel || null,
-      addressCity: addressLabel ? addressLabel.split('(')[0].trim() : null,
-      addressObject,
+      address: venue,
+      addressCity: venue,
+      addressObject: {
+        address: venue,
+        fallback_label: venue,
+        label: venue,
+      },
       date: finalStartDate.toISOString(),
       endDate: finalEndDate.toISOString(),
-      venue: venueLabel,
+      venue,
     });
 
     onClose();
-    setVenueAddress(null);
-    setFallbackVenue('');
-    setIsFallbackVisible(false);
+    setVenueInput('');
   };
 
   const setDateFromPreset = (presetDate) => {
@@ -233,38 +183,18 @@ function VenueProposalModal({
       isVisible={isVisible}
       snapPoints={['85%']}
     >
-      <View style={{ zIndex: 100 }}>
+      <View>
         <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 10 }]}>Lieu</Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-          Recherche une adresse. Si le lieu exact manque, utilise le champ libre.
+          Renseigne le nom du lieu ou son adresse en un seul champ.
         </Text>
 
-        <View style={{ zIndex: 100 }}>
-          <AutocompleteAddressInput
-            address={venueAddress}
-            minChars={2}
-            placeholder="Rechercher un lieu ou une adresse"
-            setAddress={setVenueAddress}
-          />
-        </View>
-
-        <TouchableOpacity
-          onPress={() => setIsFallbackVisible((prev) => !prev)}
-          style={{ paddingBottom: 4, paddingTop: 10 }}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
-            {isFallbackVisible ? 'Masquer le champ libre' : 'Je ne trouve pas mon lieu ou preciser mon adresse'}
-          </Text>
-        </TouchableOpacity>
-
-        {(isFallbackVisible || fallbackVenue?.trim()) ? (
-          <Input
-            onChangeText={setFallbackVenue}
-            placeholder="Nom ou adresse libre (si introuvable)"
-            value={fallbackVenue}
-            wrapperStyle={{ marginTop: 8 }}
-          />
-        ) : null}
+        <Input
+          onChangeText={setVenueInput}
+          placeholder="Ex: Z5 Aix, 12 rue des Sports Marseille"
+          value={venueInput}
+          wrapperStyle={{ marginTop: 4 }}
+        />
       </View>
 
       <View>
@@ -397,8 +327,17 @@ function VenueProposalModal({
         />
 
         {onSkip && (
-          <TouchableOpacity onPress={onSkip} style={{ alignItems: 'center', padding: 12 }}>
-            <Text style={[Fonts.p2, { color: Colors.neutral300, textDecorationLine: 'underline' }]}>
+          <TouchableOpacity
+            onPress={onSkip}
+            style={{
+              alignItems: 'center',
+              borderColor: Colors.primary500,
+              borderRadius: 10,
+              borderWidth: 1,
+              padding: 12,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
               Passer et acceder au chat
             </Text>
           </TouchableOpacity>

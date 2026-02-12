@@ -28,6 +28,11 @@ const parseHourMinute = (value) => {
   return { hour, minute };
 };
 
+const normalizePhase = (phase) => {
+  if (!phase) return '';
+  return String(phase).trim().toLowerCase();
+};
+
 export const normalizeMatchStatus = (status) => {
   if (!status) return '';
   const normalized = String(status).toLowerCase();
@@ -73,6 +78,9 @@ export const isMatchPastEnd = (match, event = null, now = new Date()) => {
 
 export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   if (!match) return 'unknown';
+
+  const backendPhase = normalizePhase(match.phase);
+  if (backendPhase) return backendPhase;
 
   const status = normalizeMatchStatus(match.status);
   const venueBooked = isVenueBookedForMatch(match, event);

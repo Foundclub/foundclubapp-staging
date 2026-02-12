@@ -5,6 +5,7 @@ import useTheme from '@/theme/themeContext';
 import useAuth from '@/domains/auth/useAuth';
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 import { getMatchHistory } from '@/services/league/leagueMatchService';
+import MatchmakingService from '@/services/league/MatchmakingService';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
@@ -17,6 +18,7 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import { RouteNames } from '@/navigation/routeNames';
+import { getEntityDocumentId } from '@/utils/entityId';
 
 const LeagueDashboard = () => {
     const { Colors, Fonts, Images, Spaces, ApplicationStyle, Alignments } = useTheme();
@@ -27,6 +29,7 @@ const LeagueDashboard = () => {
     const [matchHistory, setMatchHistory] = useState([]);
     const [rankingData, setRankingData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSearchRunning, setIsSearchRunning] = useState(false);
     const leagueSurface = {
         backgroundColor: 'rgba(10, 28, 43, 0.82)',
         borderColor: 'rgba(1, 179, 244, 0.22)',
@@ -37,14 +40,21 @@ const LeagueDashboard = () => {
         setLoading(true);
         try {
             // 1. Get User Team
-            const squads = await getMyLeagueTeam(userData.documentId);
+            const squads = await getMyLeagueTeam(getEntityDocumentId(userData));
             const team = squads && squads.length > 0 ? squads[0] : null;
             setUserTeam(team);
+            setIsSearchRunning(false);
             
             // 2. Load match history & Rankings if team exists
             if (team) {
                 try {
-                    const history = await getMatchHistory(team.documentId || team.id, 5);
+                    const teamId = getEntityDocumentId(team);
+                    if (teamId) {
+                        const searchState = await MatchmakingService.getActiveRequest(teamId);
+                        setIsSearchRunning(searchState?.state === 'searching' || searchState?.state === 'matched');
+                    }
+
+                    const history = await getMatchHistory(getEntityDocumentId(team), 5);
                     setMatchHistory(history);
 
                     // Fetch Ranking for current division
@@ -56,10 +66,12 @@ const LeagueDashboard = () => {
                     console.log("Data fetch error:", historyErr);
                     setMatchHistory([]);
                     setRankingData([]);
+                    setIsSearchRunning(false);
                 }
             }
         } catch (error) {
             console.error("Dashboard Load Error:", error);
+            setIsSearchRunning(false);
         } finally {
             setLoading(false);
         }
@@ -73,8 +85,8 @@ const LeagueDashboard = () => {
 
     const handleMatchPress = (match) => {
         navigation.navigate(RouteNames.PastMatchDetails, {
-            matchId: match.id,
-            myTeamId: userTeam?.documentId || userTeam?.id,
+            matchId: getEntityDocumentId(match),
+            myTeamId: getEntityDocumentId(userTeam),
         });
     };
 
@@ -251,7 +263,7 @@ const LeagueDashboard = () => {
                         {/* CTA Matchmaking */}
                         <View style={{ marginVertical: 24 }}>
                              <Button 
-                                title="TROUVER UN MATCH" 
+                                title={isSearchRunning ? "RECHERCHE EN COURS" : "TROUVER UN MATCH"} 
                                 variant="Primary"
                                 onPress={() => navigation.navigate(RouteNames.LeagueMatchTab)}
                                 style={{ 

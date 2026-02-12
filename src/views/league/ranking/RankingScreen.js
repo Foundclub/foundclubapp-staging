@@ -15,6 +15,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import useAuth from '@/domains/auth/useAuth';
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 import useTheme from '@/theme/themeContext';
+import { getEntityDocumentId } from '@/utils/entityId';
 
 const RankingScreen = () => {
     const { Colors, Fonts } = useTheme();
@@ -34,7 +35,7 @@ const RankingScreen = () => {
         const init = async () => {
             if (!userData) return;
             try {
-                const teams = await getMyLeagueTeam(userData.documentId);
+                const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
                 if (teams && teams.length > 0) {
                     setDivision(teams[0].division || 10);
                 }
@@ -145,7 +146,7 @@ const RankingScreen = () => {
                     <FlatList
                         contentContainerStyle={{ paddingBottom: 12 }}
                         data={ranking}
-                        keyExtractor={(item) => String(item.id || item.documentId)}
+                        keyExtractor={(item) => getEntityDocumentId(item)}
                         ListEmptyComponent={(
                             <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>

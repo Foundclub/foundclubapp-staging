@@ -478,14 +478,24 @@ export const getUserById = async (id) => {
  * @returns {Promise<object>} The promise
  */
 export const addDeviceToken = async (token) => {
-  const result = await client.post('/user-fcm-token/me/device', {
-    data: {
+  try {
+    console.log('[FCM] Registering device token', {
       device: getDeviceId(),
       platform: Platform.OS,
-      token,
-    },
-  });
-  return result.data;
+      tokenPrefix: token ? `${token.slice(0, 12)}...` : 'none',
+    });
+    const result = await client.post('/user-fcm-token/me/device', {
+      data: {
+        device: getDeviceId(),
+        platform: Platform.OS,
+        token,
+      },
+    });
+    return result.data;
+  } catch (error) {
+    console.error('[FCM] addDeviceToken failed:', error?.message || error);
+    throw error;
+  }
 };
 
 /**

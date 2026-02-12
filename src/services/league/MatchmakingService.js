@@ -1,4 +1,5 @@
 import axiosInstance from '../client';
+import { requireDocumentId } from '@/utils/entityId';
 
 const MatchmakingService = {
     /**
@@ -8,8 +9,9 @@ const MatchmakingService = {
      */
     getActiveRequest: async (teamId) => {
         try {
+            const normalizedTeamId = requireDocumentId(teamId, 'team');
             const response = await axiosInstance.get(`/matchmaking-request/status`, {
-                params: { teamId }
+                params: { teamId: normalizedTeamId }
             });
             return response.data; // Expected: { state, request, match? }
         } catch (error) {
@@ -27,8 +29,9 @@ const MatchmakingService = {
      */
     triggerSearch: async (teamId, selectedSlotIds, params) => {
         try {
+            const normalizedTeamId = requireDocumentId(teamId, 'team');
             const payload = {
-                teamId,
+                teamId: normalizedTeamId,
                 selectedSlotIds, // Array of recurring slot IDs
                 radius: params.radius,
                 location: params.location,

@@ -63,6 +63,15 @@ const SquadDetailsScreen = ({ navigation, route }) => {
     return team?.join_requests?.some(u => u.documentId === currentUser?.documentId);
   }, [team, currentUser]);
 
+  const rosterCount = useMemo(() => {
+    const uniqueIds = new Set();
+    if (team?.captain?.documentId) uniqueIds.add(String(team.captain.documentId));
+    (team?.roster || []).forEach((player) => {
+      if (player?.documentId) uniqueIds.add(String(player.documentId));
+    });
+    return uniqueIds.size;
+  }, [team]);
+
   useEffect(() => { 
       // Header Options
       const headerRight = [];
@@ -72,9 +81,15 @@ const SquadDetailsScreen = ({ navigation, route }) => {
           <TouchableOpacity 
               key="share"
               onPress={() => {
+                  const squadId = team?.documentId || teamId;
+                  const deepLink = squadId ? `foundclub://squad/${squadId}` : null;
+                  const message = deepLink
+                    ? `Rejoins ma squad ${team?.name || ''} sur FoundClub League !\n${deepLink}`
+                    : `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`;
+
                   Share.share({
-                      message: `Rejoins mon équipe ${team?.name} sur FC League !`,
-                      title: `Rejoins ${team?.name} !`
+                      message,
+                      title: `Rejoins ${team?.name || 'ma squad'} !`
                   });
               }}
               style={{ marginRight: 16 }}
@@ -125,7 +140,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       navigation.setOptions({
           headerRight: () => <View style={{ flexDirection: 'row' }}>{headerRight}</View>
       });
-  }, [navigation, isCaptain, teamId, Colors]);
+  }, [navigation, isCaptain, teamId, team?.documentId, team?.name, Colors]);
 
 
 
@@ -447,7 +462,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
         {/* Roster Preview */}
         <View style={[Spaces.marginBottom[24]]}>
              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[12]]}>
-                <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Effectif ({((team?.roster?.length || 0) + (team?.captain ? 1 : 0))})</Text>
+                <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Effectif ({rosterCount})</Text>
              </View>
              
              {/* Captain */}
@@ -581,3 +596,4 @@ const SquadDetailsScreen = ({ navigation, route }) => {
 };
 
 export default SquadDetailsScreen;
+

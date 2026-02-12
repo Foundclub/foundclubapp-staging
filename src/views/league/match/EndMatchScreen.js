@@ -27,6 +27,7 @@ import MatchmakingService from '@/services/league/MatchmakingService';
 import useAuth from '@/domains/auth/useAuth';
 import { getMatchDerivedPhase } from '@/views/league/match/utils/matchStatus';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
 const parseScore = (value) => {
     const parsed = Number.parseInt(value, 10);
@@ -127,16 +128,16 @@ const EndMatchScreen = () => {
     const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que le terrain est reserve et que le match est termine.";
 
     const getMyTeamFromMatch = () => {
-        const currentUserId = String(userData?.documentId || userData?.id || '');
+        const currentUserId = String(getEntityDocumentId(userData) || '');
         if (!match || !currentUserId) return null;
 
-        const isCaptainA = String(match?.team_a?.captain?.documentId || match?.team_a?.captain?.id || '') === currentUserId;
-        const isCaptainB = String(match?.team_b?.captain?.documentId || match?.team_b?.captain?.id || '') === currentUserId;
+        const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
+        const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
         if (isCaptainA) return match.team_a;
         if (isCaptainB) return match.team_b;
 
-        const inRosterA = (match?.team_a?.roster || []).some((member) => String(member?.documentId || member?.id || '') === currentUserId);
-        const inRosterB = (match?.team_b?.roster || []).some((member) => String(member?.documentId || member?.id || '') === currentUserId);
+        const inRosterA = (match?.team_a?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
+        const inRosterB = (match?.team_b?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
         if (inRosterA) return match.team_a;
         if (inRosterB) return match.team_b;
 
@@ -149,7 +150,7 @@ const EndMatchScreen = () => {
             throw new Error("Impossible d'identifier votre squad.");
         }
 
-        const teamId = myTeam.documentId || myTeam.id;
+        const teamId = getEntityDocumentId(myTeam);
         const homeBaseLocation = getLocationCoordinates(myTeam.home_base || myTeam.address);
         const userLocation = getLocationCoordinates(userData?.location);
         const location = homeBaseLocation || userLocation;

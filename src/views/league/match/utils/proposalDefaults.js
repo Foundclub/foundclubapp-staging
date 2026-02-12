@@ -34,7 +34,12 @@ const getNextOccurrenceForDay = (dayName, startHour) => {
   if (diff < 0) diff += 7;
   const nextDate = new Date(now);
   nextDate.setDate(now.getDate() + diff);
-  return buildDateWithHour(nextDate, startHour || '20:00');
+  const candidate = buildDateWithHour(nextDate, startHour || '20:00');
+  if (diff === 0 && candidate <= now) {
+    nextDate.setDate(nextDate.getDate() + 7);
+    return buildDateWithHour(nextDate, startHour || '20:00');
+  }
+  return candidate;
 };
 
 const findSelectedCommonSlot = (match) => {

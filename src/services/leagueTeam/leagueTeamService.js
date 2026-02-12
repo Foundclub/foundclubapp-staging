@@ -259,30 +259,137 @@ export const deleteLeagueTeam = async (documentId) => {
  */
 export const searchSquads = async (filters) => {
     try {
+        const normalizeFilterValue = (value) => {
+            if (!value) return null;
+            if (typeof value === 'object') {
+                return value.value ?? value.label ?? null;
+            }
+            return value;
+        };
+
+        const parseCoordinates = (value) => {
+            if (!value) return null;
+            if (typeof value === 'string' && value.includes('|')) {
+                const [lngRaw, latRaw] = value.split('|');
+                const lat = Number.parseFloat(latRaw);
+                const lng = Number.parseFloat(lngRaw);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+                return null;
+            }
+            if (typeof value === 'object') {
+                const lat = Number.parseFloat(value.lat ?? value.latitude);
+                const lng = Number.parseFloat(value.lng ?? value.longitude ?? value.lon);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+            }
+            return null;
+        };
+
+        const getTeamCoordinates = (team) => {
+            const homeBase = team?.home_base;
+            if (!homeBase) return null;
+            if (typeof homeBase === 'string') {
+                try {
+                    return parseCoordinates(JSON.parse(homeBase));
+                } catch (_error) {
+                    return null;
+                }
+            }
+            return parseCoordinates(homeBase);
+        };
+
+        const getHomeBaseCity = (team) => {
+            const homeBase = team?.home_base;
+            if (!homeBase) return '';
+            if (typeof homeBase === 'string') {
+                try {
+                    const parsed = JSON.parse(homeBase);
+                    return String(parsed?.city || parsed?.label || '').toLowerCase();
+                } catch (_error) {
+                    return '';
+                }
+            }
+            return String(homeBase?.city || homeBase?.label || '').toLowerCase();
+        };
+
+        const getDistanceKm = (a, b) => {
+            if (!a || !b) return Number.POSITIVE_INFINITY;
+            const toRad = (value) => (value * Math.PI) / 180;
+            const R = 6371;
+            const dLat = toRad(b.lat - a.lat);
+            const dLng = toRad(b.lng - a.lng);
+            const lat1 = toRad(a.lat);
+            const lat2 = toRad(b.lat);
+            const hav =
+                Math.sin(dLat / 2) ** 2
+                + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+            return 2 * R * Math.asin(Math.sqrt(hav));
+        };
+
         const query = {
-            populate: ['logo', 'home_base'],
+            populate: ['crest', 'home_base'],
             filters: {},
         };
 
-        if (filters.city) {
-            query.filters.home_base = {
-                city: { $containsi: filters.city }
-            };
+        const conditions = [];
+        const city = normalizeFilterValue(filters?.city);
+        const sport = normalizeFilterValue(filters?.sport);
+        const category = normalizeFilterValue(filters?.category);
+        const section = normalizeFilterValue(filters?.section);
+        const divisionRaw = normalizeFilterValue(filters?.division);
+        const searchQuery = String(filters?.query || '').trim();
+
+        if (sport) {
+            conditions.push({ sport: { $eq: sport } });
         }
 
-        if (filters.category) {
-            query.filters.category = { $eq: filters.category };
+        if (category) {
+            conditions.push({ category: { $eq: category } });
         }
 
-        if (filters.division) {
-            query.filters.division = { $eq: filters.division };
+        if (section) {
+            conditions.push({ section: { $eq: section } });
         }
 
-        // Note: Radius filtering would typically require a geospatial query or post-filtering.
-        // For now, we'll rely on city matching. Use a specialized endpoint for radius if needed.
+        const division = Number.parseInt(divisionRaw, 10);
+        if (Number.isFinite(division)) {
+            conditions.push({ division: { $eq: division } });
+        }
+
+        if (searchQuery.length >= 2) {
+            conditions.push({
+                name: { $containsi: searchQuery },
+            });
+        }
+
+        if (conditions.length === 1) {
+            query.filters = conditions[0];
+        } else if (conditions.length > 1) {
+            query.filters = { $and: conditions };
+        }
 
         const response = await client.get('/league-teams', { params: query });
-        return response.data.data;
+        let squads = response.data?.data || [];
+
+        const citySearch = city ? String(city).toLowerCase() : '';
+        if (citySearch) {
+            squads = squads.filter((team) => {
+                const teamName = String(team?.name || '').toLowerCase();
+                const homeBaseCity = getHomeBaseCity(team);
+                return teamName.includes(citySearch) || homeBaseCity.includes(citySearch);
+            });
+        }
+
+        const radius = Number.parseInt(filters?.radius, 10);
+        const centerCoordinates = parseCoordinates(filters?.city?.value || filters?.city);
+        if (Number.isFinite(radius) && radius > 0 && centerCoordinates) {
+            squads = squads.filter((team) => {
+                const teamCoordinates = getTeamCoordinates(team);
+                const distance = getDistanceKm(centerCoordinates, teamCoordinates);
+                return Number.isFinite(distance) && distance <= radius;
+            });
+        }
+
+        return squads;
     } catch (error) {
         console.error('Error searching squads:', error);
         throw error;

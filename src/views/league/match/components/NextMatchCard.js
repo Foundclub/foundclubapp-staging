@@ -7,7 +7,6 @@ import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import useAuth from '@/domains/auth/useAuth';
-import { RouteNames } from '@/navigation/routeNames';
 import { missingEvent, markVenueBooked as markEventVenueBooked } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { 
@@ -24,11 +23,10 @@ import {
     normalizeMatchStatus,
     shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
-
-const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
-const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
 
 const resolveAddressLabel = (match) => {
     const location = match?.location;
@@ -51,13 +49,13 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
 
     // Identify Teams
     // Safe chaining for team_a/team_b in case they are just IDs or partial objects
-    const teamAId = match.team_a?.documentId || match.team_a?.id;
-    const isTeamA = isSameId(teamAId, myTeamId);
+    const teamAId = getEntityDocumentId(match.team_a);
+    const isTeamA = areSameEntityId(teamAId, myTeamId);
     const myTeam = isTeamA ? match.team_a : match.team_b;
     const opponent = isTeamA ? match.team_b : match.team_a;
 
     // Check if current user is captain
-    const isCaptain = isSameId(myTeam?.captain?.documentId || myTeam?.captain?.id, userData?.documentId || userData?.id);
+    const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), getEntityDocumentId(userData));
 
     const normalizedStatus = normalizeMatchStatus(match?.status);
     const derivedPhase = getMatchDerivedPhase(match, event);
@@ -78,7 +76,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
         participations = isTeamA ? (match.participations_a || []) : (match.participations_b || []);
     }
 
-    const myParticipation = participations.find((p) => isSameId(p?.documentId || p?.id, userData?.documentId || userData?.id));
+    const myParticipation = participations.find((p) => areSameEntityId(getEntityDocumentId(p), getEntityDocumentId(userData)));
     
     // Count confirmed
     const confirmedCount = participations.length; 
@@ -159,7 +157,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                 });
             } else {
                 // League Match Mode
-                await confirmParticipation(match.documentId || match.id, isTeamA ? 'a' : 'b');
+                await confirmParticipation(getEntityDocumentId(match), isTeamA ? 'a' : 'b');
             }
             Alert.alert("Succès", "Présence confirmée !");
             onRefresh && onRefresh();
@@ -174,7 +172,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             if (event) {
                  await missingEvent(event.documentId);
             } else {
-                 await declineParticipation(match.documentId || match.id, isTeamA ? 'a' : 'b');
+                 await declineParticipation(getEntityDocumentId(match), isTeamA ? 'a' : 'b');
             }
             Alert.alert("Noté", "Absence notée.");
             onRefresh && onRefresh();
@@ -189,7 +187,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             if (event) {
                 await markEventVenueBooked(event.documentId);
             } else {
-                await markLeagueMatchVenueBooked(match.documentId || match.id);
+                await markLeagueMatchVenueBooked(getEntityDocumentId(match));
             }
             Alert.alert("Terrain Réservé ✅", "Le terrain est confirmé !");
             onRefresh && onRefresh();
@@ -213,8 +211,8 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                     onPress: async () => {
                         try {
                             // Ensure we use the correct team ID (myTeam.documentId)
-                            const teamIdToUse = myTeam.documentId || myTeam.id;
-                            const matchIdToUse = match.documentId || match.id;
+                            const teamIdToUse = getEntityDocumentId(myTeam);
+                            const matchIdToUse = getEntityDocumentId(match);
                             
                             const result = await cancelMatch(matchIdToUse, teamIdToUse, 'captain_request');
                             Alert.alert(
@@ -392,11 +390,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                                 return;
                             }
                             // Match tab is not inside LeagueNavigator stack.
-                            // Navigate through the LeagueDashboard tab, then open EndMatchScreen.
-                            navigation.navigate(RouteNames.LeagueDashboard, { 
-                                screen: 'EndMatchScreen', 
-                                params: { matchId: match.documentId || match.id } 
-                            });
+                            navigateToEndMatchScreen(navigation, match);
                         }}
                         style={[
                             styles.bookingButton,

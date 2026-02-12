@@ -1,6 +1,6 @@
-﻿import LocationIcon from '../../../assets/icons/location.png';
+import LocationIcon from '../../../assets/icons/location.png';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Image, RefreshControl, FlatList, Dimensions, AppState } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Image, RefreshControl, FlatList, Dimensions } from 'react-native';
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
@@ -35,9 +35,9 @@ import NextMatchCard from './components/NextMatchCard';
 import SearchCountdown from '@/components/organisms/league/SearchCountdown';
 import { shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
-
-const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
-const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
+import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 
 const MatchCenterScreen = () => {
     const navigation = useNavigation();
@@ -56,6 +56,8 @@ const MatchCenterScreen = () => {
     const [recentMatches, setRecentMatches] = useState([]);
 
     const screenWidth = React.useRef(Dimensions.get('window').width).current;
+    const slotCardWidth = screenWidth - 48;
+    const slotCardGap = 12;
     
     // UI State
     const [loading, setLoading] = useState(false);
@@ -66,7 +68,6 @@ const MatchCenterScreen = () => {
     const [searchRadius, setSearchRadius] = useState(20);
     const [tempSearchLocation, setTempSearchLocation] = useState(null);
     const [isEditingLocation, setIsEditingLocation] = useState(false);
-    const [searchStatus, setSearchStatus] = useState("Initialisation..."); // Dynamic status message
     const [selectedSlotIds, setSelectedSlotIds] = useState([]); // IDs of slots to include in search
 
     // DAY_MAP for display
@@ -103,31 +104,13 @@ const MatchCenterScreen = () => {
     }, [homeBase]);
 
     const lastMatchRef = useRef(null);
-    const appState = useRef(AppState.currentState);
-    const failureCount = useRef(0);
-
-    // AppState Listener
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            appState.current = nextAppState;
-            // Auto-retry on return to active if we were in error state
-            if (nextAppState === 'active' && viewState === 'connection_error') {
-                setViewState('radar'); // Try again
-                failureCount.current = 0;
-            }
-        });
-
-        return () => {
-            subscription.remove();
-        };
-    }, [viewState]);
 
     const fetchMatchData = useCallback(async (squad) => {
         setMySquad(squad);
         setLoading(true);
         try {
             try {
-                const history = await getMatchHistory(squad.documentId, 5);
+                const history = await getMatchHistory(getEntityDocumentId(squad), 5);
                 setRecentMatches(Array.isArray(history) ? history : []);
             } catch (historyError) {
                 console.error('Fetch match history error:', historyError);
@@ -135,7 +118,7 @@ const MatchCenterScreen = () => {
             }
 
             // B. Check Active Matchmaking Request for THIS squad
-            const activeReq = await MatchmakingService.getActiveRequest(squad.documentId);
+            const activeReq = await MatchmakingService.getActiveRequest(getEntityDocumentId(squad));
             
             // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
             if (activeReq && (activeReq.state === 'searching' || activeReq.state === 'matched')) {
@@ -151,7 +134,7 @@ const MatchCenterScreen = () => {
                     // Match disappeared or switched to searching?
                     if (lastMatchRef.current) {
                         if (lastMatchRef.current.status === 'provisionary' || lastMatchRef.current.status === 'scheduled') {
-                             Alert.alert("Match annulé", "Le match précédent a été annulé.");
+                             Alert.alert("Match annulÃƒÂ©", "Le match prÃƒÂ©cÃƒÂ©dent a ÃƒÂ©tÃƒÂ© annulÃƒÂ©.");
                         }
                         lastMatchRef.current = null;
                     }
@@ -160,13 +143,13 @@ const MatchCenterScreen = () => {
                 // No active request/match
                 if (lastMatchRef.current) {
                      // We had a match, now nothing. It was cancelled.
-                     Alert.alert("Match annulé", "Votre match a été annulé par l'adversaire ou le système.");
+                     Alert.alert("Match annulÃƒÂ©", "Votre match a ÃƒÂ©tÃƒÂ© annulÃƒÂ© par l'adversaire ou le systÃƒÂ¨me.");
                      lastMatchRef.current = null;
                      setCurrentMatch(null);
                 }
 
                 // C. Check Next Available Slot
-                const slots = await getAvailableSlots(squad.documentId);
+                const slots = await getAvailableSlots(getEntityDocumentId(squad));
                 setSquadSlots(slots || []);
                 
                 if (slots && slots.length > 0) {
@@ -190,7 +173,7 @@ const MatchCenterScreen = () => {
         setLoading(true);
         try {
             // A. Fetch User's LEAGUE Squads
-            const squads = await getMyLeagueTeam(userData.documentId); 
+            const squads = await getMyLeagueTeam(getEntityDocumentId(userData)); 
             setAllSquads(squads);
             
             if (squads.length === 0) {
@@ -201,7 +184,7 @@ const MatchCenterScreen = () => {
             }
 
             // Select initial squad (either currently selected or first one)
-            const initialSquad = mySquad && squads.find(s => s.documentId === mySquad.documentId) 
+            const initialSquad = mySquad && squads.find(s => areSameEntityId(getEntityDocumentId(s), getEntityDocumentId(mySquad))) 
                 ? mySquad 
                 : squads[0];
             
@@ -224,7 +207,7 @@ const MatchCenterScreen = () => {
 
     const handleSquadSwitch = async (squad) => {
         setIsSquadSelectorVisible(false);
-        if (squad.documentId !== mySquad?.documentId) {
+        if (!areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad))) {
             await fetchMatchData(squad);
         }
     };
@@ -288,7 +271,7 @@ const MatchCenterScreen = () => {
                 };
 
                 const params = {
-                    teamId: mySquad.documentId,
+                    teamId: getEntityDocumentId(mySquad),
                     selectedSlotIds: selectedSlotIds, // Array of selected recurring slot IDs
                     radius: normalizeRadius(searchRadius, normalizedLocation.radius || 20),
                     location: searchLocation,
@@ -298,7 +281,7 @@ const MatchCenterScreen = () => {
 
                 
                 if (result && result.status === 'matched') {
-                     Alert.alert("🎯 Match Trouvé !", "Un adversaire a été trouvé instantanément !");
+                     Alert.alert("Ã°Å¸Å½Â¯ Match TrouvÃƒÂ© !", "Un adversaire a ÃƒÂ©tÃƒÂ© trouvÃƒÂ© instantanÃƒÂ©ment !");
                      setViewState('match_found');
                 } else {
                     setMatchRequest(result);
@@ -306,90 +289,33 @@ const MatchCenterScreen = () => {
                 }
             } catch (error) {
                 console.error(error);
-                Alert.alert("Erreur", "Recherche échouée");
+                Alert.alert("Erreur", "Recherche ÃƒÂ©chouÃƒÂ©e");
                 setViewState('lobby'); // Go back to config on error
             }
         }, 2000); // 2 seconds delay
     };
-
-    // POLLING: If in Radar mode, check status every 5 seconds AND update dynamic text
-    useEffect(() => {
-        let interval;
-        let timerInterval;
-
-        if ((viewState === 'radar' || viewState === 'locker_room') && mySquad) {
-            // A. Status Check Logic (Backend)
-            interval = setInterval(async () => {
-                // Skip if backgrounded
-                if (appState.current.match(/inactive|background/)) {
-                    console.log("[POLLING] Paused (Background)");
-                    return;
-                }
-
-                try {
-                    const statusData = await MatchmakingService.getActiveRequest(mySquad.documentId);
-                    
-                    // Success - Reset failure count
-                    failureCount.current = 0;
-
-                    // Case 1: Match Found
-                    if (statusData && statusData.state === 'matched') {
-                        setMatchRequest(statusData.request);
-                        setCurrentMatch(statusData.match);
-                        setOpponentDetails(statusData.opponentDetails);
-                        setViewState('match_found');
-                        clearInterval(interval);
-                        Alert.alert("🔔 Match Trouvé !", "Un adversaire a été trouvé.");
-                    }
-                    
-                    // Case 2: Auto-Start Detection (Transition from Locker to Radar)
-                    else if (viewState === 'locker_room' && statusData && statusData.state === 'searching') {
-                        console.log("Auto-Start Detected! Switching to Radar.");
-                        setMatchRequest(statusData.request);
-                        setViewState('radar');
-                        // Do not clear interval, let it continue for match detection
-                    }
-                } catch (err) {
-                    console.error("[POLLING] Error:", err);
-                    failureCount.current += 1;
-                    
-                    // If 3 consecutive failures, assume connection issue
-                    if (failureCount.current >= 3) {
-                       clearInterval(interval);
-                       setViewState('connection_error');
-                    }
-                }
-            }, 5000);
-
-            // B. Dynamic UI Text Logic (Frontend)
-            const updateStatusText = () => {
-                if (!matchRequest || !matchRequest.createdAt) return;
-                
-                const created = new Date(matchRequest.createdAt).getTime();
-                const now = new Date().getTime();
-                const diffMinutes = (now - created) / 1000 / 60;
-                
-                // Detailed Algorithm Feedback based on elapsed time (Tier Logic)
-                if (diffMinutes < 5) {
-                    setSearchStatus(`Recherche précise (ELO strict, Div ${mySquad.division || '?'})`);
-                } else if (diffMinutes < 15) {
-                    setSearchStatus("Élargissement : Division +/- 1...");
-                } else if (diffMinutes < 30) {
-                    setSearchStatus("Recherche étendue : Division +/- 2...");
-                } else {
-                    setSearchStatus("Recherche globale (Toutes divisions)...");
-                }
-            };
-
-            // Run immediately and then every minute
-            updateStatusText(); 
-            timerInterval = setInterval(updateStatusText, 10000); 
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-            if (timerInterval) clearInterval(timerInterval);
-        };
-    }, [viewState, mySquad, matchRequest]);
+    const { searchStatus } = useMatchmakingStateMachine({
+        matchRequest,
+        mySquad,
+        viewState,
+        onAutoSearchingDetected: (statusData) => {
+            setMatchRequest(statusData?.request || null);
+            setViewState('radar');
+        },
+        onConnectionError: () => {
+            setViewState('connection_error');
+        },
+        onMatched: (statusData) => {
+            setMatchRequest(statusData?.request || null);
+            setCurrentMatch(statusData?.match || null);
+            setOpponentDetails(statusData?.opponentDetails || null);
+            setViewState('match_found');
+            Alert.alert('Match trouve', "Un adversaire a ete trouve.");
+        },
+        onRecoverFromBackground: () => {
+            setViewState('radar');
+        },
+    });
 
     // Ensure searchRadius is initialized from squad preferences 
     useEffect(() => {
@@ -403,7 +329,7 @@ const MatchCenterScreen = () => {
     // Initialize selectedSlotIds with ALL squad slots (pre-select all)
     useEffect(() => {
         if (squadSlots && squadSlots.length > 0) {
-            setSelectedSlotIds(squadSlots.map(s => s.id || s.documentId));
+            setSelectedSlotIds(squadSlots.map(s => getEntityDocumentId(s)));
         }
     }, [squadSlots]);
 
@@ -423,7 +349,7 @@ const MatchCenterScreen = () => {
         if (!matchRequest) return;
         setLoading(true);
         try {
-            const reqId = matchRequest.documentId || matchRequest.id;
+            const reqId = getEntityDocumentId(matchRequest);
             await MatchmakingService.cancelRequest(reqId);
             setMatchRequest(null);
             // Refresh data to ensure consistent state
@@ -441,7 +367,7 @@ const MatchCenterScreen = () => {
         if (!currentMatch) return;
         setLoading(true);
         try {
-            const matchId = currentMatch.documentId || currentMatch.id;
+            const matchId = getEntityDocumentId(currentMatch);
             const addressLabel = typeof proposalData?.address === 'string'
                 ? proposalData.address
                 : proposalData?.addressObject?.label
@@ -473,7 +399,7 @@ const MatchCenterScreen = () => {
 
             // 3. Send Formatted Message in Chat
             if (currentMatch.chat) {
-                const chatId = currentMatch.chat.documentId || currentMatch.chat.id;
+                const chatId = getEntityDocumentId(currentMatch.chat);
                 
                 const startDate = new Date(proposalData.date);
                 const endDate = proposalData.endDate
@@ -484,7 +410,7 @@ const MatchCenterScreen = () => {
                 const startStr = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                 const endStr = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?';
                 
-                const timeStr = `de ${startStr} à ${endStr}`;
+                const timeStr = `de ${startStr} ÃƒÂ  ${endStr}`;
                 const placeLine = addressLabel
                     ? `${proposalData.venue} (${addressLabel})`
                     : proposalData.venue;
@@ -533,12 +459,12 @@ const MatchCenterScreen = () => {
     const renderNoSquad = () => (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 }}>
             <LeagueCard style={{ width: '100%', alignItems: 'center', paddingVertical: 40 }}>
-                <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÊT À L'ACTION ?</Text>
+                <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÃƒÅ T Ãƒâ‚¬ L'ACTION ?</Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24 }]}>
-                    Crée ton équipe pour rejoindre la compétition officielle.
+                    CrÃƒÂ©e ton ÃƒÂ©quipe pour rejoindre la compÃƒÂ©tition officielle.
                 </Text>
                 <Button 
-                    title="CRÉER UNE SQUAD" 
+                    title="CRÃƒâ€°ER UNE SQUAD" 
                     variant="Primary" 
                     icon="plus"
                     iconColor={Colors.primary500}
@@ -641,7 +567,7 @@ const MatchCenterScreen = () => {
                          marginBottom: 24,
                          borderWidth: 2, borderColor: Colors.error500 
                      }}>
-                        <Text style={{ fontSize: 32 }}>⚠️</Text>
+                        <Text style={{ fontSize: 32 }}>Ã¢Å¡Â Ã¯Â¸Â</Text>
                      </View>
                      <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8, textAlign:'center' }]}>
                          CONNEXION PERDUE
@@ -650,11 +576,10 @@ const MatchCenterScreen = () => {
                          Impossible de joindre le serveur.
                      </Text>
                      <Button
-                        title="RÉESSAYER"
+                        title="REESSAYER"
                         variant="Primary"
                         onPress={() => {
                             setViewState('radar');
-                            failureCount.current = 0;
                         }}
                     />
                      <Button
@@ -675,14 +600,14 @@ const MatchCenterScreen = () => {
             return (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
                      <View style={[styles.radarCircle, { width: 80, height: 80, borderRadius: 40, marginBottom: 16, borderColor: Colors.gold500 }]}>
-                        <Text style={{ fontSize: 24 }}>📡</Text>
+                        <Text style={{ fontSize: 24 }}>Ã°Å¸â€œÂ¡</Text>
                      </View>
                      <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>RECHERCHE EN COURS</Text>
                      <Text style={[Fonts.p2, { color: Colors.gold500, textAlign: 'center', marginBottom: 8, fontWeight: 'bold' }]}>
                          {searchStatus}
                      </Text>
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 16 }]}>
-                         Nous cherchons une équipe compatible dans votre zone.
+                         Nous cherchons une ÃƒÂ©quipe compatible dans votre zone.
                      </Text>
                      
                      {/* Timer Countdown */}
@@ -710,9 +635,9 @@ const MatchCenterScreen = () => {
                     <NextMatchCard 
                         match={currentMatch}
                         event={currentMatch.event}
-                        myTeamId={mySquad?.documentId || mySquad?.id}
+                        myTeamId={getEntityDocumentId(mySquad)}
                         onRefresh={loadMatchCenter}
-                        onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId || currentMatch.id })}
+                        onPress={() => navigateToLeagueMatchDetails(navigation, currentMatch)}
                     />
                 );
             }
@@ -795,7 +720,7 @@ const MatchCenterScreen = () => {
                 <View style={{ alignItems: 'center', paddingVertical: 10 }}>
                      {/* ANONYMOUS HEADER */}
                      <Text style={[Fonts.h3, { color: '#ccc', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 2 }]}>
-                        ADVERSAIRE MYSTÈRE
+                        ADVERSAIRE MYSTÃƒË†RE
                      </Text>
 
                      {/* MAIN CARD */}
@@ -818,7 +743,7 @@ const MatchCenterScreen = () => {
                                 borderWidth: 2, borderColor: Colors.gold500,
                                 marginBottom: 12
                             }}>
-                                 <Text style={{ fontSize: 40 }}>⚔️</Text>
+                                 <Text style={{ fontSize: 40 }}>Ã¢Å¡â€Ã¯Â¸Â</Text>
                             </View>
                             <View style={{ 
                                 position: 'absolute', bottom: 8, right: -4, 
@@ -830,8 +755,8 @@ const MatchCenterScreen = () => {
 
                         {/* Stats / Context */}
                         <View style={{ alignItems: 'center', width: '100%' }}>
-                            <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>ÉQUIPE ADVERSE</Text>
-                            <Text style={[Fonts.p2, { color: '#bbb', marginBottom: 16 }]}>{sportLabel} • {catLabel}</Text>
+                            <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>Ãƒâ€°QUIPE ADVERSE</Text>
+                            <Text style={[Fonts.p2, { color: '#bbb', marginBottom: 16 }]}>{sportLabel} Ã¢â‚¬Â¢ {catLabel}</Text>
                             
                             <View style={{ width: '100%', height: 1, backgroundColor: Colors.neutral700, marginBottom: 16 }} />
 
@@ -846,7 +771,7 @@ const MatchCenterScreen = () => {
                                 </View>
                                 <View style={{ width: 1, height: '100%', backgroundColor: Colors.neutral700 }} />
                                 <View style={{ alignItems: 'center', flex: 1 }}>
-                                    <Text style={{ fontSize: 20, marginBottom: 4 }}>🕒</Text>
+                                    <Text style={{ fontSize: 20, marginBottom: 4 }}>Ã°Å¸â€¢â€™</Text>
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                                         {/* Translate Day */}
                                         {(() => {
@@ -864,11 +789,11 @@ const MatchCenterScreen = () => {
                         {commonSlotsSummary.length > 0 && (
                             <View style={{ marginTop: 12, width: '100%', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
                                 <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
-                                    Créneaux en commun
+                                    CrÃƒÂ©neaux en commun
                                 </Text>
                                 {commonSlotsSummary.map((slotLabel) => (
                                     <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
-                                        • {slotLabel}
+                                        Ã¢â‚¬Â¢ {slotLabel}
                                     </Text>
                                 ))}
                             </View>
@@ -876,15 +801,15 @@ const MatchCenterScreen = () => {
                      </View>
 
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 }]}>
-                        Le match correspond à vos critères. Discutez pour valider le terrain.
+                        Le match correspond ÃƒÂ  vos critÃƒÂ¨res. Discutez pour valider le terrain.
                      </Text>
 
                     <Button
-                        title="ACCÉDER AU CHAT"
+                        title="ACCÃƒâ€°DER AU CHAT"
                         variant="Primary"
                         onPress={() => {
                              if (currentMatch && currentMatch.chat) {
-                                  const chatId = currentMatch.chat.documentId || currentMatch.chat.id;
+                                  const chatId = getEntityDocumentId(currentMatch.chat);
                                   // Check if we should show proposal modal (First Contact)
                                   if (!currentMatch.proposed_venue) {
                                       setIsProposalModalVisible(true);
@@ -897,7 +822,7 @@ const MatchCenterScreen = () => {
                                       }); 
                                   }
                              } else {
-                                  Alert.alert("Erreur", "Le chat n'est pas encore prêt. Réessayez dans quelques secondes.");
+                                  Alert.alert("Erreur", "Le chat n'est pas encore prÃƒÂªt. RÃƒÂ©essayez dans quelques secondes.");
                              }
                         }}
                         style={{ width: '100%', backgroundColor: Colors.gold500 }}
@@ -905,22 +830,22 @@ const MatchCenterScreen = () => {
                     />
 
                     {/* Cancel Button - Captain Only */}
-                    {isSameId(mySquad?.captain?.documentId || mySquad?.captain?.id, userData?.documentId || userData?.id) && (
+                    {areSameEntityId(getEntityDocumentId(mySquad?.captain), getEntityDocumentId(userData)) && (
                         <TouchableOpacity
                             onPress={() => {
                                 Alert.alert(
                                     "Annuler le match ?",
-                                    "ÃŠtes-vous sûr de vouloir annuler ce match ? Votre équipe reviendra en mode recherche.",
+                                    "Etes-vous sur de vouloir annuler ce match ? Votre equipe reviendra en mode recherche.",
                                     [
                                         { text: "Non", style: "cancel" },
                                         {
                                             text: "Annuler et Relancer",
                                             onPress: async () => {
                                                 try {
-                                                    const currentMatchId = currentMatch?.documentId || currentMatch?.id;
+                                                    const currentMatchId = getEntityDocumentId(currentMatch);
                                                     if (currentMatchId) {
                                                         const { cancelMatch } = await import('../../../services/league/leagueMatchService');
-                                                        await cancelMatch(currentMatchId, mySquad.documentId || mySquad.id, 'captain_request');
+                                                        await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
                                                         
                                                         // Trigger new search immediately
                                                         setViewState('searching_start');
@@ -931,14 +856,14 @@ const MatchCenterScreen = () => {
                                                                 // Simpler: Trigger search with current params from squad
                                                                 const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
                                                                 await MatchmakingService.triggerSearch(
-                                                                    mySquad.documentId, 
+                                                                    getEntityDocumentId(mySquad), 
                                                                     [], // Slots ? Ideally reuse previously selected. But empty = any available.
                                                                     { radius: searchRadius, location: userLoc }
                                                                 );
                                                                 loadMatchCenter(); // Refresh state to show searching
                                                             } catch(e) {
                                                                 console.error("Restart search failed", e);
-                                                                Alert.alert("Erreur", "Match annulé mais impossible de relancer la recherche.");
+                                                                Alert.alert("Erreur", "Match annulÃƒÂ© mais impossible de relancer la recherche.");
                                                                 loadMatchCenter();
                                                             }
                                                         }, 500);
@@ -954,11 +879,11 @@ const MatchCenterScreen = () => {
                                             style: "destructive",
                                             onPress: async () => {
                                                 try {
-                                                    const currentMatchId = currentMatch?.documentId || currentMatch?.id;
+                                                    const currentMatchId = getEntityDocumentId(currentMatch);
                                                     if (currentMatchId) {
                                                         const { cancelMatch } = await import('../../../services/league/leagueMatchService');
-                                                        await cancelMatch(currentMatchId, mySquad.documentId || mySquad.id, 'captain_request');
-                                                        Alert.alert("Match annulé", "Vous pouvez relancer une recherche.");
+                                                        await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
+                                                        Alert.alert("Match annulÃƒÂ©", "Vous pouvez relancer une recherche.");
                                                         loadMatchCenter();
                                                     }
                                                 } catch (err) {
@@ -990,9 +915,9 @@ const MatchCenterScreen = () => {
                  <NextMatchCard 
                     match={currentMatch}
                     event={currentMatch.event}
-                    myTeamId={mySquad?.documentId || mySquad?.id}
+                    myTeamId={getEntityDocumentId(mySquad)}
                     onRefresh={loadMatchCenter}
-                    onPress={() => navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: currentMatch.documentId || currentMatch.id })}
+                    onPress={() => navigateToLeagueMatchDetails(navigation, currentMatch)}
                  />
              );
         }
@@ -1004,26 +929,28 @@ const MatchCenterScreen = () => {
                  <View>
                      <FlatList
                         data={squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : [])}
+                        bounces={false}
+                        disableIntervalMomentum
+                        overScrollMode="never"
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        snapToInterval={screenWidth - 40 + 16} // Card width + margin
+                        snapToAlignment="start"
+                        snapToInterval={slotCardWidth + slotCardGap}
                         decelerationRate="fast"
-                        pagingEnabled={false} // Disable standard paging to allow custom snap
-                        keyExtractor={(item) => item.id || item.documentId || Math.random().toString()}
+                        pagingEnabled={false}
+                        keyExtractor={(item) => getEntityDocumentId(item) || Math.random().toString()}
                         onMomentumScrollEnd={(e) => {
-                            const cardWidth = screenWidth - 40 + 16;
-                            const index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                            const index = Math.round(e.nativeEvent.contentOffset.x / (slotCardWidth + slotCardGap));
                             if (squadSlots[index]) {
                                 setActiveSlot(squadSlots[index]);
                             }
                         }}
-                        contentContainerStyle={!squadSlots.length && !activeSlot ? {} : { paddingHorizontal: 0 }}
+                        contentContainerStyle={!squadSlots.length && !activeSlot ? {} : { paddingHorizontal: 2 }}
                         renderItem={({ item, index }) => {
-                            const isActive = activeSlot && (activeSlot.id === item.id || activeSlot.documentId === item.documentId);
                             if (!item) return null;
 
                             return (
-                                <View style={{ width: screenWidth - 40, marginRight: 16 }}>
+                                <View style={{ width: slotCardWidth, marginRight: slotCardGap }}>
                                     <View style={{ marginBottom: 8 }}>
                                             {/* Date & Time Display */}
                                            <View>
@@ -1041,7 +968,7 @@ const MatchCenterScreen = () => {
                                        </View>
                                        {/* Status Chip */}
                                         <View style={{ 
-                                            position: 'absolute', right: 60, top: 0,
+                                            position: 'absolute', right: 0, top: 0,
                                             backgroundColor: 'rgba(1, 179, 244, 0.1)', 
                                             paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 
                                        }}>
@@ -1077,10 +1004,10 @@ const MatchCenterScreen = () => {
                             );
                         }}
                         ListEmptyComponent={
-                            <View style={{ width: screenWidth - 40 }}>
+                            <View style={{ width: slotCardWidth }}>
                                  <View>
                                      <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                                     <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau réservé</Text>
+                                     <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun crÃƒÂ©neau rÃƒÂ©servÃƒÂ©</Text>
                                  </View>
                                   <View style={{ position: 'absolute', right: 0, top: 0,
                                      backgroundColor: 'rgba(255, 255, 255, 0.05)', 
@@ -1103,7 +1030,7 @@ const MatchCenterScreen = () => {
                         {(activeSlot.rsvp_count || 0) >= 5 ? (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
-                                     ✅ Équipe complète
+                                     Ã¢Å“â€¦ Ãƒâ€°quipe complÃƒÂ¨te
                                  </Text>
                                  <Button 
                                     title="RECHERCHER UN MATCH" 
@@ -1115,7 +1042,7 @@ const MatchCenterScreen = () => {
                         ) : (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
-                                     Il manque {5 - (activeSlot.rsvp_count || 0)} joueurs pour être au complet.
+                                     Il manque {5 - (activeSlot.rsvp_count || 0)} joueurs pour ÃƒÂªtre au complet.
                                  </Text>
                                  <Button 
                                     title="INVITER DES JOUEURS" 
@@ -1181,7 +1108,7 @@ const MatchCenterScreen = () => {
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, opacity: 0.8 }}>
                             <Text style={[Fonts.p3, { color: Colors.gold500, marginRight: 4 }]}>Changer</Text>
-                            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>▼</Text>
+                            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Ã¢â€“Â¼</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -1224,22 +1151,25 @@ const MatchCenterScreen = () => {
                       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                       <View style={{ alignItems: 'center', flex: 1 }}>
                           <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{streakValue}</Text>
-                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SÃƒâ€°RIE</Text>
                       </View>
                       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                        <View style={{ alignItems: 'center', flex: 1 }}>
                             <TouchableOpacity 
                                 style={{
+                                    alignItems: 'center',
                                     backgroundColor: 'rgba(1, 179, 244, 0.14)',
                                     borderColor: 'rgba(1, 179, 244, 0.48)',
                                     borderRadius: 10,
                                     borderWidth: 1,
+                                    justifyContent: 'center',
+                                    minHeight: 36,
                                     paddingHorizontal: 10,
                                     paddingVertical: 8,
                                 }}
                                 onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
                             >
-                                 <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>CLASSEMENT</Text>
+                                 <Text style={[Fonts.p3Bold, { color: Colors.primary500, lineHeight: 16 }]}>CLASSEMENT</Text>
                             </TouchableOpacity>
                        </View>
                  </View>
@@ -1264,7 +1194,7 @@ const MatchCenterScreen = () => {
                                 width: 40,
                             }}
                         >
-                            <Text style={{ fontSize: 16 }}>🗂️</Text>
+                            <Text style={{ fontSize: 16 }}>Ã°Å¸â€”â€šÃ¯Â¸Â</Text>
                         </View>
                         <Text style={[Fonts.p2, { color: Colors.neutral100, textAlign: 'center' }]}>
                             Aucun match termine pour le moment.
@@ -1317,7 +1247,7 @@ const MatchCenterScreen = () => {
                                     screen: RouteNames.PastMatchDetails,
                                     params: {
                                         matchId: item.id,
-                                        myTeamId: mySquad?.documentId || mySquad?.id,
+                                        myTeamId: getEntityDocumentId(mySquad),
                                     },
                                 })}
                                 style={{
@@ -1356,7 +1286,7 @@ const MatchCenterScreen = () => {
 
 
     const renderLobbyModal = () => {
-        const sportLabel = mySquad?.activities?.[0]?.name || mySquad?.sport?.label || mySquad?.sport || "Sport indéfini";
+        const sportLabel = mySquad?.activities?.[0]?.name || mySquad?.sport?.label || mySquad?.sport || "Sport indÃƒÂ©fini";
 
         // Helper to extract string from string or object
         const getSafeLabel = (val) => {
@@ -1367,7 +1297,7 @@ const MatchCenterScreen = () => {
         };
 
         // Display Label
-        let displayLabel = "Zone indéfinie";
+        let displayLabel = "Zone indÃƒÂ©finie";
         const tempAddr = getSafeLabel(tempSearchLocation?.address);
         const tempCity = getSafeLabel(tempSearchLocation?.city);
         const homeAddr = getSafeLabel(homeBase?.address);
@@ -1388,7 +1318,7 @@ const MatchCenterScreen = () => {
                 <View>
                     <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', letterSpacing: 1 }]}>CONFIGURATION</Text>
                      <Text style={[Fonts.p1, { color: Colors.textSecondary || '#aaa', textAlign: 'center', marginBottom: 8 }]}>
-                        {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : "Recherche immédiate"}
+                        {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : "Recherche immÃƒÂ©diate"}
                     </Text>
                 </View>
             }
@@ -1423,7 +1353,7 @@ const MatchCenterScreen = () => {
                         }}
                     >
                         <Text style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]} numberOfLines={1}>
-                            📍 {displayLabel}
+                            Ã°Å¸â€œÂ {displayLabel}
                         </Text>
                         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>MODIFIER</Text>
                     </TouchableOpacity>
@@ -1452,17 +1382,17 @@ const MatchCenterScreen = () => {
                 </View>
             </View>
 
-            {/* SECTION: Sélection des Créneaux Récurrents */}
+            {/* SECTION: SÃƒÂ©lection des CrÃƒÂ©neaux RÃƒÂ©currents */}
             <View style={{ marginBottom: 24 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>
-                    Vos disponibilités ({selectedSlotIds.length}/{squadSlots.length || 0})
+                    Vos disponibilitÃƒÂ©s ({selectedSlotIds.length}/{squadSlots.length || 0})
                 </Text>
 
-                {/* SECTION: Autres créneaux communs (Négociation) */}
+                {/* SECTION: Autres crÃƒÂ©neaux communs (NÃƒÂ©gociation) */}
                 {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
                     <View style={{ marginTop: 16, padding: 12, backgroundColor: Colors.neutral800, borderRadius: 8, borderWidth: 1, borderColor: Colors.neutral700 }}>
                         <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-                            🔄 Autres créneaux communs possibles :
+                            Ã°Å¸â€â€ž Autres crÃƒÂ©neaux communs possibles :
                         </Text>
                         {currentMatch.common_slots.map((slot, index) => {
                              // Skip the currently selected slot
@@ -1471,7 +1401,7 @@ const MatchCenterScreen = () => {
                              const dayName = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' }[slot.day] || slot.day;
                              return (
                                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                     <Text style={{ fontSize: 14 }}>📅</Text>
+                                     <Text style={{ fontSize: 14 }}>Ã°Å¸â€œâ€¦</Text>
                                      <Text style={[Fonts.p2, { color: Colors.neutral100, marginLeft: 8 }]}>
                                          {dayName} {slot.startHour}-{slot.endHour}
                                      </Text>
@@ -1482,7 +1412,7 @@ const MatchCenterScreen = () => {
                 )}
 
                 {(squadSlots || []).map((slot) => {
-                    const slotId = slot.id || slot.documentId;
+                    const slotId = getEntityDocumentId(slot);
                     const isSelected = selectedSlotIds.includes(slotId);
                     const formatHour = (h) => h ? h.substring(0, 5) : '?';
                     return (
@@ -1502,7 +1432,7 @@ const MatchCenterScreen = () => {
                                 backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700,
                                 justifyContent: 'center', alignItems: 'center', marginRight: 12
                             }}>
-                                {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>✓</Text>}
+                                {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>Ã¢Å“â€œ</Text>}
                             </View>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                                 {DAY_MAP[slot.recurrence_day] || slot.recurrence_day} {formatHour(slot.start_hour)} - {formatHour(slot.end_hour)}
@@ -1512,13 +1442,13 @@ const MatchCenterScreen = () => {
                 })}
                 {(!squadSlots || squadSlots.length === 0) && (
                     <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center', padding: 16 }]}>
-                        Aucun créneau défini. Ajoutez-en depuis la page d'équipe.
+                        Aucun crÃƒÂ©neau dÃƒÂ©fini. Ajoutez-en depuis la page d'ÃƒÂ©quipe.
                     </Text>
                 )}
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.neutral800, paddingBottom: 16, marginBottom: 24  }}>
-                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Durée Match</Text>
+                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>DurÃƒÂ©e Match</Text>
                  <View style={{ backgroundColor: Colors.neutral800, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 }}>
                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>60 min</Text>
                  </View>
@@ -1547,14 +1477,14 @@ const MatchCenterScreen = () => {
             snapPoints={['50%']}
             headerComponent={
                 <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center', marginBottom: 16 }]}>
-                     Changer d'équipe
+                     Changer d'ÃƒÂ©quipe
                 </Text>
             }
         >
             <View style={{ paddingBottom: 24 }}>
                 {allSquads.map((squad) => (
                     <TouchableOpacity
-                        key={squad.documentId}
+                        key={getEntityDocumentId(squad)}
                         onPress={() => handleSquadSwitch(squad)}
                         style={[
                             ApplicationStyle.backgroundColor.neutral800,
@@ -1563,7 +1493,7 @@ const MatchCenterScreen = () => {
                             Spaces.marginBottom[12],
                             Alignments.row,
                             Alignments.alignCenter,
-                            squad.documentId === mySquad?.documentId && { borderWidth: 1, borderColor: Colors.primary500 }
+                            areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && { borderWidth: 1, borderColor: Colors.primary500 }
                         ]}
                     >
                          <View style={{ 
@@ -1580,11 +1510,11 @@ const MatchCenterScreen = () => {
                         <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{squad.name}</Text>
                             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                                 {squad?.sport || "Sport"} • Div {squad?.division || 10}
+                                 {squad?.sport || "Sport"} Ã¢â‚¬Â¢ Div {squad?.division || 10}
                             </Text>
                         </View>
-                         {squad.documentId === mySquad?.documentId && (
-                             <Text style={{ color: Colors.primary500, fontSize: 16 }}>✓</Text>
+                         {areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && (
+                             <Text style={{ color: Colors.primary500, fontSize: 16 }}>Ã¢Å“â€œ</Text>
                          )}
                     </TouchableOpacity>
                 ))}
@@ -1628,7 +1558,7 @@ const MatchCenterScreen = () => {
                 onSkip={() => {
                     setIsProposalModalVisible(false);
                     if (currentMatch && currentMatch.chat) {
-                        const chatId = currentMatch.chat.documentId || currentMatch.chat.id;
+                        const chatId = getEntityDocumentId(currentMatch.chat);
                         const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
                         navigation.navigate('Conversation', { 
                             chatId,
@@ -1692,3 +1622,4 @@ const styles = StyleSheet.create({
 });
 
 export default MatchCenterScreen;
+

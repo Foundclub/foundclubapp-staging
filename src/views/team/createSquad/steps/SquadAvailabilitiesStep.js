@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, LayoutAnimation, Platform, UIManager, StyleSheet } from 'react-native';
+import { Alert, View, Text, TouchableOpacity, ScrollView, LayoutAnimation, Platform, UIManager, StyleSheet } from 'react-native';
 import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
@@ -25,6 +25,8 @@ const DAYS = [
 const SquadAvailabilitiesStep = ({ data, updateData, onNext, onPrev }) => {
   const { Colors, Fonts, Spaces } = useTheme();
   const [isAddingSlot, setIsAddingSlot] = useState(false);
+  const [slotDraft, setSlotDraft] = useState(null);
+  const [slotDraftValid, setSlotDraftValid] = useState(false);
   
   // New slot state
   /* REMOVED UNUSED STATE & HANDLERS - Managed by TeamSlotCreationForm now */
@@ -46,6 +48,21 @@ const SquadAvailabilitiesStep = ({ data, updateData, onNext, onPrev }) => {
     
     // Reset and close
     toggleAddSlot();
+    setSlotDraft(null);
+    setSlotDraftValid(false);
+  };
+
+  const handleContinue = () => {
+    if (isAddingSlot) {
+      if (!slotDraftValid || !slotDraft) {
+        Alert.alert('Creneau incomplet', "Valide d'abord ton creneau avec le bouton Ajouter.");
+        return;
+      }
+
+      handleAddSlot(slotDraft);
+    }
+
+    onNext();
   };
 
   const removeSlot = (id) => {
@@ -125,6 +142,10 @@ const SquadAvailabilitiesStep = ({ data, updateData, onNext, onPrev }) => {
                 <View style={{ marginTop: 10 }}>
                   <TeamSlotCreationForm 
                     onAdd={handleAddSlot}
+                    onDraftChange={({ isValid, slot }) => {
+                      setSlotDraftValid(Boolean(isValid));
+                      setSlotDraft(slot);
+                    }}
                     onCancel={toggleAddSlot} 
                   />
                 </View>
@@ -134,7 +155,7 @@ const SquadAvailabilitiesStep = ({ data, updateData, onNext, onPrev }) => {
         <View style={{ marginBottom: 20, gap: 10 }}>
             <Button
                 title="Continuer"
-                onPress={onNext}
+                onPress={handleContinue}
                 variant="Primary"
             />
             <Button

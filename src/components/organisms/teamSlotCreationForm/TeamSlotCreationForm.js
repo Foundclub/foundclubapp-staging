@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, LayoutAnimation, Platform, UIManager } from 'react-native';
 import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
@@ -26,7 +26,7 @@ const DAYS = [
  * @param {(slot: { day: string, startTime: string, endTime: string }) => void} props.onAdd
  * @param {() => void} props.onCancel
  */
-const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete }) => {
+const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraftChange }) => {
   const { Colors, Fonts } = useTheme();
   
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -101,6 +101,20 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete }) => {
   const isFormValid = useMemo(() => {
      return selectedDay && startTimeDate && endTimeDate && endTimeDate > startTimeDate; 
   }, [selectedDay, startTimeDate, endTimeDate]);
+
+  useEffect(() => {
+    if (!onDraftChange) return;
+    onDraftChange({
+      isValid: Boolean(isFormValid),
+      slot: isFormValid
+        ? {
+            day: selectedDay.value,
+            endTime: formatTime(endTimeDate),
+            startTime: formatTime(startTimeDate),
+          }
+        : null,
+    });
+  }, [onDraftChange, isFormValid, selectedDay, startTimeDate, endTimeDate]);
 
   return (
     <View style={{ 

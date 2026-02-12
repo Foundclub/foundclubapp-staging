@@ -21,7 +21,6 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useAuth from '@/domains/auth/useAuth';
-import { RouteNames } from '@/navigation/routeNames';
 import {
   cancelMatch,
   confirmParticipation,
@@ -38,15 +37,26 @@ import {
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
-
-const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
-const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 const normalizeComparableText = (value) => String(value || '')
   .toLowerCase()
   .replace(/\s+/g, ' ')
   .trim();
 const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
 const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
+const normalizePhoneCandidate = (value) => String(value || '').replace(/[\s().-]/g, '');
+const looksLikePhone = (value) => /^\+?\d{8,15}$/.test(normalizePhoneCandidate(value));
+const getParticipantDisplayName = (participant) => {
+  const firstName = participant?.firstname || participant?.firstName || '';
+  const lastName = participant?.lastname || participant?.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim();
+  if (fullName) return fullName;
+  if (firstName) return firstName;
+  if (lastName) return lastName;
+  if (participant?.username && !looksLikePhone(participant.username)) return participant.username;
+  return 'Joueur';
+};
 
 function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
@@ -58,7 +68,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const [match, setMatch] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const userId = userData?.documentId || userData?.id;
+  const userId = getEntityDocumentId(userData);
 
   const loadMatch = useCallback(async () => {
     try {
@@ -83,9 +93,9 @@ function LeagueMatchDetails({ navigation, route }) {
     const rosterA = match?.team_a?.roster || [];
     const membersA = match?.team_a?.members || [];
     return (
-      rosterA.some((m) => isSameId(m.documentId || m.id, userId))
-      || membersA.some((m) => isSameId(m.documentId || m.id, userId))
-      || isSameId(match?.team_a?.captain?.documentId || match?.team_a?.captain?.id, userId)
+      rosterA.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || membersA.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId)
     );
   }, [match, userId]);
 
@@ -93,21 +103,21 @@ function LeagueMatchDetails({ navigation, route }) {
     const rosterB = match?.team_b?.roster || [];
     const membersB = match?.team_b?.members || [];
     return (
-      rosterB.some((m) => isSameId(m.documentId || m.id, userId))
-      || membersB.some((m) => isSameId(m.documentId || m.id, userId))
-      || isSameId(match?.team_b?.captain?.documentId || match?.team_b?.captain?.id, userId)
+      rosterB.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || membersB.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId)
     );
   }, [match, userId]);
 
   const teamSide = isInTeamA ? 'a' : (isInTeamB ? 'b' : null);
   const myTeam = teamSide === 'a' ? match?.team_a : (teamSide === 'b' ? match?.team_b : null);
 
-  const isCaptainA = isSameId(match?.team_a?.captain?.documentId || match?.team_a?.captain?.id, userId);
-  const isCaptainB = isSameId(match?.team_b?.captain?.documentId || match?.team_b?.captain?.id, userId);
+  const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId);
+  const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId);
   const isCaptain = isCaptainA || isCaptainB;
 
   const participations = teamSide === 'a' ? (match?.participations_a || []) : (match?.participations_b || []);
-  const hasConfirmed = participations.some((p) => isSameId(p.documentId || p.id, userId));
+  const hasConfirmed = participations.some((p) => areSameEntityId(getEntityDocumentId(p), userId));
   const participationCount = participations.length;
 
   const normalizedStatus = useMemo(() => normalizeMatchStatus(match?.status), [match?.status]);
@@ -160,13 +170,6 @@ function LeagueMatchDetails({ navigation, route }) {
     () => isMatchPastEnd(match) || ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled'].includes(normalizedStatus),
     [match, normalizedStatus]
   );
-
-  const progressSteps = useMemo(() => ([
-    { done: true, key: 'found', label: 'Trouve' },
-    { done: isVenueBooked || matchEndedOrScored, key: 'booked', label: 'Terrain reserve' },
-    { done: matchEndedOrScored, key: 'played', label: 'Match joue' },
-    { done: ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled'].includes(normalizedStatus), key: 'result', label: 'Resultat' },
-  ]), [isVenueBooked, matchEndedOrScored, normalizedStatus]);
 
   const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || (normalizedStatus === 'scheduled' && !isVenueBooked);
   const canShowCaptainCancel = normalizedStatus === 'scheduled';
@@ -247,9 +250,10 @@ function LeagueMatchDetails({ navigation, route }) {
   };
 
   const handleOpenChat = () => {
-    if (!match?.chat?.documentId) return;
+    const chatId = getEntityDocumentId(match?.chat);
+    if (!chatId) return;
     navigation.navigate('Conversation', {
-      chatId: match.chat.documentId,
+      chatId,
       title: `${match.team_a?.name} vs ${match.team_b?.name}`,
     });
   };
@@ -263,34 +267,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return;
     }
 
-    const params = { matchId };
-    const currentRouteNames = navigation?.getState?.()?.routeNames || [];
-    if (currentRouteNames.includes('EndMatchScreen')) {
-      navigation.navigate('EndMatchScreen', params);
-      return;
-    }
-
-    const parentNavigation = navigation?.getParent?.();
-    const parentRouteNames = parentNavigation?.getState?.()?.routeNames || [];
-    if (parentRouteNames.includes('EndMatchScreen')) {
-      parentNavigation.navigate('EndMatchScreen', params);
-      return;
-    }
-    if (parentRouteNames.includes(RouteNames.LeagueDashboard)) {
-      parentNavigation.navigate(RouteNames.LeagueDashboard, {
-        params,
-        screen: 'EndMatchScreen',
-      });
-      return;
-    }
-
-    navigation.navigate(RouteNames.LeagueHomeTab, {
-      params: {
-        params,
-        screen: 'EndMatchScreen',
-      },
-      screen: RouteNames.LeagueDashboard,
-    });
+    navigateToEndMatchScreen(navigation, matchId);
   };
 
   const screenContainerStyle = useMemo(() => ({
@@ -415,28 +392,6 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
           </View>
 
-          <View style={styles.progressChipsRow}>
-            {progressSteps.map((step) => (
-              <View
-                key={step.key}
-                style={[
-                  styles.progressChip,
-                  step.done ? styles.progressChipDone : styles.progressChipTodo,
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.progressChipText,
-                    { color: step.done ? Colors.primary500 : Colors.neutral300 },
-                  ]}
-                >
-                  {step.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-
           <LeagueCard isGold>
             <View style={styles.infoRow}>
               <Image source={Images.calendar} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
@@ -498,9 +453,9 @@ function LeagueMatchDetails({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
                 {(match.participations_a || []).map((p, i) => (
-                  <View key={`${p.documentId || p.id || i}-a`} style={styles.playerRow}>
+                  <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
                     <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
-                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{p.firstName || p.username}</Text>
+                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
                     {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>{'C'}</Text> : null}
                   </View>
                 ))}
@@ -520,9 +475,9 @@ function LeagueMatchDetails({ navigation, route }) {
                 ) : (
                   <>
                     {(match.participations_b || []).map((p, i) => (
-                      <View key={`${p.documentId || p.id || i}-b`} style={styles.playerRow}>
+                      <View key={`${getEntityDocumentId(p) || i}-b`} style={styles.playerRow}>
                         <View style={[styles.dot, { backgroundColor: Colors.neutral300 }]} />
-                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{p.firstName || p.username}</Text>
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
                       </View>
                     ))}
                     {(!match.participations_b || match.participations_b.length === 0) ? (

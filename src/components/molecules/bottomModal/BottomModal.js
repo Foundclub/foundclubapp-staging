@@ -100,6 +100,7 @@ function BottomModal({
   return (
     <BottomSheetModal
       backdropComponent={renderBackdrop}
+      android_keyboardInputMode="adjustResize"
       backgroundStyle={[
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
@@ -110,7 +111,7 @@ function BottomModal({
       enablePanDownToClose
       handleComponent={null}
       index={0}
-      keyboardBehavior="interactive"
+      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'extend'}
       keyboardBlurBehavior="restore"
       onDismiss={close}
       ref={modalRef}

@@ -22,9 +22,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getMatch, requestRematch } from '@/services/league/leagueMatchService';
 import useTheme from '@/theme/themeContext';
-
-const normalizeId = (value) => (value === null || value === undefined ? '' : String(value));
-const isSameId = (left, right) => normalizeId(left) !== '' && normalizeId(left) === normalizeId(right);
+import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 const normalizeComparableText = (value) => String(value || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -61,21 +59,21 @@ const PastMatchDetails = () => {
         loadMatch();
     }, [loadMatch]);
 
-    const currentUserId = userData?.documentId || userData?.id;
+    const currentUserId = getEntityDocumentId(userData);
 
     const teamA = match?.team_a;
     const teamB = match?.team_b;
-    const teamAId = teamA?.documentId || teamA?.id;
-    const teamBId = teamB?.documentId || teamB?.id;
+    const teamAId = getEntityDocumentId(teamA);
+    const teamBId = getEntityDocumentId(teamB);
 
     const isUserInTeamA = useMemo(() => {
         if (!teamA || !currentUserId) return false;
-        return isSameId(teamA?.captain?.documentId || teamA?.captain?.id, currentUserId)
-            || (teamA?.roster || []).some((member) => isSameId(member?.documentId || member?.id, currentUserId));
+        return areSameEntityId(getEntityDocumentId(teamA?.captain), currentUserId)
+            || (teamA?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
     }, [teamA, currentUserId]);
 
     const isTeamA = useMemo(() => {
-        if (myTeamId) return isSameId(teamAId, myTeamId);
+        if (myTeamId) return areSameEntityId(teamAId, myTeamId);
         return isUserInTeamA;
     }, [myTeamId, teamAId, isUserInTeamA]);
 
@@ -141,13 +139,13 @@ const PastMatchDetails = () => {
     }, [myScore, myTeam?.elo, oppScore, opponent?.elo]);
 
     const canRematch = useMemo(() => {
-        const isCaptain = isSameId(myTeam?.captain?.documentId || myTeam?.captain?.id, currentUserId);
+        const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), currentUserId);
         return Boolean(isCaptain && match?.status === 'valid');
-    }, [currentUserId, match?.status, myTeam?.captain?.documentId, myTeam?.captain?.id]);
+    }, [currentUserId, match?.status, myTeam?.captain]);
 
     const handleRematch = () => {
-        const myTeamDocId = myTeam?.documentId || myTeam?.id;
-        const opponentDocId = opponent?.documentId || opponent?.id;
+        const myTeamDocId = getEntityDocumentId(myTeam);
+        const opponentDocId = getEntityDocumentId(opponent);
 
         if (!myTeamDocId || !opponentDocId) {
             Alert.alert('Erreur', 'Impossible de lancer la revanche pour ce match.');

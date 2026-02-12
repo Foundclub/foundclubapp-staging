@@ -284,7 +284,7 @@ function Messaging({ navigation }) {
         onPress={() => archiveChat(chat.documentId)}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-           {t('messaging.archive', 'Archiver')}
+           {t('messaging.archive', 'Supprimer')}
         </Text>
       </TouchableOpacity>
     );

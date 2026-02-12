@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "eas-build-pre-install": "node ./scripts/secrets/prepare-eas-secrets.js",
     "android": "react-native run-android",
     "android:staging": "cross-env APP_ENV=staging react-native run-android --mode=stagingDebug --appId com.foundclub.staging",
     "android:local": "cross-env APP_ENV=local react-native run-android --mode=stagingDebug --appId com.foundclub.staging",
