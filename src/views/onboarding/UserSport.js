@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -27,7 +27,7 @@ function UserSport({ navigation }) {
   const [selectedSport, setSelectedSport] = useState(/** @type {string | null} */ (null));
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -37,9 +37,12 @@ function UserSport({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
       // Invalidate user query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
       // Calculate next route based on the NEW sport, not the old userData
       const tempUserData = { ...userData, preferredSport: selectedSport.trim() };
@@ -53,7 +56,7 @@ function UserSport({ navigation }) {
       // We look for the first view with index > currentIndex that has canShow !== false
       // Note: getOnboardingViews returns views with canShow property
       const nextView = views.views.find(v => v.index > currentIndex && v.canShow !== false);
-      const nextRoute = nextView?.route || RouteNames.Welcome;
+      const nextRoute = nextView?.route || getPostOnboardingHomeRoute();
 
       navigation.navigate(nextRoute, { selectedSport: selectedSport.trim() });
     },
@@ -76,7 +79,7 @@ function UserSport({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserSport) || RouteNames.Welcome);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserSport) || getPostOnboardingHomeRoute());
   };
 
   // Capitalize first letter of activity name

@@ -109,6 +109,12 @@ const LeagueDashboard = () => {
                 <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24 }]}>
                     Crée ton équipe pour rejoindre la compétition officielle.
                 </Text>
+                <Button
+                    title="RECHERCHER UNE SQUAD"
+                    variant="Secondary"
+                    onPress={() => navigation.navigate(RouteNames.SquadSearch)}
+                    style={{ width: '100%', marginBottom: 12 }}
+                />
                 <Button 
                     title="CRÉER UNE SQUAD" 
                     variant="Primary" 
@@ -311,5 +317,6 @@ const LeagueDashboard = () => {
 };
 
 export default LeagueDashboard;
+
 
 

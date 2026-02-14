@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, Text, View } from 'react-native';
+import { Alert, RefreshControl, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +45,9 @@ function UserRole({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserRole) || RouteNames.UserName);
     },

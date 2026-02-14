@@ -55,9 +55,16 @@ const MatchCenterScreen = () => {
     const [opponentDetails, setOpponentDetails] = useState(null); // Add state
     const [recentMatches, setRecentMatches] = useState([]);
 
-    const screenWidth = React.useRef(Dimensions.get('window').width).current;
-    const slotCardWidth = screenWidth - 48;
     const slotCardGap = 12;
+    const screenWidth = React.useRef(Dimensions.get('window').width).current;
+    const [slotCarouselWidth, setSlotCarouselWidth] = useState(0);
+    const slotCardWidth = React.useMemo(() => {
+        if (slotCarouselWidth > 0) {
+            // Keep one full "page" = card width + gap to avoid clipped content while swiping.
+            return Math.max(slotCarouselWidth - slotCardGap, 220);
+        }
+        return Math.max(screenWidth - 88 - slotCardGap, 220);
+    }, [screenWidth, slotCarouselWidth, slotCardGap]);
     
     // UI State
     const [loading, setLoading] = useState(false);
@@ -134,7 +141,7 @@ const MatchCenterScreen = () => {
                     // Match disappeared or switched to searching?
                     if (lastMatchRef.current) {
                         if (lastMatchRef.current.status === 'provisionary' || lastMatchRef.current.status === 'scheduled') {
-                             Alert.alert("Match annulÃƒÂ©", "Le match prÃƒÂ©cÃƒÂ©dent a ÃƒÂ©tÃƒÂ© annulÃƒÂ©.");
+                             Alert.alert('Match annule', 'Le match precedent a ete annule.');
                         }
                         lastMatchRef.current = null;
                     }
@@ -143,7 +150,7 @@ const MatchCenterScreen = () => {
                 // No active request/match
                 if (lastMatchRef.current) {
                      // We had a match, now nothing. It was cancelled.
-                     Alert.alert("Match annulÃƒÂ©", "Votre match a ÃƒÂ©tÃƒÂ© annulÃƒÂ© par l'adversaire ou le systÃƒÂ¨me.");
+                     Alert.alert('Match annule', "Votre match a ete annule par l'adversaire ou le systeme.");
                      lastMatchRef.current = null;
                      setCurrentMatch(null);
                 }
@@ -281,7 +288,7 @@ const MatchCenterScreen = () => {
 
                 
                 if (result && result.status === 'matched') {
-                     Alert.alert("Ã°Å¸Å½Â¯ Match TrouvÃƒÂ© !", "Un adversaire a ÃƒÂ©tÃƒÂ© trouvÃƒÂ© instantanÃƒÂ©ment !");
+                     Alert.alert('Match trouve !', 'Un adversaire a ete trouve instantanement !');
                      setViewState('match_found');
                 } else {
                     setMatchRequest(result);
@@ -289,7 +296,7 @@ const MatchCenterScreen = () => {
                 }
             } catch (error) {
                 console.error(error);
-                Alert.alert("Erreur", "Recherche ÃƒÂ©chouÃƒÂ©e");
+                Alert.alert('Erreur', 'Recherche echouee');
                 setViewState('lobby'); // Go back to config on error
             }
         }, 2000); // 2 seconds delay
@@ -410,7 +417,7 @@ const MatchCenterScreen = () => {
                 const startStr = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                 const endStr = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '?';
                 
-                const timeStr = `de ${startStr} ÃƒÂ  ${endStr}`;
+                const timeStr = `de ${startStr} a ${endStr}`;
                 const placeLine = addressLabel
                     ? `${proposalData.venue} (${addressLabel})`
                     : proposalData.venue;
@@ -459,12 +466,12 @@ const MatchCenterScreen = () => {
     const renderNoSquad = () => (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 }}>
             <LeagueCard style={{ width: '100%', alignItems: 'center', paddingVertical: 40 }}>
-                <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÃƒÅ T Ãƒâ‚¬ L'ACTION ?</Text>
+                <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRET A L'ACTION ?</Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24 }]}>
-                    CrÃƒÂ©e ton ÃƒÂ©quipe pour rejoindre la compÃƒÂ©tition officielle.
+                    Cree ton equipe pour rejoindre la competition officielle.
                 </Text>
                 <Button 
-                    title="CRÃƒâ€°ER UNE SQUAD" 
+                    title="CREER UNE SQUAD" 
                     variant="Primary" 
                     icon="plus"
                     iconColor={Colors.primary500}
@@ -567,7 +574,7 @@ const MatchCenterScreen = () => {
                          marginBottom: 24,
                          borderWidth: 2, borderColor: Colors.error500 
                      }}>
-                        <Text style={{ fontSize: 32 }}>Ã¢Å¡Â Ã¯Â¸Â</Text>
+                        <Text style={{ fontSize: 32 }}>!</Text>
                      </View>
                      <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8, textAlign:'center' }]}>
                          CONNEXION PERDUE
@@ -600,14 +607,14 @@ const MatchCenterScreen = () => {
             return (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
                      <View style={[styles.radarCircle, { width: 80, height: 80, borderRadius: 40, marginBottom: 16, borderColor: Colors.gold500 }]}>
-                        <Text style={{ fontSize: 24 }}>Ã°Å¸â€œÂ¡</Text>
+                        <Text style={{ fontSize: 24 }}>R</Text>
                      </View>
                      <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>RECHERCHE EN COURS</Text>
                      <Text style={[Fonts.p2, { color: Colors.gold500, textAlign: 'center', marginBottom: 8, fontWeight: 'bold' }]}>
                          {searchStatus}
                      </Text>
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 16 }]}>
-                         Nous cherchons une ÃƒÂ©quipe compatible dans votre zone.
+                         Nous cherchons une equipe compatible dans votre zone.
                      </Text>
                      
                      {/* Timer Countdown */}
@@ -720,7 +727,7 @@ const MatchCenterScreen = () => {
                 <View style={{ alignItems: 'center', paddingVertical: 10 }}>
                      {/* ANONYMOUS HEADER */}
                      <Text style={[Fonts.h3, { color: '#ccc', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 2 }]}>
-                        ADVERSAIRE MYSTÃƒË†RE
+                        ADVERSAIRE MYSTERE
                      </Text>
 
                      {/* MAIN CARD */}
@@ -743,7 +750,7 @@ const MatchCenterScreen = () => {
                                 borderWidth: 2, borderColor: Colors.gold500,
                                 marginBottom: 12
                             }}>
-                                 <Text style={{ fontSize: 40 }}>Ã¢Å¡â€Ã¯Â¸Â</Text>
+                                 <Text style={{ fontSize: 40 }}>?</Text>
                             </View>
                             <View style={{ 
                                 position: 'absolute', bottom: 8, right: -4, 
@@ -755,8 +762,8 @@ const MatchCenterScreen = () => {
 
                         {/* Stats / Context */}
                         <View style={{ alignItems: 'center', width: '100%' }}>
-                            <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>Ãƒâ€°QUIPE ADVERSE</Text>
-                            <Text style={[Fonts.p2, { color: '#bbb', marginBottom: 16 }]}>{sportLabel} Ã¢â‚¬Â¢ {catLabel}</Text>
+                            <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>EQUIPE ADVERSE</Text>
+                            <Text style={[Fonts.p2, { color: '#bbb', marginBottom: 16 }]}>{sportLabel} - {catLabel}</Text>
                             
                             <View style={{ width: '100%', height: 1, backgroundColor: Colors.neutral700, marginBottom: 16 }} />
 
@@ -771,7 +778,7 @@ const MatchCenterScreen = () => {
                                 </View>
                                 <View style={{ width: 1, height: '100%', backgroundColor: Colors.neutral700 }} />
                                 <View style={{ alignItems: 'center', flex: 1 }}>
-                                    <Text style={{ fontSize: 20, marginBottom: 4 }}>Ã°Å¸â€¢â€™</Text>
+                                    <Text style={{ fontSize: 20, marginBottom: 4 }}>H</Text>
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                                         {/* Translate Day */}
                                         {(() => {
@@ -789,11 +796,11 @@ const MatchCenterScreen = () => {
                         {commonSlotsSummary.length > 0 && (
                             <View style={{ marginTop: 12, width: '100%', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
                                 <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
-                                    CrÃƒÂ©neaux en commun
+                                    Creneaux en commun
                                 </Text>
                                 {commonSlotsSummary.map((slotLabel) => (
                                     <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
-                                        Ã¢â‚¬Â¢ {slotLabel}
+                                        - {slotLabel}
                                     </Text>
                                 ))}
                             </View>
@@ -801,11 +808,11 @@ const MatchCenterScreen = () => {
                      </View>
 
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 }]}>
-                        Le match correspond ÃƒÂ  vos critÃƒÂ¨res. Discutez pour valider le terrain.
+                        Le match correspond a vos criteres. Discutez pour valider le terrain.
                      </Text>
 
                     <Button
-                        title="ACCÃƒâ€°DER AU CHAT"
+                        title="ACCEDER AU CHAT"
                         variant="Primary"
                         onPress={() => {
                              if (currentMatch && currentMatch.chat) {
@@ -822,7 +829,7 @@ const MatchCenterScreen = () => {
                                       }); 
                                   }
                              } else {
-                                  Alert.alert("Erreur", "Le chat n'est pas encore prÃƒÂªt. RÃƒÂ©essayez dans quelques secondes.");
+                                  Alert.alert('Erreur', "Le chat n'est pas encore pret. Reessayez dans quelques secondes.");
                              }
                         }}
                         style={{ width: '100%', backgroundColor: Colors.gold500 }}
@@ -863,7 +870,7 @@ const MatchCenterScreen = () => {
                                                                 loadMatchCenter(); // Refresh state to show searching
                                                             } catch(e) {
                                                                 console.error("Restart search failed", e);
-                                                                Alert.alert("Erreur", "Match annulÃƒÂ© mais impossible de relancer la recherche.");
+                                                                Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
                                                                 loadMatchCenter();
                                                             }
                                                         }, 500);
@@ -883,7 +890,7 @@ const MatchCenterScreen = () => {
                                                     if (currentMatchId) {
                                                         const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                                                         await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                                                        Alert.alert("Match annulÃƒÂ©", "Vous pouvez relancer une recherche.");
+                                                        Alert.alert('Match annule', 'Vous pouvez relancer une recherche.');
                                                         loadMatchCenter();
                                                     }
                                                 } catch (err) {
@@ -923,12 +930,21 @@ const MatchCenterScreen = () => {
         }
 
         // DEFAULT: Locker Room / Ticket View
+        const displayedSlots = squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : []);
+
         return (
             <View>
                  {/* Carousel of Slots */}
-                 <View>
+                 <View
+                    onLayout={(event) => {
+                        const nextWidth = event?.nativeEvent?.layout?.width || 0;
+                        if (nextWidth > 0 && Math.abs(nextWidth - slotCarouselWidth) > 1) {
+                            setSlotCarouselWidth(nextWidth);
+                        }
+                    }}
+                 >
                      <FlatList
-                        data={squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : [])}
+                        data={displayedSlots}
                         bounces={false}
                         disableIntervalMomentum
                         overScrollMode="never"
@@ -938,19 +954,24 @@ const MatchCenterScreen = () => {
                         snapToInterval={slotCardWidth + slotCardGap}
                         decelerationRate="fast"
                         pagingEnabled={false}
-                        keyExtractor={(item) => getEntityDocumentId(item) || Math.random().toString()}
+                        keyExtractor={(item, index) => getEntityDocumentId(item) || `slot-${index}`}
                         onMomentumScrollEnd={(e) => {
                             const index = Math.round(e.nativeEvent.contentOffset.x / (slotCardWidth + slotCardGap));
-                            if (squadSlots[index]) {
-                                setActiveSlot(squadSlots[index]);
+                            if (displayedSlots[index]) {
+                                setActiveSlot(displayedSlots[index]);
                             }
                         }}
-                        contentContainerStyle={!squadSlots.length && !activeSlot ? {} : { paddingHorizontal: 2 }}
+                        contentContainerStyle={
+                            !displayedSlots.length
+                                ? {}
+                                : { paddingLeft: 0, paddingRight: slotCardGap }
+                        }
                         renderItem={({ item, index }) => {
                             if (!item) return null;
+                            const isLast = index === displayedSlots.length - 1;
 
                             return (
-                                <View style={{ width: slotCardWidth, marginRight: slotCardGap }}>
+                                <View style={{ width: slotCardWidth, marginRight: isLast ? 0 : slotCardGap }}>
                                     <View style={{ marginBottom: 8 }}>
                                             {/* Date & Time Display */}
                                            <View>
@@ -968,7 +989,7 @@ const MatchCenterScreen = () => {
                                        </View>
                                        {/* Status Chip */}
                                         <View style={{ 
-                                            position: 'absolute', right: 0, top: 0,
+                                            position: 'absolute', right: 10, top: 0,
                                             backgroundColor: 'rgba(1, 179, 244, 0.1)', 
                                             paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 
                                        }}>
@@ -1007,7 +1028,7 @@ const MatchCenterScreen = () => {
                             <View style={{ width: slotCardWidth }}>
                                  <View>
                                      <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                                     <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun crÃƒÂ©neau rÃƒÂ©servÃƒÂ©</Text>
+                                     <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun creneau reserve</Text>
                                  </View>
                                   <View style={{ position: 'absolute', right: 0, top: 0,
                                      backgroundColor: 'rgba(255, 255, 255, 0.05)', 
@@ -1030,7 +1051,7 @@ const MatchCenterScreen = () => {
                         {(activeSlot.rsvp_count || 0) >= 5 ? (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
-                                     Ã¢Å“â€¦ Ãƒâ€°quipe complÃƒÂ¨te
+                                     Equipe complete
                                  </Text>
                                  <Button 
                                     title="RECHERCHER UN MATCH" 
@@ -1042,7 +1063,7 @@ const MatchCenterScreen = () => {
                         ) : (
                             <View>
                                  <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
-                                     Il manque {5 - (activeSlot.rsvp_count || 0)} joueurs pour ÃƒÂªtre au complet.
+                                     Il manque {5 - (activeSlot.rsvp_count || 0)} joueurs pour etre au complet.
                                  </Text>
                                  <Button 
                                     title="INVITER DES JOUEURS" 
@@ -1107,8 +1128,7 @@ const MatchCenterScreen = () => {
                             {mySquad ? mySquad.name : "Team Alpha"}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, opacity: 0.8 }}>
-                            <Text style={[Fonts.p3, { color: Colors.gold500, marginRight: 4 }]}>Changer</Text>
-                            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Ã¢â€“Â¼</Text>
+                            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Changer</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -1151,7 +1171,7 @@ const MatchCenterScreen = () => {
                       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                       <View style={{ alignItems: 'center', flex: 1 }}>
                           <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{streakValue}</Text>
-                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SÃƒâ€°RIE</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SERIE</Text>
                       </View>
                       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                        <View style={{ alignItems: 'center', flex: 1 }}>
@@ -1194,7 +1214,7 @@ const MatchCenterScreen = () => {
                                 width: 40,
                             }}
                         >
-                            <Text style={{ fontSize: 16 }}>Ã°Å¸â€”â€šÃ¯Â¸Â</Text>
+                            <Text style={{ fontSize: 16 }}>[]</Text>
                         </View>
                         <Text style={[Fonts.p2, { color: Colors.neutral100, textAlign: 'center' }]}>
                             Aucun match termine pour le moment.
@@ -1286,7 +1306,7 @@ const MatchCenterScreen = () => {
 
 
     const renderLobbyModal = () => {
-        const sportLabel = mySquad?.activities?.[0]?.name || mySquad?.sport?.label || mySquad?.sport || "Sport indÃƒÂ©fini";
+        const sportLabel = mySquad?.activities?.[0]?.name || mySquad?.sport?.label || mySquad?.sport || 'Sport indefini';
 
         // Helper to extract string from string or object
         const getSafeLabel = (val) => {
@@ -1297,7 +1317,7 @@ const MatchCenterScreen = () => {
         };
 
         // Display Label
-        let displayLabel = "Zone indÃƒÂ©finie";
+        let displayLabel = 'Zone indefinie';
         const tempAddr = getSafeLabel(tempSearchLocation?.address);
         const tempCity = getSafeLabel(tempSearchLocation?.city);
         const homeAddr = getSafeLabel(homeBase?.address);
@@ -1318,7 +1338,7 @@ const MatchCenterScreen = () => {
                 <View>
                     <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', letterSpacing: 1 }]}>CONFIGURATION</Text>
                      <Text style={[Fonts.p1, { color: Colors.textSecondary || '#aaa', textAlign: 'center', marginBottom: 8 }]}>
-                        {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : "Recherche immÃƒÂ©diate"}
+                        {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : 'Recherche immediate'}
                     </Text>
                 </View>
             }
@@ -1353,7 +1373,7 @@ const MatchCenterScreen = () => {
                         }}
                     >
                         <Text style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]} numberOfLines={1}>
-                            Ã°Å¸â€œÂ {displayLabel}
+                            Lieu: {displayLabel}
                         </Text>
                         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>MODIFIER</Text>
                     </TouchableOpacity>
@@ -1382,17 +1402,17 @@ const MatchCenterScreen = () => {
                 </View>
             </View>
 
-            {/* SECTION: SÃƒÂ©lection des CrÃƒÂ©neaux RÃƒÂ©currents */}
+            {/* SECTION: Selection des creneaux recurrents */}
             <View style={{ marginBottom: 24 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>
-                    Vos disponibilitÃƒÂ©s ({selectedSlotIds.length}/{squadSlots.length || 0})
+                    Vos disponibilites ({selectedSlotIds.length}/{squadSlots.length || 0})
                 </Text>
 
-                {/* SECTION: Autres crÃƒÂ©neaux communs (NÃƒÂ©gociation) */}
+                {/* SECTION: Autres creneaux communs (negociation) */}
                 {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
                     <View style={{ marginTop: 16, padding: 12, backgroundColor: Colors.neutral800, borderRadius: 8, borderWidth: 1, borderColor: Colors.neutral700 }}>
                         <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-                            Ã°Å¸â€â€ž Autres crÃƒÂ©neaux communs possibles :
+                            - Autres creneaux communs possibles :
                         </Text>
                         {currentMatch.common_slots.map((slot, index) => {
                              // Skip the currently selected slot
@@ -1401,7 +1421,7 @@ const MatchCenterScreen = () => {
                              const dayName = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' }[slot.day] || slot.day;
                              return (
                                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                     <Text style={{ fontSize: 14 }}>Ã°Å¸â€œâ€¦</Text>
+                                     <Text style={{ fontSize: 14 }}>-</Text>
                                      <Text style={[Fonts.p2, { color: Colors.neutral100, marginLeft: 8 }]}>
                                          {dayName} {slot.startHour}-{slot.endHour}
                                      </Text>
@@ -1432,7 +1452,7 @@ const MatchCenterScreen = () => {
                                 backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700,
                                 justifyContent: 'center', alignItems: 'center', marginRight: 12
                             }}>
-                                {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>Ã¢Å“â€œ</Text>}
+                                {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>OK</Text>}
                             </View>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                                 {DAY_MAP[slot.recurrence_day] || slot.recurrence_day} {formatHour(slot.start_hour)} - {formatHour(slot.end_hour)}
@@ -1442,13 +1462,13 @@ const MatchCenterScreen = () => {
                 })}
                 {(!squadSlots || squadSlots.length === 0) && (
                     <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center', padding: 16 }]}>
-                        Aucun crÃƒÂ©neau dÃƒÂ©fini. Ajoutez-en depuis la page d'ÃƒÂ©quipe.
+                        Aucun creneau defini. Ajoutez-en depuis la page d'equipe.
                     </Text>
                 )}
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.neutral800, paddingBottom: 16, marginBottom: 24  }}>
-                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>DurÃƒÂ©e Match</Text>
+                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Duree Match</Text>
                  <View style={{ backgroundColor: Colors.neutral800, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 }}>
                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>60 min</Text>
                  </View>
@@ -1477,7 +1497,7 @@ const MatchCenterScreen = () => {
             snapPoints={['50%']}
             headerComponent={
                 <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center', marginBottom: 16 }]}>
-                     Changer d'ÃƒÂ©quipe
+                     Changer d'equipe
                 </Text>
             }
         >
@@ -1510,11 +1530,11 @@ const MatchCenterScreen = () => {
                         <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{squad.name}</Text>
                             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                                 {squad?.sport || "Sport"} Ã¢â‚¬Â¢ Div {squad?.division || 10}
+                                 {squad?.sport || 'Sport'} - Div {squad?.division || 10}
                             </Text>
                         </View>
                          {areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && (
-                             <Text style={{ color: Colors.primary500, fontSize: 16 }}>Ã¢Å“â€œ</Text>
+                             <Text style={{ color: Colors.primary500, fontSize: 16 }}>OK</Text>
                          )}
                     </TouchableOpacity>
                 ))}
@@ -1622,4 +1642,3 @@ const styles = StyleSheet.create({
 });
 
 export default MatchCenterScreen;
-

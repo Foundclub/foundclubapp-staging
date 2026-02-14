@@ -1,185 +1,209 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
+
+const REQUIRED_PLAYERS = 5;
+
+const dayMap = {
+  friday: 'Vendredi',
+  monday: 'Lundi',
+  saturday: 'Samedi',
+  sunday: 'Dimanche',
+  thursday: 'Jeudi',
+  tuesday: 'Mardi',
+  wednesday: 'Mercredi',
+};
+
+const formatHour = (timeValue) => {
+  if (!timeValue || typeof timeValue !== 'string') return '--';
+  const [rawHour = '00', rawMinute = '00'] = timeValue.split(':');
+  const hour = Number.parseInt(rawHour, 10);
+  const minute = String(rawMinute).padStart(2, '0');
+  if (!Number.isFinite(hour)) return '--';
+  return `${hour}h${minute}`;
+};
+
+const getStatus = (count) => {
+  if (count >= REQUIRED_PLAYERS) {
+    return { label: 'Complet', tone: 'ready' };
+  }
+  if (count >= REQUIRED_PLAYERS - 2) {
+    return { label: `Encore ${REQUIRED_PLAYERS - count}`, tone: 'warning' };
+  }
+  return { label: `${count}/${REQUIRED_PLAYERS} confirmes`, tone: 'default' };
+};
 
 /**
  * Component to display and manage Team Slots (Availability)
  * @param {object} props
- * @param {Array} props.slots - List of slots
- * @param {boolean} props.isCaptain - Is current user a captain?
- * @param {Function} props.onAddSlot - Handler to add a new slot
- * @param {Function} props.onCheckIn - Handler to toggle check-in status
+ * @param {Array<any>} [props.slots]
+ * @param {boolean} [props.isCaptain]
+ * @param {(slot: any) => void} [props.onCheckIn]
+ * @param {(slot: any) => void} [props.onSlotPress]
+ * @param {() => void} [props.onAddSlot]
+ * @param {string} [props.currentUserId]
+ * @returns {import('react').ReactElement}
  */
-export default function TeamSlotList({ slots = [], isCaptain, onAddSlot, onCheckIn, currentUserId, onSlotPress }) {
-  console.log('TeamSlotList render:', { isCaptain, slotsCount: slots.length, hasOnSlotPress: !!onSlotPress });
+export default function TeamSlotList({
+  currentUserId,
+  isCaptain = false,
+  onAddSlot,
+  onCheckIn,
+  onSlotPress,
+  slots = [],
+}) {
   const { Colors, Fonts, Spaces } = useTheme();
 
-  const dayMap = {
-      monday: 'Lundi',
-      tuesday: 'Mardi',
-      wednesday: 'Mercredi',
-      thursday: 'Jeudi',
-      friday: 'Vendredi',
-      saturday: 'Samedi',
-      sunday: 'Dimanche'
-  };
-
   return (
-    <View style={[Spaces.marginTop[20]]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={[Fonts.h3, { color: Colors.gold500 }]}>Disponibilités (Créneaux)</Text>
-            {isCaptain && (
-                <TouchableOpacity onPress={onAddSlot}>
-                    <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>+ Ajouter</Text>
-                </TouchableOpacity>
-            )}
+    <View style={{ marginTop: 24 }}>
+      <View style={{
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+      }}
+      >
+        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>Disponibilites (Creneaux)</Text>
+        {isCaptain ? (
+          <TouchableOpacity
+            onPress={onAddSlot}
+            style={{
+              backgroundColor: 'rgba(250, 204, 21, 0.12)',
+              borderColor: 'rgba(250, 204, 21, 0.42)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>+ Ajouter</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {slots.length === 0 ? (
+        <View style={{
+          backgroundColor: 'rgba(9, 27, 42, 0.78)',
+          borderColor: 'rgba(1, 179, 244, 0.20)',
+          borderRadius: 12,
+          borderWidth: 1,
+          padding: 14,
+        }}
+        >
+          <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>Aucun creneau defini.</Text>
         </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ paddingRight: 6 }}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          {slots.map((slot, index) => {
+            const participantsCount = slot?.participants?.length || 0;
+            const checkedIn = slot?.participants?.some((p) => p?.documentId === currentUserId);
+            const status = getStatus(participantsCount);
+            const progressRatio = Math.min(1, participantsCount / REQUIRED_PLAYERS);
+            const slotKey = slot?.documentId || `${slot?.recurrence_day || 'slot'}-${index}`;
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-            {slots.length === 0 ? (
-                <View style={{ padding: 15, backgroundColor: Colors.neutral800, borderRadius: 8 }}>
-                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>Aucun créneau défini.</Text>
+            const statusColor = status.tone === 'ready'
+              ? Colors.success500
+              : status.tone === 'warning'
+                ? Colors.gold500
+                : Colors.neutral300;
+
+            return (
+              <TouchableOpacity
+                key={slotKey}
+                activeOpacity={isCaptain ? 0.85 : 1}
+                onPress={() => {
+                  if (isCaptain && onSlotPress) {
+                    onSlotPress(slot);
+                  }
+                }}
+                style={{
+                  backgroundColor: 'rgba(9, 27, 42, 0.88)',
+                  borderColor: status.tone === 'ready'
+                    ? 'rgba(250, 204, 21, 0.45)'
+                    : 'rgba(1, 179, 244, 0.28)',
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  marginRight: 10,
+                  padding: 12,
+                  width: 198,
+                }}
+              >
+                <View style={{
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: 8,
+                }}
+                >
+                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                    {dayMap[slot?.recurrence_day] || slot?.recurrence_day || 'Jour'}
+                  </Text>
+                  <View style={{
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    borderColor: 'rgba(255,255,255,0.16)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: statusColor }]}>{status.label}</Text>
+                  </View>
                 </View>
-            ) : (
-                slots.map((slot, index) => {
-                     const participantsCount = slot.participants?.length || 0;
-                     const isReady = participantsCount >= 5;
-                     
-                     // Check-in logic: User is in participants list
-                     // Note: We need currentUser ID here to know if *I* am checked in. 
-                     // But this component receives `isCaptain` and `onCheckCheckIn`. 
-                     // The logic for "isCheckedIn" was passed as prop or calculated inside? 
-                     // In previous SquadDetailsScreen, we calculated `isCheckedIn` inside `handleCheckIn` but not passed to list?
-                     // Wait, SquadDetailsScreen passes `slots`. We need to know if current user is in `slot.participants`.
-                     // The previous code had `slot.isCheckedIn` (which might have been undefined or calculated elsewhere?).
-                     // SquadDetailsScreen needs to pass `currentUser` or map slots to add `isCheckedIn`.
-                     // Let's assume we can check `slot.participants` here if we have `currentUser` or if `slot` objects are pre-processed.
-                     // Actually, looking at previous code, `slot.isCheckedIn` was accessed but never set in SquadDetailsScreen explicitly map.
-                     // LET'S FIX THIS: We need to know if the user is checked in.
-                     // I'll add a `currentUserId` prop to TeamSlotList.
-                     
-                     // For now, let's update the UI structure assuming `isCheckedIn` is available or passed.
-                     // IMPORTANT: I will ask the user's ID to be passed to this component in the next tool call or assume it's passed.
-                     // Actually, I can construct the render function to expect `currentUserId`.
-                     
-                     // Time Formatting (new recurring format: start_hour/end_hour are strings like "20:00:00")
-                     const formatHour = (timeStr) => {
-                         if (!timeStr) return "?";
-                         const parts = timeStr.split(':');
-                         return `${parseInt(parts[0])}h${parts[1]}`;
-                     };
-                     const startTimeStr = formatHour(slot.start_hour);
-                     const endTimeStr = formatHour(slot.end_hour);
 
-                     // Status Text Logic
-                     let statusText = `${participantsCount}/5 Prêts`;
-                     let statusColor = Colors.neutral00; // White default
-                     if (participantsCount >= 3 && participantsCount < 5) {
-                         statusText = `Plus que ${5 - participantsCount} !`;
-                         statusColor = Colors.warning500; // Orange/Yellow
-                     } else if (participantsCount >= 5) {
-                         statusText = "Complet";
-                         statusColor = Colors.success500;
-                     }
+                <Text style={[Fonts.h3, { color: Colors.gold500, marginBottom: 10 }]}>
+                  {formatHour(slot?.start_hour)} - {formatHour(slot?.end_hour)}
+                </Text>
 
-                     // Render Dots Helper
-                     const renderDots = () => {
-                         const totalSlots = 5;
-                         const dots = [];
-                         for (let i = 0; i < totalSlots; i++) {
-                             const isFilled = i < participantsCount;
-                             dots.push(
-                                 <View 
-                                     key={i}
-                                     style={{
-                                         width: 8, // Smaller dots to fit text
-                                         height: 8,
-                                         borderRadius: 4,
-                                         backgroundColor: isFilled ? Colors.primary500 : 'transparent',
-                                         borderWidth: 1,
-                                         borderColor: isFilled ? Colors.primary500 : Colors.neutral500,
-                                         marginRight: 4
-                                     }}
-                                 />
-                             );
-                         }
-                         return (
-                             <View>
-                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                     {dots}
-                                     {participantsCount > 5 && (
-                                         <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginLeft: 4 }]}>
-                                             +{participantsCount - 5}
-                                         </Text>
-                                     )}
-                                 </View>
-                                 <Text style={[Fonts.p3, { color: statusColor, fontSize: 10 }]}>
-                                     {statusText}
-                                 </Text>
-                             </View>
-                         );
-                     };
+                <View style={{ marginBottom: 10 }}>
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
+                    Joueurs confirmes: {participantsCount}/{REQUIRED_PLAYERS}
+                  </Text>
+                  <View style={{
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: 999,
+                    height: 6,
+                    overflow: 'hidden',
+                    width: '100%',
+                  }}
+                  >
+                    <View style={{
+                      backgroundColor: progressRatio >= 1 ? Colors.gold500 : Colors.primary500,
+                      borderRadius: 999,
+                      height: 6,
+                      width: `${Math.max(6, progressRatio * 100)}%`,
+                    }}
+                    />
+                  </View>
+                </View>
 
-                     const isCheckedIn = slot.participants?.some(p => p.documentId === currentUserId);
-
-                     return (
-                        <TouchableOpacity 
-                            key={index} 
-                            onPress={() => {
-                                if (isCaptain && onSlotPress) {
-                                    onSlotPress(slot);
-                                }
-                            }}
-                            activeOpacity={isCaptain ? 0.7 : 1}
-                            style={{ 
-                                padding: 12, 
-                                backgroundColor: Colors.neutral800, 
-                                borderRadius: 12, 
-                                borderWidth: 1, 
-                                borderColor: isReady ? Colors.primary500 : Colors.neutral700,
-                                width: 170
-                            }}
-                        >
-                            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                                {dayMap[slot.recurrence_day] || slot.recurrence_day || 'Jour ?'}
-                            </Text>
-                            
-                            {/* Time Display with End Time */}
-                            <Text style={[Fonts.h2, { color: Colors.gold500, marginVertical: 8, fontSize: 18 }]}>
-                                {startTimeStr} - {endTimeStr}
-                            </Text>
-                            
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                                {/* Dots Gauge + Text */}
-                                <View style={{ flex: 1, marginRight: 8 }}>
-                                     {renderDots()}
-                                </View>
-                                
-                                <TouchableOpacity 
-                                    onPress={() => onCheckIn(slot)}
-                                    style={{ 
-                                        backgroundColor: isCheckedIn ? Colors.primary500 : 'transparent',
-                                        borderColor: Colors.primary500,
-                                        borderWidth: isCheckedIn ? 0 : 2,
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: 18,
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    {isCheckedIn ? (
-                                         <Text style={{ color: Colors.neutral00, fontSize: 18, fontWeight: 'bold' }}>✕</Text>
-                                    ) : (
-                                        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>GO</Text>
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                        </TouchableOpacity>
-                    );
-                })
-            )}
+                <TouchableOpacity
+                  onPress={() => onCheckIn?.(slot)}
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: checkedIn ? Colors.primary500 : 'transparent',
+                    borderColor: Colors.primary500,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    justifyContent: 'center',
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary500 }]}>
+                    {checkedIn ? 'Retirer ma presence' : 'Je suis present'}
+                  </Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
+      )}
     </View>
   );
 }

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
+  Alert,
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
@@ -31,7 +32,7 @@ function UserPhysique({ navigation }) {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
 
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -40,9 +41,12 @@ function UserPhysique({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || RouteNames.Welcome);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || getPostOnboardingHomeRoute());
     },
   });
 
@@ -56,7 +60,7 @@ function UserPhysique({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || RouteNames.Welcome);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || getPostOnboardingHomeRoute());
   };
 
   const isValid = height || weight;

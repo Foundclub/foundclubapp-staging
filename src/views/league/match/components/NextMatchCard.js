@@ -19,6 +19,7 @@ import {
 import Button from '@/components/atoms/button/Button';
 import {
     getMatchDerivedPhase,
+    isMatchPastStart,
     isMatchPastEnd,
     normalizeMatchStatus,
     shouldMaskOpponentIdentity,
@@ -62,8 +63,9 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const isAnonymous = shouldMaskOpponentIdentity(match, event);
     const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
     const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
+    const hasMatchStarted = isMatchPastStart(match, event);
     const hasMatchEnded = isMatchPastEnd(match, event);
-    const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !hasMatchEnded;
+    const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !hasMatchStarted;
 
     // Participations
     // SOT: use event.participations if available (Event Mode)
@@ -385,7 +387,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                             if (isScoreLockedByTime) {
                                 Alert.alert(
                                     'Score indisponible',
-                                    "Vous pourrez saisir le score une fois l'heure de fin du match dépassée."
+                                    "Vous pourrez saisir le score une fois l'heure de debut du match depassee."
                                 );
                                 return;
                             }
@@ -400,7 +402,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                         ]}
                     >
                         <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
-                            {isScoreLockedByTime ? '⚽ SCORE VERROUILLE (MATCH EN COURS)' : '⚽ SAISIR LE SCORE'}
+                            {isScoreLockedByTime ? '⚽ SCORE VERROUILLE (AVANT DEBUT)' : '⚽ SAISIR LE SCORE'}
                         </Text>
                     </TouchableOpacity>
                 )}

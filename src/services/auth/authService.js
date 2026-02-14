@@ -236,7 +236,7 @@ export const updateMe = async (userData) => {
     // Create a copy to avoid modifying the parameter directly
     const userDataCopy = {
       ...userData,
-      birthdate: userData.birthdate ? format(new Date(userData.birthdate), 'yyyy-MM-dd') : undefined,
+      birthdate: normalizeBirthdateToIso(userData.birthdate),
       role: userData.role?.documentId || userData?.role,
       section: userData.section?.documentId || userData?.section,
     };
@@ -496,6 +496,33 @@ export const addDeviceToken = async (token) => {
     console.error('[FCM] addDeviceToken failed:', error?.message || error);
     throw error;
   }
+};
+
+/**
+ * Normalize birthdate to YYYY-MM-DD without timezone drift.
+ * @param {string | Date | undefined | null} value
+ * @returns {string | undefined}
+ */
+const normalizeBirthdateToIso = (value) => {
+  if (!value) return undefined;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    const parsedDate = new Date(trimmed);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return format(parsedDate, 'yyyy-MM-dd');
+    }
+    return undefined;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return format(value, 'yyyy-MM-dd');
+  }
+
+  return undefined;
 };
 
 /**

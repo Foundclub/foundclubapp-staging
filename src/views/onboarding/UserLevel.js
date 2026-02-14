@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -25,7 +25,7 @@ import { useGetLevels } from '@/services/level/levelQueries';
 function UserLevel({ navigation }) {
   const [selectedLevel, setSelectedLevel] = useState(/** @type {string | null} */ (null));
 
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -35,9 +35,12 @@ function UserLevel({ navigation }) {
   const queryClient = useQueryClient();
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || RouteNames.Welcome);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || getPostOnboardingHomeRoute());
     },
   });
 
@@ -48,7 +51,7 @@ function UserLevel({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || RouteNames.Welcome);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || getPostOnboardingHomeRoute());
   };
 
   const sortedLevels = levels || [];

@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, Text, View,
+  Alert, KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,6 +48,9 @@ function UserName({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserName) || RouteNames.UserBirthdate);
     },

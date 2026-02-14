@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, Text, View,
+  Alert, KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -53,6 +53,22 @@ const birthdateSchema = Joi.object({
       return value;
     })
     .required(),
+}).custom((value, helper) => {
+  const day = Number(value.day);
+  const month = Number(value.month);
+  const year = Number(value.year);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    Number.isNaN(date.getTime())
+    || date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    return helper.error('any.invalid');
+  }
+
+  return value;
 });
 
 /**
@@ -69,6 +85,9 @@ function UserBirthdate({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)
         || RouteNames.UserAvatar);

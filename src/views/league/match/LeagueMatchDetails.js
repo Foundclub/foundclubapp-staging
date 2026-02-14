@@ -32,6 +32,7 @@ import useTheme from '@/theme/themeContext';
 import {
   canCaptainSubmitScore,
   getMatchStatusBadgeConfig,
+  isMatchPastStart,
   isMatchPastEnd,
   isVenueBookedForMatch,
   normalizeMatchStatus,
@@ -128,7 +129,7 @@ function LeagueMatchDetails({ navigation, route }) {
     [isCaptain, match]
   );
   const isScoreLockedByTime = useMemo(
-    () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !isMatchPastEnd(match),
+    () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !isMatchPastStart(match),
     [isCaptain, isVenueBooked, match, normalizedStatus]
   );
 
@@ -262,7 +263,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de fin du match depassee."
+        "Vous pourrez saisir le score une fois l'heure de debut du match depassee."
       );
       return;
     }
@@ -505,13 +506,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       marginBottom: 12,
                     }}
                     textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                    title={isScoreLockedByTime ? 'Score verrouille (match en cours)' : 'Saisir le score final'}
+                    title={isScoreLockedByTime ? 'Score verrouille (avant debut)' : 'Saisir le score final'}
                     variant="Primary"
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
-                    Le score sera disponible apres l'heure de fin du match.
+                    Le score sera disponible apres l'heure de debut du match.
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (

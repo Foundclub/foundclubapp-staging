@@ -134,5 +134,6 @@ export const RouteNames = /** @type {const} */ ({
   MatchDetails: 'MatchDetails',
   PastMatchDetails: 'PastMatchDetails', // Completed match details with ELO delta
   SquadSearch: 'SquadSearch',
+  SquadFilters: 'SquadFilters',
   SquadRequests: 'SquadRequests',
 });

@@ -50,7 +50,8 @@ export default function LeagueNavigator() {
       />
       <Stack.Screen 
         component={require('@/views/league/details/SquadDetailsScreen').default} 
-        name={RouteNames.SquadDetails} 
+        name={RouteNames.SquadDetails}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
         component={require('@/views/league/search/SquadSearchScreen').default} 
@@ -59,7 +60,7 @@ export default function LeagueNavigator() {
       />
       <Stack.Screen 
         component={require('@/views/league/search/SquadFiltersScreen').default} 
-        name="SquadFilters" 
+        name={RouteNames.SquadFilters} 
         options={{ headerShown: false }}
       />
       <Stack.Screen 

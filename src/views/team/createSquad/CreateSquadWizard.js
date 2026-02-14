@@ -110,11 +110,11 @@ const CreateSquadWizard = ({ navigation }) => {
         // Ensure Enums match Schema exactly
         const sportEnumMap = {
             'Football': 'Football à 5',
-            'Football Ã  5': 'Football Ã  5',
+            'Football à 5': 'Football à 5',
             'Padel': 'Padel',
             // Default fallback if label differs slightly, though Autocomplete usage suggests direct mapping
-            'Five': 'Football Ã  5',
-            'Urban Soccer': 'Football Ã  5',
+            'Five': 'Football à 5',
+            'Urban Soccer': 'Football à 5',
             'Foot': 'Football à 5',
             'Futsal': 'Football à 5'
         };
@@ -220,7 +220,7 @@ const CreateSquadWizard = ({ navigation }) => {
         console.error('Full Error:', JSON.stringify(errorData, null, 2));
 
         if (errorMessage?.includes('unique') || errorMessage?.includes('already taken')) {
-            alert("Ce nom d'Ã©quipe est dÃ©jÃ  pris. Veuillez en choisir un autre.");
+            alert("Ce nom d'équipe est déjà pris. Veuillez en choisir un autre.");
         } else {
              alert(`Erreur: ${errorMessage}\n${errorDetails}`);
         }

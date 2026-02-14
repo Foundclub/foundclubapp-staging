@@ -19,7 +19,7 @@ import { markOnboardingComplete } from '@/domains/auth/authUseCases';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
 function UserSportHistory({ navigation }) {
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -32,7 +32,7 @@ function UserSportHistory({ navigation }) {
     
     const nextRoute = getNextOnboardingRoute(RouteNames.UserSportHistory);
     if (!nextRoute) {
-      navigation.navigate(RouteNames.HomeTab);
+      navigation.navigate(getPostOnboardingHomeRoute());
     } else {
       navigation.navigate(nextRoute);
     }
@@ -54,7 +54,7 @@ function UserSportHistory({ navigation }) {
     const nextRoute = getNextOnboardingRoute(RouteNames.UserSportHistory);
     if (!nextRoute) {
       markOnboardingComplete(userData?.documentId);
-      navigation.navigate(RouteNames.HomeTab);
+      navigation.navigate(getPostOnboardingHomeRoute());
     } else {
       navigation.navigate(nextRoute);
     }

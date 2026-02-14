@@ -125,7 +125,7 @@ const EndMatchScreen = () => {
 
     const matchPhase = getMatchDerivedPhase(match);
     const isScoreSubmissionAllowed = ['waiting_score', 'pending_validation', 'disputed'].includes(matchPhase);
-    const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que le terrain est reserve et que le match est termine.";
+    const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que le terrain est reserve et que l'heure de debut du match est depassee.";
 
     const getMyTeamFromMatch = () => {
         const currentUserId = String(getEntityDocumentId(userData) || '');

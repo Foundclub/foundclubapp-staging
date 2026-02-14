@@ -332,7 +332,7 @@ function UserDetails({ navigation, route }) {
                     <Image source={Images.calendar} style={{ width: 20, height: 20, tintColor: Colors.primary500 }} />
                   </View>
                   <View>
-                    <Text style={[Fonts.p2, Fonts.neutral300]}>{t('userDetails.fields.age', 'Âge')}</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral300]}>{t('userDetails.fields.age', 'Age')}</Text>
                     <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
                       {`${differenceInYears(new Date(), new Date(user.birthdate))} ans`}
                     </Text>

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -46,7 +46,7 @@ const CATEGORIES = [
 function UserCategory({ navigation }) {
   const [selectedCategories, setSelectedCategories] = useState(/** @type {string[]} */ ([]));
 
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -55,9 +55,12 @@ function UserCategory({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserCategory) || RouteNames.Welcome);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserCategory) || getPostOnboardingHomeRoute());
     },
   });
 
@@ -77,7 +80,7 @@ function UserCategory({ navigation }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserCategory) || RouteNames.Welcome);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserCategory) || getPostOnboardingHomeRoute());
   };
 
   return (

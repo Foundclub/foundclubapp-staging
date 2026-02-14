@@ -69,7 +69,10 @@ export default function LeagueTabNavigator() {
             renderTabBarIcon,
           });
           const focusedRouteName = getFocusedRouteNameFromRoute(route) || RouteNames.LeagueDashboard;
-          const hideTabBar = focusedRouteName === 'EndMatchScreen';
+          const hideTabBar = (
+            focusedRouteName === 'EndMatchScreen'
+            || focusedRouteName === RouteNames.SquadFilters
+          );
           return {
             headerShown: false,
             ...baseOptions,

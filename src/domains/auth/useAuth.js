@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Linking, Platform, Share,
 } from 'react-native';
+import { useAppMode } from '@/context/AppModeContext';
+import { RouteNames } from '@/navigation/routeNames';
 
 import { storage, useAppContext } from '@/store/appContext';
 
@@ -35,6 +37,7 @@ const useAuth = () => {
 
   // hooks
   const [, appDispatch] = useAppContext();
+  const { isGold } = useAppMode();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -283,8 +286,15 @@ const useAuth = () => {
     const currentIndex = onboardingViews?.views?.find(
       (view) => view.route === currentRoute,
     )?.index || 0;
-    return onboardingViews?.views?.find((view) => view.index === currentIndex + 1)?.route;
+    return onboardingViews?.views?.find(
+      (view) => view.canShow && view.index > currentIndex,
+    )?.route;
   }, [onboardingViews]);
+
+  const getPostOnboardingHomeRoute = useCallback(
+    () => (isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab),
+    [isGold],
+  );
 
   const allMyTeams = useMemo(() => (userData?.myTeams || [])
     ?.concat(userData?.trainedTeams || []), [userData]);
@@ -380,6 +390,7 @@ const useAuth = () => {
     formatBirthdateToSend,
     getAuthTokens,
     getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
     inviteTeamPlayers,
     inviteTrainer,
     isLoading: otpMutation.isPending || loginMutation.isPending,

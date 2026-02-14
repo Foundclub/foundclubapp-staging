@@ -86,12 +86,9 @@ function PrivateNavigator() {
     return RouteNames.HomeTab;
   }, [onboardingViews, isGold]);
 
-  const canShowHome = useMemo(() => !!(onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0 <= 2), [onboardingViews]);
-  
   const canShowView = useCallback((routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
-    const viewable = onboardingViews?.views?.filter(({ canShow }) => canShow)?.length || 0;
-    return !!(view && viewable >= 1);
+    return !!view?.canShow;
   }, [onboardingViews]);
 
   if (userDataLoading) {
@@ -112,21 +109,16 @@ function PrivateNavigator() {
 
   return userData?.documentId ? (
     <Stack.Navigator id={undefined} initialRouteName={initialRouteName} key={userData?.documentId} screenOptions={commonOptions}>
-      {canShowHome ? (
-        isGold ? (
-           <Stack.Screen
-            component={LeagueTabNavigator}
-            name={RouteNames.LeagueHomeTab}
-            options={{ headerShown: false }}
-          />
-        ) : (
-          <Stack.Screen
-            component={PrivateTabNavigator}
-            name={RouteNames.HomeTab}
-            options={{ headerShown: false }}
-          />
-        )
-      ) : null}
+      <Stack.Screen
+        component={PrivateTabNavigator}
+        name={RouteNames.HomeTab}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={LeagueTabNavigator}
+        name={RouteNames.LeagueHomeTab}
+        options={{ headerShown: false }}
+      />
 
 
       {/* Domain Stacks - These contain the refactored screens */}
@@ -385,6 +377,14 @@ function PrivateNavigator() {
       <Stack.Screen
         component={require('@/views/league/search/SquadSearchScreen').default}
         name={RouteNames.SquadSearch}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={require('@/views/league/search/SquadFiltersScreen').default}
+        name={RouteNames.SquadFilters}
         options={{
           ...commonOptions,
           headerShown: false,

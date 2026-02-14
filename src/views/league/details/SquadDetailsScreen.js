@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, Alert, TouchableOpacity, ImageBackground, Image, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfilePicturePreviewOverlay from '@/components/molecules/profilePicturePreviewOverlay/ProfilePicturePreviewOverlay';
 import { getImageUrl } from '@/utils/imageUrl';
+import { normalizeLocationInput } from '@/utils/location';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
@@ -19,6 +20,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
 import { createTeamSlot, updateTeamSlot, deleteTeamSlot } from '@/services/teamSlot/teamSlotService';
 import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 
 /**
  * Squad Details Screen for FC League
@@ -72,75 +74,31 @@ const SquadDetailsScreen = ({ navigation, route }) => {
     return uniqueIds.size;
   }, [team]);
 
-  useEffect(() => { 
-      // Header Options
-      const headerRight = [];
+  const normalizedHomeBase = useMemo(
+    () => normalizeLocationInput(team?.home_base),
+    [team?.home_base]
+  );
 
-      // Share Button (For everyone)
-      headerRight.push(
-          <TouchableOpacity 
-              key="share"
-              onPress={() => {
-                  const squadId = team?.documentId || teamId;
-                  const deepLink = squadId ? `foundclub://squad/${squadId}` : null;
-                  const message = deepLink
-                    ? `Rejoins ma squad ${team?.name || ''} sur FoundClub League !\n${deepLink}`
-                    : `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`;
+  const locationLabel = useMemo(
+    () => normalizedHomeBase?.city
+      || normalizedHomeBase?.label
+      || normalizedHomeBase?.address
+      || 'Localisation non renseignee',
+    [normalizedHomeBase]
+  );
 
-                  Share.share({
-                      message,
-                      title: `Rejoins ${team?.name || 'ma squad'} !`
-                  });
-              }}
-              style={{ marginRight: 16 }}
-          >
-              <Image 
-                  source={Images.share} 
-                  style={[ApplicationStyle.icon24, { tintColor: Colors.primary500 }]} 
-              />
-          </TouchableOpacity>
-      );
+  const handleShare = useCallback(() => {
+    const squadId = team?.documentId || teamId;
+    const deepLink = squadId ? `foundclub://squad/${squadId}` : null;
+    const message = deepLink
+      ? `Rejoins ma squad ${team?.name || ''} sur FoundClub League !\n${deepLink}`
+      : `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`;
 
-      if (isCaptain) {
-          headerRight.push(
-            <TouchableOpacity 
-                key="requests"
-                onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId })}
-                style={{ marginRight: 16 }}
-            >
-                <View>
-                     <Text style={{ color: Colors.gold500, fontWeight: 'bold' }}>Demandes</Text>
-                     {/* Badge if requests exist */}
-                     {team?.join_requests?.length > 0 && (
-                         <View style={{ 
-                             position: 'absolute', 
-                             top: -5, 
-                             right: -10, 
-                             backgroundColor: Colors.error500, 
-                             width: 8, 
-                             height: 8, 
-                             borderRadius: 4 
-                         }} />
-                     )}
-                </View>
-            </TouchableOpacity>
-          );
-
-          headerRight.push(
-            <TouchableOpacity 
-                key="edit"
-                onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
-                style={{ marginRight: 16 }}
-            >
-                <Text style={{ color: Colors.primary500, fontWeight: 'bold' }}>Modifier</Text>
-            </TouchableOpacity>
-          );
-      }
-
-      navigation.setOptions({
-          headerRight: () => <View style={{ flexDirection: 'row' }}>{headerRight}</View>
-      });
-  }, [navigation, isCaptain, teamId, team?.documentId, team?.name, Colors]);
+    Share.share({
+      message,
+      title: `Rejoins ${team?.name || 'ma squad'} !`,
+    });
+  }, [team?.documentId, team?.name, teamId]);
 
 
 
@@ -302,25 +260,74 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       }
   };
 
+  const showJoinAction = !isMember && !isCaptain;
+
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingBottom[100], Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 120 }]}
+        contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 120 }]}
         refreshControl={<RefreshControl refreshing={isLoading || isUpdating} onRefresh={refetch} />}
         showsVerticalScrollIndicator={false}
       >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 16, marginTop: 4 }]}>
+          <HeaderBackButton
+            onPress={() => navigation.goBack()}
+            style={{ marginLeft: 0 }}
+            withDefaultMargin={false}
+          />
+          <View style={[Alignments.row, Alignments.alignCenter]}>
+            {isCaptain ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId })}
+                style={{ marginRight: 12 }}
+              >
+                <View>
+                  <Text style={{ color: Colors.gold500, fontWeight: 'bold' }}>Demandes</Text>
+                  {team?.join_requests?.length > 0 ? (
+                    <View style={{
+                      backgroundColor: Colors.error500,
+                      borderRadius: 4,
+                      height: 8,
+                      position: 'absolute',
+                      right: -10,
+                      top: -5,
+                      width: 8,
+                    }}
+                    />
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ) : null}
+            {isCaptain ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
+                style={{ marginRight: 12 }}
+              >
+                <Text style={{ color: Colors.primary500, fontWeight: 'bold' }}>Modifier</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity onPress={handleShare}>
+              <Image
+                source={Images.share}
+                style={[ApplicationStyle.icon24, { tintColor: Colors.primary500 }]}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Header / Identity */}
-        <View style={[Alignments.alignCenter, Spaces.marginBottom[24], Spaces.marginTop[16]]}>
-           <Text style={[Fonts.h5, { color: Colors.gold500, letterSpacing: 1, marginBottom: 8 }]}>SQUAD</Text>
+        <View style={[Alignments.alignCenter, { marginBottom: 24, marginTop: 8 }]}>
+           <Text style={[Fonts.p2Bold, { color: Colors.gold500, letterSpacing: 0.8, marginBottom: 6 }]}>SQUAD</Text>
            <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 4 }]}>{team?.name}</Text>
+           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 6 }]}>{locationLabel}</Text>
            {team?.activities?.[0]?.name && (
                 <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>{team.activities[0].name.toUpperCase()}</Text>
            )}
         </View>
 
         {/* Join Action for Non-Members */}
-        {!isMember && !isCaptain && (
-            <View style={[Spaces.marginBottom[16], Alignments.alignCenter]}>
+        {showJoinAction && (
+            <View style={[Alignments.alignCenter, { marginTop: 8, marginBottom: 30, width: '100%' }]}>
                 {hasPendingRequest ? (
                     <View style={{ backgroundColor: Colors.neutral800, padding: 12, borderRadius: 8 }}>
                         <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>Demande en attente...</Text>
@@ -330,7 +337,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                         title="Demander à rejoindre" 
                         onPress={handleRequestJoin} 
                         isLoading={isUpdating}
-                        style={{ width: '60%' }}
+                        style={{ alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%' }}
                         variant="Primary"
                     />
                 )}
@@ -345,8 +352,13 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 if(team?.cover?.url) setIsCoverPreviewVisible(true);
              }}
              style={[
-                 Spaces.marginBottom[24],
-                 { borderRadius: 16, overflow: 'hidden' } // Ensure border radius clips background
+                 { marginTop: showJoinAction ? 2 : 0, marginBottom: 32 },
+                 {
+                   borderRadius: 16,
+                   borderWidth: 1,
+                   borderColor: 'rgba(250, 204, 21, 0.28)',
+                   overflow: 'hidden'
+                 } // Ensure border radius clips background
              ]}
         >
           <ImageBackground
@@ -355,7 +367,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                   !team?.cover?.url && ApplicationStyle.backgroundColor.primary700,
                   Spaces.padding[16],
                   Alignments.alignCenter,
-                  { minHeight: 180, justifyContent: 'center' }
+                  { minHeight: 200, justifyContent: 'center' }
               ]}
               imageStyle={{ opacity: 0.6 }} // Dim background image for readability
           >
@@ -387,7 +399,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 </View>
              )}
 
-             <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+             <View style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
                 {/* Logo or Shield (Using CREST for League Squad) */}
                 <View>
                     {team?.crest?.url ? (
@@ -426,28 +438,45 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                     )}
                 </View>
              </View>
-             
-             {/* Edit Button (Icon) for Captain has been moved */}
 
-             <View style={[Alignments.row, Spaces.gap[16], Alignments.wrap, Alignments.justifyCenter]}>
-                 {team?.division && (
-                     <View style={[Alignments.alignCenter]}>
-                         <Text style={[Fonts.p3, { color: Colors.primary500 }]}>Division</Text>
-                         <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{team.division}</Text>
+             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10, textAlign: 'center' }]}>
+                 {locationLabel}
+             </Text>
+
+             {/* League badges */}
+             <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
+                 {team?.division ? (
+                     <View style={{
+                         backgroundColor: 'rgba(250, 204, 21, 0.12)',
+                         borderColor: 'rgba(250, 204, 21, 0.45)',
+                         borderRadius: 999,
+                         borderWidth: 1,
+                         paddingHorizontal: 14,
+                         paddingVertical: 7,
+                     }}
+                     >
+                         <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>DIV {team.division}</Text>
                      </View>
-                 )}
-                 {team?.elo && (
-                     <View style={[Alignments.alignCenter]}>
-                         <Text style={[Fonts.p3, { color: Colors.primary500 }]}>ELO</Text>
-                         <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{team.elo}</Text>
+                 ) : null}
+                 {team?.elo ? (
+                     <View style={{
+                         backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                         borderColor: 'rgba(1, 179, 244, 0.38)',
+                         borderRadius: 999,
+                         borderWidth: 1,
+                         paddingHorizontal: 14,
+                         paddingVertical: 7,
+                     }}
+                     >
+                         <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{team.elo} PTS</Text>
                      </View>
-                 )}
+                 ) : null}
              </View>
           </ImageBackground>
         </TouchableOpacity>
 
         {/* Availability Slots */}
-        <View style={[Spaces.marginBottom[24]]}>
+        <View style={{ marginBottom: 28 }}>
             <TeamSlotList 
                 slots={team?.slots || []}
                 isCaptain={isCaptain}
@@ -460,21 +489,37 @@ const SquadDetailsScreen = ({ navigation, route }) => {
 
 
         {/* Roster Preview */}
-        <View style={[Spaces.marginBottom[24]]}>
+        <View style={{ marginBottom: 24 }}>
              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[12]]}>
-                <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Effectif ({rosterCount})</Text>
+                <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>Effectif ({rosterCount})</Text>
              </View>
              
              {/* Captain */}
              {team?.captain && (
                  <View key={team.captain.documentId} style={[
                      Alignments.row, Alignments.alignCenter, Spaces.gap[12], 
-                     ApplicationStyle.backgroundColor.neutral800, Spaces.padding[12], ApplicationStyle.borderRadius12, Spaces.marginBottom[8]
+                     ApplicationStyle.backgroundColor.neutral800,
+                     Spaces.padding[12],
+                     ApplicationStyle.borderRadius12,
+                     Spaces.marginBottom[8],
+                     { borderWidth: 1, borderColor: 'rgba(250, 204, 21, 0.25)' }
                  ]}>
                      <ProfileAvatar imageUrl={team.captain.avatar?.url} size={40} />
                      <View>
                          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{team.captain.firstname} {team.captain.lastname}</Text>
-                         <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Capitaine</Text>
+                         <View style={{
+                           alignSelf: 'flex-start',
+                           backgroundColor: 'rgba(250, 204, 21, 0.14)',
+                           borderColor: 'rgba(250, 204, 21, 0.45)',
+                           borderRadius: 999,
+                           borderWidth: 1,
+                           marginTop: 4,
+                           paddingHorizontal: 10,
+                           paddingVertical: 3,
+                         }}
+                         >
+                           <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Capitaine</Text>
+                         </View>
                      </View>
                  </View>
              )}
@@ -483,12 +528,28 @@ const SquadDetailsScreen = ({ navigation, route }) => {
              {team?.roster?.filter(p => p.documentId !== team?.captain?.documentId).map(player => (
                  <View key={player.documentId} style={[
                      Alignments.row, Alignments.alignCenter, Spaces.gap[12], 
-                     ApplicationStyle.backgroundColor.neutral800, Spaces.padding[12], ApplicationStyle.borderRadius12, Spaces.marginBottom[8]
+                     ApplicationStyle.backgroundColor.neutral800,
+                     Spaces.padding[12],
+                     ApplicationStyle.borderRadius12,
+                     Spaces.marginBottom[8],
+                     { borderWidth: 1, borderColor: 'rgba(1, 179, 244, 0.2)' }
                  ]}>
                      <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
                      <View>
                          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{player.firstname} {player.lastname}</Text>
-                         <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>Joueur</Text>
+                         <View style={{
+                           alignSelf: 'flex-start',
+                           backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                           borderColor: 'rgba(1, 179, 244, 0.35)',
+                           borderRadius: 999,
+                           borderWidth: 1,
+                           marginTop: 4,
+                           paddingHorizontal: 10,
+                           paddingVertical: 3,
+                         }}
+                         >
+                           <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>Joueur</Text>
+                         </View>
                      </View>
                  </View>
              ))}

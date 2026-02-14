@@ -62,7 +62,7 @@ function TeamStack() {
         name={RouteNames.SquadDetails}
         options={{
           ...commonOptions,
-          headerTitle: '',
+          headerShown: false,
         }}
       />
       <Stack.Screen

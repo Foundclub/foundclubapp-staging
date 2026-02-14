@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+import useAuth from '@/domains/auth/useAuth';
 
 import { storage, useAppContext } from '@/store/appContext';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
@@ -12,7 +13,6 @@ import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { RouteNames } from '@/navigation/routeNames';
 
 /**
  * Welcome screen component shown after completing onboarding.
@@ -28,6 +28,7 @@ function Welcome({ navigation }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [{ auth }] = useAppContext();
+  const { getPostOnboardingHomeRoute } = useAuth();
 
   const handleNext = () => {
     if (auth?.user?.documentId) {
@@ -37,7 +38,7 @@ function Welcome({ navigation }) {
     }
     navigation.reset({
       index: 0,
-      routes: [{ name: RouteNames.HomeTab }],
+      routes: [{ name: getPostOnboardingHomeRoute() }],
     });
   };
 

@@ -503,7 +503,7 @@ function Profile({ navigation }) {
                 screen: RouteNames.RequestsDashboard,
                 params: { clubId: userData?.club?.documentId },
               })}
-              title={t('profile.actions.manageEventRequests', 'Gérer les demandes d\'événements')}
+              title={t('profile.actions.manageEventRequests', "Gerer les demandes d'evenements")}
             />
           ) : null}
           {canManageTeam && userData?.club ? (

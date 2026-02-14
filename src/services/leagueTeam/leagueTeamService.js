@@ -87,11 +87,14 @@ export const getMyLeagueTeam = async (userId) => {
  */
 export const checkTeamNameUnique = async (name) => {
     try {
+        const normalizedName = String(name || '').trim().replace(/\s+/g, ' ');
+        if (!normalizedName) return false;
+
         const response = await client.get('/league-teams', {
             params: {
                 filters: {
                     name: {
-                        $eq: name
+                        $eqi: normalizedName
                     }
                 }
             }
@@ -259,12 +262,51 @@ export const deleteLeagueTeam = async (documentId) => {
  */
 export const searchSquads = async (filters) => {
     try {
+        const safeFilters = filters || {};
+
         const normalizeFilterValue = (value) => {
             if (!value) return null;
             if (typeof value === 'object') {
                 return value.value ?? value.label ?? null;
             }
             return value;
+        };
+
+        const normalizeText = (value) => String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        const resolveSportToken = (value) => {
+            const normalized = normalizeText(value);
+            if (!normalized) return null;
+
+            if (
+                normalized === 'football'
+                || normalized === 'foot'
+                || normalized === 'football a 5'
+                || normalized === 'futsal'
+                || normalized === 'five'
+                || normalized === 'urban soccer'
+            ) {
+                return 'football5';
+            }
+
+            if (normalized === 'padel') {
+                return 'padel';
+            }
+
+            return normalized;
+        };
+
+        const normalizeSectionFilter = (value) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (!normalized) return null;
+            if (['male', 'masculin', 'homme', 'men'].includes(normalized)) return 'Male';
+            if (['female', 'feminin', 'femme', 'women'].includes(normalized)) return 'Female';
+            if (['mixed', 'mixte'].includes(normalized)) return 'Mixed';
+            return null;
         };
 
         const parseCoordinates = (value) => {
@@ -280,6 +322,35 @@ export const searchSquads = async (filters) => {
                 const lat = Number.parseFloat(value.lat ?? value.latitude);
                 const lng = Number.parseFloat(value.lng ?? value.longitude ?? value.lon);
                 if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+
+                const rawValue = value.value ?? value.address?.value;
+                if (typeof rawValue === 'string' && rawValue.includes('|')) {
+                    const [lngRaw, latRaw] = rawValue.split('|');
+                    const parsedLat = Number.parseFloat(latRaw);
+                    const parsedLng = Number.parseFloat(lngRaw);
+                    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+                        return { lat: parsedLat, lng: parsedLng };
+                    }
+                }
+
+                const geometryCoordinates = value.geometry?.coordinates;
+                if (Array.isArray(geometryCoordinates) && geometryCoordinates.length >= 2) {
+                    const geometryLng = Number.parseFloat(geometryCoordinates[0]);
+                    const geometryLat = Number.parseFloat(geometryCoordinates[1]);
+                    if (Number.isFinite(geometryLat) && Number.isFinite(geometryLng)) {
+                        return { lat: geometryLat, lng: geometryLng };
+                    }
+                }
+
+                const directCoordinates = value.coordinates;
+                if (Array.isArray(directCoordinates) && directCoordinates.length >= 2) {
+                    const first = Number.parseFloat(directCoordinates[0]);
+                    const second = Number.parseFloat(directCoordinates[1]);
+                    if (Number.isFinite(first) && Number.isFinite(second)) {
+                        // Prefer [lng, lat] legacy format.
+                        return { lat: second, lng: first };
+                    }
+                }
             }
             return null;
         };
@@ -289,12 +360,21 @@ export const searchSquads = async (filters) => {
             if (!homeBase) return null;
             if (typeof homeBase === 'string') {
                 try {
-                    return parseCoordinates(JSON.parse(homeBase));
+                    const parsed = JSON.parse(homeBase);
+                    return (
+                        parseCoordinates(parsed)
+                        || parseCoordinates(parsed?.address)
+                        || parseCoordinates(parsed?.home_base)
+                    );
                 } catch (_error) {
                     return null;
                 }
             }
-            return parseCoordinates(homeBase);
+            return (
+                parseCoordinates(homeBase)
+                || parseCoordinates(homeBase?.address)
+                || parseCoordinates(homeBase?.home_base)
+            );
         };
 
         const getHomeBaseCity = (team) => {
@@ -303,12 +383,42 @@ export const searchSquads = async (filters) => {
             if (typeof homeBase === 'string') {
                 try {
                     const parsed = JSON.parse(homeBase);
-                    return String(parsed?.city || parsed?.label || '').toLowerCase();
+                    const fallbackText = [
+                        parsed?.city,
+                        parsed?.label,
+                        parsed?.address,
+                        parsed?.address_line,
+                        parsed?.address?.city,
+                        parsed?.address?.label,
+                        parsed?.address?.address,
+                        parsed?.home_base?.city,
+                        parsed?.home_base?.label,
+                        parsed?.home_base?.address,
+                        parsed?.context,
+                        parsed?.properties?.city,
+                        parsed?.properties?.label,
+                    ].find((item) => typeof item === 'string' && item.trim().length > 0) || '';
+                    return String(fallbackText).toLowerCase();
                 } catch (_error) {
                     return '';
                 }
             }
-            return String(homeBase?.city || homeBase?.label || '').toLowerCase();
+            const fallbackText = [
+                homeBase?.city,
+                homeBase?.label,
+                homeBase?.address,
+                homeBase?.address_line,
+                homeBase?.address?.city,
+                homeBase?.address?.label,
+                homeBase?.address?.address,
+                homeBase?.home_base?.city,
+                homeBase?.home_base?.label,
+                homeBase?.home_base?.address,
+                homeBase?.context,
+                homeBase?.properties?.city,
+                homeBase?.properties?.label,
+            ].find((item) => typeof item === 'string' && item.trim().length > 0) || '';
+            return String(fallbackText).toLowerCase();
         };
 
         const getDistanceKm = (a, b) => {
@@ -325,22 +435,63 @@ export const searchSquads = async (filters) => {
             return 2 * R * Math.asin(Math.sqrt(hav));
         };
 
+        const buildCityNeedles = (cityValue) => {
+            if (!cityValue) return [];
+
+            const cityObject = typeof cityValue === 'object' ? cityValue : null;
+            const rawLabel = cityObject?.label || String(cityValue || '');
+            const explicitCity = cityObject?.city || '';
+            const cleanedLabel = normalizeText(rawLabel)
+                .replace(/\(\s*\d{5}\s*\)/g, ' ')
+                .replace(/\b\d{5}\b/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const firstToken = cleanedLabel.split(' ').find((token) => token.length >= 3) || '';
+
+            return [...new Set([
+                normalizeText(explicitCity),
+                cleanedLabel,
+                firstToken,
+            ].filter((needle) => needle.length >= 3))];
+        };
+
+        const isCityTextMatch = (team, cityNeedles) => {
+            if (!cityNeedles.length) return true;
+
+            const teamName = normalizeText(team?.name);
+            const homeBaseCity = normalizeText(getHomeBaseCity(team));
+
+            return cityNeedles.some((needle) => {
+                const matchesCity = homeBaseCity
+                    ? (homeBaseCity.includes(needle) || needle.includes(homeBaseCity))
+                    : false;
+                const matchesName = teamName ? teamName.includes(needle) : false;
+                return matchesCity || matchesName;
+            });
+        };
+
+        const normalizeTeamPayload = (team) => {
+            const attributes = team?.attributes && typeof team.attributes === 'object' ? team.attributes : {};
+            const merged = { ...attributes, ...team };
+            if (!merged.documentId && merged.id !== undefined && merged.id !== null) {
+                merged.documentId = String(merged.id);
+            }
+            return merged;
+        };
+
         const query = {
-            populate: ['crest', 'home_base'],
-            filters: {},
+            populate: ['crest'],
         };
 
         const conditions = [];
-        const city = normalizeFilterValue(filters?.city);
-        const sport = normalizeFilterValue(filters?.sport);
-        const category = normalizeFilterValue(filters?.category);
-        const section = normalizeFilterValue(filters?.section);
-        const divisionRaw = normalizeFilterValue(filters?.division);
-        const searchQuery = String(filters?.query || '').trim();
-
-        if (sport) {
-            conditions.push({ sport: { $eq: sport } });
-        }
+        const cityRaw = safeFilters?.city;
+        const requestedSportToken = resolveSportToken(normalizeFilterValue(safeFilters?.sport));
+        const category = normalizeFilterValue(safeFilters?.category);
+        const section = normalizeSectionFilter(normalizeFilterValue(safeFilters?.section));
+        const divisionRaw = normalizeFilterValue(safeFilters?.division);
+        const searchQuery = String(safeFilters?.query || '').trim();
+        const cityNeedles = buildCityNeedles(cityRaw);
+        const centerCoordinates = parseCoordinates(safeFilters?.city?.value || safeFilters?.city);
 
         if (category) {
             conditions.push({ category: { $eq: category } });
@@ -351,14 +502,12 @@ export const searchSquads = async (filters) => {
         }
 
         const division = Number.parseInt(divisionRaw, 10);
-        if (Number.isFinite(division)) {
+        if (Number.isFinite(division) && division >= 1 && division <= 10) {
             conditions.push({ division: { $eq: division } });
         }
 
         if (searchQuery.length >= 2) {
-            conditions.push({
-                name: { $containsi: searchQuery },
-            });
+            conditions.push({ name: { $containsi: searchQuery } });
         }
 
         if (conditions.length === 1) {
@@ -368,24 +517,49 @@ export const searchSquads = async (filters) => {
         }
 
         const response = await client.get('/league-teams', { params: query });
-        let squads = response.data?.data || [];
+        let squads = Array.isArray(response?.data?.data)
+            ? response.data.data.map(normalizeTeamPayload)
+            : [];
 
-        const citySearch = city ? String(city).toLowerCase() : '';
-        if (citySearch) {
+        if (requestedSportToken) {
             squads = squads.filter((team) => {
-                const teamName = String(team?.name || '').toLowerCase();
-                const homeBaseCity = getHomeBaseCity(team);
-                return teamName.includes(citySearch) || homeBaseCity.includes(citySearch);
+                const teamSport = normalizeText(team?.sport);
+                if (!teamSport) return false;
+
+                if (requestedSportToken === 'football5') {
+                    return teamSport.includes('football') || teamSport.includes('futsal');
+                }
+
+                if (requestedSportToken === 'padel') {
+                    return teamSport.includes('padel');
+                }
+
+                return teamSport.includes(requestedSportToken);
             });
         }
 
-        const radius = Number.parseInt(filters?.radius, 10);
-        const centerCoordinates = parseCoordinates(filters?.city?.value || filters?.city);
+        if (cityNeedles.length && !centerCoordinates) {
+            squads = squads.filter((team) => isCityTextMatch(team, cityNeedles));
+        }
+
+        const radius = Number.parseInt(safeFilters?.radius, 10);
         if (Number.isFinite(radius) && radius > 0 && centerCoordinates) {
             squads = squads.filter((team) => {
                 const teamCoordinates = getTeamCoordinates(team);
+                if (!teamCoordinates) {
+                    return isCityTextMatch(team, cityNeedles);
+                }
                 const distance = getDistanceKm(centerCoordinates, teamCoordinates);
-                return Number.isFinite(distance) && distance <= radius;
+                if (Number.isFinite(distance) && distance <= radius) {
+                    return true;
+                }
+
+                const swappedCoordinates = {
+                    lat: teamCoordinates.lng,
+                    lng: teamCoordinates.lat,
+                };
+                const swappedDistance = getDistanceKm(centerCoordinates, swappedCoordinates);
+                return Number.isFinite(swappedDistance) && swappedDistance <= radius;
             });
         }
 

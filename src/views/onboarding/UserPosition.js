@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -25,7 +25,7 @@ import { SPORTS_WITH_POSITIONS, getPositionsForSport } from '@/constants/positio
 function UserPosition({ navigation, route }) {
   const [selectedPositions, setSelectedPositions] = useState(/** @type {string[]} */ ([]));
 
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -47,15 +47,18 @@ function UserPosition({ navigation, route }) {
     const sport = userSport?.toLowerCase();
     if (sport && !SPORTS_WITH_POSITIONS.includes(sport)) {
       // Sport doesn't have positions, skip this step
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || RouteNames.Welcome);
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
     }
-  }, [userSport, navigation, getNextOnboardingRoute]);
+  }, [userSport, navigation, getNextOnboardingRoute, getPostOnboardingHomeRoute]);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
-      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || RouteNames.Welcome);
+      queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
     },
   });
 
@@ -77,7 +80,7 @@ function UserPosition({ navigation, route }) {
   };
 
   const handleSkip = () => {
-    navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || RouteNames.Welcome);
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
   };
 
   // Get sport name for display

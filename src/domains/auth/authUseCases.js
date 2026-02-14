@@ -52,17 +52,10 @@ export const getOnboardingViews = ({
     };
   }
 
-  const hasSeenWelcome = (() => {
-    try {
-      if (documentId) {
-        return storage.getBoolean(`hasSeenWelcome_${documentId}`);
-      }
-      return false;
-    } catch (e) { return false; }
-  })();
+  const roleName = role?.name || USER_ROLES.new;
 
   const baseViews = (() => {
-    switch (role.name) {
+    switch (roleName) {
       case USER_ROLES.coach:
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
@@ -128,7 +121,7 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserAvatar && avatar) {
       return Object.assign(view, { canShow: false });
     }
-    if (view.route === RouteNames.UserRole && role.name !== 'Authenticated') {
+    if (view.route === RouteNames.UserRole && roleName !== USER_ROLES.new) {
       return Object.assign(view, { canShow: false });
     }
     // Optional steps - skip if already filled
@@ -160,17 +153,8 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserClubSearch && isLookingForClub !== undefined && isLookingForClub !== null) {
       return Object.assign(view, { canShow: false });
     }
-    if (view.route === RouteNames.Welcome && hasSeenWelcome) {
-      return Object.assign(view, { canShow: false });
-    }
     return view;
   });
-
-  // If all steps except Welcome are already completed, skip Welcome too
-  // This means it's an existing user logging in, not a new registration
-  const otherStepsCanShow = filteredViews.filter(v => v.canShow);
-  
-  // Note: Welcome screen logic removed as requested
 
   const views = filteredViews?.filter((view) => view.canShow)?.length > 0 ? filteredViews
     : [];

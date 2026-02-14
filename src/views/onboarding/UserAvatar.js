@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -30,7 +30,7 @@ function UserAvatar({ navigation }) {
   );
 
   // hooks
-  const { getNextOnboardingRoute } = useAuth();
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
 
   const {
     Alignments, Fonts, Spaces,
@@ -41,11 +41,14 @@ function UserAvatar({ navigation }) {
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
+    onError: (error) => {
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+    },
     onSuccess: () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
       if (!nextRoute) {
         markOnboardingComplete(userData?.documentId);
-        navigation.navigate(RouteNames.HomeTab);
+        navigation.navigate(getPostOnboardingHomeRoute());
       } else {
         navigation.navigate(nextRoute);
       }
@@ -62,7 +65,7 @@ function UserAvatar({ navigation }) {
     const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
     if (!nextRoute) {
       markOnboardingComplete(userData?.documentId);
-      navigation.navigate(RouteNames.HomeTab);
+      navigation.navigate(getPostOnboardingHomeRoute());
     } else {
       navigation.navigate(nextRoute);
     }

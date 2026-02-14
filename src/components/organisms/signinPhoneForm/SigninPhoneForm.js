@@ -16,7 +16,9 @@ const defaultValues = {
 };
 
 const loginSchema = Joi.object({
-  phoneNumber: Joi.string().required(),
+  phoneNumber: Joi.string()
+    .pattern(/^\+\d{8,15}$/)
+    .required(),
 });
 
 /**

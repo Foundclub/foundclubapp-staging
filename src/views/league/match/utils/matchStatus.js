@@ -50,6 +50,12 @@ export const getMatchStartDate = (match, event = null) => {
   return parseDate(event?.date || match?.date);
 };
 
+export const isMatchPastStart = (match, event = null, now = new Date()) => {
+  const startDate = getMatchStartDate(match, event);
+  if (!startDate) return false;
+  return now >= startDate;
+};
+
 export const getMatchEndDate = (match, event = null) => {
   const explicitEnd = parseDate(event?.endDate || match?.location?.proposed_end_time);
   if (explicitEnd) return explicitEnd;
@@ -80,16 +86,23 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   if (!match) return 'unknown';
 
   const backendPhase = normalizePhase(match.phase);
-  if (backendPhase) return backendPhase;
-
   const status = normalizeMatchStatus(match.status);
   const venueBooked = isVenueBookedForMatch(match, event);
-  const hasEnded = isMatchPastEnd(match, event, now);
+  const hasStarted = isMatchPastStart(match, event, now);
+
+  if (backendPhase) {
+    // Compatibility override: if backend still sends confirmed_upcoming while the
+    // match start time is passed and venue is booked, force waiting_score locally.
+    if (backendPhase === 'confirmed_upcoming' && status === 'scheduled' && venueBooked && hasStarted) {
+      return 'waiting_score';
+    }
+    return backendPhase;
+  }
 
   if (status === 'provisionary' || status === 'negotiating') return 'waiting_proposal';
   if (status === 'scheduled' && !venueBooked) return 'waiting_venue';
-  if (status === 'scheduled' && venueBooked && !hasEnded) return 'confirmed_upcoming';
-  if (status === 'scheduled' && venueBooked && hasEnded) return 'waiting_score';
+  if (status === 'scheduled' && venueBooked && !hasStarted) return 'confirmed_upcoming';
+  if (status === 'scheduled' && venueBooked && hasStarted) return 'waiting_score';
   if (status === 'pending_validation') return 'pending_validation';
   if (status === 'disputed') return 'disputed';
   if (status === 'valid') return 'valid';
