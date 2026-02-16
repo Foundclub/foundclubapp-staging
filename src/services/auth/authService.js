@@ -531,7 +531,8 @@ const normalizeBirthdateToIso = (value) => {
  * @returns {Promise<object>} The promise
  */
 export const deleteDeviceToken = async (token) => {
-  const result = await client.delete(`/user-fcm-token/me/device/${token}`);
+  const encodedToken = encodeURIComponent(token || '');
+  const result = await client.delete(`/user-fcm-token/me/device/${encodedToken}`);
   return result.data;
 };
 

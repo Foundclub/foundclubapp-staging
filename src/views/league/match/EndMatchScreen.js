@@ -24,6 +24,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { fetchMatch, submitMatchScore } from '@/services/league/leagueMatchService';
 import MatchmakingService from '@/services/league/MatchmakingService';
+import { getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 import useAuth from '@/domains/auth/useAuth';
 import { getMatchDerivedPhase } from '@/views/league/match/utils/matchStatus';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
@@ -158,10 +159,18 @@ const EndMatchScreen = () => {
             throw new Error('Aucune localisation valide trouvee. Configurez la base de votre squad.');
         }
         const radius = normalizeRadius(myTeam?.radius || myTeam?.home_base?.radius, 20);
+        const availableSlots = await getAvailableSlots(teamId);
+        const selectedSlotIds = (availableSlots || [])
+            .map((slot) => getEntityDocumentId(slot))
+            .filter(Boolean);
 
-        await MatchmakingService.triggerSearch(teamId, [], {
+        if (selectedSlotIds.length === 0) {
+            throw new Error('Aucun creneau disponible pour relancer une recherche.');
+        }
+
+        await MatchmakingService.triggerSearch(teamId, selectedSlotIds, {
             teamId,
-            selectedSlotIds: [],
+            selectedSlotIds,
             radius,
             location,
         });

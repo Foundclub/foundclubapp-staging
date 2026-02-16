@@ -73,13 +73,17 @@ const useAuth = () => {
 
   const logoutMutation = useMutation({
     mutationFn: async (/** @type {string} */token) => {
-      deleteDeviceToken(token).then(() => {
+      try {
+        if (token) {
+          await deleteDeviceToken(token);
+        }
+      } catch (error) {
+        console.warn('[FCM] Failed to delete device token on logout:', error?.message || error);
+      } finally {
         appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
-        return logout();
-      }).catch(() => {
-        appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
-        return logout();
-      });
+      }
+
+      await logout();
     },
     onSuccess: () => {
       queryClient.clear();

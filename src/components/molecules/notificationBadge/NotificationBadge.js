@@ -11,7 +11,13 @@ import NotificationPopup from '@/components/organisms/notificationPopup/Notifica
  */
 const NotificationBadge = ({ onPress }) => {
     const { Images, Colors } = useTheme();
-    const { unreadCount, notifications, markAsRead } = useNotificationController();
+    const {
+        unreadCount,
+        notifications,
+        markAsRead,
+        markAllAsRead,
+        refreshNotifications,
+    } = useNotificationController();
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [prevUnreadCount, setPrevUnreadCount] = useState(0);
 
@@ -53,11 +59,11 @@ const NotificationBadge = ({ onPress }) => {
     };
 
     const handlePress = () => {
-        console.log('NotificationBadge pressed');
         Vibration.vibrate(10);
         if (onPress) {
             onPress();
         } else {
+            refreshNotifications();
             setIsPopupVisible(true);
         }
     };
@@ -121,6 +127,8 @@ const NotificationBadge = ({ onPress }) => {
                     onClose={handleClose}
                     notifications={notifications}
                     onMarkAsRead={markAsRead}
+                    onMarkAllAsRead={markAllAsRead}
+                    onRefresh={refreshNotifications}
                 />
             )}
         </>

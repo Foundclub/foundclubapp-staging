@@ -28,6 +28,8 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
+ * @param {React.MutableRefObject<any>} [props.scrollViewRef] - Optional ref forwarded to BottomSheetScrollView
+ * @param {object} [props.scrollViewProps] - Optional extra props forwarded to BottomSheetScrollView
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
  * @returns {import('react').ReactElement} Modal component
@@ -42,6 +44,8 @@ function BottomModal({
   hideCloseButton = false,
   isVisible,
   scrollable = true,
+  scrollViewProps,
+  scrollViewRef,
   style,
   snapPoints,
 }) {
@@ -147,6 +151,7 @@ function BottomModal({
         {/* Content */}
         {scrollable ? (
           <BottomSheetScrollView
+            ref={scrollViewRef}
             contentContainerStyle={[
               Spaces.paddingHorizontal[24],
               // If there's no footer, add some bottom padding for scroll
@@ -157,6 +162,7 @@ function BottomModal({
             style={[
               snapPoints ? Alignments.fill : { maxHeight: Dimensions.get('screen').height * 0.7 },
             ]}
+            {...scrollViewProps}
           >
             {children}
           </BottomSheetScrollView>

@@ -1,30 +1,18 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { format, isToday, isYesterday, isThisWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import useTheme from '@/theme/themeContext';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useNotificationController } from '@/hooks/useNotificationController';
 import { RouteNames } from '@/navigation/routeNames';
+import useTheme from '@/theme/themeContext';
+import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
+import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
 
-// Icons for different notification types
-const getNotificationIcon = (type) => {
-    switch (type) {
-        case 'event': return '📅';
-        case 'team': return '👥';
-        case 'club': return '🏛️';
-        case 'chat': return '💬';
-        case 'membership': return '🎫';
-        default: return '🔔';
-    }
-};
-
-// Group notifications by date period
 const groupNotificationsByDate = (notifications) => {
     const groups = {
         today: [],
@@ -49,7 +37,6 @@ const groupNotificationsByDate = (notifications) => {
     return groups;
 };
 
-// Format relative time
 const getRelativeTime = (dateStr) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -58,7 +45,7 @@ const getRelativeTime = (dateStr) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 1) return "A l'instant";
     if (diffMins < 60) return `Il y a ${diffMins} min`;
     if (diffHours < 24) return `Il y a ${diffHours}h`;
     if (diffDays < 7) return `Il y a ${diffDays}j`;
@@ -66,113 +53,73 @@ const getRelativeTime = (dateStr) => {
 };
 
 const NotificationList = () => {
-    const { Colors, Fonts, Spaces, ApplicationStyle } = useTheme();
-    const { t } = useTranslation();
+    const { Colors, Fonts, Spaces } = useTheme();
     const navigation = useNavigation();
-    const { 
-        notifications, 
-        isLoading, 
+    const {
+        notifications,
+        isLoading,
         isFetchingNextPage,
         hasNextPage,
         loadMore,
-        refetch,
-        markAsRead, 
-        markAllAsRead, 
+        refreshNotifications,
+        markAsRead,
+        markAllAsRead,
         deleteNotification,
-        unreadCount 
+        unreadCount,
     } = useNotificationController();
 
-    // Group notifications by date
-    const groupedNotifications = useMemo(() => {
-        return groupNotificationsByDate(notifications);
-    }, [notifications]);
+    const groupedNotifications = useMemo(
+        () => groupNotificationsByDate(notifications),
+        [notifications]
+    );
 
-    // Build sections for FlatList
     const sections = useMemo(() => {
         const result = [];
-        
+
         if (groupedNotifications.today.length > 0) {
             result.push({ type: 'header', title: "Aujourd'hui", key: 'header-today' });
-            groupedNotifications.today.forEach(n => result.push({ type: 'item', data: n, key: n.id }));
+            groupedNotifications.today.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
         }
         if (groupedNotifications.yesterday.length > 0) {
             result.push({ type: 'header', title: 'Hier', key: 'header-yesterday' });
-            groupedNotifications.yesterday.forEach(n => result.push({ type: 'item', data: n, key: n.id }));
+            groupedNotifications.yesterday.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
         }
         if (groupedNotifications.thisWeek.length > 0) {
             result.push({ type: 'header', title: 'Cette semaine', key: 'header-week' });
-            groupedNotifications.thisWeek.forEach(n => result.push({ type: 'item', data: n, key: n.id }));
+            groupedNotifications.thisWeek.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
         }
         if (groupedNotifications.older.length > 0) {
             result.push({ type: 'header', title: 'Plus ancien', key: 'header-older' });
-            groupedNotifications.older.forEach(n => result.push({ type: 'item', data: n, key: n.id }));
+            groupedNotifications.older.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
         }
-        
+
         return result;
     }, [groupedNotifications]);
 
-    const handlePressNotification = useCallback((notification) => {
-        // Use documentId as the backend expects documentId, not internal id
-        markAsRead(notification.documentId);
-        
-        const data = notification.data || {};
-        const type = notification.type;
-        
-        // Navigate based on notification type
-        switch (type) {
-            case 'addToTeam':
-            case 'teamRequest':
-            case 'teamMembershipRequest':
-                navigation.navigate(RouteNames.TeamStack, {
-                    screen: RouteNames.TeamDetails,
-                    params: { teamId: data.teamId },
-                });
-                break;
-            case 'newTeam':
-                navigation.navigate(RouteNames.TeamStack, {
-                    screen: RouteNames.TeamDetails,
-                    params: { teamId: data.teamId },
-                });
-                break;
-            case 'clubMembershipRequest':
-                navigation.navigate(RouteNames.ClubStack, {
-                    screen: RouteNames.ClubMembershipRequests,
-                });
-                break;
-            case 'clubRequest':
-                navigation.navigate(RouteNames.ClubStack, {
-                    screen: RouteNames.Club,
-                    params: { clubId: data.clubId },
-                });
-                break;
-            case 'eventCancellation':
-            case 'eventReminder':
-                navigation.navigate(RouteNames.EventStack, {
-                    screen: RouteNames.EventDetails,
-                    params: { eventId: data.eventId },
-                });
-                break;
-            case 'newParticipation':
-            case 'participationRequest':
-                navigation.navigate(RouteNames.EventStack, {
-                    screen: RouteNames.EventDetails,
-                    params: { eventId: data.eventId },
-                });
-                break;
-            case 'newWhisper':
-            case 'newTeamMessage':
-                // Navigate directly to Conversation (it's in PrivateNavigator, not nested)
-                navigation.navigate(RouteNames.Conversation, {
-                    chatId: data.conversationId || data.chatId,
-                });
-                break;
-            default:
-                // For unknown types, try to use any available route/params
-                if (data.route) {
-                    navigation.navigate(data.route, data.params || {});
-                }
-                break;
+    const showActionError = (fallbackMessage, error) => {
+        Alert.alert('Erreur', error?.response?.data?.error?.message || fallbackMessage);
+    };
+
+    const handlePressNotification = useCallback(async (notification) => {
+        try {
+            await markAsRead(notification.documentId);
+        } catch (error) {
+            showActionError("Impossible de marquer la notification comme lue.", error);
         }
+
+        const payload = {
+            ...(notification.data || {}),
+            notificationKind: notification?.data?.type,
+            type: notification.type,
+        };
+        const destination = resolveNotificationDestination(payload);
+
+        if (destination?.route) {
+            navigation.navigate(destination.route, destination.params || {});
+            return;
+        }
+
+        navigation.navigate(RouteNames.NotificationList);
     }, [markAsRead, navigation]);
 
     const handleDelete = useCallback((notification) => {
@@ -181,10 +128,16 @@ const NotificationList = () => {
             'Supprimer cette notification ?',
             [
                 { text: 'Annuler', style: 'cancel' },
-                { 
-                    text: 'Supprimer', 
+                {
+                    text: 'Supprimer',
                     style: 'destructive',
-                    onPress: () => deleteNotification(notification.documentId)
+                    onPress: async () => {
+                        try {
+                            await deleteNotification(notification.documentId);
+                        } catch (error) {
+                            showActionError('Impossible de supprimer la notification.', error);
+                        }
+                    },
                 },
             ]
         );
@@ -208,7 +161,13 @@ const NotificationList = () => {
 
     const renderLeftActions = useCallback((notification) => (
         <TouchableOpacity
-            onPress={() => markAsRead(notification.documentId)}
+            onPress={async () => {
+                try {
+                    await markAsRead(notification.documentId);
+                } catch (error) {
+                    showActionError('Impossible de marquer comme lu.', error);
+                }
+            }}
             style={{
                 backgroundColor: Colors.primary500,
                 justifyContent: 'center',
@@ -225,7 +184,7 @@ const NotificationList = () => {
     const renderItem = useCallback(({ item, index }) => {
         if (item.type === 'header') {
             return (
-                <Animated.View 
+                <Animated.View
                     entering={FadeInDown.delay(index * 50).duration(300)}
                     style={[Spaces.marginTop[16], Spaces.marginBottom[8]]}
                 >
@@ -252,40 +211,40 @@ const NotificationList = () => {
                             Spaces.padding[16],
                             Spaces.marginBottom[12],
                             {
-                                backgroundColor: notification.read 
-                                    ? 'rgba(255, 255, 255, 0.03)' 
+                                backgroundColor: notification.read
+                                    ? 'rgba(255, 255, 255, 0.03)'
                                     : 'rgba(1, 179, 244, 0.12)',
                                 borderRadius: 12,
                                 borderLeftWidth: notification.read ? 0 : 4,
                                 borderLeftColor: Colors.primary500,
                                 flexDirection: 'row',
                                 alignItems: 'flex-start',
-                            }
+                            },
                         ]}
                         onPress={() => handlePressNotification(notification)}
                         activeOpacity={0.7}
                     >
-                        {/* Icon */}
-                        <View style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            marginRight: 12,
-                        }}>
+                        <View
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                marginRight: 12,
+                            }}
+                        >
                             <Text style={{ fontSize: 18 }}>{icon}</Text>
                         </View>
 
-                        {/* Content */}
                         <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <Text 
+                                <Text
                                     style={[
-                                        notification.read ? Fonts.p2 : Fonts.p2Bold, 
-                                        { color: Colors.neutral00, flex: 1 }
-                                    ]} 
+                                        notification.read ? Fonts.p2 : Fonts.p2Bold,
+                                        { color: Colors.neutral00, flex: 1 },
+                                    ]}
                                     numberOfLines={1}
                                 >
                                     {notification.title}
@@ -294,26 +253,27 @@ const NotificationList = () => {
                                     {getRelativeTime(notification.createdAt)}
                                 </Text>
                             </View>
-                            <Text 
-                                style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 18 }]} 
+                            <Text
+                                style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 18 }]}
                                 numberOfLines={2}
                             >
                                 {notification.body}
                             </Text>
                         </View>
 
-                        {/* Unread indicator */}
-                        {!notification.read && (
-                            <View style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: Colors.primary500,
-                                position: 'absolute',
-                                top: 16,
-                                right: 16,
-                            }} />
-                        )}
+                        {!notification.read ? (
+                            <View
+                                style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: 4,
+                                    backgroundColor: Colors.primary500,
+                                    position: 'absolute',
+                                    top: 16,
+                                    right: 16,
+                                }}
+                            />
+                        ) : null}
                     </TouchableOpacity>
                 </Swipeable>
             </Animated.View>
@@ -334,7 +294,15 @@ const NotificationList = () => {
             onBack={() => navigation.goBack()}
             rightAction={
                 unreadCount > 0 ? (
-                    <TouchableOpacity onPress={() => markAllAsRead()}>
+                    <TouchableOpacity
+                        onPress={async () => {
+                            try {
+                                await markAllAsRead();
+                            } catch (error) {
+                                showActionError('Impossible de marquer toutes les notifications comme lues.', error);
+                            }
+                        }}
+                    >
                         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Tout lire</Text>
                     </TouchableOpacity>
                 ) : null
@@ -345,7 +313,7 @@ const NotificationList = () => {
                 renderItem={renderItem}
                 keyExtractor={(item) => item.key}
                 contentContainerStyle={{ paddingBottom: 40 }}
-                onRefresh={refetch}
+                onRefresh={refreshNotifications}
                 refreshing={isLoading && !isFetchingNextPage}
                 onEndReached={handleEndReached}
                 onEndReachedThreshold={0.3}
@@ -357,7 +325,7 @@ const NotificationList = () => {
                                 Aucune notification
                             </Text>
                             <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 8, textAlign: 'center', opacity: 0.7 }]}>
-                                Les nouvelles notifications apparaîtront ici
+                                Les nouvelles notifications apparaitront ici
                             </Text>
                         </View>
                     )

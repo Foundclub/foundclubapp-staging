@@ -26,10 +26,6 @@ import { useIsFocused } from '@react-navigation/native';
 import ModeSwitch from '@/components/atoms/ModeSwitch/ModeSwitch';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 
-// Notification imports (Fix for Popup issue)
-import { useNotificationController } from '@/hooks/useNotificationController';
-import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
-
 const baseSearchOptions = [
   {
     label: 'Évènements',
@@ -52,8 +48,6 @@ const baseSearchOptions = [
  */
 function HomeContent({ navigation, route }) {
   const [searchType, setSearchType] = useState(baseSearchOptions[0].value);
-  const [isNotifVisible, setIsNotifVisible] = useState(false);
-  const { notifications, markAsRead } = useNotificationController();
 
   useEffect(() => {
     if (route.params?.initialSearchType) {
@@ -148,7 +142,7 @@ function HomeContent({ navigation, route }) {
       >
         <LeagueHeaderSwitch />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <NotificationBadge onPress={() => setIsNotifVisible(true)} />
+          <NotificationBadge />
           <ProfileButton />
         </View>
       </View>
@@ -170,14 +164,6 @@ function HomeContent({ navigation, route }) {
       </View>
       {renderContent()}
       <OnboardingOverlay />
-
-      {/* Notification Popup at Root Level ensuring it appears above everything */}
-      <NotificationPopup
-        isVisible={isNotifVisible}
-        onClose={() => setIsNotifVisible(false)}
-        notifications={notifications}
-        onMarkAsRead={markAsRead}
-      />
     </ScreenContainer>
   );
 }

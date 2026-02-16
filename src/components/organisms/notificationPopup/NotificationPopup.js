@@ -6,24 +6,14 @@ import {
     StyleSheet,
     ScrollView,
     Modal,
-    Dimensions,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import useTheme from '@/theme/themeContext';
-import { RouteNames } from '@/navigation/routeNames';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const getNotificationIcon = (type) => {
-    switch (type) {
-        case 'event': return '📅';
-        case 'team': return '👥';
-        case 'club': return '🏛️';
-        case 'chat': return '💬';
-        case 'membership': return '🎫';
-        default: return '🔔';
-    }
-};
+import { RouteNames } from '@/navigation/routeNames';
+import useTheme from '@/theme/themeContext';
+import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
+import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
 
 const getRelativeTime = (dateStr) => {
     if (!dateStr) return '';
@@ -34,94 +24,60 @@ const getRelativeTime = (dateStr) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 1) return "A l'instant";
     if (diffMins < 60) return `${diffMins} min`;
     if (diffHours < 24) return `${diffHours}h`;
     if (diffDays < 7) return `${diffDays}j`;
     return `${diffDays}j`;
 };
 
-const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) => {
-    const { Colors, Fonts, Spaces } = useTheme();
+const NotificationPopup = ({
+    isVisible,
+    onClose,
+    notifications,
+    onMarkAsRead,
+    onMarkAllAsRead,
+    onRefresh,
+}) => {
+    const { Fonts, Spaces } = useTheme();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const { width, height } = Dimensions.get('window');
 
-    // Debug log
     useEffect(() => {
-        if (isVisible) {
-            console.log('[NotificationPopup] JS Modal Became Visible (No Native Modal)');
-        }
-    }, [isVisible]);
+        if (!isVisible) return;
+        if (onRefresh) onRefresh();
+    }, [isVisible, onRefresh]);
 
     const safeNotifications = Array.isArray(notifications) ? notifications : [];
     const recentNotifications = safeNotifications.slice(0, 5);
-    const unreadCount = safeNotifications.filter(n => !n.read).length;
+    const unreadCount = safeNotifications.filter((n) => !n.read).length;
 
     if (!isVisible) return null;
 
-    const handlePressNotification = (notification) => {
-        if (onMarkAsRead) onMarkAsRead(notification.documentId);
+    const handlePressNotification = async (notification) => {
+        if (onMarkAsRead) {
+            try {
+                await onMarkAsRead(notification.documentId);
+            } catch (_error) {
+                // Keep navigation flow smooth in compact popup.
+            }
+        }
         onClose();
 
-        const data = notification.data || {};
-        const type = notification.type;
+        const payload = {
+            ...(notification.data || {}),
+            notificationKind: notification?.data?.type,
+            type: notification.type,
+        };
 
         try {
-            switch (type) {
-                case 'addToTeam':
-                case 'teamRequest':
-                case 'teamMembershipRequest':
-                case 'newTeam':
-                    navigation.navigate(RouteNames.TeamStack, {
-                        screen: RouteNames.TeamDetails,
-                        params: { teamId: data.teamId },
-                    });
-                    break;
-                case 'clubMembershipRequest':
-                    navigation.navigate(RouteNames.ClubStack, {
-                        screen: RouteNames.ClubMembershipRequests,
-                    });
-                    break;
-                case 'clubRequest':
-                    navigation.navigate(RouteNames.ClubStack, {
-                        screen: RouteNames.Club,
-                        params: { clubId: data.clubId },
-                    });
-                    break;
-                case 'eventCancellation':
-                case 'eventReminder':
-                case 'newParticipation':
-                case 'participationRequest':
-                    navigation.navigate(RouteNames.EventStack, {
-                        screen: RouteNames.EventDetails,
-                        params: { eventId: data.eventId },
-                    });
-                    break;
-                case 'newWhisper':
-                case 'newTeamMessage':
-                    navigation.navigate(RouteNames.Conversation, {
-                        chatId: data.conversationId || data.chatId,
-                    });
-                    break;
-                case 'searchAlertMatch':
-                    if (data.type === 'event' && data.eventId) {
-                        navigation.navigate(RouteNames.EventStack, {
-                            screen: RouteNames.EventDetails,
-                            params: { eventId: data.eventId },
-                        });
-                    }
-                    break;
-                default:
-                    if (data.route) {
-                        navigation.navigate(data.route, data.params || {});
-                    } else {
-                        navigation.navigate(RouteNames.NotificationList);
-                    }
-                    break;
+            const destination = resolveNotificationDestination(payload);
+            if (destination?.route) {
+                navigation.navigate(destination.route, destination.params || {});
+            } else {
+                navigation.navigate(RouteNames.NotificationList);
             }
-        } catch (e) {
-            console.error('Navigation error', e);
+        } catch (_error) {
             navigation.navigate(RouteNames.NotificationList);
         }
     };
@@ -131,67 +87,81 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
         navigation.navigate(RouteNames.NotificationList);
     };
 
-    // REPLACEMENT: USING NATIVE MODAL TO FIX Z-INDEX/POSITION ISSUES
+    const handleMarkAllAsRead = async () => {
+        if (!onMarkAllAsRead) return;
+        try {
+            await onMarkAllAsRead();
+        } catch (_error) {
+            // Keep popup lightweight.
+        }
+    };
+
     return (
         <Modal
             visible={isVisible}
-            transparent={true}
+            transparent
             animationType="fade"
             onRequestClose={onClose}
         >
             <View style={[styles.modalOverlay, { paddingTop: insets.top + 50 }]}>
-                {/* Backdrop - Click to close */}
-                <TouchableOpacity 
-                    style={styles.touchableBackground} 
-                    activeOpacity={1} 
+                <TouchableOpacity
+                    style={styles.touchableBackground}
+                    activeOpacity={1}
                     onPress={onClose}
                 />
-                
-                {/* Popup Content */}
-                <View style={[
-                    styles.popup,
-                    {
-                        backgroundColor: '#1E1E1E',
-                        borderColor: '#01B3F4',
-                        marginRight: 16, // Standard margin from right edge
-                    }
-                ]}>
-                    {/* Header */}
-                    <View style={[
-                        Spaces.padding[16], 
-                        { 
-                            borderBottomWidth: 1, 
-                            borderBottomColor: 'rgba(255,255,255,0.1)',
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                        }
-                    ]}>
+
+                <View
+                    style={[
+                        styles.popup,
+                        {
+                            backgroundColor: '#1E1E1E',
+                            borderColor: '#01B3F4',
+                            marginRight: 16,
+                        },
+                    ]}
+                >
+                    <View
+                        style={[
+                            Spaces.padding[16],
+                            {
+                                borderBottomWidth: 1,
+                                borderBottomColor: 'rgba(255,255,255,0.1)',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            },
+                        ]}
+                    >
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Text style={[Fonts.h4Bold || { fontSize: 16, fontWeight: 'bold' }, { color: '#FFFFFF' }]}>
                                 Notifications
                             </Text>
-                            {unreadCount > 0 && (
-                                <View style={{
-                                    backgroundColor: '#01B3F4',
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2,
-                                    borderRadius: 10,
-                                    marginLeft: 8,
-                                }}>
+                            {unreadCount > 0 ? (
+                                <View
+                                    style={{
+                                        backgroundColor: '#01B3F4',
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 2,
+                                        borderRadius: 10,
+                                        marginLeft: 8,
+                                    }}
+                                >
                                     <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '600' }}>
                                         {unreadCount}
                                     </Text>
                                 </View>
-                            )}
+                            ) : null}
                         </View>
+                        {unreadCount > 0 ? (
+                            <TouchableOpacity onPress={handleMarkAllAsRead}>
+                                <Text style={[Fonts.p3Bold || { fontWeight: '600' }, { color: '#01B3F4' }]}>
+                                    Tout lire
+                                </Text>
+                            </TouchableOpacity>
+                        ) : null}
                     </View>
 
-                    {/* Content */}
-                    <ScrollView 
-                        style={{ maxHeight: 320 }}
-                        showsVerticalScrollIndicator={false}
-                    >
+                    <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
                         {recentNotifications.length === 0 ? (
                             <View style={{ padding: 24, alignItems: 'center' }}>
                                 <Text style={{ fontSize: 32, marginBottom: 8 }}>🔔</Text>
@@ -204,7 +174,7 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
                                 const icon = getNotificationIcon(notif.type);
                                 return (
                                     <TouchableOpacity
-                                        key={notif.id || index}
+                                        key={notif.documentId || notif.id || index}
                                         style={[
                                             Spaces.padding[12],
                                             {
@@ -212,16 +182,21 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
                                                 borderBottomWidth: 1,
                                                 borderBottomColor: 'rgba(255,255,255,0.05)',
                                                 flexDirection: 'row',
-                                            }
+                                            },
                                         ]}
                                         onPress={() => handlePressNotification(notif)}
                                     >
-                                        <View style={{
-                                            width: 32, height: 32, borderRadius: 16,
-                                            backgroundColor: 'rgba(255,255,255,0.1)',
-                                            justifyContent: 'center', alignItems: 'center',
-                                            marginRight: 10,
-                                        }}>
+                                        <View
+                                            style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: 16,
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                marginRight: 10,
+                                            }}
+                                        >
                                             <Text style={{ fontSize: 14 }}>{icon}</Text>
                                         </View>
                                         <View style={{ flex: 1 }}>
@@ -237,19 +212,24 @@ const NotificationPopup = ({ isVisible, onClose, notifications, onMarkAsRead }) 
                                                 {notif.body}
                                             </Text>
                                         </View>
-                                        {!notif.read && (
-                                            <View style={{
-                                                width: 6, height: 6, borderRadius: 3,
-                                                backgroundColor: '#01B3F4', marginLeft: 4, marginTop: 4
-                                            }} />
-                                        )}
+                                        {!notif.read ? (
+                                            <View
+                                                style={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: 3,
+                                                    backgroundColor: '#01B3F4',
+                                                    marginLeft: 4,
+                                                    marginTop: 4,
+                                                }}
+                                            />
+                                        ) : null}
                                     </TouchableOpacity>
                                 );
                             })
                         )}
                     </ScrollView>
 
-                    {/* Footer */}
                     <TouchableOpacity
                         style={{
                             padding: 16,
@@ -275,12 +255,15 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'flex-start',
         alignItems: 'flex-end',
-        paddingRight: 0, 
+        paddingRight: 0,
     },
     touchableBackground: {
         position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)', 
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
     },
     popup: {
         width: 320,
@@ -289,8 +272,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         overflow: 'hidden',
         elevation: 10,
-        backgroundColor: '#1E1E1E', 
+        backgroundColor: '#1E1E1E',
     },
 });
 
 export default NotificationPopup;
+

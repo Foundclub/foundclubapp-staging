@@ -86,7 +86,7 @@ export const WheelPicker = ({ data, selectedValue, onValueChange, formatItem, wi
                 >
                     <Text style={[
                         Fonts.p1,
-                        { color: isSelected ? Colors.primary500 : Colors.neutral300 },
+                        { color: isSelected ? Colors.primary500 : Colors.neutral300, textAlign: 'center', width: '100%' },
                         isSelected && styles.selectedItemText
                     ]}>
                         {itemLabel}
@@ -107,6 +107,7 @@ const DateTimeSelector = ({
   labelStyle,
   mode = 'date',
   onChange,
+  onOpen,
   value,
 }) => {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -122,7 +123,15 @@ const DateTimeSelector = ({
   };
 
   const handleOpen = () => {
-    setTempDate(value ? new Date(value) : new Date());
+    const nextDate = value ? new Date(value) : new Date();
+    setTempDate(nextDate);
+    if (onOpen) {
+      onOpen({
+        display,
+        mode,
+        value: nextDate,
+      });
+    }
     setIsOpen(true);
   };
 
@@ -161,6 +170,7 @@ const DateTimeSelector = ({
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
   const isInlineTimeMode = display === 'inline' && mode === 'time';
+  const dayWheelWidth = 86;
   const timeWheelWidth = isInlineTimeMode ? 56 : 80;
   const timeSeparatorMargin = isInlineTimeMode ? 4 : 8;
   const inlinePickerPanelStyle = useMemo(() => ({
@@ -214,7 +224,7 @@ const DateTimeSelector = ({
                         setTempDate(newDate);
                         if(display === 'inline') onChange(newDate); // Immediate update for inline
                     }}
-                    width={70}
+                    width={dayWheelWidth}
                     isOpen={isOpen}
                     />
                     <WheelPicker
@@ -311,7 +321,7 @@ const DateTimeSelector = ({
                         newDate.setDate(d);
                         setTempDate(newDate);
                     }}
-                    width={70}
+                    width={dayWheelWidth}
                     isOpen={isOpen}
                     />
                     <WheelPicker
@@ -417,7 +427,8 @@ const styles = StyleSheet.create({
   },
   selectedItemText: {
     fontWeight: '700',
-    fontSize: 20,
+    fontSize: 17,
+    lineHeight: 22,
   },
 });
 

@@ -293,6 +293,14 @@ export const NOTIFICATION_TYPES = {
   EVENT_REMINDER: 'eventReminder',
   NEW_PARTICIPATION: 'newParticipation',
   PARTICIPATION_REQUEST: 'participationRequest',
+  FEATURED_REQUEST: 'featuredRequest',
+  FEATURED_APPROVED: 'featuredApproved',
+  FEATURED_REJECTED: 'featuredRejected',
+  OVERBOOKING_REQUEST: 'overbookingRequest',
+  RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
+  RESERVATION_SOS_ALERT: 'reservationSosAlert',
+  RESERVATION_COMPLETE: 'reservationComplete',
+  SEARCH_ALERT_MATCH: 'searchAlertMatch',
 
   // Messages
   NEW_TEAM_MESSAGE: 'newTeamMessage',
@@ -308,6 +316,11 @@ export const NOTIFICATION_TYPES = {
   LEAGUE_MATCH_VALIDATED: 'leagueMatchValidated',
   LEAGUE_MATCH_DISPUTED: 'leagueMatchDisputed',
   LEAGUE_SEARCH_RELAUNCH_PROMPT: 'leagueSearchRelaunchPrompt',
+  LEAGUE_AUTOMATION: 'LEAGUE_AUTOMATION',
+  REMATCH_REQUEST: 'REMATCH_REQUEST',
+  RSVP_ALERT: 'RSVP_ALERT',
+  RECRUITMENT_APPLICATION: 'recruitment_application',
+  RECRUITMENT_APPLICATION_AUTO: 'recruitment_application_auto',
   // Legacy alias kept for backward compatibility
   MATCH_FOUND: 'MATCH_FOUND',
 };

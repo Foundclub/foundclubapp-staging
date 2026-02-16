@@ -15,6 +15,10 @@ import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 
 import { addDeviceToken } from '@/services/auth/authService';
+import {
+  normalizeNotificationPayload,
+  resolveNotificationDestination,
+} from '@/utils/notifications/notificationNavigation';
 
 import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
@@ -50,28 +54,6 @@ const isNotificationDuplicate = (messageId) => {
   }
   notificationStorage.set('last-notification-id', messageId);
   return false;
-};
-
-const parseMaybeJson = (value) => {
-  if (typeof value !== 'string') return value;
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-    try {
-      return JSON.parse(trimmed);
-    } catch (_error) {
-      return value;
-    }
-  }
-  return value;
-};
-
-const normalizeNotificationData = (value) => {
-  if (!value || typeof value !== 'object') return {};
-  return Object.entries(value).reduce((acc, [key, raw]) => {
-    acc[key] = parseMaybeJson(raw);
-    return acc;
-  }, {});
 };
 
 const formatDateForGoogleCalendar = (dateInput) => {
@@ -226,7 +208,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {remoteMessageData} */remoteMessageData) => {
-    const notificationData = normalizeNotificationData(remoteMessageData);
+    const notificationData = normalizeNotificationPayload(remoteMessageData);
     console.log('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
     if (!notificationData?.type) {
         console.warn('[useNotifications] No type in notification data, cannot navigate');
@@ -246,113 +228,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       return true;
     };
 
-    if (notificationData.ctaRoute) {
-      const ctaOk = tryNavigate(notificationData.ctaRoute, notificationData.ctaParams || {});
-      if (ctaOk) return true;
+    const destination = resolveNotificationDestination(notificationData);
+    if (!destination?.route) {
+      console.warn('[useNotifications] Unknown notification type:', notificationData.type);
+      return false;
     }
 
-    switch (notificationData.type) {
-      case NOTIFICATION_TYPES.ADD_TO_TEAM:
-        return tryNavigate(RouteNames.TeamStack, {
-          params: {
-            teamId: notificationData.teamId,
-          },
-          screen: RouteNames.TeamDetails,
-        });
-      case NOTIFICATION_TYPES.CLUB_MEMBERSHIP_REQUEST:
-        return tryNavigate(RouteNames.ClubStack, {
-          screen: RouteNames.ClubMembershipRequests,
-          params: {
-            clubId: notificationData.clubId,
-          },
-        });
-      case NOTIFICATION_TYPES.CLUB_REQUEST:
-        return tryNavigate(RouteNames.ClubStack, {
-          params: {
-            clubId: notificationData.clubId,
-          },
-          screen: RouteNames.Club,
-        });
-      case NOTIFICATION_TYPES.EVENT_CANCELLATION:
-        return tryNavigate(RouteNames.MyEventList);
-      case NOTIFICATION_TYPES.EVENT_REMINDER:
-        return tryNavigate(RouteNames.EventStack, {
-          params: {
-            eventId: notificationData.eventId,
-          },
-          screen: RouteNames.EventDetails,
-        });
-      case NOTIFICATION_TYPES.NEW_PARTICIPATION:
-        return tryNavigate(RouteNames.EventStack, {
-          params: {
-            eventId: notificationData.eventId,
-          },
-          screen: RouteNames.EventDetails,
-        });
-      case NOTIFICATION_TYPES.NEW_TEAM:
-        return tryNavigate(RouteNames.TeamStack, {
-          params: {
-            teamId: notificationData.teamId,
-          },
-          screen: RouteNames.TeamDetails,
-        });
-      case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
-        return tryNavigate(RouteNames.Conversation, {
-          chatId: notificationData.conversationId,
-        });
-      case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
-        return tryNavigate(RouteNames.Conversation, {
-          chatId: notificationData.conversationId,
-        });
-      case NOTIFICATION_TYPES.NEW_WHISPER:
-        return tryNavigate(RouteNames.Conversation, {
-          chatId: notificationData.conversationId,
-        });
-      case NOTIFICATION_TYPES.PARTICIPATION_REQUEST:
-        return tryNavigate(RouteNames.EventStack, {
-          params: {
-            eventId: notificationData.eventId,
-          },
-          screen: RouteNames.EventDetails,
-        });
-      case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
-        return tryNavigate(RouteNames.TeamStack, {
-          params: {
-            teamId: notificationData.teamId,
-          },
-          screen: RouteNames.TeamDetails,
-        });
-      case NOTIFICATION_TYPES.TEAM_REQUEST:
-        return tryNavigate(RouteNames.TeamStack, {
-          screen: RouteNames.TeamMembershipRequests,
-        });
-      case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
-      case NOTIFICATION_TYPES.MATCH_FOUND:
-        return tryNavigate(RouteNames.LeagueMatchTab);
-      case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
-      case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
-      case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
-        if (notificationData.chatId || notificationData.conversationId) {
-          return tryNavigate(RouteNames.Conversation, {
-            chatId: notificationData.chatId || notificationData.conversationId,
-          });
-        }
-        return tryNavigate(RouteNames.LeagueMatchTab);
-      case NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED:
-      case NOTIFICATION_TYPES.LEAGUE_SCORE_DUE:
-      case NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT:
-        return tryNavigate(RouteNames.LeagueMatchTab);
-      case NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED:
-        if (notificationData.matchId) {
-          return tryNavigate(RouteNames.PastMatchDetails, {
-            matchId: notificationData.matchId,
-          });
-        }
-        return tryNavigate(RouteNames.LeagueMatchTab);
-      default:
-        console.warn('[useNotifications] Unknown notification type:', notificationData.type);
-        return false;
-    }
+    return tryNavigate(destination.route, destination.params || {});
   }, [navigate, maybePromptAddToCalendar]);
 
   const smartForegroundTypes = useRef(new Set([
@@ -372,7 +254,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
-      const normalizedData = normalizeNotificationData(remoteMessage.data || {});
+      const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       // Skip notification display for message types that shouldn't show in foreground
       const skipTypes = [
         '',
@@ -421,10 +303,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   // open notification when app is in foreground
   useEffect(() => notifee.onForegroundEvent(({ detail, type }) => {
-    if (type === EventType.PRESS) {
+      if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(normalizeNotificationData(detail.notification.data)),
+          /** @type {{type: string, bookingId: string}} */(normalizeNotificationPayload(detail.notification.data)),
         );
       }
     }
@@ -435,7 +317,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(normalizeNotificationData(detail.notification.data)),
+          /** @type {{type: string, bookingId: string}} */(normalizeNotificationPayload(detail.notification.data)),
         );
       }
     }
@@ -507,7 +389,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     getMessaging().getInitialNotification().then(remoteMessage => {
       if (remoteMessage) {
         console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
-        const normalizedData = normalizeNotificationData(remoteMessage.data || {});
+        const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
         if (normalizedData?.type) {
            // Store it in context to be handled when navigation is ready
            console.log('[FCM] Storing pending notification in context');

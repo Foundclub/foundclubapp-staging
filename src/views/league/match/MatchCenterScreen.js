@@ -1,4 +1,5 @@
 import LocationIcon from '../../../assets/icons/location.png';
+import ClockIcon from '../../../assets/icons/clock.png';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Image, RefreshControl, FlatList, Dimensions } from 'react-native';
 import AutocompleteAddressInput from '../../../components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -33,13 +34,17 @@ import { getMatchHistory, updateMatch } from '@/services/league/leagueMatchServi
 import { createChatMessage } from '@/services/chat/chatService';
 import NextMatchCard from './components/NextMatchCard';
 import SearchCountdown from '@/components/organisms/league/SearchCountdown';
+import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
 import { shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
+import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 
 const MatchCenterScreen = () => {
+    const swordsIcon = '\u2694\uFE0F';
+    const radarIcon = '\uD83D\uDCE1';
     const navigation = useNavigation();
     const { userData } = useAuth();
     const { Colors, Fonts, Images, Alignments, Spaces, ApplicationStyle } = useTheme();
@@ -76,6 +81,8 @@ const MatchCenterScreen = () => {
     const [tempSearchLocation, setTempSearchLocation] = useState(null);
     const [isEditingLocation, setIsEditingLocation] = useState(false);
     const [selectedSlotIds, setSelectedSlotIds] = useState([]); // IDs of slots to include in search
+    const [isAddingSearchSlot, setIsAddingSearchSlot] = useState(false);
+    const [isSavingSearchSlot, setIsSavingSearchSlot] = useState(false);
 
     // DAY_MAP for display
     const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
@@ -225,6 +232,13 @@ const MatchCenterScreen = () => {
 
     const handleConfirmSearch = async () => {
         if (!mySquad) return; 
+        if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
+            Alert.alert(
+                'Creneau requis',
+                'Selectionnez au moins un creneau avant de lancer la recherche.'
+            );
+            return;
+        }
         
         // 1. Show Loading Screen immediately (closes modal)
         setViewState('searching_start');
@@ -296,12 +310,18 @@ const MatchCenterScreen = () => {
                 }
             } catch (error) {
                 console.error(error);
-                Alert.alert('Erreur', 'Recherche echouee');
+                const backendCode = error?.response?.data?.code;
+                const backendMessage = error?.response?.data?.message;
+                if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
+                    Alert.alert('Recherche deja active', 'Une recherche est deja en cours pour cette squad.');
+                } else {
+                    Alert.alert('Erreur', backendMessage || 'Recherche echouee');
+                }
                 setViewState('lobby'); // Go back to config on error
             }
         }, 2000); // 2 seconds delay
     };
-    const { searchStatus } = useMatchmakingStateMachine({
+    const { searchStatus, candidateFallbackCountdown } = useMatchmakingStateMachine({
         matchRequest,
         mySquad,
         viewState,
@@ -332,12 +352,14 @@ const MatchCenterScreen = () => {
         }
     }, [mySquad]);
 
-    // Initialize selectedSlotIds with ALL squad slots (pre-select all)
-    // Initialize selectedSlotIds with ALL squad slots (pre-select all)
+    // Search is manual: no silent preselection of all slots.
     useEffect(() => {
-        if (squadSlots && squadSlots.length > 0) {
-            setSelectedSlotIds(squadSlots.map(s => getEntityDocumentId(s)));
-        }
+        setSelectedSlotIds([]);
+    }, [getEntityDocumentId(mySquad)]);
+
+    useEffect(() => {
+        const allowedIds = new Set((squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean));
+        setSelectedSlotIds((prev) => prev.filter((slotId) => allowedIds.has(slotId)));
     }, [squadSlots]);
 
     // Toggle slot selection for matchmaking
@@ -347,6 +369,47 @@ const MatchCenterScreen = () => {
                 ? prev.filter(id => id !== slotId) 
                 : [...prev, slotId]
         );
+    };
+
+    const handleAddSearchSlot = async (slotData) => {
+        if (!mySquad || isSavingSearchSlot) return;
+
+        try {
+            setIsSavingSearchSlot(true);
+            const teamId = getEntityDocumentId(mySquad);
+            const previousSlotIds = new Set((squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean));
+            const payload = {
+                start_hour: `${slotData.startTime}:00`,
+                end_hour: `${slotData.endTime}:00`,
+                recurrence_day: slotData.day,
+                league_team: teamId,
+                status: 'open',
+            };
+
+            await createTeamSlot(payload);
+            const refreshedSlots = await getAvailableSlots(teamId);
+            setSquadSlots(refreshedSlots || []);
+
+            const newlyAddedSlot = (refreshedSlots || []).find((slot) => {
+                const slotId = getEntityDocumentId(slot);
+                return slotId && !previousSlotIds.has(slotId);
+            });
+
+            const newSlotId = getEntityDocumentId(newlyAddedSlot);
+            if (newSlotId) {
+                setSelectedSlotIds((prev) => (
+                    prev.includes(newSlotId) ? prev : [...prev, newSlotId]
+                ));
+            }
+
+            setIsAddingSearchSlot(false);
+            Alert.alert('Succes', 'Creneau ajoute a la recherche.');
+        } catch (error) {
+            console.error('Add search slot error:', error);
+            Alert.alert('Erreur', "Impossible d'ajouter le creneau.");
+        } finally {
+            setIsSavingSearchSlot(false);
+        }
     };
 
 
@@ -607,12 +670,28 @@ const MatchCenterScreen = () => {
             return (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
                      <View style={[styles.radarCircle, { width: 80, height: 80, borderRadius: 40, marginBottom: 16, borderColor: Colors.gold500 }]}>
-                        <Text style={{ fontSize: 24 }}>R</Text>
+                        <Text style={{ fontSize: 24, color: Colors.gold500 }}>{radarIcon}</Text>
                      </View>
                      <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>RECHERCHE EN COURS</Text>
                      <Text style={[Fonts.p2, { color: Colors.gold500, textAlign: 'center', marginBottom: 8, fontWeight: 'bold' }]}>
                          {searchStatus}
                      </Text>
+                     {Number.isFinite(candidateFallbackCountdown) && candidateFallbackCountdown > 0 && (
+                        <View style={{
+                            backgroundColor: 'rgba(255, 209, 0, 0.10)',
+                            borderColor: Colors.gold500,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            marginBottom: 10,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            width: '100%',
+                        }}>
+                            <Text style={[Fonts.p3Bold, { color: Colors.gold500, textAlign: 'center' }]}>
+                                Adversaire presque compatible detecte. Match auto dans {candidateFallbackCountdown}s si aucun meilleur adversaire.
+                            </Text>
+                        </View>
+                     )}
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 16 }]}>
                          Nous cherchons une equipe compatible dans votre zone.
                      </Text>
@@ -726,35 +805,43 @@ const MatchCenterScreen = () => {
             return (
                 <View style={{ alignItems: 'center', paddingVertical: 10 }}>
                      {/* ANONYMOUS HEADER */}
-                     <Text style={[Fonts.h3, { color: '#ccc', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 2 }]}>
+                     <Text style={[Fonts.h3, { color: Colors.neutral200, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 2 }]}>
                         ADVERSAIRE MYSTERE
                      </Text>
 
                      {/* MAIN CARD */}
-                     <View style={{ 
-                         backgroundColor: Colors.neutral800, 
+                     <View style={{
+                         backgroundColor: 'rgba(255,255,255,0.04)',
                          borderRadius: 16, 
                          padding: 24, 
                          width: '100%',
                          alignItems: 'center',
                          borderWidth: 1,
                          borderColor: Colors.gold500,
+                         shadowColor: Colors.gold500,
+                         shadowOffset: { width: 0, height: 6 },
+                         shadowOpacity: 0.12,
+                         shadowRadius: 14,
                          marginBottom: 24
                      }}>
                         {/* Generic Identity */}
                         <View style={{ marginBottom: 16 }}>
                             <View style={{ 
                                 width: 80, height: 80, borderRadius: 40, 
-                                backgroundColor: Colors.neutral900, 
+                                backgroundColor: 'rgba(255, 215, 0, 0.10)',
                                 justifyContent: 'center', alignItems: 'center',
                                 borderWidth: 2, borderColor: Colors.gold500,
+                                shadowColor: Colors.gold500,
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 10,
                                 marginBottom: 12
                             }}>
-                                 <Text style={{ fontSize: 40 }}>?</Text>
+                                 <Text style={{ fontSize: 36, fontWeight: '700', color: Colors.neutral00, lineHeight: 42 }}>?</Text>
                             </View>
                             <View style={{ 
-                                position: 'absolute', bottom: 8, right: -4, 
-                                backgroundColor: Colors.gold500, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 
+                                position: 'absolute', bottom: 6, right: -8,
+                                backgroundColor: Colors.gold500, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999
                             }}>
                                 <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>DIV {division}</Text>
                             </View>
@@ -762,8 +849,11 @@ const MatchCenterScreen = () => {
 
                         {/* Stats / Context */}
                         <View style={{ alignItems: 'center', width: '100%' }}>
+                            <Text style={{ color: Colors.gold500, fontSize: 18, marginBottom: 2 }}>
+                                {swordsIcon}
+                            </Text>
                             <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>EQUIPE ADVERSE</Text>
-                            <Text style={[Fonts.p2, { color: '#bbb', marginBottom: 16 }]}>{sportLabel} - {catLabel}</Text>
+                            <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16 }]}>{sportLabel} - {catLabel}</Text>
                             
                             <View style={{ width: '100%', height: 1, backgroundColor: Colors.neutral700, marginBottom: 16 }} />
 
@@ -774,11 +864,11 @@ const MatchCenterScreen = () => {
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                                         {city}
                                     </Text>
-                                    <Text style={[Fonts.p3, { color: '#bbb' }]}>{radiusDisplay}</Text>
+                                    <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{radiusDisplay}</Text>
                                 </View>
                                 <View style={{ width: 1, height: '100%', backgroundColor: Colors.neutral700 }} />
                                 <View style={{ alignItems: 'center', flex: 1 }}>
-                                    <Text style={{ fontSize: 20, marginBottom: 4 }}>H</Text>
+                                    <Image source={ClockIcon} style={{ width: 20, height: 20, marginBottom: 4, tintColor: Colors.primary500 }} resizeMode="contain" />
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                                         {/* Translate Day */}
                                         {(() => {
@@ -787,19 +877,27 @@ const MatchCenterScreen = () => {
                                             return dayMap[rDay] || rDay || "Date Inconnue";
                                         })()}
                                     </Text>
-                                    <Text style={[Fonts.p3, { color: '#bbb' }]}>{recurringStart} - {recurringEnd}</Text>
+                                    <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{recurringStart} - {recurringEnd}</Text>
                                 </View>
                             </View>
                         </View>
 
                         {/* Common Slots Negotiation Text */}
                         {commonSlotsSummary.length > 0 && (
-                            <View style={{ marginTop: 12, width: '100%', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                            <View style={{
+                                marginTop: 12,
+                                width: '100%',
+                                padding: 10,
+                                backgroundColor: 'rgba(255,255,255,0.08)',
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255,255,255,0.10)',
+                            }}>
                                 <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
                                     Creneaux en commun
                                 </Text>
                                 {commonSlotsSummary.map((slotLabel) => (
-                                    <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
+                                    <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 4 }]}>
                                         - {slotLabel}
                                     </Text>
                                 ))}
@@ -807,7 +905,7 @@ const MatchCenterScreen = () => {
                         )}
                      </View>
 
-                     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 }]}>
+                     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 28, paddingHorizontal: 10 }]}>
                         Le match correspond a vos criteres. Discutez pour valider le terrain.
                      </Text>
 
@@ -862,9 +960,15 @@ const MatchCenterScreen = () => {
                                                                 // Ideally we call handleConfirmSearch logic but access is tricky.
                                                                 // Simpler: Trigger search with current params from squad
                                                                 const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
+                                                                const fallbackSlotIds = (selectedSlotIds && selectedSlotIds.length > 0)
+                                                                    ? selectedSlotIds
+                                                                    : (squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean);
+                                                                if (fallbackSlotIds.length === 0) {
+                                                                    throw new Error('Ajoutez puis selectionnez au moins un creneau pour relancer la recherche.');
+                                                                }
                                                                 await MatchmakingService.triggerSearch(
                                                                     getEntityDocumentId(mySquad), 
-                                                                    [], // Slots ? Ideally reuse previously selected. But empty = any available.
+                                                                    fallbackSlotIds,
                                                                     { radius: searchRadius, location: userLoc }
                                                                 );
                                                                 loadMatchCenter(); // Refresh state to show searching
@@ -1306,8 +1410,6 @@ const MatchCenterScreen = () => {
 
 
     const renderLobbyModal = () => {
-        const sportLabel = mySquad?.activities?.[0]?.name || mySquad?.sport?.label || mySquad?.sport || 'Sport indefini';
-
         // Helper to extract string from string or object
         const getSafeLabel = (val) => {
             if (!val) return null;
@@ -1338,7 +1440,7 @@ const MatchCenterScreen = () => {
                 <View>
                     <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', letterSpacing: 1 }]}>CONFIGURATION</Text>
                      <Text style={[Fonts.p1, { color: Colors.textSecondary || '#aaa', textAlign: 'center', marginBottom: 8 }]}>
-                        {activeSlot ? `Match du ${formatDate(activeSlot.start_time || activeSlot.date)}` : 'Recherche immediate'}
+                        Rechercher match
                     </Text>
                 </View>
             }
@@ -1404,9 +1506,65 @@ const MatchCenterScreen = () => {
 
             {/* SECTION: Selection des creneaux recurrents */}
             <View style={{ marginBottom: 24 }}>
-                <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>
-                    Vos disponibilites ({selectedSlotIds.length}/{squadSlots.length || 0})
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 10 }}>
+                    <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
+                        Vos disponibilites ({selectedSlotIds.length}/{squadSlots.length || 0})
+                    </Text>
+                    <TouchableOpacity
+                        onPress={() => setIsAddingSearchSlot((prev) => !prev)}
+                        style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: Colors.gold500,
+                            backgroundColor: 'rgba(255, 209, 0, 0.08)',
+                        }}
+                    >
+                        <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                            {isAddingSearchSlot ? 'Fermer' : '+ Ajouter'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {isAddingSearchSlot && (
+                    <View style={{ marginBottom: 12 }}>
+                        {isSavingSearchSlot && (
+                            <ActivityIndicator size="small" color={Colors.primary500} style={{ marginBottom: 8 }} />
+                        )}
+                        <TeamSlotCreationForm
+                            onAdd={handleAddSearchSlot}
+                            onCancel={() => setIsAddingSearchSlot(false)}
+                        />
+                    </View>
+                )}
+
+                {!isAddingSearchSlot && (squadSlots || []).length > 0 && (
+                    <TouchableOpacity
+                        onPress={() => {
+                            const allSlotIds = (squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean);
+                            const hasAllSelected = allSlotIds.length > 0
+                                && allSlotIds.every((slotId) => selectedSlotIds.includes(slotId));
+                            setSelectedSlotIds(hasAllSelected ? [] : allSlotIds);
+                        }}
+                        style={{
+                            alignSelf: 'flex-end',
+                            marginBottom: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: Colors.primary500,
+                            backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                        }}
+                    >
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                            {selectedSlotIds.length === (squadSlots || []).length && selectedSlotIds.length > 0
+                                ? 'Tout deselectionner'
+                                : 'Tout selectionner'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
 
                 {/* SECTION: Autres creneaux communs (negociation) */}
                 {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
@@ -1431,7 +1589,7 @@ const MatchCenterScreen = () => {
                     </View>
                 )}
 
-                {(squadSlots || []).map((slot) => {
+                {!isAddingSearchSlot && (squadSlots || []).map((slot) => {
                     const slotId = getEntityDocumentId(slot);
                     const isSelected = selectedSlotIds.includes(slotId);
                     const formatHour = (h) => h ? h.substring(0, 5) : '?';
@@ -1460,9 +1618,9 @@ const MatchCenterScreen = () => {
                         </TouchableOpacity>
                     );
                 })}
-                {(!squadSlots || squadSlots.length === 0) && (
+                {!isAddingSearchSlot && (!squadSlots || squadSlots.length === 0) && (
                     <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center', padding: 16 }]}>
-                        Aucun creneau defini. Ajoutez-en depuis la page d'equipe.
+                        Aucun creneau defini. Ajoutez-en directement ici.
                     </Text>
                 )}
             </View>
@@ -1478,7 +1636,7 @@ const MatchCenterScreen = () => {
                 title={loading ? "Lancement..." : "CONFIRMER & SCANNER"} 
                 variant="Primary"
                 onPress={handleConfirmSearch}
-                disabled={loading}
+                disabled={loading || selectedSlotIds.length === 0}
                 style={{ marginBottom: 16 }}
             />
             <Button 

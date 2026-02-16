@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -60,6 +60,9 @@ function VenueProposalModal({
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState(() => buildDefaultStartTime());
   const [endTime, setEndTime] = useState(() => buildDefaultEndTime());
+  const modalScrollRef = useRef(null);
+  const [dateSelectorY, setDateSelectorY] = useState(0);
+  const [timeSelectorY, setTimeSelectorY] = useState(0);
 
   const datePresets = useMemo(() => {
     const now = new Date();
@@ -166,6 +169,32 @@ function VenueProposalModal({
     setDate(next);
   };
 
+  const scrollModalTo = useCallback((y, animated = true) => {
+    const ref = modalScrollRef.current;
+    if (!ref) return;
+
+    if (typeof ref.scrollTo === 'function') {
+      ref.scrollTo({ y, animated });
+      return;
+    }
+
+    if (typeof ref.scrollToOffset === 'function') {
+      ref.scrollToOffset({ offset: y, animated });
+    }
+  }, []);
+
+  const handleSelectorOpen = useCallback((target = 'date') => {
+    const baseY = target === 'time' ? timeSelectorY : dateSelectorY;
+    const firstY = Math.max(baseY - 12, 0);
+    const expandedBoost = target === 'time' ? 130 : 170;
+    const secondY = Math.max(firstY + expandedBoost, 0);
+
+    scrollModalTo(firstY, true);
+    setTimeout(() => {
+      scrollModalTo(secondY, true);
+    }, 220);
+  }, [dateSelectorY, timeSelectorY, scrollModalTo]);
+
   return (
     <BottomModal
       close={onClose}
@@ -181,6 +210,7 @@ function VenueProposalModal({
         </View>
       )}
       isVisible={isVisible}
+      scrollViewRef={modalScrollRef}
       snapPoints={['85%']}
     >
       <View>
@@ -215,14 +245,21 @@ function VenueProposalModal({
           </Text>
         </View>
 
-        <DateTimeSelector
-          buttonStyle={glassPickerStyle}
-          display="inline"
-          label="Date"
-          mode="date"
-          onChange={setDate}
-          value={date}
-        />
+        <View
+          onLayout={(event) => {
+            setDateSelectorY(event?.nativeEvent?.layout?.y || 0);
+          }}
+        >
+          <DateTimeSelector
+            buttonStyle={glassPickerStyle}
+            display="inline"
+            label="Date"
+            mode="date"
+            onChange={setDate}
+            onOpen={() => handleSelectorOpen('date')}
+            value={date}
+          />
+        </View>
 
         <View style={{
           flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8,
@@ -256,7 +293,12 @@ function VenueProposalModal({
           })}
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 16 }}>
+        <View
+          onLayout={(event) => {
+            setTimeSelectorY(event?.nativeEvent?.layout?.y || 0);
+          }}
+          style={{ flexDirection: 'row', gap: 16 }}
+        >
           <View style={{ flex: 1 }}>
             <DateTimeSelector
               buttonStyle={glassPickerStyle}
@@ -264,6 +306,7 @@ function VenueProposalModal({
               label="Debut"
               mode="time"
               onChange={setStartTime}
+              onOpen={() => handleSelectorOpen('time')}
               value={startTime}
             />
           </View>
