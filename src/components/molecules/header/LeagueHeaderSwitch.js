@@ -8,17 +8,40 @@ import {
 } from 'react-native';
 import useTheme from '@/theme/themeContext';
 import { useAppMode } from '@/context/AppModeContext';
+import { useNavigation } from '@react-navigation/native';
+import { RouteNames } from '@/navigation/routeNames';
 
 const LeagueHeaderSwitch = () => {
     const { Colors, Fonts, Images } = useTheme();
     const { isGold, toggleMode } = useAppMode();
+    const navigation = useNavigation();
     const logoWidth = isGold ? 100 : 140;
     const logoHeight = isGold ? 18 : 26;
     const leagueSectionWidth = isGold ? 118 : 92;
 
+    const handleSwitch = React.useCallback(() => {
+        const targetRoute = isGold ? RouteNames.HomeTab : RouteNames.LeagueHomeTab;
+        toggleMode();
+
+        const currentRouteNames = navigation?.getState?.()?.routeNames || [];
+        if (currentRouteNames.includes(targetRoute)) {
+            navigation.navigate(targetRoute);
+            return;
+        }
+
+        const parentNavigation = navigation?.getParent?.();
+        const parentRouteNames = parentNavigation?.getState?.()?.routeNames || [];
+        if (parentNavigation && parentRouteNames.includes(targetRoute)) {
+            parentNavigation.navigate(targetRoute);
+            return;
+        }
+
+        navigation.navigate(targetRoute);
+    }, [isGold, navigation, toggleMode]);
+
     return (
         <TouchableOpacity 
-            onPress={toggleMode} 
+            onPress={handleSwitch}
             activeOpacity={0.8}
             style={styles.container}
         >
