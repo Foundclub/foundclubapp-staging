@@ -13,16 +13,34 @@ import {
   rejectHighlightRequest,
 } from './multisportClubService';
 
+/**
+ * @typedef {object} CreateSectionVariables
+ * @property {string} cmId
+ * @property {Record<string, any>} data
+ */
+
+/**
+ * @typedef {object} HighlightRequestVariables
+ * @property {string} eventId
+ * @property {Record<string, any>} data
+ */
+
+/**
+ * @typedef {object} RejectHighlightRequestVariables
+ * @property {string} requestId
+ * @property {string} reason
+ */
+
 export const CM_QUERY_KEYS = {
-  clubs: (cmId) => ['cm', cmId, 'clubs'],
-  planning: (cmId, filters) => ['cm', cmId, 'planning', filters],
-  highlightRequests: (cmId) => ['cm', cmId, 'highlight-requests'],
+  clubs: (/** @type {string} */ cmId) => ['cm', cmId, 'clubs'],
+  planning: (/** @type {string} */ cmId, /** @type {Record<string, any>} */ filters) => ['cm', cmId, 'planning', filters],
+  highlightRequests: (/** @type {string} */ cmId) => ['cm', cmId, 'highlight-requests'],
 };
 
 /**
  * Get all club sections for a multisport club
  */
-export function useGetCMClubs(cmId, options = {}) {
+export function useGetCMClubs(/** @type {string} */ cmId, options = {}) {
   return useQuery({
     queryKey: CM_QUERY_KEYS.clubs(cmId),
     queryFn: () => getCMClubs(cmId),
@@ -34,7 +52,11 @@ export function useGetCMClubs(cmId, options = {}) {
 /**
  * Get planning for a multisport club
  */
-export function useGetCMPlanning(cmId, filters = {}, options = {}) {
+export function useGetCMPlanning(
+  /** @type {string} */ cmId,
+  filters = /** @type {Record<string, any>} */ ({}),
+  options = {},
+) {
   return useQuery({
     queryKey: CM_QUERY_KEYS.planning(cmId, filters),
     queryFn: () => getCMPlanning(cmId, filters),
@@ -46,7 +68,7 @@ export function useGetCMPlanning(cmId, filters = {}, options = {}) {
 /**
  * Get pending highlight requests for a multisport club
  */
-export function useGetCMHighlightRequests(cmId, options = {}) {
+export function useGetCMHighlightRequests(/** @type {string} */ cmId, options = {}) {
   return useQuery({
     queryKey: CM_QUERY_KEYS.highlightRequests(cmId),
     queryFn: () => getCMHighlightRequests(cmId),
@@ -62,8 +84,8 @@ export function useCreateCMSection() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ cmId, data }) => createCMSection(cmId, data),
-    onSuccess: (_, variables) => {
+    mutationFn: (/** @type {CreateSectionVariables} */ { cmId, data }) => createCMSection(cmId, data),
+    onSuccess: (_, /** @type {CreateSectionVariables} */ variables) => {
       queryClient.invalidateQueries({
         queryKey: CM_QUERY_KEYS.clubs(variables.cmId),
       });
@@ -78,7 +100,7 @@ export function useCreateHighlightRequest() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ eventId, data }) => createHighlightRequest(eventId, data),
+    mutationFn: (/** @type {HighlightRequestVariables} */ { eventId, data }) => createHighlightRequest(eventId, data),
     onSuccess: () => {
       // Invalidate all CM highlight requests
       queryClient.invalidateQueries({
@@ -95,7 +117,7 @@ export function useApproveHighlightRequest() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (requestId) => approveHighlightRequest(requestId),
+    mutationFn: (/** @type {string} */ requestId) => approveHighlightRequest(requestId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[2] === 'highlight-requests',
@@ -112,7 +134,7 @@ export function useRejectHighlightRequest() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ requestId, reason }) => rejectHighlightRequest(requestId, reason),
+    mutationFn: (/** @type {RejectHighlightRequestVariables} */ { requestId, reason }) => rejectHighlightRequest(requestId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[2] === 'highlight-requests',

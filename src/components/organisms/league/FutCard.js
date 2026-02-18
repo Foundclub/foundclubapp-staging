@@ -4,12 +4,14 @@ import useTheme from '@/theme/themeContext';
 import PropTypes from 'prop-types';
 
 const FutCard = ({ team, variant = 'classic' }) => {
-    const { Colors, Fonts, Spaces } = useTheme();
+    const { Colors, Fonts } = useTheme();
 
     // Determine colors based on variant
     const isGold = variant === 'gold';
     const BorderColor = isGold ? Colors.gold500 : Colors.primary500;
     const AccentColor = isGold ? Colors.gold500 : Colors.neutral00;
+    const GoldColor = Colors.gold500;
+    const GoldDarkColor = Colors.gold700;
     const CardBg = Colors.neutral900; // Keep dark background for contrast
     const ShadowColor = isGold ? Colors.gold500 : Colors.primary500;
 
@@ -18,7 +20,7 @@ const FutCard = ({ team, variant = 'classic' }) => {
 
             <View style={styles.topRow}>
                 <View style={styles.ratingBox}>
-                    <Text style={[Fonts.h1, { color: Gold, fontSize: 32 }]}>
+                    <Text style={[Fonts.h1, { color: GoldColor, fontSize: 32 }]}>
                         {team.elo || 1200}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral300, textTransform: 'uppercase' }]}>
@@ -39,8 +41,8 @@ const FutCard = ({ team, variant = 'classic' }) => {
                     <Image source={{ uri: team.crest }} style={styles.crest} />
                 ) : (
                     // Placeholder Shield
-                    <View style={[styles.placeholderCrest, { borderColor: GoldDark }]}>
-                        <Text style={[Fonts.h1, { color: GoldDark, fontSize: 40 }]}>
+                    <View style={[styles.placeholderCrest, { borderColor: GoldDarkColor }]}>
+                        <Text style={[Fonts.h1, { color: GoldDarkColor, fontSize: 40 }]}>
                             {team.name ? team.name.substring(0, 1).toUpperCase() : '?'}
                         </Text>
                     </View>
@@ -48,8 +50,8 @@ const FutCard = ({ team, variant = 'classic' }) => {
             </View>
 
             {/* Bottom: Team Name */}
-            <View style={[styles.bottomRow, { borderTopColor: GoldDark }]}>
-                <Text style={[Fonts.h3, { color: Gold, textAlign: 'center', textTransform: 'uppercase' }]}>
+            <View style={[styles.bottomRow, { borderTopColor: GoldDarkColor }]}>
+                <Text style={[Fonts.h3, { color: GoldColor, textAlign: 'center', textTransform: 'uppercase' }]}>
                     {team.name || "Unknown Squad"}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>

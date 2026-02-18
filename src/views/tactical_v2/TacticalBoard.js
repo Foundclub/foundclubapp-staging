@@ -105,8 +105,8 @@ const TacticalBoard = () => {
     const base = selectedPlayers.length > 0 ? selectedPlayers : players;
     // Include manual players from composition
     const manuals = existingComposition?.manualPlayers || manualPlayers || [];
-    const baseIds = new Set(base.map(p => p.id || p.documentId));
-    const uniqueManuals = manuals.filter(m => !baseIds.has(m.id || m.documentId));
+    const baseIds = new Set(base.map((/** @type {TacticalPlayer} */ p) => p.id || p.documentId));
+    const uniqueManuals = manuals.filter((/** @type {TacticalPlayer} */ m) => !baseIds.has(m.id || m.documentId));
     return [...base, ...uniqueManuals];
   }, [selectedPlayers, players, existingComposition, manualPlayers]);
 
@@ -124,7 +124,7 @@ const TacticalBoard = () => {
     if (existingComposition?.placements?.length) {
       // Build field players from composition with FULL player data
       const fieldFromCompo = existingComposition.placements
-        .map(p => {
+        .map((/** @type {{ playerId?: string; positionX?: number; positionY?: number }} */ p) => {
           const original = poolPlayers.find(sp => (sp.id === p.playerId) || (sp.documentId === p.playerId));
           if (!original) return null;
           return {
@@ -135,11 +135,11 @@ const TacticalBoard = () => {
             y: p.positionY,
           };
         })
-        .filter(Boolean);
+        .filter((/** @type {FieldPlayer | null} */ p) => Boolean(p));
       
       // Players not in composition go to bench
-      const placedIds = new Set(fieldFromCompo.map(fp => fp.id || fp.documentId));
-      const benchFromCompo = poolPlayers.filter(p => {
+      const placedIds = new Set(fieldFromCompo.map((/** @type {any} */ fp) => fp.id || fp.documentId));
+      const benchFromCompo = poolPlayers.filter((/** @type {TacticalPlayer} */ p) => {
         const id = p.id || p.documentId;
         return !placedIds.has(id);
       });
@@ -171,10 +171,10 @@ const TacticalBoard = () => {
   
   // === STATE ===
   // Bench players (not placed on field)
-  const [benchPlayers, setBenchPlayers] = useState(initialBenchPlayers);
+  const [benchPlayers, setBenchPlayers] = useState(/** @type {TacticalPlayer[]} */ (initialBenchPlayers));
   
   // Field players (placed on field) - { id, x, y } where x,y are percentages
-  const [fieldPlayers, setFieldPlayers] = useState(initialFieldPlayers);
+  const [fieldPlayers, setFieldPlayers] = useState(/** @type {FieldPlayer[]} */ (initialFieldPlayers));
   
   // Active drag state
   const [activeDragPlayer, setActiveDragPlayer] = useState(/** @type {TacticalPlayer|null} */ (null));
@@ -230,7 +230,8 @@ const TacticalBoard = () => {
   // === DRAG HANDLERS ===
   
   // Start drag from bench
-  const startDragFromBench = useCallback((/** @type {TacticalPlayer} */ player, /** @type {number} */ pageX, /** @type {number} */ pageY) => {
+  const startDragFromBench = useCallback((/** @type {TacticalPlayer | undefined} */ player, /** @type {number | undefined} */ pageX, /** @type {number | undefined} */ pageY) => {
+    if (!player || typeof pageX !== 'number' || typeof pageY !== 'number') return;
     // Re-measure field at drag start for accurate coordinates
     measureField();
     
@@ -247,7 +248,8 @@ const TacticalBoard = () => {
   }, [measureField, ghostX, ghostY, ghostScale, ghostOpacity, dropZoneActive]);
 
   // Start drag from field
-  const startDragFromField = useCallback((/** @type {string} */ playerId, /** @type {number} */ pageX, /** @type {number} */ pageY) => {
+  const startDragFromField = useCallback((/** @type {string | undefined} */ playerId, /** @type {number | undefined} */ pageX, /** @type {number | undefined} */ pageY) => {
+    if (!playerId || typeof pageX !== 'number' || typeof pageY !== 'number') return;
     const player = getPlayerById(playerId);
     if (!player) return;
     
@@ -267,14 +269,15 @@ const TacticalBoard = () => {
   }, [getPlayerById, measureField, ghostX, ghostY, ghostScale, ghostOpacity, dropZoneActive]);
 
   // Update drag position
-  const updateDragPosition = useCallback((/** @type {number} */ pageX, /** @type {number} */ pageY) => {
+  const updateDragPosition = useCallback((/** @type {number | undefined} */ pageX, /** @type {number | undefined} */ pageY) => {
+    if (typeof pageX !== 'number' || typeof pageY !== 'number') return;
     ghostX.value = pageX - GHOST_TOKEN_WIDTH / 2;
     ghostY.value = pageY - GHOST_TOKEN_HEIGHT / 2;
   }, [ghostX, ghostY]);
 
   // End drag - use SharedValues for precise coordinates
-  const endDrag = useCallback((/** @type {number} */ pageX, /** @type {number} */ pageY) => {
-    if (!activeDragPlayer) return;
+  const endDrag = useCallback((/** @type {number | undefined} */ pageX, /** @type {number | undefined} */ pageY) => {
+    if (!activeDragPlayer || typeof pageX !== 'number' || typeof pageY !== 'number') return;
     
     const playerId = activeDragPlayer.id || activeDragPlayer.documentId || '';
     
@@ -309,8 +312,8 @@ const TacticalBoard = () => {
       console.log('[TacticalBoard] Storing position:', { clampedX, clampedY });
       
       // Update field players - store full player data with coordinates
-      setFieldPlayers(prev => {
-        const filtered = prev.filter(p => (p.id || p.documentId) !== playerId);
+      setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => {
+        const filtered = prev.filter((/** @type {FieldPlayer} */ p) => (p.id || p.documentId) !== playerId);
         // Get full player data
         const fullPlayer = getPlayerById(playerId) || activeDragPlayer;
         if (!fullPlayer) return prev;
@@ -319,13 +322,13 @@ const TacticalBoard = () => {
       
       // Remove from bench if coming from bench
       if (dragSource === 'bench') {
-        setBenchPlayers(prev => prev.filter(p => (p.id || p.documentId) !== playerId));
+        setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => prev.filter(p => (p.id || p.documentId) !== playerId));
       }
     } else {
       // Dropped outside field - return to bench
       if (dragSource === 'field') {
-        setFieldPlayers(prev => prev.filter(p => p.id !== playerId));
-        setBenchPlayers(prev => {
+        setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => prev.filter(p => p.id !== playerId));
+        setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => {
           // Check if already in bench
           const exists = prev.some(p => (p.id || p.documentId) === playerId);
           if (exists) return prev;
@@ -396,8 +399,8 @@ const TacticalBoard = () => {
       // Extract manual players from all players (field + bench)
       const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
       const extractedManualPlayers = allCurrentPlayers
-        .filter(p => p.isManual || (p.id && String(p.id).startsWith('manual_')) || (p.documentId && String(p.documentId).startsWith('manual_')))
-        .map(p => ({
+        .filter((/** @type {TacticalPlayer | FieldPlayer} */ p) => p.isManual || (p.id && String(p.id).startsWith('manual_')) || (p.documentId && String(p.documentId).startsWith('manual_')))
+        .map((/** @type {TacticalPlayer | FieldPlayer} */ p) => ({
           id: p.id,
           documentId: p.documentId || p.id,
           firstname: p.firstname,
@@ -409,7 +412,7 @@ const TacticalBoard = () => {
 
       const compositionData = {
         sportContext: sport,
-        placements: fieldPlayers.map(fp => ({
+        placements: fieldPlayers.map((/** @type {FieldPlayer} */ fp) => ({
           playerId: fp.documentId || fp.id,
           positionX: fp.x,
           positionY: fp.y,
@@ -425,7 +428,7 @@ const TacticalBoard = () => {
       });
       
       Alert.alert('Succès', 'Composition enregistrée !', [
-        { text: 'OK', onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId }) }
+        { text: 'OK', onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }) }
       ]);
     } catch (error) {
       console.error('Save error:', error);
@@ -471,7 +474,7 @@ const TacticalBoard = () => {
             <Animated.View style={[styles.dropZoneIndicator, { borderColor: Colors.primary500 }, dropZoneStyle]} />
             
             {/* Placed players */}
-            {fieldPlayers.map((fp) => {
+            {fieldPlayers.map((/** @type {FieldPlayer} */ fp) => {
               // fp already has full player data from reconstruction
               if (!fp.firstname && !fp.lastname && !fp.id) return null;
               
@@ -518,7 +521,7 @@ const TacticalBoard = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.benchScroll}
           >
-            {benchPlayers.map((player) => {
+            {benchPlayers.map((/** @type {TacticalPlayer} */ player) => {
               const playerId = player.id || player.documentId || '';
               const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
               const panGesture = createBenchPanGesture(player);
@@ -560,7 +563,7 @@ const TacticalBoard = () => {
               <Button 
                 title="Modifier"
                 variant="Primary"
-                onPress={() => navigation.navigate(RouteNames.TacticalSelectionV2, {
+                onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TacticalSelectionV2, {
                   eventId,
                   sport,
                   teamId,

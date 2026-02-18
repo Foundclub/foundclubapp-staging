@@ -29,12 +29,16 @@ const schema = Joi.object({
   radius: Joi.number().min(5).max(100).default(20).label('Rayon'),
 });
 
+/**
+ * @param {{ navigation: any, route: { params?: { teamId?: string } } }} props
+ */
 const SquadEditScreen = ({ navigation, route }) => {
   const { teamId } = route.params || {};
+  const safeTeamId = String(teamId || '');
   const { Colors, Fonts, Spaces, Alignments } = useTheme();
   const { t } = useTranslation();
 
-  const { data: team, isLoading } = useGetLeagueTeam(teamId);
+  const { data: team, isLoading } = useGetLeagueTeam(safeTeamId);
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
   
@@ -61,7 +65,7 @@ const SquadEditScreen = ({ navigation, route }) => {
   // Format Activities for AutocompleteSelect
   const activities = useMemo(() => {
     const formatted = allActivities
-      ?.filter(a => a.isLeague === true)
+      ?.filter((/** @type {any} */ a) => a.isLeague === true)
       ?.map(({ name }) => ({
         label: name,
         value: name,
@@ -103,7 +107,7 @@ const SquadEditScreen = ({ navigation, route }) => {
       const normalizedHomeBase = normalizeLocationInput(team.home_base);
       reset({
         name: team.name || '',
-        address: normalizedHomeBase || null,
+        address: /** @type {any} */ (normalizedHomeBase || null),
         division: team.division ? String(team.division) : '',
         elo: team.elo ? String(team.elo) : '',
         sport: team.sport || 'Football',
@@ -114,7 +118,7 @@ const SquadEditScreen = ({ navigation, route }) => {
     }
   }, [team, reset]);
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (/** @type {Record<string, any>} */ data) => {
     try {
       setIsSubmitting(true);
 
@@ -124,14 +128,14 @@ const SquadEditScreen = ({ navigation, route }) => {
         return;
       }
 
-      await updateLeagueTeam({
+      await updateLeagueTeam(/** @type {any} */ ({
         documentId: teamId,
         name: data.name,
         home_base: homeBasePayload,
         sport: data.sport,
         section: data.section,
         category: data.category
-      });
+      }));
       Alert.alert('Succès', 'Squad mise à jour');
       navigation.goBack();
     } catch (e) {
@@ -176,7 +180,7 @@ const SquadEditScreen = ({ navigation, route }) => {
                             placeholder="Sélectionner"
                             options={activities}
                             value={value}
-                            setValue={(option) => onChange(option ? option.value : null)}
+                            setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
                             searchValue={sportSearchValue}
                             setSearchValue={setSportSearchValue}
                             error={errors.sport?.message}
@@ -195,7 +199,7 @@ const SquadEditScreen = ({ navigation, route }) => {
                             placeholder="Sélectionner"
                             options={sections}
                             value={sections.find(s => s.value === value)?.label || value}
-                            setValue={(option) => onChange(option ? option.value : null)}
+                            setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
                             isSearchable={false}
                             error={errors.section?.message}
                         />
@@ -213,7 +217,7 @@ const SquadEditScreen = ({ navigation, route }) => {
                 placeholder="Ex: Senior"
                 options={categories}
                 value={value}
-                setValue={(option) => onChange(option ? option.value : null)}
+                setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
                 searchValue={categorySearchValue}
                 setSearchValue={setCategorySearchValue}
                 isSearchable={true}
@@ -229,7 +233,7 @@ const SquadEditScreen = ({ navigation, route }) => {
                 <AutocompleteAddressInput
                     label="QG (Adresse principale)"
                     placeholder="Rechercher une adresse"
-                    address={value}
+                    address={/** @type {any} */ (value || undefined)}
                     setAddress={onChange}
                 />
             )}

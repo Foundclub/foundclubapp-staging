@@ -66,6 +66,7 @@ function Messaging({ navigation }) {
     // Sort: Multisport > Club > Team > Whisper
     // We want Multisport (m) at top, then Club (c)
     // Map types to priority
+    /** @type {Record<'multisport' | 'club' | 'league_match' | 'team' | 'whisper', number>} */
     const priority = {
         'multisport': 0,
         'club': 1,
@@ -75,16 +76,16 @@ function Messaging({ navigation }) {
     };
     
     return chats
-      .filter(chat => !chat.archivedBy?.some(u => u.documentId === userData?.documentId))
+      .filter((chat) => !chat.archivedBy?.some((u) => u.documentId === userData?.documentId))
       .sort((a, b) => {
-        const isPinnedA = a.pinnedBy?.some(u => u.documentId === userData?.documentId);
-        const isPinnedB = b.pinnedBy?.some(u => u.documentId === userData?.documentId);
+        const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+        const isPinnedB = b.pinnedBy?.some((u) => u.documentId === userData?.documentId);
         
         if (isPinnedA && !isPinnedB) return -1;
         if (!isPinnedA && isPinnedB) return 1;
 
-        const pA = priority[a.type] ?? 99;
-        const pB = priority[b.type] ?? 99;
+        const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (a.type)] ?? 99;
+        const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (b.type)] ?? 99;
         
         if (pA !== pB) return pA - pB;
         
@@ -139,7 +140,6 @@ function Messaging({ navigation }) {
           <TeamShield
             initials={chat?.team?.name ? getClubInitials(chat?.team?.name) : ''}
             isSmall
-            style={{ borderRadius: 24 }} // Ensure roundness if needed
           />
         );
       case 'whisper': {
@@ -246,8 +246,8 @@ function Messaging({ navigation }) {
     </View>
   );
 
-  const renderLeftActions = (progress, dragX, chat) => {
-    const isPinned = chat.pinnedBy?.some(u => u.documentId === userData?.documentId);
+  const renderLeftActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => {
+    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
     return (
       <TouchableOpacity
         style={{
@@ -270,7 +270,7 @@ function Messaging({ navigation }) {
     );
   };
 
-  const renderRightActions = (progress, dragX, chat) => {
+  const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => {
     return (
       <TouchableOpacity
         style={{
@@ -303,7 +303,7 @@ function Messaging({ navigation }) {
       new Date(lastMessage.createdAt).toISOString(),
     ));
 
-    const isPinned = chat.pinnedBy?.some(u => u.documentId === userData?.documentId);
+    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
 
     return (
       <Swipeable

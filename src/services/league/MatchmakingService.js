@@ -5,7 +5,7 @@ const MatchmakingService = {
     /**
      * Get active request and status for the team
      * @param {string} teamId 
-     * @returns {Promise<object|null>} { state: 'searching'|'matched'|'idle', request, match }
+     * @returns {Promise<MatchmakingStatus | null>}
      */
     getActiveRequest: async (teamId) => {
         try {
@@ -16,16 +16,17 @@ const MatchmakingService = {
             return response.data; // Expected: { state, request, match? }
         } catch (error) {
             console.error("Error fetching matchmaking status:", error);
-            // Fallback for MVP if backend error
-            return null;
+            const apiMessage = error?.response?.data?.message || error?.message || 'Unable to fetch matchmaking status';
+            throw new Error(apiMessage);
         }
     },
 
     /**
      * Launch a new search with recurring slot IDs
      * @param {string} teamId 
-     * @param {Array} selectedSlotIds - Array of slot IDs to include in search
-     * @param {object} params { radius, location }
+     * @param {string[]} selectedSlotIds - Array of slot IDs to include in search
+     * @param {{radius: number, location: object}} params
+     * @returns {Promise<MatchmakingStatus | MatchRequest>}
      */
     triggerSearch: async (teamId, selectedSlotIds, params) => {
         try {

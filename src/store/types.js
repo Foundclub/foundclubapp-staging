@@ -5,7 +5,12 @@
  * @property {string} [theme] - The current theme.
  * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
+ * @property {MercatoFilters} [mercatoFilters] - Recruitment marketplace filters.
+ * @property {ReservationFilters} [reservationFilters] - Reservation filters.
+ * @property {SquadFilters} [squadFilters] - League squad filters.
  * @property {EventFilters} [eventFilters] - The filters for events.
+ * @property {AuthSession[]} [authSessions] - Stored sessions for account switch.
+ * @property {boolean} [isAddingAccount] - Indicates add-account flow state.
  */
 
 /**
@@ -19,8 +24,9 @@
 /**
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
- * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS'
- * | 'SET_EVENT_FILTERS'} AppContextTypes
+ * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RESERVATION_FILTERS'
+ * | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'
+ * | 'PREPARE_ADD_ACCOUNT' | 'CANCEL_ADD_ACCOUNT' | 'UPDATE_USER_DATA' | 'SET_PENDING_NOTIFICATION'} AppContextTypes
  */
 
 /**
@@ -49,6 +55,53 @@
  * @property {string} activity
  * @property {{label: string, value: string}} city
  * @property {number} radius
+ */
+
+/**
+ * @typedef {object} MercatoFilters
+ * @property {string} [q]
+ * @property {string | string[]} [activity]
+ * @property {string | string[]} [position]
+ * @property {string} [bestLevel]
+ * @property {string | string[]} [category]
+ * @property {string} [preferredSport]
+ * @property {{label: string, value: string | number | null}} [city]
+ * @property {number | string} [radius]
+ * @property {string} [geohash]
+ * @property {boolean} [isActive]
+ * @property {string} [type]
+ * @property {string} [label]
+ * @property {string} [alertDocumentId]
+ */
+
+/**
+ * @typedef {object} ReservationFilters
+ * @property {string} [q]
+ * @property {string | string[]} [activity]
+ * @property {{label: string, value: string | number | null}} [city]
+ * @property {number | string} [radius]
+ * @property {number | string} [maxPrice]
+ * @property {string | null} [startTime]
+ * @property {string} [startDateAfter]
+ * @property {string} [activitySlug]
+ */
+
+/**
+ * @typedef {object} SquadFilters
+ * @property {{label?: string, value?: string} | null} [city]
+ * @property {number | string | null} [radius]
+ * @property {{label?: string, value?: string} | null} [sport]
+ * @property {{label?: string, value?: string} | null} [section]
+ * @property {{label?: string, value?: string} | null} [category]
+ * @property {number | string | null} [division]
+ */
+
+/**
+ * @typedef {object} AuthSession
+ * @property {Auth} [auth]
+ * @property {User} [user]
+ * @property {string} [idToken]
+ * @property {string} [token]
  */
 
 /**

@@ -9,14 +9,50 @@ import { Platform } from 'react-native';
  * @property {object} home_base
  * @property {number} [elo]
  */
+/**
+ * @typedef {{ uri: string, filename?: string, mime?: string }} UploadAsset
+ */
+/**
+ * @typedef {LeagueTeamData & {
+ *  documentId?: string,
+ *  logo?: UploadAsset | null,
+ *  cover?: UploadAsset | null,
+ *  crest?: number | string | null
+ * }} LeagueTeamMutationData
+ */
+/**
+ * @typedef {{
+ *  city?: unknown,
+ *  radius?: number | string,
+ *  category?: unknown,
+ *  division?: number | string,
+ *  sport?: unknown,
+ *  section?: unknown,
+ *  query?: unknown,
+ * }} SquadSearchFilters
+ */
+/**
+ * @typedef {{ lat: number, lng: number }} Coordinates
+ */
+/**
+ * @typedef {Record<string, any> & {
+ *  documentId?: string,
+ *  id?: string | number,
+ *  name?: string,
+ *  sport?: string,
+ *  home_base?: unknown,
+ *  attributes?: Record<string, unknown>,
+ * }} GenericTeamPayload
+ */
 
 /**
  * Create a new league team
- * @param {LeagueTeamData} teamData
+ * @param {LeagueTeamMutationData} teamData
  * @returns {Promise<object>}
  */
 export const createLeagueTeam = async (teamData) => {
-  const { logo, cover, ...data } = teamData;
+  const { logo, cover, ...baseData } = teamData;
+  const data = /** @type {Record<string, unknown>} */ ({ ...baseData });
 
   try {
       // 1. Handle File Uploads first
@@ -46,7 +82,7 @@ export const createLeagueTeam = async (teamData) => {
 /**
  * Get league teams for a user (Captain)
  * @param {string} userId
- * @returns {Promise<object[]>}
+ * @returns {Promise<Team[]>}
  */
 export const getMyLeagueTeam = async (userId) => {
   try {
@@ -107,7 +143,7 @@ export const checkTeamNameUnique = async (name) => {
 
 /**
  * Upload a file to Strapi using native fetch to avoid Axios/Android issues
- * @param {object} file 
+ * @param {UploadAsset} file
  * @returns {Promise<number>} - The uploaded file ID
  */
 const uploadFile = async (file) => {
@@ -116,11 +152,11 @@ const uploadFile = async (file) => {
         
         const uri = Platform.OS === 'android' ? file.uri : file.uri.replace('file://', '');
         
-        formData.append('files', {
+        formData.append('files', /** @type {any} */ ({
             uri: uri,
             name: file.filename || 'upload.jpg',
             type: file.mime || 'image/jpeg',
-        });
+        }));
 
         // Get token for upload
         const { getAuthTokens } = require('../../domains/auth/authUseCases');
@@ -154,11 +190,12 @@ const uploadFile = async (file) => {
 
 /**
  * Update a league team
- * @param {object} teamData 
+ * @param {LeagueTeamMutationData} teamData
  * @returns {Promise<object>}
  */
 export const updateLeagueTeam = async (teamData) => {
-    const { documentId, logo, cover, ...data } = teamData;
+    const { documentId, logo, cover, ...baseData } = teamData;
+    const data = /** @type {Record<string, unknown>} */ ({ ...baseData });
 
     try {
         // 1. Handle File Uploads first
@@ -203,7 +240,7 @@ export const getLeagueTeamById = async (id) => {
                     slots: { populate: ['participants'] },
                     crest: true,
                     cover: true,
-                    join_requests: true
+                    join_requests: { populate: ['avatar'] }
                 }
             }
         });
@@ -216,7 +253,7 @@ export const getLeagueTeamById = async (id) => {
 /**
  * Get ranking for a specific division
  * @param {number} division 
- * @returns {Promise<object[]>}
+ * @returns {Promise<Team[]>}
  */
 export const getRanking = async (division = 10) => {
     try {
@@ -253,31 +290,40 @@ export const deleteLeagueTeam = async (documentId) => {
 
 /**
  * Search squads with filters
- * @param {object} filters
- * @param {string} [filters.city]
- * @param {number} [filters.radius]
- * @param {string} [filters.category]
- * @param {number} [filters.division]
+ * @param {SquadSearchFilters} filters
  * @returns {Promise<any[]>}
  */
 export const searchSquads = async (filters) => {
     try {
-        const safeFilters = filters || {};
+        const safeFilters = /** @type {SquadSearchFilters} */ (filters || {});
 
+        /**
+         * @param {unknown} value
+         * @returns {unknown}
+         */
         const normalizeFilterValue = (value) => {
             if (!value) return null;
             if (typeof value === 'object') {
-                return value.value ?? value.label ?? null;
+                const safeValue = /** @type {Record<string, unknown>} */ (value);
+                return safeValue.value ?? safeValue.label ?? null;
             }
             return value;
         };
 
+        /**
+         * @param {unknown} value
+         * @returns {string}
+         */
         const normalizeText = (value) => String(value || '')
             .trim()
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
 
+        /**
+         * @param {unknown} value
+         * @returns {string | null}
+         */
         const resolveSportToken = (value) => {
             const normalized = normalizeText(value);
             if (!normalized) return null;
@@ -300,6 +346,10 @@ export const searchSquads = async (filters) => {
             return normalized;
         };
 
+        /**
+         * @param {unknown} value
+         * @returns {'Male' | 'Female' | 'Mixed' | null}
+         */
         const normalizeSectionFilter = (value) => {
             const normalized = String(value || '').trim().toLowerCase();
             if (!normalized) return null;
@@ -309,6 +359,10 @@ export const searchSquads = async (filters) => {
             return null;
         };
 
+        /**
+         * @param {unknown} value
+         * @returns {Coordinates | null}
+         */
         const parseCoordinates = (value) => {
             if (!value) return null;
             if (typeof value === 'string' && value.includes('|')) {
@@ -319,11 +373,12 @@ export const searchSquads = async (filters) => {
                 return null;
             }
             if (typeof value === 'object') {
-                const lat = Number.parseFloat(value.lat ?? value.latitude);
-                const lng = Number.parseFloat(value.lng ?? value.longitude ?? value.lon);
+                const safeValue = /** @type {Record<string, any>} */ (value);
+                const lat = Number.parseFloat(safeValue.lat ?? safeValue.latitude);
+                const lng = Number.parseFloat(safeValue.lng ?? safeValue.longitude ?? safeValue.lon);
                 if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
 
-                const rawValue = value.value ?? value.address?.value;
+                const rawValue = safeValue.value ?? safeValue.address?.value;
                 if (typeof rawValue === 'string' && rawValue.includes('|')) {
                     const [lngRaw, latRaw] = rawValue.split('|');
                     const parsedLat = Number.parseFloat(latRaw);
@@ -333,7 +388,7 @@ export const searchSquads = async (filters) => {
                     }
                 }
 
-                const geometryCoordinates = value.geometry?.coordinates;
+                const geometryCoordinates = safeValue.geometry?.coordinates;
                 if (Array.isArray(geometryCoordinates) && geometryCoordinates.length >= 2) {
                     const geometryLng = Number.parseFloat(geometryCoordinates[0]);
                     const geometryLat = Number.parseFloat(geometryCoordinates[1]);
@@ -342,7 +397,7 @@ export const searchSquads = async (filters) => {
                     }
                 }
 
-                const directCoordinates = value.coordinates;
+                const directCoordinates = safeValue.coordinates;
                 if (Array.isArray(directCoordinates) && directCoordinates.length >= 2) {
                     const first = Number.parseFloat(directCoordinates[0]);
                     const second = Number.parseFloat(directCoordinates[1]);
@@ -355,6 +410,10 @@ export const searchSquads = async (filters) => {
             return null;
         };
 
+        /**
+         * @param {GenericTeamPayload} team
+         * @returns {Coordinates | null}
+         */
         const getTeamCoordinates = (team) => {
             const homeBase = team?.home_base;
             if (!homeBase) return null;
@@ -370,13 +429,20 @@ export const searchSquads = async (filters) => {
                     return null;
                 }
             }
+            const homeBaseObject = /** @type {Record<string, any>} */ (
+                typeof homeBase === 'object' && homeBase !== null ? homeBase : {}
+            );
             return (
                 parseCoordinates(homeBase)
-                || parseCoordinates(homeBase?.address)
-                || parseCoordinates(homeBase?.home_base)
+                || parseCoordinates(homeBaseObject['address'])
+                || parseCoordinates(homeBaseObject['home_base'])
             );
         };
 
+        /**
+         * @param {GenericTeamPayload} team
+         * @returns {string}
+         */
         const getHomeBaseCity = (team) => {
             const homeBase = team?.home_base;
             if (!homeBase) return '';
@@ -403,26 +469,38 @@ export const searchSquads = async (filters) => {
                     return '';
                 }
             }
+            const homeBaseObject = /** @type {Record<string, any>} */ (
+                typeof homeBase === 'object' && homeBase !== null ? homeBase : {}
+            );
             const fallbackText = [
-                homeBase?.city,
-                homeBase?.label,
-                homeBase?.address,
-                homeBase?.address_line,
-                homeBase?.address?.city,
-                homeBase?.address?.label,
-                homeBase?.address?.address,
-                homeBase?.home_base?.city,
-                homeBase?.home_base?.label,
-                homeBase?.home_base?.address,
-                homeBase?.context,
-                homeBase?.properties?.city,
-                homeBase?.properties?.label,
+                homeBaseObject['city'],
+                homeBaseObject['label'],
+                homeBaseObject['address'],
+                homeBaseObject['address_line'],
+                homeBaseObject['address']?.city,
+                homeBaseObject['address']?.label,
+                homeBaseObject['address']?.address,
+                homeBaseObject['home_base']?.city,
+                homeBaseObject['home_base']?.label,
+                homeBaseObject['home_base']?.address,
+                homeBaseObject['context'],
+                homeBaseObject['properties']?.city,
+                homeBaseObject['properties']?.label,
             ].find((item) => typeof item === 'string' && item.trim().length > 0) || '';
             return String(fallbackText).toLowerCase();
         };
 
+        /**
+         * @param {Coordinates | null} a
+         * @param {Coordinates | null} b
+         * @returns {number}
+         */
         const getDistanceKm = (a, b) => {
             if (!a || !b) return Number.POSITIVE_INFINITY;
+            /**
+             * @param {number} value
+             * @returns {number}
+             */
             const toRad = (value) => (value * Math.PI) / 180;
             const R = 6371;
             const dLat = toRad(b.lat - a.lat);
@@ -435,10 +513,16 @@ export const searchSquads = async (filters) => {
             return 2 * R * Math.asin(Math.sqrt(hav));
         };
 
+        /**
+         * @param {unknown} cityValue
+         * @returns {string[]}
+         */
         const buildCityNeedles = (cityValue) => {
             if (!cityValue) return [];
 
-            const cityObject = typeof cityValue === 'object' ? cityValue : null;
+            const cityObject = typeof cityValue === 'object'
+                ? /** @type {Record<string, unknown>} */ (cityValue)
+                : null;
             const rawLabel = cityObject?.label || String(cityValue || '');
             const explicitCity = cityObject?.city || '';
             const cleanedLabel = normalizeText(rawLabel)
@@ -446,22 +530,27 @@ export const searchSquads = async (filters) => {
                 .replace(/\b\d{5}\b/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
-            const firstToken = cleanedLabel.split(' ').find((token) => token.length >= 3) || '';
+            const firstToken = cleanedLabel.split(' ').find((/** @type {string} */ token) => token.length >= 3) || '';
 
             return [...new Set([
                 normalizeText(explicitCity),
                 cleanedLabel,
                 firstToken,
-            ].filter((needle) => needle.length >= 3))];
+            ].filter((/** @type {string} */ needle) => needle.length >= 3))];
         };
 
+        /**
+         * @param {GenericTeamPayload} team
+         * @param {string[]} cityNeedles
+         * @returns {boolean}
+         */
         const isCityTextMatch = (team, cityNeedles) => {
             if (!cityNeedles.length) return true;
 
             const teamName = normalizeText(team?.name);
             const homeBaseCity = normalizeText(getHomeBaseCity(team));
 
-            return cityNeedles.some((needle) => {
+            return cityNeedles.some((/** @type {string} */ needle) => {
                 const matchesCity = homeBaseCity
                     ? (homeBaseCity.includes(needle) || needle.includes(homeBaseCity))
                     : false;
@@ -470,6 +559,10 @@ export const searchSquads = async (filters) => {
             });
         };
 
+        /**
+         * @param {GenericTeamPayload} team
+         * @returns {GenericTeamPayload}
+         */
         const normalizeTeamPayload = (team) => {
             const attributes = team?.attributes && typeof team.attributes === 'object' ? team.attributes : {};
             const merged = { ...attributes, ...team };
@@ -479,10 +572,12 @@ export const searchSquads = async (filters) => {
             return merged;
         };
 
+        /** @type {Record<string, unknown>} */
         const query = {
             populate: ['crest'],
         };
 
+        /** @type {Array<Record<string, unknown>>} */
         const conditions = [];
         const cityRaw = safeFilters?.city;
         const requestedSportToken = resolveSportToken(normalizeFilterValue(safeFilters?.sport));
@@ -491,7 +586,10 @@ export const searchSquads = async (filters) => {
         const divisionRaw = normalizeFilterValue(safeFilters?.division);
         const searchQuery = String(safeFilters?.query || '').trim();
         const cityNeedles = buildCityNeedles(cityRaw);
-        const centerCoordinates = parseCoordinates(safeFilters?.city?.value || safeFilters?.city);
+        const cityAsRecord = typeof safeFilters?.city === 'object' && safeFilters?.city !== null
+            ? /** @type {Record<string, unknown>} */ (safeFilters.city)
+            : null;
+        const centerCoordinates = parseCoordinates(cityAsRecord?.value || safeFilters?.city);
 
         if (category) {
             conditions.push({ category: { $eq: category } });
@@ -501,7 +599,7 @@ export const searchSquads = async (filters) => {
             conditions.push({ section: { $eq: section } });
         }
 
-        const division = Number.parseInt(divisionRaw, 10);
+        const division = Number.parseInt(String(/** @type {any} */ (divisionRaw ?? '')), 10);
         if (Number.isFinite(division) && division >= 1 && division <= 10) {
             conditions.push({ division: { $eq: division } });
         }
@@ -517,12 +615,12 @@ export const searchSquads = async (filters) => {
         }
 
         const response = await client.get('/league-teams', { params: query });
-        let squads = Array.isArray(response?.data?.data)
+        let squads = /** @type {GenericTeamPayload[]} */ (Array.isArray(response?.data?.data)
             ? response.data.data.map(normalizeTeamPayload)
-            : [];
+            : []);
 
         if (requestedSportToken) {
-            squads = squads.filter((team) => {
+            squads = squads.filter((/** @type {GenericTeamPayload} */ team) => {
                 const teamSport = normalizeText(team?.sport);
                 if (!teamSport) return false;
 
@@ -539,12 +637,12 @@ export const searchSquads = async (filters) => {
         }
 
         if (cityNeedles.length && !centerCoordinates) {
-            squads = squads.filter((team) => isCityTextMatch(team, cityNeedles));
+            squads = squads.filter((/** @type {GenericTeamPayload} */ team) => isCityTextMatch(team, cityNeedles));
         }
 
-        const radius = Number.parseInt(safeFilters?.radius, 10);
+        const radius = Number.parseInt(String(safeFilters?.radius ?? ''), 10);
         if (Number.isFinite(radius) && radius > 0 && centerCoordinates) {
-            squads = squads.filter((team) => {
+            squads = squads.filter((/** @type {GenericTeamPayload} */ team) => {
                 const teamCoordinates = getTeamCoordinates(team);
                 if (!teamCoordinates) {
                     return isCityTextMatch(team, cityNeedles);
@@ -604,11 +702,11 @@ export const requestToJoinSquad = async (teamId, userId) => {
  */
 export const respondToJoinRequest = async (teamId, userId, accept) => {
     try {
-        const updateData = {
+        const updateData = /** @type {Record<string, any>} */ ({
             join_requests: {
                 disconnect: [userId]
             }
-        };
+        });
 
         if (accept) {
             updateData.roster = {

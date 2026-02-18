@@ -14,7 +14,7 @@ const DEFAULT_REGION = {
 
 const SearchMap = ({ items = [], type = 'event', onMarkerPress }) => {
     const { t } = useTranslation();
-    const { Colors, Spaces, Fonts } = useTheme();
+    const { Colors } = useTheme();
     const [region, setRegion] = useState(DEFAULT_REGION);
     const [hasPermission, setHasPermission] = useState(false);
 
@@ -62,7 +62,7 @@ const SearchMap = ({ items = [], type = 'event', onMarkerPress }) => {
                 key={item.id || item.documentId}
                 coordinate={{ latitude: parseFloat(lat), longitude: parseFloat(lng) }}
                 onPress={() => onMarkerPress && onMarkerPress(item)}
-                pinColor={type === 'event' ? Colors.primary : Colors.secondary}
+                pinColor={type === 'event' ? Colors.primary500 : Colors.warning500}
             >
                 {/* Custom Marker View if needed */}
             </Marker>
@@ -77,7 +77,7 @@ const SearchMap = ({ items = [], type = 'event', onMarkerPress }) => {
                 initialRegion={DEFAULT_REGION}
                 showsUserLocation={hasPermission}
                 showsMyLocationButton={hasPermission}
-                clusterColor={Colors.primary}
+                clusterColor={Colors.primary500}
             >
                 {items.map(renderMarker)}
             </ClusteredMapView>

@@ -13,16 +13,21 @@ import useTheme from '@/theme/themeContext';
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
 
-const groupNotificationsByDate = (notifications) => {
+/**
+ * @typedef {{ id?: string | number; documentId?: string; createdAt?: string; type?: string; title?: string; body?: string; read?: boolean; data?: Record<string, any> }} NotificationItem
+ * @typedef {{ type: 'header'; title: string; key: string } | { type: 'item'; data: NotificationItem; key: string }} NotificationSectionItem
+ */
+
+const groupNotificationsByDate = (/** @type {NotificationItem[]} */ notifications) => {
     const groups = {
-        today: [],
-        yesterday: [],
-        thisWeek: [],
-        older: [],
+        today: /** @type {NotificationItem[]} */ ([]),
+        yesterday: /** @type {NotificationItem[]} */ ([]),
+        thisWeek: /** @type {NotificationItem[]} */ ([]),
+        older: /** @type {NotificationItem[]} */ ([]),
     };
 
     notifications.forEach((notif) => {
-        const date = new Date(notif.createdAt);
+        const date = new Date(notif.createdAt || Date.now());
         if (isToday(date)) {
             groups.today.push(notif);
         } else if (isYesterday(date)) {
@@ -37,10 +42,10 @@ const groupNotificationsByDate = (notifications) => {
     return groups;
 };
 
-const getRelativeTime = (dateStr) => {
+const getRelativeTime = (/** @type {string | Date} */ dateStr) => {
     const date = new Date(dateStr);
     const now = new Date();
-    const diffMs = now - date;
+    const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -55,6 +60,7 @@ const getRelativeTime = (dateStr) => {
 const NotificationList = () => {
     const { Colors, Fonts, Spaces } = useTheme();
     const navigation = useNavigation();
+    const nav = /** @type {any} */ (navigation);
     const {
         notifications,
         isLoading,
@@ -74,35 +80,36 @@ const NotificationList = () => {
     );
 
     const sections = useMemo(() => {
+        /** @type {NotificationSectionItem[]} */
         const result = [];
 
         if (groupedNotifications.today.length > 0) {
             result.push({ type: 'header', title: "Aujourd'hui", key: 'header-today' });
-            groupedNotifications.today.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
+            groupedNotifications.today.forEach((n) => result.push({ type: 'item', data: n, key: String(n.documentId || n.id || Math.random()) }));
         }
         if (groupedNotifications.yesterday.length > 0) {
             result.push({ type: 'header', title: 'Hier', key: 'header-yesterday' });
-            groupedNotifications.yesterday.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
+            groupedNotifications.yesterday.forEach((n) => result.push({ type: 'item', data: n, key: String(n.documentId || n.id || Math.random()) }));
         }
         if (groupedNotifications.thisWeek.length > 0) {
             result.push({ type: 'header', title: 'Cette semaine', key: 'header-week' });
-            groupedNotifications.thisWeek.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
+            groupedNotifications.thisWeek.forEach((n) => result.push({ type: 'item', data: n, key: String(n.documentId || n.id || Math.random()) }));
         }
         if (groupedNotifications.older.length > 0) {
             result.push({ type: 'header', title: 'Plus ancien', key: 'header-older' });
-            groupedNotifications.older.forEach((n) => result.push({ type: 'item', data: n, key: n.documentId || n.id }));
+            groupedNotifications.older.forEach((n) => result.push({ type: 'item', data: n, key: String(n.documentId || n.id || Math.random()) }));
         }
 
         return result;
     }, [groupedNotifications]);
 
-    const showActionError = (fallbackMessage, error) => {
+    const showActionError = (/** @type {string} */ fallbackMessage, /** @type {any} */ error) => {
         Alert.alert('Erreur', error?.response?.data?.error?.message || fallbackMessage);
     };
 
-    const handlePressNotification = useCallback(async (notification) => {
+    const handlePressNotification = useCallback(async (/** @type {NotificationItem} */ notification) => {
         try {
-            await markAsRead(notification.documentId);
+            await markAsRead(String(notification.documentId || notification.id || ''));
         } catch (error) {
             showActionError("Impossible de marquer la notification comme lue.", error);
         }
@@ -115,14 +122,14 @@ const NotificationList = () => {
         const destination = resolveNotificationDestination(payload);
 
         if (destination?.route) {
-            navigation.navigate(destination.route, destination.params || {});
+            nav.navigate(destination.route, destination.params || {});
             return;
         }
 
-        navigation.navigate(RouteNames.NotificationList);
-    }, [markAsRead, navigation]);
+        nav.navigate(RouteNames.NotificationList);
+    }, [markAsRead, nav]);
 
-    const handleDelete = useCallback((notification) => {
+    const handleDelete = useCallback((/** @type {NotificationItem} */ notification) => {
         Alert.alert(
             'Supprimer',
             'Supprimer cette notification ?',
@@ -133,7 +140,7 @@ const NotificationList = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteNotification(notification.documentId);
+                            await deleteNotification(String(notification.documentId || notification.id || ''));
                         } catch (error) {
                             showActionError('Impossible de supprimer la notification.', error);
                         }
@@ -143,7 +150,7 @@ const NotificationList = () => {
         );
     }, [deleteNotification]);
 
-    const renderRightActions = useCallback((notification) => (
+    const renderRightActions = useCallback((/** @type {NotificationItem} */ notification) => (
         <TouchableOpacity
             onPress={() => handleDelete(notification)}
             style={{
@@ -159,11 +166,11 @@ const NotificationList = () => {
         </TouchableOpacity>
     ), [Colors, handleDelete]);
 
-    const renderLeftActions = useCallback((notification) => (
+    const renderLeftActions = useCallback((/** @type {NotificationItem} */ notification) => (
         <TouchableOpacity
             onPress={async () => {
                 try {
-                    await markAsRead(notification.documentId);
+                    await markAsRead(String(notification.documentId || notification.id || ''));
                 } catch (error) {
                     showActionError('Impossible de marquer comme lu.', error);
                 }
@@ -181,7 +188,7 @@ const NotificationList = () => {
         </TouchableOpacity>
     ), [Colors, markAsRead]);
 
-    const renderItem = useCallback(({ item, index }) => {
+    const renderItem = useCallback((/** @type {{ item: NotificationSectionItem; index: number }} */ { item, index }) => {
         if (item.type === 'header') {
             return (
                 <Animated.View
@@ -250,7 +257,7 @@ const NotificationList = () => {
                                     {notification.title}
                                 </Text>
                                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginLeft: 8 }]}>
-                                    {getRelativeTime(notification.createdAt)}
+                                    {getRelativeTime(notification.createdAt || new Date())}
                                 </Text>
                             </View>
                             <Text
@@ -290,10 +297,13 @@ const NotificationList = () => {
         <ScreenContainer
             bgImage="bg2"
             contentContainerStyle={[Spaces.padding[16]]}
-            title="Notifications"
-            onBack={() => navigation.goBack()}
-            rightAction={
-                unreadCount > 0 ? (
+        >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <TouchableOpacity onPress={() => nav.goBack()}>
+                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Retour</Text>
+                </TouchableOpacity>
+                <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Notifications</Text>
+                {unreadCount > 0 ? (
                     <TouchableOpacity
                         onPress={async () => {
                             try {
@@ -305,9 +315,8 @@ const NotificationList = () => {
                     >
                         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Tout lire</Text>
                     </TouchableOpacity>
-                ) : null
-            }
-        >
+                ) : <View style={{ width: 56 }} />}
+            </View>
             <FlatList
                 data={sections}
                 renderItem={renderItem}
@@ -318,7 +327,7 @@ const NotificationList = () => {
                 onEndReached={handleEndReached}
                 onEndReachedThreshold={0.3}
                 ListEmptyComponent={
-                    !isLoading && (
+                    !isLoading ? (
                         <View style={{ alignItems: 'center', marginTop: 60 }}>
                             <Text style={{ fontSize: 48, marginBottom: 16 }}>🔔</Text>
                             <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
@@ -328,7 +337,7 @@ const NotificationList = () => {
                                 Les nouvelles notifications apparaitront ici
                             </Text>
                         </View>
-                    )
+                    ) : null
                 }
                 ListFooterComponent={
                     isFetchingNextPage ? (

@@ -19,7 +19,17 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getMultisportClubById, getCMClubs, deleteCMSection } from '@/services/multisportClub/multisportClubService';
 
 /**
+ * @typedef {{ url?: string }} ImageAsset
+ * @typedef {{ documentId?: string }} CMAdmin
+ * @typedef {{ title?: string; link?: string; logo?: ImageAsset }} CMSponsor
+ * @typedef {{ teams?: number; members?: number }} CMSectionStats
+ * @typedef {{ documentId?: string; name?: string; sport?: string; logoUrl?: string; stats?: CMSectionStats }} CMSectionRow
+ * @typedef {{ documentId?: string; name?: string; logo?: ImageAsset; addressDetails?: string; phoneNumber?: string; email?: string; sponsor?: CMSponsor[]; admins?: CMAdmin[] }} CMMultisport
+ */
+
+/**
  * CM Dashboard - Main management screen for Dirigeant Omnisport
+ * @param {{ navigation: any; route: { params?: { cmId?: string } } }} props
  */
 function CMDashboard({ navigation, route }) {
   const { cmId } = route?.params ?? {};
@@ -33,28 +43,36 @@ function CMDashboard({ navigation, route }) {
 
   // Fetch CM details
   const {
-    data: cm,
+    data: cmData,
     error: cmError,
     isLoading: cmLoading,
     refetch: refetchCM,
   } = useQuery({
     queryKey: ['multisport-club', cmId],
-    queryFn: () => getMultisportClubById(cmId),
+    queryFn: () => {
+      if (!cmId) return Promise.resolve(null);
+      return getMultisportClubById(cmId);
+    },
     enabled: !!cmId,
   });
 
   // Fetch sections with stats
   const {
-    data: sectionsData,
+    data: sectionsDataRaw,
     error: sectionsError,
     isLoading: sectionsLoading,
     refetch: refetchSections,
   } = useQuery({
     queryKey: ['cm-clubs', cmId],
-    queryFn: () => getCMClubs(cmId),
+    queryFn: () => {
+      if (!cmId) return Promise.resolve({ data: [] });
+      return getCMClubs(cmId);
+    },
     enabled: !!cmId,
   });
 
+  const cm = /** @type {CMMultisport | null | undefined} */ (cmData);
+  const sectionsData = /** @type {{ data?: CMSectionRow[] } | undefined} */ (sectionsDataRaw);
   const sections = sectionsData?.data || [];
   const isLoading = cmLoading || sectionsLoading;
   const error = cmError || sectionsError;
@@ -68,7 +86,7 @@ function CMDashboard({ navigation, route }) {
   const globalStats = useMemo(() => {
     let totalTeams = 0;
     let totalMembers = 0;
-    sections.forEach((section) => {
+    sections.forEach((/** @type {CMSectionRow} */ section) => {
       totalTeams += section.stats?.teams || 0;
       totalMembers += section.stats?.members || 0;
     });
@@ -80,9 +98,10 @@ function CMDashboard({ navigation, route }) {
   }, [sections]);
 
   /**
-   * @param {object} section
+   * @param {CMSectionRow} section
    */
   const handleSectionPress = (section) => {
+    if (!section?.documentId) return;
     navigation.navigate(RouteNames.ClubStack, {
       screen: RouteNames.Club,
       params: { clubId: section.documentId },
@@ -98,7 +117,10 @@ function CMDashboard({ navigation, route }) {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: (sectionId) => deleteCMSection(cmId, sectionId),
+    mutationFn: (/** @type {string} */ sectionId) => {
+      if (!cmId) throw new Error('Missing cmId');
+      return deleteCMSection(cmId, sectionId);
+    },
     onSuccess: () => {
       refetchSections();
       Alert.alert(t('common.actions.delete'), t('multisport.sectionDeleted'));
@@ -112,7 +134,7 @@ function CMDashboard({ navigation, route }) {
     navigation.navigate(RouteNames.AddSponsor, { cmId });
   }, [navigation, cmId]);
 
-  const handleDeleteSection = (section) => {
+  const handleDeleteSection = (/** @type {CMSectionRow} */ section) => {
     Alert.alert(
       t('multisport.deleteSectionTitle'),
       t('multisport.deleteSectionConfirm', { name: section.name }),
@@ -121,13 +143,17 @@ function CMDashboard({ navigation, route }) {
         {
           text: t('common.actions.delete'),
           style: 'destructive',
-          onPress: () => deleteMutation.mutate(section.documentId),
+          onPress: () => {
+            if (section.documentId) {
+              deleteMutation.mutate(section.documentId);
+            }
+          },
         },
       ],
     );
   };
 
-  const isCmAdmin = cm?.admins?.some(admin => admin.documentId === userData?.documentId);
+  const isCmAdmin = cm?.admins?.some((admin) => admin.documentId === userData?.documentId);
 
   return (
     <ScreenContainer
@@ -254,7 +280,7 @@ function CMDashboard({ navigation, route }) {
           </View>
 
           {/* Sponsors */}
-          {(cm?.sponsor?.length > 0 || isCmAdmin) && (
+          {((cm?.sponsor?.length ?? 0) > 0 || isCmAdmin) && (
             <View style={[Spaces.gap[16]]}>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween]}>
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>
@@ -274,7 +300,7 @@ function CMDashboard({ navigation, route }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={[Spaces.gap[16]]}
               >
-                {cm?.sponsor?.map((sponsor, idx) => (
+                {cm?.sponsor?.map((/** @type {CMSponsor} */ sponsor, idx) => (
                   <TouchableOpacity
                     key={sponsor.link || idx}
                     onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
@@ -386,7 +412,7 @@ function CMDashboard({ navigation, route }) {
               Mes sections ({sections.length})
             </Text>
             <View style={[Spaces.gap[12]]}>
-              {sections.map((section) => (
+              {sections.map((/** @type {CMSectionRow} */ section) => (
                 <TouchableOpacity
                   key={section.documentId}
                   onPress={() => handleSectionPress(section)}
@@ -408,7 +434,7 @@ function CMDashboard({ navigation, route }) {
                     />
                   ) : (
                     <TeamShield
-                      initials={getClubInitials(section.name)}
+                      initials={getClubInitials(section.name || '')}
                       isSmall
                     />
                   )}

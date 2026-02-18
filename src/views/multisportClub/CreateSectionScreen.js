@@ -16,8 +16,22 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { createCMSection, getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 import { getActivities } from '@/services/activity/activityService';
 
+/** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
+/**
+ * @typedef {object} SectionPayload
+ * @property {string} name
+ * @property {(string | number | null)[]} [activites]
+ * @property {string} [addressLabel]
+ * @property {string | number | null} [coordinates]
+ * @property {string} [managerPhone]
+ */
+
 /**
  * Create Section - Form to create a new club section under a MultisportClub
+ * @param {{
+ *  navigation: import('@react-navigation/native').NavigationProp<any>;
+ *  route: { params?: { cmId?: string } };
+ * }} props
  */
 function CreateSectionScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};
@@ -28,17 +42,21 @@ function CreateSectionScreen({ navigation, route }) {
   const { t } = useTranslation();
 
   const [name, setName] = useState('');
-  const [selectedActivity, setSelectedActivity] = useState(null);
-  const [address, setAddress] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(
+    /** @type {Option | null} */ (null),
+  );
+  const [address, setAddress] = useState(
+    /** @type {Option | undefined} */ (undefined),
+  );
   const [managerPhone, setManagerPhone] = useState('');
 
   // Fetch activities
   const { data: activities = [] } = useQuery({
     queryKey: ['activities'],
     queryFn: getActivities,
-    select: (data) => data.map((act) => ({
-      label: act.name,
-      value: act.documentId,
+    select: (data) => (Array.isArray(data) ? data : []).map((act) => ({
+      label: act?.name || '',
+      value: act?.documentId || '',
     })),
   });
 
@@ -69,7 +87,7 @@ function CreateSectionScreen({ navigation, route }) {
   }, [cmDetails, address]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => createCMSection(cmId, data),
+    mutationFn: (/** @type {SectionPayload} */ data) => createCMSection(cmId || '', data),
     onSuccess: (result) => {
       Alert.alert(
         'Section créée',
@@ -83,9 +101,12 @@ function CreateSectionScreen({ navigation, route }) {
       );
     },
     onError: (error) => {
+      const message = error && typeof error === 'object' && 'message' in error
+        ? error.message
+        : 'Une erreur est survenue lors de la création de la section.';
       Alert.alert(
         'Erreur',
-        error?.message || 'Une erreur est survenue lors de la création de la section.',
+        typeof message === 'string' ? message : 'Une erreur est survenue lors de la création de la section.',
       );
     },
   });
@@ -111,7 +132,7 @@ function CreateSectionScreen({ navigation, route }) {
     });
   };
 
-  const isValid = name.trim().length > 0 && address?.label;
+  const isValid = name.trim().length > 0 && !!address?.label;
 
   return (
     <ScreenContainer
@@ -179,7 +200,7 @@ function CreateSectionScreen({ navigation, route }) {
               </Text>
               <AutocompleteAddressInput
                 address={address}
-                setAddress={setAddress}
+                setAddress={(value) => setAddress(value)}
                 placeholder="Ex: 10 rue de Paris..."
               />
             </View>

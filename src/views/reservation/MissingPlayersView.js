@@ -1,8 +1,7 @@
-import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { startOfDay, isBefore, differenceInHours } from 'date-fns';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -15,11 +14,16 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetReservations } from '@/services/reservation/reservationQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-import useAuth from '@/domains/auth/useAuth';
+
+/** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
+/** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
 
 /**
  * MissingPlayersView - Lists reservations that need players (bookingStatus === 'shared')
  * Prioritizes last-minute alerts and sorts by urgency
+ */
+/**
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
  */
 function MissingPlayersView({ navigation }) {
   const { t } = useTranslation();
@@ -32,11 +36,9 @@ function MissingPlayersView({ navigation }) {
     Spaces,
   } = useTheme();
 
-  const { userData } = useAuth();
-  
   // State for JoinEventModal
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(undefined);
+  const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
 
   // Fetch reservations with shared status
   const {
@@ -66,15 +68,16 @@ function MissingPlayersView({ navigation }) {
 
   // Filter and sort reservations by urgency
   const sharedReservations = useMemo(() => {
-    const allReservations = requestPages?.pages
-      ?.reduce((acc, page) => {
+    const pages = /** @type {ReservationPages} */ (requestPages || {});
+    const allReservations = pages?.pages
+      ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
         const items = page?.data || [];
         return acc.concat(items);
       }, [])
       || [];
 
     // Filter only shared reservations (looking for players)
-    const shared = allReservations.filter((reservation) => {
+    const shared = allReservations.filter((/** @type {FCEvent & { bookingStatus?: string; reservationMode?: string; missingPlayers?: number }} */ reservation) => {
       const isShared = reservation?.bookingStatus === 'shared' || reservation?.reservationMode === 'RECRUITING';
       const hasMissingPlayers = reservation?.missingPlayers > 0;
       const isFuture = reservation?.date && !isBefore(new Date(reservation.date), new Date());
@@ -82,7 +85,7 @@ function MissingPlayersView({ navigation }) {
     });
 
     // Sort by urgency: SOS first, then by date proximity
-    return shared.sort((a, b) => {
+    return shared.sort((/** @type {any} */ a, /** @type {any} */ b) => {
       // SOS alerts first
       if (a.isLastMinuteAlert && !b.isLastMinuteAlert) return -1;
       if (!a.isLastMinuteAlert && b.isLastMinuteAlert) return 1;
@@ -95,13 +98,13 @@ function MissingPlayersView({ navigation }) {
   }, [requestPages]);
 
   // Handlers
-  const handleCardPress = useCallback((item) => {
+  const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
       navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: item.documentId } });
     }
   }, [navigation]);
 
-  const handleJoinEvent = useCallback((event) => {
+  const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
   }, []);
@@ -117,10 +120,13 @@ function MissingPlayersView({ navigation }) {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const renderItem = useCallback(({ item }) => {
+  const renderItem = useCallback((/** @type {{ item: FCEvent }} */ { item }) => {
     return (
       <EventCardNew
         item={item}
+        onDecline={() => {}}
+        onJoin={() => {}}
+        onLogin={() => {}}
         onParticipate={() => handleJoinEvent(item)}
         onPress={handleCardPress}
       />
@@ -165,7 +171,7 @@ function MissingPlayersView({ navigation }) {
         </View>
         <View style={[styles.statBadge, styles.sosBadge]}>
           <Text style={styles.statNumber}>
-            {sharedReservations.filter(r => r.isLastMinuteAlert).length}
+            {sharedReservations.filter((/** @type {any} */ r) => r.isLastMinuteAlert).length}
           </Text>
           <Text style={styles.statLabel}>🔥 SOS urgents</Text>
         </View>
@@ -174,7 +180,7 @@ function MissingPlayersView({ navigation }) {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" title={t('reservation.missingPlayers.screenTitle', 'Joueurs manquants')}>
+    <ScreenContainer bgImage="bg2">
       <WithDataWrapper
         error={error?.message}
         isLoading={isLoading && !isFetchingNextPage}
@@ -184,7 +190,7 @@ function MissingPlayersView({ navigation }) {
           <FlashList
             data={sharedReservations}
             estimatedItemSize={220}
-            keyExtractor={(item) => item?.documentId || 'unknown'}
+            keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={renderEmptyList}
             ListHeaderComponent={renderHeader}
             ListFooterComponent={isFetchingNextPage ? (
@@ -197,13 +203,8 @@ function MissingPlayersView({ navigation }) {
             ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
-            refreshControl={
-              <RefreshControl
-                refreshing={isLoading && !isFetchingNextPage}
-                onRefresh={refetch}
-                tintColor={Colors.primary500}
-              />
-            }
+            onRefresh={refetch}
+            refreshing={isLoading && !isFetchingNextPage}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}

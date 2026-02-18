@@ -1,114 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import useTheme from '@/theme/themeContext';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import useTheme from '@/theme/themeContext';
 
 /**
- * SearchCountdown Component
- * Displays elapsed search time (no auto-expiration).
+ * SearchCountdown component.
+ * @param {{createdAt?: string | number | Date, serverNow?: string | number | Date | null, onExpired?: () => void}} props
+ * @returns {import('react').ReactElement}
  */
-const SearchCountdown = ({ createdAt }) => {
-    const { Colors, Fonts } = useTheme();
-    const [elapsed, setElapsed] = useState(null);
-    const leagueSurface = {
-        backgroundColor: 'rgba(10, 28, 43, 0.82)',
-        borderColor: 'rgba(1, 179, 244, 0.22)',
+const SearchCountdown = ({ createdAt, serverNow = null }) => {
+  const { Colors, Fonts } = useTheme();
+  const [elapsed, setElapsed] = useState(null);
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+
+  useEffect(() => {
+    if (!serverNow) {
+      setServerOffsetMs(0);
+      return;
+    }
+    const parsedServerNow = new Date(serverNow).getTime();
+    if (Number.isNaN(parsedServerNow)) return;
+    setServerOffsetMs(parsedServerNow - Date.now());
+  }, [serverNow]);
+
+  useEffect(() => {
+    if (!createdAt) {
+      setElapsed(null);
+      return undefined;
+    }
+
+    const updateElapsed = () => {
+      const created = new Date(createdAt).getTime();
+      if (Number.isNaN(created)) {
+        setElapsed(null);
+        return;
+      }
+
+      const diff = Math.max(0, (Date.now() + serverOffsetMs) - created);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setElapsed({ hours, minutes, seconds });
     };
 
-    useEffect(() => {
-        if (!createdAt) return;
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [createdAt, serverOffsetMs]);
 
-        const updateElapsed = () => {
-            const created = new Date(createdAt).getTime();
-            if (Number.isNaN(created)) {
-                setElapsed(null);
-                return;
-            }
+  const formatNumber = (num) => String(num).padStart(2, '0');
+  const displayHours = elapsed ? formatNumber(elapsed.hours) : '--';
+  const displayMinutes = elapsed ? formatNumber(elapsed.minutes) : '--';
+  const displaySeconds = elapsed ? formatNumber(elapsed.seconds) : '--';
 
-            const diff = Math.max(0, Date.now() - created);
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return (
+    <LeagueCard
+      style={[
+        styles.container,
+        {
+          backgroundColor: Colors.neutral800,
+          borderColor: Colors.primary500,
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <Text style={{ color: Colors.neutral00, fontSize: 16, marginRight: 8 }}>{'\u23F1'}</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+          TEMPS DE RECHERCHE
+        </Text>
+      </View>
 
-            setElapsed({ hours, minutes, seconds });
-        };
+      <View style={styles.timerRow}>
+        <View style={styles.timerBlock}>
+          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+            {displayHours}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>H</Text>
+        </View>
 
-        updateElapsed();
-        const interval = setInterval(updateElapsed, 1000);
-        return () => clearInterval(interval);
-    }, [createdAt]);
+        <Text style={[styles.separator, { color: Colors.primary500 }]}>:</Text>
 
-    if (!elapsed) return null;
+        <View style={styles.timerBlock}>
+          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+            {displayMinutes}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>M</Text>
+        </View>
 
-    const formatNumber = (num) => String(num).padStart(2, '0');
+        <Text style={[styles.separator, { color: Colors.primary500 }]}>:</Text>
 
-    return (
-        <LeagueCard style={[styles.container, leagueSurface]}>
-            <View style={styles.header}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>⏱️</Text>
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                    TEMPS DE RECHERCHE
-                </Text>
-            </View>
-
-            <View style={styles.timerRow}>
-                <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
-                        {formatNumber(elapsed.hours)}
-                    </Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>H</Text>
-                </View>
-
-                <Text style={[styles.separator, { color: Colors.primary500 || '#01B3F4' }]}>:</Text>
-
-                <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
-                        {formatNumber(elapsed.minutes)}
-                    </Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>M</Text>
-                </View>
-
-                <Text style={[styles.separator, { color: Colors.primary500 || '#01B3F4' }]}>:</Text>
-
-                <View style={styles.timerBlock}>
-                    <Text style={[styles.timerValue, { color: Colors.primary500 || '#01B3F4' }]}>
-                        {formatNumber(elapsed.seconds)}
-                    </Text>
-                    <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>S</Text>
-                </View>
-            </View>
-        </LeagueCard>
-    );
+        <View style={styles.timerBlock}>
+          <Text style={[styles.timerValue, { color: Colors.primary500 }]}>
+            {displaySeconds}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>S</Text>
+        </View>
+      </View>
+    </LeagueCard>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-        paddingVertical: 16,
-        marginBottom: 16,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    timerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    timerBlock: {
-        alignItems: 'center',
-        marginHorizontal: 4,
-    },
-    timerValue: {
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
-    separator: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginHorizontal: 2,
-    },
+  container: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 16,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  separator: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginHorizontal: 2,
+  },
+  timerBlock: {
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  timerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  timerValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
 });
 
 export default SearchCountdown;

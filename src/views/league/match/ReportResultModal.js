@@ -4,18 +4,26 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
+/**
+ * @param {{
+ *  visible: boolean,
+ *  onClose: () => void,
+ *  onSubmit: (payload: { scoreA: number, scoreB: number, photo: import('react-native-image-picker').Asset | null }) => void,
+ *  isLoading?: boolean,
+ * }} props
+ */
 const ReportResultModal = ({ visible, onClose, onSubmit, isLoading }) => {
     const { Colors, Fonts, Spaces } = useTheme();
     const [scoreA, setScoreA] = useState('');
     const [scoreB, setScoreB] = useState('');
-    const [photo, setPhoto] = useState(null);
+    const [photo, setPhoto] = useState(/** @type {import('react-native-image-picker').Asset | null} */ (null));
 
     const handlePhoto = async () => {
-        const options = {
+        const options = /** @type {import('react-native-image-picker').ImageLibraryOptions} */ ({
             mediaType: 'photo',
             includeBase64: false,
             quality: 0.8,
-        };
+        });
         // For simplicity using library, but could be camera
         const result = await launchImageLibrary(options);
         if (result.assets && result.assets.length > 0) {
@@ -82,7 +90,7 @@ const ReportResultModal = ({ visible, onClose, onSubmit, isLoading }) => {
 
                     <TouchableOpacity onPress={handlePhoto} style={styles.photoBox}>
                         {photo ? (
-                            <Image source={{ uri: photo.uri }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />
+                            <Image source={{ uri: photo.uri || '' }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />
                         ) : (
                             <Text style={[Fonts.p2, { color: Colors.primary500 }]}>+ Add Match Sheet (Photo)</Text>
                         )}

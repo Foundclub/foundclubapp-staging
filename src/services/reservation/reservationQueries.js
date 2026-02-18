@@ -12,8 +12,14 @@ import {
  *   pageSize?: number;
  *   q?: string;
  *   type?: string;
- *   reservationMode?: string;
- *   club?: string;
+  *   reservationMode?: string;
+  *   club?: string;
+ *   activity?: string;
+ *   geohash?: string;
+ *   maxPricePerPerson?: number;
+ *   startTime?: string;
+ *   startDateAfter?: string;
+ *   startDateBefore?: string;
  * }} filters
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult}
  */

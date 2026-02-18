@@ -45,6 +45,11 @@ import { useGetTeam } from '@/services/team/teamQueries';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 /**
+ * @typedef {{ teamId: string; teamName: string }} FFBBTeamOption
+ * @typedef {{ message?: string; response?: { data?: { code?: string; remainingSeconds?: number } } }} ApiError
+ */
+
+/**
  * Team details screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Team details screen component
@@ -73,17 +78,30 @@ function TeamDetails({ navigation, route }) {
   } = useGetTeam(teamId);
 
   const [activeTab, setActiveTab] = useState('infos');
-  const [selectedRound, setSelectedRound] = useState(null);
+  const [selectedRound, setSelectedRound] = useState(/** @type {string | number | null} */ (null));
   
   // FFBB Modal states
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
   const [showFFBBTeamModal, setShowFFBBTeamModal] = useState(false);
   const [showFFBBErrorModal, setShowFFBBErrorModal] = useState(false);
   const [ffbbUrl, setFfbbUrl] = useState('');
-  const [ffbbTeamsList, setFfbbTeamsList] = useState([]);
+  const [ffbbTeamsList, setFfbbTeamsList] = useState(/** @type {FFBBTeamOption[]} */ ([]));
   const [ffbbLoading, setFfbbLoading] = useState(false);
   const [ffbbErrorType, setFfbbErrorType] = useState('wrong_data');
   const [ffbbErrorDescription, setFfbbErrorDescription] = useState('');
+
+  /**
+   * @param {unknown} error
+   * @param {string} [fallback]
+   * @returns {string}
+   */
+  const getErrorMessage = (error, fallback = 'Erreur') => {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      return error.message;
+    }
+    if (typeof error === 'string') return error;
+    return fallback;
+  };
 
   const allMembers = useMemo(() => {
     const allTrainers = team?.trainers || [];
@@ -123,7 +141,8 @@ function TeamDetails({ navigation, route }) {
   });
 
   const removePlayerMutation = useMutation({
-    mutationFn: ({ teamId, playerId }) => removePlayerFromTeam(teamId, playerId),
+    mutationFn: (/** @type {{ teamId: string; playerId: string }} */ payload) =>
+      removePlayerFromTeam(payload.teamId, payload.playerId),
     onSuccess: () => {
       refetch();
     },
@@ -135,15 +154,15 @@ function TeamDetails({ navigation, route }) {
       Alert.alert(t('common.success'), t('teamDetails.alerts.scrapingSuccess.description', 'Classement mis à jour avec succès.'));
       refetch();
     },
-    onError: (err) => {
-        // Handle rate limiting
-        if (err?.response?.data?.code === 'RATE_LIMITED') {
-          const seconds = err.response.data.remainingSeconds || 0;
-          Alert.alert(t('common.error'), t('teamDetails.ffbb.rateLimit', `Veuillez patienter ${seconds} secondes.`));
-        } else {
-          Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', 'Erreur lors de la mise à jour : ' + err.message));
-        }
-    }
+    onError: (/** @type {ApiError} */ err) => {
+      const apiError = err;
+      if (apiError?.response?.data?.code === 'RATE_LIMITED') {
+        const seconds = apiError.response.data.remainingSeconds || 0;
+        Alert.alert(t('common.error'), t('teamDetails.ffbb.rateLimit', `Veuillez patienter ${seconds} secondes.`));
+      } else {
+        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise à jour : ${getErrorMessage(apiError)}`));
+      }
+    },
   });
 
   // Handler for FFBB URL configuration
@@ -158,7 +177,7 @@ function TeamDetails({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('common.error'),
-        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + (error?.message || error)
+        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(error)
       );
     } finally {
       setFfbbLoading(false);
@@ -166,7 +185,7 @@ function TeamDetails({ navigation, route }) {
   };
 
   // Handler for FFBB team selection
-  const handleSelectFFBBTeam = async (selectedTeam) => {
+  const handleSelectFFBBTeam = async (/** @type {FFBBTeamOption} */ selectedTeam) => {
     if (!teamId) return;
     try {
       await selectTeamFFBBTeam(teamId, selectedTeam.teamId, selectedTeam.teamName);
@@ -174,7 +193,7 @@ function TeamDetails({ navigation, route }) {
       refetch();
       Alert.alert(t('common.success'), t('teamDetails.ffbb.teamSelected', 'Équipe associée avec succès!'));
     } catch (error) {
-      Alert.alert(t('common.error'), error?.message || 'Erreur');
+      Alert.alert(t('common.error'), getErrorMessage(error));
     }
   };
 
@@ -192,7 +211,7 @@ function TeamDetails({ navigation, route }) {
       setFfbbErrorDescription('');
       Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoyé, merci!'));
     } catch (error) {
-      Alert.alert(t('common.error'), error?.message || 'Erreur');
+      Alert.alert(t('common.error'), getErrorMessage(error));
     } finally {
       setFfbbLoading(false);
     }
@@ -241,7 +260,8 @@ function TeamDetails({ navigation, route }) {
   }, [currentUser, teamId]);
 
   const handleJoinTeam = useCallback(() => {
-    if (teamId && currentUser?.documentId) {
+    const userId = currentUser?.documentId;
+    if (teamId && userId) {
       Alert.alert(
         t('teamDetails.alerts.joinRequest.title'),
         t('teamDetails.alerts.joinRequest.description'),
@@ -254,7 +274,7 @@ function TeamDetails({ navigation, route }) {
             onPress: () => {
               createTeamMembershipRequestMutation.mutate({
                 team: teamId,
-                user: currentUser.documentId,
+                user: userId,
               });
             },
             text: t('common.actions.confirm'),
@@ -286,7 +306,7 @@ function TeamDetails({ navigation, route }) {
     );
   }, [t, handleLeaveTeam]);
 
-  const handleUserPress = (user) => {
+  const handleUserPress = (/** @type {User} */ user) => {
     if (user?.documentId) {
       if (user?.documentId === currentUser?.documentId) {
         navigation.navigate(RouteNames.ProfileStack);
@@ -308,7 +328,7 @@ function TeamDetails({ navigation, route }) {
     }
   };
 
-  const handleDeleteTrainer = (trainerId) => {
+  const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
       t('teamDetails.alerts.deleteTrainer.title'),
       t('teamDetails.alerts.deleteTrainer.description'),
@@ -326,7 +346,7 @@ function TeamDetails({ navigation, route }) {
     );
   };
 
-  const handleRemovePlayer = (playerId) => {
+  const handleRemovePlayer = (/** @type {string} */ playerId) => {
     Alert.alert(
       t('teamDetails.alerts.removePlayer.title', 'Supprimer le joueur'),
       t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'équipe ?'),
@@ -337,8 +357,9 @@ function TeamDetails({ navigation, route }) {
         },
         {
           onPress: () => {
-            if (teamId) {
-              removePlayerMutation.mutate({ teamId, playerId });
+            const currentTeamId = teamId;
+            if (currentTeamId) {
+              removePlayerMutation.mutate({ teamId: currentTeamId, playerId });
             }
           },
           text: t('common.actions.confirm'),
@@ -362,7 +383,7 @@ function TeamDetails({ navigation, route }) {
     }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam])
   );
 
-  const renderTab = (key, label) => {
+  const renderTab = (/** @type {string} */ key, /** @type {string} */ label) => {
       const isActive = activeTab === key;
       return (
           <TouchableOpacity
@@ -567,7 +588,7 @@ function TeamDetails({ navigation, route }) {
               Spaces.paddingBottom[24],
             ]}
           >
-            {(team?.club?.sponsor?.length > 0) && (
+            {((team?.club?.sponsor?.length ?? 0) > 0) && (
               <ScrollView
                 contentContainerStyle={[Spaces.gap[16]]}
                 horizontal
@@ -874,7 +895,7 @@ function TeamDetails({ navigation, route }) {
                                             return (
                                                 <TouchableOpacity
                                                     key={round}
-                                                    onPress={() => setSelectedRound(round)}
+                                                    onPress={() => setSelectedRound(round ?? null)}
                                                     style={[
                                                         Spaces.paddingVertical[8],
                                                         Spaces.paddingHorizontal[16],
@@ -964,7 +985,7 @@ function TeamDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       <View style={[Alignments.row, Spaces.gap[16]]}>
-        {canManageTeam && isMyClub && (isMyTeam || canEditClub(team?.club?.documentId)) && (
+        {canManageTeam && isMyClub && (isMyTeam || (team?.club?.documentId ? canEditClub(team.club.documentId) : false)) && (
           <Button
             onPress={handleEditTeam}
             style={[Alignments.fill, Spaces.paddingHorizontal[16]]}

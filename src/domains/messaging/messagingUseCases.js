@@ -26,8 +26,10 @@ export const getUnreadStatus = (
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object
+ * @param {MultisportClubRef} [params.chatMultisportClub] - The multisport club object
  * @param {User[]} [params.chatParticipants] - Array of chat participants
  * @param {Team} [params.chatTeam] - The chat team object
+ * @param {LeagueMatch} [params.chatLeagueMatch] - League match linked to chat
  * @param {string} params.chatType - The type of chat (e.g., 'club', 'team', 'whisper')
  * @param {string} [params.meId] - The ID of the current user
  * @returns {string} The generated conversation name

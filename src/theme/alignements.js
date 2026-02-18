@@ -61,7 +61,15 @@ const alignements = {
   alignStretch: {
     alignItems: positions.stretch,
   },
+  // compatibility aliases
+  center: {
+    alignItems: positions.center,
+    justifyContent: positions.center,
+  },
   // align-self
+  selfStart: {
+    alignSelf: positions.start,
+  },
   selfCenter: {
     alignSelf: positions.center,
   },
@@ -81,12 +89,20 @@ const alignements = {
   justifySpaceBetween: {
     justifyContent: positions.between,
   },
+  spaceBetween: {
+    justifyContent: positions.between,
+  },
   justifyStart: {
     justifyContent: positions.start,
   },
   // flex and flex-grow
   fill: {
     flex: 1,
+  },
+  mainCenter: {
+    alignItems: positions.center,
+    flex: 1,
+    justifyContent: positions.center,
   },
   grow1: {
     flexGrow: 1,

@@ -25,6 +25,9 @@ const DAYS = [
  * @param {object} props
  * @param {(slot: { day: string, startTime: string, endTime: string }) => void} props.onAdd
  * @param {() => void} props.onCancel
+ * @param {{ day?: string, startTime?: string, endTime?: string } | null} [props.initialValues]
+ * @param {() => void} [props.onDelete]
+ * @param {(draft: { isValid: boolean, slot: { day: string, startTime: string, endTime: string } | null }) => void} [props.onDraftChange]
  */
 const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraftChange }) => {
   const { Colors, Fonts } = useTheme();
@@ -63,10 +66,18 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
 
+  /**
+   * @param {Date} date
+   * @returns {string}
+   */
   const formatTime = (date) => {
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
+  /**
+   * @param {'hour' | 'minute'} type
+   * @param {number} value
+   */
   const handleStartTimeChange = (type, value) => {
     const newStart = new Date(startTimeDate);
     if (type === 'hour') newStart.setHours(value);
@@ -82,6 +93,10 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
     }
   };
 
+  /**
+   * @param {'hour' | 'minute'} type
+   * @param {number} value
+   */
   const handleEndTimeChange = (type, value) => {
       const newEnd = new Date(endTimeDate);
       if (type === 'hour') newEnd.setHours(value);
@@ -104,11 +119,12 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
 
   useEffect(() => {
     if (!onDraftChange) return;
+    const selectedDayValue = selectedDay?.value;
     onDraftChange({
       isValid: Boolean(isFormValid),
-      slot: isFormValid
+      slot: isFormValid && selectedDayValue
         ? {
-            day: selectedDay.value,
+            day: selectedDayValue,
             endTime: formatTime(endTimeDate),
             startTime: formatTime(startTimeDate),
           }
@@ -131,7 +147,7 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
             <AutocompleteSelect
                 placeholder="Sélectionner un jour"
                 options={DAYS}
-                value={selectedDay?.label}
+                value={selectedDay?.label || ''}
                 setValue={setSelectedDay}
                 isSearchable={false}
             />

@@ -22,6 +22,12 @@ import { horizontalScale } from '@/theme/scaling';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 
+/** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
+/** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
+
+/**
+ * @param {{ showFilters?: boolean }} props
+ */
 function ReservationListContent({ showFilters = false }) {
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -39,10 +45,10 @@ function ReservationListContent({ showFilters = false }) {
   
   // State for JoinEventModal - SAME as EventListContent
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(undefined);
+  const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
   
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedActivity, setSelectedActivity] = useState(null); // Activity quick filter
+  const [selectedActivity, setSelectedActivity] = useState(/** @type {string | null} */ (null)); // Activity quick filter
   const [{ reservationFilters }, appDispatch] = useAppContext();
 
   // Activity options for quick filters
@@ -67,14 +73,14 @@ function ReservationListContent({ showFilters = false }) {
   });
 
   // Handlers - SAME as EventListContent
-  const handleCardPress = useCallback((item) => {
+  const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
       navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: item.documentId } });
     }
   }, [navigation]);
 
   // SAME as handleJoinEvent in EventListContent - opens the modal
-  const handleJoinEvent = useCallback((event) => {
+  const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
   }, []);
@@ -86,7 +92,7 @@ function ReservationListContent({ showFilters = false }) {
 
   const filterCount = useMemo(() => {
     if (!reservationFilters) return 0;
-    return Object.entries(reservationFilters).reduce((acc, [key, value]) => {
+    return Object.entries(reservationFilters).reduce((/** @type {number} */ acc, [key, value]) => {
       if (!value || (Array.isArray(value) && value.length === 0)) {
         return acc;
       }
@@ -124,9 +130,10 @@ function ReservationListContent({ showFilters = false }) {
   } = useGetFeaturedReservations();
 
   const featuredReservations = useMemo(() => {
-    if (featuredError || !featuredData?.data) return [];
+    const typedFeaturedData = /** @type {{ data?: any[] }} */ (featuredData || {});
+    if (featuredError || !typedFeaturedData.data) return [];
     try {
-      const items = featuredData.data;
+      const items = typedFeaturedData.data;
       if (!Array.isArray(items)) return [];
 
       let events = [];
@@ -136,11 +143,11 @@ function ReservationListContent({ showFilters = false }) {
         events = items;
       }
 
-      const validEvents = events.filter((event) => {
+      const validEvents = events.filter((/** @type {FCEvent} */ event) => {
         return event && typeof event === 'object' && (event.documentId || event.id);
       });
 
-      const futureEvents = validEvents.filter((event) => {
+      const futureEvents = validEvents.filter((/** @type {FCEvent} */ event) => {
         if (!event.date) return false;
         return !isBefore(new Date(event.date), startOfDay(new Date()));
       });
@@ -153,8 +160,9 @@ function ReservationListContent({ showFilters = false }) {
   }, [featuredData, featuredError]);
 
   const reservations = useMemo(() => {
-    const allReservations = requestPages?.pages
-      ?.reduce((acc, page) => {
+    const pages = /** @type {ReservationPages} */ (requestPages || {});
+    const allReservations = pages?.pages
+      ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
         const items = page?.data || [];
         return acc.concat(items);
       }, [])
@@ -172,14 +180,14 @@ function ReservationListContent({ showFilters = false }) {
     navigation.navigate(RouteNames.ReservationFilters);
   }, [navigation]);
 
-  const handleSearchField = useCallback((q) => {
+  const handleSearchField = useCallback((/** @type {string} */ q) => {
     appDispatch({
       payload: Object.assign(reservationFilters || {}, { q }),
       type: 'SET_RESERVATION_FILTERS',
     });
   }, [appDispatch, reservationFilters]);
 
-  const handleDateSelected = useCallback((date) => {
+  const handleDateSelected = useCallback((/** @type {Date} */ date) => {
     setSelectedDate(date);
     const start = startOfDay(date).toISOString();
     appDispatch({
@@ -193,10 +201,13 @@ function ReservationListContent({ showFilters = false }) {
     refetchFeatured();
   }, [refetch, refetchFeatured]);
 
-  const handleActivitySelect = useCallback((activitySlug) => {
+  const handleActivitySelect = useCallback((/** @type {string | null} */ activitySlug) => {
     setSelectedActivity(activitySlug);
   }, []);
 
+  /**
+   * @param {{ item: FCEvent }} param
+   */
   const renderItem = useCallback(({ item }) => {
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     
@@ -204,6 +215,9 @@ function ReservationListContent({ showFilters = false }) {
       <EventCardNew
         actionLabel={isManager ? t('eventList.actions.about') : undefined}
         item={item}
+        onDecline={() => {}}
+        onJoin={() => {}}
+        onLogin={() => {}}
         onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
         onPress={handleCardPress}
       />
@@ -265,12 +279,15 @@ function ReservationListContent({ showFilters = false }) {
               const cardWidth = Dimensions.get('window').width - horizontalScale(48);
               return (
                 <View key={item?.documentId || Math.random()} style={{ width: cardWidth }}>
-                  <EventCardNew
-                    actionLabel={isManager ? t('eventList.actions.about') : undefined}
-                    item={item}
-                    onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
-                    onPress={handleCardPress}
-                  />
+      <EventCardNew
+        actionLabel={isManager ? t('eventList.actions.about') : undefined}
+        item={item}
+        onDecline={() => {}}
+        onJoin={() => {}}
+        onLogin={() => {}}
+        onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
+        onPress={handleCardPress}
+      />
                 </View>
               );
             })}
@@ -346,7 +363,7 @@ function ReservationListContent({ showFilters = false }) {
           <FlashList
             data={reservations}
             estimatedItemSize={200}
-            keyExtractor={(item) => item?.documentId || 'unknown'}
+            keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={renderEmptyList}
             ListHeaderComponent={renderHeader}
             ListFooterComponent={isFetchingNextPage ? (

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Image, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -19,7 +19,6 @@ import {
 import Button from '@/components/atoms/button/Button';
 import {
     getMatchDerivedPhase,
-    isMatchPastStart,
     isMatchPastEnd,
     normalizeMatchStatus,
     shouldMaskOpponentIdentity,
@@ -29,6 +28,10 @@ import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavig
 
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 
+/**
+ * @param {LeagueMatch | null} match
+ * @returns {string}
+ */
 const resolveAddressLabel = (match) => {
     const location = match?.location;
     if (typeof location === 'string') return location;
@@ -38,15 +41,44 @@ const resolveAddressLabel = (match) => {
     return match?.address || '';
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const normalizeComparableLabel = (value) => String(value || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
 
+/**
+ * @param {unknown} sportValue
+ * @returns {number}
+ */
+const getRequiredPlayersForSport = (sportValue) => {
+    const normalized = String(sportValue || '').trim().toLowerCase();
+    if (normalized.includes('padel')) return 2;
+    return 5;
+};
+
+/**
+ * @param {{
+ *  match: LeagueMatch,
+ *  event?: any,
+ *  myTeamId?: string | null,
+ *  onRefresh?: (() => void) | undefined,
+ *  onPress?: (() => void) | undefined,
+ * }} props
+ */
 const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const { Colors, Fonts, Images: ThemeImages } = useTheme();
-    const navigation = useNavigation();
-    const { userData } = useAuth();
+    const navigation = /** @type {any} */ (useNavigation());
+    const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+    const [now, setNow] = useState(() => new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 10000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Identify Teams
     // Safe chaining for team_a/team_b in case they are just IDs or partial objects
@@ -59,34 +91,36 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), getEntityDocumentId(userData));
 
     const normalizedStatus = normalizeMatchStatus(match?.status);
-    const derivedPhase = getMatchDerivedPhase(match, event);
+    const derivedPhase = getMatchDerivedPhase(match, event, now);
     const isAnonymous = shouldMaskOpponentIdentity(match, event);
     const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
     const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
-    const hasMatchStarted = isMatchPastStart(match, event);
-    const hasMatchEnded = isMatchPastEnd(match, event);
-    const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !hasMatchStarted;
+    const hasMatchEnded = isMatchPastEnd(match, event, now);
+    const canSubmitScoreByPhase = ['waiting_score', 'pending_validation', 'disputed'].includes(derivedPhase);
+    const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScoreByPhase;
 
     // Participations
     // SOT: use event.participations if available (Event Mode)
     // OR match.participations_a / match.participations_b (League Mode)
+    /** @type {User[]} */
     let participations = [];
     if (event && event.participations) {
-        participations = event.participations;
+        participations = /** @type {User[]} */ (event.participations);
     } else {
         // League Match Mode
-        participations = isTeamA ? (match.participations_a || []) : (match.participations_b || []);
+        participations = /** @type {User[]} */ (isTeamA ? (match.participations_a || []) : (match.participations_b || []));
     }
 
-    const myParticipation = participations.find((p) => areSameEntityId(getEntityDocumentId(p), getEntityDocumentId(userData)));
+    const myParticipation = participations.find((/** @type {User} */ p) => areSameEntityId(getEntityDocumentId(p), getEntityDocumentId(userData)));
     
     // Count confirmed
     const confirmedCount = participations.length; 
-    const isQuorumReached = confirmedCount >= 5;
+    const requiredPlayers = getRequiredPlayersForSport(myTeam?.sport);
+    const isQuorumReached = confirmedCount >= requiredPlayers;
 
     // Calculate hours until match
     const matchDate = new Date(event?.date || match?.date || new Date());
-    const hoursUntilMatch = (matchDate - new Date()) / (1000 * 60 * 60);
+    const hoursUntilMatch = (matchDate.getTime() - now.getTime()) / (1000 * 60 * 60);
     const matchAddressLabel = resolveAddressLabel(match);
     const venueLabel = match.venue || match.proposed_venue || "Lieu à définir";
     const showAddressDetails = Boolean(
@@ -150,12 +184,21 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
     // Handlers
     const handleConfirm = async () => {
         try {
+            const currentUserId = getEntityDocumentId(userData);
             if (event) {
                 // Event Mode
+                const eventId = getEntityDocumentId(event);
+                if (!currentUserId) {
+                    Alert.alert("Erreur", "Utilisateur introuvable");
+                    return;
+                }
+                if (!eventId) {
+                    Alert.alert("Erreur", "Evenement introuvable");
+                    return;
+                }
                 await createEventParticipation({
-                    event: event.documentId,
-                    user: userData.documentId,
-                    participationStatus: 'accepted' 
+                    event: eventId,
+                    user: currentUserId,
                 });
             } else {
                 // League Match Mode
@@ -165,29 +208,40 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             onRefresh && onRefresh();
         } catch (error) {
             console.error("Confirm participation error:", error);
-            Alert.alert("Erreur", error.response?.data?.error?.message || "Impossible de confirmer");
+            const apiError = /** @type {any} */ (error);
+            Alert.alert("Erreur", apiError?.response?.data?.error?.message || "Impossible de confirmer");
         }
     };
 
     const handleDecline = async () => {
         try {
             if (event) {
-                 await missingEvent(event.documentId);
+                 const eventId = getEntityDocumentId(event);
+                 if (!eventId) {
+                     Alert.alert("Erreur", "Evenement introuvable");
+                     return;
+                 }
+                 await missingEvent(eventId);
             } else {
                  await declineParticipation(getEntityDocumentId(match), isTeamA ? 'a' : 'b');
             }
             Alert.alert("Noté", "Absence notée.");
             onRefresh && onRefresh();
         } catch (error) {
-            console.error("Decline participation error:", error);
-            Alert.alert("Erreur", error.response?.data?.error?.message || "Impossible de décliner");
+            const apiError = /** @type {any} */ (error);
+            Alert.alert("Erreur", apiError?.response?.data?.error?.message || "Impossible de decliner");
         }
     };
 
     const handleMarkVenueBooked = async () => {
         try {
             if (event) {
-                await markEventVenueBooked(event.documentId);
+                const eventId = getEntityDocumentId(event);
+                if (!eventId) {
+                    Alert.alert("Erreur", "Evenement introuvable");
+                    return;
+                }
+                await markEventVenueBooked(eventId);
             } else {
                 await markLeagueMatchVenueBooked(getEntityDocumentId(match));
             }
@@ -241,7 +295,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
             activeOpacity={0.9}
         >
             <ImageBackground
-                source={BG_MATCH}
+                source={/** @type {any} */ (BG_MATCH)}
                 style={StyleSheet.absoluteFill}
                 imageStyle={{ borderRadius: 24 }}
                 resizeMode="cover"
@@ -387,7 +441,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                             if (isScoreLockedByTime) {
                                 Alert.alert(
                                     'Score indisponible',
-                                    "Vous pourrez saisir le score une fois l'heure de debut du match depassee."
+                                    "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute."
                                 );
                                 return;
                             }
@@ -402,21 +456,21 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                         ]}
                     >
                         <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
-                            {isScoreLockedByTime ? '⚽ SCORE VERROUILLE (AVANT DEBUT)' : '⚽ SAISIR LE SCORE'}
+                            {isScoreLockedByTime ? 'SCORE VERROUILLE (AVANT DEBUT + 1 MIN)' : 'SAISIR LE SCORE'}
                         </Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Attendance Gauge */}
                 <View style={styles.attendance}>
-                    <Text style={styles.attendanceTitle}>Presences joueurs confirmees ({confirmedCount}/5)</Text>
+                    <Text style={styles.attendanceTitle}>Presences joueurs confirmees ({confirmedCount}/{requiredPlayers})</Text>
                     <Text style={styles.attendanceHint}>
                         {isQuorumReached
                             ? "Quorum atteint. Equipe prete."
-                            : `Minimum requis: 5 joueurs. Il manque ${Math.max(5 - confirmedCount, 0)} joueur(s).`}
+                            : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
                     </Text>
                     <View style={styles.gaugeBg}>
-                        <View style={[styles.gaugeFill, { width: `${Math.min((confirmedCount/5)*100, 100)}%`, backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107' }]} />
+                        <View style={[styles.gaugeFill, { width: `${Math.min((confirmedCount / Math.max(requiredPlayers, 1)) * 100, 100)}%`, backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107' }]} />
                     </View>
                 </View>
 

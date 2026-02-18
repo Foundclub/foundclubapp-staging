@@ -29,6 +29,19 @@ import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert } from '@/services/searchAlert/searchAlertService';
 import { RouteNames } from '@/navigation/routeNames';
 
+/** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
+/** @typedef {{ createAlertMode?: boolean; editAlertMode?: boolean; alertLabel?: string; alertDocumentId?: string }} MercatoRouteParams */
+/** @typedef {{ title: string; content: string }} InfoModalContent */
+/**
+ * @typedef {import('@/store/types').MercatoFilters & {
+ *  city?: { label: string; value: string | number | null };
+ *  activity?: string | string[];
+ *  category?: string | string[];
+ *  position?: string | string[];
+ *  radius?: number | string;
+ * }} MercatoFiltersFormData
+ */
+
 const filtersSchema = Joi.object({
     activity: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
     category: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
@@ -37,12 +50,16 @@ const filtersSchema = Joi.object({
     position: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
 });
 
+/**
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
+ */
 function MercatoFilters({ navigation }) {
     const route = useRoute();
-    const createAlertMode = route.params?.createAlertMode || false;
-    const editAlertMode = route.params?.editAlertMode || false;
-    const initialAlertLabel = route.params?.alertLabel || '';
-    const alertDocumentId = route.params?.alertDocumentId;
+    const routeParams = /** @type {MercatoRouteParams} */ (route?.params || {});
+    const createAlertMode = routeParams.createAlertMode || false;
+    const editAlertMode = routeParams.editAlertMode || false;
+    const initialAlertLabel = routeParams.alertLabel || '';
+    const alertDocumentId = routeParams.alertDocumentId;
 
     const isAlertMode = createAlertMode || editAlertMode;
 
@@ -51,13 +68,15 @@ function MercatoFilters({ navigation }) {
     const [categorySearchValue, setCategorySearchValue] = useState('');
     const [positionSearchValue, setPositionSearchValue] = useState('');
     const [infoModalVisible, setInfoModalVisible] = useState(false);
-    const [infoModalContent, setInfoModalContent] = useState({ title: '', content: '' });
+    const [infoModalContent, setInfoModalContent] = useState(
+        /** @type {InfoModalContent} */ ({ title: '', content: '' }),
+    );
 
     // Alert State
     const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
     const [alertLabel, setAlertLabel] = useState('');
     const [isCreatingAlert, setIsCreatingAlert] = useState(false);
-    const [previewCount, setPreviewCount] = useState(null);
+    const [previewCount, setPreviewCount] = useState(/** @type {number | null} */ (null));
 
     // hooks
     const { t } = useTranslation();
@@ -92,7 +111,7 @@ function MercatoFilters({ navigation }) {
         setIsSaveModalVisible(true);
         // Fetch preview count
         try {
-            const currentFilters = getValues();
+            const currentFilters = /** @type {MercatoFiltersFormData} */ (getValues());
             const result = await getPreviewCount(currentFilters, 'mercato');
             setPreviewCount(result.count);
         } catch (error) {
@@ -175,6 +194,7 @@ function MercatoFilters({ navigation }) {
         if (!selectedActivityIds || selectedActivityIds.length === 0 || !allActivities) return [];
 
         const selectedIds = Array.isArray(selectedActivityIds) ? selectedActivityIds : [selectedActivityIds];
+        const positionsBySport = /** @type {Record<string, string[]>} */ (SPORTS_POSITIONS);
         const selectedNames = allActivities
             .filter((a) => selectedIds.includes(a.documentId))
             .map((a) => a.name);
@@ -182,9 +202,9 @@ function MercatoFilters({ navigation }) {
         const positions = new Set();
         selectedNames.forEach((name) => {
             // Find key case-insensitive
-            const key = Object.keys(SPORTS_POSITIONS).find((k) => k.toLowerCase() === name.toLowerCase());
+            const key = Object.keys(positionsBySport).find((k) => k.toLowerCase() === name.toLowerCase());
             if (key) {
-                SPORTS_POSITIONS[key].forEach((p) => positions.add(p));
+                positionsBySport[key].forEach((/** @type {string} */ p) => positions.add(p));
             }
         });
 
@@ -193,13 +213,17 @@ function MercatoFilters({ navigation }) {
 
 
 
+    /**
+     * @param {MercatoFiltersFormData} data
+     */
     const handleApplyFilters = (data) => {
         // format place params
-        const coordinates = data.city?.value?.split('|');
+        const cityValue = typeof data.city?.value === 'string' ? data.city.value : '';
+        const coordinates = cityValue ? cityValue.split('|') : undefined;
         const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
             parseFloat(coordinates[1]),
             parseFloat(coordinates[0]),
-            data.radius,
+            Number(data.radius || 0),
         ) : undefined;
 
         const payload = {
@@ -221,7 +245,7 @@ function MercatoFilters({ navigation }) {
 
     // Direct alert creation/update for createAlertMode
     const handleSaveAlert = async () => {
-        const currentFilters = getValues();
+        const currentFilters = /** @type {MercatoFiltersFormData} */ (getValues());
         
         // Validate city and radius
         if (!currentFilters.city?.value || !currentFilters.radius) {
@@ -243,7 +267,7 @@ function MercatoFilters({ navigation }) {
                 const alerts = existingAlerts.data || [];
                 let duplicateCount = 0;
                 
-                alerts.forEach((alert) => {
+                alerts.forEach((/** @type {{ label?: string }} */ alert) => {
                     if (alert.label === baseLabel || alert.label.startsWith(baseLabel + ' (')) {
                         duplicateCount++;
                     }
@@ -303,11 +327,19 @@ function MercatoFilters({ navigation }) {
         }
     };
 
+    /**
+     * @param {string} title
+     * @param {string} content
+     */
     const openInfoModal = (title, content) => {
         setInfoModalContent({ title, content });
         setInfoModalVisible(true);
     };
 
+    /**
+     * @param {string} label
+     * @param {string} infoKey
+     */
     const renderLabel = (label, infoKey) => (
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], Spaces.marginBottom[8]]}>
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{label}</Text>
@@ -385,11 +417,11 @@ function MercatoFilters({ navigation }) {
                         },
                     }) => (
                         <AutocompleteAddressInput
-                            address={value}
+                            address={value && typeof value === 'object' ? value : undefined}
                             error={getFieldError({ errors: formErrors, fieldName: 'address' })}
                             label={t('clubFilters.fields.city.label')}
                             placeholder={t('clubFilters.fields.city.placeholder')}
-                            setAddress={onChange}
+                            setAddress={(nextValue) => onChange(nextValue)}
                         />
                     )}
                 />
@@ -413,12 +445,11 @@ function MercatoFilters({ navigation }) {
                                 maximumValue={50}
                                 minimumTrackTintColor={Colors.primary500}
                                 minimumValue={20}
-                                onValueChange={onChange}
+                                onValueChange={(nextValue) => onChange(nextValue)}
                                 step={2}
                                 style={[Alignments.fullWidth, { height: 50 }]}
-                                tapToSeek
                                 thumbTintColor={Colors.primary500}
-                                value={value}
+                                value={Number(value || 20)}
                             />
                         </View>
                     )}
@@ -440,13 +471,15 @@ function MercatoFilters({ navigation }) {
                                 placeholder="Ex: Football, Tennis..."
                                 searchValue={activitySearchValue}
                                 setSearchValue={setActivitySearchValue}
-                                setValue={(/** @type {Option | undefined} */option) => {
-                                    const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                                setValue={(/** @type {Option | Option[] | undefined} */ option) => {
+                                    const val = Array.isArray(option)
+                                        ? option.map((o) => String(o.value))
+                                        : (option?.value ? [String(option.value)] : []);
                                     onChange(val);
                                     // Reset position when activity changes
                                     setValue('position', []);
                                 }}
-                                value={value}
+                                value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
                             />
                         </View>
                     )}
@@ -468,11 +501,13 @@ function MercatoFilters({ navigation }) {
                                 placeholder="Ex: U11, U13..."
                                 searchValue={categorySearchValue}
                                 setSearchValue={setCategorySearchValue}
-                                setValue={(/** @type {Option | undefined} */option) => {
-                                    const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                                setValue={(/** @type {Option | Option[] | undefined} */ option) => {
+                                    const val = Array.isArray(option)
+                                        ? option.map((o) => String(o.value))
+                                        : (option?.value ? [String(option.value)] : []);
                                     onChange(val);
                                 }}
-                                value={value}
+                                value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
                             />
                         </View>
                     )}
@@ -497,17 +532,19 @@ function MercatoFilters({ navigation }) {
                                         placeholder="Ex: Attaquant, Gardien..."
                                         searchValue={positionSearchValue}
                                         setSearchValue={setPositionSearchValue}
-                                        setValue={(/** @type {Option | undefined} */option) => {
-                                            const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
+                                        setValue={(/** @type {Option | Option[] | undefined} */ option) => {
+                                            const val = Array.isArray(option)
+                                                ? option.map((o) => String(o.value))
+                                                : (option?.value ? [String(option.value)] : []);
                                             onChange(val);
                                         }}
-                                        value={value}
+                                        value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
                                     />
                                 ) : (
                                     <Input
-                                        onChangeText={onChange}
+                                        onChangeText={(text) => onChange(text ? [text] : [])}
                                         placeholder="Ex: Attaquant"
-                                        value={value}
+                                        value={Array.isArray(value) ? (value[0] || '') : (value || '')}
                                     />
                                 )}
                             </View>

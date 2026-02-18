@@ -44,6 +44,8 @@ import SearchMap from '@/components/organisms/searchMap/SearchMap';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 
+/** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
+
 /**
  * Event list content to be used in home page or dedicated event list screen
  * @param {object} props
@@ -113,13 +115,13 @@ function EventListContent({
   const allCmIds = useMemo(() => [...new Set([...userCmIds, ...teamCmIds])], [userCmIds, teamCmIds]);
 
   const featuredEventsConfig = useMemo(() => {
-    const config = {
+    const config = /** @type {Record<string, any>} */ ({
       ...(showFilters ? eventFilters : {}),
       ...additionalFilters,
       isFeatured: true,
       sessionStatus: 'open',
       pageSize: 5,
-    };
+    });
 
     if (isPlanning) {
       // SECTION/CM featured events - filter by user's membership
@@ -240,13 +242,12 @@ function EventListContent({
   });
 
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
-    // @ts-expect-error because of react navigation type definitions
     if (!event?.documentId) {
       console.warn('Navigation blocked: missing event documentId', event);
       return;
     }
     console.log('Navigating to event:', event.documentId);
-    navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: event.documentId } });
+    /** @type {any} */ (navigation).navigate('EventStack', { screen: 'EventDetails', params: { eventId: event.documentId } });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
@@ -296,7 +297,7 @@ function EventListContent({
   }, []);
 
   // Date Picker Handlers
-  const handleDateSelected = useCallback((date) => {
+  const handleDateSelected = useCallback((/** @type {Date} */ date) => {
     setSelectedDate(date);
     const start = startOfDay(date).toISOString();
 
@@ -335,6 +336,9 @@ function EventListContent({
         <EventCardNew
           actionLabel={showAbout ? t('eventList.actions.about') : undefined}
           item={item}
+          onDecline={() => {}}
+          onJoin={() => {}}
+          onLogin={() => {}}
           onParticipate={() => (showAbout ? handleEventSelect(item) : handleParticipateToEvent(item))}
           onPress={() => handleEventSelect(item)}
         />
@@ -355,6 +359,7 @@ function EventListContent({
 
   const renderEmptyList = () => (
     <EmptyState
+      icon={Images.search}
       title={t('eventList.noData')}
       description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
       actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
@@ -388,9 +393,9 @@ function EventListContent({
             ApplicationStyle.borderRadius2]}
           >
             <FlashList
-              data={events}
+              data={/** @type {FCEvent[]} */ (events)}
               estimatedItemSize={200}
-              keyExtractor={(item) => item?.documentId || 'unknown'}
+              keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
               ListEmptyComponent={renderEmptyList}
               onEndReached={handleEndReached}
               onEndReachedThreshold={0.5}
@@ -425,6 +430,7 @@ function EventListContent({
                           description="Recherchez par mot-clé ou utilisez les filtres avancés."
                           id="search-filters"
                           order={2}
+                          style={{}}
                           title="Filtres"
                         >
                           <SearchComponent

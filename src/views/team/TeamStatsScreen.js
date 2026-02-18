@@ -134,7 +134,7 @@ function TeamStatsScreen({ route }) {
     return (
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
-          <Text style={[Fonts.p1, { color: Colors.error }]}>
+          <Text style={[Fonts.p1, { color: Colors.error500 }]}>
             {t('common.errors.generic', 'Une erreur est survenue')}
           </Text>
         </View>

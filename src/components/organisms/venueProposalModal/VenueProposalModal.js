@@ -9,20 +9,26 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import Input from '@/components/molecules/input/Input';
+import {
+  getParisNowAsDeviceDate,
+  toDeviceDateFromParisInstant,
+  toParisIsoFromLocalSelection,
+  toParisUtcDateFromLocalSelection,
+} from '@/utils/parisTime';
 
-const buildDefaultStartTime = (sourceDate = new Date()) => {
+const buildDefaultStartTime = (sourceDate = getParisNowAsDeviceDate()) => {
   const date = new Date(sourceDate);
   date.setHours(20, 0, 0, 0);
   return date;
 };
 
-const buildDefaultEndTime = (sourceDate = new Date()) => {
+const buildDefaultEndTime = (sourceDate = getParisNowAsDeviceDate()) => {
   const date = new Date(sourceDate);
   date.setHours(21, 0, 0, 0);
   return date;
 };
 
-const safeDate = (value, fallback = new Date()) => {
+const safeDate = (value, fallback = getParisNowAsDeviceDate()) => {
   if (value === 0 || value === '0') {
     return new Date(fallback);
   }
@@ -57,15 +63,16 @@ function VenueProposalModal({
   const { Colors, Fonts } = useTheme();
 
   const [venueInput, setVenueInput] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(getParisNowAsDeviceDate());
   const [startTime, setStartTime] = useState(() => buildDefaultStartTime());
   const [endTime, setEndTime] = useState(() => buildDefaultEndTime());
   const modalScrollRef = useRef(null);
+  const hasHydratedInitialValuesRef = useRef(false);
   const [dateSelectorY, setDateSelectorY] = useState(0);
   const [timeSelectorY, setTimeSelectorY] = useState(0);
 
   const datePresets = useMemo(() => {
-    const now = new Date();
+    const now = getParisNowAsDeviceDate();
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
     const plusTwoDays = new Date(now);
@@ -78,20 +85,29 @@ function VenueProposalModal({
   }, []);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      hasHydratedInitialValuesRef.current = false;
+      return;
+    }
 
-    const baseDate = safeDate(initialDate || initialStartTime || new Date());
-    const nextStart = initialStartTime
-      ? safeDate(initialStartTime, baseDate)
+    if (hasHydratedInitialValuesRef.current) return;
+
+    const initialParisDate = toDeviceDateFromParisInstant(initialDate || initialStartTime || null);
+    const initialParisStart = toDeviceDateFromParisInstant(initialStartTime || null);
+    const initialParisEnd = toDeviceDateFromParisInstant(initialEndTime || null);
+    const baseDate = safeDate(initialParisDate || getParisNowAsDeviceDate());
+    const nextStart = initialParisStart
+      ? safeDate(initialParisStart, baseDate)
       : buildDefaultStartTime(baseDate);
-    const nextEnd = initialEndTime
-      ? safeDate(initialEndTime, nextStart)
+    const nextEnd = initialParisEnd
+      ? safeDate(initialParisEnd, nextStart)
       : new Date(nextStart.getTime() + (60 * 60 * 1000));
 
     setVenueInput('');
     setDate(baseDate);
     setStartTime(nextStart);
     setEndTime(nextEnd > nextStart ? nextEnd : new Date(nextStart.getTime() + (60 * 60 * 1000)));
+    hasHydratedInitialValuesRef.current = true;
   }, [isVisible, initialDate, initialStartTime, initialEndTime]);
 
   useEffect(() => {
@@ -136,15 +152,22 @@ function VenueProposalModal({
     finalStartDate.setMinutes(startTime.getMinutes());
     finalStartDate.setSeconds(0, 0);
 
-    if (finalStartDate <= new Date()) {
+    const startUtcDate = toParisUtcDateFromLocalSelection(finalStartDate);
+    const startIso = toParisIsoFromLocalSelection(finalStartDate);
+    if (!startUtcDate || !startIso) {
+      Alert.alert('Erreur', "Impossible de convertir le creneau selectionne.");
+      return;
+    }
+
+    if (startUtcDate <= new Date()) {
       Alert.alert(
         'Creneau passe',
-        'Ce creneau est deja passe. Choisis une date ou une heure future.',
+        'Ce creneau est deja passe (heure de Paris). Choisis une date ou une heure future.',
       );
       return;
     }
 
-    const finalEndDate = new Date(finalStartDate.getTime() + (60 * 60 * 1000));
+    const finalEndDate = new Date(startUtcDate.getTime() + (60 * 60 * 1000));
 
     onSend({
       address: venue,
@@ -154,7 +177,7 @@ function VenueProposalModal({
         fallback_label: venue,
         label: venue,
       },
-      date: finalStartDate.toISOString(),
+      date: startIso,
       endDate: finalEndDate.toISOString(),
       venue,
     });

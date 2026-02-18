@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import useTheme from '@/theme/themeContext';
@@ -61,7 +61,7 @@ const OnboardingOverlay = () => {
                         <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>
                             {currentStepIndex + 1}/{totalSteps}
                         </Text>
-                        <TouchableOpacity onPress={nextStep} style={[styles.nextButton, { backgroundColor: Colors.primary }]}>
+                        <TouchableOpacity onPress={nextStep} style={[styles.nextButton, { backgroundColor: Colors.primary500 }]}>
                             <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                                 {currentStepIndex < totalSteps - 1 ? t('common.next', 'Suivant') : t('common.finish', 'Terminer')}
                             </Text>

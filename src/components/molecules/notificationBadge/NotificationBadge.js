@@ -8,8 +8,10 @@ import NotificationPopup from '@/components/organisms/notificationPopup/Notifica
  * Notification Badge Component
  * Displays a bell icon with a red dot if there are unread notifications.
  * Features a pulse animation when new notifications arrive.
+ * @param {{ onPress?: () => void }} [props]
+ * @returns {import('react').ReactElement}
  */
-const NotificationBadge = ({ onPress }) => {
+const NotificationBadge = ({ onPress } = {}) => {
     const { Images, Colors } = useTheme();
     const {
         unreadCount,

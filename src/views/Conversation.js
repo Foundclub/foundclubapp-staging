@@ -52,14 +52,14 @@ function Conversation({ navigation, route }) {
   const { userData } = useAuth();
   
   const [isMenuVisible, setIsMenuVisible] = useState(false);
-  const formatDateForGoogleCalendar = (dateInput) => {
+  const formatDateForGoogleCalendar = (/** @type {string | number | Date} */ dateInput) => {
     const date = new Date(dateInput);
     if (Number.isNaN(date.getTime())) return null;
-    const pad = (value) => String(value).padStart(2, '0');
+    const pad = (/** @type {string | number} */ value) => String(value).padStart(2, '0');
     return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
   };
 
-  const promptAddMatchToCalendar = (message) => {
+  const promptAddMatchToCalendar = (/** @type {any} */ message) => {
     const startIso = message?.composition?.date || chatData?.league_match?.date;
     const venue = message?.composition?.venue || chatData?.league_match?.venue || chatData?.league_match?.proposed_venue || '';
     if (!startIso) return;
@@ -114,6 +114,7 @@ function Conversation({ navigation, route }) {
     const isOwnMessage = currentMessage.user._id === userData?.documentId;
     
     // Base actions
+    /** @type {import('react-native').AlertButton[]} */
     const actions = [
        { text: 'Répondre', onPress: () => setReplyingTo(currentMessage) }
     ];
@@ -194,7 +195,7 @@ function Conversation({ navigation, route }) {
 
   const { socket } = useSocket();
   const [typingUsers, setTypingUsers] = useState(new Set());
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [isUploading, setIsUploading] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
   const { sendTypingStart, sendTypingStop, sendReadReceipt } = useMessaging(chatId);
@@ -202,7 +203,7 @@ function Conversation({ navigation, route }) {
   // Event Participation Logic
   const queryClient = useQueryClient();
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(undefined);
+  const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
@@ -216,7 +217,7 @@ function Conversation({ navigation, route }) {
     }
   });
 
-  const handleParticipateToEvent = (event) => {
+  const handleParticipateToEvent = (/** @type {{ documentId?: string }} */ event) => {
     if (event?.documentId && userData?.documentId) {
       createEventParticipationMutation.mutate({
         event: event.documentId,
@@ -225,7 +226,7 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const handleJoinEvent = (event) => {
+  const handleJoinEvent = (/** @type {{ documentId?: string; team?: Team }} */ event) => {
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
   };
@@ -239,7 +240,7 @@ function Conversation({ navigation, route }) {
   useEffect(() => {
     if (!socket) return;
 
-    const handleTypingStart = ({ chatDocumentId }) => {
+    const handleTypingStart = (/** @type {{ chatDocumentId?: string }} */ { chatDocumentId }) => {
       if (chatDocumentId === chatId) {
         // Since we don't have user info in typing event, we just show generic
         // In a real app we'd pass userId
@@ -247,7 +248,7 @@ function Conversation({ navigation, route }) {
       }
     };
 
-    const handleTypingStop = ({ chatDocumentId }) => {
+    const handleTypingStop = (/** @type {{ chatDocumentId?: string }} */ { chatDocumentId }) => {
        if (chatDocumentId === chatId) {
          setTypingUsers(prev => {
             const newSet = new Set(prev);
@@ -272,7 +273,7 @@ function Conversation({ navigation, route }) {
   }, [chatId, sendReadReceipt]);
 
   // Handle Input Text Change for Typing Indicator
-  const handleInputTextChanged = (text) => {
+  const handleInputTextChanged = (/** @type {string} */ text) => {
      if (text.length > 0) {
         sendTypingStart(chatId);
      } else {
@@ -302,11 +303,11 @@ function Conversation({ navigation, route }) {
         setIsUploading(true);
 
         const formData = new FormData();
-        formData.append('files', {
+        formData.append('files', /** @type {any} */ ({
           uri: image.uri,
-          type: image.type,
+          type: image.type || 'image/jpeg',
           name: image.fileName || `upload_${Date.now()}.jpg`,
-        });
+        }));
 
         const uploadResponse = await client.post('/upload', formData, {
           headers: {
@@ -333,7 +334,7 @@ function Conversation({ navigation, route }) {
 
 
   /* Proposal Logic */
-  const handleSendProposal = async (proposalData) => {
+  const handleSendProposal = async (/** @type {any} */ proposalData) => {
       try {
           const proposalStartDate = new Date(proposalData.date);
           const proposalEndDate = proposalData.endDate
@@ -390,7 +391,7 @@ function Conversation({ navigation, route }) {
       }
   };
 
-  const handleRespondProposal = async (message, status) => {
+  const handleRespondProposal = async (/** @type {any} */ message, /** @type {string} */ status) => {
       const matchId = message?.composition?.matchId || getEntityDocumentId(chatData?.league_match);
       
       if (!matchId && status === 'accepted') {
@@ -405,16 +406,16 @@ function Conversation({ navigation, route }) {
       const updatedComposition = { ...message.composition, status };
       
       // Update local cache immediately (Optimistic)
-      queryClient.setQueryData(['chat-messages', chatId], (oldData) => {
+      queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
           if (!oldData?.pages) return oldData;
           return {
               ...oldData,
-              pages: oldData.pages.map(page => ({
-                  ...page,
-                  data: page.data.map(msg => 
-                      msg.id === message._id ? { ...msg, composition: updatedComposition } : msg
-                  )
-              }))
+               pages: oldData.pages.map((/** @type {any} */ page) => ({
+                   ...page,
+                   data: page.data.map((/** @type {any} */ msg) => 
+                       msg.id === message._id ? { ...msg, composition: updatedComposition } : msg
+                   )
+               }))
           };
       });
 
@@ -472,6 +473,7 @@ function Conversation({ navigation, route }) {
 
     // Determine teamId of the current user
     const userId = userData?.documentId;
+    /** @type {string | null} */
     let teamId = null;
     const teamA = chatData?.league_match?.team_a;
     const teamB = chatData?.league_match?.team_b;
@@ -481,7 +483,7 @@ function Conversation({ navigation, route }) {
     } else if (areSameEntityId(teamB?.captain?.documentId, userId)) {
         teamId = getEntityDocumentId(teamB);
     } else {
-        teamId = userData?.team?.documentId;
+        teamId = userData?.team?.documentId || null;
     }
 
     if (!teamId) {
@@ -499,8 +501,10 @@ function Conversation({ navigation, route }) {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log('[Conversation] Cancelling match:', matchId, 'Team:', teamId);
-              await cancelMatch(matchId, teamId, 'Demande capitaine');
+              const resolvedTeamId = teamId;
+              if (!resolvedTeamId) return;
+              console.log('[Conversation] Cancelling match:', matchId, 'Team:', resolvedTeamId);
+              await cancelMatch(matchId, resolvedTeamId, 'Demande capitaine');
               navigation.goBack(); 
             } catch (error) {
               console.error('[Conversation] Cancel match failed:', error);
@@ -541,7 +545,7 @@ function Conversation({ navigation, route }) {
 
   const subtitle = route.params?.subTitle || '';
   const proposalDefaults = useMemo(
-    () => buildProposalDefaultsFromMatch(chatData?.league_match),
+    () => buildProposalDefaultsFromMatch(chatData?.league_match || null),
     [chatData?.league_match],
   );
 
@@ -549,7 +553,7 @@ function Conversation({ navigation, route }) {
   console.log('[Conversation] showCancelButton:', showCancelButton, 'type:', chatData?.type, 'hasLeagueMatch:', !!chatData?.league_match);
 
   // Anonymization helper for league_match chats
-  const getAnonymizedName = (sender, senderIndex) => {
+  const getAnonymizedName = (/** @type {User} */ sender, /** @type {number} */ senderIndex) => {
     // If not a league match chat, show real name
     if (chatData?.type !== 'league_match') {
       return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
@@ -670,19 +674,15 @@ function Conversation({ navigation, route }) {
       setIsReportModalVisible(true);
       setSelectedMessage(currentMessage);
     }
-     // Handle long press to reply for everyone
-     Alert.alert(
-        t('Actions'),
-        '',
-        [
-           { text: 'Répondre', onPress: () => setReplyingTo(currentMessage) },
-           !isOwnMessage ? { text: 'Signaler', onPress: () => {
-              setIsReportModalVisible(true);
-              setSelectedMessage(currentMessage);
-           }} : null,
-           { text: 'Annuler', style: 'cancel' }
-        ].filter(Boolean)
-     );
+    const pressActions = /** @type {import('react-native').AlertButton[]} */ ([
+      { text: 'Repondre', onPress: () => setReplyingTo(currentMessage) },
+      !isOwnMessage ? { text: 'Signaler', onPress: () => {
+        setIsReportModalVisible(true);
+        setSelectedMessage(currentMessage);
+      }} : null,
+      { text: 'Annuler', style: 'cancel' },
+    ].filter(Boolean));
+    Alert.alert(t('Actions'), '', pressActions);
   };
 
   const handleSubmitReport = () => {
@@ -851,7 +851,7 @@ function Conversation({ navigation, route }) {
               padding: 4,
             },
           }}
-          renderTicks={(currentMessage) => {
+          renderTicks={(/** @type {any} */ currentMessage) => {
              if (currentMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>🕒</Text>;
              // Checkmark logic using icons or text
              const tickColor = 'rgba(255,255,255,0.8)';
@@ -932,7 +932,7 @@ function Conversation({ navigation, route }) {
   /**
    * Render custom actions (attachment button)
    */
-  const renderActions = (props) => (
+  const renderActions = (/** @type {any} */ props) => (
        <View style={{ flexDirection: 'row', alignItems: 'center', height: 44 }}>
             <TouchableOpacity 
                 onPress={() => setIsProposalModalVisible(true)}
@@ -1111,9 +1111,6 @@ function Conversation({ navigation, route }) {
 
       <View style={[Alignments.fill]}>
         <GiftedChat
-          safeAreaInsets={{
-            top: 0, bottom, left: 0, right: 0,
-          }}
           dateFormat="DD MMMM"
         dateFormatCalendar={{
           lastDay: '[Hier]',
@@ -1133,7 +1130,7 @@ function Conversation({ navigation, route }) {
         onPress={handleMessagePress}
         onSend={onSend}
         user={{
-          _id: userData?.documentId,
+          _id: userData?.documentId || '',
           name: `${userData?.firstname || ''} ${userData?.lastname || ''}`,
           avatar: userData?.avatar?.url,
         }}
@@ -1158,7 +1155,6 @@ function Conversation({ navigation, route }) {
                     }}
                     title={t('common.cancelMatch', 'Annuler le match')}
                     variant="Secondary"
-                    textColor={Colors.error500}
                  />
              )}
              
@@ -1216,6 +1212,7 @@ function Conversation({ navigation, route }) {
         isVisible={isProposalModalVisible}
         onClose={() => setIsProposalModalVisible(false)}
         onSend={handleSendProposal}
+        onSkip={() => setIsProposalModalVisible(false)}
         initialDate={proposalDefaults.date}
         initialStartTime={proposalDefaults.start}
         initialEndTime={proposalDefaults.end}

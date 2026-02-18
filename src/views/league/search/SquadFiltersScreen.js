@@ -47,38 +47,56 @@ const filtersSchema = Joi.object({
   division: Joi.number().allow(null),
 });
 
+/**
+ * @param {unknown} value
+ * @returns {{label: string, value: string} | null}
+ */
 const normalizeObjectFilter = (value) => {
   if (!value) return null;
   if (typeof value === 'object') {
-    const label = value.label || value.value;
-    const id = value.value || value.label;
+    const safeValue = /** @type {Record<string, any>} */ (value);
+    const label = safeValue.label || safeValue.value;
+    const id = safeValue.value || safeValue.label;
     if (!label || !id) return null;
     return { label, value: id };
   }
   return { label: String(value), value: String(value) };
 };
 
+/**
+ * @param {unknown} value
+ * @returns {{label: string, value: string, [key: string]: any}}
+ */
 const normalizeCityFilter = (value) => {
   if (!value || typeof value !== 'object') return { label: '', value: '' };
+  const safeValue = /** @type {Record<string, any>} */ (value);
   return {
-    ...value,
-    label: value.label || '',
-    value: value.value || '',
+    ...safeValue,
+    label: safeValue.label || '',
+    value: safeValue.value || '',
   };
 };
 
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
 const toDivisionValue = (value) => {
-  const parsed = Number.parseInt(value, 10);
+  const parsed = Number.parseInt(String(value || ''), 10);
   if (!Number.isFinite(parsed)) return null;
   if (parsed < 1 || parsed > 10) return null;
   return parsed;
 };
 
+/**
+ * @param {Record<string, any> | null | undefined} rawData
+ * @returns {Record<string, any>}
+ */
 const buildCleanFilters = (rawData) => {
   const data = rawData || {};
   const city = normalizeCityFilter(data.city);
   const hasCity = Boolean(city?.value);
-  const radius = Number.parseInt(data.radius, 10);
+  const radius = Number.parseInt(String(data.radius || ''), 10);
   const cleanPayload = {};
 
   if (hasCity) {
@@ -99,6 +117,9 @@ const buildCleanFilters = (rawData) => {
   return cleanPayload;
 };
 
+/**
+ * @param {{ navigation: any }} props
+ */
 const SquadFiltersScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
@@ -127,7 +148,7 @@ const SquadFiltersScreen = ({ navigation }) => {
 
   const initialValues = useMemo(() => ({
     city: normalizeCityFilter(squadFilters?.city),
-    radius: Number.parseInt(squadFilters?.radius, 10) || DEFAULT_RADIUS_KM,
+    radius: Number.parseInt(String(squadFilters?.radius || ''), 10) || DEFAULT_RADIUS_KM,
     sport: normalizeObjectFilter(squadFilters?.sport),
     section: normalizeObjectFilter(squadFilters?.section),
     category: normalizeObjectFilter(squadFilters?.category),
@@ -154,12 +175,12 @@ const SquadFiltersScreen = ({ navigation }) => {
     if (watchedValues?.section?.value) count += 1;
     if (watchedValues?.category?.value) count += 1;
     if (toDivisionValue(watchedValues?.division)) count += 1;
-    const radius = Number.parseInt(watchedValues?.radius, 10);
+    const radius = Number.parseInt(String(watchedValues?.radius || ''), 10);
     if (watchedValues?.city?.value && Number.isFinite(radius) && radius !== DEFAULT_RADIUS_KM) count += 1;
     return count;
   }, [watchedValues]);
 
-  const handleApplyFilters = (data) => {
+  const handleApplyFilters = (/** @type {Record<string, any>} */ data) => {
     const payload = buildCleanFilters(data);
     appDispatch({ payload, type: 'SET_SQUAD_FILTERS' });
     navigation.goBack();
@@ -345,7 +366,7 @@ const SquadFiltersScreen = ({ navigation }) => {
                   placeholder="Selectionner une categorie"
                   searchValue={categorySearchValue}
                   setSearchValue={setCategorySearchValue}
-                  setValue={(option) => {
+                  setValue={(/** @type {{label?: string, value?: string} | null} */ option) => {
                     if (!option) {
                       onChange(null);
                       return;

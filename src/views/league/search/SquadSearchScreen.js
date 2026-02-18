@@ -20,30 +20,41 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 import { normalizeLocationInput } from '@/utils/location';
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 const readFilterValue = (value) => {
   if (!value) return null;
-  if (typeof value === 'object') return value.label || value.value || null;
-  return value;
+  if (typeof value === 'object') {
+    const safeValue = /** @type {Record<string, any>} */ (value);
+    return safeValue.label || safeValue.value || null;
+  }
+  return String(value);
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 const getSectionLabel = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return null;
   if (normalized === 'male' || normalized === 'masculin') return 'Masculin';
   if (normalized === 'female' || normalized === 'feminin' || normalized === 'féminin') return 'Feminin';
   if (normalized === 'mixed' || normalized === 'mixte') return 'Mixte';
-  return value;
+  return String(value || '');
 };
 
 function SquadSearchScreen() {
   const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
-  const navigation = useNavigation();
+  const navigation = /** @type {any} */ (useNavigation());
 
   const [{ squadFilters }] = useAppContext();
 
   const [query, setQuery] = useState('');
-  const [squads, setSquads] = useState([]);
+  const [squads, setSquads] = useState(/** @type {any[]} */ ([]));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -70,10 +81,10 @@ function SquadSearchScreen() {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      const results = await searchSquads({
+      const results = await searchSquads(/** @type {any} */ ({
         ...squadFilters,
         query: query.trim(),
-      });
+      }));
       setSquads(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error('[SquadSearch] search failed:', error);
@@ -99,7 +110,7 @@ function SquadSearchScreen() {
     return () => clearTimeout(timeout);
   }, [query, handleSearch]);
 
-  const renderItem = ({ item }) => {
+  const renderItem = (/** @type {{ item: any }} */ { item }) => {
     const teamId = item?.documentId || item?.id;
     const normalizedHomeBase = normalizeLocationInput(item?.home_base);
     const cityLabel = normalizedHomeBase?.city

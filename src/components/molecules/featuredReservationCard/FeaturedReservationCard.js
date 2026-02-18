@@ -16,13 +16,38 @@ import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
+ * @typedef {{
+ *  type?: { name?: string };
+ *  team?: { club?: Club };
+ *  club?: Club;
+ *  locationDetails?: string;
+ *  location?: string;
+ *  pricePerPerson?: number;
+ *  startTime?: string;
+ *  endTime?: string;
+ *  date?: string;
+ * }} FeaturedReservation
+ */
+
+/**
+ * @param {string | undefined} input
+ * @returns {string}
+ */
+const getShortAddress = (input) => {
+  if (!input || typeof input !== 'string') return '';
+  return input.split(',').slice(0, 2).join(',').trim();
+};
+
+/**
  * FeaturedReservationCard component - Styled like Planning Card
  * Dimensions: Width 335, Flexible Height (matching Planning style)
- * @param {object} props
- * @param {object} props.item - The reservation item
- * @param {Function} props.onPress - Function called when card is pressed
- * @param {Function} props.onParticipate - Function called when participate button is pressed
- * @param {object} [props.style] - Optional style overrides
+ * @param {{
+ *  actionLabel?: string;
+ *  item: FeaturedReservation;
+ *  onPress?: (item: FeaturedReservation) => void;
+ *  onParticipate?: (item: FeaturedReservation) => void;
+ *  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
+ * }} props
  * @returns {import('react').ReactElement}
  */
 function FeaturedReservationCard({
@@ -126,9 +151,9 @@ function FeaturedReservationCard({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={[{ gap: horizontalScale(12) }]}
             >
-              {sponsors.map((sponsor, idx) => (
+              {sponsors.map((/** @type {Sponsor} */ sponsor, idx) => (
                 <TouchableOpacity
-                  key={sponsor.id || idx}
+                  key={sponsor.link || idx}
                   onPress={() => {
                     if (sponsor.link) {
                       Linking.openURL(sponsor.link);

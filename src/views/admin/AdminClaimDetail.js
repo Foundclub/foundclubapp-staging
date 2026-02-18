@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { useGetClubClaimRequest, useApproveClubClaim, useRefuseClubClaim } from '@/services/admin/adminQueries';
 import Loader from '@/components/atoms/loader/Loader';
+import Button from '@/components/atoms/button/Button';
 
 const AdminClaimDetail = () => {
     const { Colors, Fonts, Spaces, ApplicationStyle, Alignments } = useTheme();
@@ -112,23 +113,23 @@ const AdminClaimDetail = () => {
 
                 {/* Actions */}
                 <View style={[Spaces.marginTop[24]]}>
-                    <TouchableOpacity
-                        style={[ApplicationStyle.button.primary, Spaces.marginBottom[12], { backgroundColor: Colors.success500 }]}
+                    <Button
+                        title={approveMutation.isPending ? "Traitement..." : "Accepter la demande"}
+                        variant="Primary"
                         onPress={handleApprove}
                         disabled={approveMutation.isPending}
-                    >
-                         <Text style={[Fonts.button, { color: 'white' }]}>
-                             {approveMutation.isPending ? "Traitement..." : "Accepter la demande"}
-                         </Text>
-                    </TouchableOpacity>
+                        style={[Spaces.marginBottom[12], { backgroundColor: Colors.success500 }]}
+                        textStyle={[Fonts.button, { color: Colors.neutral00 }]}
+                    />
 
-                    <TouchableOpacity
-                        style={[ApplicationStyle.button.secondary, { borderColor: Colors.error500 }]}
+                    <Button
+                        title="Refuser"
+                        variant="Secondary"
                         onPress={handleRefuse}
                         disabled={refuseMutation.isPending}
-                    >
-                        <Text style={[Fonts.button, { color: Colors.error500 }]}>Refuser</Text>
-                    </TouchableOpacity>
+                        style={{ borderColor: Colors.error500 }}
+                        textStyle={[Fonts.button, { color: Colors.error500 }]}
+                    />
                 </View>
             </ScrollView>
         </ScreenContainer>

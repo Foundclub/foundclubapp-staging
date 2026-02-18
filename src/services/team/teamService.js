@@ -233,20 +233,22 @@ export const createTeam = async (teamData) => {
     
     // Append files if they exist
     if (logo) {
-      // @ts-ignore
+      const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
+      // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.logo', {
-        uri: logo.uri,
-        name: logo.filename || 'logo.jpg',
-        type: logo.mime || 'image/jpeg',
+        uri: logoFile.uri || '',
+        name: logoFile.filename || 'logo.jpg',
+        type: logoFile.mime || 'image/jpeg',
       });
     }
 
     if (cover) {
-      // @ts-ignore
+      const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
+      // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.cover', {
-        uri: cover.uri,
-        name: cover.filename || 'cover.jpg',
-        type: cover.mime || 'image/jpeg',
+        uri: coverFile.uri || '',
+        name: coverFile.filename || 'cover.jpg',
+        type: coverFile.mime || 'image/jpeg',
       });
     }
     
@@ -304,20 +306,22 @@ export const updateTeam = async (teamData) => {
     
     // Append files if they exist
     if (logo) {
-      // @ts-ignore
+      const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
+      // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.logo', {
-        uri: logo.uri,
-        name: logo.filename || 'logo.jpg',
-        type: logo.mime || 'image/jpeg',
+        uri: logoFile.uri || '',
+        name: logoFile.filename || 'logo.jpg',
+        type: logoFile.mime || 'image/jpeg',
       });
     }
 
     if (cover) {
-      // @ts-ignore
+      const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
+      // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.cover', {
-        uri: cover.uri,
-        name: cover.filename || 'cover.jpg',
-        type: cover.mime || 'image/jpeg',
+        uri: coverFile.uri || '',
+        name: coverFile.filename || 'cover.jpg',
+        type: coverFile.mime || 'image/jpeg',
       });
     }
     

@@ -41,24 +41,41 @@ import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
+import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+
+/**
+ * @typedef {'loading' | 'initializing' | 'no_squad' | 'locker_room' | 'lobby' | 'radar' | 'match_found' | 'connection_error' | 'searching_start'} MatchCenterViewState
+ */
+
+/**
+ * @typedef {{address: string | null, city: string | null, context?: string | null, country?: string, label: string | null, lat: number | null, lng: number | null, postcode: string | null, radius?: number, value: string}} SearchLocation
+ */
+
+/**
+ * @typedef {{day: string, startTime: string, endTime: string}} AddSearchSlotPayload
+ */
+
+/**
+ * @typedef {{address?: string, addressObject?: {label?: string, address?: string} | null, date?: string, endDate?: string, venue?: string}} VenueProposalPayload
+ */
 
 const MatchCenterScreen = () => {
     const swordsIcon = '\u2694\uFE0F';
     const radarIcon = '\uD83D\uDCE1';
-    const navigation = useNavigation();
+    const navigation = /** @type {any} */ (useNavigation());
     const { userData } = useAuth();
     const { Colors, Fonts, Images, Alignments, Spaces, ApplicationStyle } = useTheme();
     
     // Data State
-    const [mySquad, setMySquad] = useState(null);
-    const [allSquads, setAllSquads] = useState([]); // Store all user squads
-    const [viewState, setViewState] = useState('loading'); // loading, no_squad, locker_room, lobby, radar, match_found, connection_error
-    const [activeSlot, setActiveSlot] = useState(null);
-    const [squadSlots, setSquadSlots] = useState([]); // Store all available slots for carousel
-    const [matchRequest, setMatchRequest] = useState(null);
-    const [currentMatch, setCurrentMatch] = useState(null);
-    const [opponentDetails, setOpponentDetails] = useState(null); // Add state
-    const [recentMatches, setRecentMatches] = useState([]);
+    const [mySquad, setMySquad] = useState(/** @type {Team | null} */ (null));
+    const [allSquads, setAllSquads] = useState(/** @type {Team[]} */ ([])); // Store all user squads
+    const [viewState, setViewState] = useState(/** @type {MatchCenterViewState} */ ('loading')); // loading, no_squad, locker_room, lobby, radar, match_found, connection_error
+    const [activeSlot, setActiveSlot] = useState(/** @type {LeagueSlot | null} */ (null));
+    const [squadSlots, setSquadSlots] = useState(/** @type {LeagueSlot[]} */ ([])); // Store all available slots for carousel
+    const [matchRequest, setMatchRequest] = useState(/** @type {MatchRequest | null} */ (null));
+    const [currentMatch, setCurrentMatch] = useState(/** @type {LeagueMatch | null} */ (null));
+    const [opponentDetails, setOpponentDetails] = useState(/** @type {OpponentDetails | null} */ (null)); // Add state
+    const [recentMatches, setRecentMatches] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
 
     const slotCardGap = 12;
     const screenWidth = React.useRef(Dimensions.get('window').width).current;
@@ -78,14 +95,80 @@ const MatchCenterScreen = () => {
 
     // Search Config State
     const [searchRadius, setSearchRadius] = useState(20);
-    const [tempSearchLocation, setTempSearchLocation] = useState(null);
+    const [tempSearchLocation, setTempSearchLocation] = useState(/** @type {SearchLocation | null} */ (null));
     const [isEditingLocation, setIsEditingLocation] = useState(false);
-    const [selectedSlotIds, setSelectedSlotIds] = useState([]); // IDs of slots to include in search
+    const [selectedSlotIds, setSelectedSlotIds] = useState(/** @type {string[]} */ ([])); // IDs of slots to include in search
     const [isAddingSearchSlot, setIsAddingSearchSlot] = useState(false);
     const [isSavingSearchSlot, setIsSavingSearchSlot] = useState(false);
+    const [matchmakingServerNow, setMatchmakingServerNow] = useState(/** @type {string | null} */ (null));
 
     // DAY_MAP for display
+    /** @type {Record<string, string>} */
     const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
+
+    const isCurrentUserCaptain = React.useMemo(() => {
+        const captainId = getEntityDocumentId(mySquad?.captain);
+        const currentUserId = getEntityDocumentId(userData);
+        return Boolean(captainId && currentUserId && areSameEntityId(captainId, currentUserId));
+    }, [mySquad?.captain, userData]);
+
+    /**
+     * @param {string} routeName
+     * @returns {any}
+     */
+    const findNavigatorWithRoute = useCallback((routeName) => {
+        let cursor = navigation;
+        while (cursor) {
+            const routeNames = cursor?.getState?.()?.routeNames || [];
+            if (routeNames.includes(routeName)) return cursor;
+            cursor = cursor?.getParent?.();
+        }
+        return null;
+    }, [navigation]);
+
+    /**
+     * @param {string} routeName
+     * @param {Record<string, any>} [params]
+     * @returns {boolean}
+     */
+    const safeNavigate = useCallback((routeName, params) => {
+        const targetNavigator = findNavigatorWithRoute(routeName);
+        if (!targetNavigator) return false;
+        targetNavigator.navigate(routeName, params);
+        return true;
+    }, [findNavigatorWithRoute]);
+
+    const promptCaptainSearchRequirements = useCallback(() => {
+        Alert.alert(
+            'Recherche reservee au capitaine',
+            'Seul le capitaine peut lancer une recherche manuelle. La recherche demarre aussi automatiquement quand 5 membres sont prets sur un creneau.',
+            [
+                {
+                    text: 'Compris',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Inviter des joueurs',
+                    onPress: () => {
+                        const squadId = getEntityDocumentId(mySquad);
+                        if (safeNavigate(RouteNames.LeagueSquadTab)) return;
+                        if (squadId && safeNavigate(RouteNames.SquadDetails, { teamId: squadId })) return;
+                        safeNavigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueSquadTab });
+                    },
+                },
+            ],
+        );
+    }, [mySquad, safeNavigate]);
+
+    /**
+     * @param {Array<any>} items
+     * @returns {string[]}
+     */
+    const toDocumentIdList = (items) => (
+        (items || [])
+            .map((item) => getEntityDocumentId(item))
+            .filter((id) => typeof id === 'string' && id.length > 0)
+    );
 
     // Normalized home base shape shared across all league screens.
     const homeBase = React.useMemo(
@@ -117,9 +200,15 @@ const MatchCenterScreen = () => {
         }
     }, [homeBase]);
 
-    const lastMatchRef = useRef(null);
+    const lastMatchRef = useRef(/** @type {LeagueMatch | null} */ (null));
+    const cancellationLikeStatuses = React.useMemo(
+        () => new Set(['provisionary', 'negotiating', 'scheduled']),
+        []
+    );
 
-    const fetchMatchData = useCallback(async (squad) => {
+    const fetchMatchData = useCallback(async (
+        /** @type {Team} */ squad,
+    ) => {
         setMySquad(squad);
         setLoading(true);
         try {
@@ -133,21 +222,23 @@ const MatchCenterScreen = () => {
 
             // B. Check Active Matchmaking Request for THIS squad
             const activeReq = await MatchmakingService.getActiveRequest(getEntityDocumentId(squad));
+            setMatchmakingServerNow(activeReq?.serverNow || null);
             
             // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
             if (activeReq && (activeReq.state === 'searching' || activeReq.state === 'matched')) {
-                setMatchRequest(activeReq.request);
+                setMatchRequest(activeReq.request || null);
                 if (activeReq.state === 'matched') {
                     setViewState('match_found');
-                    setCurrentMatch(activeReq.match);
-                    setOpponentDetails(activeReq.opponentDetails);
-                    lastMatchRef.current = activeReq.match; // Track match
+                    setCurrentMatch(activeReq.match || null);
+                    setOpponentDetails(activeReq.opponentDetails || null);
+                    lastMatchRef.current = activeReq.match || null; // Track match
                 } else {
                     setViewState('radar');
                     setCurrentMatch(null);
                     // Match disappeared or switched to searching?
                     if (lastMatchRef.current) {
-                        if (lastMatchRef.current.status === 'provisionary' || lastMatchRef.current.status === 'scheduled') {
+                        const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
+                        if (cancellationLikeStatuses.has(previousStatus)) {
                              Alert.alert('Match annule', 'Le match precedent a ete annule.');
                         }
                         lastMatchRef.current = null;
@@ -155,9 +246,13 @@ const MatchCenterScreen = () => {
                 }
             } else {
                 // No active request/match
+                setMatchmakingServerNow(null);
                 if (lastMatchRef.current) {
-                     // We had a match, now nothing. It was cancelled.
-                     Alert.alert('Match annule', "Votre match a ete annule par l'adversaire ou le systeme.");
+                     // Only show cancellation if previous status was in cancellable pre-result phases.
+                     const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
+                     if (cancellationLikeStatuses.has(previousStatus)) {
+                         Alert.alert('Match annule', "Votre match a ete annule par l'adversaire ou le systeme.");
+                     }
                      lastMatchRef.current = null;
                      setCurrentMatch(null);
                 }
@@ -180,7 +275,7 @@ const MatchCenterScreen = () => {
         } finally {
             setLoading(false);
         }
-    }, [userData, searchRadius]);
+    }, [userData, searchRadius, cancellationLikeStatuses]);
 
     const loadMatchCenter = useCallback(async () => {
         if (!userData) return;
@@ -198,7 +293,7 @@ const MatchCenterScreen = () => {
             }
 
             // Select initial squad (either currently selected or first one)
-            const initialSquad = mySquad && squads.find(s => areSameEntityId(getEntityDocumentId(s), getEntityDocumentId(mySquad))) 
+            const initialSquad = mySquad && squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), getEntityDocumentId(mySquad))) 
                 ? mySquad 
                 : squads[0];
             
@@ -219,7 +314,7 @@ const MatchCenterScreen = () => {
         }, [loadMatchCenter])
     );
 
-    const handleSquadSwitch = async (squad) => {
+    const handleSquadSwitch = async (/** @type {Team} */ squad) => {
         setIsSquadSelectorVisible(false);
         if (!areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad))) {
             await fetchMatchData(squad);
@@ -227,11 +322,19 @@ const MatchCenterScreen = () => {
     };
 
     const handleLaunchLobby = () => {
+        if (!isCurrentUserCaptain) {
+            promptCaptainSearchRequirements();
+            return;
+        }
         setViewState('lobby');
     };
 
     const handleConfirmSearch = async () => {
         if (!mySquad) return; 
+        if (!isCurrentUserCaptain) {
+            promptCaptainSearchRequirements();
+            return;
+        }
         if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
             Alert.alert(
                 'Creneau requis',
@@ -301,19 +404,23 @@ const MatchCenterScreen = () => {
                 const result = await MatchmakingService.triggerSearch(params.teamId, params.selectedSlotIds, params);
 
                 
-                if (result && result.status === 'matched') {
+                if (result && 'status' in result && result.status === 'matched') {
                      Alert.alert('Match trouve !', 'Un adversaire a ete trouve instantanement !');
                      setViewState('match_found');
                 } else {
                     setMatchRequest(result);
+                    setMatchmakingServerNow(result?.serverNow || null);
                     setViewState('radar');
                 }
             } catch (error) {
                 console.error(error);
-                const backendCode = error?.response?.data?.code;
-                const backendMessage = error?.response?.data?.message;
+                const apiError = /** @type {any} */ (error);
+                const backendCode = apiError?.response?.data?.code;
+                const backendMessage = apiError?.response?.data?.message;
                 if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
                     Alert.alert('Recherche deja active', 'Une recherche est deja en cours pour cette squad.');
+                } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
+                    promptCaptainSearchRequirements();
                 } else {
                     Alert.alert('Erreur', backendMessage || 'Recherche echouee');
                 }
@@ -321,27 +428,54 @@ const MatchCenterScreen = () => {
             }
         }, 2000); // 2 seconds delay
     };
-    const { searchStatus, candidateFallbackCountdown } = useMatchmakingStateMachine({
+    const handleAutoSearchingDetected = useCallback((/** @type {MatchmakingStatus} */ statusData) => {
+        setMatchRequest(statusData?.request || null);
+        setMatchmakingServerNow(statusData?.serverNow || null);
+        setViewState('radar');
+    }, []);
+
+    const handleSearchingStatusSync = useCallback((/** @type {MatchmakingStatus} */ statusData) => {
+        if (statusData?.request) {
+            setMatchRequest(statusData.request);
+        }
+        if (statusData?.serverNow) {
+            setMatchmakingServerNow(statusData.serverNow);
+        }
+    }, []);
+
+    const handleConnectionError = useCallback(() => {
+        setViewState('connection_error');
+    }, []);
+
+    const handleMatched = useCallback((/** @type {MatchmakingStatus} */ statusData, /** @type {{silent?: boolean}} */ options = {}) => {
+        const nextMatch = statusData?.match || null;
+        const nextMatchId = getEntityDocumentId(nextMatch);
+        const currentMatchId = getEntityDocumentId(currentMatch);
+        const sameMatch = Boolean(nextMatchId && currentMatchId && areSameEntityId(nextMatchId, currentMatchId));
+        const shouldAlert = !options?.silent && (!sameMatch || viewState !== 'match_found');
+        setMatchRequest(statusData?.request || null);
+        setMatchmakingServerNow(statusData?.serverNow || null);
+        setCurrentMatch(nextMatch);
+        setOpponentDetails(statusData?.opponentDetails || null);
+        setViewState('match_found');
+        if (shouldAlert) {
+            Alert.alert('Match trouve', "Un adversaire a ete trouve.");
+        }
+    }, [currentMatch, viewState]);
+
+    const handleRecoverFromBackground = useCallback(() => {
+        setViewState('radar');
+    }, []);
+
+    const { searchStatus, serverNow: pollingServerNow } = useMatchmakingStateMachine({
         matchRequest,
         mySquad,
         viewState,
-        onAutoSearchingDetected: (statusData) => {
-            setMatchRequest(statusData?.request || null);
-            setViewState('radar');
-        },
-        onConnectionError: () => {
-            setViewState('connection_error');
-        },
-        onMatched: (statusData) => {
-            setMatchRequest(statusData?.request || null);
-            setCurrentMatch(statusData?.match || null);
-            setOpponentDetails(statusData?.opponentDetails || null);
-            setViewState('match_found');
-            Alert.alert('Match trouve', "Un adversaire a ete trouve.");
-        },
-        onRecoverFromBackground: () => {
-            setViewState('radar');
-        },
+        onAutoSearchingDetected: handleAutoSearchingDetected,
+        onConnectionError: handleConnectionError,
+        onMatched: handleMatched,
+        onSearchingStatus: handleSearchingStatusSync,
+        onRecoverFromBackground: handleRecoverFromBackground,
     });
 
     // Ensure searchRadius is initialized from squad preferences 
@@ -358,12 +492,22 @@ const MatchCenterScreen = () => {
     }, [getEntityDocumentId(mySquad)]);
 
     useEffect(() => {
-        const allowedIds = new Set((squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean));
+        const allowedIds = new Set(
+            (squadSlots || [])
+                .map((slot) => getEntityDocumentId(slot))
+                .filter((id) => typeof id === 'string' && id.length > 0),
+        );
         setSelectedSlotIds((prev) => prev.filter((slotId) => allowedIds.has(slotId)));
     }, [squadSlots]);
 
+    useEffect(() => {
+        if (viewState === 'radar' && !matchRequest?.createdAt) {
+            console.warn('[MatchCenter] Missing request.createdAt while searching. Countdown fallback active.');
+        }
+    }, [matchRequest?.createdAt, viewState]);
+
     // Toggle slot selection for matchmaking
-    const toggleSlotSelection = (slotId) => {
+    const toggleSlotSelection = (/** @type {string} */ slotId) => {
         setSelectedSlotIds(prev => 
             prev.includes(slotId) 
                 ? prev.filter(id => id !== slotId) 
@@ -371,13 +515,13 @@ const MatchCenterScreen = () => {
         );
     };
 
-    const handleAddSearchSlot = async (slotData) => {
+    const handleAddSearchSlot = async (/** @type {AddSearchSlotPayload} */ slotData) => {
         if (!mySquad || isSavingSearchSlot) return;
 
         try {
             setIsSavingSearchSlot(true);
             const teamId = getEntityDocumentId(mySquad);
-            const previousSlotIds = new Set((squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean));
+            const previousSlotIds = new Set(toDocumentIdList(squadSlots));
             const payload = {
                 start_hour: `${slotData.startTime}:00`,
                 end_hour: `${slotData.endTime}:00`,
@@ -433,11 +577,14 @@ const MatchCenterScreen = () => {
         }
     };
 
-    const handleSendProposal = async (proposalData) => {
+    const handleSendProposal = async (/** @type {VenueProposalPayload} */ proposalData) => {
         if (!currentMatch) return;
         setLoading(true);
         try {
             const matchId = getEntityDocumentId(currentMatch);
+            if (!proposalData?.date) {
+                throw new Error('Missing proposal date');
+            }
             const addressLabel = typeof proposalData?.address === 'string'
                 ? proposalData.address
                 : proposalData?.addressObject?.label
@@ -470,8 +617,12 @@ const MatchCenterScreen = () => {
             // 3. Send Formatted Message in Chat
             if (currentMatch.chat) {
                 const chatId = getEntityDocumentId(currentMatch.chat);
+                if (!chatId) {
+                    throw new Error('Missing chat id');
+                }
+                const proposalDate = String(proposalData.date);
                 
-                const startDate = new Date(proposalData.date);
+                const startDate = new Date(proposalDate);
                 const endDate = proposalData.endDate
                     ? new Date(proposalData.endDate)
                     : new Date(startDate.getTime() + (60 * 60 * 1000));
@@ -491,7 +642,7 @@ const MatchCenterScreen = () => {
                     `${timeStr}\n\n` +
                     `Cela vous convient-il ?`;
 
-                await createChatMessage({
+                await createChatMessage(/** @type {any} */ ({
                     chatId,
                     message: messageText,
                     composition: {
@@ -504,7 +655,7 @@ const MatchCenterScreen = () => {
                         status: 'pending',
                         matchId: matchId 
                     }
-                });
+                }));
                 
                 // 4. Navigate to Chat
                 setIsProposalModalVisible(false);
@@ -676,33 +827,16 @@ const MatchCenterScreen = () => {
                      <Text style={[Fonts.p2, { color: Colors.gold500, textAlign: 'center', marginBottom: 8, fontWeight: 'bold' }]}>
                          {searchStatus}
                      </Text>
-                     {Number.isFinite(candidateFallbackCountdown) && candidateFallbackCountdown > 0 && (
-                        <View style={{
-                            backgroundColor: 'rgba(255, 209, 0, 0.10)',
-                            borderColor: Colors.gold500,
-                            borderRadius: 10,
-                            borderWidth: 1,
-                            marginBottom: 10,
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            width: '100%',
-                        }}>
-                            <Text style={[Fonts.p3Bold, { color: Colors.gold500, textAlign: 'center' }]}>
-                                Adversaire presque compatible detecte. Match auto dans {candidateFallbackCountdown}s si aucun meilleur adversaire.
-                            </Text>
-                        </View>
-                     )}
                      <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 16 }]}>
                          Nous cherchons une equipe compatible dans votre zone.
                      </Text>
                      
                      {/* Timer Countdown */}
-                     {matchRequest?.createdAt && (
-                         <SearchCountdown 
-                             createdAt={matchRequest.createdAt}
-                             onExpired={handleCancelSearch}
-                         />
-                     )}
+                     <SearchCountdown
+                         createdAt={matchRequest?.createdAt}
+                         serverNow={pollingServerNow || matchmakingServerNow}
+                         onExpired={handleCancelSearch}
+                     />
                      
                      <Button
                         title="ANNULER"
@@ -716,11 +850,11 @@ const MatchCenterScreen = () => {
 
         if (viewState === 'match_found') {
             // CRITICAL FIX: If match is already scheduled/pending, Show NextMatchCard instead of Mystery Card
-            if (shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
+            if (currentMatch && shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
                 return (
                     <NextMatchCard 
                         match={currentMatch}
-                        event={currentMatch.event}
+                        event={currentMatch?.event}
                         myTeamId={getEntityDocumentId(mySquad)}
                         onRefresh={loadMatchCenter}
                         onPress={() => navigateToLeagueMatchDetails(navigation, currentMatch)}
@@ -728,16 +862,17 @@ const MatchCenterScreen = () => {
                 );
             }
             // Helpers for display
+            /** @type {Record<string, string>} */
             const DAY_MAP = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
-            const formatHour = (h) => h ? h.substring(0, 5) : '?';
-            const cleanLabel = (value) => {
+            const formatHour = (/** @type {string | undefined | null} */ h) => (h ? h.substring(0, 5) : '?');
+            const cleanLabel = (/** @type {unknown} */ value) => {
                 if (typeof value !== 'string') return null;
                 const trimmed = value.trim();
                 if (!trimmed) return null;
                 return trimmed.split('(')[0].trim();
             };
 
-            const parseMaybeJson = (value) => {
+            const parseMaybeJson = (/** @type {unknown} */ value) => {
                 if (value && typeof value === 'object') return value;
                 if (typeof value !== 'string') return value;
                 try {
@@ -747,7 +882,7 @@ const MatchCenterScreen = () => {
                 }
             };
 
-            const getOpponentCity = (details) => {
+            const getOpponentCity = (/** @type {OpponentDetails | null} */ details) => {
                 if (!details) return "Zone inconnue";
 
                 const homeBase = parseMaybeJson(details.home_base);
@@ -783,22 +918,30 @@ const MatchCenterScreen = () => {
             const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0) ? `+/- ${opponentDetails.radius} km` : 'Rayon Standard';
             const division = opponentDetails?.division || '?';
             // Recurring slot display
-            const recurringDay = DAY_MAP[opponentDetails?.recurring_day] || currentMatch?.recurring_day || '?';
+            const recurringDayKey = String(opponentDetails?.recurring_day || currentMatch?.recurring_day || '').toLowerCase();
+            const recurringDay = DAY_MAP[recurringDayKey] || recurringDayKey || '?';
             const recurringStart = formatHour(opponentDetails?.recurring_start_hour || currentMatch?.recurring_start_hour);
             const recurringEnd = formatHour(opponentDetails?.recurring_end_hour || currentMatch?.recurring_end_hour);
             // Sport/Category handling (Relation objects or strings)
-            const sportLabel = opponentDetails?.sport?.label || opponentDetails?.sport?.name || "Sport"; 
-            const catLabel = opponentDetails?.category?.label || opponentDetails?.category?.name || "Senior";
-            const allCommonSlots = Array.isArray(currentMatch?.common_slots) ? currentMatch.common_slots : [];
-            const commonSlotsSummary = allCommonSlots
-                .map((slot) => {
-                    const dayLabel = DAY_MAP[String(slot?.day || '').toLowerCase()] || slot?.day || '';
-                    const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
-                    const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
-                    if (!dayLabel) return null;
-                    return `${dayLabel} ${startLabel}-${endLabel}`;
-                })
-                .filter(Boolean);
+            const sportData = opponentDetails?.sport;
+            const sportLabel = typeof sportData === 'string'
+                ? sportData
+                : sportData?.label || sportData?.name || "Sport";
+            const categoryData = opponentDetails?.category;
+            const catLabel = typeof categoryData === 'string'
+                ? categoryData
+                : categoryData?.label || categoryData?.name || "Senior";
+            const matchCommonSlots = currentMatch?.common_slots;
+            const allCommonSlots = Array.isArray(matchCommonSlots) ? matchCommonSlots : [];
+            /** @type {string[]} */
+            const commonSlotsSummary = [];
+            (allCommonSlots || []).forEach((/** @type {LeagueSlot} */ slot) => {
+                const dayLabel = DAY_MAP[String(slot?.day || '').toLowerCase()] || slot?.day || '';
+                const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
+                const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
+                if (!dayLabel) return;
+                commonSlotsSummary.push(`${dayLabel} ${startLabel}-${endLabel}`);
+            });
             
             console.log('[DEBUG] MatchCenter Opponent Details:', JSON.stringify(opponentDetails, null, 2));
 
@@ -872,8 +1015,9 @@ const MatchCenterScreen = () => {
                                     <Text style={[Fonts.p2Bold, { color: 'white' }]}>
                                         {/* Translate Day */}
                                         {(() => {
+                                            /** @type {Record<string, string>} */
                                             const dayMap = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
-                                            const rDay = recurringDay?.toLowerCase();
+                                            const rDay = String(recurringDay || '').toLowerCase();
                                             return dayMap[rDay] || rDay || "Date Inconnue";
                                         })()}
                                     </Text>
@@ -896,7 +1040,7 @@ const MatchCenterScreen = () => {
                                 <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
                                     Creneaux en commun
                                 </Text>
-                                {commonSlotsSummary.map((slotLabel) => (
+                                {commonSlotsSummary.map((/** @type {string} */ slotLabel) => (
                                     <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 4 }]}>
                                         - {slotLabel}
                                     </Text>
@@ -962,7 +1106,7 @@ const MatchCenterScreen = () => {
                                                                 const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
                                                                 const fallbackSlotIds = (selectedSlotIds && selectedSlotIds.length > 0)
                                                                     ? selectedSlotIds
-                                                                    : (squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean);
+                                                                    : toDocumentIdList(squadSlots);
                                                                 if (fallbackSlotIds.length === 0) {
                                                                     throw new Error('Ajoutez puis selectionnez au moins un creneau pour relancer la recherche.');
                                                                 }
@@ -1020,12 +1164,12 @@ const MatchCenterScreen = () => {
 
 
         // If Match Scheduled / Validated
-        if (shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
+        if (currentMatch && shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
              // Navigate to standalone LeagueMatchDetails (no event dependency)
              return (
                  <NextMatchCard 
                     match={currentMatch}
-                    event={currentMatch.event}
+                    event={currentMatch?.event}
                     myTeamId={getEntityDocumentId(mySquad)}
                     onRefresh={loadMatchCenter}
                     onPress={() => navigateToLeagueMatchDetails(navigation, currentMatch)}
@@ -1034,13 +1178,14 @@ const MatchCenterScreen = () => {
         }
 
         // DEFAULT: Locker Room / Ticket View
+        /** @type {LeagueSlot[]} */
         const displayedSlots = squadSlots.length > 0 ? squadSlots : (activeSlot ? [activeSlot] : []);
 
         return (
             <View>
                  {/* Carousel of Slots */}
                  <View
-                    onLayout={(event) => {
+                    onLayout={(/** @type {import('react-native').LayoutChangeEvent} */ event) => {
                         const nextWidth = event?.nativeEvent?.layout?.width || 0;
                         if (nextWidth > 0 && Math.abs(nextWidth - slotCarouselWidth) > 1) {
                             setSlotCarouselWidth(nextWidth);
@@ -1059,7 +1204,7 @@ const MatchCenterScreen = () => {
                         decelerationRate="fast"
                         pagingEnabled={false}
                         keyExtractor={(item, index) => getEntityDocumentId(item) || `slot-${index}`}
-                        onMomentumScrollEnd={(e) => {
+                        onMomentumScrollEnd={(/** @type {import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>} */ e) => {
                             const index = Math.round(e.nativeEvent.contentOffset.x / (slotCardWidth + slotCardGap));
                             if (displayedSlots[index]) {
                                 setActiveSlot(displayedSlots[index]);
@@ -1077,19 +1222,34 @@ const MatchCenterScreen = () => {
                             return (
                                 <View style={{ width: slotCardWidth, marginRight: isLast ? 0 : slotCardGap }}>
                                     <View style={{ marginBottom: 8 }}>
-                                            {/* Date & Time Display */}
-                                           <View>
-                                                <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
-                                                   {item.recurrence_day ? (DAY_MAP[item.recurrence_day] || item.recurrence_day) : formatDate(item.start_time || item.date).split(' ')[0]}
-                                                </Text>
-                                                <Text style={[Fonts.p1, { color: Colors.primary500, marginTop: 2 }]}>
-                                                    {item.start_hour ? 
-                                                       `${item.start_hour.substring(0,5)} - ${item.end_hour.substring(0,5)}` 
-                                                       : 
-                                                       `${new Date(item.start_time || item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${new Date(new Date(item.start_time || item.date).getTime() + 60*60*1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
-                                                    }
-                                                </Text>
-                                           </View>
+                                            {(() => {
+                                                const baseDate = item.start_time || item.date || '';
+                                                const recurringStart = item.start_hour ? item.start_hour.substring(0, 5) : null;
+                                                const recurringEnd = item.end_hour ? item.end_hour.substring(0, 5) : null;
+                                                const fallbackStart = baseDate
+                                                    ? new Date(baseDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                    : '?';
+                                                const fallbackEnd = baseDate
+                                                    ? new Date(new Date(baseDate).getTime() + 60 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                    : '?';
+                                                const rangeLabel = recurringStart && recurringEnd
+                                                    ? `${recurringStart} - ${recurringEnd}`
+                                                    : `${fallbackStart} - ${fallbackEnd}`;
+                                                const recurrenceKey = String(item.recurrence_day || '').toLowerCase();
+                                                const dayLabel = recurrenceKey
+                                                    ? (DAY_MAP[recurrenceKey] || recurrenceKey)
+                                                    : (baseDate ? formatDate(baseDate).split(' ')[0] : 'Date');
+                                                return (
+                                                   <View>
+                                                        <Text style={[Fonts.h2, { color: Colors.neutral00, textTransform: 'uppercase' }]}>
+                                                           {dayLabel}
+                                                        </Text>
+                                                        <Text style={[Fonts.p1, { color: Colors.primary500, marginTop: 2 }]}>
+                                                            {rangeLabel}
+                                                        </Text>
+                                                   </View>
+                                                );
+                                            })()}
                                        </View>
                                        {/* Status Chip */}
                                         <View style={{ 
@@ -1237,11 +1397,11 @@ const MatchCenterScreen = () => {
                     </TouchableOpacity>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                        <View style={{ 
-                            backgroundColor: Colors.neutral800, paddingHorizontal: 8, paddingVertical: 2, 
-                            borderRadius: 4, borderWidth: 1, borderColor: Colors.neutral700, marginRight: 8 
-                        }}>
-                             <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>DIV {mySquad?.division || 10}</Text>
+                        <View style={{ marginRight: 8 }}>
+                            <DivisionBadge
+                                division={mySquad?.division || 10}
+                                size={34}
+                            />
                         </View>
                         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{mySquad?.elo || 1200} PTS</Text>
                     </View>
@@ -1277,8 +1437,8 @@ const MatchCenterScreen = () => {
                           <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{streakValue}</Text>
                           <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>SERIE</Text>
                       </View>
-                      <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
-                       <View style={{ alignItems: 'center', flex: 1 }}>
+                       <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+                        <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
                             <TouchableOpacity 
                                 style={{
                                     alignItems: 'center',
@@ -1288,8 +1448,9 @@ const MatchCenterScreen = () => {
                                     borderWidth: 1,
                                     justifyContent: 'center',
                                     minHeight: 36,
-                                    paddingHorizontal: 10,
+                                    paddingHorizontal: 12,
                                     paddingVertical: 8,
+                                    width: '100%',
                                 }}
                                 onPress={() => navigation.navigate(RouteNames.LeagueRanking)}
                             >
@@ -1346,7 +1507,7 @@ const MatchCenterScreen = () => {
                         )}
                     </View>
                 ) : (
-                    recentMatches.map((item, index) => {
+                    recentMatches.map((/** @type {MatchHistoryEntry} */ item, /** @type {number} */ index) => {
                         const resultColor = item.result === 'win'
                             ? Colors.success500
                             : item.result === 'loss'
@@ -1411,10 +1572,13 @@ const MatchCenterScreen = () => {
 
     const renderLobbyModal = () => {
         // Helper to extract string from string or object
-        const getSafeLabel = (val) => {
+        const getSafeLabel = (/** @type {unknown} */ val) => {
             if (!val) return null;
             if (typeof val === 'string') return val;
-            if (typeof val === 'object' && val.label) return val.label;
+            if (typeof val === 'object') {
+                const obj = /** @type {{label?: string}} */ (val);
+                if (obj.label) return obj.label;
+            }
             return null;
         };
 
@@ -1439,7 +1603,7 @@ const MatchCenterScreen = () => {
             headerComponent={
                 <View>
                     <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center', letterSpacing: 1 }]}>CONFIGURATION</Text>
-                     <Text style={[Fonts.p1, { color: Colors.textSecondary || '#aaa', textAlign: 'center', marginBottom: 8 }]}>
+                     <Text style={[Fonts.p1, { color: Colors.neutral300, textAlign: 'center', marginBottom: 8 }]}>
                         Rechercher match
                     </Text>
                 </View>
@@ -1452,7 +1616,7 @@ const MatchCenterScreen = () => {
                     <View style={{ height: 200 }}>
                         <AutocompleteAddressInput
                             placeholder="Entrez une nouvelle adresse..."
-                            onSelect={(data) => {
+                            onSelect={(/** @type {unknown} */ data) => {
                                 const normalized = normalizeLocationInput(data);
                                 if (normalized && hasValidLocationCoordinates(normalized)) {
                                     setTempSearchLocation(normalized);
@@ -1542,7 +1706,7 @@ const MatchCenterScreen = () => {
                 {!isAddingSearchSlot && (squadSlots || []).length > 0 && (
                     <TouchableOpacity
                         onPress={() => {
-                            const allSlotIds = (squadSlots || []).map((slot) => getEntityDocumentId(slot)).filter(Boolean);
+                            const allSlotIds = toDocumentIdList(squadSlots);
                             const hasAllSelected = allSlotIds.length > 0
                                 && allSlotIds.every((slotId) => selectedSlotIds.includes(slotId));
                             setSelectedSlotIds(hasAllSelected ? [] : allSlotIds);
@@ -1572,11 +1736,12 @@ const MatchCenterScreen = () => {
                         <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
                             - Autres creneaux communs possibles :
                         </Text>
-                        {currentMatch.common_slots.map((slot, index) => {
+                        {currentMatch.common_slots.map((/** @type {LeagueSlot} */ slot, /** @type {number} */ index) => {
                              // Skip the currently selected slot
-                             if (slot.day === (currentMatch.recurring_day || opponentDetails.recurring_day)) return null;
+                             if (slot.day === (currentMatch.recurring_day || opponentDetails?.recurring_day)) return null;
 
-                             const dayName = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' }[slot.day] || slot.day;
+                             const dayKey = String(slot.day || '').toLowerCase();
+                             const dayName = DAY_MAP[dayKey] || slot.day;
                              return (
                                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                                      <Text style={{ fontSize: 14 }}>-</Text>
@@ -1589,10 +1754,10 @@ const MatchCenterScreen = () => {
                     </View>
                 )}
 
-                {!isAddingSearchSlot && (squadSlots || []).map((slot) => {
-                    const slotId = getEntityDocumentId(slot);
+                {!isAddingSearchSlot && (squadSlots || []).map((/** @type {LeagueSlot} */ slot) => {
+                    const slotId = getEntityDocumentId(slot) || '';
                     const isSelected = selectedSlotIds.includes(slotId);
-                    const formatHour = (h) => h ? h.substring(0, 5) : '?';
+                    const formatHour = (/** @type {string | undefined | null} */ h) => (h ? h.substring(0, 5) : '?');
                     return (
                         <TouchableOpacity
                             key={slotId}
@@ -1613,7 +1778,7 @@ const MatchCenterScreen = () => {
                                 {isSelected && <Text style={{ color: 'white', fontWeight: 'bold' }}>OK</Text>}
                             </View>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                                {DAY_MAP[slot.recurrence_day] || slot.recurrence_day} {formatHour(slot.start_hour)} - {formatHour(slot.end_hour)}
+                                {DAY_MAP[String(slot.recurrence_day || '').toLowerCase()] || slot.recurrence_day} {formatHour(slot.start_hour)} - {formatHour(slot.end_hour)}
                             </Text>
                         </TouchableOpacity>
                     );
@@ -1660,7 +1825,7 @@ const MatchCenterScreen = () => {
             }
         >
             <View style={{ paddingBottom: 24 }}>
-                {allSquads.map((squad) => (
+                {allSquads.map((/** @type {Team} */ squad) => (
                     <TouchableOpacity
                         key={getEntityDocumentId(squad)}
                         onPress={() => handleSquadSwitch(squad)}

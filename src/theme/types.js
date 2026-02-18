@@ -84,8 +84,12 @@ import { sizes as spaces, types } from '@/theme/spaces';
  */
 
 /**
+ * @typedef {{card: import('react-native').ViewStyle, input: import('react-native').ViewStyle}} PrimitiveComponentStyle
+ */
+
+/**
  * @typedef {StaticStyle & {
  * borderColor: StyleWithColors, backgroundColor : StyleWithColors, tintColor : StyleWithColors
- * } & NavigationStyle & ButtonComponentStyle
+ * } & NavigationStyle & ButtonComponentStyle & PrimitiveComponentStyle
  * } ApplicationStyle
  */

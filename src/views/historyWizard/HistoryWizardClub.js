@@ -15,6 +15,15 @@ const defaultClubIcon = require('@/assets/icons/shield.png');
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
+/** @typedef {import('@/domains/club/types').Club} Club */
+/** @typedef {{ documentId?: string; name?: string }} ClubSection */
+
+/**
+ * @param {{
+ *  navigation: import('@react-navigation/native').NavigationProp<any>;
+ *  route: { params?: { resetContext?: boolean; returnRoute?: string } };
+ * }} props
+ */
 const HistoryWizardClub = ({ navigation, route }) => {
   const { Colors, Fonts, Spaces, Alignments } = useTheme();
   const { t } = useTranslation();
@@ -24,7 +33,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
   const [customClubName, setCustomClubName] = useState(state.customClubName || '');
   const [showCustomInput, setShowCustomInput] = useState(state.useCustomClub);
   
-  const [selectedMultisport, setSelectedMultisport] = useState(null);
+  const [selectedMultisport, setSelectedMultisport] = useState(/** @type {Club | undefined} */ (undefined));
   const [showMultisportModal, setShowMultisportModal] = useState(false);
 
   useEffect(() => {
@@ -43,7 +52,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
     enabled: searchQuery.length >= 2 && !showCustomInput 
   });
 
-  const handleSelectClub = (club) => {
+  const handleSelectClub = (/** @type {Club} */ club) => {
     if (club._type === 'multisport') {
       setSelectedMultisport(club);
       setShowMultisportModal(true);
@@ -59,7 +68,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
     navigation.navigate(RouteNames.HistoryWizardCategory);
   };
 
-  const handleSelectMultisportSection = (section) => {
+  const handleSelectMultisportSection = (/** @type {ClubSection} */ section) => {
     // Sections are just Clubs, but we need to fetch the full club details potentially later, 
     // or we assume section has enough info. Ideally we'd want the logo etc.
     // Since section from search only has id/name, we might need to handle logo display gracefully 
@@ -86,7 +95,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
     }
   };
 
-  const canProceed = state.club || state.multisportClub || (showCustomInput && customClubName.trim());
+  const canProceed = !!(state.club || state.multisportClub || (showCustomInput && customClubName.trim()));
 
   return (
     <WizardStepLayout
@@ -94,6 +103,8 @@ const HistoryWizardClub = ({ navigation, route }) => {
       subtitle="Recherche ton club ou saisis-le manuellement"
       onBack={() => navigation.goBack()}
       onNext={canProceed ? () => navigation.navigate(RouteNames.HistoryWizardCategory) : undefined}
+      onSkip={() => {}}
+      nextLabel={t('common.actions.next', 'Suivant')}
       isNextDisabled={!canProceed}
     >
       {!showCustomInput ? (
@@ -108,7 +119,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
           }}>
             <Image source={searchIcon} style={{ width: 24, height: 24, tintColor: '#FFFFFF', marginRight: 12 }} />
             <TextInput
-              value={state.club ? state.club.name : (state.multisportClub ? state.multisportClub.name : searchQuery)}
+              value={state.club ? (state.club.name || '') : (state.multisportClub ? (state.multisportClub.name || '') : searchQuery)}
               onChangeText={(text) => {
                 setSearchQuery(text);
                 if (state.club || state.multisportClub) dispatch({ type: 'RESET' }); // Reset if user types again
@@ -123,7 +134,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
           {/* Club Results */}
           {searchQuery.length >= 2 && !state.club && !state.multisportClub && (
             <View style={[Spaces.gap[8]]}>
-              {clubResults?.slice(0, 6).map((club) => (
+              {(clubResults || []).slice(0, 6).map((/** @type {Club} */ club) => (
                 <TouchableOpacity
                   key={club.documentId}
                   onPress={() => handleSelectClub(club)}

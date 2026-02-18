@@ -224,6 +224,29 @@ export const staticStyle = {
 };
 
 /**
+ * Generate component-level primitive styles.
+ * @param {import('./types').Colors} colors - Theme colors.
+ * @returns {{card: import('react-native').ViewStyle, input: import('react-native').ViewStyle}}
+ */
+const componentPrimitives = (colors) => ({
+  card: {
+    backgroundColor: colors.neutral800,
+    borderColor: colors.neutral700,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  input: {
+    backgroundColor: colors.transparent,
+    borderColor: colors.neutral300,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+});
+
+/**
  * Generate the application styles
  * @param {import('./types').Colors} colors - The colors object.
  * @returns {import('./types').ApplicationStyle} - The generated classes.
@@ -234,5 +257,6 @@ export default (colors) => ({
   backgroundColor: backgroundColors(colors),
   borderColor: borderColor(colors),
   tintColor: tintColors(colors),
+  ...componentPrimitives(colors),
   ...staticStyle,
 });

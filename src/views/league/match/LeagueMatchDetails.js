@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,25 +30,28 @@ import {
 } from '@/services/league/leagueMatchService';
 import useTheme from '@/theme/themeContext';
 import {
-  canCaptainSubmitScore,
+  getMatchDerivedPhase,
   getMatchStatusBadgeConfig,
-  isMatchPastStart,
-  isMatchPastEnd,
   isVenueBookedForMatch,
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
-const normalizeComparableText = (value) => String(value || '')
+
+/**
+ * @typedef {{navigation: any, route: {params: {matchId: string}}}} LeagueMatchDetailsProps
+ */
+
+const normalizeComparableText = (/** @type {unknown} */ value) => String(value || '')
   .toLowerCase()
   .replace(/\s+/g, ' ')
   .trim();
-const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
-const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
-const normalizePhoneCandidate = (value) => String(value || '').replace(/[\s().-]/g, '');
-const looksLikePhone = (value) => /^\+?\d{8,15}$/.test(normalizePhoneCandidate(value));
-const getParticipantDisplayName = (participant) => {
+const resolveVenueLabel = (/** @type {LeagueMatch | null} */ match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
+const resolveAddressLabel = (/** @type {LeagueMatch | null} */ match) => match?.location?.address || match?.address || '';
+const normalizePhoneCandidate = (/** @type {unknown} */ value) => String(value || '').replace(/[\s().-]/g, '');
+const looksLikePhone = (/** @type {unknown} */ value) => /^\+?\d{8,15}$/.test(normalizePhoneCandidate(value));
+const getParticipantDisplayName = (/** @type {User | null | undefined} */ participant) => {
   const firstName = participant?.firstname || participant?.firstName || '';
   const lastName = participant?.lastname || participant?.lastName || '';
   const fullName = `${firstName} ${lastName}`.trim();
@@ -59,14 +62,28 @@ const getParticipantDisplayName = (participant) => {
   return 'Joueur';
 };
 
+/**
+ * @param {unknown} sportValue
+ * @returns {number}
+ */
+const getRequiredPlayersForSport = (sportValue) => {
+  const normalized = String(sportValue || '').trim().toLowerCase();
+  if (normalized.includes('padel')) return 2;
+  return 5;
+};
+
+/**
+ * @param {LeagueMatchDetailsProps} props
+ * @returns {import('react').ReactElement}
+ */
 function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
   const { Colors, Fonts, Images } = useTheme();
-  const { userData } = useAuth();
+  const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
   const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [match, setMatch] = useState(null);
+  const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
   const [refreshing, setRefreshing] = useState(false);
 
   const userId = getEntityDocumentId(userData);
@@ -90,12 +107,19 @@ function LeagueMatchDetails({ navigation, route }) {
     }, [loadMatch])
   );
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadMatch();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [loadMatch]);
+
   const isInTeamA = useMemo(() => {
     const rosterA = match?.team_a?.roster || [];
     const membersA = match?.team_a?.members || [];
     return (
-      rosterA.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
-      || membersA.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      rosterA.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || membersA.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
       || areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId)
     );
   }, [match, userId]);
@@ -104,8 +128,8 @@ function LeagueMatchDetails({ navigation, route }) {
     const rosterB = match?.team_b?.roster || [];
     const membersB = match?.team_b?.members || [];
     return (
-      rosterB.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
-      || membersB.some((m) => areSameEntityId(getEntityDocumentId(m), userId))
+      rosterB.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
+      || membersB.some((/** @type {User} */ m) => areSameEntityId(getEntityDocumentId(m), userId))
       || areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId)
     );
   }, [match, userId]);
@@ -118,19 +142,21 @@ function LeagueMatchDetails({ navigation, route }) {
   const isCaptain = isCaptainA || isCaptainB;
 
   const participations = teamSide === 'a' ? (match?.participations_a || []) : (match?.participations_b || []);
-  const hasConfirmed = participations.some((p) => areSameEntityId(getEntityDocumentId(p), userId));
+  const hasConfirmed = participations.some((/** @type {User} */ p) => areSameEntityId(getEntityDocumentId(p), userId));
   const participationCount = participations.length;
+  const requiredPlayers = useMemo(() => getRequiredPlayersForSport(myTeam?.sport), [myTeam?.sport]);
 
   const normalizedStatus = useMemo(() => normalizeMatchStatus(match?.status), [match?.status]);
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
+  const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
   const canSubmitScore = useMemo(
-    () => canCaptainSubmitScore({ isCaptain, match }),
-    [isCaptain, match]
+    () => isCaptain && ['waiting_score', 'pending_validation', 'disputed'].includes(matchPhase),
+    [isCaptain, matchPhase]
   );
   const isScoreLockedByTime = useMemo(
-    () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !isMatchPastStart(match),
-    [isCaptain, isVenueBooked, match, normalizedStatus]
+    () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScore,
+    [canSubmitScore, isCaptain, isVenueBooked, normalizedStatus]
   );
 
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
@@ -166,11 +192,6 @@ function LeagueMatchDetails({ navigation, route }) {
       winB: -lossA,
     };
   }, [match]);
-
-  const matchEndedOrScored = useMemo(
-    () => isMatchPastEnd(match) || ['pending_validation', 'disputed', 'valid', 'forfeit', 'no_show', 'cancelled'].includes(normalizedStatus),
-    [match, normalizedStatus]
-  );
 
   const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || (normalizedStatus === 'scheduled' && !isVenueBooked);
   const canShowCaptainCancel = normalizedStatus === 'scheduled';
@@ -234,7 +255,12 @@ function LeagueMatchDetails({ navigation, route }) {
           onPress: async () => {
             setActionLoading(true);
             try {
-              await cancelMatch(matchId, myTeam?.documentId, 'Annule par le capitaine');
+              const myTeamId = getEntityDocumentId(myTeam);
+              if (!myTeamId) {
+                Alert.alert('Erreur', 'Equipe introuvable.');
+                return;
+              }
+              await cancelMatch(matchId, myTeamId, 'Annule par le capitaine');
               Alert.alert('Match annule', 'Le match a ete annule.');
               navigation.goBack();
             } catch (_error) {
@@ -251,6 +277,7 @@ function LeagueMatchDetails({ navigation, route }) {
   };
 
   const handleOpenChat = () => {
+    if (!match) return;
     const chatId = getEntityDocumentId(match?.chat);
     if (!chatId) return;
     navigation.navigate('Conversation', {
@@ -263,7 +290,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de debut du match depassee."
+        "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute."
       );
       return;
     }
@@ -346,7 +373,7 @@ function LeagueMatchDetails({ navigation, route }) {
         >
           <View style={styles.heroSection}>
             <View style={styles.teamColumn}>
-              <TeamShield initials={match.team_a?.initials || match.team_a?.name || '?'} size={80} />
+              <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} size={80} />
               <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
             </View>
 
@@ -386,7 +413,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 </>
               ) : (
                 <>
-                  <TeamShield initials={match.team_b?.initials || match.team_b?.name || '?'} isNeutral={true} size={80} />
+                  <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isNeutral={true} size={80} />
                   <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Equipe B'}</Text>
                 </>
               )}
@@ -403,7 +430,7 @@ function LeagueMatchDetails({ navigation, route }) {
             <View style={[styles.separator, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
 
             <View style={styles.infoRow}>
-              <Image source={Images.location} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
+              <Image source={Images.pin} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{venueLabel}</Text>
                 {showAddressLine ? (
@@ -453,7 +480,7 @@ function LeagueMatchDetails({ navigation, route }) {
             <View style={styles.compoRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
-                {(match.participations_a || []).map((p, i) => (
+                {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
                   <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
                     <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
                     <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
@@ -475,7 +502,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Masque</Text>
                 ) : (
                   <>
-                    {(match.participations_b || []).map((p, i) => (
+                    {(match.participations_b || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
                       <View key={`${getEntityDocumentId(p) || i}-b`} style={styles.playerRow}>
                         <View style={[styles.dot, { backgroundColor: Colors.neutral300 }]} />
                         <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
@@ -506,13 +533,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       marginBottom: 12,
                     }}
                     textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                    title={isScoreLockedByTime ? 'Score verrouille (avant debut)' : 'Saisir le score final'}
+                    title={isScoreLockedByTime ? 'Score verrouille (avant debut + 1 min)' : 'Saisir le score final'}
                     variant="Primary"
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
-                    Le score sera disponible apres l'heure de debut du match.
+                    Le score sera disponible apres l'heure de debut du match (+1 min).
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (
@@ -568,11 +595,11 @@ function LeagueMatchDetails({ navigation, route }) {
                   variant="Secondary"
                 />
                 <Button
-                  disabled={actionLoading || participationCount >= 5}
+                  disabled={actionLoading || participationCount >= requiredPlayers}
                   onPress={handleConfirmParticipation}
                   style={{ backgroundColor: Colors.gold500, flex: 1.35 }}
                   textStyle={{ color: Colors.primary900 }}
-                  title={`Présent (${participationCount}/5)`}
+                  title={`Present (${participationCount}/${requiredPlayers})`}
                   variant="Primary"
                 />
               </View>

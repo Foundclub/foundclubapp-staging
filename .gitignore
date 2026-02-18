@@ -100,3 +100,6 @@ ios/private-key.json
 # Scratch/debug artifacts should never live under product source
 src/debug_*
 src/inspect_*
+
+# Local analysis artifacts
+.tmp/

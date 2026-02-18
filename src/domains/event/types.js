@@ -23,7 +23,7 @@
  * @property {{documentId?: string, name?: string}} [facility] - Event facility
  * @property {string[]} [myTeams] - User's teams filter
  * @property {string[]} [teamIds] - Team IDs filter
- * @property {string} [composition] - Tactical composition JSON string
+ * @property {any} [composition] - Tactical composition payload
  */
 
 /**
@@ -52,6 +52,8 @@
  * @property {'none' | 'pending' | 'approved' | 'rejected'} [featuredRequestStatus] - Featured request status
  * @property {string} [startTime] - Event start time
  * @property {string} [endTime] - Event end time
+ * @property {{ documentId?: string; name?: string; maxSlots?: number }} [facility] - Selected facility
+ * @property {Team[]} [invitedTeams] - Invited opponent teams
  * @property {any} [reservation] - Reservation object if applicable
  */
 

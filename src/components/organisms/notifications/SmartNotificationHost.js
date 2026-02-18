@@ -1,49 +1,13 @@
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
-import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigate } from '@/navigation/navigationService';
 import useTheme from '@/theme/themeContext';
-import MatchRecapBanner from '@/components/organisms/league/MatchRecapBanner';
-import MatchRecapSheet from '@/components/organisms/league/MatchRecapSheet';
+import MatchFinalPosterModal from '@/components/organisms/league/MatchFinalPosterModal';
+import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 
 const AUTO_HIDE_SNACKBAR_MS = 3200;
-
-const resolveNavigation = (payload = {}) => {
-  const type = payload.type;
-  const chatId = payload.chatId || payload.conversationId;
-  const matchId = payload.matchId;
-  if (payload.ctaRoute) {
-    return {
-      params: payload.ctaParams || {},
-      route: payload.ctaRoute,
-    };
-  }
-
-  if (
-    type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED
-    || type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED
-    || type === NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED
-  ) {
-    if (chatId) {
-      return { params: { chatId }, route: RouteNames.Conversation };
-    }
-    return { params: {}, route: RouteNames.LeagueMatchTab };
-  }
-
-  if (type === NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED) {
-    if (matchId) {
-      return {
-        params: { matchId },
-        route: RouteNames.PastMatchDetails,
-      };
-    }
-    return { params: {}, route: RouteNames.LeagueMatchTab };
-  }
-
-  return { params: {}, route: RouteNames.LeagueMatchTab };
-};
 
 const SmartNotificationHost = () => {
   const smartNotifEnabled = (() => {
@@ -59,8 +23,6 @@ const SmartNotificationHost = () => {
     activeSnackbar,
     dismissRecap,
     dismissSnackbar,
-    openRecapSheet,
-    recapSheetVisible,
   } = useSmartNotifications();
 
   if (!smartNotifEnabled) return null;
@@ -72,8 +34,10 @@ const SmartNotificationHost = () => {
   }, [activeSnackbar, dismissSnackbar]);
 
   const handleOpenFromPayload = (payload) => {
-    const destination = resolveNavigation(payload);
-    const ok = navigate(destination.route, destination.params);
+    const destination = resolveNotificationDestination(payload);
+    const route = destination?.route || RouteNames.NotificationList;
+    const params = destination?.params || {};
+    const ok = navigate(route, params);
     if (ok === false) {
       navigate(RouteNames.NotificationList);
     }
@@ -106,16 +70,9 @@ const SmartNotificationHost = () => {
         </View>
       ) : null}
 
-      <MatchRecapBanner
-        onDismiss={dismissRecap}
-        onOpenDetails={openRecapSheet}
-        payload={activeRecap}
-        visible={Boolean(activeRecap)}
-      />
-
-      <MatchRecapSheet
+      <MatchFinalPosterModal
         onClose={dismissRecap}
-        onOpenMatch={() => {
+        onOpenDetails={() => {
           handleOpenFromPayload(activeRecap);
           dismissRecap();
         }}
@@ -124,7 +81,7 @@ const SmartNotificationHost = () => {
           dismissRecap();
         }}
         payload={activeRecap}
-        visible={Boolean(activeRecap) && recapSheetVisible}
+        visible={Boolean(activeRecap)}
       />
     </>
   );

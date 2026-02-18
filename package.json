@@ -17,7 +17,10 @@
     "ios:staging": "cross-env APP_ENV=staging react-native run-ios --scheme 'FoundClub Staging'",
     "test": "jest",
     "type-check": "npx -p typescript tsc --allowJs --noEmit -p jsconfig.json",
-    "quality": "npm run type-check && npm run lint && npm run test"
+    "type-check:report": "node ./scripts/typecheck-report.js",
+    "type-check:no-regression": "node ./scripts/typecheck-no-regression.js",
+    "verify:theme-contract": "node ./scripts/verify-theme-contract.js",
+    "quality": "npm run verify:theme-contract && npm run type-check && npm run lint && npm run test"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.1.2",

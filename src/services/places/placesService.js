@@ -2,6 +2,8 @@ import Joi from 'joi';
 
 import client from '../client';
 
+/** @typedef {import('./types').Place} Place */
+
 const BAN_BASE_URL = 'https://api-adresse.data.gouv.fr';
 const DEFAULT_SEARCH_LIMIT = 20;
 const GEO_SEARCH_PATH = '/geo/search';
@@ -49,12 +51,12 @@ export const geoSearchResponseSchema = Joi.object({
   meta: Joi.object().unknown(true).optional(),
 }).unknown(true);
 
-const normalizeSearchQuery = (search) => (search || '')
+const normalizeSearchQuery = (/** @type {string} */ search) => (search || '')
   .replace(/\s*,\s*/g, ', ')
   .replace(/\s+/g, ' ')
   .trim();
 
-const inferSearchType = (search, explicitType) => {
+const inferSearchType = (/** @type {string} */ search, /** @type {string | undefined} */ explicitType) => {
   if (explicitType) return explicitType;
 
   const normalized = normalizeSearchQuery(search).toLowerCase();
@@ -72,7 +74,7 @@ const inferSearchType = (search, explicitType) => {
   return undefined;
 };
 
-const getSearchTypes = (type, query) => {
+const getSearchTypes = (/** @type {string | undefined} */ type, /** @type {string} */ query) => {
   const hasHouseNumber = /\d/.test(query);
   const prioritizedTypes = [];
 
@@ -84,7 +86,8 @@ const getSearchTypes = (type, query) => {
   return [...new Set(prioritizedTypes.filter(Boolean))];
 };
 
-const fetchPlacesByType = async (search, type) => {
+const fetchPlacesByType = async (/** @type {string} */ search, /** @type {string | undefined} */ type) => {
+  /** @type {{ autocomplete: number; limit: number; q: string; type?: string }} */
   const params = {
     autocomplete: 1,
     limit: DEFAULT_SEARCH_LIMIT,
@@ -104,7 +107,7 @@ const fetchPlacesByType = async (search, type) => {
   return validationResult.features || [];
 };
 
-const mapGeoLocationToPlace = (location) => ({
+const mapGeoLocationToPlace = (/** @type {any} */ location) => ({
   geometry: {
     coordinates: [location.lng, location.lat],
   },
@@ -121,7 +124,8 @@ const mapGeoLocationToPlace = (location) => ({
   },
 });
 
-const fetchPlacesFromGeoSearch = async (search, type) => {
+const fetchPlacesFromGeoSearch = async (/** @type {string} */ search, /** @type {string | undefined} */ type) => {
+  /** @type {{ limit: number; q: string; type?: string }} */
   const params = {
     limit: DEFAULT_SEARCH_LIMIT,
     q: search,
@@ -137,6 +141,12 @@ const fetchPlacesFromGeoSearch = async (search, type) => {
   return locations.map(mapGeoLocationToPlace);
 };
 
+/**
+ * @param {string} search
+ * @param {string[]} types
+ * @param {number} [index=0]
+ * @returns {Promise<Place[]>}
+ */
 const searchByTypeWithFallback = async (search, types, index = 0) => {
   if (index >= types.length) {
     return [];

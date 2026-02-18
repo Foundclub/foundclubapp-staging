@@ -40,6 +40,17 @@ export const images = {
   trashAlt: require('../assets/icons/trash-alt.png'),
   redTrash: require('../assets/icons/redtrash.png'),
   users: require('../assets/icons/users.png'),
+  // League Division Badges (provisional static pack)
+  division01: require('../assets/league/divisions/div-01.png'),
+  division02: require('../assets/league/divisions/div-02.png'),
+  division03: require('../assets/league/divisions/div-03.png'),
+  division04: require('../assets/league/divisions/div-04.png'),
+  division05: require('../assets/league/divisions/div-05.png'),
+  division06: require('../assets/league/divisions/div-06.png'),
+  division07: require('../assets/league/divisions/div-07.png'),
+  division08: require('../assets/league/divisions/div-08.png'),
+  division09: require('../assets/league/divisions/div-09.png'),
+  division10: require('../assets/league/divisions/div-10.png'),
   // League Icons (Mapped to existing until assets are added)
   trophy: require('../assets/icons/flag.png'), // Temp mapping
   whistle: require('../assets/icons/stadium.png'), // Temp mapping

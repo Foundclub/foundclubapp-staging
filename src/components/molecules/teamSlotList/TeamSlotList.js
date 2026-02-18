@@ -39,6 +39,7 @@ const getStatus = (count) => {
  * @param {object} props
  * @param {Array<any>} [props.slots]
  * @param {boolean} [props.isCaptain]
+ * @param {boolean} [props.isMember]
  * @param {(slot: any) => void} [props.onCheckIn]
  * @param {(slot: any) => void} [props.onSlotPress]
  * @param {() => void} [props.onAddSlot]
@@ -48,6 +49,7 @@ const getStatus = (count) => {
 export default function TeamSlotList({
   currentUserId,
   isCaptain = false,
+  isMember = true,
   onAddSlot,
   onCheckIn,
   onSlotPress,
@@ -58,13 +60,15 @@ export default function TeamSlotList({
   return (
     <View style={{ marginTop: 24 }}>
       <View style={{
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 12,
       }}
       >
-        <Text style={[Fonts.h3, { color: Colors.gold500 }]}>Disponibilites (Creneaux)</Text>
+        <Text style={[Fonts.h3, { color: Colors.gold500, flex: 1, flexShrink: 1, paddingRight: 10 }]}>
+          Disponibilites (Creneaux)
+        </Text>
         {isCaptain ? (
           <TouchableOpacity
             onPress={onAddSlot}
@@ -73,6 +77,8 @@ export default function TeamSlotList({
               borderColor: 'rgba(250, 204, 21, 0.42)',
               borderRadius: 999,
               borderWidth: 1,
+              flexShrink: 0,
+              marginLeft: 8,
               paddingHorizontal: 12,
               paddingVertical: 6,
             }}
@@ -182,23 +188,29 @@ export default function TeamSlotList({
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  onPress={() => onCheckIn?.(slot)}
-                  style={{
-                    alignItems: 'center',
-                    backgroundColor: checkedIn ? Colors.primary500 : 'transparent',
-                    borderColor: Colors.primary500,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    justifyContent: 'center',
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                  }}
-                >
-                  <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary500 }]}>
-                    {checkedIn ? 'Retirer ma presence' : 'Je suis present'}
+                {isMember ? (
+                  <TouchableOpacity
+                    onPress={() => onCheckIn?.(slot)}
+                    style={{
+                      alignItems: 'center',
+                      backgroundColor: checkedIn ? Colors.primary500 : 'transparent',
+                      borderColor: Colors.primary500,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      justifyContent: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary500 }]}>
+                      {checkedIn ? 'Retirer ma presence' : 'Je suis present'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center', paddingVertical: 8 }]}>
+                    Rejoindre la squad pour participer.
                   </Text>
-                </TouchableOpacity>
+                )}
               </TouchableOpacity>
             );
           })}

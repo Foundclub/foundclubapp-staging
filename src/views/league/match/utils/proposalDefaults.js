@@ -1,14 +1,27 @@
+/**
+ * @param {unknown} value
+ * @returns {Date | null}
+ */
 const safeDate = (value) => {
   if (value === undefined || value === null || value === '') return null;
-  const parsed = new Date(value);
+  const parsed = new Date(String(value));
   if (Number.isNaN(parsed.getTime()) || parsed.getTime() === 0) {
     return null;
   }
   return parsed;
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
 export const toHourMinute = (value) => (value ? String(value).slice(0, 5) : null);
 
+/**
+ * @param {Date | string | null | undefined} baseDate
+ * @param {string | null | undefined} hourValue
+ * @returns {Date}
+ */
 const buildDateWithHour = (baseDate, hourValue) => {
   const parsedBase = safeDate(baseDate) || new Date();
   const [hRaw, mRaw] = String(hourValue || '').split(':');
@@ -19,6 +32,11 @@ const buildDateWithHour = (baseDate, hourValue) => {
   return date;
 };
 
+/**
+ * @param {string} dayName
+ * @param {string | null | undefined} startHour
+ * @returns {Date}
+ */
 const getNextOccurrenceForDay = (dayName, startHour) => {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const normalized = String(dayName || '').toLowerCase();
@@ -42,14 +60,18 @@ const getNextOccurrenceForDay = (dayName, startHour) => {
   return candidate;
 };
 
+/**
+ * @param {LeagueMatch | null} match
+ * @returns {LeagueSlot | null}
+ */
 const findSelectedCommonSlot = (match) => {
-  const allCommonSlots = Array.isArray(match?.common_slots) ? match.common_slots : [];
+  const allCommonSlots = Array.isArray(match?.common_slots) ? (match?.common_slots || []) : [];
   if (allCommonSlots.length === 0) return null;
 
   const recurringDay = String(match?.recurring_day || '').toLowerCase();
   const recurringStart = toHourMinute(match?.recurring_start_hour);
 
-  const exact = allCommonSlots.find((slot) => {
+  const exact = allCommonSlots.find((/** @type {LeagueSlot} */ slot) => {
     const slotDay = String(slot?.day || '').toLowerCase();
     const slotStart = toHourMinute(slot?.startHour || slot?.start_hour);
     if (!slotDay || !slotStart) return false;
@@ -59,6 +81,10 @@ const findSelectedCommonSlot = (match) => {
   return exact || allCommonSlots[0];
 };
 
+/**
+ * @param {LeagueMatch | null} match
+ * @returns {{ date: Date, start: Date, end: Date }}
+ */
 export const buildProposalDefaultsFromMatch = (match) => {
   if (!match) {
     const fallbackStart = buildDateWithHour(new Date(), '20:00');

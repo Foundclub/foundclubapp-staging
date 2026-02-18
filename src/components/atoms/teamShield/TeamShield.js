@@ -8,9 +8,15 @@ import useTheme from '@/theme/themeContext';
  * @param {string} props.initials - Team initials (max 3 letters)
  * @param {boolean} [props.isSmall] - Size of the shield
  * @param {boolean} [props.isNeutral] - Colors
+ * @param {number} [props.size] - Explicit size override.
  * @returns {import('react').ReactElement} TeamShield component
  */
-function TeamShield({ initials, isNeutral = false, isSmall = false }) {
+function TeamShield({
+  initials,
+  isNeutral = false,
+  isSmall = false,
+  size,
+}) {
   // hooks
   const {
     Alignments, ApplicationStyle, Fonts, Images,
@@ -18,7 +24,7 @@ function TeamShield({ initials, isNeutral = false, isSmall = false }) {
 
   // Format initials to max 3 letters uppercase
   const formattedInitials = (initials || '?').slice(0, 3).toUpperCase();
-  const size = isSmall ? 60 : 90;
+  const shieldSize = Number.isFinite(size) ? Number(size) : (isSmall ? 60 : 90);
 
   return (
     <View style={[
@@ -31,8 +37,8 @@ function TeamShield({ initials, isNeutral = false, isSmall = false }) {
         style={[
           isNeutral ? ApplicationStyle.tintColor.neutral200 : ApplicationStyle.tintColor.primary200,
           {
-            height: size,
-            width: size,
+            height: shieldSize,
+            width: shieldSize,
           }]}
       />
       <View style={[
@@ -42,7 +48,7 @@ function TeamShield({ initials, isNeutral = false, isSmall = false }) {
         <Text style={[
           isSmall ? Fonts.p2Black : Fonts.h4Black,
           isNeutral ? Fonts.neutral700 : Fonts.primary700,
-          { top: size / 3.5 },
+          { top: shieldSize / 3.5 },
         ]}
         >
           {formattedInitials}

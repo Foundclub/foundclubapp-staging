@@ -20,8 +20,28 @@ import { getMultisportClubById } from '@/services/multisportClub/multisportClubS
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
+ * @typedef {{ url?: string }} ImageAsset
+ * @typedef {{ documentId?: string; firstname?: string; lastname?: string; avatar?: ImageAsset }} CMAdmin
+ * @typedef {{ name?: string }} SectionActivity
+ * @typedef {{ documentId?: string; name?: string; logo?: ImageAsset; activites?: SectionActivity[]; teams?: unknown[] }} CMSection
+ * @typedef {{ title?: string; link?: string; logo?: ImageAsset }} CMSponsor
+ * @typedef {{
+ *  documentId?: string;
+ *  name?: string;
+ *  logo?: ImageAsset;
+ *  addressDetails?: string;
+ *  phoneNumber?: string;
+ *  email?: string;
+ *  sponsor?: CMSponsor[];
+ *  admins?: CMAdmin[];
+ *  sections?: CMSection[];
+ * }} MultisportClub
+ */
+
+/**
  * MultisportClub details screen component
  * Displays a multisport club with its sections (child clubs)
+ * @param {{ navigation: any; route: { params?: { cmId?: string } } }} props
  */
 function MultisportClubDetails({ navigation, route }) {
   const { cmId } = route?.params ?? {};
@@ -33,27 +53,38 @@ function MultisportClubDetails({ navigation, route }) {
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
 
-  const canEdit = useMemo(() => cm?.admins?.some(admin => admin.documentId === userData?.documentId), [cm, userData]);
-
   const handleCreateSponsor = useCallback(() => {
     navigation.navigate(RouteNames.AddSponsor, { cmId });
   }, [navigation, cmId]);
 
   const {
-    data: cm,
+    data: cmData,
     error,
     isLoading,
     refetch,
   } = useQuery({
     queryKey: ['multisport-club', cmId],
-    queryFn: () => getMultisportClubById(cmId),
+    queryFn: () => {
+      if (!cmId) return Promise.resolve(null);
+      return getMultisportClubById(cmId);
+    },
     enabled: !!cmId,
   });
 
+  const cm = /** @type {MultisportClub | null | undefined} */ (cmData);
+  const sponsors = cm?.sponsor ?? [];
+  const sections = cm?.sections ?? [];
+  const admins = cm?.admins ?? [];
+  const canEdit = useMemo(
+    () => cm?.admins?.some((admin) => admin.documentId === userData?.documentId),
+    [cm, userData],
+  );
+
   /**
    * Handle section press - navigate to club details
+   * @param {CMSection} section
    */
-  const handleSectionPress = useCallback((section) => {
+  const handleSectionPress = useCallback((/** @type {CMSection} */ section) => {
     if (section?.documentId) {
       navigation.navigate(RouteNames.ClubStack, {
         screen: RouteNames.Club,
@@ -64,8 +95,9 @@ function MultisportClubDetails({ navigation, route }) {
 
   /**
    * Handle admin press - navigate to user profile
+   * @param {CMAdmin} admin
    */
-  const handleAdminPress = useCallback((admin) => {
+  const handleAdminPress = useCallback((/** @type {CMAdmin} */ admin) => {
     if (admin?.documentId) {
       navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.UserDetails,
@@ -138,7 +170,7 @@ function MultisportClubDetails({ navigation, route }) {
             </View>
 
               {/* Edit Action - Visible only to CM admins */}
-              {cm?.admins?.some(admin => admin.documentId === userData?.documentId) ? (
+              {cm?.admins?.some((admin) => admin.documentId === userData?.documentId) ? (
                 <TouchableOpacity
                   onPress={() => navigation.navigate(RouteNames.MultisportClubEdit, { cmId })}
                   style={[
@@ -214,7 +246,7 @@ function MultisportClubDetails({ navigation, route }) {
           </View>
 
           {/* Sponsors */}
-          {(cm?.sponsor?.length > 0 || canEdit) && (
+          {((sponsors.length > 0) || canEdit) && (
             <View style={[Spaces.gap[16]]}>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween]}>
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>
@@ -234,7 +266,7 @@ function MultisportClubDetails({ navigation, route }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={[Spaces.gap[16]]}
               >
-                {cm?.sponsor?.map((sponsor, idx) => (
+                {sponsors.map((sponsor, idx) => (
                   <TouchableOpacity
                     key={sponsor.link || idx}
                     onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
@@ -261,7 +293,7 @@ function MultisportClubDetails({ navigation, route }) {
           )}
 
           {/* Admin Actions - Visible only to CM admins */}
-          {cm?.admins?.some(admin => admin.documentId === userData?.documentId) && (
+          {cm?.admins?.some((admin) => admin.documentId === userData?.documentId) && (
             <TouchableOpacity
               onPress={handleFeaturedRequestsPress}
               style={[
@@ -281,13 +313,13 @@ function MultisportClubDetails({ navigation, route }) {
           )}
 
           {/* Sections (Child Clubs) */}
-          {cm?.sections?.length > 0 && (
+          {sections.length > 0 && (
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                Sections ({cm.sections.length})
+                Sections ({sections.length})
               </Text>
               <View style={[Spaces.gap[12]]}>
-                {cm.sections.map((section) => (
+                {sections.map((section) => (
                   <TouchableOpacity
                     key={section.documentId}
                     onPress={() => handleSectionPress(section)}
@@ -309,7 +341,7 @@ function MultisportClubDetails({ navigation, route }) {
                       />
                     ) : (
                       <TeamShield
-                        initials={getClubInitials(section.name)}
+                        initials={getClubInitials(section.name || '')}
                         isSmall
                       />
                     )}
@@ -329,7 +361,7 @@ function MultisportClubDetails({ navigation, route }) {
                       )}
                     </View>
                     <Image
-                      source={Images.chevronRight}
+                      source={Images.arrowRight}
                       style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
                     />
                   </TouchableOpacity>
@@ -339,13 +371,13 @@ function MultisportClubDetails({ navigation, route }) {
           )}
 
           {/* Admins (Dirigeants Omnisport) */}
-          {cm?.admins?.length > 0 && (
+          {admins.length > 0 && (
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
                 Dirigeants Omnisport
               </Text>
               <View style={[Spaces.gap[12]]}>
-                {cm.admins.map((admin) => (
+                {admins.map((admin) => (
                   <TouchableOpacity
                     key={admin.documentId}
                     onPress={() => handleAdminPress(admin)}

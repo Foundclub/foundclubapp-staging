@@ -10,6 +10,7 @@ export const colors = {
   neutral400: '#92979a',
   neutral50: '#f1f2f2',
   neutral500: '#777c7e',
+  neutral600: '#5f6366',
   neutral700: '#474b4c',
   neutral800: '#242526',
   neutral900: '#0c0c0d',
@@ -27,12 +28,20 @@ export const colors = {
   warning100: '#fff4e5',
   warning500: '#ffa115',
   warning700: '#cc7a00',
+  warning900: '#8a4f00',
 
   gold100: '#FFF8E1',
   gold200: '#FFE082',
   gold500: '#FFD700',
   gold700: '#C5A000',
   gold900: '#3D2E0F',
+
+  // @deprecated compatibility aliases (to remove after design-system migration)
+  primary: '#01b3f4',
+  secondary: '#ffa115',
+  error: '#ff284f',
+  danger500: '#ff284f',
+  textSecondary: '#adb1b2',
 
   transparent: 'transparent',
 };

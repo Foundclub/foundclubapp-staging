@@ -12,13 +12,15 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {boolean} [props.isLoading]
  * @param {boolean} [props.disabled]
  * @param {string} [props.title]
- * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' } props.variant
+ * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' } [props.variant]
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.style]
+ * @param {import('react-native').TextStyle | import('react-native').TextStyle[]} [props.textStyle]
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]
  * @param {'before' | 'after'} [props.iconPosition]
  * @param {string} [props.iconColor]
  * @param {(event: import('react-native').GestureResponderEvent) => void} [props.onPress]
  * @param {boolean} [props.isOption]
+ * @param {'md' | 'sm' | 'small'} [props.size]
  * @returns {import('react').ReactElement}
  */
 function Button({
@@ -29,10 +31,11 @@ function Button({
   isLoading,
   isOption = false,
   onPress,
+  size = 'md',
   style,
   textStyle,
   title,
-  variant,
+  variant = 'Primary',
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -44,6 +47,23 @@ function Button({
     tintColor: iconColor || ApplicationStyle[`buttonText${variant}`]?.color,
     width: 20,
   };
+  const normalizedSize = size === 'small' ? 'sm' : size;
+  const isSmall = normalizedSize === 'sm';
+  const sizeStyle = isSmall
+    ? {
+      borderRadius: 12,
+      height: 39,
+      paddingHorizontal: 12,
+    }
+    : null;
+  const sizeIconStyle = isSmall
+    ? {
+      borderRadius: 12,
+      height: 39,
+      width: 39,
+    }
+    : null;
+  const sizeTextStyle = isSmall ? Fonts.p2Bold : null;
 
   return (
     <TouchableOpacity
@@ -51,7 +71,9 @@ function Button({
       onPress={onPress}
       style={[
         ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
+        sizeStyle,
         !title && ApplicationStyle[`buttonIcon${isOption ? 'Option' : ''}`],
+        !title && sizeIconStyle,
         disabled && ApplicationStyle.buttonDisabled,
         style,
       ]}
@@ -71,6 +93,7 @@ function Button({
                 numberOfLines={1}
                 style={[
                   Fonts.p1Bold,
+                  sizeTextStyle,
                   ApplicationStyle[`buttonText${variant}`],
                   textStyle,
                 ]}

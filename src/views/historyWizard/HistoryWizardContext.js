@@ -1,5 +1,61 @@
 import React, { createContext, useContext, useReducer } from 'react';
 
+/**
+ * @typedef {{ documentId?: string, name?: string, logo?: { url?: string }, _type?: string, sectionsCount?: number, sections?: Array<{ documentId?: string, name?: string }> }} HistoryWizardClub
+ */
+/**
+ * @typedef {{ documentId?: string, name?: string }} HistoryWizardOption
+ */
+/**
+ * @typedef {{
+ *  documentId?: string,
+ *  club?: HistoryWizardClub | null,
+ *  multisport_club?: HistoryWizardClub | null,
+ *  customClubName?: string,
+ *  category?: HistoryWizardOption | null,
+ *  level?: HistoryWizardOption | null,
+ *  startYear?: number,
+ *  endYear?: number,
+ *  isCurrentlyActive?: boolean,
+ * }} HistoryWizardEditingEntry
+ */
+/**
+ * @typedef {{
+ *  club: HistoryWizardClub | null,
+ *  multisportClub: HistoryWizardClub | null,
+ *  customClubName: string,
+ *  useCustomClub: boolean,
+ *  category: HistoryWizardOption | null,
+ *  level: HistoryWizardOption | null,
+ *  startYear: number,
+ *  endYear: number,
+ *  isCurrentlyActive: boolean,
+ *  editingEntry: HistoryWizardEditingEntry | null,
+ *  returnRoute: string | null,
+ * }} HistoryWizardState
+ */
+/**
+ * @typedef {{
+ *  type:
+ *    | 'SET_RETURN_ROUTE'
+ *    | 'SET_CLUB'
+ *    | 'SET_MULTISPORT_CLUB'
+ *    | 'SET_CUSTOM_CLUB'
+ *    | 'SET_CATEGORY'
+ *    | 'SET_LEVEL'
+ *    | 'SET_START_YEAR'
+ *    | 'SET_END_YEAR'
+ *    | 'SET_CURRENTLY_ACTIVE'
+ *    | 'SET_EDITING_ENTRY'
+ *    | 'RESET',
+ *  payload?: any,
+ * }} HistoryWizardAction
+ */
+/**
+ * @typedef {{ state: HistoryWizardState, dispatch: (action: HistoryWizardAction) => void }} HistoryWizardContextValue
+ */
+
+/** @type {HistoryWizardState} */
 const initialState = {
   club: null,
   multisportClub: null,
@@ -14,6 +70,11 @@ const initialState = {
   returnRoute: null,
 };
 
+/**
+ * @param {HistoryWizardState} state
+ * @param {HistoryWizardAction} action
+ * @returns {HistoryWizardState}
+ */
 function historyWizardReducer(state, action) {
   switch (action.type) {
     case 'SET_RETURN_ROUTE':
@@ -59,8 +120,11 @@ function historyWizardReducer(state, action) {
   }
 }
 
-const HistoryWizardContext = createContext(null);
+const HistoryWizardContext = createContext(/** @type {HistoryWizardContextValue | null} */ (null));
 
+/**
+ * @param {{ children: React.ReactNode }} props
+ */
 export function HistoryWizardProvider({ children }) {
   const [state, dispatch] = useReducer(historyWizardReducer, initialState);
 
@@ -71,6 +135,9 @@ export function HistoryWizardProvider({ children }) {
   );
 }
 
+/**
+ * @returns {HistoryWizardContextValue}
+ */
 export function useHistoryWizard() {
   const context = useContext(HistoryWizardContext);
   if (!context) {

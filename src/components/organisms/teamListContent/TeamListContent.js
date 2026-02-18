@@ -29,11 +29,16 @@ import { deleteTeamMembershipRequest } from '@/services/teamMembershipRequest/te
 import { useMutation } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 
+/** @typedef {import('@/domains/team/types').Team} Team */
+/** @typedef {import('@/domains/auth/types').User} User */
+/** @typedef {{ requestId?: string } & Team} PendingTeam */
+
 /**
  * Team list content to be used in home page or dedicated team list screen
  * @param {object} props
  * @param {string} [props.clubId] - The ID of the club to fetch teams for
  * @param {string} [props.playerId] - The ID of the player to fetch teams for
+ * @param {boolean} [props.isLeagueMode] - League mode renders squads instead of classic teams.
  * @returns {import('react').ReactElement} Team list content component
  */
 
@@ -69,8 +74,10 @@ function TeamListContent({
     fetchNextPage,
     isFetchingNextPage,
   } = useGetTeams({
-    filters: { club: clubId, players: playerId },
-    enabled: !isLeagueMode // Disable if league mode
+    clubId,
+    playerId,
+  }, {
+    enabled: !isLeagueMode, // Disable if league mode
   });
 
   // 2. League Teams Query
@@ -78,7 +85,7 @@ function TeamListContent({
     data: leagueData, // Array of LeagueTeams
     isLoading: isLoadingLeague,
     refetch: refetchLeague,
-  } = useGetMyLeagueTeam(userData?.documentId, { enabled: isLeagueMode && !!userData });
+  } = useGetMyLeagueTeam(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
 
   const teams = useMemo(() => {
       if (isLeagueMode) return (leagueData || []).filter(Boolean);
@@ -111,23 +118,23 @@ function TeamListContent({
     // Copy existing classic logic here or keep it if I can verify I'm editing the right block.
     // Since I'm replacing a large block, I must replicate the classic logic.
     
-    const my = [];
-    const other = [];
+    const my = /** @type {Team[]} */ ([]);
+    const other = /** @type {Team[]} */ ([]);
     // ... classic filtering logic ...
     const teamRequests = userData.teamMembershipRequests || [];
     const pending = teamRequests
-      .filter((r) => r.state === 'pending' && r.team)
-      .map((r) => ({ ...r.team, requestId: r.documentId }));
+      .filter((/** @type {{ state?: string; team?: Team }} */ r) => r.state === 'pending' && r.team)
+      .map((/** @type {{ team?: Team; documentId?: string }} */ r) => ({ ...r.team, requestId: r.documentId }));
     
     const clubRequests = userData.clubMembershipRequests || [];
     const pendingClubs = clubRequests
-      .filter((r) => r.state === 'pending' && r.club)
-      .map((r) => ({ ...r.club, name: r.club.name, club: r.club, documentId: r.club.documentId, activities: r.club.activities || [] }));
+      .filter((/** @type {{ state?: string; club?: any }} */ r) => r.state === 'pending' && r.club)
+      .map((/** @type {{ club?: any }} */ r) => ({ ...r.club, name: r.club.name, club: r.club, documentId: r.club.documentId, activities: r.club.activities || [] }));
 
-    teams.forEach((team) => {
-      const isTrainer = team.trainers?.some((t) => t.documentId === userData.documentId);
-      const isPlayer = team.players?.some((p) => p.documentId === userData.documentId);
-      const isPending = pending.some((p) => p.documentId === team.documentId);
+    teams.forEach((/** @type {Team} */ team) => {
+      const isTrainer = team.trainers?.some((/** @type {User} */ t) => t.documentId === userData.documentId);
+      const isPlayer = team.players?.some((/** @type {User} */ p) => p.documentId === userData.documentId);
+      const isPending = pending.some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
 
       if (isTrainer || isPlayer) {
         my.push(team);
@@ -150,7 +157,7 @@ function TeamListContent({
   const handleTeamSelect = useCallback((/** @type {Team} */ team) => {
     // @ts-expect-error because of react navigation type definitions
     if (team.type === 'club') {
-        navigation.navigate(RouteNames.ClubStack, {
+        /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
             screen: RouteNames.Club,
             params: { clubId: team.documentId },
         });
@@ -159,7 +166,7 @@ function TeamListContent({
 
     if (isLeagueMode) {
         // League Mode -> SquadDetails
-        navigation.navigate(RouteNames.TeamStack, {
+        /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
             screen: RouteNames.SquadDetails,
             params: { teamId: team.documentId },
         });
@@ -168,7 +175,7 @@ function TeamListContent({
 
     // Classic Mode -> TeamDetails
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.TeamStack, {
+    /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
       screen: RouteNames.TeamDetails,
       params: { teamId: team.documentId },
     });
@@ -181,15 +188,10 @@ function TeamListContent({
   );
 
 
-  // Update renderItem to handle crest
-
-  const renderItem = useCallback(({ item, isPending }) => {
-    
-    // Inner Content Renderer to avoid duplication if possible, 
-    // but structure differs enough that we might just inline or separate blocks.
+  const renderTeamCard = useCallback((/** @type {Team} */ item, isPending = false) => {
     const renderContent = () => (
-        <>
-         <View style={[
+      <>
+        <View style={[
           Alignments.fullWidth,
           Alignments.row,
           Alignments.justifyEnd,
@@ -200,18 +202,17 @@ function TeamListContent({
         >
           {item?.activities?.[0]?.name ? (
             <Tag text={item.activities[0].name} />
-          ) : (item.sport && <Tag text={item.sport} />)} 
+          ) : (item.sport && <Tag text={item.sport} />)}
         </View>
 
         <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignCenter, Spaces.gap[8], isLeagueMode && { flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 16 }]}>
           <View>
-            {/* LEAGUE TEAM CREST HANDLING */}
             {isLeagueMode && item.crest?.url ? (
-                 <ProfileAvatar
-                    imageUrl={item.crest.url}
-                    size={80} // Larger Avatar for Big Card
-                    style={{ borderRadius: 80, borderWidth: 1, borderColor: Colors.gold500 }}
-                 />
+              <ProfileAvatar
+                imageUrl={item.crest.url}
+                size={80}
+                style={{ borderRadius: 80, borderWidth: 1, borderColor: Colors.gold500 }}
+              />
             ) : (item?.club?.logo?.url ? (
               <ProfileAvatar
                 imageUrl={item.club.logo.url}
@@ -230,92 +231,87 @@ function TeamListContent({
             <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, isLeagueMode && Fonts.h2, isLeagueMode && { color: '#FFFFFF' }]}>
               {item.name}
             </Text>
-             {isLeagueMode && (
-                <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>Division {item.division || 10}</Text>
-             )}
+            {isLeagueMode && (
+              <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>Division {item.division || 10}</Text>
+            )}
           </View>
         </View>
-        
-        {/* Classic Footer */}
+
         {!isLeagueMode && (
-             <View style={[Alignments.fullWidth, Spaces.marginVertical[16], ApplicationStyle.separator, ApplicationStyle.backgroundColor.neutral500]} />
+          <View style={[Alignments.fullWidth, Spaces.marginVertical[16], ApplicationStyle.separator, ApplicationStyle.backgroundColor.neutral500]} />
         )}
-        
+
         {!isLeagueMode && (
-            <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
-                 {item?.section && <Text style={[Fonts.p2Bold, Fonts.primary100]}>{t('teamList.fields.section')} : <Text style={[Fonts.p2, Fonts.primary100]}>{item.section.name}</Text></Text>}
-            </View>
+          <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
+            {item?.section && <Text style={[Fonts.p2Bold, Fonts.primary100]}>{t('teamList.fields.section')} : <Text style={[Fonts.p2, Fonts.primary100]}>{item.section.name}</Text></Text>}
+          </View>
         )}
-        </>
+      </>
     );
 
     if (isLeagueMode) {
-        return (
-            <View style={[{ position: 'relative', marginVertical: 12, height: 250 }]}>
-                 <TouchableOpacity onPress={() => handleTeamSelect(item)} activeOpacity={0.9} style={{ flex: 1 }}>
-                    {/* 1. Glass Background Layer */}
-                    <LinearGradient
-                        colors={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
-                        start={{x: 0, y: 0}} end={{x: 1, y: 1}}
-                        style={[
-                            ApplicationStyle.borderRadius24,
-                            { 
-                                flex: 1,
-                                justifyContent: 'center',
-                            }
-                        ]}
-                    />
+      return (
+        <View style={[{ position: 'relative', marginVertical: 12, height: 250 }]}>
+          <TouchableOpacity onPress={() => handleTeamSelect(item)} activeOpacity={0.9} style={{ flex: 1 }}>
+            <LinearGradient
+              colors={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={[
+                ApplicationStyle.borderRadius24,
+                {
+                  flex: 1,
+                  justifyContent: 'center',
+                },
+              ]}
+            />
 
-                    {/* 2. Gradient Border Overlay (using MaskedView) */}
-                    <MaskedView
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        maskElement={
-                            <View
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: 24,
-                                    borderWidth: 2,
-                                    borderColor: 'black', // The mask opacity (keeps the border)
-                                    backgroundColor: 'transparent',
-                                }}
-                            />
-                        }
-                    >
-                        <LinearGradient
-                            colors={['#00C6FB', Colors.gold500]}
-                            start={{x: 0, y: 0}} end={{x: 1, y: 1}}
-                            style={{ flex: 1 }}
-                        />
-                    </MaskedView>
+            <MaskedView
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              maskElement={(
+                <View
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 24,
+                    borderWidth: 2,
+                    borderColor: 'black',
+                    backgroundColor: 'transparent',
+                  }}
+                />
+              )}
+            >
+              <LinearGradient
+                colors={['#00C6FB', Colors.gold500]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ flex: 1 }}
+              />
+            </MaskedView>
 
-                    {/* 3. Content Layer (Absolute to sit on top of background) */}
-                    <View style={[Spaces.padding[24], { position: 'absolute', width: '100%', height: '100%', justifyContent: 'center' }]}>
-                        {renderContent()}
-                    </View>
-                </TouchableOpacity>
+            <View style={[Spaces.padding[24], { position: 'absolute', width: '100%', height: '100%', justifyContent: 'center' }]}>
+              {renderContent()}
             </View>
-        );
+          </TouchableOpacity>
+        </View>
+      );
     }
 
-    // Classic Card
     return (
-    <View style={[{ position: 'relative' }]}>
-      <TouchableOpacity
-        onPress={() => handleTeamSelect(item)}
-        style={[
-          Spaces.padding[24],
-          Spaces.marginVertical[12],
-          ApplicationStyle.backgroundColor.primary700,
-          ApplicationStyle.borderRadius24,
-          isPending && { borderColor: '#EAB308', borderWidth: 1 },
-        ]}
-      >
-        {renderContent()}
-      </TouchableOpacity>
-      {/* Pending Badge Logic would specifically go here if needed, but simplified for now */}
-    </View>
-  )}, [Alignments, ApplicationStyle, Fonts, Spaces, getClubInitials, handleTeamSelect, t, isLeagueMode, Colors]);
+      <View style={[{ position: 'relative' }]}>
+        <TouchableOpacity
+          onPress={() => handleTeamSelect(item)}
+          style={[
+            Spaces.padding[24],
+            Spaces.marginVertical[12],
+            ApplicationStyle.backgroundColor.primary700,
+            ApplicationStyle.borderRadius24,
+            isPending && { borderColor: '#EAB308', borderWidth: 1 },
+          ]}
+        >
+          {renderContent()}
+        </TouchableOpacity>
+      </View>
+    );
+  }, [Alignments, ApplicationStyle, Fonts, Spaces, getClubInitials, handleTeamSelect, t, isLeagueMode, Colors]);
 
   const headerComponent = useMemo(() => (
     <View>
@@ -324,7 +320,7 @@ function TeamListContent({
           <Button
             title="RECHERCHER UNE SQUAD"
             variant="Secondary"
-            onPress={() => navigation.navigate(RouteNames.SquadSearch)}
+            onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
             style={{ flex: 1 }}
           />
         </View>
@@ -350,7 +346,7 @@ function TeamListContent({
           </Text>
           {pendingTeams.map((team) => (
             <View key={team.documentId}>
-              {renderItem({ item: team, isPending: true })}
+              {renderTeamCard(team, true)}
             </View>
           ))}
         </View>
@@ -364,7 +360,7 @@ function TeamListContent({
           </Text>
           {myTeams.map((team) => (
             <View key={team.documentId}>
-              {renderItem({ item: team })}
+              {renderTeamCard(team, false)}
             </View>
           ))}
         </View>
@@ -377,7 +373,7 @@ function TeamListContent({
         </Text>
       )}
     </View>
-  ), [pendingTeams, myTeams, otherTeams.length, Fonts, Spaces, renderItem, searchValue, t, isLeagueMode, navigation]);
+  ), [pendingTeams, myTeams, otherTeams.length, Fonts, Spaces, renderTeamCard, searchValue, t, isLeagueMode, navigation]);
 
   const renderEmptyList = () => (
     <View style={[
@@ -395,7 +391,7 @@ function TeamListContent({
         <Button
           title="RECHERCHER UNE SQUAD"
           variant="Secondary"
-          onPress={() => navigation.navigate(RouteNames.SquadSearch)}
+          onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
           style={{ minWidth: 220 }}
         />
       )}
@@ -423,7 +419,7 @@ function TeamListContent({
             onEndReachedThreshold={0.5}
             onRefresh={refetchTeams}
             refreshing={isLoadingTeams && !isFetchingNextPage}
-            renderItem={renderItem}
+            renderItem={({ item }) => renderTeamCard(item, false)}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
           />
@@ -436,7 +432,7 @@ function TeamListContent({
                     title="CRÉER UNE SQUAD"
                     variant="Primary"
                     icon="plus"
-                    onPress={() => navigation.navigate(RouteNames.TeamStack, { screen: RouteNames.CreateSquad })}
+                    onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, { screen: RouteNames.CreateSquad })}
                     style={{
                         backgroundColor: Colors.gold500,
                         borderRadius: 30,

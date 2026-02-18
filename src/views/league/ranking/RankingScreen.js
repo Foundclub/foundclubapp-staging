@@ -19,12 +19,12 @@ import { getEntityDocumentId } from '@/utils/entityId';
 
 const RankingScreen = () => {
     const { Colors, Fonts } = useTheme();
-    const navigation = useNavigation();
-    const { userData } = useAuth();
+    const navigation = /** @type {any} */ (useNavigation());
+    const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
     const [division, setDivision] = useState(10);
     const [loading, setLoading] = useState(true);
-    const [ranking, setRanking] = useState([]);
+    const [ranking, setRanking] = useState(/** @type {Team[]} */ ([]));
 
     const leagueSurface = {
         backgroundColor: 'rgba(10, 28, 43, 0.82)',
@@ -63,14 +63,14 @@ const RankingScreen = () => {
         loadData();
     }, [division]);
 
-    const changeDivision = (delta) => {
+    const changeDivision = (/** @type {number} */ delta) => {
         const nextDivision = division + delta;
         if (nextDivision >= 1 && nextDivision <= 10) {
             setDivision(nextDivision);
         }
     };
 
-    const renderItem = ({ item, index }) => (
+    const renderItem = (/** @type {{ item: Team, index: number }} */ { item, index }) => (
         <TouchableOpacity
             style={[
                 styles.row,
@@ -146,7 +146,7 @@ const RankingScreen = () => {
                     <FlatList
                         contentContainerStyle={{ paddingBottom: 12 }}
                         data={ranking}
-                        keyExtractor={(item) => getEntityDocumentId(item)}
+                        keyExtractor={(/** @type {Team} */ item) => String(getEntityDocumentId(item) || '')}
                         ListEmptyComponent={(
                             <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>

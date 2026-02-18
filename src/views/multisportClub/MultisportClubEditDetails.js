@@ -20,6 +20,18 @@ import { getMultisportClubById, updateMultisportClub } from '@/services/multispo
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+/** @typedef {import('@/domains/auth/types').Avatar} Avatar */
+/** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
+/**
+ * @typedef {object} CMUpdatePayload
+ * @property {string} [name]
+ * @property {string} [email]
+ * @property {string} [phoneNumber]
+ * @property {Avatar | undefined} [logo]
+ * @property {string} [addressLabel]
+ * @property {string | number | null} [coordinates]
+ */
+
 const defaultValues = {
     name: '',
     email: '',
@@ -38,7 +50,7 @@ const clubSchema = Joi.object({
  * @returns {import('react').ReactElement} Multisport Club edit screen component
  */
 function MultisportClubEditDetails({ navigation, route }) {
-    const { cmId } = route.params;
+    const { cmId } = route?.params ?? {};
 
     // hooks
     const {
@@ -53,8 +65,8 @@ function MultisportClubEditDetails({ navigation, route }) {
     });
 
     // local state
-    const [logo, setLogo] = useState(undefined);
-    const [address, setAddress] = useState(null);
+    const [logo, setLogo] = useState(/** @type {Avatar | undefined} */ (undefined));
+    const [address, setAddress] = useState(/** @type {Option | undefined} */ (undefined));
 
     useEffect(() => {
         if (cmData?.logo?.url) {
@@ -82,7 +94,7 @@ function MultisportClubEditDetails({ navigation, route }) {
     }, [cmData, address]);
 
     const updateCMMutation = useMutation({
-        mutationFn: (data) => updateMultisportClub(cmId, data),
+        mutationFn: (/** @type {CMUpdatePayload} */ data) => updateMultisportClub(cmId, data),
         onSuccess: () => {
             refetch();
             navigation.goBack();
@@ -149,7 +161,7 @@ function MultisportClubEditDetails({ navigation, route }) {
                         <View style={[Alignments.row, Spaces.marginVertical[24]]}>
                             <SelectAvatar
                                 currentAvatar={logo}
-                                onAvatarSelected={setLogo}
+                                onAvatarSelected={(avatar) => setLogo(avatar)}
                                 size={110}
                             />
                         </View>
@@ -228,7 +240,7 @@ function MultisportClubEditDetails({ navigation, route }) {
                              <AutocompleteAddressInput
                                 label="Adresse / Ville"
                                 address={address}
-                                setAddress={setAddress}
+                                setAddress={(value) => setAddress(value)}
                                 placeholder="Rechercher une adresse..."
                             />
                         </View>

@@ -45,7 +45,7 @@ const TacticalSelection = () => {
   // Initialize selected IDs from existing composition
   const initialSelectedIds = useMemo(() => {
     if (existingComposition?.placements?.length) {
-      const ids = existingComposition.placements.map(p => p.playerId);
+      const ids = existingComposition.placements.map((/** @type {{ playerId?: string }} */ p) => p.playerId || '');
       return new Set(ids);
     }
     return new Set();
@@ -66,18 +66,20 @@ const TacticalSelection = () => {
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   /** @type {[TacticalPlayer|null, React.Dispatch<React.SetStateAction<TacticalPlayer|null>>]} */
-  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [editingPlayer, setEditingPlayer] = useState(/** @type {TacticalPlayer | null} */ (null));
   const [editFirstname, setEditFirstname] = useState('');
   const [editLastname, setEditLastname] = useState('');
   const [editNumber, setEditNumber] = useState('');
   
   // Number overrides for team players (store overridden jersey numbers)
-  const [numberOverrides, setNumberOverrides] = useState({});
+  const [numberOverrides, setNumberOverrides] = useState(
+    /** @type {Record<string, string>} */ ({}),
+  );
 
   // Combined players list - deduplicate to avoid showing manuals twice
   const allPlayers = useMemo(() => {
     const seenIds = new Set();
-    const result = [];
+    const result = /** @type {TacticalPlayer[]} */ ([]);
     
     // Add team players first
     for (const p of teamPlayers) {
@@ -104,7 +106,7 @@ const TacticalSelection = () => {
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) return allPlayers;
     const q = searchQuery.toLowerCase();
-    return allPlayers.filter(p => 
+    return allPlayers.filter((/** @type {TacticalPlayer} */ p) =>
       p.firstname?.toLowerCase().includes(q) || 
       p.lastname?.toLowerCase().includes(q) ||
       String(p.number || '').includes(q)
@@ -259,7 +261,9 @@ const TacticalSelection = () => {
     // Use documentId preferably (that's what composition stores), fallback to id
     const playerId = String(item.documentId || item.id || '');
     // Check if selected - handles both id formats
-    const isSelected = selectedIds.has(playerId) || selectedIds.has(String(item.id)) || selectedIds.has(item.documentId);
+    const isSelected = selectedIds.has(playerId)
+      || selectedIds.has(String(item.id || ''))
+      || selectedIds.has(String(item.documentId || ''));
     const initials = `${item.firstname?.charAt(0) || ''}${item.lastname?.charAt(0) || ''}`.toUpperCase();
     const isManualPlayer = item.isManual || String(playerId).startsWith('manual_');
     
@@ -377,7 +381,7 @@ const TacticalSelection = () => {
       {/* Player List */}
       <FlatList
         data={filteredPlayers}
-        keyExtractor={(item) => item.id || item.documentId || String(Math.random())}
+        keyExtractor={(item) => String(item.id || item.documentId || Math.random())}
         renderItem={renderPlayer}
         contentContainerStyle={[Spaces.paddingHorizontal[24], styles.listContent]}
         showsVerticalScrollIndicator={false}

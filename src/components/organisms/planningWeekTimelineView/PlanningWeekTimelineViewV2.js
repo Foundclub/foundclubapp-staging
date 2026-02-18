@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
-import PropTypes from 'prop-types';
 import {
     format,
     addDays,
@@ -29,6 +28,56 @@ const HOUR_HEIGHT = 60;
 const COLLAPSED_HEIGHT = 15; // Height for empty blocks
 const MIN_EVENT_HEIGHT = 20;
 
+/**
+ * @typedef {{
+ *   id?: string | number;
+ *   date?: string | Date;
+ *   startTime?: string;
+ *   endTime?: string;
+ *   type?: string | { name?: string };
+ *   team?: { name?: string };
+ *   category?: { name?: string };
+ *   facility?: { name?: string };
+ *   title?: string;
+ *   name?: string;
+ *   league_match?: unknown;
+ * }} TimelineEvent
+ */
+
+/**
+ * @typedef {{ type: 'hour'; value: number } | { type: 'collapsed'; start: number; end: number; id: string }} TimelineBlock
+ */
+
+/**
+ * @typedef {TimelineEvent & {
+ *   dayIndex: number;
+ *   top: number;
+ *   height: number;
+ *   color: string;
+ *   colIndex?: number;
+ *   widthPercent?: number;
+ *   leftPercent?: number;
+ *   concurrentCount?: number;
+ * }} PositionedEvent
+ */
+
+/**
+ * @typedef {{
+ *   events?: TimelineEvent[];
+ *   onEventPress?: (event: PositionedEvent) => void;
+ *   onSummaryPress?: () => void;
+ *   scrollEnabled?: boolean;
+ *   currentDate?: Date;
+ *   onDateChange?: (date: Date) => void;
+ *   mode?: '3days' | 'week';
+ *   isInfiniteScroll?: boolean;
+ *   maxSlots?: number;
+ * }} PlanningWeekTimelineViewProps
+ */
+
+/**
+ * @param {PlanningWeekTimelineViewProps} props
+ */
 const PlanningWeekTimelineView = ({
     events = [],
     onEventPress,
@@ -43,9 +92,13 @@ const PlanningWeekTimelineView = ({
     const { Colors, Fonts, Spaces } = useTheme();
     const [internalDate, setInternalDate] = useState(new Date());
     const currentDate = propDate || internalDate;
-    const scrollViewRef = React.useRef(null);
+    const scrollViewRef = React.useRef(/** @type {any} */ (null));
 
     // Helpers
+    /**
+     * @param {string | undefined} t
+     * @returns {string | undefined}
+     */
     const formatTime = (t) => t?.split(':').slice(0, 2).join(':');
 
     const PALETTE = [
@@ -59,13 +112,17 @@ const PlanningWeekTimelineView = ({
         '#FFD94D', // Yellow
     ];
 
+    /**
+     * @param {TimelineEvent} event
+     * @returns {string}
+     */
     const getEventColor = (event) => {
         // 1. Gold for League Matches
         if (event.league_match) {
             return '#FFD700'; // Gold
         }
 
-        const type = event.type?.name || event.type;
+            const type = typeof event.type === 'string' ? event.type : event.type?.name;
         if (type) {
             switch (type) {
                 case 'Match': return '#FF4D4D'; // Red
@@ -105,7 +162,7 @@ const PlanningWeekTimelineView = ({
         const start = startOfDay(weekDays[0]);
         const end = endOfDay(weekDays[weekDays.length - 1]);
 
-        return events.filter((event) => {
+        return events.filter((/** @type {TimelineEvent} */ event) => {
             if (!event || !event.date) return false;
             const eventDate = new Date(event.date);
             return isWithinInterval(eventDate, { start, end });
@@ -118,7 +175,7 @@ const PlanningWeekTimelineView = ({
         const active = new Set();
         if (!weekEvents || weekEvents.length === 0) return active;
 
-        weekEvents.forEach(event => {
+        weekEvents.forEach((/** @type {TimelineEvent} */ event) => {
             let startH = 0;
             let endH = 0;
             let endM = 0;
@@ -159,7 +216,7 @@ const PlanningWeekTimelineView = ({
     const minStartHour = useMemo(() => {
         if (!weekEvents || weekEvents.length === 0) return 8; // Default to 8am if no events
         let min = 24;
-        weekEvents.forEach(e => {
+        weekEvents.forEach((/** @type {TimelineEvent} */ e) => {
             if (e.startTime) {
                 const h = parseInt(e.startTime.split(':')[0], 10);
                 if (h < min) min = h;
@@ -168,24 +225,11 @@ const PlanningWeekTimelineView = ({
         return min === 24 ? 8 : Math.max(0, min - 1); // Scroll to 1 hour before first event
     }, [weekEvents]);
 
-    // Scroll to minStartHour on mount or week change
-    useEffect(() => {
-        if (scrollViewRef.current && hourPositions[minStartHour] !== undefined) {
-            // Small timeout to ensure layout is ready
-            setTimeout(() => {
-                if (scrollViewRef.current) {
-                    scrollViewRef.current.scrollTo({
-                        y: hourPositions[minStartHour],
-                        animated: true
-                    });
-                }
-            }, 100);
-        }
-    }, [minStartHour, hourPositions, weekDays]);
-
     // 4. Build Timeline Structure (The "Map" of the vertical axis)
     const timelineStructure = useMemo(() => {
+        /** @type {TimelineBlock[]} */
         const structure = [];
+        /** @type {{ start: number; end: number; id: string } | null} */
         let currentEmptyBlock = null;
 
         for (let h = 0; h <= 23; h++) {
@@ -216,9 +260,10 @@ const PlanningWeekTimelineView = ({
 
     // 5. Calculate Y-Positions (Top) for each hour
     const hourPositions = useMemo(() => {
+        /** @type {Record<number, number>} */
         const positions = {};
         let currentY = 0;
-        timelineStructure.forEach(block => {
+        timelineStructure.forEach((/** @type {TimelineBlock} */ block) => {
             if (block.type === 'hour') {
                 positions[block.value] = currentY;
                 currentY += HOUR_HEIGHT;
@@ -234,10 +279,26 @@ const PlanningWeekTimelineView = ({
         return positions;
     }, [timelineStructure]);
 
+    // Scroll to minStartHour on mount or week change
+    useEffect(() => {
+        if (scrollViewRef.current && hourPositions[minStartHour] !== undefined) {
+            // Small timeout to ensure layout is ready
+            setTimeout(() => {
+                const scroll = scrollViewRef.current;
+                if (scroll && typeof scroll.scrollTo === 'function') {
+                    scroll.scrollTo({
+                        y: hourPositions[minStartHour],
+                        animated: true
+                    });
+                }
+            }, 100);
+        }
+    }, [minStartHour, hourPositions, weekDays]);
+
     // 6. Process Events for Layout (Calculate Top, Height, DayIndex)
     const processedEvents = useMemo(() => {
-        return weekEvents.map(event => {
-            if (!event.startTime || !event.endTime) return null;
+        const mapped = weekEvents.map((/** @type {TimelineEvent} */ event) => {
+            if (!event.startTime || !event.endTime || !event.date) return null;
 
             const startH = parseInt(event.startTime.split(':')[0], 10);
             const startM = parseInt(event.startTime.split(':')[1], 10);
@@ -296,11 +357,15 @@ const PlanningWeekTimelineView = ({
                 // We need to find the Y position of the "end" of the timeline.
 
                 const lastBlock = timelineStructure[timelineStructure.length - 1];
-                const lastBlockEndY = lastBlock.type === 'hour'
-                    ? hourPositions[lastBlock.value] + HOUR_HEIGHT
-                    : hourPositions[lastBlock.end] + COLLAPSED_HEIGHT;
+                if (!lastBlock) {
+                    realBottom = top + MIN_EVENT_HEIGHT;
+                } else {
+                    const lastBlockEndY = lastBlock.type === 'hour'
+                        ? (hourPositions[lastBlock.value] ?? 0) + HOUR_HEIGHT
+                        : (hourPositions[lastBlock.end] ?? 0) + COLLAPSED_HEIGHT;
 
-                realBottom = lastBlockEndY;
+                    realBottom = lastBlockEndY;
+                }
             } else {
                 // Normal case
                 const endYBase = hourPositions[endH] !== undefined ? hourPositions[endH] : 0;
@@ -323,24 +388,27 @@ const PlanningWeekTimelineView = ({
                 height,
                 color: getEventColor(event),
             };
-        }).filter(Boolean);
+        }).filter((event) => event !== null);
+        return /** @type {PositionedEvent[]} */ (mapped);
     }, [weekEvents, hourPositions, activeHours, weekDays, timelineStructure]);
 
     // 7. Handle Overlaps (Columns)
     const eventsWithLayout = useMemo(() => {
         const daysCount = mode === 'week' ? 7 : 3;
-        const eventsByDay = Array.from({ length: daysCount }, () => []);
+        const eventsByDay = Array.from({ length: daysCount }, () => /** @type {PositionedEvent[]} */ ([]));
 
-        processedEvents.forEach(event => {
+        processedEvents.forEach((event) => {
             if (event.dayIndex >= 0 && event.dayIndex < daysCount) {
                 eventsByDay[event.dayIndex].push(event);
             }
         });
 
+        /** @type {PositionedEvent[]} */
         const result = [];
         eventsByDay.forEach((dayEvents) => {
             dayEvents.sort((a, b) => a.top - b.top);
 
+            /** @type {PositionedEvent[][]} */
             const columns = [];
             dayEvents.forEach(event => {
                 let placed = false;
@@ -362,7 +430,8 @@ const PlanningWeekTimelineView = ({
             const totalColumns = columns.length;
             dayEvents.forEach(event => {
                 event.widthPercent = 100 / totalColumns;
-                event.leftPercent = event.colIndex * event.widthPercent;
+                const colIndex = event.colIndex ?? 0;
+                event.leftPercent = colIndex * event.widthPercent;
                 event.concurrentCount = totalColumns;
                 result.push(event);
             });
@@ -372,6 +441,9 @@ const PlanningWeekTimelineView = ({
     }, [processedEvents, mode]);
 
     // Helpers
+    /**
+     * @param {Date} newDate
+     */
     const handleDateUpdate = (newDate) => {
         if (onDateChange) onDateChange(newDate);
         else setInternalDate(newDate);
@@ -425,7 +497,7 @@ const PlanningWeekTimelineView = ({
                     }}>
                         <TouchableOpacity onPress={handlePrevPage} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Image
-                                source={Images.arrowLeft}
+                                source={/** @type {any} */ (Images.arrowLeft)}
                                 style={{ width: 16, height: 16, tintColor: Colors.primary500 }}
                                 resizeMode="contain"
                             />
@@ -449,7 +521,7 @@ const PlanningWeekTimelineView = ({
 
                         <TouchableOpacity onPress={handleNextPage} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Image
-                                source={Images.arrowRight}
+                                source={/** @type {any} */ (Images.arrowRight)}
                                 style={{ width: 16, height: 16, tintColor: Colors.primary500 }}
                                 resizeMode="contain"
                             />
@@ -638,8 +710,10 @@ const PlanningWeekTimelineView = ({
                             {/* Events */}
                             {eventsWithLayout.map((event) => {
                                 const dayWidth = 100 / weekDays.length;
-                                const left = (event.dayIndex * dayWidth) + (event.leftPercent * (dayWidth / 100));
-                                const width = event.widthPercent * (dayWidth / 100);
+                                const leftPercent = event.leftPercent ?? 0;
+                                const widthPercent = event.widthPercent ?? 100;
+                                const left = (event.dayIndex * dayWidth) + (leftPercent * (dayWidth / 100));
+                                const width = widthPercent * (dayWidth / 100);
 
                                 const eventColor = event.color || Colors.primary500;
                                 const isHex = eventColor.startsWith('#');
@@ -648,7 +722,7 @@ const PlanningWeekTimelineView = ({
 
                                 // Content Data
                                 const mainTitle = event.team?.name || event.category?.name || event.title || event.name || 'Event';
-                                const eventType = event.type?.name || event.type;
+                                const eventType = typeof event.type === 'string' ? event.type : event.type?.name;
                                 const facilityName = event.facility?.name;
 
                                 // Layout Constraints
@@ -696,38 +770,35 @@ const PlanningWeekTimelineView = ({
 
                                         {/* Event Type (e.g. Match, Entraînement) */}
                                         {showType && (
-                                            <Text numberOfLines={1} style={{
+                                            <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.neutral300,
                                                 fontSize: isWeekMode ? 7 : 9,
-                                                fontFamily: Fonts.p3?.fontFamily,
                                                 marginBottom: 0,
                                                 marginTop: isWeekMode ? 1 : 0
-                                            }}>
+                                            }]}>
                                                 {eventType}
                                             </Text>
                                         )}
 
                                         {/* Facility Name */}
                                         {showFacility && (
-                                            <Text numberOfLines={1} style={{
+                                            <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.primary500,
                                                 fontSize: isWeekMode ? 7 : 8,
-                                                fontFamily: Fonts.p3?.fontFamily,
                                                 marginTop: 0,
                                                 fontWeight: 'bold'
-                                            }}>
+                                            }]}>
                                                 {facilityName}
                                             </Text>
                                         )}
 
                                         {/* Time Range */}
                                         {showTime && (
-                                            <Text numberOfLines={1} style={{
+                                            <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.neutral300,
                                                 fontSize: isWeekMode ? 7 : 8,
-                                                fontFamily: Fonts.p3?.fontFamily,
                                                 marginTop: 0
-                                            }}>
+                                            }]}>
                                                 {formatTime(event.startTime)} - {formatTime(event.endTime)}
                                             </Text>
                                         )}
@@ -740,17 +811,6 @@ const PlanningWeekTimelineView = ({
             </View >
         </GestureDetector >
     );
-};
-
-PlanningWeekTimelineView.propTypes = {
-    events: PropTypes.array,
-    onEventPress: PropTypes.func,
-    scrollEnabled: PropTypes.bool,
-    currentDate: PropTypes.instanceOf(Date),
-    onDateChange: PropTypes.func,
-    mode: PropTypes.oneOf(['3days', 'week']),
-    isInfiniteScroll: PropTypes.bool,
-    maxSlots: PropTypes.number
 };
 
 export default PlanningWeekTimelineView;

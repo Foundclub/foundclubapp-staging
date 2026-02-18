@@ -15,6 +15,7 @@ const SmartNotificationContext = createContext({
 
 const isRecapType = (type) => (
   type === NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED
+  || type === NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED
 );
 
 const getDedupeKey = (payload = {}) => {

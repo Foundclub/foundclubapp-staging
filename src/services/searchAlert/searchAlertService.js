@@ -1,6 +1,14 @@
 import client from '../client';
 
 /**
+ * @typedef {object} SearchAlertPayload
+ * @property {string} [label]
+ * @property {object} [filters]
+ * @property {string} [type]
+ * @property {boolean} [isActive]
+ */
+
+/**
  * Get search alerts for the current user
  * @returns {Promise<any>}
  */
@@ -11,9 +19,7 @@ export const getSearchAlerts = async () => {
 
 /**
  * Create a new search alert
- * @param {object} data
- * @param {string} data.label
- * @param {object} data.filters
+ * @param {SearchAlertPayload} data
  * @returns {Promise<any>}
  */
 export const createSearchAlert = async (data) => {
@@ -34,7 +40,7 @@ export const deleteSearchAlert = async (id) => {
 /**
  * Update a search alert
  * @param {string} id
- * @param {object} data
+ * @param {SearchAlertPayload} data
  * @returns {Promise<any>}
  */
 export const updateSearchAlert = async (id, data) => {

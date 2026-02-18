@@ -2,6 +2,8 @@ import Joi from 'joi';
 
 import client from '../client';
 
+/** @typedef {import('@/domains/event/types').FCEvent} Reservation */
+
 export const reservationSchema = Joi.object({
   club: Joi.object().optional(),
   currentPlayers: Joi.number().required(),
@@ -30,6 +32,12 @@ export const reservationSchema = Joi.object({
  *   type?: string;
  *   reservationMode?: string;
  *   club?: string;
+ *   activity?: string;
+ *   geohash?: string;
+ *   maxPricePerPerson?: number;
+ *   startTime?: string;
+ *   startDateAfter?: string;
+ *   startDateBefore?: string;
  * }} [filters]
  * @returns {Promise<{data: Reservation[], meta: {pagination: {page: number, pageSize: number, pageCount: number, total: number}}}>}
  */
@@ -50,6 +58,7 @@ export const getReservations = async (filters = {}) => {
       type,
     } = filters;
 
+    /** @type {{ filters: Record<string, any>; pagination: { page: number; pageSize: number }; populate: string[]; sort: string[] }} */
     const params = {
       filters: {
         type: { name: { $eq: 'Réservation' } },

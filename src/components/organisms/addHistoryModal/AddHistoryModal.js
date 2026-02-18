@@ -25,11 +25,21 @@ import { useCreateHistory, useUpdateHistory, useDeleteHistory } from '@/services
 const searchIcon = require('@/assets/icons/search.png');
 
 /**
+ * @typedef {{
+ *  documentId?: string;
+ *  club?: Club | null;
+ *  customClubName?: string | null;
+ *  category?: Category | null;
+ *  level?: Level | null;
+ *  startYear?: number;
+ *  endYear?: number | null;
+ *  isCurrentlyActive?: boolean;
+ * }} HistoryEntry
+ */
+
+/**
  * AddHistoryModal - Modal form to add/edit a sports history entry
- * @param {object} props
- * @param {boolean} props.visible - Whether modal is visible
- * @param {Function} props.onClose - Callback when modal is closed
- * @param {object} props.editingEntry - Entry being edited (null for new)
+ * @param {{ visible: boolean; onClose: () => void; editingEntry?: HistoryEntry | null }} props
  */
 function AddHistoryModal({ visible, onClose, editingEntry = null }) {
   const { Alignments, Colors, Fonts, Spaces } = useTheme();
@@ -38,11 +48,11 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
 
   // Form state
   const [clubSearch, setClubSearch] = useState('');
-  const [selectedClub, setSelectedClub] = useState(null);
+  const [selectedClub, setSelectedClub] = useState(/** @type {Club | null} */ (null));
   const [useCustomClub, setUseCustomClub] = useState(false);
   const [customClubName, setCustomClubName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(/** @type {Category | null} */ (null));
+  const [selectedLevel, setSelectedLevel] = useState(/** @type {Level | null} */ (null));
   const [startYear, setStartYear] = useState(new Date().getFullYear());
   const [endYear, setEndYear] = useState(new Date().getFullYear());
   const [isCurrentlyActive, setIsCurrentlyActive] = useState(false);
@@ -51,6 +61,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
   const { data: categories } = useGetCategories();
   const { data: levels } = useGetLevels();
   const { data: clubResults, isLoading: searchingClubs } = useSearchClubs(clubSearch, { enabled: clubSearch.length >= 2 && !useCustomClub });
+  const clubs = clubResults ?? [];
 
   // Mutations
   const createHistoryMutation = useCreateHistory();
@@ -69,9 +80,9 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
         setCustomClubName(editingEntry.customClubName);
         setUseCustomClub(true);
       }
-      setSelectedCategory(editingEntry.category);
-      setSelectedLevel(editingEntry.level);
-      setStartYear(editingEntry.startYear);
+      setSelectedCategory(editingEntry.category || null);
+      setSelectedLevel(editingEntry.level || null);
+      setStartYear(editingEntry.startYear || new Date().getFullYear());
       setEndYear(editingEntry.endYear || new Date().getFullYear());
       setIsCurrentlyActive(editingEntry.isCurrentlyActive || false);
     } else {
@@ -132,7 +143,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
     }
   };
 
-  const isValid = (selectedClub || (useCustomClub && customClubName)) && startYear;
+  const isValid = Boolean((selectedClub || (useCustomClub && customClubName.trim())) && startYear);
 
   return (
     <Modal
@@ -170,7 +181,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
             <View style={{ width: 50 }} />
           </View>
 
-          <ScrollView style={[Spaces.padding[16]]} contentContainerStyle={[Spaces.gap[20]]}>
+          <ScrollView style={[Spaces.padding[16]]} contentContainerStyle={[{ rowGap: 20 }]}>
             {/* Club Selection */}
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Club</Text>
@@ -187,9 +198,9 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                     borderColor: Colors.neutral700,
                     paddingHorizontal: 12,
                   }}>
-                    <Image source={searchIcon} style={{ width: 20, height: 20, tintColor: Colors.neutral500, marginRight: 8 }} />
+                    <Image source={/** @type {any} */ (searchIcon)} style={{ width: 20, height: 20, tintColor: Colors.neutral500, marginRight: 8 }} />
                     <TextInput
-                      value={selectedClub ? selectedClub.name : clubSearch}
+                      value={selectedClub?.name || clubSearch}
                       onChangeText={(text) => {
                         setClubSearch(text);
                         setSelectedClub(null);
@@ -202,10 +213,10 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                   </View>
 
                   {/* Club results */}
-                  {clubSearch.length >= 2 && !selectedClub && clubResults?.length > 0 && (
+                  {clubSearch.length >= 2 && !selectedClub && clubs.length > 0 && (
                     <View style={{ backgroundColor: Colors.neutral800, borderRadius: 8, maxHeight: 150 }}>
                       <ScrollView nestedScrollEnabled>
-                        {clubResults.slice(0, 5).map((club) => (
+                        {clubs.slice(0, 5).map((club) => (
                           <TouchableOpacity
                             key={club.documentId}
                             onPress={() => {
@@ -238,7 +249,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                     placeholderTextColor={Colors.neutral500}
                     style={[
                       Fonts.p1,
-                      Spaces.padding[14],
+                      { padding: 14 },
                       {
                         backgroundColor: Colors.neutral800,
                         borderRadius: 12,
@@ -262,7 +273,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
               <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Catégorie</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={[Alignments.row, Spaces.gap[8]]}>
-                  {categories?.map((cat) => (
+                  {categories?.map((/** @type {Category} */ cat) => (
                     <TouchableOpacity
                       key={cat.documentId}
                       onPress={() => setSelectedCategory(cat)}
@@ -289,7 +300,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
               <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Niveau</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={[Alignments.row, Spaces.gap[8]]}>
-                  {levels?.map((lvl) => (
+                  {levels?.map((/** @type {Level} */ lvl) => (
                     <TouchableOpacity
                       key={lvl.documentId}
                       onPress={() => setSelectedLevel(lvl)}
@@ -403,7 +414,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                   isLoading={deleteHistoryMutation.isPending}
                   onPress={handleDelete}
                   title="Supprimer cette expérience"
-                  variant="Destructive"
+                  variant="SecondaryLight"
                 />
               )}
             </View>

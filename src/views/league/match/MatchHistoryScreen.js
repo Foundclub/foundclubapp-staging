@@ -8,24 +8,25 @@ import useAuth from '@/domains/auth/useAuth';
 import { getMyLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { RouteNames } from '@/navigation/routeNames';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
+import { getEntityDocumentId } from '@/utils/entityId';
 
 const MatchHistoryScreen = () => {
     const { Colors, Fonts } = useTheme();
-    const navigation = useNavigation();
-    const { userData } = useAuth();
+    const navigation = /** @type {any} */ (useNavigation());
+    const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
     
-    const [matches, setMatches] = useState([]);
+    const [matches, setMatches] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
     const [loading, setLoading] = useState(true);
-    const [teamId, setTeamId] = useState(null);
+    const [teamId, setTeamId] = useState(/** @type {string | null} */ (null));
 
     // Initial Load
     useEffect(() => {
         const init = async () => {
             if (userData) {
                 try {
-                    const teams = await getMyLeagueTeam(userData.documentId);
+                    const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
                     if (teams && teams.length > 0) {
-                        setTeamId(teams[0].documentId);
+                        setTeamId(getEntityDocumentId(teams[0]) || null);
                     } else {
                         setLoading(false);
                     }
@@ -44,7 +45,7 @@ const MatchHistoryScreen = () => {
         setLoading(true);
         try {
             const history = await getMatchHistory(teamId, 50); // Fetch up to 50 matches
-            setMatches(history);
+            setMatches(Array.isArray(history) ? history : []);
         } catch (error) {
             console.error(error);
         } finally {
@@ -58,7 +59,7 @@ const MatchHistoryScreen = () => {
         }
     }, [teamId]);
 
-    const getResultStyle = (result) => {
+    const getResultStyle = (/** @type {'win' | 'loss' | 'draw' | 'pending' | undefined} */ result) => {
         switch(result) {
             case 'win': return { bg: 'rgba(76, 175, 80, 0.15)', text: Colors.success500 || '#4caf50', icon: '✅' };
             case 'loss': return { bg: 'rgba(244, 67, 54, 0.15)', text: Colors.error500 || '#f44336', icon: '❌' };
@@ -67,12 +68,12 @@ const MatchHistoryScreen = () => {
         }
     };
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
+    const formatDate = (/** @type {string | undefined} */ dateString) => {
+        const date = new Date(String(dateString || ''));
         return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     };
 
-    const renderItem = ({ item }) => {
+    const renderItem = (/** @type {{ item: MatchHistoryEntry }} */ { item }) => {
         const result = getResultStyle(item.result);
         return (
             <TouchableOpacity 
@@ -124,13 +125,13 @@ const MatchHistoryScreen = () => {
                 <FlatList
                     data={matches}
                     renderItem={renderItem}
-                    keyExtractor={(item) => item.id.toString()}
+                    keyExtractor={(/** @type {MatchHistoryEntry} */ item) => String(item.id || '')}
                     refreshControl={
                         <RefreshControl refreshing={loading} onRefresh={loadMatches} tintColor={Colors.primary500} />
                     }
                     contentContainerStyle={{ paddingBottom: 40 }}
                     ListEmptyComponent={
-                        !loading && (
+                        loading ? null : (
                             <View style={{ alignItems: 'center', marginTop: 100 }}>
                                 <Text style={{ fontSize: 40, marginBottom: 16 }}>📜</Text>
                                 <Text style={[Fonts.h3, { color: Colors.neutral300 }]}>Aucun match trouvé</Text>

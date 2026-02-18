@@ -2,17 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import useTheme from '@/theme/themeContext';
 
+/**
+ * @param {object} props
+ * @param {string} props.title
+ * @param {string} [props.subtitle]
+ * @param {import('react').ReactNode} [props.rightElement]
+ * @returns {import('react').ReactElement}
+ */
 const SectionHeader = ({ title, subtitle, rightElement }) => {
     const { Colors, Fonts, Spaces } = useTheme();
 
     return (
-        <View style={[styles.container, { marginBottom: Spaces?.gap?.[16] || 16 }]}>
+        <View style={[styles.container, Spaces.marginBottom[16]]}>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.title, { ...Fonts.h3, color: Colors.neutral00 || '#FFF' }]}>{title}</Text>
-                {subtitle && <Text style={[styles.subtitle, { ...Fonts.p2, color: Colors.neutral300 || '#CCC', marginTop: Spaces?.gap?.[4] || 4 }]}>{subtitle}</Text>}
+                {subtitle && <Text style={[styles.subtitle, Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>{subtitle}</Text>}
             </View>
             {rightElement && (
-                <View style={[styles.rightElement, { marginLeft: Spaces?.gap?.[16] || 16 }]}>
+                <View style={[styles.rightElement, Spaces.marginLeft[16]]}>
                     {rightElement}
                 </View>
             )}

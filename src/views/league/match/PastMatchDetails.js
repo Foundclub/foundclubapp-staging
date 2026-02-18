@@ -23,30 +23,49 @@ import { getImageUrl } from '@/utils/imageUrl';
 import { getMatch, requestRematch } from '@/services/league/leagueMatchService';
 import useTheme from '@/theme/themeContext';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const normalizeComparableText = (value) => String(value || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
 
+/**
+ * @param {LeagueMatch | null} match
+ * @returns {string}
+ */
 const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
+/**
+ * @param {LeagueMatch | null} match
+ * @returns {string}
+ */
 const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
 
 const PastMatchDetails = () => {
     const { Colors, Fonts, Images } = useTheme();
-    const route = useRoute();
-    const navigation = useNavigation();
-    const { userData } = useAuth();
+    const route = /** @type {any} */ (useRoute());
+    const navigation = /** @type {any} */ (useNavigation());
+    const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
-    const { matchId, myTeamId } = route.params || {};
+    const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined} */ (route.params);
+    const matchId = routeParams?.matchId ? String(routeParams.matchId) : '';
+    const myTeamId = routeParams?.myTeamId ? String(routeParams.myTeamId) : '';
 
     const [loading, setLoading] = useState(true);
-    const [match, setMatch] = useState(null);
+    const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
     const [requestingRematch, setRequestingRematch] = useState(false);
 
     const loadMatch = useCallback(async () => {
+        if (!matchId) {
+            setMatch(null);
+            setLoading(false);
+            return;
+        }
         try {
             const data = await getMatch(matchId);
-            setMatch(data);
+            setMatch(/** @type {LeagueMatch | null} */ (data || null));
         } catch (error) {
             console.error('Error loading match:', error);
             Alert.alert('Erreur', 'Impossible de charger le match');
@@ -69,7 +88,7 @@ const PastMatchDetails = () => {
     const isUserInTeamA = useMemo(() => {
         if (!teamA || !currentUserId) return false;
         return areSameEntityId(getEntityDocumentId(teamA?.captain), currentUserId)
-            || (teamA?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
+            || (teamA?.roster || []).some((/** @type {User} */ member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
     }, [teamA, currentUserId]);
 
     const isTeamA = useMemo(() => {
@@ -82,9 +101,11 @@ const PastMatchDetails = () => {
 
     const myScore = isTeamA ? match?.score_a : match?.score_b;
     const oppScore = isTeamA ? match?.score_b : match?.score_a;
+    const myScoreValue = Number.isFinite(Number(myScore)) ? Number(myScore) : 0;
+    const oppScoreValue = Number.isFinite(Number(oppScore)) ? Number(oppScore) : 0;
 
     const resultConfig = useMemo(() => {
-        if (myScore > oppScore) {
+        if (myScoreValue > oppScoreValue) {
             return {
                 borderColor: 'rgba(39, 214, 163, 0.55)',
                 chipBg: 'rgba(39, 214, 163, 0.2)',
@@ -92,7 +113,7 @@ const PastMatchDetails = () => {
                 label: 'VICTOIRE',
             };
         }
-        if (myScore < oppScore) {
+        if (myScoreValue < oppScoreValue) {
             return {
                 borderColor: 'rgba(255, 40, 79, 0.55)',
                 chipBg: 'rgba(255, 40, 79, 0.2)',
@@ -107,7 +128,7 @@ const PastMatchDetails = () => {
             color: Colors.warning500,
             label: 'MATCH NUL',
         };
-    }, [Colors.error500, Colors.success500, Colors.warning500, myScore, oppScore]);
+    }, [Colors.error500, Colors.success500, Colors.warning500, myScoreValue, oppScoreValue]);
 
     const formattedDate = useMemo(() => {
         if (!match?.date) return 'Date inconnue';
@@ -129,14 +150,14 @@ const PastMatchDetails = () => {
         const current = Number(myTeam?.elo || 1200);
         const opponentElo = Number(opponent?.elo || 1200);
         const expectedWin = 1 / (1 + Math.pow(10, (opponentElo - current) / 400));
-        const actualScore = myScore > oppScore ? 1 : myScore < oppScore ? 0 : 0.5;
+        const actualScore = myScoreValue > oppScoreValue ? 1 : myScoreValue < oppScoreValue ? 0 : 0.5;
         const delta = Math.round(32 * (actualScore - expectedWin));
         return {
             after: current,
             before: current - delta,
             delta,
         };
-    }, [myScore, myTeam?.elo, oppScore, opponent?.elo]);
+    }, [myScoreValue, myTeam?.elo, oppScoreValue, opponent?.elo]);
 
     const canRematch = useMemo(() => {
         const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), currentUserId);
@@ -205,9 +226,9 @@ const PastMatchDetails = () => {
         );
     }
 
-    const goalsByPlayer = match?.player_goals && typeof match.player_goals === 'object'
+    const goalsByPlayer = /** @type {Array<[string, number]>} */ (match?.player_goals && typeof match.player_goals === 'object'
         ? Object.entries(match.player_goals)
-        : [];
+        : []);
 
     return (
         <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>

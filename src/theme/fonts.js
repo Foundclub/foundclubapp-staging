@@ -3,9 +3,15 @@ export const sizes = {
   h2Size: 24,
   h3Size: 20,
   h4Size: 18,
+  h5Size: 16,
   p1Size: 16,
   p2Size: 14,
   p3Size: 12,
+  p4Size: 10,
+  labelSize: 11,
+  buttonSize: 16,
+  smallSize: 11,
+  captionSize: 12,
 };
 
 export const lineHeights = {
@@ -13,9 +19,15 @@ export const lineHeights = {
   h2Height: 32,
   h3Height: 28,
   h4Height: 24,
+  h5Height: 22,
   p1Height: 23,
   p2Height: 21,
   p3Height: 18,
+  p4Height: 14,
+  labelHeight: 16,
+  buttonHeight: 23,
+  smallHeight: 16,
+  captionHeight: 18,
 };
 
 /**
@@ -167,6 +179,19 @@ export const staticFontStyle = {
     fontSize: sizes.h4Size,
     lineHeight: lineHeights.h4Height,
   },
+  h5: {
+    color: 'black',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: sizes.h5Size,
+    fontWeight: '400',
+    lineHeight: lineHeights.h5Height,
+  },
+  h5Bold: {
+    color: 'black',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.h5Size,
+    lineHeight: lineHeights.h5Height,
+  },
   p1: {
     color: 'black',
     fontFamily: 'Montserrat-Regular',
@@ -223,6 +248,50 @@ export const staticFontStyle = {
     fontFamily: 'Montserrat-Bold',
     fontSize: sizes.p3Size,
     lineHeight: lineHeights.p3Height,
+  },
+  p4: {
+    color: 'black',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: sizes.p4Size,
+    fontWeight: '400',
+    lineHeight: lineHeights.p4Height,
+  },
+  p4Bold: {
+    color: 'black',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.p4Size,
+    lineHeight: lineHeights.p4Height,
+  },
+  caption: {
+    color: 'black',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: sizes.captionSize,
+    fontWeight: '400',
+    lineHeight: lineHeights.captionHeight,
+  },
+  captionBold: {
+    color: 'black',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.captionSize,
+    lineHeight: lineHeights.captionHeight,
+  },
+  label: {
+    color: 'black',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.labelSize,
+    lineHeight: lineHeights.labelHeight,
+  },
+  button: {
+    color: 'black',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: sizes.buttonSize,
+    lineHeight: lineHeights.buttonHeight,
+  },
+  small: {
+    color: 'black',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: sizes.smallSize,
+    lineHeight: lineHeights.smallHeight,
   },
 };
 

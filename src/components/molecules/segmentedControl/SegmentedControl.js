@@ -1,21 +1,78 @@
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { horizontalScale, verticalScale, moderateScale } from '@/theme/scaling';
+
+import useTheme from '@/theme/themeContext';
+import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 
 /**
- * SegmentedControl component - Scrollable & Auto-sizing
+ * SegmentedControl component.
  * @param {object} props
- * @param {Array<{label: string, value: string}>} props.options - The options to display
- * @param {string} props.value - The currently selected value
- * @param {Function} props.onChange - Callback when selection changes
+ * @param {Array<{label: string, value: string}>} props.options
+ * @param {string} props.value
+ * @param {(value: string) => void} props.onChange
  * @returns {import('react').ReactElement}
  */
 function SegmentedControl({ options, value, onChange }) {
+  const { Colors, Fonts } = useTheme();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      backgroundColor: Colors.transparent,
+      flexDirection: 'row',
+      gap: horizontalScale(8.58),
+      height: verticalScale(37.52),
+      minWidth: horizontalScale(327),
+    },
+    segment: {
+      alignItems: 'center',
+      backgroundColor: Colors.transparent,
+      borderColor: Colors.neutral500,
+      borderRadius: moderateScale(33.24),
+      borderWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      minHeight: verticalScale(32),
+      paddingHorizontal: horizontalScale(16),
+      paddingVertical: verticalScale(8),
+    },
+    segmentSelected: {
+      backgroundColor: Colors.primary500,
+      borderColor: Colors.primary500,
+      borderRadius: moderateScale(34.31),
+      elevation: 4,
+      shadowColor: Colors.neutral900,
+      shadowOffset: {
+        height: verticalScale(4.29),
+        width: 0,
+      },
+      shadowOpacity: 0.47,
+      shadowRadius: moderateScale(4.29),
+    },
+    segmentText: {
+      ...Fonts.p3,
+      color: Colors.neutral00,
+      fontSize: moderateScale(12.87),
+      includeFontPadding: false,
+      textAlign: 'center',
+      textAlignVertical: 'center',
+    },
+    segmentTextSelected: {
+      ...Fonts.p3Bold,
+      color: Colors.neutral00,
+      fontSize: moderateScale(12.87),
+    },
+    wrapper: {
+      height: verticalScale(45),
+    },
+  }), [Colors, Fonts.p3, Fonts.p3Bold]);
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
+        contentContainerStyle={styles.container}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.container}
       >
         {options.map((option) => {
           const isSelected = option.value === value;
@@ -45,62 +102,4 @@ function SegmentedControl({ options, value, onChange }) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    height: verticalScale(45), // Increased height to accommodate shadows
-  },
-  // Container principal - ScrollView content
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: horizontalScale(8.58),
-    height: verticalScale(37.52),
-    backgroundColor: 'transparent',
-    // Allow container to grow based on content
-    minWidth: horizontalScale(327),
-  },
-  // Segment
-  segment: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: verticalScale(8),
-    paddingHorizontal: horizontalScale(16),
-    minHeight: verticalScale(32),
-    backgroundColor: 'transparent',
-    borderRadius: moderateScale(33.24),
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  // Segment sélectionné
-  segmentSelected: {
-    backgroundColor: '#01B3F4',
-    borderColor: '#01B3F4', // Match background to hide border but keep layout consistent
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: verticalScale(4.29),
-    },
-    shadowOpacity: 0.47,
-    shadowRadius: moderateScale(4.29),
-    elevation: 4,
-    borderRadius: moderateScale(34.31),
-  },
-  // Texte du segment
-  segmentText: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: moderateScale(12.87),
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    color: '#FFFFFF',
-  },
-  // Texte du segment sélectionné
-  segmentTextSelected: {
-    color: '#FFFFFF',
-    fontFamily: 'Montserrat-Bold', // Bold for selected
-  },
-});
-
 export default SegmentedControl;
-

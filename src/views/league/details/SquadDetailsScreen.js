@@ -21,6 +21,8 @@ import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/Te
 import { createTeamSlot, updateTeamSlot, deleteTeamSlot } from '@/services/teamSlot/teamSlotService';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { getEntityDocumentId } from '@/utils/entityId';
+import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 
 /**
  * Squad Details Screen for FC League
@@ -30,7 +32,8 @@ const SquadDetailsScreen = ({ navigation, route }) => {
   const { teamId } = route?.params ?? {};
   const { Colors, Fonts, Spaces, Alignments, ApplicationStyle, Images } = useTheme();
   const { t } = useTranslation();
-  const { userData: currentUser } = useAuth();
+  const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
+  const currentUserId = getEntityDocumentId(currentUser);
   const { getClubInitials } = useClub();
 
   // Use League Team Hook
@@ -39,7 +42,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
 
   const [isUpdating, setIsUpdating] = useState(false);
-  const [editingSlot, setEditingSlot] = useState(null);
+  const [editingSlot, setEditingSlot] = useState(/** @type {LeagueSlot | null} */ (null));
 
   const [isCoverPreviewVisible, setIsCoverPreviewVisible] = useState(false);
 
@@ -58,17 +61,17 @@ const SquadDetailsScreen = ({ navigation, route }) => {
   }, [team, currentUser]);
 
   const isMember = useMemo(() => {
-    return team?.roster?.some(p => p.documentId === currentUser?.documentId) || isCaptain;
+    return team?.roster?.some((/** @type {User} */ p) => p.documentId === currentUser?.documentId) || isCaptain;
   }, [team, currentUser, isCaptain]);
 
   const hasPendingRequest = useMemo(() => {
-    return team?.join_requests?.some(u => u.documentId === currentUser?.documentId);
+    return team?.join_requests?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId);
   }, [team, currentUser]);
 
   const rosterCount = useMemo(() => {
     const uniqueIds = new Set();
     if (team?.captain?.documentId) uniqueIds.add(String(team.captain.documentId));
-    (team?.roster || []).forEach((player) => {
+    (team?.roster || []).forEach((/** @type {User} */ player) => {
       if (player?.documentId) uniqueIds.add(String(player.documentId));
     });
     return uniqueIds.size;
@@ -111,9 +114,13 @@ const SquadDetailsScreen = ({ navigation, route }) => {
 
   const handleRequestJoin = async () => {
     try {
+        if (!teamId || !currentUserId) {
+            Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
+            return;
+        }
         setIsUpdating(true);
         const { requestToJoinSquad } = require('@/services/leagueTeam/leagueTeamService');
-        await requestToJoinSquad(teamId, currentUser?.documentId);
+        await requestToJoinSquad(String(teamId || ''), currentUserId || '');
         await refetch();
         Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a reçu votre demande.'));
     } catch (error) {
@@ -124,6 +131,9 @@ const SquadDetailsScreen = ({ navigation, route }) => {
     }
   };
 
+  /**
+   * @param {'logo' | 'cover'} type
+   */
   const handleImageUpload = (type) => { // type: 'logo' (mapped to crest) | 'cover'
       Alert.alert(
           'Modifier la photo',
@@ -145,17 +155,25 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       );
   };
 
+  /**
+   * @param {'logo' | 'cover'} type
+   * @param {'camera' | 'library'} source
+   */
   const openImagePicker = async (type, source) => {
       try {
-          const options = {
+          const cameraOptions = /** @type {import('react-native-image-picker').CameraOptions} */ ({
               mediaType: 'photo',
               quality: 0.8,
               saveToPhotos: true,
-          };
+          });
+          const libraryOptions = /** @type {import('react-native-image-picker').ImageLibraryOptions} */ ({
+              mediaType: 'photo',
+              quality: 0.8,
+          });
 
           const result = source === 'camera' 
-              ? await launchCamera(options)
-              : await launchImageLibrary(options);
+              ? await launchCamera(cameraOptions)
+              : await launchImageLibrary(libraryOptions);
 
           if (result.assets && result.assets.length > 0) {
               const asset = result.assets[0];
@@ -167,24 +185,25 @@ const SquadDetailsScreen = ({ navigation, route }) => {
 
               setIsUpdating(true);
               const payload = {
-                  documentId: teamId,
+                  documentId: String(teamId || ''),
                   [type]: file // Service maps 'logo' to 'crest'
               };
-              
-              await updateLeagueTeam(payload);
+               
+              await updateLeagueTeam(/** @type {any} */ (payload));
               await refetch();
               setIsUpdating(false);
           }
       } catch (e) {
           setIsUpdating(false);
           console.error(e);
-          if (e.code !== 'E_PICKER_CANCELLED') {
+          const pickerError = /** @type {{ code?: string }} */ (e);
+          if (pickerError?.code !== 'E_PICKER_CANCELLED') {
               Alert.alert('Erreur', 'Impossible de mettre à jour l\'image');
           }
       }
   };
 
-  const handleSaveSlot = async (slotData) => {
+  const handleSaveSlot = async (/** @type {{ day: string, startTime: string, endTime: string }} */ slotData) => {
       try {
           setIsUpdating(true);
           
@@ -194,12 +213,16 @@ const SquadDetailsScreen = ({ navigation, route }) => {
               start_hour: slotData.startTime + ':00', // "20:00" -> "20:00:00"
               end_hour: slotData.endTime + ':00',     // "22:00" -> "22:00:00"
               recurrence_day: slotData.day,
-              league_team: teamId,
+              league_team: String(teamId || ''),
               status: 'open'
           };
 
           if (editingSlot) {
-              await updateTeamSlot(editingSlot.documentId, payload);
+              const editingSlotId = getEntityDocumentId(editingSlot);
+              if (!editingSlotId) {
+                  throw new Error('Missing slot id');
+              }
+              await updateTeamSlot(editingSlotId, payload);
               Alert.alert('Succès', 'Créneau modifié');
           } else {
               await createTeamSlot(payload);
@@ -218,10 +241,14 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       }
   };
 
-  const handleDeleteSlot = async (slot) => {
+  const handleDeleteSlot = async (/** @type {LeagueSlot} */ slot) => {
       try {
           setIsUpdating(true);
-          await deleteTeamSlot(slot.documentId);
+          const slotId = getEntityDocumentId(slot);
+          if (!slotId) {
+              throw new Error('Missing slot id');
+          }
+          await deleteTeamSlot(slotId);
           await refetch();
           setIsSlotModalVisible(false);
           setEditingSlot(null);
@@ -234,29 +261,45 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       }
   };
 
-  const handleSlotPress = (slot) => {
+  const handleSlotPress = (/** @type {LeagueSlot} */ slot) => {
       setEditingSlot(slot);
       setIsSlotModalVisible(true);
   };
 
-  const handleCheckIn = async (slot) => {
+  const handleCheckIn = async (/** @type {LeagueSlot} */ slot) => {
       try {
+          if (!currentUserId) return;
+          if (!isMember) {
+              Alert.alert('Action non disponible', 'Rejoignez la squad pour participer aux creneaux.');
+              return;
+          }
           // Check if already participant
-          const isCheckedIn = slot.participants?.some(p => p.documentId === currentUser?.documentId);
+          const isCheckedIn = slot.participants?.some((/** @type {User} */ p) => p.documentId === currentUser?.documentId);
           
           // Strapi v5 Connect/Disconnect syntax
           const payload = {
               participants: {
-                  [isCheckedIn ? 'disconnect' : 'connect']: [{ documentId: currentUser.documentId }]
+                  [isCheckedIn ? 'disconnect' : 'connect']: [{ documentId: currentUserId }]
               }
           };
 
-          await updateTeamSlot(slot.documentId, payload);
+          const slotId = getEntityDocumentId(slot);
+          if (!slotId) {
+              throw new Error('Missing slot id');
+          }
+          await updateTeamSlot(slotId, payload);
           await refetch(); // Refresh UI
 
       } catch (e) {
           console.error(e);
-          Alert.alert('Erreur', 'Impossible de modifier votre statut');
+          const backendCode = e?.response?.data?.code
+            || e?.response?.data?.error?.details?.code
+            || e?.response?.data?.error?.code;
+          if (backendCode === 'SQUAD_MEMBERSHIP_REQUIRED') {
+            Alert.alert('Action non disponible', 'Rejoignez la squad pour participer aux creneaux.');
+            return;
+          }
+          Alert.alert('Erreur', 'Impossible de modifier votre statut.');
       }
   };
 
@@ -282,7 +325,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 style={{ marginRight: 12 }}
               >
                 <View>
-                  <Text style={{ color: Colors.gold500, fontWeight: 'bold' }}>Demandes</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>Demandes</Text>
                   {team?.join_requests?.length > 0 ? (
                     <View style={{
                       backgroundColor: Colors.error500,
@@ -303,7 +346,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                 onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
                 style={{ marginRight: 12 }}
               >
-                <Text style={{ color: Colors.primary500, fontWeight: 'bold' }}>Modifier</Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Modifier</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity onPress={handleShare}>
@@ -334,7 +377,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                     </View>
                 ) : (
                     <Button 
-                        title="Demander à rejoindre" 
+                        title="Demander a rejoindre" 
                         onPress={handleRequestJoin} 
                         isLoading={isUpdating}
                         style={{ alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%' }}
@@ -446,17 +489,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
              {/* League badges */}
              <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
                  {team?.division ? (
-                     <View style={{
-                         backgroundColor: 'rgba(250, 204, 21, 0.12)',
-                         borderColor: 'rgba(250, 204, 21, 0.45)',
-                         borderRadius: 999,
-                         borderWidth: 1,
-                         paddingHorizontal: 14,
-                         paddingVertical: 7,
-                     }}
-                     >
-                         <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>DIV {team.division}</Text>
-                     </View>
+                    <DivisionBadge division={team.division} size={44} />
                  ) : null}
                  {team?.elo ? (
                      <View style={{
@@ -480,6 +513,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
             <TeamSlotList 
                 slots={team?.slots || []}
                 isCaptain={isCaptain}
+                isMember={Boolean(isMember)}
                 onAddSlot={() => setIsSlotModalVisible(true)}
                 onCheckIn={handleCheckIn}
                 currentUserId={currentUser?.documentId}
@@ -525,7 +559,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
              )}
 
              {/* Roster Players */}
-             {team?.roster?.filter(p => p.documentId !== team?.captain?.documentId).map(player => (
+             {team?.roster?.filter((/** @type {User} */ p) => p.documentId !== team?.captain?.documentId).map((/** @type {User} */ player) => (
                  <View key={player.documentId} style={[
                      Alignments.row, Alignments.alignCenter, Spaces.gap[12], 
                      ApplicationStyle.backgroundColor.neutral800,
@@ -560,16 +594,19 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       {/* Delete Team Button (Captain Only) - Fixed at bottom */}
       {isCaptain && (
           <View style={[
-              Spaces.padding[16],
-              {
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  backgroundColor: 'rgba(239, 68, 68, 0.0)', // Transparent, or semi-transparent if needed
-                  paddingBottom: 40 // Safe area
-              }
-          ]}>
+               {
+                   position: 'absolute',
+                   bottom: 0,
+                   left: -24,
+                   right: -24,
+                   backgroundColor: 'rgba(9, 27, 42, 0.98)',
+                   borderTopColor: 'rgba(1, 179, 244, 0.26)',
+                   borderTopWidth: 1,
+                   paddingTop: 16,
+                   paddingHorizontal: 24,
+                   paddingBottom: 40
+               }
+           ]}>
               <TouchableOpacity
                   onPress={() => {
                       Alert.alert(
@@ -625,9 +662,9 @@ const SquadDetailsScreen = ({ navigation, route }) => {
               onAdd={handleSaveSlot}
               onCancel={() => setIsSlotModalVisible(false)}
                initialValues={editingSlot ? {
-                   day: editingSlot.recurrence_day,
-                   startTime: editingSlot.start_hour?.substring(0, 5),
-                   endTime: editingSlot.end_hour?.substring(0, 5)
+                   day: /** @type {any} */ (editingSlot)?.recurrence_day,
+                   startTime: /** @type {any} */ (editingSlot)?.start_hour?.substring(0, 5),
+                   endTime: /** @type {any} */ (editingSlot)?.end_hour?.substring(0, 5)
                } : null}
                 onDelete={() => {
                    // Fix for "Alert not attached to Activity" on Android
@@ -637,7 +674,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                            'Voulez-vous vraiment supprimer ce créneau ?',
                            [
                                { text: 'Annuler', style: 'cancel' },
-                               { text: 'Supprimer', style: 'destructive', onPress: () => handleDeleteSlot(editingSlot) }
+                               { text: 'Supprimer', style: 'destructive', onPress: () => editingSlot && handleDeleteSlot(editingSlot) }
                            ]
                        );
                    }, 500);
@@ -649,7 +686,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
       
       <ProfilePicturePreviewOverlay
             isVisible={isCoverPreviewVisible}
-            imageUrl={team?.cover?.url ? getImageUrl(team.cover.url) : ''}
+            imageUrl={team?.cover?.url ? (getImageUrl(team.cover.url) || '') : ''}
             onClose={() => setIsCoverPreviewVisible(false)}
         />
     </ScreenContainer>

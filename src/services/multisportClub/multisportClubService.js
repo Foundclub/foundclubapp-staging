@@ -7,9 +7,35 @@ import client from '../client';
 import { uploadFile } from '../club/clubService';
 
 /**
+ * @typedef {{ lat?: number; lng?: number; label?: string }} LocationAddress
+ * @typedef {{
+ *   documentId?: string;
+ *   name?: string;
+ *   email?: string;
+ *   phoneNumber?: string;
+ *   logo?: { url?: string; path?: string; uri?: string; mime?: string; filename?: string; id?: number | string; documentId?: string };
+ *   address?: LocationAddress;
+ *   addressDetails?: string;
+ * }} MultisportClubEntity
+ * @typedef {{
+ *   name: string;
+ *   activites?: string[];
+ *   addressLabel?: string;
+ *   coordinates?: string;
+ *   managerPhone?: string;
+ * }} CreateCMSectionPayload
+ * @typedef {{ data?: { name?: string; documentId?: string } }} CreateCMSectionResponse
+ * @typedef {{ name?: string; geohash?: string; page?: number; pageSize?: number }} MultisportClubSearchParams
+ * @typedef {{ sectionId?: string; installationId?: string; from?: string; to?: string }} CMPlanningFilters
+ * @typedef {{ path?: string; id?: number | string; documentId?: string }} MediaRef
+ * @typedef {{ logo?: MediaRef | number | string; [key: string]: any }} SponsorPayload
+ * @typedef {{ logo?: MediaRef | number | string; sponsor?: SponsorPayload[]; [key: string]: any }} MultisportClubUpdatePayload
+ */
+
+/**
  * Get a single multisport club by ID
  * @param {string} id - MultisportClub documentId
- * @returns {Promise<Object>} MultisportClub with populated sections
+ * @returns {Promise<MultisportClubEntity>} MultisportClub with populated sections
  */
 export const getMultisportClubById = async (id) => {
   const result = await client.get(`/multisport-clubs/${id}`, {
@@ -33,12 +59,13 @@ export const getMultisportClubById = async (id) => {
 
 /**
  * Get list of multisport clubs (for search)
- * @param {Object} params - Search params (name, geohash, page, pageSize)
+ * @param {MultisportClubSearchParams} [params] - Search params (name, geohash, page, pageSize)
  * @returns {Promise<Object>} List of multisport clubs
  */
 export const getMultisportClubs = async (params = {}) => {
   const { name, geohash, page = 1, pageSize = 30 } = params;
   
+  /** @type {{ pagination: { page: number; pageSize: number }; populate: any; filters?: Record<string, any> }} */
   const filters = {
     pagination: { page, pageSize },
     populate: {
@@ -65,7 +92,7 @@ export const getMultisportClubs = async (params = {}) => {
   const result = await client.get('/multisport-clubs', { params: filters });
   
   // Add type indicator to differentiate from regular clubs
-  const dataWithType = result.data?.data?.map(cm => ({
+  const dataWithType = result.data?.data?.map((/** @type {any} */ cm) => ({
     ...cm,
     _type: 'multisport',
     // Count sections for display
@@ -91,7 +118,7 @@ export const getCMClubs = async (cmId) => {
 /**
  * Get planning for a multisport club
  * @param {string} cmId - MultisportClub documentId
- * @param {Object} filters - Optional filters (sectionId, installationId, from, to)
+ * @param {CMPlanningFilters} [filters] - Optional filters (sectionId, installationId, from, to)
  * @returns {Promise<Object>} Planning slots
  */
 export const getCMPlanning = async (cmId, filters = {}) => {
@@ -108,8 +135,8 @@ export const getCMPlanning = async (cmId, filters = {}) => {
 /**
  * Create a new section under a multisport club
  * @param {string} cmId - MultisportClub documentId
- * @param {Object} data - Section data (name, sport, city)
- * @returns {Promise<Object>} Created section
+ * @param {CreateCMSectionPayload} data - Section data (name, sport, city)
+ * @returns {Promise<CreateCMSectionResponse>} Created section
  */
 export const createCMSection = async (cmId, data) => {
   const result = await client.post(`/cm/${cmId}/clubs`, data);
@@ -192,6 +219,10 @@ export const getCMTeams = async (cmId) => {
   return response.data;
 };
 
+/**
+ * @param {string} cmId
+ * @returns {Promise<any>}
+ */
 export const getCMMembers = async (cmId) => {
   const result = await client.get(`/cm/${cmId}/members`);
   return result.data;
@@ -200,22 +231,23 @@ export const getCMMembers = async (cmId) => {
 /**
  * Update a multisport club
  * @param {string} cmId - MultisportClub documentId
- * @param {Object} data - Update data (name, email, phone, addressLabel, coordinates, logo)
+ * @param {MultisportClubUpdatePayload} data - Update data (name, email, phone, addressLabel, coordinates, logo)
  * @returns {Promise<Object>} Updated CM
  */
 export const updateMultisportClub = async (cmId, data) => {
+  /** @type {MultisportClubUpdatePayload} */
   const dataCopy = { ...data };
   let logoId = null;
 
   // Handle logo file upload if it's a new file (has path)
-  if (dataCopy.logo && dataCopy.logo.path) {
-    const uploadResult = await uploadFile(dataCopy.logo);
-    logoId = uploadResult.documentId;
-  } else if (dataCopy.logo && dataCopy.logo.id) {
+  if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'path' in dataCopy.logo && dataCopy.logo.path) {
+    const uploadResult = /** @type {{ id?: number | string; documentId?: string }} */ (await uploadFile(dataCopy.logo));
+    logoId = uploadResult.documentId || uploadResult.id || null;
+  } else if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'id' in dataCopy.logo && dataCopy.logo.id) {
     // Keep existing logo if not changed
     logoId = dataCopy.logo.id;
   }
-  else if (dataCopy.logo && dataCopy.logo.documentId) {
+  else if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'documentId' in dataCopy.logo && dataCopy.logo.documentId) {
     // Keep existing logo if using documentId
     logoId = dataCopy.logo.documentId;
   }
@@ -225,25 +257,26 @@ export const updateMultisportClub = async (cmId, data) => {
 
   // Handle Sponsors Uploads
   if (dataCopy.sponsor && Array.isArray(dataCopy.sponsor)) {
+    /** @type {SponsorPayload[]} */
     const processedSponsors = [];
     for (const sponsor of dataCopy.sponsor) {
       const newSponsor = { ...sponsor };
       
       // If logo is a new file (has path), upload it
-      if (newSponsor.logo && newSponsor.logo.path) {
-        const uploadResult = await uploadFile(newSponsor.logo);
+      if (newSponsor.logo && typeof newSponsor.logo === 'object' && 'path' in newSponsor.logo && newSponsor.logo.path) {
+        const uploadResult = /** @type {{ id?: number | string; documentId?: string }} */ (await uploadFile(newSponsor.logo));
         // For components media fields, we use the Integer ID
-        newSponsor.logo = uploadResult.id; 
+        newSponsor.logo = uploadResult.id || uploadResult.documentId || newSponsor.logo; 
       } 
       // If existing logo (has documentId or id)
-      else if (newSponsor.logo && (newSponsor.logo.documentId || newSponsor.logo.id)) {
+      else if (newSponsor.logo && typeof newSponsor.logo === 'object' && ('documentId' in newSponsor.logo || 'id' in newSponsor.logo)) {
         // For existing, we might need ID or DocumentId. Let's try ID if available, else DocumentId
         // Actually, if we send the object or ID? 
         // If we send just the ID (int), Strapi should handle it.
         // If we send documentId?
         // Let's safe bet on ID (int) if available, or just keeping what we have.
         // Usually existing returns object with id and documentId.
-        newSponsor.logo = newSponsor.logo.id || newSponsor.logo.documentId;
+        newSponsor.logo = newSponsor.logo.id || newSponsor.logo.documentId || newSponsor.logo;
       }
       
       processedSponsors.push(newSponsor);
@@ -252,13 +285,14 @@ export const updateMultisportClub = async (cmId, data) => {
   }
 
   // Prepare payload
+  /** @type {Record<string, any>} */
   const payload = {
     ...dataCopy,
     ...(logoId && { logo: logoId }),
   };
   
   // Clean payload of undefined/null values
-  Object.keys(payload).forEach(key => {
+  Object.keys(payload).forEach((key) => {
     if (payload[key] === undefined) {
       delete payload[key];
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -30,12 +30,26 @@ import { getMatchDerivedPhase } from '@/views/league/match/utils/matchStatus';
 import { getLocationCoordinates, normalizeRadius } from '@/utils/location';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
+/**
+ * @typedef {{ uri: string, name: string, type: string, source: 'gallery' | 'camera' }} ProofPayload
+ */
+
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
 const parseScore = (value) => {
-    const parsed = Number.parseInt(value, 10);
+    const parsed = Number.parseInt(String(value), 10);
     return Number.isNaN(parsed) ? null : parsed;
 };
 
+/**
+ * @param {string | undefined | null} beforeStatus
+ * @param {string | undefined | null} afterStatus
+ * @returns {boolean}
+ */
 const hasForwardStatusProgression = (beforeStatus, afterStatus) => {
+    /** @type {Record<string, string[]>} */
     const transitions = {
         scheduled: ['pending_validation', 'valid', 'disputed'],
         pending_validation: ['valid', 'disputed'],
@@ -46,9 +60,16 @@ const hasForwardStatusProgression = (beforeStatus, afterStatus) => {
         return false;
     }
 
-    return Boolean(transitions[beforeStatus]?.includes(afterStatus));
+    return Boolean(transitions[String(beforeStatus)]?.includes(String(afterStatus)));
 };
 
+/**
+ * @param {LeagueMatch | null} previousMatch
+ * @param {LeagueMatch | null} refreshedMatch
+ * @param {string | number | undefined | null} scoreA
+ * @param {string | number | undefined | null} scoreB
+ * @returns {boolean}
+ */
 const wasScorePersistedDespiteError = (previousMatch, refreshedMatch, scoreA, scoreB) => {
     if (!refreshedMatch) {
         return false;
@@ -64,12 +85,15 @@ const wasScorePersistedDespiteError = (previousMatch, refreshedMatch, scoreA, sc
     const finalB = parseScore(refreshedMatch.score_b);
     const hasMatchingFinalScore = finalA === expectedA && finalB === expectedB;
 
-    const submissions = [
+    const submissions = /** @type {Array<{ score_a?: string | number | null, score_b?: string | number | null }>} */ ([
         refreshedMatch.submitted_score_team_a,
         refreshedMatch.submitted_score_team_b,
-    ].filter(Boolean);
+    ].filter((submission) => Boolean(submission && typeof submission === 'object')));
 
     const hasMatchingSubmission = submissions.some((submission) => {
+        if (!submission) {
+            return false;
+        }
         return parseScore(submission.score_a) === expectedA
             && parseScore(submission.score_b) === expectedB;
     });
@@ -88,11 +112,26 @@ const DISPUTE_TYPES = [
     { key: 'incident', label: 'Incident terrain' },
 ];
 
+const hasSubmissionPayload = (submission) => Boolean(
+    submission
+    && typeof submission === 'object'
+    && (submission.score_a !== undefined || submission.score_b !== undefined)
+);
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const sanitizeScoreInput = (value) => {
     if (typeof value !== 'string') return '';
     return value.replace(/[^\d]/g, '').slice(0, 2);
 };
 
+/**
+ * @param {any} asset
+ * @param {'gallery' | 'camera'} source
+ * @returns {ProofPayload | null}
+ */
 const buildProofPayloadFromAsset = (asset, source) => {
     if (!asset?.uri) return null;
     return {
@@ -105,28 +144,49 @@ const buildProofPayloadFromAsset = (asset, source) => {
 
 const EndMatchScreen = () => {
     const { Colors, Fonts } = useTheme();
-    const navigation = useNavigation();
-    const route = useRoute();
+    const navigation = /** @type {any} */ (useNavigation());
+    const route = /** @type {any} */ (useRoute());
     const queryClient = useQueryClient();
-    const { userData } = useAuth();
-    const matchId = route.params?.matchId;
+    const { userData } = /** @type {{userData: User | null}} */ (useAuth());
+    const matchId = route.params?.matchId ? String(route.params.matchId) : '';
 
     const [scoreA, setScoreA] = useState('0');
     const [scoreB, setScoreB] = useState('0');
     const [dispute, setDispute] = useState(false);
-    const [proof, setProof] = useState(null);
+    const [proof, setProof] = useState(/** @type {ProofPayload | null} */ (null));
     const [disputeType, setDisputeType] = useState('score_mismatch');
     const [disputeComment, setDisputeComment] = useState('');
 
-    const { data: match, isLoading } = useQuery({
+    const { data: matchData, isLoading } = useQuery({
         queryKey: ['league-match', matchId],
         queryFn: () => fetchMatch(matchId),
-        enabled: !!matchId,
+        enabled: Boolean(matchId),
     });
+    const match = /** @type {LeagueMatch | null} */ (matchData || null);
 
     const matchPhase = getMatchDerivedPhase(match);
     const isScoreSubmissionAllowed = ['waiting_score', 'pending_validation', 'disputed'].includes(matchPhase);
-    const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que le terrain est reserve et que l'heure de debut du match est depassee.";
+    const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que l'heure de debut du match est depassee.";
+    const currentUserId = getEntityDocumentId(userData);
+    const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
+    const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
+    const ownSubmission = isCaptainA ? match?.submitted_score_team_a : isCaptainB ? match?.submitted_score_team_b : null;
+    const opponentSubmission = isCaptainA ? match?.submitted_score_team_b : isCaptainB ? match?.submitted_score_team_a : null;
+    const hasOwnSubmission = hasSubmissionPayload(ownSubmission);
+    const hasOpponentSubmission = hasSubmissionPayload(opponentSubmission);
+    const opponentScoreA = parseScore(opponentSubmission?.score_a);
+    const opponentScoreB = parseScore(opponentSubmission?.score_b);
+    const [manualEntryEnabled, setManualEntryEnabled] = useState(true);
+    const canShowManualForms = !hasOpponentSubmission || manualEntryEnabled || hasOwnSubmission;
+    const shouldShowGuidedState = hasOpponentSubmission && !canShowManualForms;
+
+    useEffect(() => {
+        if (hasOpponentSubmission && !hasOwnSubmission) {
+            setManualEntryEnabled(false);
+            return;
+        }
+        setManualEntryEnabled(true);
+    }, [hasOpponentSubmission, hasOwnSubmission]);
 
     const getMyTeamFromMatch = () => {
         const currentUserId = String(getEntityDocumentId(userData) || '');
@@ -158,22 +218,20 @@ const EndMatchScreen = () => {
         if (!location) {
             throw new Error('Aucune localisation valide trouvee. Configurez la base de votre squad.');
         }
-        const radius = normalizeRadius(myTeam?.radius || myTeam?.home_base?.radius, 20);
+        const homeBase = myTeam?.home_base && typeof myTeam.home_base === 'object'
+            ? /** @type {{radius?: number}} */ (myTeam.home_base)
+            : null;
+        const radius = normalizeRadius(myTeam?.radius || homeBase?.radius, 20);
         const availableSlots = await getAvailableSlots(teamId);
         const selectedSlotIds = (availableSlots || [])
             .map((slot) => getEntityDocumentId(slot))
-            .filter(Boolean);
+            .filter((id) => typeof id === 'string' && id.length > 0);
 
         if (selectedSlotIds.length === 0) {
             throw new Error('Aucun creneau disponible pour relancer une recherche.');
         }
 
-        await MatchmakingService.triggerSearch(teamId, selectedSlotIds, {
-            teamId,
-            selectedSlotIds,
-            radius,
-            location,
-        });
+        await MatchmakingService.triggerSearch(teamId, selectedSlotIds, { radius, location });
         queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     };
 
@@ -194,8 +252,9 @@ const EndMatchScreen = () => {
                             await relaunchSearchNow();
                             Alert.alert('Recherche relancee', 'La recherche de nouvel adversaire a ete lancee.');
                         } catch (error) {
-                            const message = typeof error === 'string' ? error : error?.message || 'Relance impossible.';
-                            Alert.alert('Relance impossible', message);
+            const apiError = /** @type {any} */ (error);
+            const message = typeof error === 'string' ? error : apiError?.message || 'Relance impossible.';
+            Alert.alert('Relance impossible', message);
                         } finally {
                             navigation.goBack();
                         }
@@ -206,7 +265,7 @@ const EndMatchScreen = () => {
     };
 
     const submitMutation = useMutation({
-        mutationFn: (data) => submitMatchScore(
+        mutationFn: (/** @type {{scoreA: number, scoreB: number, dispute: boolean, proof: ProofPayload | null, disputeType: string | null, disputeComment: string | null}} */ data) => submitMatchScore(
             matchId,
             data.scoreA,
             data.scoreB,
@@ -217,10 +276,38 @@ const EndMatchScreen = () => {
                 disputeComment: data.disputeComment,
             },
         ),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ['league-matches'] });
             queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
-            promptForSearchRelaunch();
+            const finalStatus = String(response?.status || '').toLowerCase();
+            if (finalStatus === 'valid') {
+                promptForSearchRelaunch();
+                return;
+            }
+
+            if (finalStatus === 'pending_validation') {
+                Alert.alert(
+                    'Score enregistre',
+                    "Votre score est en attente de validation par le capitaine adverse.",
+                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+                return;
+            }
+
+            if (finalStatus === 'disputed') {
+                Alert.alert(
+                    'Litige ouvert',
+                    "Le score est maintenant en litige. Vous pourrez confirmer ou fournir des details si besoin.",
+                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+                return;
+            }
+
+            Alert.alert(
+                'Score enregistre',
+                'Le score a bien ete envoye.',
+                [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
         },
         onError: async (error, variables) => {
             console.error('[EndMatchScreen] Submit score failed:', error);
@@ -237,14 +324,32 @@ const EndMatchScreen = () => {
                 if (recovered) {
                     queryClient.invalidateQueries({ queryKey: ['league-matches'] });
                     queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
-                    promptForSearchRelaunch();
+                    const recoveredStatus = String(refreshedMatch?.status || '').toLowerCase();
+                    if (recoveredStatus === 'valid') {
+                        promptForSearchRelaunch();
+                    } else if (recoveredStatus === 'pending_validation') {
+                        Alert.alert(
+                            'Score enregistre',
+                            "Votre score est en attente de validation par le capitaine adverse.",
+                            [{ text: 'OK', onPress: () => navigation.goBack() }]
+                        );
+                    } else if (recoveredStatus === 'disputed') {
+                        Alert.alert(
+                            'Litige ouvert',
+                            'Le score a ete enregistre mais est passe en litige.',
+                            [{ text: 'OK', onPress: () => navigation.goBack() }]
+                        );
+                    } else {
+                        Alert.alert('Score enregistre', 'Le score a ete enregistre.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+                    }
                     return;
                 }
             } catch (refreshError) {
                 console.error('[EndMatchScreen] Recovery check failed:', refreshError);
             }
 
-            const message = typeof error === 'string' ? error : error?.message || "Impossible d'envoyer le score.";
+            const apiError = /** @type {any} */ (error);
+            const message = typeof error === 'string' ? error : apiError?.message || "Impossible d'envoyer le score.";
             Alert.alert('Erreur', message);
         },
     });
@@ -252,6 +357,7 @@ const EndMatchScreen = () => {
     const isNoShowDispute = dispute && disputeType === 'no_show';
 
     const handlePickProofFromGallery = async () => {
+        /** @type {import('react-native-image-picker').ImageLibraryOptions} */
         const options = {
             mediaType: 'photo',
             quality: 0.7,
@@ -273,6 +379,7 @@ const EndMatchScreen = () => {
     };
 
     const handleCaptureProof = async () => {
+        /** @type {import('react-native-image-picker').CameraOptions} */
         const options = {
             mediaType: 'photo',
             quality: 0.7,
@@ -303,10 +410,6 @@ const EndMatchScreen = () => {
             Alert.alert('Erreur', 'Veuillez saisir les scores.');
             return;
         }
-        if (dispute && !proof) {
-            Alert.alert('Erreur', 'Une preuve photo est requise pour ouvrir un litige.');
-            return;
-        }
         if (isNoShowDispute && proof?.source !== 'camera') {
             Alert.alert('Erreur', 'Pour un no-show, la preuve doit venir de la camera.');
             return;
@@ -322,17 +425,40 @@ const EndMatchScreen = () => {
         });
     };
 
-    const handleScoreChange = (setter) => (value) => {
+    const handleConfirmOpponentScore = () => {
+        if (opponentScoreA === null || opponentScoreB === null) {
+            Alert.alert('Information', "Le score adverse est incomplet.");
+            return;
+        }
+        submitMutation.mutate({
+            scoreA: opponentScoreA,
+            scoreB: opponentScoreB,
+            dispute: false,
+            proof: null,
+            disputeType: null,
+            disputeComment: null,
+        });
+    };
+
+    const handleDisputeOpponentScore = () => {
+        if (opponentScoreA !== null) setScoreA(String(opponentScoreA));
+        if (opponentScoreB !== null) setScoreB(String(opponentScoreB));
+        setManualEntryEnabled(true);
+        setDispute(true);
+        setDisputeType('score_mismatch');
+    };
+
+    const handleScoreChange = (/** @type {(value: string) => void} */ setter) => (/** @type {string} */ value) => {
         setter(sanitizeScoreInput(value));
     };
 
-    const incrementScore = (score, setter) => {
+    const incrementScore = (/** @type {string} */ score, /** @type {(value: string) => void} */ setter) => {
         const current = Number.parseInt(score || '0', 10);
         const next = Number.isNaN(current) ? 1 : Math.min(current + 1, 99);
         setter(String(next));
     };
 
-    const decrementScore = (score, setter) => {
+    const decrementScore = (/** @type {string} */ score, /** @type {(value: string) => void} */ setter) => {
         const current = Number.parseInt(score || '0', 10);
         const next = Number.isNaN(current) ? 0 : Math.max(current - 1, 0);
         setter(String(next));
@@ -389,10 +515,49 @@ const EndMatchScreen = () => {
                         </LeagueCard>
                     ) : null}
 
+                    {hasOpponentSubmission ? (
+                        <LeagueCard style={[styles.opponentScoreCard, leagueSurface]}>
+                            <Text style={[Fonts.p3Bold, { color: Colors.warning500 || Colors.secondary500 || '#FACC15' }]}>
+                                Score saisi par l'adversaire
+                            </Text>
+                            <Text style={[Fonts.h4, { color: Colors.neutral100, marginTop: 6 }]}>
+                                {`${opponentScoreA ?? '-'} - ${opponentScoreB ?? '-'}`}
+                            </Text>
+                            <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+                                Confirmez ce score si vous etes d'accord, sinon ouvrez un litige.
+                            </Text>
+                            <View style={styles.opponentScoreActions}>
+                                <Button
+                                    onPress={handleConfirmOpponentScore}
+                                    style={{ width: '100%' }}
+                                    title="Confirmer le score"
+                                    variant="Primary"
+                                />
+                                <Button
+                                    onPress={handleDisputeOpponentScore}
+                                    style={{ borderColor: Colors.error500, width: '100%' }}
+                                    textStyle={{ color: Colors.error500 }}
+                                    title="Contester le score"
+                                    variant="Secondary"
+                                />
+                            </View>
+                        </LeagueCard>
+                    ) : null}
+
+                    {shouldShowGuidedState ? (
+                        <LeagueCard style={[styles.guidedStateCard, leagueSurface]}>
+                            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>En attente de votre decision</Text>
+                            <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+                                Utilisez les boutons ci-dessus pour confirmer ou contester le score adverse.
+                            </Text>
+                        </LeagueCard>
+                    ) : null}
+
+                    {canShowManualForms ? (
                     <LeagueCard style={[styles.scoreCard, leagueSurface]}>
                         <View style={styles.scoreContainer}>
                             <View style={styles.teamColumn}>
-                                <TeamShield initials={teamA?.name?.substring(0, 2)} size={64} />
+                                <TeamShield initials={String(teamA?.name?.substring(0, 2) || '?')} size={64} />
                                 <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]} numberOfLines={1}>{teamA?.name}</Text>
                                 <TextInput
                                     style={[
@@ -425,7 +590,7 @@ const EndMatchScreen = () => {
                             </View>
 
                             <View style={styles.teamColumn}>
-                                <TeamShield initials={teamB?.name?.substring(0, 2)} size={64} />
+                                <TeamShield initials={String(teamB?.name?.substring(0, 2) || '?')} size={64} />
                                 <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]} numberOfLines={1}>{teamB?.name}</Text>
                                 <TextInput
                                     style={[
@@ -454,7 +619,9 @@ const EndMatchScreen = () => {
                             </View>
                         </View>
                     </LeagueCard>
+                    ) : null}
 
+                    {canShowManualForms ? (
                     <LeagueCard style={[styles.disputeCard, leagueSurface]}>
                         <View style={styles.headerRow}>
                             <Text style={[Fonts.h4, { color: Colors.neutral100 }]}>Il y a un litige ?</Text>
@@ -465,7 +632,7 @@ const EndMatchScreen = () => {
                                 value={dispute}
                             />
                         </View>
-                        <Text style={[Fonts.p3, { color: Colors.neutral400, marginTop: 6 }]}>Activez cette option en cas de desaccord sur le score ou d'incident majeur. Une preuve sera demandee.</Text>
+                        <Text style={[Fonts.p3, { color: Colors.neutral400, marginTop: 6 }]}>Activez en cas de desaccord. Preuve optionnelle sauf no-show (camera obligatoire).</Text>
 
                         {dispute ? (
                             <View style={styles.disputeContent}>
@@ -532,7 +699,9 @@ const EndMatchScreen = () => {
                             </View>
                         ) : null}
                     </LeagueCard>
+                    ) : null}
 
+                    {canShowManualForms ? (
                     <Button
                         disabled={submitMutation.isPending || !isScoreSubmissionAllowed}
                         onPress={handleSubmit}
@@ -541,6 +710,7 @@ const EndMatchScreen = () => {
                         title={submitMutation.isPending ? 'Envoi en cours...' : 'Valider le score'}
                         variant="Primary"
                     />
+                    ) : null}
                 </ScrollView>
             </SafeAreaView>
         </ScreenContainer>
@@ -568,7 +738,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     disputeCard: {
-        marginBottom: 20,
+        marginBottom: 18,
     },
     disputeContent: {
         gap: 12,
@@ -608,8 +778,19 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     introText: {
-        marginBottom: 18,
+        marginBottom: 20,
         textAlign: 'center',
+    },
+    opponentScoreActions: {
+        flexDirection: 'column',
+        gap: 10,
+        marginTop: 14,
+    },
+    opponentScoreCard: {
+        marginBottom: 18,
+    },
+    guidedStateCard: {
+        marginBottom: 18,
     },
     proofPreview: {
         borderRadius: 10,
@@ -624,7 +805,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     scoreCard: {
-        marginBottom: 20,
+        marginBottom: 18,
     },
     scoreContainer: {
         alignItems: 'flex-start',
@@ -664,7 +845,7 @@ const styles = StyleSheet.create({
         paddingTop: 16,
     },
     submitButton: {
-        marginTop: 8,
+        marginTop: 6,
     },
     teamColumn: {
         alignItems: 'center',

@@ -40,6 +40,9 @@ import { getTeams } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+/** @typedef {import('@/domains/event/types').FCEventForm} FCEventForm */
+/** @typedef {import('@/domains/team/types').Team} Team */
+
 const defaultValues = {
   capacity: null,
   date: '',
@@ -52,15 +55,16 @@ const defaultValues = {
   recurrenceEndDate: '',
   recurrenceFrequency: 'week',
   recurrenceInterval: 1,
-  recurrenceDays: [],
+  recurrenceDays: /** @type {number[]} */ ([]),
   recurrenceStartDate: '',
   featuredRequestStatus: 'none',
+  requestFeatured: false,
   reservationMode: 'FULL_GROUP',
   sessionStatus: 'open',
   startTime: '',
   endTime: '',
   team: undefined,
-  invitedTeams: [],
+  invitedTeams: /** @type {string[]} */ ([]),
   totalPlayers: null,
   type: undefined,
   validationMode: 'auto',
@@ -116,6 +120,7 @@ const eventSchema = Joi.object({
     then: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).required(),
   }),
   featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').optional(),
+  requestFeatured: Joi.boolean().optional(),
   reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').optional(),
   sessionStatus: Joi.string().valid('open', 'closed').required(),
   startTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).required(),
@@ -162,7 +167,7 @@ function EventEdit({ navigation, route }) {
   })) || [];
 
   const [isFeaturedRequestLoading, setIsFeaturedRequestLoading] = useState(false);
-  const [featuredRequestError, setFeaturedRequestError] = useState(null);
+  const [featuredRequestError, setFeaturedRequestError] = useState(/** @type {string | null} */ (null));
   const [hasConflict, setHasConflict] = useState(false);
 
   const createEventMutation = useMutation({
@@ -220,7 +225,7 @@ function EventEdit({ navigation, route }) {
       sessionStatus: event?.sessionStatus || 'open',
       startTime: event?.startTime ? event.startTime.substring(0, 5) : '',
       team: event?.team?.documentId || '',
-      invitedTeams: event?.invitedTeams?.map(t => t.documentId) || [],
+      invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
       totalPlayers: event?.totalPlayers,
       type: event?.type?.documentId || '',
       validationMode: event?.validationMode || 'auto',
@@ -258,12 +263,12 @@ function EventEdit({ navigation, route }) {
 
   // Derive clubId from selected team
   // Derive clubId from selected team or user's club (for Dirigeant)
-  const selectedTeam = userData?.trainedTeams?.find(t => t.documentId === selectedTeamId);
+  const selectedTeam = userData?.trainedTeams?.find((/** @type {Team} */ t) => t.documentId === selectedTeamId);
   const clubId = selectedTeam?.club?.documentId || userData?.club?.documentId;
   const cmId = selectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
 
   // Fetch club teams for invited teams selection
-  const [clubTeams, setClubTeams] = useState([]);
+  const [clubTeams, setClubTeams] = useState(/** @type {Team[]} */ ([]));
 
   useEffect(() => {
     const fetchClubTeams = async () => {
@@ -358,7 +363,7 @@ function EventEdit({ navigation, route }) {
 
   useEffect(() => {
     if (facilityEvents && selectedStartTime && selectedEndTime) {
-      const parseTime = (t) => {
+      const parseTime = (/** @type {string} */ t) => {
         const [h, m] = t.split(':').map(Number);
         return h * 60 + m;
       };
@@ -367,8 +372,9 @@ function EventEdit({ navigation, route }) {
       const end = parseTime(selectedEndTime);
 
       // Filter events that overlap
-      const overlappingEvents = facilityEvents.filter(e => {
+      const overlappingEvents = facilityEvents.filter((/** @type {import('@/domains/event/types').FCEvent} */ e) => {
         if (e.documentId === eventId) return false; // Ignore self
+        if (!e.startTime || !e.endTime) return false;
         const eStart = parseTime(e.startTime.substring(0, 5));
         const eEnd = parseTime(e.endTime.substring(0, 5));
         return (start < eEnd && end > eStart);
@@ -482,7 +488,7 @@ function EventEdit({ navigation, route }) {
 
       if (eventId) {
         // Mise à jour d'un événement existant
-        const updateEventWithMode = async (recurrenceMode) => {
+        const updateEventWithMode = async (/** @type {'future' | 'all'} */ recurrenceMode) => {
           await updateEventMutation.mutateAsync({
             documentId: eventId,
             eventData: formattedEvents[0],
@@ -646,13 +652,13 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <FacilitySelector
-                  clubId={clubId}
-                  cmId={cmId}
+                  clubId={clubId || ''}
+                  cmId={cmId || ''}
                   location={value}
                   facilityId={watch('facility')}
-                  onChange={({ location: newLocation, facilityId: newFacilityId }) => {
+                  onChange={(/** @type {{ location: string; facilityId?: string }} */ { location: newLocation, facilityId: newFacilityId }) => {
                     onChange(newLocation);
-                    setValue('facility', newFacilityId);
+                    setValue('facility', newFacilityId || '');
                   }}
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                 />
@@ -1123,7 +1129,7 @@ function EventEdit({ navigation, route }) {
         <View style={[Spaces.gap[8]]}>
           {featuredRequestError && (
             <View style={[Spaces.paddingHorizontal[16]]}>
-              <Text style={[Fonts.p2, { color: Colors.danger500 }]}>
+              <Text style={[Fonts.p2, { color: Colors.error500 }]}>
                 ⚠️ {featuredRequestError}
               </Text>
             </View>

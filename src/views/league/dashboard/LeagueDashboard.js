@@ -13,6 +13,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import Button from '@/components/atoms/button/Button';
 import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
+import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
@@ -20,14 +21,24 @@ import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch
 import { RouteNames } from '@/navigation/routeNames';
 import { getEntityDocumentId } from '@/utils/entityId';
 
+/**
+ * @typedef {{ rank: number, name: string, points: number, form: string, isMe: boolean }} LeaderboardEntry
+ */
+/**
+ * @typedef {{ type: 'separator' }} LeaderboardSeparator
+ */
+/**
+ * @typedef {LeaderboardEntry | LeaderboardSeparator} LeaderboardRow
+ */
+
 const LeagueDashboard = () => {
     const { Colors, Fonts, Images, Spaces, ApplicationStyle, Alignments } = useTheme();
-    const { userData } = useAuth();
-    const navigation = useNavigation();
+    const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+    const navigation = /** @type {any} */ (useNavigation());
 
-    const [userTeam, setUserTeam] = useState(null);
-    const [matchHistory, setMatchHistory] = useState([]);
-    const [rankingData, setRankingData] = useState([]);
+    const [userTeam, setUserTeam] = useState(/** @type {Team | null} */ (null));
+    const [matchHistory, setMatchHistory] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
+    const [rankingData, setRankingData] = useState(/** @type {Team[]} */ ([]));
     const [loading, setLoading] = useState(true);
     const [isSearchRunning, setIsSearchRunning] = useState(false);
     const leagueSurface = {
@@ -55,12 +66,12 @@ const LeagueDashboard = () => {
                     }
 
                     const history = await getMatchHistory(getEntityDocumentId(team), 5);
-                    setMatchHistory(history);
+                    setMatchHistory(Array.isArray(history) ? history : []);
 
                     // Fetch Ranking for current division
-                    const division = team.division || 10;
+                    const division = Number(team?.division) || 10;
                     const rankings = await getRanking(division);
-                    setRankingData(rankings);
+                    setRankingData(Array.isArray(rankings) ? rankings : []);
 
                 } catch (historyErr) {
                     console.log("Data fetch error:", historyErr);
@@ -83,7 +94,7 @@ const LeagueDashboard = () => {
         }, [userData])
     );
 
-    const handleMatchPress = (match) => {
+    const handleMatchPress = (/** @type {MatchHistoryEntry} */ match) => {
         navigation.navigate(RouteNames.PastMatchDetails, {
             matchId: getEntityDocumentId(match),
             myTeamId: getEntityDocumentId(userTeam),
@@ -151,7 +162,7 @@ const LeagueDashboard = () => {
                 </View>
                 <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{userTeam?.losses || 0}</Text>
+                    <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
                     <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
                 </View>
             </View>
@@ -163,26 +174,26 @@ const LeagueDashboard = () => {
         if (!rankingData || rankingData.length === 0) return null;
 
         // 1. Get Top 3
-        const topTeams = rankingData.slice(0, 3).map((t, i) => ({
+        const topTeams = /** @type {LeaderboardEntry[]} */ (rankingData.slice(0, 3).map((/** @type {Team} */ t, /** @type {number} */ i) => ({
             rank: i + 1,
-            name: t.name,
-            points: t.elo,
+            name: t.name || 'Equipe',
+            points: Number(t.elo || 0),
             form: '✅✅❓', // TODO: Compute form
-            isMe: t.documentId === userTeam?.documentId
-        }));
+            isMe: getEntityDocumentId(t) === getEntityDocumentId(userTeam)
+        })));
 
         // 2. Add User if not in Top 3
-        const userIndex = rankingData.findIndex(t => t.documentId === userTeam?.documentId);
+        const userIndex = rankingData.findIndex((/** @type {Team} */ t) => getEntityDocumentId(t) === getEntityDocumentId(userTeam));
         const isUserInTop = userIndex >= 0 && userIndex < 3;
 
-        let displayTeams = [...topTeams];
+        const displayTeams = /** @type {any[]} */ ([...topTeams]);
         
         if (userTeam && !isUserInTop && userIndex !== -1) {
             displayTeams.push({ type: 'separator' });
             displayTeams.push({ 
                 rank: userIndex + 1, 
-                name: userTeam.name, 
-                points: userTeam.elo, 
+                name: userTeam.name || 'Equipe', 
+                points: Number(userTeam.elo || 0), 
                 form: '✅✅❓', 
                 isMe: true 
             });
@@ -196,8 +207,8 @@ const LeagueDashboard = () => {
                 />
                 
                 <LeagueCard style={{ padding: 0, overflow: 'hidden', ...leagueSurface }}>
-                    {displayTeams.map((team, index) => {
-                        if (team.type === 'separator') {
+                    {displayTeams.map((/** @type {any} */ team, /** @type {number} */ index) => {
+                        if ('type' in team && team.type === 'separator') {
                             return (
                                 <View key="sep" style={{ paddingVertical: 8, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)' }}>
                                     <View style={{ height: 4, width: 4, borderRadius: 2, backgroundColor: Colors.neutral500, marginVertical: 2 }} />
@@ -207,6 +218,7 @@ const LeagueDashboard = () => {
                             );
                         }
 
+                        const rankedTeam = /** @type {LeaderboardEntry} */ (team);
                         return (
                             <View 
                                 key={index} 
@@ -214,20 +226,25 @@ const LeagueDashboard = () => {
                                     flexDirection: 'row', 
                                     padding: 16, 
                                     alignItems: 'center',
-                                    backgroundColor: team.isMe ? 'rgba(212, 175, 55, 0.14)' : 'transparent',
-                                    borderBottomWidth: (index < displayTeams.length - 1 && displayTeams[index + 1].type !== 'separator') ? 1 : 0,
+                                    backgroundColor: rankedTeam.isMe ? 'rgba(212, 175, 55, 0.14)' : 'transparent',
+                                    borderBottomWidth: (() => {
+                                        if (index >= displayTeams.length - 1) return 0;
+                                        const nextTeam = displayTeams[index + 1];
+                                        if (!nextTeam) return 0;
+                                        return ('type' in nextTeam && nextTeam.type === 'separator') ? 0 : 1;
+                                    })(),
                                     borderColor: 'rgba(255,255,255,0.08)',
                                 }}
                             >
-                                <Text style={[Fonts.h4, { width: 35, color: team.rank <= 3 ? Colors.gold500 : Colors.neutral300 }]}>
-                                    #{team.rank}
+                                <Text style={[Fonts.h4, { width: 35, color: rankedTeam.rank <= 3 ? Colors.gold500 : Colors.neutral300 }]}>
+                                    #{rankedTeam.rank}
                                 </Text>
                                 <View style={{ flex: 1, marginLeft: 8 }}>
-                                    <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{team.name}</Text>
+                                    <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{rankedTeam.name}</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{team.points} pts</Text>
-                                    <Text style={{ fontSize: 10, marginTop: 2, color: Colors.neutral300 }}>{team.form}</Text>
+                                    <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{rankedTeam.points} pts</Text>
+                                    <Text style={{ fontSize: 10, marginTop: 2, color: Colors.neutral300 }}>{rankedTeam.form}</Text>
                                 </View>
                             </View>
                         );
@@ -261,10 +278,16 @@ const LeagueDashboard = () => {
                         <CompetitiveHero 
                             elo={userTeam.elo} 
                             division={userTeam.division} 
-                            rank={rankingData.findIndex(t => t.documentId === userTeam?.documentId) + 1 || '-'}
+                            rank={(() => {
+                                const index = rankingData.findIndex((/** @type {Team} */ t) => getEntityDocumentId(t) === getEntityDocumentId(userTeam));
+                                return index >= 0 ? index + 1 : '-';
+                            })()}
                             teamName={userTeam.name}
                             nextDivisionElo={1300}
                         />
+                        <View style={{ alignItems: 'center', marginBottom: 4, marginTop: -8 }}>
+                            <DivisionBadge division={userTeam?.division || 10} size={46} />
+                        </View>
 
                         {/* CTA Matchmaking */}
                         <View style={{ marginVertical: 24 }}>

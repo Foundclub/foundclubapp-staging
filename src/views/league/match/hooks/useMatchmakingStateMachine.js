@@ -3,8 +3,12 @@ import { AppState } from 'react-native';
 import MatchmakingService from '@/services/league/MatchmakingService';
 import { getEntityDocumentId } from '@/utils/entityId';
 
-const POLLING_VIEWS = new Set(['radar', 'locker_room']);
+const POLLING_VIEWS = new Set(['radar', 'locker_room', 'match_found']);
 
+/**
+ * @param {number} seconds
+ * @returns {string}
+ */
 const formatSecondsCompact = (seconds) => {
   const safe = Math.max(0, Number(seconds) || 0);
   const min = Math.floor(safe / 60);
@@ -13,6 +17,12 @@ const formatSecondsCompact = (seconds) => {
   return `${min}m ${String(sec).padStart(2, '0')}s`;
 };
 
+/**
+ * @param {Record<string, any> | null} searchInsights
+ * @param {number} updatedAtMs
+ * @param {number} [nowMs]
+ * @returns {number}
+ */
 const computeRemainingExpansionSec = (searchInsights, updatedAtMs, nowMs = Date.now()) => {
   const base = Number(searchInsights?.nextExpansionInSec || 0);
   if (!Number.isFinite(base) || base <= 0) return 0;
@@ -21,65 +31,162 @@ const computeRemainingExpansionSec = (searchInsights, updatedAtMs, nowMs = Date.
   return Math.max(0, base - elapsedSec);
 };
 
+/**
+ * @param {Record<string, any> | null} searchInsights
+ * @returns {boolean}
+ */
 const hasTierBlocking = (searchInsights) => {
-  const blocked = Array.isArray(searchInsights?.blockedCriteria) ? searchInsights.blockedCriteria : [];
+  const blockedCriteria = searchInsights?.blockedCriteria;
+  const blocked = Array.isArray(blockedCriteria) ? blockedCriteria : [];
   return blocked.includes('elo') || blocked.includes('division');
 };
 
-const buildSearchStatusLabel = (minutesElapsed, division, searchInsights, nextExpansionInSec) => {
-  const divisionLabel = division || '?';
-  const matched = Array.isArray(searchInsights?.matchedCriteria) ? searchInsights.matchedCriteria : [];
-  const blocked = Array.isArray(searchInsights?.blockedCriteria) ? searchInsights.blockedCriteria : [];
-  const tier = Number(searchInsights?.tier || 0) || (minutesElapsed < 5 ? 1 : minutesElapsed < 15 ? 2 : minutesElapsed < 30 ? 3 : 4);
-  const geoRelaxationKm = Number(searchInsights?.geoRelaxationKm || 0);
-  const policyVersion = searchInsights?.policyVersion ? ` [${searchInsights.policyVersion}]` : '';
-  const remainingExpansion = Number.isFinite(nextExpansionInSec)
-    ? Math.max(0, nextExpansionInSec)
-    : Number(searchInsights?.nextExpansionInSec || 0);
-  const criteriaDetails = matched.length || blocked.length
-    ? ` Match: ${matched.join(', ') || '-'} | En attente: ${blocked.join(', ') || '-'}`
-    : '';
-  if (searchInsights?.candidateFound) {
-    const nextExpansion = remainingExpansion;
-    const isTierBlocked = blocked.includes('elo') || blocked.includes('division');
-    if (isTierBlocked) {
-      return nextExpansion > 0
-        ? `Adversaire potentiel trouve, on cherche encore un niveau proche (palier suivant dans ${formatSecondsCompact(nextExpansion)}).${criteriaDetails}`
-        : `Adversaire potentiel trouve, recherche en ouverture de palier.${criteriaDetails}`;
+/**
+ * @param {...unknown} values
+ * @returns {string | null}
+ */
+const pickFirstText = (...values) => {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
     }
+  }
+  return null;
+};
 
+/**
+ * @param {unknown} value
+ * @returns {any}
+ */
+const parseMaybeJson = (value) => {
+  if (value && typeof value === 'object') return value;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return value;
+  }
+};
+
+/**
+ * @param {string | null} cityLabel
+ * @param {number | string | null | undefined} radiusKm
+ * @returns {string}
+ */
+const formatZoneLine = (cityLabel, radiusKm) => {
+  const safeRadius = Number.isFinite(Number(radiusKm)) ? Number(radiusKm) : null;
+  const city = cityLabel || 'votre zone';
+  if (!safeRadius) return `Zone: ${city}.`;
+  return `Zone: ${city} - rayon ${safeRadius} km.`;
+};
+
+/**
+ * @param {MatchRequest | null} matchRequest
+ * @param {Team | null} mySquad
+ * @returns {{ cityLabel: string | null, radiusKm: number }}
+ */
+const extractSearchZone = (matchRequest, mySquad) => {
+  const requestLocation = parseMaybeJson(matchRequest?.location);
+  const squadHomeBase = parseMaybeJson(mySquad?.home_base);
+  const cityLabel = pickFirstText(
+    requestLocation?.city,
+    requestLocation?.label,
+    requestLocation?.address,
+    squadHomeBase?.city,
+    squadHomeBase?.label,
+    squadHomeBase?.address
+  );
+
+  const radiusKm = Number(matchRequest?.radius || squadHomeBase?.radius || mySquad?.radius || 20);
+  return { cityLabel, radiusKm };
+};
+
+/**
+ * @typedef {{
+ *  division?: number,
+ *  searchInsights?: Record<string, any> | null,
+ *  nextExpansionInSec?: number,
+ *  cityLabel?: string | null,
+ *  radiusKm?: number | string,
+ * }} SearchStatusInput
+ */
+/**
+ * @param {SearchStatusInput} input
+ * @returns {string}
+ */
+const buildSearchStatusLabel = ({
+  division,
+  searchInsights,
+  nextExpansionInSec,
+  cityLabel,
+  radiusKm,
+}) => {
+  const divisionLabel = division ? `Division ${division}` : 'votre niveau';
+  const tier = Number(searchInsights?.tier || 0) || 1;
+  const geoRelaxationKm = Number(searchInsights?.geoRelaxationKm || 0);
+  const safeNextExpansionInSec = Number(nextExpansionInSec ?? 0);
+  const nextExpansion = Number.isFinite(safeNextExpansionInSec)
+    ? Math.max(0, safeNextExpansionInSec)
+    : Number(searchInsights?.nextExpansionInSec || 0);
+
+  const zoneLine = formatZoneLine(cityLabel || null, radiusKm);
+  const criteriaLine = `Critere prioritaire: ${divisionLabel} avec un ELO similaire.`;
+
+  if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
-      return `Adversaires detectes. Affinage en cours (${formatSecondsCompact(nextExpansion)} avant elargissement, geo +${geoRelaxationKm}km).${criteriaDetails}${policyVersion}`;
+      return `Statut: adversaire potentiel trouve.\n${criteriaLine}\n${zoneLine}\nSuite: match auto dans ${formatSecondsCompact(nextExpansion)} si aucun meilleur profil.`;
     }
+    return `Statut: adversaire potentiel trouve.\n${criteriaLine}\n${zoneLine}\nSuite: recherche elargie en cours.`;
   }
 
   if (tier <= 1) {
-    return `Recherche precise (ELO strict, Div ${divisionLabel}, geo +${geoRelaxationKm}km).${criteriaDetails}${policyVersion}`;
+    return `Statut: recherche precise en cours.\n${criteriaLine}\n${zoneLine}`;
   }
+
   if (tier === 2) {
-    return `Elargissement : Division +/- 1, ELO <= 200 (geo +${geoRelaxationKm}km).${criteriaDetails}${policyVersion}`;
+    return `Statut: recherche elargie niveau 1.\nCritere actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
   }
+
   if (tier === 3) {
-    return `Recherche etendue : Division +/- 2 (geo +${geoRelaxationKm}km).${criteriaDetails}${policyVersion}`;
+    return `Statut: recherche elargie niveau 2.\nCritere actuel: ${divisionLabel} +/-2.\nZone etendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
   }
-  return `Recherche globale (Toutes divisions, geo +${geoRelaxationKm}km).${criteriaDetails}${policyVersion}`;
+
+  return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilites restantes.\nZone etendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
 };
 
+/**
+ * @typedef {object} UseMatchmakingStateMachineParams
+ * @property {MatchRequest | null} matchRequest
+ * @property {Team | null} mySquad
+ * @property {(statusData: MatchmakingStatus) => void} [onAutoSearchingDetected]
+ * @property {() => void} [onConnectionError]
+ * @property {(statusData: MatchmakingStatus, options?: {silent?: boolean}) => void} [onMatched]
+ * @property {(statusData: MatchmakingStatus) => void} [onSearchingStatus]
+ * @property {() => void} [onRecoverFromBackground]
+ * @property {string} viewState
+ */
+
+/**
+ * @param {UseMatchmakingStateMachineParams} params
+ * @returns {{searchStatus: string, serverNow: string | null}}
+ */
 export const useMatchmakingStateMachine = ({
   matchRequest,
   mySquad,
   onAutoSearchingDetected,
   onConnectionError,
   onMatched,
+  onSearchingStatus,
   onRecoverFromBackground,
   viewState,
 }) => {
   const appStateRef = useRef(AppState.currentState);
   const failureCountRef = useRef(0);
   const [searchStatus, setSearchStatus] = useState('Initialisation...');
-  const [searchInsights, setSearchInsights] = useState(null);
+  const [searchInsights, setSearchInsights] = useState(/** @type {Record<string, any> | null} */ (null));
   const [searchInsightsUpdatedAt, setSearchInsightsUpdatedAt] = useState(0);
-  const [candidateFallbackCountdown, setCandidateFallbackCountdown] = useState(null);
+  const [serverNow, setServerNow] = useState(/** @type {string | null} */ (null));
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -107,10 +214,15 @@ export const useMatchmakingStateMachine = ({
       try {
         const statusData = await MatchmakingService.getActiveRequest(squadId);
         failureCountRef.current = 0;
+        setServerNow(statusData?.serverNow || null);
 
         if (statusData?.state === 'matched') {
-          onMatched?.(statusData);
+          onMatched?.(statusData, { silent: viewState === 'match_found' });
           return;
+        }
+
+        if (statusData?.state === 'searching') {
+          onSearchingStatus?.(statusData);
         }
 
         if (statusData?.searchInsights) {
@@ -118,7 +230,7 @@ export const useMatchmakingStateMachine = ({
           setSearchInsightsUpdatedAt(Date.now());
         }
 
-        if (viewState === 'locker_room' && statusData?.state === 'searching') {
+        if ((viewState === 'locker_room' || viewState === 'match_found') && statusData?.state === 'searching') {
           onAutoSearchingDetected?.(statusData);
         }
       } catch (error) {
@@ -133,15 +245,15 @@ export const useMatchmakingStateMachine = ({
       if (!matchRequest?.createdAt) return;
       const createdAt = new Date(matchRequest.createdAt).getTime();
       if (Number.isNaN(createdAt)) return;
-      const minutesElapsed = (Date.now() - createdAt) / (1000 * 60);
       const nextExpansionInSec = computeRemainingExpansionSec(searchInsights, searchInsightsUpdatedAt);
-      setSearchStatus(buildSearchStatusLabel(minutesElapsed, mySquad?.division, searchInsights, nextExpansionInSec));
-
-      if (searchInsights?.candidateFound && hasTierBlocking(searchInsights) && nextExpansionInSec > 0) {
-        setCandidateFallbackCountdown(nextExpansionInSec);
-      } else {
-        setCandidateFallbackCountdown(null);
-      }
+      const zone = extractSearchZone(matchRequest, mySquad);
+      setSearchStatus(buildSearchStatusLabel({
+        division: mySquad?.division,
+        searchInsights,
+        nextExpansionInSec,
+        cityLabel: zone.cityLabel,
+        radiusKm: zone.radiusKm,
+      }));
     }, 1000);
 
     return () => {
@@ -154,10 +266,11 @@ export const useMatchmakingStateMachine = ({
     onAutoSearchingDetected,
     onConnectionError,
     onMatched,
+    onSearchingStatus,
     searchInsights,
     searchInsightsUpdatedAt,
     viewState,
   ]);
 
-  return { candidateFallbackCountdown, searchStatus };
+  return { searchStatus, serverNow };
 };

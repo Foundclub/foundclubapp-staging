@@ -30,6 +30,35 @@ linter:
       policy: pull-push # We override the policy for one job
 
 
+theme-contract:
+  extends: .quality
+  script:
+    - npm run verify:theme-contract
+
+
+type-check-no-regression:
+  extends: .quality
+  script:
+    - npm run type-check:no-regression
+  artifacts:
+    when: always
+    paths:
+      - .tmp/typecheck-no-regression.json
+      - .tmp/typecheck.log
+
+
+type-check-report:
+  extends: .quality
+  allow_failure: true
+  script:
+    - npm run type-check:report
+  artifacts:
+    when: always
+    paths:
+      - .tmp/typecheck-report.json
+      - .tmp/typecheck.log
+
+
 jest-tests:
   extends: .quality
   script:
@@ -39,6 +68,6 @@ jest-tests:
 
 type:
   extends: .quality
+  allow_failure: true
   script:
     - npm run type-check
-

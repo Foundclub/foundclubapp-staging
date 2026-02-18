@@ -11,18 +11,31 @@ import { getSearchAlerts, deleteSearchAlert, updateSearchAlert } from '@/service
 import { RouteNames } from '@/navigation/routeNames';
 import { useAppContext } from '@/store/appContext';
 
+/**
+ * @typedef {object} SearchAlertItem
+ * @property {string} [documentId]
+ * @property {number | string} [id]
+ * @property {string} [label]
+ * @property {'event' | 'mercato' | string} [type]
+ * @property {Record<string, any>} [filters]
+ * @property {boolean} [isActive]
+ */
+
+/**
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
+ */
 const SearchAlerts = ({ navigation }) => {
     const { t } = useTranslation();
     const {
         Spaces, Fonts, Alignments, Colors, Images,
     } = useTheme();
     const [, appDispatch] = useAppContext();
-    const [alerts, setAlerts] = useState([]);
+    const [alerts, setAlerts] = useState(/** @type {SearchAlertItem[]} */ ([]));
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [isTypeModalVisible, setIsTypeModalVisible] = useState(false);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-    const [alertToDelete, setAlertToDelete] = useState(null);
+    const [alertToDelete, setAlertToDelete] = useState(/** @type {string | null} */ (null));
 
     const fetchAlerts = async () => {
         setLoading(true);
@@ -61,12 +74,12 @@ const SearchAlerts = ({ navigation }) => {
         }
     };
 
-    const handleDeletePress = (id) => {
+    const handleDeletePress = (/** @type {string} */ id) => {
         setAlertToDelete(id);
         setDeleteModalVisible(true);
     };
 
-    const handleToggleActive = async (item) => {
+    const handleToggleActive = async (/** @type {SearchAlertItem} */ item) => {
         try {
             await updateSearchAlert(item.documentId, { isActive: !item.isActive });
             fetchAlerts();
@@ -77,7 +90,7 @@ const SearchAlerts = ({ navigation }) => {
     };
 
     // Launch search with filters applied directly to results page
-    const handleLaunchSearch = (alert) => {
+    const handleLaunchSearch = (/** @type {SearchAlertItem} */ alert) => {
         if (alert.type === 'event') {
             // Apply filters to app context and navigate to Search (events tab)
             appDispatch({ type: 'SET_EVENT_FILTERS', payload: alert.filters || {} });
@@ -96,7 +109,7 @@ const SearchAlerts = ({ navigation }) => {
     };
 
     // Edit alert - navigate to filters with pre-filled values
-    const handleEditAlert = (alert) => {
+    const handleEditAlert = (/** @type {SearchAlertItem} */ alert) => {
         if (alert.type === 'event') {
             navigation.navigate(RouteNames.EventFilters, { 
                 editAlertMode: true, 
@@ -118,7 +131,7 @@ const SearchAlerts = ({ navigation }) => {
         setIsTypeModalVisible(true);
     };
 
-    const handleNavigateToFilters = (type) => {
+    const handleNavigateToFilters = (/** @type {'event' | 'mercato'} */ type) => {
         setIsTypeModalVisible(false);
         if (type === 'event') {
             navigation.navigate(RouteNames.EventFilters, { createAlertMode: true });
@@ -128,7 +141,7 @@ const SearchAlerts = ({ navigation }) => {
     };
 
     // Format filters into readable string with calendar icon
-    const formatFilters = (filters, type) => {
+    const formatFilters = (/** @type {Record<string, any> | undefined} */ filters, /** @type {string} */ type) => {
         if (!filters) return null;
         const parts = [];
         
@@ -164,12 +177,12 @@ const SearchAlerts = ({ navigation }) => {
                     contentContainerStyle={[
                         Spaces.gap[16],
                         Spaces.paddingHorizontal[16],
-                        Spaces.paddingBottom[100],
+                        Spaces.paddingBottom[80],
                         alerts.length === 0 && Alignments.fill,
                         alerts.length === 0 && Alignments.mainCenter,
                     ]}
                     data={alerts}
-                    keyExtractor={(item) => item.documentId || item.id?.toString()}
+                    keyExtractor={(item) => (item.documentId || item.id?.toString() || Math.random().toString())}
                     ListEmptyComponent={(
                         <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
                             <Image
@@ -202,7 +215,7 @@ const SearchAlerts = ({ navigation }) => {
                             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
                                 <View style={{ flex: 1, marginRight: 12 }}>
                                     <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.label}</Text>
-                                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[6], { marginTop: 4 }]}>
+                                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { marginTop: 4 }]}>
                                         <Image 
                                             source={item.type === 'event' ? Images.calendar : Images.users}
                                             style={{ width: 14, height: 14, tintColor: Colors.neutral00 }}

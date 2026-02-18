@@ -5,6 +5,7 @@ import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils
  * Generic partial update for a league match (proposal, metadata, etc.)
  * @param {string} matchId
  * @param {object} data
+ * @returns {Promise<LeagueMatch>}
  */
 export const updateMatch = async (matchId, data) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
@@ -96,19 +97,19 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
   if (hoursUntilMatch < 24) {
     return {
       penalty: 200,
-      message: "⚠️ ATTENTION: Forfait! Pénalité de -200 ELO et défaite attribuée.",
+      message: 'ATTENTION: Forfait. Penalite de -200 ELO et defaite attribuee.',
       isSevere: true,
     };
   } else if (hoursUntilMatch < 48) {
     return {
       penalty: 50,
-      message: "⚠️ Pénalité de -50 ELO applicable.",
+      message: 'Penalite de -50 ELO applicable.',
       isSevere: false,
     };
   } else {
     return {
       penalty: 0,
-      message: "✅ Aucune pénalité (annulation > 48h avant le match).",
+      message: 'Aucune penalite (annulation > 48h avant le match).',
       isSevere: false,
     };
   }
@@ -117,6 +118,7 @@ export const getCancellationPenalty = (hoursUntilMatch) => {
 /**
  * Fetch a single match with full details
  * @param {string} matchId - The match documentId
+ * @returns {Promise<LeagueMatch>}
  */
 export const fetchMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
@@ -144,15 +146,16 @@ export const fetchMatch = async (matchId) => {
  * Get match history for a team
  * @param {string} teamId - The team documentId
  * @param {number} limit - Max number of matches to return (default 10)
+ * @returns {Promise<MatchHistoryEntry[]>}
  */
 export const getMatchHistory = async (teamId, limit = 10) => {
   const normalizedTeamId = requireDocumentId(teamId, 'team');
   const parsedNumericId = Number.parseInt(normalizedTeamId, 10);
   const isNumericTeamId = Number.isFinite(parsedNumericId) && String(parsedNumericId) === normalizedTeamId;
-  const teamFilterOr = [
+  const teamFilterOr = /** @type {Array<Record<string, unknown>>} */ ([
     { team_a: { documentId: { $eq: normalizedTeamId } } },
     { team_b: { documentId: { $eq: normalizedTeamId } } },
-  ];
+  ]);
   if (isNumericTeamId) {
     teamFilterOr.push({ team_a: { id: { $eq: parsedNumericId } } });
     teamFilterOr.push({ team_b: { id: { $eq: parsedNumericId } } });
@@ -174,17 +177,19 @@ export const getMatchHistory = async (teamId, limit = 10) => {
 
   const matches = response.data?.data || [];
   // Transform to a simpler format with result/opponent perspective
-  return matches.map(match => {
+  return matches.map((/** @type {LeagueMatch} */ match) => {
     const isTeamA = areSameEntityId(getEntityDocumentId(match.team_a), normalizedTeamId)
       || (isNumericTeamId && areSameEntityId(match.team_a?.id, parsedNumericId));
     const myScore = isTeamA ? match.score_a : match.score_b;
     const opponentScore = isTeamA ? match.score_b : match.score_a;
+    const myScoreValue = Number.isFinite(Number(myScore)) ? Number(myScore) : 0;
+    const opponentScoreValue = Number.isFinite(Number(opponentScore)) ? Number(opponentScore) : 0;
     const opponent = isTeamA ? match.team_b : match.team_a;
     
     let result = 'pending';
     if (match.status === 'valid') {
-      if (myScore > opponentScore) result = 'win';
-      else if (myScore < opponentScore) result = 'loss';
+      if (myScoreValue > opponentScoreValue) result = 'win';
+      else if (myScoreValue < opponentScoreValue) result = 'loss';
       else result = 'draw';
     } else if (match.status === 'forfeit' || match.status === 'no_show') {
       const winnerId = getEntityDocumentId(match.winner);
@@ -209,6 +214,7 @@ export const getMatchHistory = async (teamId, limit = 10) => {
 /**
  * Get a single match by ID
  * @param {string} matchId - The match documentId
+ * @returns {Promise<LeagueMatch>}
  */
 export const getMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
@@ -224,16 +230,16 @@ export const getMatch = async (matchId) => {
  * Request a rematch against a specific opponent
  * @param {string} teamId - Your team documentId
  * @param {string} opponentTeamId - Opponent team documentId  
- * @param {string} matchId - Original match documentId (optional)
+ * @param {string} [matchId] - Original match documentId (optional)
  */
-export const requestRematch = async (teamId, opponentTeamId, matchId = null) => {
+export const requestRematch = async (teamId, opponentTeamId, matchId = '') => {
   const normalizedTeamId = requireDocumentId(teamId, 'team');
   const normalizedOpponentTeamId = requireDocumentId(opponentTeamId, 'opponentTeam');
   const normalizedMatchId = matchId ? requireDocumentId(matchId, 'match') : null;
   const response = await client.post('/matchmaking-request/rematch', {
     teamId: normalizedTeamId,
     opponentTeamId: normalizedOpponentTeamId,
-    matchId: normalizedMatchId
+    ...(normalizedMatchId ? { matchId: normalizedMatchId } : {})
   });
   return response.data;
 };
@@ -256,10 +262,8 @@ export const submitPlayerGoals = async (matchId, goals) => {
 /**
  * Submit match score
  * @param {string} matchId - The match documentId
- * @param {number} scoreA - Score of Team A
- * @param {number} scoreB - Score of Team B
- * @param {boolean} [dispute] - Whether there is a dispute
- * @param {object} [proof] - Optional proof file (image) { uri, name, type }
+ * @param {{uri: string, name?: string, type?: string, source?: string} | null} [proof] - Optional proof file (image)
+ * @returns {Promise<object>}
  */
 export const submitMatchProof = async (matchId, proof) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
@@ -268,11 +272,11 @@ export const submitMatchProof = async (matchId, proof) => {
   }
 
   const formData = new FormData();
-  formData.append('proof', {
+  formData.append('proof', /** @type {any} */ ({
     uri: proof.uri,
     name: proof.name || 'proof.jpg',
     type: proof.type || 'image/jpeg',
-  });
+  }));
   if (proof?.source) {
     formData.append('source', proof.source);
   }
@@ -286,6 +290,16 @@ export const submitMatchProof = async (matchId, proof) => {
   return response.data;
 };
 
+/**
+ * Submit final score for a league match.
+ * @param {string} matchId
+ * @param {number | string} scoreA
+ * @param {number | string} scoreB
+ * @param {boolean} [dispute]
+ * @param {{uri: string, name?: string, type?: string, source?: string} | null} [proof]
+ * @param {{disputeType?: string | null, disputeComment?: string | null}} [extras]
+ * @returns {Promise<object>}
+ */
 export const submitMatchScore = async (
   matchId,
   scoreA,
@@ -294,8 +308,8 @@ export const submitMatchScore = async (
   proof = null,
   extras = {},
 ) => {
-  const normalizedScoreA = Number.parseInt(scoreA, 10);
-  const normalizedScoreB = Number.parseInt(scoreB, 10);
+  const normalizedScoreA = Number.parseInt(String(scoreA), 10);
+  const normalizedScoreB = Number.parseInt(String(scoreB), 10);
 
   if (Number.isNaN(normalizedScoreA) || Number.isNaN(normalizedScoreB)) {
     throw new Error('Invalid scores payload');
@@ -305,11 +319,11 @@ export const submitMatchScore = async (
     await submitMatchProof(matchId, proof);
   }
 
-  const payload = {
+  const payload = /** @type {Record<string, any>} */ ({
     score_a: normalizedScoreA,
     score_b: normalizedScoreB,
     dispute: Boolean(dispute),
-  };
+  });
 
   if (extras?.disputeType) {
     payload.dispute_type = extras.disputeType;

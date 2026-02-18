@@ -52,6 +52,7 @@ const clubListSchema = Joi.object({
  * @param {{
  *   activity?: string;
  *   geohash?: string[];
+ *   isCustomer?: boolean;
  *   name?: string;
  *   page?: number;
  *   pageSize?: number;
@@ -126,7 +127,7 @@ export const getClubs = async (params = {}) => {
   const clubsResponse = await client.get('/clubs', { params: filters });
   
   // Add type marker to regular clubs
-  const clubsWithType = (clubsResponse.data?.data || []).map(club => ({
+  const clubsWithType = (clubsResponse.data?.data || []).map((/** @type {Club} */ club) => ({
     ...club,
     _type: 'club',
   }));
@@ -137,6 +138,7 @@ export const getClubs = async (params = {}) => {
   // Fetch multisport clubs if requested and on first page
   if (includeMultisport && (page || 1) === 1) {
     try {
+      /** @type {{ pagination: { page: number; pageSize: number }; populate: any; filters?: Record<string, any> }} */
       const cmFilters = {
         pagination: { page: 1, pageSize: 10 },
         populate: {
@@ -158,7 +160,7 @@ export const getClubs = async (params = {}) => {
       }
 
       const cmResponse = await client.get('/multisport-clubs', { params: cmFilters });
-      const cmWithType = (cmResponse.data?.data || []).map(cm => ({
+      const cmWithType = (cmResponse.data?.data || []).map((/** @type {any} */ cm) => ({
         ...cm,
         _type: 'multisport',
         sectionsCount: cm.sections?.length || 0,
@@ -169,7 +171,8 @@ export const getClubs = async (params = {}) => {
       totalFromCM = cmResponse.data?.meta?.pagination?.total || 0;
     } catch (error) {
       // If CM fetch fails, just use regular clubs
-      console.warn('Failed to fetch multisport clubs:', error.message);
+      const message = error && typeof error === 'object' && 'message' in error ? error.message : error;
+      console.warn('Failed to fetch multisport clubs:', message);
     }
   }
 
@@ -314,10 +317,12 @@ export const updateClub = async (clubData) => {
         if (sponsor.logo && sponsor.logo.path) {
           // NEW FILE UPLOAD
           console.warn('Appended file for sponsor', i);
+          const sponsorLogoPath = sponsor.logo.path || '';
+          // @ts-expect-error - React Native FormData supports file descriptor objects.
           formData.append(`sponsor[${i}][logo]`, {
-            name: sponsor.logo.filename,
-            type: sponsor.logo.mime,
-            uri: Platform.OS === 'android' ? sponsor.logo.path : sponsor.logo.path.replace('file://', ''),
+            name: sponsor.logo.filename || `sponsor_${i}.jpg`,
+            type: sponsor.logo.mime || 'image/jpeg',
+            uri: Platform.OS === 'android' ? sponsorLogoPath : sponsorLogoPath.replace('file://', ''),
           });
         } else {
           // EXISTING LOGO - DO NOT SEND ANYTHING
@@ -385,12 +390,13 @@ export const updateClub = async (clubData) => {
     if (clubDataCopy.logo) {
       // If it's a new file (has path/uri), append it as a file
       if (clubDataCopy.logo.path || clubDataCopy.logo.uri) {
+        const logoFileUri = clubDataCopy.logo.path || clubDataCopy.logo.uri || '';
         const fileToUpload = {
           name: clubDataCopy.logo.filename || 'club_logo.jpg',
           type: clubDataCopy.logo.mime || 'image/jpeg',
-          uri: Platform.OS === 'android' 
-            ? (clubDataCopy.logo.path || clubDataCopy.logo.uri) 
-            : (clubDataCopy.logo.path || clubDataCopy.logo.uri).replace('file://', ''),
+          uri: Platform.OS === 'android'
+            ? logoFileUri
+            : logoFileUri.replace('file://', ''),
         };
         // Use 'files.logo' if Strapi controller expects files.field
         // OR just 'logo' if using standard upload middleware.
@@ -398,7 +404,8 @@ export const updateClub = async (clubData) => {
         // Based on sponsor logic `sponsor[${i}][logo]`, let's try appending to `files.logo` or `logo`.
         // Strapi default upload usually looks for `files` key.
         // Let's assume standard multipart: `logo` as key for file.
-        formData.append('files.logo', fileToUpload); 
+        // @ts-expect-error - React Native FormData supports file descriptor objects.
+        formData.append('files.logo', fileToUpload);
       } 
       // Existing logo (sent as ID)
       else if (clubDataCopy.logo.documentId) {
@@ -432,8 +439,11 @@ export const updateClub = async (clubData) => {
 
     return validationResult.data;
   } catch (error) {
-    console.error('updateClub error full:', JSON.stringify(error.response?.data || error, null, 2));
-    const errorToDisplay = error?.response?.data?.error?.message || error?.message || JSON.stringify(error);
+    const normalizedError = /** @type {any} */ (error);
+    console.error('updateClub error full:', JSON.stringify(normalizedError?.response?.data || normalizedError, null, 2));
+    const errorToDisplay = normalizedError?.response?.data?.error?.message
+      || normalizedError?.message
+      || JSON.stringify(normalizedError);
     throw new Error(`Failed to update club: ${errorToDisplay}`);
   }
 };
@@ -445,7 +455,7 @@ export const updateClub = async (clubData) => {
 /**
  * Upload a file to Strapi
  * @param {object} file - The file object (from image picker)
- * @returns {Promise<number>} - The uploaded file ID
+ * @returns {Promise<{ id: number | string; documentId: string | number }>} - Uploaded file references
  */
 export const uploadFile = async (file) => {
   try {

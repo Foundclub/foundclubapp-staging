@@ -342,7 +342,7 @@ const useMessaging = (currentChatId) => {
 
   /* UPDATE MESSAGE MUTATION */
   const updateMessageMutation = useMutation({
-    mutationFn: ({ messageId, data }) => updateMessage(messageId, data),
+    mutationFn: (/** @type {{ messageId: string; data: any }} */ payload) => updateMessage(payload.messageId, payload.data),
     onSuccess: (data) => {
       // Optimistically we might have already updated, but let's confirm
        queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId || data.chat?.documentId] });

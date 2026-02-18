@@ -20,24 +20,36 @@ import { getRecruitmentAds, getMyRecruitmentAds, getMyApplications } from '@/ser
 import { useAppContext } from '@/store/appContext';
 
 /**
+ * @typedef {{ id?: string | number; documentId?: string; [key: string]: any }} MercatoUser
+ * @typedef {{ documentId?: string | number; id?: string | number; name?: string }} LevelRef
+ * @typedef {{ id?: string | number; level?: LevelRef; [key: string]: any }} RecruitmentAdItem
+ */
+
+/**
  * Recrutement List Content - Main component for recruitment marketplace
  * Shows different content based on user role:
  * - Coach/Dirigeant: TopTabs with "Profils" (search players) and "Annonces" (manage ads)
  * - Joueur: Smart feed of recruitment ads matching their profile
+ * @param {{ initialTab?: 'profils' | 'annonces' | 'candidatures'; timestamp?: number | string }} props
  */
 const RecrutementListContent = ({ initialTab, timestamp }) => {
   const { t } = useTranslation();
   const { Spaces, Fonts, Alignments, Colors } = useTheme();
   const navigation = useNavigation();
+  const nav = /** @type {any} */ (navigation);
   const { userData } = useAuth();
   const [{ mercatoFilters }] = useAppContext();
+  const roleName = userData?.role?.name;
+  const isCoachOrAdmin = roleName === USER_ROLES.coach
+    || roleName === USER_ROLES.president
+    || roleName === USER_ROLES.superAdmin;
   
   // State
   const [activeTab, setActiveTab] = useState(initialTab || 'profils'); // 'profils' or 'annonces'
-  const [users, setUsers] = useState([]);
-  const [ads, setAds] = useState([]);
-  const [myAds, setMyAds] = useState([]);
-  const [myApplications, setMyApplications] = useState([]);
+  const [users, setUsers] = useState(/** @type {MercatoUser[]} */ ([]));
+  const [ads, setAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
+  const [myAds, setMyAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
+  const [myApplications, setMyApplications] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -68,11 +80,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
   }, [timestamp, isCoachOrAdmin, activeTab]); // Dependencies: timestamp changes, so it runs.
 
   // Modal state
-  const [selectedTeam, setSelectedTeam] = useState(null);
-
-  // Check user role
-  const isCoachOrAdmin = [USER_ROLES.coach, USER_ROLES.president, USER_ROLES.superAdmin]
-    .includes(userData?.role?.name);
+  const [selectedTeam, setSelectedTeam] = useState(/** @type {Team | null} */ (null));
 
   // Gatekeeper: Check if player has required profile fields
   useEffect(() => {
@@ -85,7 +93,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
             { text: 'Plus tard', style: 'cancel' },
             { 
               text: 'Compléter', 
-              onPress: () => navigation.navigate(RouteNames.ProfileStack, {
+              onPress: () => nav.navigate(RouteNames.ProfileStack, {
                 screen: RouteNames.Profile,
               })
             }
@@ -181,7 +189,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
      if (isCoachOrAdmin) return;
      if (!isRefresh) setLoading(true);
      try {
-       const data = await getMyApplications(userData?.documentId || userData?.id);
+       const data = await getMyApplications(String(userData?.documentId || userData?.id || ''));
        setMyApplications(data || []);
      } catch (error) {
        console.error('[RecrutementListContent] Error fetching applications:', error);
@@ -231,21 +239,22 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
   }, [activeTab, isCoachOrAdmin, fetchUsers, fetchMyAds, fetchMyApplications, fetchAdsForPlayer]);
 
   // Handle card press (navigate to user details)
-  const handleUserCardPress = (user) => {
-    navigation.navigate(RouteNames.ProfileStack, {
+  const handleUserCardPress = (/** @type {MercatoUser} */ user) => {
+    nav.navigate(RouteNames.ProfileStack, {
       screen: RouteNames.UserDetails,
       params: { userId: user.documentId || user.id },
     });
   };
 
   // Handle ad card press
-  const handleAdCardPress = (ad, isOwnerContext = false) => {
-    navigation.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
+  const handleAdCardPress = (/** @type {RecruitmentAdItem} */ ad, isOwnerContext = false) => {
+    nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
   };
 
   // Filters count
-  const filtersCount = Object.keys(mercatoFilters || {}).filter((key) => {
-    const value = mercatoFilters[key];
+  const activeMercatoFilters = /** @type {Record<string, any>} */ (mercatoFilters || {});
+  const filtersCount = Object.keys(activeMercatoFilters).filter((key) => {
+    const value = activeMercatoFilters[key];
     if (Array.isArray(value)) return value.length > 0;
     if (typeof value === 'object' && value !== null) return !!value.value;
     return !!value;
@@ -336,11 +345,11 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
       <View style={[Spaces.marginBottom[16], Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
         <View style={{ flex: 1 }}>
           <SearchComponent
-            filtersCount={filtersCount}
+            filterNumber={filtersCount}
             handleSearchField={setSearchValue}
             placeholder="Rechercher un profil..."
             searchDefaultValue={searchValue}
-            openFilters={() => navigation.navigate(RouteNames.MercatoFilters)}
+            openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
           />
         </View>
       </View>
@@ -350,7 +359,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={users}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item) => String(item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
@@ -381,7 +390,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
       <TouchableOpacity
         onPress={() => {
           console.log('[CreateAd] Button pressed, navigating to AdWizardStack');
-          navigation.navigate('AdWizardStack');
+          nav.navigate('AdWizardStack');
         }}
         style={[
           Spaces.padding[16],
@@ -403,7 +412,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={myAds}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item) => String(item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
@@ -412,7 +421,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
             </Text>
           )}
           renderItem={({ item }) => (
-            <RecruitmentAdCard ad={item} onPress={(ad) => handleAdCardPress(ad, true)} isOwner />
+            <RecruitmentAdCard ad={item} onPress={(/** @type {RecruitmentAdItem} */ ad) => handleAdCardPress(ad, true)} isOwner />
           )}
         />
       )}
@@ -431,16 +440,21 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
     // Filter to keep ads that match user's level
     // Note: Ideally we want ">= Level", but without numeric rank, we do Exact Match or Name Match
     // For now, doing simple name matching or ID matching
-    return ads.filter(ad => {
+    return ads.filter((ad) => {
        const adLevelId = ad.level?.documentId || ad.level?.id;
-       const userLevelId = userData.bestLevel?.documentId || userData.bestLevel?.id;
+       const bestLevel = /** @type {any} */ (userData?.bestLevel);
+       const userLevelId = (bestLevel && typeof bestLevel === 'object')
+         ? (bestLevel.documentId || bestLevel.id)
+         : undefined;
        
        // Try ID match
        if (adLevelId && userLevelId && adLevelId === userLevelId) return true;
        
        // Try Name match
        const adLevelName = ad.level?.name;
-       const userLevelName = userData.bestLevel?.name || userData.bestLevel;
+       const userLevelName = (bestLevel && typeof bestLevel === 'object')
+         ? bestLevel.name
+         : bestLevel;
        if (adLevelName && userLevelName && adLevelName === userLevelName) return true;
 
        return false;
@@ -488,7 +502,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={filteredAds}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item) => String(item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
@@ -604,7 +618,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={myApplications}
-          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+          keyExtractor={(item) => String(item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
