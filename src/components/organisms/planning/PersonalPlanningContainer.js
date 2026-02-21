@@ -1,233 +1,135 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import PlanningWeekTimelineView from '../planningWeekTimelineView/PlanningWeekTimelineViewV2';
-import PlanningCalendarView from '../planningCalendarView/PlanningCalendarView';
-import BottomModal from '../../molecules/bottomModal/BottomModal';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, endOfDay, startOfDay, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import {
+  addDays,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from 'date-fns';
+import { useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
+
 import { getEvents } from '@/services/event/eventService';
-import { RouteNames } from '@/navigation/routeNames';
-import Loader from '@/components/atoms/loader/Loader';
 import useTheme from '@/theme/themeContext';
-import useAuth from '@/domains/auth/useAuth';
 
-const PersonalPlanningContainer = ({ onSummaryPress }) => {
-    const navigation = useNavigation();
-    const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
-    const { userData } = useAuth();
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState('3days'); // '3days' | 'week' | 'month'
-    const [isViewModalVisible, setIsViewModalVisible] = useState(false);
+import Loader from '@/components/atoms/loader/Loader';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import PlanningCalendarView from '@/components/organisms/planningCalendarView/PlanningCalendarView';
+import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView/PlanningWeekTimelineViewV2';
 
-    // Get parent multisport club ID from user's club
-    const multisportClubId = userData?.club?.parentMultisport?.documentId;
+/**
+ * Personal planning content.
+ * @param {{ onSummaryPress?: () => void }} props
+ * @returns {import('react').ReactElement}
+ */
+function PersonalPlanningContainer({ onSummaryPress }) {
+  const navigation = useNavigation();
+  const {
+    Alignments, Fonts, Spaces,
+  } = useTheme();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState('3days'); // '3days' | 'week' | 'month'
 
-    // Calculate date range based on view mode
-    const { startDate, endDate } = React.useMemo(() => {
-        const now = currentDate;
-        if (viewMode === 'month') {
-            return {
-                startDate: startOfMonth(now),
-                endDate: endOfMonth(now)
-            };
-        }
-        if (viewMode === '3days') {
-            return {
-                startDate: startOfDay(now),
-                endDate: endOfDay(addDays(now, 2))
-            };
-        }
-        // Default to week view
-        return {
-            startDate: startOfWeek(now, { weekStartsOn: 1 }), // Monday start
-            endDate: endOfWeek(now, { weekStartsOn: 1 })
-        };
-    }, [currentDate, viewMode]);
-
-    const { data: eventsData, isLoading } = useQuery({
-        queryKey: ['events', 'personal', startDate.toISOString(), endDate.toISOString()],
-        queryFn: () => getEvents({
-            // @ts-ignore
-            myTeams: true,
-            pageSize: 100,
-            sort: 'date:asc',
-            startDateAfter: startDate,
-            startDateBefore: endDate
-        }),
-    });
-
-    // Query featured events for the multisport club
-    const { data: featuredEventsData } = useQuery({
-        queryKey: ['events', 'featured', multisportClubId, startDate.toISOString(), endDate.toISOString()],
-        queryFn: () => getEvents({
-            isFeatured: true,
-            pageSize: 20,
-            sort: 'date:asc',
-            startDateAfter: startDate,
-            startDateBefore: endDate
-        }),
-        enabled: !!multisportClubId, // Only fetch if user has a multisport club
-    });
-
-    const events = eventsData?.data || [];
-    const featuredEvents = featuredEventsData?.data?.filter(
-        // Filter out events that are already in the user's personal events
-        (fe) => !events.some((e) => e.documentId === fe.documentId)
-    ) || [];
-
-    /**
-     * @param {import('@/domains/event/types').FCEvent} event
-     */
-    const handleEventPress = (event) => {
-        if (!event?.documentId) {
-             console.warn('PersonalPlanningContainer: Missing event documentId', event);
-             return;
-        }
-        // Always navigate to generic EventDetails via EventStack
-        // @ts-ignore
-        navigation.navigate('EventStack', { 
-            screen: 'EventDetails', 
-            params: { eventId: event.documentId } 
-        });
-    };
-
-    const getViewLabel = (mode) => {
-        switch (mode) {
-            case 'month': return 'Vue : Mois';
-            case 'week': return 'Vue : Semaine';
-            case '3days': return 'Vue : 3 Jours';
-            default: return 'Vue : Semaine';
-        }
-    };
-
-    const handleViewSelect = (mode) => {
-        setViewMode(mode);
-        setIsViewModalVisible(false);
-    };
-
-    if (isLoading) {
-        return <Loader />;
+  const { endDate, startDate } = useMemo(() => {
+    const now = currentDate;
+    if (viewMode === 'month') {
+      return {
+        endDate: endOfMonth(now),
+        startDate: startOfMonth(now),
+      };
     }
+    if (viewMode === '3days') {
+      return {
+        endDate: endOfDay(addDays(now, 2)),
+        startDate: startOfDay(now),
+      };
+    }
+    return {
+      endDate: endOfWeek(now, { weekStartsOn: 1 }),
+      startDate: startOfWeek(now, { weekStartsOn: 1 }),
+    };
+  }, [currentDate, viewMode]);
 
-    return (
-        <View>
-            {/* Header with View Selector - Centered and No Title */}
-            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, Spaces.marginBottom[16]]}>
-                {/* View Selector Buttons */}
-                <View style={[Alignments.row, { backgroundColor: Colors.neutral800, borderRadius: 8, padding: 2 }]}>
-                    <TouchableOpacity
-                        onPress={() => setViewMode('week')}
-                        style={[
-                            Spaces.paddingHorizontal[12],
-                            Spaces.paddingVertical[6],
-                            { borderRadius: 6, backgroundColor: viewMode === 'week' ? Colors.primary500 : 'transparent' }
-                        ]}
-                    >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'week' ? 1 : 0.5 }]}>
-                            Semaine
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setViewMode('3days')}
-                        style={[
-                            Spaces.paddingHorizontal[12],
-                            Spaces.paddingVertical[6],
-                            { borderRadius: 6, backgroundColor: viewMode === '3days' ? Colors.primary500 : 'transparent' }
-                        ]}
-                    >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === '3days' ? 1 : 0.5 }]}>
-                            3 Jours
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setViewMode('month')}
-                        style={[
-                            Spaces.paddingHorizontal[12],
-                            Spaces.paddingVertical[6],
-                            { borderRadius: 6, backgroundColor: viewMode === 'month' ? Colors.primary500 : 'transparent' }
-                        ]}
-                    >
-                        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontWeight: 'bold', opacity: viewMode === 'month' ? 1 : 0.5 }]}>
-                            Mois
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+  const { data: eventsData, isLoading } = useQuery({
+    queryFn: () => getEvents({
+      // @ts-ignore
+      myTeams: true,
+      pageSize: 100,
+      sort: 'date:asc',
+      startDateAfter: startDate,
+      startDateBefore: endDate,
+    }),
+    queryKey: ['events', 'personal', startDate.toISOString(), endDate.toISOString()],
+  });
 
-            {/* Featured Events Carousel - Subtle horizontal scroll */}
-            {featuredEvents.length > 0 && (
-                <View style={[Spaces.marginBottom[12]]}>
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary100, marginBottom: 8 }]}>
-                        📢 À la une du club
-                    </Text>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ gap: 8 }}
-                    >
-                        {featuredEvents.map((event) => (
-                            <TouchableOpacity
-                                key={event.documentId}
-                                onPress={() => handleEventPress(event)}
-                                style={{
-                                    backgroundColor: Colors.primary700,
-                                    borderRadius: 12,
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 8,
-                                    borderLeftWidth: 3,
-                                    borderLeftColor: Colors.primary500,
-                                    minWidth: 140,
-                                    maxWidth: 180,
-                                }}
-                            >
-                                <Text 
-                                    numberOfLines={1} 
-                                    style={[Fonts.p3Bold, { color: Colors.neutral00 }]}
-                                >
-                                    {event.type?.name || 'Événement'}
-                                </Text>
-                                <Text 
-                                    numberOfLines={1} 
-                                    style={[Fonts.p3, { color: Colors.primary100, opacity: 0.8 }]}
-                                >
-                                    {event.team?.club?.name}
-                                </Text>
-                                <Text style={[Fonts.p3, { color: Colors.primary100 }]}>
-                                    {event.date ? format(new Date(event.date), 'EEE d MMM', { locale: fr }) : ''}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
+  /**
+   * @param {import('@/domains/event/types').FCEvent} event
+   */
+  const handleEventPress = (event) => {
+    if (!event?.documentId) return;
+    // @ts-ignore
+    navigation.navigate('EventStack', {
+      params: { eventId: event.documentId },
+      screen: 'EventDetails',
+    });
+  };
 
-            {/* Planning Views */}
-            {viewMode === 'month' ? (
-                <PlanningCalendarView
-                    // @ts-ignore
-                    events={events}
-                    onEventPress={handleEventPress}
-                    compact={true}
-                    currentDate={currentDate}
-                    onDateSelect={setCurrentDate}
-                />
-            ) : (
-                <PlanningWeekTimelineView
-                    // @ts-ignore
-                    events={events}
-                    onEventPress={handleEventPress}
-                    currentDate={currentDate}
-                    onDateChange={setCurrentDate}
-                    mode={viewMode}
-                    scrollEnabled={false}
-                    maxSlots={1}
-                    onSummaryPress={onSummaryPress}
-                />
-            )}
-        </View>
-    );
-};
+  const viewOptions = useMemo(() => ([
+    { label: 'Semaine', value: 'week' },
+    { label: '3 Jours', value: '3days' },
+    { label: 'Mois', value: 'month' },
+  ]), []);
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  const events = eventsData?.data || [];
+
+  return (
+    <View style={{ width: '100%' }}>
+      <View style={[Alignments.alignCenter, Spaces.marginBottom[16], { width: '100%' }]}>
+        <SegmentedControl
+          centerContent
+          onChange={setViewMode}
+          options={viewOptions}
+          value={viewMode}
+        />
+        <Text style={[Fonts.p3, Fonts.primary100, Fonts.textCenter, Spaces.marginTop[8]]}>
+          {viewMode === 'month'
+            ? 'Vue globale du mois'
+            : viewMode === 'week'
+              ? 'Vue detaillee de la semaine'
+              : 'Vue condensee sur 3 jours'}
+        </Text>
+      </View>
+
+      {viewMode === 'month' ? (
+        <PlanningCalendarView
+          compact
+          currentDate={currentDate}
+          // @ts-ignore
+          events={events}
+          onDateSelect={setCurrentDate}
+          onEventPress={handleEventPress}
+        />
+      ) : (
+        <PlanningWeekTimelineView
+          currentDate={currentDate}
+          // @ts-ignore
+          events={events}
+          mode={viewMode}
+          onDateChange={setCurrentDate}
+          onEventPress={handleEventPress}
+          onSummaryPress={onSummaryPress}
+          scrollEnabled={false}
+        />
+      )}
+    </View>
+  );
+}
 
 export default PersonalPlanningContainer;

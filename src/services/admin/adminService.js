@@ -1,4 +1,15 @@
 import client from '@/services/client';
+import {
+    getClubRequestById,
+    getPendingAffiliationHelpRequests,
+    processClubRequest,
+    refuseClubRequest as refuseAffiliationClubRequest,
+} from '@/services/clubRequest/clubRequestService';
+
+/**
+ * @typedef {{ q?: string; role?: string; page?: number; pageSize?: number }} AdminUsersParams
+ * @typedef {{ q?: string; page?: number; pageSize?: number }} AdminClubsParams
+ */
 
 /**
  * Get admin dashboard stats
@@ -8,23 +19,118 @@ export const getAdminStats = async () => {
     const result = await client.get('/admin-dashboard/stats');
     return result.data;
 };
+
+export const ADMIN_CLAIM_ITEM_TYPES = Object.freeze({
+    CLAIM: 'claim',
+    CLUB_NOT_FOUND: 'club_not_found',
+    TEAM_NOT_FOUND: 'team_not_found',
+});
+
+const HELP_KINDS = [ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND, ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND];
+
+const toBadgeLabel = (kind) => {
+    if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND) return 'CLUB INTROUVABLE';
+    if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'EQUIPE INTROUVABLE';
+    return 'REVENDICATION';
+};
+
+const toTimestamp = (value) => {
+    const parsed = Date.parse(String(value || ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sortByCreatedAtDesc = (a, b) => toTimestamp(b?.createdAt) - toTimestamp(a?.createdAt);
+
+const normalizeHelpState = (state) => {
+    const normalized = String(state || '').trim().toLowerCase();
+    if (normalized === 'en attente' || normalized === 'pending') return 'pending';
+    if (normalized === 'traitée' || normalized === 'traitee' || normalized === 'processed') return 'processed';
+    if (normalized === 'refusée' || normalized === 'refusee' || normalized === 'refused') return 'refused';
+    return normalized || 'pending';
+};
+
+const mapClaimRequestToAdminItem = (item = {}) => ({
+    ...item,
+    __isAffiliationHelp: false,
+    __requestType: ADMIN_CLAIM_ITEM_TYPES.CLAIM,
+    __typeLabel: toBadgeLabel(ADMIN_CLAIM_ITEM_TYPES.CLAIM),
+});
+
+const mapHelpRequestToAdminItem = (item = {}) => {
+    const requestKind = HELP_KINDS.includes(item?.requestKind)
+        ? item.requestKind
+        : ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND;
+    return {
+        ...item,
+        __isAffiliationHelp: true,
+        __requestType: requestKind,
+        __typeLabel: toBadgeLabel(requestKind),
+        state: normalizeHelpState(item?.state),
+    };
+};
+
+const fetchPendingClaimRequests = async (params = {}) => {
+    const mergedParams = {
+        ...params,
+        filters: {
+            type: 'claim',
+            state: 'pending',
+            ...(params.filters || {}),
+        },
+        populate: params.populate || ['user', 'club', 'user.avatar', 'club.logo'],
+        sort: params.sort || ['createdAt:desc'],
+        pagination: {
+            page: 1,
+            pageSize: 100,
+            ...(params.pagination || {}),
+        },
+    };
+
+    const result = await client.get('/club-membership-requests', {
+        params: mergedParams,
+    });
+    return result.data;
+};
+
 /**
- * Get pending club claims
+ * Get pending claim + affiliation help count.
  * @returns {Promise<any>}
  */
 export const getPendingClubClaims = async () => {
-    const result = await client.get('/club-membership-requests', {
-        params: {
-            filters: {
-                type: 'claim',
-                state: 'pending',
-            },
+    const [claimsResult, helpResult] = await Promise.all([
+        fetchPendingClaimRequests({
             pagination: {
-                pageSize: 1, // We just need the count
+                page: 1,
+                pageSize: 1,
+            },
+        }),
+        getPendingAffiliationHelpRequests({
+            pagination: {
+                page: 1,
+                pageSize: 1,
+            },
+        }),
+    ]);
+
+    const claimsCount = claimsResult?.meta?.pagination?.total || 0;
+    const helpCount = helpResult?.meta?.pagination?.total || 0;
+    const total = claimsCount + helpCount;
+
+    return {
+        data: [],
+        meta: {
+            pagination: {
+                page: 1,
+                pageCount: total > 0 ? 1 : 0,
+                pageSize: 1,
+                total,
+            },
+            counts: {
+                claims: claimsCount,
+                affiliationHelp: helpCount,
             },
         },
-    });
-    return result.data;
+    };
 };
 
 /**
@@ -33,34 +139,88 @@ export const getPendingClubClaims = async () => {
  * @returns {Promise<any>}
  */
 export const getClubClaimsRequestList = async (params = {}) => {
-    const defaultParams = {
-        filters: {
-            type: 'claim',
-            state: 'pending',
+    const page = params?.pagination?.page || 1;
+    const pageSize = params?.pagination?.pageSize || 25;
+
+    const [claimsResult, helpResult] = await Promise.all([
+        fetchPendingClaimRequests({
+            pagination: {
+                page: 1,
+                pageSize: 200,
+            },
+        }),
+        getPendingAffiliationHelpRequests({
+            pagination: {
+                page: 1,
+                pageSize: 200,
+            },
+        }),
+    ]);
+
+    const claimItems = (claimsResult?.data || []).map(mapClaimRequestToAdminItem);
+    const helpItems = (helpResult?.data || []).map(mapHelpRequestToAdminItem);
+
+    const merged = [...claimItems, ...helpItems].sort(sortByCreatedAtDesc);
+    const total = merged.length;
+    const pageCount = total > 0 ? Math.ceil(total / pageSize) : 0;
+    const start = (page - 1) * pageSize;
+    const data = merged.slice(start, start + pageSize);
+
+    return {
+        data,
+        meta: {
+            pagination: {
+                page,
+                pageCount,
+                pageSize,
+                total,
+            },
+            counts: {
+                claims: claimItems.length,
+                affiliationHelp: helpItems.length,
+            },
         },
-        populate: ['user', 'club', 'user.avatar', 'club.logo'],
-        sort: ['createdAt:desc'],
-        ...params,
     };
-    
-    const result = await client.get('/club-membership-requests', {
-        params: defaultParams,
-    });
-    return result.data;
 };
 
 /**
  * Get single club claim request
  * @param {string} documentId
+ * @param {'claim'|'club_not_found'|'team_not_found'} [requestType]
  * @returns {Promise<any>}
  */
-export const getClubClaimRequest = async (documentId) => {
-    const result = await client.get(`/club-membership-requests/${documentId}`, {
-        params: {
-            populate: ['user', 'club', 'user.avatar', 'club.logo'],
-        },
-    });
-    return result.data;
+export const getClubClaimRequest = async (documentId, requestType = undefined) => {
+    const normalizedType = String(requestType || '').trim();
+    const isHelpRequest = HELP_KINDS.includes(normalizedType);
+
+    if (isHelpRequest) {
+        const result = await getClubRequestById(documentId);
+        return {
+            ...result,
+            data: mapHelpRequestToAdminItem(result?.data || {}),
+        };
+    }
+
+    try {
+        const result = await client.get(`/club-membership-requests/${documentId}`, {
+            params: {
+                populate: ['user', 'club', 'user.avatar', 'club.logo'],
+            },
+        });
+        return {
+            ...result.data,
+            data: mapClaimRequestToAdminItem(result?.data?.data || result?.data?.attributes || result?.data),
+        };
+    } catch (error) {
+        if (normalizedType) {
+            throw error;
+        }
+        const fallback = await getClubRequestById(documentId);
+        return {
+            ...fallback,
+            data: mapHelpRequestToAdminItem(fallback?.data || {}),
+        };
+    }
 };
 
 /**
@@ -92,21 +252,41 @@ export const refuseClubClaim = async (documentId) => {
     return result.data;
 };
 
+/**
+ * Process an affiliation help request (club/team not found).
+ * @param {string} documentId
+ * @param {{ adminNote?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const processAffiliationHelpRequest = async (documentId, payload = {}) => {
+    return processClubRequest(documentId, payload);
+};
+
+/**
+ * Refuse an affiliation help request (club/team not found).
+ * @param {string} documentId
+ * @param {{ adminNote?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const refuseAffiliationHelpRequest = async (documentId, payload = {}) => {
+    return refuseAffiliationClubRequest(documentId, payload);
+};
+
 // ================== ADMIN USERS ==================
 
 /**
  * Get admin users list with search and filters
- * @param {object} params
+ * @param {AdminUsersParams} params
  * @returns {Promise<any>}
  */
 export const getAdminUsers = async (params = {}) => {
     const { q, role, page = 1, pageSize = 20 } = params;
-    const filters = { 
+    const filters = /** @type {any} */ ({
         filters: {}, 
         pagination: { page, pageSize },
         populate: ['avatar', 'role', 'club'],
         sort: ['createdAt:desc'],
-    };
+    });
     
     if (q) {
         filters.filters.$or = [
@@ -152,17 +332,17 @@ export const updateAdminUser = async (documentId, data) => {
 
 /**
  * Get admin clubs list with search
- * @param {object} params
+ * @param {AdminClubsParams} params
  * @returns {Promise<any>}
  */
 export const getAdminClubs = async (params = {}) => {
     const { q, page = 1, pageSize = 20 } = params;
-    const filters = { 
+    const filters = /** @type {any} */ ({
         filters: {}, 
         pagination: { page, pageSize },
         populate: ['logo', 'sport'],
         sort: ['createdAt:desc'],
-    };
+    });
     
     if (q) {
         filters.filters.name = { $containsi: q };
@@ -241,8 +421,8 @@ export const getLeagueDisputes = async (params = {}) => {
  */
 export const resolveLeagueDispute = async (matchId, payload) => {
     const response = await client.post(`/league-matches/${matchId}/resolve-dispute`, {
-        score_a: Number.parseInt(payload.scoreA, 10),
-        score_b: Number.parseInt(payload.scoreB, 10),
+        score_a: Number.parseInt(String(payload.scoreA), 10),
+        score_b: Number.parseInt(String(payload.scoreB), 10),
         reason: payload.reason || 'Décision SuperAdmin',
     });
     return response.data;

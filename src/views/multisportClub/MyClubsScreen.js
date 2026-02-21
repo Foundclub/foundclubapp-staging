@@ -23,9 +23,25 @@ import { useGetMe } from '@/services/auth/authQueries';
 import { useGetCMClubs, useGetCMHighlightRequests } from '@/services/multisportClub/multisportClubQueries';
 
 /**
- * Club Section Card Component
+ * @typedef {object} ClubSectionItem
+ * @property {string} [documentId]
+ * @property {string} [name]
+ * @property {string} [sport]
+ * @property {string} [city]
+ * @property {string} [logoUrl]
+ * @property {{ teams?: number; members?: number }} [stats]
  */
-function ClubSectionCard({ club, onPress, Colors, Fonts, Spaces }) {
+
+/**
+ * Club Section Card Component
+ * @param {{
+ *  club: ClubSectionItem;
+ *  onPress: () => void;
+ *  Colors: any;
+ *  Fonts: any;
+ * }} props
+ */
+function ClubSectionCard({ club, onPress, Colors, Fonts }) {
   return (
     <Pressable
       onPress={onPress}
@@ -73,6 +89,7 @@ function ClubSectionCard({ club, onPress, Colors, Fonts, Spaces }) {
 
 /**
  * MyClubsScreen Component
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
  */
 function MyClubsScreen({ navigation }) {
   const { t } = useTranslation();
@@ -91,57 +108,58 @@ function MyClubsScreen({ navigation }) {
     isLoading: isLoadingClubs,
     refetch: refetchClubs,
     isRefetching,
-  } = useGetCMClubs(cmId);
+  } = useGetCMClubs(cmId || '');
 
-  const { data: requestsData } = useGetCMHighlightRequests(cmId);
-  const pendingRequestsCount = requestsData?.data?.length || 0;
+  const { data: requestsData } = useGetCMHighlightRequests(cmId || '');
+  const typedRequestsData = /** @type {{ data?: any[] } | undefined} */ (requestsData);
+  const typedClubsData = /** @type {{ data?: ClubSectionItem[] } | undefined} */ (clubsData);
+  const pendingRequestsCount = typedRequestsData?.data?.length || 0;
 
   // Filter state
-  const [sportFilter, setSportFilter] = useState(null);
+  const [sportFilter, setSportFilter] = useState(/** @type {string | null} */ (null));
 
   // Filtered clubs
   const clubs = useMemo(() => {
-    const allClubs = clubsData?.data || [];
+    const allClubs = typedClubsData?.data || [];
     if (!sportFilter) return allClubs;
-    return allClubs.filter((club) => club.sport === sportFilter);
-  }, [clubsData, sportFilter]);
+    return allClubs.filter((/** @type {ClubSectionItem} */ club) => club.sport === sportFilter);
+  }, [typedClubsData, sportFilter]);
 
   // Available sports for filter
   const sports = useMemo(() => {
-    const allClubs = clubsData?.data || [];
-    const sportSet = new Set(allClubs.map((c) => c.sport).filter(Boolean));
+    const allClubs = typedClubsData?.data || [];
+    const sportSet = new Set(allClubs.map((/** @type {ClubSectionItem} */ c) => c.sport).filter(Boolean));
     return Array.from(sportSet);
-  }, [clubsData]);
+  }, [typedClubsData]);
 
   // Navigation handlers
-  const handleClubPress = useCallback((club) => {
+  const handleClubPress = useCallback((/** @type {ClubSectionItem} */ club) => {
     navigation.navigate(RouteNames.Club, { 
       clubId: club.documentId,
     });
   }, [navigation]);
 
   const handleInboxPress = useCallback(() => {
-    navigation.navigate(RouteNames.HighlightRequestsInbox, { cmId });
+    navigation.navigate(RouteNames.HighlightRequestsInbox, { cmId: cmId || '' });
   }, [navigation, cmId]);
 
   const handleAddSection = useCallback(() => {
-    navigation.navigate(RouteNames.CreateSection, { cmId });
+    navigation.navigate(RouteNames.CreateSection, { cmId: cmId || '' });
   }, [navigation, cmId]);
 
   const handlePlanningPress = useCallback(() => {
-    navigation.navigate(RouteNames.CMPlanning, { cmId });
+    navigation.navigate(RouteNames.CMPlanning, { cmId: cmId || '' });
   }, [navigation, cmId]);
 
   // Render club card
-  const renderClubCard = useCallback(({ item }) => (
+  const renderClubCard = useCallback((/** @type {{ item: ClubSectionItem }} */ { item }) => (
     <ClubSectionCard
       club={item}
       onPress={() => handleClubPress(item)}
       Colors={Colors}
       Fonts={Fonts}
-      Spaces={Spaces}
     />
-  ), [handleClubPress, Colors, Fonts, Spaces]);
+  ), [handleClubPress, Colors, Fonts]);
 
   // Loading state
   if (isLoadingClubs && !clubsData) {
@@ -213,7 +231,7 @@ function MyClubsScreen({ navigation }) {
             </Pressable>
             {sports.map((sport) => (
               <Pressable
-                key={sport}
+                key={String(sport)}
                 onPress={() => setSportFilter(sport)}
                 style={[
                   styles.filterChip,
@@ -230,7 +248,7 @@ function MyClubsScreen({ navigation }) {
         <FlatList
           data={clubs}
           renderItem={renderClubCard}
-          keyExtractor={(item) => item.documentId}
+          keyExtractor={(item) => item.documentId || item.name || Math.random().toString()}
           contentContainerStyle={[Spaces.padding[16], Spaces.gap[12]]}
           refreshControl={
             <RefreshControl

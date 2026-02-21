@@ -25,6 +25,9 @@ import useTheme from '@/theme/themeContext';
  * @property {() => void} [onBottomIconPress]
  * @property {string} [iconColor]
  * @property {boolean} [lightMode]
+ * @property {string} [accessibilityLabel]
+ * @property {string} [accessibilityHint]
+ * @property {import('react-native').AccessibilityRole} [accessibilityRole]
  */
 
 /**
@@ -48,6 +51,7 @@ const Input = forwardRef(
     const {
       Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
     } = useTheme();
+    const hasLabel = Boolean(props.label);
 
     // methods
     const handleFocus = () => {
@@ -73,16 +77,18 @@ const Input = forwardRef(
     }, [props.error]);
 
     return (
-      <View style={[Spaces.gap[8]]}>
-        <View style={[Spaces.gap[12], props.wrapperStyle]}>
-          <Text style={[
-            Fonts.p3Bold,
-            Fonts[mainColor],
-            props.labelStyle,
-          ]}
-          >
-            {props.label}
-          </Text>
+      <View style={[hasLabel ? Spaces.gap[8] : null]}>
+        <View style={[hasLabel ? Spaces.gap[12] : null, props.wrapperStyle]}>
+          {hasLabel ? (
+            <Text style={[
+              Fonts.p3Bold,
+              Fonts[mainColor],
+              props.labelStyle,
+            ]}
+            >
+              {props.label}
+            </Text>
+          ) : null}
           <View>
             <View style={[
               Alignments.row,
@@ -123,6 +129,9 @@ const Input = forwardRef(
                 onSubmitEditing={props.onSubmitEditing}
                 placeholder={props.placeholder}
                 placeholderTextColor={Colors.neutral500}
+                accessibilityHint={props.accessibilityHint}
+                accessibilityLabel={props.accessibilityLabel}
+                accessibilityRole={props.accessibilityRole}
                 readOnly={props.readOnly}
                 ref={ref}
                 secureTextEntry={props.secureTextEntry}

@@ -52,12 +52,12 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.new },
       });
 
-      expect(result.totalViews).toBe(13);
+      expect(result.totalViews).toBe(14);
       expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserRole });
       expect(result.views[result.views.length - 1]).toEqual({
         canShow: true,
-        index: 13,
-        route: RouteNames.UserClubSearch,
+        index: 14,
+        route: RouteNames.Welcome,
       });
     });
 
@@ -66,12 +66,14 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(4);
+      expect(result.totalViews).toBe(6);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
         RouteNames.UserBirthdate,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
+        RouteNames.UserAffiliationGuide,
+        RouteNames.Welcome,
       ]);
     });
 
@@ -80,7 +82,7 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.player },
       });
 
-      expect(result.totalViews).toBe(12);
+      expect(result.totalViews).toBe(14);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
         RouteNames.UserSection,
@@ -94,6 +96,8 @@ describe('authUseCases', () => {
         RouteNames.UserCategory,
         RouteNames.UserSportHistory,
         RouteNames.UserClubSearch,
+        RouteNames.UserAffiliationGuide,
+        RouteNames.Welcome,
       ]);
     });
 
@@ -102,10 +106,12 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.president },
       });
 
-      expect(result.totalViews).toBe(2);
+      expect(result.totalViews).toBe(4);
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
         RouteNames.UserAvatar,
+        RouteNames.UserAffiliationGuide,
+        RouteNames.Welcome,
       ]);
     });
 
@@ -116,7 +122,7 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(4);
+      expect(result.totalViews).toBe(6);
       expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
       expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserBirthdate });
     });
@@ -131,18 +137,71 @@ describe('authUseCases', () => {
       expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
     });
 
-    it('returns empty views when all coach fields are already completed', () => {
+    it('skips position step when preferred sport is not selected', () => {
+      const result = getOnboardingViews({
+        role: { name: USER_ROLES.player },
+      });
+
+      const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
+      expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
+    });
+
+    it('keeps club visibility step visible even with default isLookingForClub value', () => {
+      const result = getOnboardingViews({
+        isLookingForClub: false,
+        role: { name: USER_ROLES.player },
+      });
+
+      const clubSearchStep = result.views.find((v) => v.route === RouteNames.UserClubSearch);
+      expect(clubSearchStep).toEqual({
+        canShow: true,
+        index: 12,
+        route: RouteNames.UserClubSearch,
+      });
+    });
+
+    it('returns welcome-only view when coach fields are already completed', () => {
       const result = getOnboardingViews({
         address: { label: 'Paris', value: '2.35|48.85' },
         avatar: 'avatar.jpg',
         birthdate: '1990-01-01',
+        club: { documentId: 'club-1' },
         firstname: 'John',
         lastname: 'Doe',
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(4);
-      expect(result.views).toEqual([]);
+      expect(result.totalViews).toBe(6);
+      const visibleRoutes = result.views.filter((v) => v.canShow).map((v) => v.route);
+      expect(visibleRoutes).toEqual([RouteNames.Welcome]);
+    });
+
+    it('hides affiliation guide for coach when already affiliated to a club', () => {
+      const result = getOnboardingViews({
+        club: { documentId: 'club-1' },
+        role: { name: USER_ROLES.coach },
+      });
+
+      const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
+      expect(affiliationStep).toEqual({
+        canShow: false,
+        index: 5,
+        route: RouteNames.UserAffiliationGuide,
+      });
+    });
+
+    it('hides affiliation guide for player when already in a team', () => {
+      const result = getOnboardingViews({
+        myTeams: [{ documentId: 'team-1' }],
+        role: { name: USER_ROLES.player },
+      });
+
+      const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
+      expect(affiliationStep).toEqual({
+        canShow: false,
+        index: 13,
+        route: RouteNames.UserAffiliationGuide,
+      });
     });
   });
 });

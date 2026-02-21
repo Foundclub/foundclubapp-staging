@@ -42,10 +42,18 @@ function UserDetails({ navigation, route }) {
     refetch,
   } = useGetUserById(userId);
 
-  const allUserTeams = useMemo(
-    () => currentUser?.myTeams?.concat(currentUser?.trainedTeams || []) || [],
-    [currentUser],
-  );
+  const allUserTeams = useMemo(() => {
+    const teams = (currentUser?.myTeams || []).concat(currentUser?.trainedTeams || []);
+    /** @type {Set<string>} */
+    const seen = new Set();
+    return teams.filter((team) => {
+      const key = String(team?.documentId || team?.id || '').trim();
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [currentUser?.myTeams, currentUser?.trainedTeams]);
 
   const canContact = useMemo(() => {
     if (!currentUser || !user) return false;
@@ -401,9 +409,9 @@ function UserDetails({ navigation, route }) {
                 <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('userDetails.titles.teams')}</Text>
               </View>
               {
-                allUserTeams?.map((/** @type {Team} */ team) => (
+                allUserTeams?.map((/** @type {Team} */ team, index) => (
                   <TouchableOpacity
-                    key={team.documentId}
+                    key={String(team?.documentId || team?.id || `${team?.name || 'team'}-${index}`)}
                     onPress={() => handleTeamPress(team)}
                     style={[
                       ApplicationStyle.borderRadius24,

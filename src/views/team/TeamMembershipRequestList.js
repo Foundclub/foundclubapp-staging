@@ -8,9 +8,13 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { useGetTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestQueries';
 import {
@@ -23,8 +27,9 @@ import {
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Team membership request list screen component
  */
-function TeamMembershipRequestList({ route }) {
+function TeamMembershipRequestList({ navigation, route }) {
   const { teamIds } = route?.params ?? {};
+  const { userData } = useAuth();
 
   // hooks
   const {
@@ -208,39 +213,68 @@ function TeamMembershipRequestList({ route }) {
   );
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.paddingVertical[24],
-        Alignments.justifySpaceBetween,
-        Alignments.column,
-        Alignments.fill,
-      ]}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.TEAM_MEMBERSHIP_REQUESTS}
+      userId={userData?.documentId}
     >
-      <WithDataWrapper
-        error={error?.message}
-        isLoading={(isLoading && !isFetchingNextPage)
-          || acceptRequestMutation.isPending
-          || rejectRequestMutation.isPending}
-        wrapperStyle={[Alignments.fill]}
-      >
-        <View style={[
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.justifySpaceBetween,
+          Alignments.column,
           Alignments.fill,
-          ApplicationStyle.borderRadius2]}
+        ]}
+      >
+        <WithDataWrapper
+          error={error?.message}
+          isLoading={(isLoading && !isFetchingNextPage)
+            || acceptRequestMutation.isPending
+            || rejectRequestMutation.isPending}
+          wrapperStyle={[Alignments.fill]}
         >
-          <FlashList
-            data={requests}
-            keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={renderEmptyList}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            onRefresh={refetch}
-            refreshing={isLoading && !isFetchingNextPage}
-            renderItem={renderItem}
-          />
-        </View>
-      </WithDataWrapper>
-    </ScreenContainer>
+          <OnboardingWrapper
+            description="Ici vous pouvez accepter ou refuser les demandes d adhesion a vos equipes."
+            id="team-membership-requests-list"
+            order={1}
+            spotlight={{
+              borderRadius: 16,
+              maxHeight: 260,
+              overlayOpacity: 0.4,
+              paddingX: 2,
+              paddingY: 2,
+            }}
+            style={{ flex: 1 }}
+            title="Demandes equipe"
+          >
+            <View style={[
+              Alignments.fill,
+              ApplicationStyle.borderRadius2]}
+            >
+              <FlashList
+                data={requests}
+                keyExtractor={(item) => item?.documentId || 'unknown'}
+                ListEmptyComponent={renderEmptyList}
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={0.5}
+                onRefresh={refetch}
+                refreshing={isLoading && !isFetchingNextPage}
+                renderItem={renderItem}
+              />
+            </View>
+          </OnboardingWrapper>
+        </WithDataWrapper>
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 

@@ -11,3 +11,68 @@ export const createClubRequest = async (clubRequestData) => {
   });
   return response.data;
 };
+
+/**
+ * Get pending "not found" affiliation help requests.
+ * @param {object} [params]
+ * @returns {Promise<any>}
+ */
+export const getPendingAffiliationHelpRequests = async (params = {}) => {
+  const response = await client.get('/club-requests', {
+    params: {
+      filters: {
+        requestKind: {
+          $in: ['club_not_found', 'team_not_found'],
+        },
+        $or: [
+          { state: 'En attente' },
+          { state: 'pending' },
+        ],
+      },
+      pagination: {
+        page: 1,
+        pageSize: 100,
+      },
+      populate: ['user', 'user.avatar', 'processedBy'],
+      sort: ['createdAt:desc'],
+      ...params,
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Get one club-request by document id.
+ * @param {string} documentId
+ * @returns {Promise<any>}
+ */
+export const getClubRequestById = async (documentId) => {
+  const response = await client.get(`/club-requests/${documentId}`, {
+    params: {
+      populate: ['user', 'user.avatar', 'processedBy'],
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Mark a club-request as processed.
+ * @param {string} documentId
+ * @param {{ adminNote?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const processClubRequest = async (documentId, payload = {}) => {
+  const response = await client.post(`/club-requests/${documentId}/process`, payload);
+  return response.data;
+};
+
+/**
+ * Refuse a club-request.
+ * @param {string} documentId
+ * @param {{ adminNote?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const refuseClubRequest = async (documentId, payload = {}) => {
+  const response = await client.post(`/club-requests/${documentId}/refuse`, payload);
+  return response.data;
+};

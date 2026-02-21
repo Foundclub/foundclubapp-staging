@@ -86,6 +86,41 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
 };
 
 /**
+ * Create multiple events sequentially.
+ * Useful for recurrent creation to collect partial failures.
+ * @param {FCEventForm[]} payloads
+ * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
+ */
+export const createEventsSequentially = async (payloads = []) => {
+  const created = [];
+  const failed = [];
+
+  for (const payload of payloads) {
+    try {
+      const response = await createEvent(payload);
+      const documentId = response?.data?.documentId || response?.documentId || null;
+      created.push({ payload, response, documentId });
+    } catch (error) {
+      failed.push({ payload, error });
+    }
+  }
+
+  return { created, failed };
+};
+
+/**
+ * Rollback events by cancelling all provided documentIds.
+ * @param {string[]} documentIds
+ * @returns {Promise<PromiseSettledResult<any>[]>}
+ */
+export const rollbackEventsByCancel = async (documentIds = []) => {
+  const validIds = documentIds.filter(Boolean);
+  return Promise.allSettled(
+    validIds.map((documentId) => cancelEvent({ documentId })),
+  );
+};
+
+/**
  * Get an event by ID
  * @param {string} documentId - The event ID
  * @returns {Promise<FCEvent>} The event
@@ -102,6 +137,8 @@ export const getEventById = async (documentId) => {
         'team.level',
         'team.players',
         'team.players.avatar',
+        'team.trainers',
+        'team.trainers.avatar',
         'type',
         'missings',
         'participations.avatar',
@@ -537,7 +574,7 @@ export const missingEvent = async (eventId) => {
  * @returns {Promise<any>} - Response from API
  */
 export const remindUnansweredPlayers = async (eventId) => {
-  const response = await client.post(`/events/${eventId}/remind`);
+  const response = await client.post(`/events/${eventId}/remind-unanswered-players`);
   return response.data;
 };
 
@@ -614,13 +651,48 @@ export const getPendingFeaturedRequests = async (multisportClubId) => {
 };
 
 /**
- * Toggle late status for an event (Trainer/Admin only)
+ * Get attendance/lateness data for event participants.
+ * @param {string} eventId
+ * @returns {Promise<{ data?: { eventId?: string, items?: Array } }>}
+ */
+export const getEventAttendance = async (eventId) => {
+  const response = await client.get(`/events/${eventId}/attendance`);
+  return response.data;
+};
+
+/**
+ * Player self-arrival on an event.
+ * @param {string} eventId
+ * @param {{ arrivedAt?: string, note?: string }} [payload]
+ * @returns {Promise<any>}
+ */
+export const markSelfArrival = async (eventId, payload = {}) => {
+  const response = await client.post(`/events/${eventId}/attendance/self-arrival`, payload);
+  return response.data;
+};
+
+/**
+ * Coach marks arrival for a participant.
  * @param {string} eventId
  * @param {string} userId
+ * @param {{ arrivedAt?: string, lateMinutes?: number, note?: string }} [payload]
+ * @returns {Promise<any>}
  */
-export const toggleLateEvent = async (eventId, userId) => {
-  const { data } = await client.post(`/events/${eventId}/toggle-late`, { userId }); // Custom route
-  return data;
+export const markCoachArrival = async (eventId, userId, payload = {}) => {
+  const response = await client.post(`/events/${eventId}/attendance/${userId}/coach-arrival`, payload);
+  return response.data;
+};
+
+/**
+ * Coach updates lateness minutes for a participant.
+ * @param {string} eventId
+ * @param {string} userId
+ * @param {{ lateMinutes: number, arrivedAt?: string, note?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const updateCoachLateMinutes = async (eventId, userId, payload) => {
+  const response = await client.patch(`/events/${eventId}/attendance/${userId}/late`, payload);
+  return response.data;
 };
 
 /**

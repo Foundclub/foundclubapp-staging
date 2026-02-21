@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -267,26 +268,15 @@ function MultisportClubDetails({ navigation, route }) {
                 contentContainerStyle={[Spaces.gap[16]]}
               >
                 {sponsors.map((sponsor, idx) => (
-                  <TouchableOpacity
+                  <SponsorLogoTile
                     key={sponsor.link || idx}
-                    onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
-                    style={[Alignments.alignCenter]}
-                  >
-                    <ProfileAvatar
-                      imageUrl={sponsor.logo?.url}
-                      size={55}
-                      enablePreview={false}
-                      style={[
-                        ApplicationStyle.borderWidth1,
-                        ApplicationStyle.borderColor.neutral00,
-                        { borderRadius: 8, width: 110, height: 55 },
-                      ]}
-                      imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
-                      {sponsor.title}
-                    </Text>
-                  </TouchableOpacity>
+                    imageUrl={sponsor.logo?.url}
+                    link={sponsor.link}
+                    title={sponsor.title}
+                    width={110}
+                    height={55}
+                    titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
+                  />
                 ))}
               </ScrollView>
             </View>

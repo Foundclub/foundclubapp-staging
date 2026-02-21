@@ -10,9 +10,10 @@ import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
  * @param {Array<{label: string, value: string}>} props.options
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
+ * @param {boolean} [props.centerContent]
  * @returns {import('react').ReactElement}
  */
-function SegmentedControl({ options, value, onChange }) {
+function SegmentedControl({ options, value, onChange, centerContent = false }) {
   const { Colors, Fonts } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -23,6 +24,15 @@ function SegmentedControl({ options, value, onChange }) {
       gap: horizontalScale(8.58),
       height: verticalScale(37.52),
       minWidth: horizontalScale(327),
+    },
+    containerCentered: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: horizontalScale(4),
+      width: '100%',
+    },
+    scroll: {
+      width: '100%',
     },
     segment: {
       alignItems: 'center',
@@ -64,14 +74,17 @@ function SegmentedControl({ options, value, onChange }) {
     },
     wrapper: {
       height: verticalScale(45),
+      width: '100%',
     },
   }), [Colors, Fonts.p3, Fonts.p3Bold]);
 
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={styles.container}
+        bounces={!centerContent}
+        contentContainerStyle={[styles.container, centerContent && styles.containerCentered]}
         horizontal
+        style={styles.scroll}
         showsHorizontalScrollIndicator={false}
       >
         {options.map((option) => {

@@ -15,11 +15,40 @@ import useTheme from '@/theme/themeContext';
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
 
-const getRelativeTime = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
+/**
+ * @typedef {{
+ *   id?: string | number;
+ *   documentId?: string;
+ *   read?: boolean;
+ *   data?: Record<string, any>;
+ *   type?: string;
+ *   title?: string;
+ *   body?: string;
+ *   createdAt?: string;
+ * }} NotificationPopupItem
+ */
+
+/**
+ * @typedef {{
+ *   isVisible: boolean;
+ *   onClose: () => void;
+ *   notifications?: NotificationPopupItem[];
+ *   onMarkAsRead?: (documentId?: string) => Promise<void> | void;
+ *   onMarkAllAsRead?: () => Promise<void> | void;
+ *   onRefresh?: () => void;
+ * }} NotificationPopupProps
+ */
+
+/**
+ * @param {string | Date | number | undefined | null} dateInput
+ * @returns {string}
+ */
+const getRelativeTime = (dateInput) => {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) return '';
     const now = new Date();
-    const diffMs = now - date;
+    const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -31,6 +60,10 @@ const getRelativeTime = (dateStr) => {
     return `${diffDays}j`;
 };
 
+/**
+ * @param {NotificationPopupProps} props
+ * @returns {import('react').ReactElement | null}
+ */
 const NotificationPopup = ({
     isVisible,
     onClose,
@@ -40,7 +73,7 @@ const NotificationPopup = ({
     onRefresh,
 }) => {
     const { Fonts, Spaces } = useTheme();
-    const navigation = useNavigation();
+    const navigation = /** @type {any} */ (useNavigation());
     const insets = useSafeAreaInsets();
 
     useEffect(() => {
@@ -54,7 +87,7 @@ const NotificationPopup = ({
 
     if (!isVisible) return null;
 
-    const handlePressNotification = async (notification) => {
+    const handlePressNotification = async (/** @type {NotificationPopupItem} */ notification) => {
         if (onMarkAsRead) {
             try {
                 await onMarkAsRead(notification.documentId);
@@ -277,4 +310,3 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationPopup;
-

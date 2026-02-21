@@ -6,9 +6,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 // screens
 import MyEventsList from '@/views/event/MyEventList';
-import Home from '@/views/Home';
 import Messaging from '@/views/Messaging';
-import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import MyTeamList from '@/views/team/MyTeamList';
 // utils and misc
@@ -19,8 +17,7 @@ import TeamList from '@/views/team/TeamList';
 import useTheme from '../../theme/themeContext';
 import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
-
-
+import SearchStack from './stacks/SearchStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -84,11 +81,12 @@ function PrivateTabNavigator() {
       initialRouteName={RouteNames.Search}
       screenOptions={{
         ...commonOptions,
+        sceneContainerStyle: { backgroundColor: 'transparent' },
         // tabBarBackground removed to eliminate gradient
       }}
     >
       <Tab.Screen
-        component={Home}
+        component={SearchStack}
         name={RouteNames.Search}
         options={{
           headerShown: false,
@@ -96,7 +94,7 @@ function PrivateTabNavigator() {
             activeColor: Colors.primary500,
             bottomInset: insets.bottom,
             icon: Images.search,
-            label: t('menu.search'),
+            label: t('menu.home', 'Accueil'),
             renderTabBarIcon,
           }),
         }}

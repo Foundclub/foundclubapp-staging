@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,10 +18,21 @@ const WizardStepLayout = ({
   nextLabel,
   showSkip = false,
   onSkip,
+  stepIndex,
+  stepCount,
 }) => {
-  const { Alignments, Fonts, Spaces } = useTheme();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  const hasProgress = Number.isFinite(stepIndex) && Number.isFinite(stepCount) && stepCount > 0;
+  const normalizedProgress = hasProgress ? Math.max(0, Math.min(1, stepIndex / stepCount)) : 0;
 
   return (
     <ScreenContainer
@@ -34,21 +44,52 @@ const WizardStepLayout = ({
       ]}
     >
       <View style={[Alignments.fill]}>
-        {/* Header Section */}
-        <View style={[Spaces.marginTop[16], Spaces.paddingHorizontal[24], Spaces.marginBottom[32]]}>
+        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24]]}>
+          {hasProgress ? (
+            <View style={[Spaces.marginBottom[16]]}>
+              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[8]]}>
+                {t('eventWizard.common.stepCounter', {
+                  current: stepIndex,
+                  defaultValue: `Etape ${stepIndex}/${stepCount}`,
+                  total: stepCount,
+                })}
+              </Text>
+              <View
+                style={[
+                  ApplicationStyle.card,
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: 'rgba(1, 179, 244, 0.22)',
+                    borderRadius: 999,
+                    height: 8,
+                    overflow: 'hidden',
+                  },
+                ]}
+              >
+                <View
+                  style={{
+                    backgroundColor: Colors.primary500,
+                    borderRadius: 999,
+                    height: '100%',
+                    width: `${normalizedProgress * 100}%`,
+                  }}
+                />
+              </View>
+            </View>
+          ) : null}
+
           <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[8]]}>
             {title}
           </Text>
-          {subtitle && (
+          {subtitle ? (
             <Text style={[Fonts.p1, Fonts.neutral100]}>
               {subtitle}
             </Text>
-          )}
+          ) : null}
         </View>
 
-        {/* Content Section */}
         <ScrollView
-          contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[24]]}
+          contentContainerStyle={[Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -56,25 +97,24 @@ const WizardStepLayout = ({
         </ScrollView>
       </View>
 
-      {/* Footer Navigation */}
-      <View style={[Spaces.paddingHorizontal[24], Spaces.gap[16]]}>
-        {showSkip && (
+      <View style={[Spaces.gap[16]]}>
+        {showSkip ? (
           <Button
             onPress={onSkip}
-            title={t('common.ignore', 'Ignorer')}
+            title={t('common.ignore')}
             variant="Secondary"
           />
-        )}
+        ) : null}
         <View style={[Alignments.row, Spaces.gap[16]]}>
-          {onBack && (
+          {onBack ? (
             <Button
               onPress={onBack}
               title={t('common.back', 'Retour')}
               variant="Secondary"
               style={{ flex: 1 }}
             />
-          )}
-          {onNext && (
+          ) : null}
+          {onNext ? (
             <Button
               onPress={onNext}
               title={nextLabel || t('common.next', 'Suivant')}
@@ -83,7 +123,7 @@ const WizardStepLayout = ({
               isLoading={isNextLoading}
               style={{ flex: 1 }}
             />
-          )}
+          ) : null}
         </View>
       </View>
     </ScreenContainer>

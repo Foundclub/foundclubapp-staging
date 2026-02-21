@@ -1,5 +1,5 @@
 import {
-  forwardRef, useRef, useState,
+  forwardRef, useEffect, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,6 +22,10 @@ import Input from '../input/Input';
  * @property {boolean} [isMulti] - Whether multiple options can be selected.
  * @property {boolean} [isSearchable] - The flag to know if the select is searchable or not.
  * @property {boolean} [disabled] - The flag to know if the select is searchable or not.
+ * @property {string} [actionLabel] - Optional secondary action label shown in the modal footer.
+ * @property {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight'} [actionVariant]
+ *  - Optional secondary action button variant.
+ * @property {() => void} [onActionPress] - Optional secondary action handler.
  * @property {(value: string) => void} [setSearchValue] - The function to set the search value
  * @property {string} [searchValue] - The function to set the search value
  * @property {boolean} [isLoading] - The flag to know if the select options are loading or not.
@@ -61,6 +65,7 @@ const AutocompleteSelect = forwardRef(
       Alignments, Colors, Fonts, Spaces,
     } = useTheme();
     const { t } = useTranslation();
+    const hasLabel = Boolean(props.label);
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
@@ -71,12 +76,26 @@ const AutocompleteSelect = forwardRef(
 
     // refs
     const searchInputRef = useRef(null);
+    const openModalTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+
+    useEffect(() => () => {
+      if (openModalTimeoutRef.current) {
+        clearTimeout(openModalTimeoutRef.current);
+      }
+    }, []);
 
     // methods
     const handleFocus = () => {
       if (!props.disabled) {
         Keyboard.dismiss();
-        setAreValuesVisible(true);
+        // Open after keyboard dismissal so the bottom sheet always appears above it.
+        if (openModalTimeoutRef.current) {
+          clearTimeout(openModalTimeoutRef.current);
+        }
+        openModalTimeoutRef.current = setTimeout(() => {
+          setAreValuesVisible(true);
+          openModalTimeoutRef.current = null;
+        }, 120);
         if (props?.onFocus) {
           props?.onFocus();
         }
@@ -103,6 +122,10 @@ const AutocompleteSelect = forwardRef(
     };
 
     const handleCloseModal = () => {
+      if (openModalTimeoutRef.current) {
+        clearTimeout(openModalTimeoutRef.current);
+        openModalTimeoutRef.current = null;
+      }
       setAreValuesVisible(false);
       if (props.setSearchValue) {
         props.setSearchValue('');
@@ -112,6 +135,13 @@ const AutocompleteSelect = forwardRef(
     const handleValidation = () => {
       handleCloseModal();
       props.setValue(selectedOptions);
+    };
+
+    const handleActionPress = () => {
+      handleCloseModal();
+      if (props.onActionPress) {
+        props.onActionPress();
+      }
     };
 
     /**
@@ -155,7 +185,7 @@ const AutocompleteSelect = forwardRef(
               Alignments.absolute,
               Alignments.fullSize,
               Spaces.padding[12],
-              Spaces.paddingTop[40],
+              hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
               { zIndex: 1 },
             ]}
           >
@@ -264,8 +294,17 @@ const AutocompleteSelect = forwardRef(
                 ) : null}
             </ScrollView>
 
-            {/* Validation Button - Fixed at bottom */}
+            {/* Footer actions */}
             <View style={[Spaces.paddingBottom[16]]}>
+              {props.actionLabel && props.onActionPress ? (
+                <View style={[Spaces.marginBottom[12]]}>
+                  <Button
+                    onPress={handleActionPress}
+                    title={props.actionLabel}
+                    variant={props.actionVariant || 'SecondaryLight'}
+                  />
+                </View>
+              ) : null}
               <Button
                 onPress={handleValidation}
                 title={t('modals.actions.select')}

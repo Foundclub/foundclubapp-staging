@@ -25,6 +25,7 @@ const userSchema = Joi.object({
   preferredSport: Joi.string().allow(null, '').optional(),
   bestLevel: Joi.string().allow(null, '').optional(),
   category: Joi.string().allow(null, '').optional(),
+  geohash: Joi.string().allow(null, '').optional(),
   weight: Joi.number().allow(null, '').optional(),
   height: Joi.number().allow(null, '').optional(),
   position: Joi.string().allow(null, '').optional(),
@@ -124,7 +125,10 @@ export const login = async ({ code, confirm }) => {
   if (BYPASS_FIREBASE) {
     console.log('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
     console.log('[BYPASS] confirm object received:', JSON.stringify(confirm));
-    const phoneNumber = confirm?.phoneNumber || '+33600000001';
+    const phoneNumber = typeof confirm?.phoneNumber === 'string' ? confirm.phoneNumber.trim() : '';
+    if (!phoneNumber) {
+      throw new Error('Missing phone number in confirmation. Please restart login.');
+    }
     console.log('[BYPASS] phoneNumber to send to API:', phoneNumber);
 
     try {
@@ -186,11 +190,22 @@ export const login = async ({ code, confirm }) => {
 };
 
 export const logout = async () => {
+  if (BYPASS_FIREBASE) {
+    return Promise.resolve();
+  }
+
   try {
     const auth = getAuth();
+    if (!auth?.currentUser) {
+      return Promise.resolve();
+    }
+
     await auth.signOut();
     return Promise.resolve();
   } catch (e) {
+    if (e?.code === 'auth/no-current-user') {
+      return Promise.resolve();
+    }
     return Promise.reject(e);
   }
 };
@@ -493,7 +508,12 @@ export const addDeviceToken = async (token) => {
     });
     return result.data;
   } catch (error) {
-    console.error('[FCM] addDeviceToken failed:', error?.message || error);
+    const statusCode = error?.status || error?.response?.status;
+    if (statusCode === 401 || statusCode === 403) {
+      console.warn('[FCM] addDeviceToken unauthorized/forbidden. Skipping device registration.');
+    } else {
+      console.error('[FCM] addDeviceToken failed:', error?.message || error);
+    }
     throw error;
   }
 };

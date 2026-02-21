@@ -86,7 +86,7 @@ const StatRow = ({ player, columns, isEven = false }) => {
                 { 
                   color: col.key === 'attendanceCount' ? '#4ade80' : 
                          col.key === 'absenceCount' ? '#f87171' : // Red for Absence
-                         col.key === 'retardCount' ? '#fbbf24' : // Amber for Retard 
+                         col.key === 'retardCount' || col.key === 'lateCount' ? '#fbbf24' : // Amber for Retard 
                          Colors.neutral100, 
                   textAlign: 'center' 
                 },

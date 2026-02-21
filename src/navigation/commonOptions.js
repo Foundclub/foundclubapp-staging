@@ -90,7 +90,12 @@ export const getTabScreenCommonOptions = ({
     backgroundColor: getThemeColors().primary700,
     borderTopColor: getThemeColors().primary900,
     borderTopWidth: 1,
+    elevation: 0,
     height: Platform.OS === 'ios' ? 80 : 80 + bottomInset,
     marginBottom: 0,
+    shadowColor: 'transparent',
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
 });

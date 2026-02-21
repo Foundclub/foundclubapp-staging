@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { Image, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
 import { useAppContext } from '@/store/appContext';
 import { RouteNames } from '@/navigation/routeNames';
@@ -12,7 +12,7 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} ProfileButton component
  */
 function ProfileButton() {
-  const { ApplicationStyle, Images } = useTheme();
+  const { ApplicationStyle } = useTheme();
   const { userData } = useAuth();
   const navigation = useNavigation();
   const [{ isAddingAccount }, dispatch] = useAppContext();
@@ -32,8 +32,6 @@ function ProfileButton() {
       onPress={handlePress}
       style={[
         ApplicationStyle.borderRadius24,
-        ApplicationStyle.borderColor.primary100,
-        ApplicationStyle.borderWidth1,
       ]}
     >
       <ProfileAvatar

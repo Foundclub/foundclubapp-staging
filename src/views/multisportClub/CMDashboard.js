@@ -10,10 +10,14 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getMultisportClubById, getCMClubs, deleteCMSection } from '@/services/multisportClub/multisportClubService';
@@ -156,21 +160,48 @@ function CMDashboard({ navigation, route }) {
   const isCmAdmin = cm?.admins?.some((admin) => admin.documentId === userData?.documentId);
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.paddingVertical[24],
-        Alignments.column,
-        Alignments.fill,
-      ]}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.MY_TEAMS}
+      userId={userData?.documentId}
     >
-      <ScrollView
-        contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
-        refreshControl={
-          <RefreshControl onRefresh={refetch} refreshing={isLoading} />
-        }
-        showsVerticalScrollIndicator={false}
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.fill,
+        ]}
       >
+        <OnboardingWrapper
+          description="Gerez vos sections omnisport, ouvrez les equipes et suivez les indicateurs du club."
+          id="cm-dashboard-main-content"
+          order={1}
+          spotlight={{
+            borderRadius: 16,
+            maxHeight: 280,
+            overlayOpacity: 0.4,
+            paddingX: 2,
+            paddingY: 2,
+          }}
+          style={{ flex: 1 }}
+          title="Gestion des equipes"
+        >
+          <ScrollView
+            contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
+            refreshControl={
+              <RefreshControl onRefresh={refetch} refreshing={isLoading} />
+            }
+            showsVerticalScrollIndicator={false}
+          >
         <WithDataWrapper
           error={error?.message}
           isLoading={isLoading}
@@ -301,26 +332,15 @@ function CMDashboard({ navigation, route }) {
                 contentContainerStyle={[Spaces.gap[16]]}
               >
                 {cm?.sponsor?.map((/** @type {CMSponsor} */ sponsor, idx) => (
-                  <TouchableOpacity
+                  <SponsorLogoTile
                     key={sponsor.link || idx}
-                    onPress={() => sponsor.link && Linking.openURL(sponsor.link)}
-                    style={[Alignments.alignCenter]}
-                  >
-                    <ProfileAvatar
-                      imageUrl={sponsor.logo?.url}
-                      size={55}
-                      enablePreview={false}
-                      style={[
-                        ApplicationStyle.borderWidth1,
-                        ApplicationStyle.borderColor.neutral00,
-                        { borderRadius: 8, width: 110, height: 55 },
-                      ]}
-                      imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
-                      {sponsor.title}
-                    </Text>
-                  </TouchableOpacity>
+                    imageUrl={sponsor.logo?.url}
+                    link={sponsor.link}
+                    title={sponsor.title}
+                    width={110}
+                    height={55}
+                    titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -487,8 +507,10 @@ function CMDashboard({ navigation, route }) {
 
 
         </WithDataWrapper>
-      </ScrollView>
-    </ScreenContainer>
+          </ScrollView>
+        </OnboardingWrapper>
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 

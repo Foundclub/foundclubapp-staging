@@ -87,7 +87,7 @@ const PhoneInput = forwardRef(
     };
 
     return (
-      <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignStart]}>
+      <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignEnd]}>
 
         <AutocompleteSelect
           isSearchable

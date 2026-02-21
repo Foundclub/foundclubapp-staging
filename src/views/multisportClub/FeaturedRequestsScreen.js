@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -8,21 +8,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getPendingFeaturedRequests, approveFeatured, rejectFeatured } from '@/services/event/eventService';
 import { formatDateWithDayPrefix } from '@/utils/date';
+import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 /**
  * Screen for multisport club admins to manage featured event requests
  */
 function FeaturedRequestsScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};
+  const { userData } = useAuth();
 
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -38,7 +43,6 @@ function FeaturedRequestsScreen({ navigation, route }) {
     enabled: !!cmId,
   });
 
-  // Approve mutation
   const approveMutation = useMutation({
     mutationFn: approveFeatured,
     onSuccess: () => {
@@ -46,20 +50,12 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('featuredRequests.approveSuccess.title', 'Demande acceptée'),
-        t('featuredRequests.approveSuccess.message', "L'événement est maintenant à la une du club.")
-      );
-    },
-    onError: (error) => {
-      console.error('Error approving featured request:', error);
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        error?.message || t('featuredRequests.approveError', 'Une erreur est survenue')
+        t('featuredRequests.approveSuccess.title', 'Demande acceptee'),
+        t('featuredRequests.approveSuccess.message', "L'evenement est maintenant a la une du club."),
       );
     },
   });
 
-  // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: rejectFeatured,
     onSuccess: () => {
@@ -67,15 +63,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('featuredRequests.rejectSuccess.title', 'Demande refusée'),
-        t('featuredRequests.rejectSuccess.message', 'Le demandeur a été notifié.')
-      );
-    },
-    onError: (error) => {
-      console.error('Error rejecting featured request:', error);
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        error?.message || t('featuredRequests.rejectError', 'Une erreur est survenue')
+        t('featuredRequests.rejectSuccess.title', 'Demande refusee'),
+        t('featuredRequests.rejectSuccess.message', 'Le demandeur a ete notifie.'),
       );
     },
   });
@@ -83,21 +72,21 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const handleApprove = useCallback((eventId) => {
     Alert.alert(
       t('featuredRequests.confirm.approve.title', 'Accepter la demande ?'),
-      t('featuredRequests.confirm.approve.message', "Cet événement sera visible dans le planning de tous les adhérents du club."),
+      t('featuredRequests.confirm.approve.message', 'Cet evenement sera visible dans le planning de tous les adherents du club.'),
       [
         { text: t('common.cancel', 'Annuler'), style: 'cancel' },
         {
           text: t('common.confirm', 'Accepter'),
           onPress: () => approveMutation.mutate(eventId),
         },
-      ]
+      ],
     );
   }, [approveMutation, t]);
 
   const handleReject = useCallback((eventId) => {
     Alert.alert(
       t('featuredRequests.confirm.reject.title', 'Refuser la demande ?'),
-      t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifié du refus.'),
+      t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifie du refus.'),
       [
         { text: t('common.cancel', 'Annuler'), style: 'cancel' },
         {
@@ -105,7 +94,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () => rejectMutation.mutate({ eventId }),
         },
-      ]
+      ],
     );
   }, [rejectMutation, t]);
 
@@ -121,100 +110,76 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const requests = pendingRequests?.data || [];
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.paddingVertical[24],
-        Alignments.column,
-        Alignments.fill,
-      ]}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.FEATURED_REQUESTS}
+      userId={userData?.documentId}
     >
-      <ScrollView
+      <ScreenContainer
+        bgImage="bg2"
         contentContainerStyle={[
-          Spaces.gap[16],
-          Spaces.paddingBottom[40],
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.fill,
         ]}
-        refreshControl={(
-          <RefreshControl
-            onRefresh={refetch}
-            refreshing={isLoading}
-          />
-        )}
-        showsVerticalScrollIndicator={false}
       >
-        <WithDataWrapper
-          error={error?.message}
-          isLoading={isLoading}
-          wrapperStyle={[Spaces.gap[16]]}
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
+          refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading} />}
+          showsVerticalScrollIndicator={false}
         >
-          {requests.length === 0 ? (
-            <View style={[
-              ApplicationStyle.borderRadius16,
-              ApplicationStyle.backgroundColor.primary700,
-              Spaces.padding[24],
-              Alignments.alignCenter,
-            ]}>
-              <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
-                {t('featuredRequests.empty', 'Aucune demande en attente')}
-              </Text>
-            </View>
-          ) : (
-            requests.map((event) => (
-              <TouchableOpacity
-                key={event.documentId}
-                onPress={() => handleEventPress(event)}
-                style={[
-                  ApplicationStyle.borderRadius16,
-                  ApplicationStyle.backgroundColor.primary700,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                ]}
-              >
-                {/* Event Info */}
-                <View style={[Spaces.gap[4]]}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                    {event.name || event.type?.name || 'Événement'}
+          <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
+            <OnboardingWrapper
+              description="Analysez les demandes et validez les evenements a la une."
+              id="featured-requests-list"
+              order={1}
+              spotlight={{
+                borderRadius: 16,
+                maxHeight: 280,
+                overlayOpacity: 0.4,
+                paddingX: 2,
+                paddingY: 2,
+              }}
+              title="Demandes a la une"
+            >
+              {requests.length === 0 ? (
+                <View style={[ApplicationStyle.borderRadius16, ApplicationStyle.backgroundColor.primary700, Spaces.padding[24], Alignments.alignCenter]}>
+                  <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
+                    {t('featuredRequests.empty', 'Aucune demande en attente')}
                   </Text>
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {event.team?.club?.name}
-                  </Text>
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    📅 {event.date ? formatDateWithDayPrefix(event.date) : '-'}
-                  </Text>
-                  {event.featuredBy && (
-                    <Text style={[Fonts.p3, Fonts.neutral00]}>
-                      Demandé par: {event.featuredBy.firstname} {event.featuredBy.lastname}
-                    </Text>
-                  )}
                 </View>
-
-                {/* Action Buttons */}
-                <View style={[Alignments.row, Spaces.gap[12]]}>
-                  <Button
-                    icon="check"
-                    isOption
-                    isLoading={approveMutation.isPending}
-                    onPress={() => handleApprove(event.documentId)}
-                    style={{ flex: 1 }}
-                    title={t('common.accept', 'Accepter')}
-                    variant="Primary"
-                  />
-                  <Button
-                    icon="close"
-                    isOption
-                    isLoading={rejectMutation.isPending}
-                    onPress={() => handleReject(event.documentId)}
-                    style={{ flex: 1 }}
-                    title={t('common.refuse', 'Refuser')}
-                    variant="Secondary"
-                  />
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </WithDataWrapper>
-      </ScrollView>
-    </ScreenContainer>
+              ) : (
+                requests.map((event) => (
+                  <TouchableOpacity
+                    key={event.documentId}
+                    onPress={() => handleEventPress(event)}
+                    style={[ApplicationStyle.borderRadius16, ApplicationStyle.backgroundColor.primary700, Spaces.padding[16], Spaces.gap[12]]}
+                  >
+                    <View style={[Spaces.gap[4]]}>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{event.name || event.type?.name || 'Evenement'}</Text>
+                      <Text style={[Fonts.p2, Fonts.primary100]}>{event.team?.club?.name}</Text>
+                      <Text style={[Fonts.p2, Fonts.primary100]}>Date: {event.date ? formatDateWithDayPrefix(event.date) : '-'}</Text>
+                    </View>
+                    <View style={[Alignments.row, Spaces.gap[12]]}>
+                      <Button icon="check" isOption isLoading={approveMutation.isPending} onPress={() => handleApprove(event.documentId)} style={{ flex: 1 }} title={t('common.accept', 'Accepter')} variant="Primary" />
+                      <Button icon="close" isOption isLoading={rejectMutation.isPending} onPress={() => handleReject(event.documentId)} style={{ flex: 1 }} title={t('common.refuse', 'Refuser')} variant="Secondary" />
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </OnboardingWrapper>
+          </WithDataWrapper>
+        </ScrollView>
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 

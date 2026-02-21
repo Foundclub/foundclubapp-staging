@@ -26,11 +26,26 @@ const MINI_FIELD_HEIGHT = 150;
 const MINI_TOKEN_SIZE = 24;
 
 /**
+ * @typedef {{ id?: string; documentId?: string; firstname?: string; lastname?: string }} CompositionPlayer
+ * @typedef {{ playerId?: string; positionX?: number; positionY?: number }} CompositionPlacement
+ * @typedef {{
+ *   eventId?: string;
+ *   eventDate?: string;
+ *   eventName?: string;
+ *   sport?: string;
+ *   sportContext?: string;
+ *   placements?: CompositionPlacement[];
+ *   manualPlayers?: CompositionPlayer[];
+ *   teamPlayers?: CompositionPlayer[];
+ * }} CompositionPayload
+ */
+
+/**
  * Mini composition preview for chat messages
  * @param {object} props
- * @param {object} props.composition - The composition data {eventId, eventDate, sportContext, placements, manualPlayers, sport, eventName}
+ * @param {CompositionPayload | null | undefined} props.composition - The composition data
  * @param {boolean} [props.isMe] - Whether sent by current user
- * @returns {import('react').ReactElement}
+ * @returns {import('react').ReactElement | null}
  */
 const CompositionMessageBubble = ({ composition, isMe = false }) => {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -52,7 +67,8 @@ const CompositionMessageBubble = ({ composition, isMe = false }) => {
   // Combine all players for lookup
   const allPlayers = [...teamPlayers, ...manualPlayers];
 
-  const fieldImage = FIELD_IMAGES[sport?.toLowerCase()] || FIELD_IMAGES.generic;
+  const sportKey = /** @type {keyof typeof FIELD_IMAGES} */ ((sport || 'football').toLowerCase());
+  const fieldImage = FIELD_IMAGES[sportKey] || FIELD_IMAGES.generic;
   const formattedDate = eventDate ? dayjs(eventDate).locale('fr').format('DD/MM/YYYY') : '';
 
   // Navigate to TacticalBoard in readonly mode
@@ -78,18 +94,18 @@ const CompositionMessageBubble = ({ composition, isMe = false }) => {
 
   // Render mini tokens on the field
   const renderMiniTokens = () => {
-    return placements.map((placement, index) => {
+    return placements.map((/** @type {CompositionPlacement} */ placement, /** @type {number} */ index) => {
       const { playerId, positionX, positionY } = placement;
       
       // Find player data from all players (team + manual)
-      const player = allPlayers.find(p => p.id === playerId || p.documentId === playerId);
+      const player = allPlayers.find((/** @type {CompositionPlayer} */ p) => p.id === playerId || p.documentId === playerId);
       const initials = player 
         ? `${player.firstname?.charAt(0) || ''}${player.lastname?.charAt(0) || ''}`.toUpperCase()
         : '?';
       
       // Convert percentage to actual position
-      const left = (positionX / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
-      const top = (positionY / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
+      const left = ((positionX || 0) / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
+      const top = ((positionY || 0) / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
 
       return (
         <View

@@ -1,21 +1,23 @@
-import React, { useCallback } from 'react';
-import { FlatList, RefreshControl, View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useMemo } from 'react';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
 
 import useTheme from '@/theme/themeContext';
 import { RouteNames } from '@/navigation/routeNames';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { useGetClubClaimsRequestList } from '@/services/admin/adminQueries';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-
 import Button from '@/components/atoms/button/Button';
-import { useApproveClubClaim, useRefuseClubClaim } from '@/services/admin/adminQueries'; // Need mutations here
+import {
+    useApproveClubClaim,
+    useGetClubClaimsRequestList,
+    useProcessAffiliationHelpRequest,
+    useRefuseAffiliationHelpRequest,
+    useRefuseClubClaim,
+} from '@/services/admin/adminQueries';
 
 const AdminClaimList = () => {
-    const { Colors, Fonts, Spaces, ApplicationStyle, Alignments } = useTheme();
+    const { Alignments, ApplicationStyle, Colors, Fonts, Spaces } = useTheme();
     const navigation = useNavigation();
-    const { t } = useTranslation();
 
     const {
         data,
@@ -24,78 +26,137 @@ const AdminClaimList = () => {
     } = useGetClubClaimsRequestList();
 
     const approveMutation = useApproveClubClaim();
-    const refuseMutation = useRefuseClubClaim();
+    const refuseClaimMutation = useRefuseClubClaim();
+    const processHelpMutation = useProcessAffiliationHelpRequest();
+    const refuseHelpMutation = useRefuseAffiliationHelpRequest();
 
-    const requests = data?.data || [];
+    const requests = useMemo(() => data?.data || [], [data?.data]);
 
-    const handleApprove = (item) => {
+    const handlePrimaryAction = (item) => {
+        if (item?.__isAffiliationHelp) {
+            processHelpMutation.mutate(
+                { documentId: item.documentId },
+                { onSuccess: () => refetch() },
+            );
+            return;
+        }
+
         approveMutation.mutate(item.documentId, {
-             onSuccess: () => refetch() // Refresh list
+            onSuccess: () => refetch(),
         });
     };
 
-    const handleReject = (item) => {
-         refuseMutation.mutate(item.documentId, {
-             onSuccess: () => refetch()
-         });
+    const handleSecondaryAction = (item) => {
+        if (item?.__isAffiliationHelp) {
+            refuseHelpMutation.mutate(
+                { documentId: item.documentId },
+                { onSuccess: () => refetch() },
+            );
+            return;
+        }
+
+        refuseClaimMutation.mutate(item.documentId, {
+            onSuccess: () => refetch(),
+        });
+    };
+
+    const isPrimaryLoading = (item) => {
+        if (item?.__isAffiliationHelp) {
+            return processHelpMutation.isPending
+                && processHelpMutation.variables?.documentId === item.documentId;
+        }
+        return approveMutation.isPending && approveMutation.variables === item.documentId;
+    };
+
+    const isSecondaryLoading = (item) => {
+        if (item?.__isAffiliationHelp) {
+            return refuseHelpMutation.isPending
+                && refuseHelpMutation.variables?.documentId === item.documentId;
+        }
+        return refuseClaimMutation.isPending && refuseClaimMutation.variables === item.documentId;
     };
 
     const renderItem = ({ item }) => {
-        const user = item.user;
-        const club = item.club;
-        const date = new Date(item.createdAt).toLocaleDateString();
-        
+        const user = item?.user || {};
+        const fullName = [user?.firstname, user?.lastname].filter(Boolean).join(' ').trim()
+            || [item?.holderFirstname, item?.holderLastname].filter(Boolean).join(' ').trim()
+            || 'Utilisateur';
+        const date = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
+        const subtitle = item?.__isAffiliationHelp
+            ? `Recherche: ${item?.clubName || 'non precise'}`
+            : `Revendique: ${item?.club?.name || 'club inconnu'}`;
+
         return (
             <View
                 style={[
                     ApplicationStyle.card,
                     Spaces.padding[16],
                     Spaces.marginBottom[16],
-                    { borderLeftWidth: 4, borderLeftColor: Colors.warning500 }
+                    {
+                        borderLeftColor: item?.__isAffiliationHelp ? Colors.primary500 : Colors.warning500,
+                        borderLeftWidth: 4,
+                    },
                 ]}
             >
-                <TouchableOpacity 
-                    onPress={() => navigation.navigate(RouteNames.AdminClaimDetail, { requestId: item.documentId })}
+                <TouchableOpacity
+                    onPress={() => navigation.navigate(RouteNames.AdminClaimDetail, {
+                        requestId: item.documentId,
+                        requestType: item.__requestType,
+                    })}
                     style={[Alignments.row, Alignments.alignStart]}
                 >
-                    {/* User Avatar */}
                     <ProfileAvatar
                         size={50}
                         imageUrl={user?.avatar?.url}
                     />
-                    
+
                     <View style={[Spaces.marginLeft[12], { flex: 1 }]}>
-                        <Text style={[Fonts.h4Black, { color: Colors.neutral00 }]}>
-                            {user?.firstname} {user?.lastname}
+                        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                            <Text numberOfLines={1} style={[Fonts.h4Black, { color: Colors.neutral00, flex: 1 }]}>
+                                {fullName}
+                            </Text>
+                            <View
+                                style={{
+                                    borderColor: Colors.primary500,
+                                    borderRadius: 999,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                }}
+                            >
+                                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                                    {item?.__typeLabel || 'REVENDICATION'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[6]]}>
+                            {subtitle}
                         </Text>
-                        <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[4]]}>
-                            Revendique : <Text style={[{ color: Colors.primary500, fontWeight: 'bold' }]}>{club?.name}</Text>
+                        <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+                            {date}
                         </Text>
-                         <Text style={[Fonts.small, {color: Colors.neutral300, marginTop: 4}]}>
-                             📅 {date} • {club?.city}
-                         </Text>
                     </View>
                 </TouchableOpacity>
 
-                {/* Actions */}
-                <View style={[Alignments.row, Spaces.gap[16], Spaces.marginTop[16]]}>
+                <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[16]]}>
                     <View style={{ flex: 1 }}>
                         <Button
                             title="Refuser"
                             variant="Secondary"
-                            onPress={() => handleReject(item)}
-                            isLoading={refuseMutation.isPending && refuseMutation.variables === item.documentId}
+                            onPress={() => handleSecondaryAction(item)}
+                            isLoading={isSecondaryLoading(item)}
                             style={{ borderColor: Colors.error500 }}
                             textStyle={{ color: Colors.error500 }}
-                            size="small" // Assuming small size exists or fits better
+                            size="small"
                         />
                     </View>
                     <View style={{ flex: 1 }}>
                         <Button
-                            title="Accepter"
+                            title={item?.__isAffiliationHelp ? 'Traiter' : 'Accepter'}
                             variant="Primary"
-                            onPress={() => handleApprove(item)}
-                            isLoading={approveMutation.isPending && approveMutation.variables === item.documentId}
+                            onPress={() => handlePrimaryAction(item)}
+                            isLoading={isPrimaryLoading(item)}
                             size="small"
                         />
                     </View>
@@ -105,25 +166,27 @@ const AdminClaimList = () => {
     };
 
     return (
-        <ScreenContainer bgImage="bg2" title="Revendications en attente">
-             <FlatList
+        <ScreenContainer bgImage="bg2" title="Revendications et demandes">
+            <FlatList
                 data={requests}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.documentId}
                 contentContainerStyle={[Spaces.padding[16]]}
-                refreshControl={
-                    <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.primary500} />
-                }
-                ListEmptyComponent={
-                    !isLoading && (
-                        <View style={[Alignments.center, Spaces.marginTop[40]]}>
-                             <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
-                             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], {textAlign: 'center'}]}>
-                                 Les demandes de revendication de club apparaîtront ici.
-                             </Text>
-                        </View>
-                    )
-                }
+                refreshControl={(
+                    <RefreshControl
+                        refreshing={isLoading}
+                        onRefresh={refetch}
+                        tintColor={Colors.primary500}
+                    />
+                )}
+                ListEmptyComponent={!isLoading ? (
+                    <View style={[Alignments.center, Spaces.marginTop[40]]}>
+                        <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
+                        <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
+                            Les revendications et demandes "introuvable" apparaitront ici.
+                        </Text>
+                    </View>
+                ) : null}
             />
         </ScreenContainer>
     );

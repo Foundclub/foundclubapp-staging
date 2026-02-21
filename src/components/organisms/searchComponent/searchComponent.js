@@ -40,10 +40,12 @@ function SearchComponent({
   };
 
   return (
-    <View style={[
-      Alignments.row,
-      Alignments.alignEnd,
-      Spaces.gap[12]]}
+    <View
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.gap[12],
+      ]}
     >
 
       <View style={[Alignments.fill]}>

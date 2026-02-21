@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
+import {
+    View, Text, ScrollView, TouchableOpacity, StyleSheet, Image,
+} from 'react-native';
 import {
     format,
     addDays,
     startOfWeek,
-    endOfWeek,
     isSameDay,
     isWithinInterval,
     startOfDay,
@@ -14,10 +15,6 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import useTheme from '@/theme/themeContext';
-import Fonts from '@/theme/fonts';
-import Spaces from '@/theme/spaces';
-import Alignments from '@/theme/alignements';
-import Colors from '@/theme/colors';
 import { images as Images } from '@/theme/images';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Directions } from 'react-native-gesture-handler';
@@ -26,7 +23,8 @@ import { runOnJS } from 'react-native-reanimated';
 // Constants
 const HOUR_HEIGHT = 60;
 const COLLAPSED_HEIGHT = 15; // Height for empty blocks
-const MIN_EVENT_HEIGHT = 20;
+const MIN_EVENT_HEIGHT = 24;
+const TIME_COLUMN_WIDTH = 44;
 
 /**
  * @typedef {{
@@ -86,10 +84,8 @@ const PlanningWeekTimelineView = ({
     currentDate: propDate,
     onDateChange,
     mode = '3days', // '3days' or 'week'
-    isInfiniteScroll = false, // Not fully implemented in this V2 rewrite to keep it simple first
-    maxSlots // Optional prop for capacity calculation
 }) => {
-    const { Colors, Fonts, Spaces } = useTheme();
+    const { Colors, Fonts } = useTheme();
     const [internalDate, setInternalDate] = useState(new Date());
     const currentDate = propDate || internalDate;
     const scrollViewRef = React.useRef(/** @type {any} */ (null));
@@ -122,12 +118,13 @@ const PlanningWeekTimelineView = ({
             return '#FFD700'; // Gold
         }
 
-            const type = typeof event.type === 'string' ? event.type : event.type?.name;
-        if (type) {
-            switch (type) {
+        const rawType = typeof event.type === 'string' ? event.type : event.type?.name;
+        const normalizedType = rawType?.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (normalizedType) {
+            switch (normalizedType) {
                 case 'Match': return '#FF4D4D'; // Red
                 case 'Entrainement': return '#4D79FF'; // Blue
-                case 'Réunion': return '#FFB34D'; // Orange
+                case 'Reunion': return '#FFB34D'; // Orange
                 case 'Autre': return '#4DFFB3'; // Green
             }
         }
@@ -476,8 +473,15 @@ const PlanningWeekTimelineView = ({
         const end = weekDays[weekDays.length - 1];
         const startStr = format(start, 'd MMM', { locale: fr });
         const endStr = format(end, 'd MMM yyyy', { locale: fr });
-        return `${startStr}. - ${endStr}`;
+        return `${startStr} - ${endStr}`;
     }, [weekDays]);
+
+    const summaryText = useMemo(() => {
+        const count = weekEvents.length;
+        const unit = count > 1 ? 'evenements' : 'evenement';
+        const period = mode === 'week' ? 'cette semaine' : 'sur 3 jours';
+        return `${count} ${unit} ${period}`;
+    }, [weekEvents.length, mode]);
 
     // Render
     return (
@@ -485,36 +489,38 @@ const PlanningWeekTimelineView = ({
             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
 
                 {/* 1. HEADER & NAVIGATION (Date Selector) */}
-                <View style={{ paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8 }}>
+                <View style={{ paddingBottom: 12, paddingTop: 8 }}>
                     <View style={{
-                        backgroundColor: Colors.neutral800,
-                        borderRadius: 16,
-                        paddingVertical: 8,
-                        paddingHorizontal: 16,
+                        alignItems: 'center',
+                        backgroundColor: Colors.primary700,
+                        borderColor: Colors.primary500 + '33',
+                        borderRadius: 22,
+                        borderWidth: 1,
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
                     }}>
                         <TouchableOpacity onPress={handlePrevPage} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Image
                                 source={/** @type {any} */ (Images.arrowLeft)}
-                                style={{ width: 16, height: 16, tintColor: Colors.primary500 }}
+                                style={{ width: 18, height: 18, tintColor: Colors.primary500 }}
                                 resizeMode="contain"
                             />
                         </TouchableOpacity>
 
                         <View style={{ alignItems: 'center' }}>
                             <Text style={{
-                                color: Colors.neutral100,
-                                textTransform: 'uppercase',
-                                fontSize: 16,
+                                color: Colors.primary200,
+                                fontSize: 13,
                                 fontWeight: '700',
                                 letterSpacing: 1,
-                                marginBottom: 4
+                                marginBottom: 2,
+                                textTransform: 'uppercase',
                             }}>
                                 PLANNING
                             </Text>
-                            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
+                            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                                 {dateRangeText}
                             </Text>
                         </View>
@@ -522,132 +528,146 @@ const PlanningWeekTimelineView = ({
                         <TouchableOpacity onPress={handleNextPage} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Image
                                 source={/** @type {any} */ (Images.arrowRight)}
-                                style={{ width: 16, height: 16, tintColor: Colors.primary500 }}
+                                style={{ width: 18, height: 18, tintColor: Colors.primary500 }}
                                 resizeMode="contain"
                             />
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* Days Row */}
-                <View style={{ flexDirection: 'row', paddingBottom: 10 }}>
-                    <View style={{ width: 50 }} />
-                    {weekDays.map((day, index) => {
-                        const isToday = isSameDay(day, new Date());
-                        // Calculate event count for this day
-                        const dayEventsCount = weekEvents.filter(e => {
-                            if (!e.date) return false;
-                            return isSameDay(new Date(e.date), day);
-                        }).length;
-
-                        const hasEvents = dayEventsCount > 0;
-
-                        return (
-                            <View key={index} style={{ flex: 1, alignItems: 'center' }}>
-                                {/* Day Name (LUN, MAR...) */}
-                                <Text style={[Fonts.p3, {
-                                    color: isToday ? Colors.primary500 : Colors.neutral300,
-                                    marginBottom: 8,
-                                    textTransform: 'uppercase',
-                                    fontSize: 10,
-                                    fontWeight: isToday ? 'bold' : 'normal'
-                                }]}>
-                                    {format(day, 'EEE', { locale: fr }).replace('.', '')}
+                <View>
+                    <View style={{
+                        backgroundColor: 'rgba(255,255,255,0.03)',
+                        borderColor: 'rgba(255,255,255,0.10)',
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        overflow: 'hidden',
+                        paddingHorizontal: 8,
+                    }}>
+                        {/* Summary Button */}
+                        {weekEvents.length > 0 && (
+                            <TouchableOpacity
+                                onPress={onSummaryPress}
+                                activeOpacity={0.7}
+                                style={{
+                                    alignItems: 'center',
+                                    backgroundColor: 'transparent',
+                                    flexDirection: 'row',
+                                    justifyContent: 'center',
+                                    paddingTop: 8,
+                                    paddingBottom: 6,
+                                }}>
+                                <View style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: 999,
+                                    marginRight: 8,
+                                    backgroundColor: Colors.primary500,
+                                }} />
+                                <Text style={[Fonts.p3, { color: Colors.neutral00, fontWeight: '700' }]}>
+                                    {summaryText}
                                 </Text>
+                                <Image
+                                    source={/** @type {any} */ (Images.arrowRight)}
+                                    style={{
+                                        width: 12,
+                                        height: 12,
+                                        marginLeft: 8,
+                                        tintColor: Colors.neutral00,
+                                    }}
+                                    resizeMode="contain"
+                                />
+                            </TouchableOpacity>
+                        )}
 
-                                {/* Date Number Container */}
-                                <View style={{ alignItems: 'center' }}>
-                                    <View style={{
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: 999,
-                                        backgroundColor: isToday ? Colors.primary500 : (hasEvents ? Colors.neutral800 : 'transparent'),
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        position: 'relative'
-                                    }}>
-                                        <Text style={[Fonts.h3, {
-                                            color: isToday ? Colors.neutral900 : Colors.neutral00,
-                                            fontWeight: 'bold',
-                                            fontSize: 14
+                        {/* Days Row */}
+                        <View style={{
+                            alignItems: 'flex-end',
+                            borderBottomWidth: 1,
+                            borderBottomColor: 'rgba(255,255,255,0.12)',
+                            flexDirection: 'row',
+                            marginBottom: 8,
+                            paddingBottom: 8,
+                        }}>
+                            <View style={{ width: TIME_COLUMN_WIDTH }} />
+                            {weekDays.map((day, index) => {
+                                const isToday = isSameDay(day, new Date());
+                                const dayEventsCount = weekEvents.filter(e => {
+                                    if (!e.date) return false;
+                                    return isSameDay(new Date(e.date), day);
+                                }).length;
+
+                                const hasEvents = dayEventsCount > 0;
+
+                                return (
+                                    <View key={index} style={{ flex: 1, alignItems: 'center' }}>
+                                        <Text style={[Fonts.p3, {
+                                            color: isToday ? Colors.primary500 : Colors.neutral300,
+                                            fontSize: 11,
+                                            fontWeight: isToday ? 'bold' : 'normal',
+                                            marginBottom: 6,
+                                            textTransform: 'uppercase',
                                         }]}>
-                                            {format(day, 'd')}
+                                            {format(day, 'EEE', { locale: fr }).replace('.', '')}
                                         </Text>
 
-                                        {/* Event Count Badge */}
-                                        {dayEventsCount > 0 && !isToday && (
-                                            <View style={{
-                                                position: 'absolute',
-                                                top: -4,
-                                                right: -4,
-                                                backgroundColor: Colors.primary500,
-                                                borderRadius: 6,
-                                                width: 14,
-                                                height: 14,
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderWidth: 1,
-                                                borderColor: Colors.neutral900
-                                            }}>
-                                                <Text style={{ color: Colors.neutral00, fontSize: 8, fontWeight: 'bold' }}>
-                                                    {dayEventsCount}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* AUJ Pill (Only for Today) */}
-                                    {isToday && (
                                         <View style={{
-                                            marginTop: 4,
-                                            backgroundColor: Colors.neutral800,
-                                            paddingHorizontal: 6,
-                                            paddingVertical: 2,
-                                            borderRadius: 8
+                                            alignItems: 'center',
+                                            minHeight: 32,
+                                            justifyContent: 'center',
                                         }}>
-                                            <Text style={{
-                                                color: Colors.primary500,
-                                                fontSize: 8,
-                                                fontWeight: 'bold',
-                                                textTransform: 'uppercase'
+                                            <View style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: 999,
+                                                backgroundColor: isToday ? Colors.primary500 : (hasEvents ? Colors.neutral800 : 'transparent'),
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                position: 'relative',
                                             }}>
-                                                AUJ
-                                            </Text>
+                                                <Text style={[Fonts.h3, {
+                                                    color: Colors.neutral00,
+                                                    fontWeight: 'bold',
+                                                    fontSize: 14,
+                                                }]}>
+                                                    {format(day, 'd')}
+                                                </Text>
+
+                                                {dayEventsCount > 0 && !isToday && (
+                                                    <View style={{
+                                                        position: 'absolute',
+                                                        top: -4,
+                                                        right: -4,
+                                                        backgroundColor: Colors.primary500,
+                                                        borderRadius: 6,
+                                                        width: 14,
+                                                        height: 14,
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        borderWidth: 1,
+                                                        borderColor: Colors.neutral700,
+                                                    }}>
+                                                        <Text style={{ color: Colors.neutral00, fontSize: 8, fontWeight: 'bold' }}>
+                                                            {dayEventsCount}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
-                                    )}
-                                </View>
-                            </View>
-                        );
-                    })}
-                </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
 
-                {/* Summary Button */}
-                {weekEvents.length > 0 && (
-                    <TouchableOpacity
-                        onPress={onSummaryPress}
-                        activeOpacity={0.7}
-                        style={{
-                            alignItems: 'center',
-                            paddingVertical: 8,
-                            backgroundColor: 'transparent',
-                            borderBottomWidth: 1,
-                            borderBottomColor: 'rgba(255,255,255,0.05)'
-                        }}>
-                        <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>
-                            {weekEvents.length} événements cette semaine ⬇
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* Timeline ScrollView */}
-                <ScrollView
-                    ref={scrollViewRef}
-                    scrollEnabled={scrollEnabled}
-                    contentContainerStyle={{ paddingBottom: 50, paddingTop: 24 }}
-                >
+                        {/* Timeline ScrollView */}
+                        <ScrollView
+                            ref={scrollViewRef}
+                            scrollEnabled={scrollEnabled}
+                            contentContainerStyle={{ paddingBottom: 50, paddingTop: 6 }}
+                        >
                     <View style={{ flexDirection: 'row' }}>
                         {/* Time Column */}
-                        <View style={{ width: 50 }}>
+                        <View style={{ width: TIME_COLUMN_WIDTH }}>
                             {timelineStructure.map((block, index) => (
                                 <View key={index} style={{
                                     height: block.type === 'hour' ? HOUR_HEIGHT : COLLAPSED_HEIGHT,
@@ -660,7 +680,7 @@ const PlanningWeekTimelineView = ({
                                             color: Colors.neutral300,
                                             marginTop: -8,
                                             backgroundColor: 'transparent',
-                                            fontSize: 10,
+                                            fontSize: 11,
                                             fontWeight: 'bold'
                                         }]}>
                                             {`${block.value}:00`}
@@ -727,15 +747,15 @@ const PlanningWeekTimelineView = ({
 
                                 // Layout Constraints
                                 const isWeekMode = mode === 'week';
-                                const isTinyEvent = event.height < 25;
-                                const isSmallEvent = event.height < 45;
+                                const isTinyEvent = event.height < 32;
+                                const isSmallEvent = event.height < 56;
 
                                 // In Week Mode, we have very narrow columns.
                                 // Strategy: Wrap text, smaller fonts, hide time if needed.
-                                const titleLines = isWeekMode ? 2 : 1;
+                                const titleLines = isWeekMode && !isTinyEvent ? 2 : 1;
                                 const showType = !isSmallEvent && eventType;
                                 const showFacility = !isSmallEvent && facilityName;
-                                const showTime = !isTinyEvent && (!isWeekMode || event.height > 60); // Hide time in week mode unless event is tall
+                                const showTime = !isTinyEvent && (!isWeekMode || event.height > 52);
 
                                 return (
                                     <TouchableOpacity
@@ -752,8 +772,8 @@ const PlanningWeekTimelineView = ({
                                             borderLeftColor: eventColor,
                                             borderWidth: 1,
                                             borderColor: borderOpacity,
-                                            borderRadius: 4,
-                                            padding: isWeekMode ? 1 : 2, // Save padding in week mode
+                                            borderRadius: 8,
+                                            padding: isWeekMode ? 3 : 4,
                                             overflow: 'hidden',
                                             justifyContent: isTinyEvent ? 'center' : 'flex-start'
                                         }}
@@ -761,19 +781,19 @@ const PlanningWeekTimelineView = ({
                                         {/* Main Title (Team Name) */}
                                         <Text numberOfLines={titleLines} style={[Fonts.p3Bold, {
                                             color: Colors.neutral00,
-                                            fontSize: isWeekMode ? 8 : (isTinyEvent ? 9 : 10),
-                                            marginBottom: 0,
-                                            lineHeight: isWeekMode ? 10 : (isTinyEvent ? 10 : 12)
+                                            fontSize: isWeekMode ? (isTinyEvent ? 9 : 10) : (isTinyEvent ? 10 : 11),
+                                            marginBottom: 1,
+                                            lineHeight: isWeekMode ? 12 : 13
                                         }]}>
                                             {mainTitle}
                                         </Text>
 
-                                        {/* Event Type (e.g. Match, Entraînement) */}
+                                        {/* Event Type (e.g. Match, Entrainement) */}
                                         {showType && (
                                             <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.neutral300,
-                                                fontSize: isWeekMode ? 7 : 9,
-                                                marginBottom: 0,
+                                                fontSize: isWeekMode ? 8 : 9,
+                                                marginBottom: 1,
                                                 marginTop: isWeekMode ? 1 : 0
                                             }]}>
                                                 {eventType}
@@ -784,7 +804,7 @@ const PlanningWeekTimelineView = ({
                                         {showFacility && (
                                             <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.primary500,
-                                                fontSize: isWeekMode ? 7 : 8,
+                                                fontSize: isWeekMode ? 8 : 9,
                                                 marginTop: 0,
                                                 fontWeight: 'bold'
                                             }]}>
@@ -796,7 +816,7 @@ const PlanningWeekTimelineView = ({
                                         {showTime && (
                                             <Text numberOfLines={1} style={[Fonts.p3, {
                                                 color: Colors.neutral300,
-                                                fontSize: isWeekMode ? 7 : 8,
+                                                fontSize: isWeekMode ? 8 : 9,
                                                 marginTop: 0
                                             }]}>
                                                 {formatTime(event.startTime)} - {formatTime(event.endTime)}
@@ -807,10 +827,13 @@ const PlanningWeekTimelineView = ({
                             })}
                         </View>
                     </View>
-                </ScrollView >
+                        </ScrollView >
+                    </View>
+                </View>
             </View >
         </GestureDetector >
     );
 };
 
 export default PlanningWeekTimelineView;
+

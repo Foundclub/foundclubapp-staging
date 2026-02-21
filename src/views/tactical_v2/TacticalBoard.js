@@ -490,6 +490,7 @@ const TacticalBoard = () => {
               
               // Hide if currently being dragged
               const playerId = fp.id || fp.documentId;
+              if (!playerId) return null;
               const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
               
               const panGesture = createFieldPanGesture(playerId);

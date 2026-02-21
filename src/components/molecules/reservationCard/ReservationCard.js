@@ -6,11 +6,11 @@ import {
 } from 'react-native';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import useTheme from '@/theme/themeContext';
 
-import { getImageUrl } from '@/utils/imageUrl';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 
@@ -104,13 +104,16 @@ function ReservationCard({ item, onPress, onParticipate }) {
       {(item?.club?.sponsor || item?.team?.club?.sponsor) && (
         <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[8]]}>
           {(item?.club?.sponsor || item?.team?.club?.sponsor).map((/** @type {any} */ sponsor, /** @type {number} */ idx) => (
-            <View
-              key={sponsor.documentId || idx} style={styles.sponsorWrapper}>
-              <Image
-                source={{ uri: getImageUrl(sponsor.logo?.url) }}
-                style={styles.sponsorLogo}
-              />
-            </View>
+            <SponsorLogoTile
+              key={sponsor.documentId || idx}
+              imageUrl={sponsor.logo?.url}
+              link={sponsor.link}
+              title={sponsor.title}
+              showTitle={false}
+              width={30}
+              height={30}
+              borderRadius={15}
+            />
           ))}
         </View>
       )}
@@ -273,29 +276,6 @@ const styles = StyleSheet.create({
     color: '#01B3F4',
   },
   // Sponsors - Frame 1419
-  sponsorsContainer: {
-    position: 'absolute',
-    top: 78,
-    left: 16,
-    height: 28,
-  },
-  sponsorsContent: {
-    flexDirection: 'row',
-    gap: 13,
-  },
-  sponsorWrapper: {
-    width: 25.31,
-    height: 25.34,
-    borderRadius: 12.67,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sponsorLogo: {
-    width: 23.25,
-    height: 23.25,
-    borderRadius: 11.63,
-  },
   // Ligne séparatrice
   separator: {
     position: 'absolute',

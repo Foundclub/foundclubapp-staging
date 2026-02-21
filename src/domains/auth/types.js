@@ -24,6 +24,7 @@
  * @property {string} [lastName]
  * @property {string} [username]
  * @property {string} phoneNumber
+ * @property {string} [phone]
  * @property {string} [email]
  * @property {Role} role
  * @property {Avatar} [avatar]
@@ -45,8 +46,8 @@
  * @property {string} [sportsHistory]
  * @property {string | object} [address]
  * @property {{lat?: number, lng?: number, label?: string, city?: string, radius?: number, address?: string, value?: string}} [location]
- * @property {{ documentId?: string; name?: string }[]} [multisportClubs]
- * @property {object} [geohash]
+ * @property {{ documentId?: string; name?: string; logo?: Avatar }[]} [multisportClubs]
+ * @property {string} [geohash]
  * @property {boolean} [isCaptain]
  */
 

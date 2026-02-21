@@ -5,9 +5,43 @@ import client from '../client';
 const clubMembershipRequestSchema = Joi.object({
   club: Joi.object().required(),
   documentId: Joi.string().required(),
+  requesterDisplayName: Joi.string().allow('', null).optional(),
+  requesterFirstname: Joi.string().allow('', null).optional(),
+  requesterLastname: Joi.string().allow('', null).optional(),
+  requester: Joi.object().unknown(true).optional(),
   state: Joi.string().valid('processed', 'refused', 'pending').required(),
-  user: Joi.object().required(),
+  user: Joi.alternatives().try(
+    Joi.object().unknown(true),
+    Joi.string(),
+    Joi.number(),
+    Joi.valid(null),
+  ).optional(),
 }).required();
+
+const toFlatUser = (user) => {
+  if (!user) return null;
+
+  if (typeof user === 'object' && user?.data && typeof user.data === 'object') {
+    const nested = user.data;
+    const attrs = nested.attributes && typeof nested.attributes === 'object'
+      ? nested.attributes
+      : {};
+
+    return {
+      ...attrs,
+      ...nested,
+      documentId: nested.documentId || attrs.documentId,
+      id: nested.id || attrs.id,
+      avatar: nested.avatar || attrs.avatar || null,
+    };
+  }
+
+  if (typeof user === 'object') {
+    return user;
+  }
+
+  return null;
+};
 /**
  * Create a new club membership request
  * @param {{user: string, club: string}} clubMembershipRequestData
@@ -66,7 +100,41 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    return validationResult;
+
+    const normalizedData = (validationResult?.data || []).map((item) => {
+      const rawRequester = item?.requester && typeof item.requester === 'object'
+        ? item.requester
+        : {};
+      const flatRequester = toFlatUser(rawRequester) || rawRequester;
+      const requester = {
+        ...flatRequester,
+        firstname: flatRequester?.firstname || flatRequester?.firstName || item?.requesterFirstname || '',
+        lastname: flatRequester?.lastname || flatRequester?.lastName || item?.requesterLastname || '',
+        username: flatRequester?.username || '',
+        phoneNumber: flatRequester?.phoneNumber || flatRequester?.phone || '',
+        displayName: flatRequester?.displayName || item?.requesterDisplayName || '',
+      };
+      const flatUser = toFlatUser(item?.user);
+
+      return {
+        ...item,
+        requester,
+        user: {
+          avatar: flatUser?.avatar || requester?.avatar || null,
+          documentId: flatUser?.documentId
+            || (typeof item?.user === 'string' ? item.user : undefined),
+          firstname: flatUser?.firstname || flatUser?.firstName || requester?.firstname || '',
+          lastname: flatUser?.lastname || flatUser?.lastName || requester?.lastname || '',
+          username: flatUser?.username || requester?.username || '',
+          phoneNumber: flatUser?.phoneNumber || requester?.phoneNumber || item?.phoneNumber || '',
+        },
+      };
+    });
+
+    return {
+      ...validationResult,
+      data: normalizedData,
+    };
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch club membership requests: ${errorToDisplay}`);

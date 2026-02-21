@@ -8,11 +8,11 @@ import {
 
 import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
-import { getImageUrl } from '@/utils/imageUrl';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress } from '@/utils/location';
 
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -126,38 +126,16 @@ function EventCard({
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                             {sponsors.map((/** @type {any} */ sponsor) => (
-                                <View
+                                <SponsorLogoTile
                                     key={sponsor.documentId || sponsor.id}
-                                    style={{
-                                        width: 48,
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: 4,
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            width: 32,
-                                            height: 32,
-                                            borderRadius: 16,
-                                            backgroundColor: 'white',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <Image
-                                            source={{ uri: getImageUrl(sponsor.logo?.url) }}
-                                            style={{ width: 24, height: 24, resizeMode: 'contain' }}
-                                        />
-                                    </View>
-                                    <Text
-                                        numberOfLines={1}
-                                        style={[Fonts.p3, Fonts.neutral00, { textAlign: 'center', width: '100%' }]}
-                                    >
-                                        {sponsor.title}
-                                    </Text>
-                                </View>
+                                    imageUrl={sponsor.logo?.url}
+                                    link={sponsor.link}
+                                    title={sponsor.title}
+                                    width={56}
+                                    height={32}
+                                    borderRadius={8}
+                                    titleStyle={[Fonts.p3, Fonts.neutral00]}
+                                />
                             ))}
                         </View>
                     </ScrollView>

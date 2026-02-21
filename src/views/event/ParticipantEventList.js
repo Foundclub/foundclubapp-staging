@@ -1,28 +1,25 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { format, isAfter, isSameDay, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { isAfter, isSameDay } from 'date-fns';
 import React, { useCallback, useMemo, useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import {
-  FlatList, Image, Modal, ScrollView, Text, TouchableOpacity, View,
+  FlatList, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import { useGetEvents } from '@/services/event/eventQueries';
 import useTheme from '@/theme/themeContext';
-import { images as Images } from '@/theme/images';
 import { RouteNames } from '@/navigation/routeNames';
 import useAuth from '@/domains/auth/useAuth';
 
@@ -33,7 +30,6 @@ import useAuth from '@/domains/auth/useAuth';
  * @returns {React.ReactElement} ParticipantEventList component
  */
 function ParticipantEventList({ navigation }) {
-  const { t } = useTranslation();
   const {
     Alignments,
     Colors,
@@ -41,12 +37,9 @@ function ParticipantEventList({ navigation }) {
     Spaces,
   } = useTheme();
   const { userData, canManageEvents } = useAuth();
+  const insets = useSafeAreaInsets();
   
   // State
-  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [calendarViewMode, setCalendarViewMode] = useState('3days'); // '3days' | 'week' | 'month'
-  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [listStartDate, setListStartDate] = useState(new Date());
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(undefined);
@@ -60,7 +53,6 @@ function ParticipantEventList({ navigation }) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
     refetch,
   } = useGetEvents({
     // @ts-ignore
@@ -90,10 +82,7 @@ function ParticipantEventList({ navigation }) {
   ].filter((value, index, self) => Boolean(value) && self.indexOf(value) === index);
 
   // Fetch SECTION/CM featured events for Mon Planning
-  const {
-    data: featuredData,
-    isLoading: isFeaturedLoading,
-  } = useGetEvents({
+  const { data: featuredData } = useGetEvents({
     isFeatured: true,
     featuredScope: ['SECTION', 'CM'],
     membershipClubIds: allClubIds.length ? allClubIds : undefined,
@@ -228,30 +217,6 @@ function ParticipantEventList({ navigation }) {
    */
   const handleDateConfirm = (date) => {
     setListStartDate(date);
-    setIsDatePickerVisible(false);
-  };
-
-  const openViewModal = () => setIsViewModalVisible(true);
-  const closeViewModal = () => setIsViewModalVisible(false);
-
-  /**
-   * @param {string} mode
-   */
-  const handleViewSelect = (mode) => {
-    setCalendarViewMode(mode);
-    closeViewModal();
-  };
-
-  /**
-   * @param {string} mode
-   */
-  const getViewLabel = (mode) => {
-    switch (mode) {
-      case 'month': return 'Vue : Mois';
-      case 'week': return 'Vue : Semaine';
-      case '3days': return 'Vue : 3 Jours';
-      default: return 'Vue : Semaine';
-    }
   };
 
 
@@ -259,6 +224,9 @@ function ParticipantEventList({ navigation }) {
     // @ts-ignore
     flatListRef.current?.scrollToOffset({ offset: 500, animated: true });
   };
+
+  const floatingCtaBottom = Math.max(insets.bottom + 12, 20);
+  const listBottomPadding = canManageEvents ? insets.bottom + 140 : insets.bottom + 24;
 
   const ListHeader = () => {
     return (
@@ -274,7 +242,20 @@ function ParticipantEventList({ navigation }) {
 
         {/* Calendar Section */}
         <View>
-          <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
+          <OnboardingWrapper
+            description="Retrouvez vos evenements, votre calendrier et les actions de planning."
+            id="planning-main-content"
+            order={1}
+            spotlight={{
+              borderRadius: 16,
+              overlayOpacity: 0.4,
+              paddingX: 2,
+              paddingY: 2,
+            }}
+            title="Mon planning"
+          >
+            <PersonalPlanningContainer onSummaryPress={handleSummaryPress} />
+          </OnboardingWrapper>
         </View>
 
         {/* Featured Events Carousel */}
@@ -310,7 +291,7 @@ function ParticipantEventList({ navigation }) {
         // @ts-ignore
         keyExtractor={(item) => item.documentId || Math.random().toString()}
         ListHeaderComponent={ListHeader}
-        contentContainerStyle={[Spaces.paddingBottom[80]]}
+        contentContainerStyle={{ paddingBottom: listBottomPadding }}
         showsVerticalScrollIndicator={false}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -322,7 +303,7 @@ function ParticipantEventList({ navigation }) {
       {canManageEvents && (
         <View style={{
           position: 'absolute',
-          bottom: 20,
+          bottom: floatingCtaBottom,
           left: 20,
           right: 20,
         }}>
@@ -345,62 +326,10 @@ function ParticipantEventList({ navigation }) {
               elevation: 5,
             }}
           >
-            <Text style={[Fonts.h4Bold, { color: Colors.neutral900 }]}>Ajouter un évènement</Text>
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>+ Ajouter un évènement</Text>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* View Selection Modal */}
-      <BottomModal
-        isVisible={isViewModalVisible}
-        close={closeViewModal}
-        style={{ paddingBottom: 40 }}
-      >
-        <View style={[Spaces.gap[16]]}>
-          <Text style={[Fonts.h3, Fonts.neutral00, { textAlign: 'center', marginBottom: 16 }]}>
-            Choisir la vue
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => handleViewSelect('3days')}
-            style={[
-              Spaces.paddingVertical[16],
-              Spaces.paddingHorizontal[24],
-              { backgroundColor: calendarViewMode === '3days' ? Colors.primary500 : Colors.neutral800, borderRadius: 12 }
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, { color: calendarViewMode === '3days' ? Colors.neutral900 : Colors.neutral00, textAlign: 'center' }]}>
-              Vue 3 Jours
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleViewSelect('week')}
-            style={[
-              Spaces.paddingVertical[16],
-              Spaces.paddingHorizontal[24],
-              { backgroundColor: calendarViewMode === 'week' ? Colors.primary500 : Colors.neutral800, borderRadius: 12 }
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, { color: calendarViewMode === 'week' ? Colors.neutral900 : Colors.neutral00, textAlign: 'center' }]}>
-              Vue Semaine
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleViewSelect('month')}
-            style={[
-              Spaces.paddingVertical[16],
-              Spaces.paddingHorizontal[24],
-              { backgroundColor: calendarViewMode === 'month' ? Colors.primary500 : Colors.neutral800, borderRadius: 12 }
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, { color: calendarViewMode === 'month' ? Colors.neutral900 : Colors.neutral00, textAlign: 'center' }]}>
-              Vue Mois
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </BottomModal>
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}

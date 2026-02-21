@@ -29,13 +29,26 @@ const VALIDATION_MODES = [
 ];
 
 /**
+ * @typedef {{
+ *   documentId?: string;
+ *   name?: string;
+ *   sport?: { name?: string };
+ *   activities?: Array<{ name?: string }>;
+ * }} TeamLite
+ */
+
+/**
+ * @typedef {{ documentId?: string }} EventLite
+ */
+
+/**
  * CreateAdModal - Modal for coaches to create recruitment ads
  * @param {Object} props
  * @param {boolean} props.visible
  * @param {Function} props.onClose
  * @param {Function} props.onSuccess
- * @param {Object|null} props.team
- * @param {Object|null} [props.event]
+ * @param {TeamLite | null} props.team
+ * @param {EventLite | null} [props.event]
  */
 const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
   const { Colors, Fonts, Spaces, Alignments, Images } = useTheme();
@@ -51,8 +64,8 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
   // Fetch levels from API
   const { data: levelsData } = useGetLevels();
   const levelOptions = useMemo(() => {
-    if (!levelsData?.data) return [];
-    return levelsData.data.map((level) => ({
+    if (!Array.isArray(levelsData)) return [];
+    return levelsData.map((/** @type {any} */ level) => ({
       value: level.documentId || level.id?.toString(),
       label: level.name || `Level ${level.id}`,
     }));
@@ -61,7 +74,7 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
   // Get positions based on team sport
   const sportName = team?.sport?.name || team?.activities?.[0]?.name || 'Football';
   const capitalizedSport = sportName.charAt(0).toUpperCase() + sportName.slice(1).toLowerCase();
-  const positions = POSITIONS_BY_SPORT[capitalizedSport] || POSITIONS_BY_SPORT.Football;
+  const positions = POSITIONS_BY_SPORT[/** @type {keyof typeof POSITIONS_BY_SPORT} */ (capitalizedSport)] || POSITIONS_BY_SPORT.Football;
 
   // Handle form submission
   const handleSubmit = async () => {
@@ -79,13 +92,14 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
     setError('');
 
     try {
+      const teamId = team.documentId || '';
       await createRecruitmentAd({
-        team: team.documentId,
+        team: teamId,
         position: selectedPosition,
-        level: selectedLevel || null,
+        ...(selectedLevel ? { minLevel: selectedLevel } : {}),
         quantity,
         validationMode,
-        event: event?.documentId || null,
+        ...(event?.documentId ? { event: event.documentId } : {}),
       });
 
       // Reset form
@@ -96,8 +110,9 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
       
       onSuccess?.();
     } catch (err) {
-      console.error('[CreateAdModal] Error creating ad:', err);
-      setError(err?.message || 'Une erreur est survenue lors de la création de l\'annonce.');
+      const typedError = /** @type {any} */ (err);
+      console.error('[CreateAdModal] Error creating ad:', typedError);
+      setError(typedError?.message || 'Une erreur est survenue lors de la création de l\'annonce.');
     } finally {
       setLoading(false);
     }
@@ -173,7 +188,7 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                 Poste recherché *
               </Text>
               <View style={styles.optionsGrid}>
-                {positions.map((pos) => (
+                {positions.map((/** @type {string} */ pos) => (
                   <TouchableOpacity
                     key={pos}
                     style={[
@@ -220,7 +235,7 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                       Tous
                     </Text>
                   </TouchableOpacity>
-                  {levelOptions.map((level) => (
+                  {levelOptions.map((/** @type {{ value: string; label: string }} */ level) => (
                     <TouchableOpacity
                       key={level.value}
                       style={[

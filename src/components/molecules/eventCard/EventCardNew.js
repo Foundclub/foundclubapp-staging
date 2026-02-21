@@ -19,11 +19,11 @@ import useClub from '@/domains/club/useClub';
 import useAuth from '@/domains/auth/useAuth';
 import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
-import { getImageUrl } from '@/utils/imageUrl';
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress } from '@/utils/location';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import Tag from '@/components/atoms/tag/Tag';
@@ -54,6 +54,24 @@ const getHeaderTitle = (typeName) => {
     if (normalizedType.includes('detection') || normalizedType.includes('détection')) return 'DÉTECTION';
     if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return 'RÉSERVATION';
     return typeName?.toUpperCase() || 'ÉVÈNEMENT';
+};
+
+const getDisplayLabel = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'object') {
+        if (typeof value.name === 'string') return value.name.trim();
+        if (typeof value.label === 'string') return value.label.trim();
+        if (typeof value.title === 'string') return value.title.trim();
+    }
+    return '';
+};
+
+const formatEventDateLabel = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const formatted = format(date, 'EEEE dd MMMM', { locale: fr });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
 /**
@@ -148,7 +166,13 @@ function EventCardNew({
 
     const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
     const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
-    const category = item?.team?.name || ''; // Using team name as category/level
+    const teamName = item?.team?.name || '';
+    const teamSection = getDisplayLabel(item?.team?.section || item?.section);
+    const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
+    const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
+    const teamMetaLine = [teamCategory, teamSection, teamLevel]
+        .filter((value) => !!value)
+        .join(' • ');
 
     return (
 
@@ -198,24 +222,29 @@ function EventCardNew({
                             )}
                         </View>
                         <View style={styles.clubTextContainer}>
-                            <Text style={[styles.clubName, showClubHeader && { fontSize: 20 }]} numberOfLines={1}>{clubName}</Text>
-                            {category ? <Text style={styles.category} numberOfLines={1}>{category}</Text> : null}
+                            <Text style={[styles.clubName, showClubHeader && { fontSize: 20 }]} numberOfLines={2}>{clubName}</Text>
+                            {teamName ? <Text style={styles.category} numberOfLines={1}>{teamName}</Text> : null}
+                            {teamMetaLine ? <Text style={styles.teamMetaInline} numberOfLines={1}>{teamMetaLine}</Text> : null}
                         </View>
                     </View>
 
                     {/* Date + Time (Hidden for reservations as it's in details) */}
                     {item?.date && !isReservation && (
                         <View style={styles.dateTimeContainer}>
-                            <View style={{ flex: 1, marginRight: 8 }}>
-                                <Text style={styles.dateText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-                                    {format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase()}
+                            <View style={styles.dateMetaGroup}>
+                                <Image source={Images.calendar} style={styles.dateMetaIcon} />
+                                <Text style={styles.dateText} numberOfLines={1}>
+                                    {formatEventDateLabel(item.date)}
                                 </Text>
                             </View>
-                            <Text style={styles.timeText}>
-                                {item.startTime && item.endTime
-                                    ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
-                                    : format(new Date(item.date), 'HH:mm')}
-                            </Text>
+                            <View style={styles.dateMetaGroupRight}>
+                                <Image source={Images.clock} style={styles.dateMetaIcon} />
+                                <Text style={styles.timeText}>
+                                    {item.startTime && item.endTime
+                                        ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
+                                        : format(new Date(item.date), 'HH:mm')}
+                                </Text>
+                            </View>
                         </View>
                     )}
 
@@ -227,16 +256,20 @@ function EventCardNew({
                                 {/* Date Row (Prominent) */}
                                 {item?.date && (
                                     <View style={styles.dateTimeContainer}>
-                                        <View style={{ flex: 1, marginRight: 8 }}>
-                                            <Text style={styles.dateText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-                                                {format(new Date(item.date), 'EEE dd MMMM yyyy', { locale: fr }).toUpperCase()}
+                                        <View style={styles.dateMetaGroup}>
+                                            <Image source={Images.calendar} style={styles.dateMetaIcon} />
+                                            <Text style={styles.dateText} numberOfLines={1}>
+                                                {formatEventDateLabel(item.date)}
                                             </Text>
                                         </View>
-                                        <Text style={styles.timeText}>
-                                            {item.startTime && item.endTime
-                                                ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
-                                                : (item.startTime ? item.startTime.substring(0, 5) : '')}
-                                        </Text>
+                                        <View style={styles.dateMetaGroupRight}>
+                                            <Image source={Images.clock} style={styles.dateMetaIcon} />
+                                            <Text style={styles.timeText}>
+                                                {item.startTime && item.endTime
+                                                    ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
+                                                    : (item.startTime ? item.startTime.substring(0, 5) : '')}
+                                            </Text>
+                                        </View>
                                     </View>
                                 )}
 
@@ -332,23 +365,16 @@ function EventCardNew({
                         <View style={styles.sponsorsContainer}>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sponsorsScroll}>
                                 {sponsors.map((sponsor, index) => (
-                                    <View key={sponsor.documentId || sponsor.id || index} style={styles.sponsorItem}>
-                                        <View style={styles.sponsorLogoWrapper}>
-                                            {sponsor.logo?.url ? (
-                                                <Image
-                                                    source={{ uri: getImageUrl(sponsor.logo.url) }}
-                                                    style={styles.sponsorLogo}
-                                                />
-                                            ) : (
-                                                <Text style={styles.sponsorInitial}>
-                                                    {sponsor.title ? sponsor.title.charAt(0).toUpperCase() : '?'}
-                                                </Text>
-                                            )}
-                                        </View>
-                                        <Text style={styles.sponsorName} numberOfLines={1}>
-                                            {sponsor.title}
-                                        </Text>
-                                    </View>
+                                    <SponsorLogoTile
+                                        key={sponsor.documentId || sponsor.id || index}
+                                        imageUrl={sponsor.logo?.url}
+                                        link={sponsor.link}
+                                        title={sponsor.title}
+                                        width={92}
+                                        height={46}
+                                        containerStyle={styles.sponsorItem}
+                                        titleStyle={styles.sponsorName}
+                                    />
                                 ))}
                             </ScrollView>
                         </View>
@@ -427,7 +453,9 @@ function EventCardNew({
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#173844',
+        borderColor: 'rgba(255,255,255,0.12)',
         borderRadius: 24,
+        borderWidth: 1,
         overflow: 'hidden',
         minHeight: 200, // Flexible height
     },
@@ -436,26 +464,27 @@ const styles = StyleSheet.create({
         borderRadius: 24,
     },
     contentContainer: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         gap: 8,
         // Add a dark overlay on top of the background image for better contrast
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0, 0, 0, 0.56)',
         flex: 1,
     },
     headerContainer: {
         width: '100%',
-        borderWidth: 3,
+        backgroundColor: 'rgba(1, 179, 244, 0.10)',
+        borderWidth: 2,
         borderColor: '#01B3F4',
-        borderRadius: 7,
-        paddingVertical: 4,
+        borderRadius: 8,
+        paddingVertical: 3,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 4,
+        marginBottom: 6,
     },
     headerText: {
         fontFamily: 'Montserrat-Bold',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: 'bold',
         color: '#01B3F4',
         textTransform: 'uppercase',
@@ -471,39 +500,72 @@ const styles = StyleSheet.create({
     clubTextContainer: {
         flex: 1,
         justifyContent: 'center',
+        marginRight: 6,
     },
     clubName: {
         fontFamily: 'Montserrat-Bold',
-        fontSize: 18, // Slightly larger
+        fontSize: 17,
         fontWeight: '800', // Extra bold
         color: '#FFFFFF',
+        lineHeight: 22,
     },
     category: {
         fontFamily: 'Montserrat-Medium', // Medium weight
-        fontSize: 14,
-        color: '#E0E0E0', // Slightly lighter than white
+        fontSize: 13,
+        marginTop: 2,
+        color: '#BFD5E2',
+    },
+    teamMetaInline: {
+        fontFamily: 'Montserrat-SemiBold',
+        fontSize: 12,
+        marginTop: 3,
+        color: '#D9F4FF',
     },
     dateTimeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 12,
-        marginBottom: 8,
+        marginTop: 10,
+        marginBottom: 6,
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.12)',
+    },
+    dateMetaGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        gap: 6,
+        marginRight: 6,
+    },
+    dateMetaGroupRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 6,
+        maxWidth: '45%',
+    },
+    dateMetaIcon: {
+        width: 14,
+        height: 14,
+        tintColor: '#CDE6F2',
+        resizeMode: 'contain',
     },
     dateText: {
         fontFamily: 'Montserrat-Bold',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: '#EAF8FF',
+        flexShrink: 1,
     },
     timeText: {
         fontFamily: 'Montserrat-Bold',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: '#EAF8FF',
     },
     detailsContainer: {
-        gap: 4,
+        gap: 8,
     },
     statusBadgesRow: {
         flexDirection: 'row',
@@ -573,72 +635,48 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         justifyContent: 'flex-end',
+        marginLeft: 8,
+        maxWidth: '45%',
     },
     icon: {
-        width: 18, // Slightly smaller icons
-        height: 18,
-        tintColor: '#FFFFFF',
+        width: 16,
+        height: 16,
+        tintColor: '#CDE6F2',
         resizeMode: 'contain',
     },
     detailText: {
-        fontFamily: 'Montserrat-Medium', // Medium weight
-        fontSize: 13, // Slightly smaller
-        color: '#F0F0F0',
+        fontFamily: 'Montserrat-Medium',
+        fontSize: 13,
+        color: '#D6E7EE',
         flex: 1,
     },
     sponsorsContainer: {
-        marginTop: 8,
+        marginTop: 10,
         borderTopWidth: 0,
     },
     sponsorsScroll: {
-        gap: 20,
-        alignItems: 'center',
+        gap: 12,
+        alignItems: 'flex-start',
     },
     sponsorItem: {
-        width: 48,
         alignItems: 'center',
-        gap: 4,
-    },
-    sponsorLogoWrapper: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#FFFFFF',
         justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1,
-        elevation: 2,
-    },
-    sponsorLogo: {
-        width: 24,
-        height: 24,
-        resizeMode: 'contain',
-    },
-    sponsorInitial: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#173844',
     },
     sponsorName: {
+        fontFamily: 'Montserrat-SemiBold',
         fontSize: 10,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: '#EAF8FF',
         textAlign: 'center',
-        width: '100%',
     },
     ctaContainer: {
-        marginTop: 12, // More space
+        marginTop: 8,
         width: '100%',
     },
     reservationButton: {
         width: '100%',
-        height: 40, // Reduced height
+        height: 38,
         backgroundColor: '#01B3F4',
-        borderRadius: 20,
+        borderRadius: 19,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -646,7 +684,7 @@ const styles = StyleSheet.create({
         fontFamily: 'Montserrat-Bold',
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#001218',
+        color: '#FFFFFF',
     },
 });
 

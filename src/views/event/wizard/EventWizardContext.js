@@ -1,36 +1,54 @@
-
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
 
 const EventWizardContext = createContext();
 
-const initialState = {
-  // Step 1: Type
-  type: null, // Event Type Object or ID
+const createDefaultTimeRange = () => {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(now.getHours() + 1, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(start.getHours() + 1, 30, 0, 0);
+  return { end, start };
+};
 
-  // Step 2: Team (Organizer)
-  team: null, // Team Object or ID
+const createInitialState = () => {
+  const { start, end } = createDefaultTimeRange();
+  return {
+    // Step 1: Type
+    type: null,
 
-  // Step 3: Invites
-  invitedTeams: [], // Array of IDs
+    // Step 2: Team
+    team: null,
 
-  // Step 4: Logistics
-  date: new Date(),
-  startTime: null,
-  endTime: null,
-  isRecurrent: false,
-  recurrenceFrequency: 'week',
-  recurrenceEndDate: null,
-  
-  // Step 5: Location
-  location: null, // { lat, lng, label }
-  facility: null, // Facility ID
+    // Step 3: Invites
+    invitedTeams: [],
 
-  // Meta
-  description: '',
-  sessionStatus: 'open', // Default to open
-  capacity: null,
-  pricePerPerson: null,
-  totalPlayers: null,
+    // Step 4: Logistics
+    date: new Date(),
+    startTime: start,
+    endTime: end,
+    isRecurrent: false,
+    recurrenceFrequency: 'week',
+    recurrenceInterval: 1,
+    recurrenceDays: [],
+    recurrenceStartDate: null,
+    recurrenceEndDate: null,
+    reservationMode: 'FULL_GROUP',
+    pricePerPerson: null,
+    // Step 5: Participants
+    capacity: null,
+    totalPlayers: null,
+    // Step 6: Validation mode
+    validationMode: 'auto',
+
+    // Step 7+: Meta
+    description: '',
+    sessionStatus: 'open',
+
+    // Step 9: Location
+    location: null,
+    facility: null,
+  };
 };
 
 function eventWizardReducer(state, action) {
@@ -38,24 +56,32 @@ function eventWizardReducer(state, action) {
     case 'SET_TYPE':
       return { ...state, type: action.payload };
     case 'SET_TEAM':
-      return { ...state, team: action.payload, invitedTeams: [] }; // Reset invites if team changes
+      return { ...state, team: action.payload, invitedTeams: [] };
     case 'SET_INVITES':
       return { ...state, invitedTeams: action.payload };
     case 'SET_LOGISTICS':
       return { ...state, ...action.payload };
+    case 'SET_PARTICIPANTS':
+      return { ...state, ...action.payload };
+    case 'SET_VALIDATION_MODE':
+      return { ...state, validationMode: action.payload };
     case 'SET_LOCATION':
-      return { ...state, location: action.payload.location, facility: action.payload.facility };
+      return {
+        ...state,
+        location: action.payload.location,
+        facility: action.payload.facility,
+      };
     case 'SET_META':
       return { ...state, ...action.payload };
     case 'RESET':
-      return initialState;
+      return createInitialState();
     default:
       return state;
   }
 }
 
 export function EventWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(eventWizardReducer, initialState);
+  const [state, dispatch] = useReducer(eventWizardReducer, undefined, createInitialState);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 

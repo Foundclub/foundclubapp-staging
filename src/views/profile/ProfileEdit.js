@@ -14,10 +14,13 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import usePlaces from '@/domains/places/usePlaces';
 
@@ -67,7 +70,7 @@ const profileSchema = Joi.object({
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Profile edit screen component
  */
-function ProfileEdit({ navigation }) {
+function ProfileEdit({ navigation, route }) {
   // hooks
   const {
     Alignments, Spaces, Fonts,
@@ -190,15 +193,28 @@ function ProfileEdit({ navigation }) {
   };
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[Spaces.paddingVertical[24]]}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.PROFILE_EDIT}
+      userId={userData?.documentId}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
-        style={[Alignments.justifySpaceBetween, Alignments.fill]}
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingVertical[24]]}
       >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={100}
+          style={[Alignments.justifySpaceBetween, Alignments.fill]}
+        >
         <ScrollView
           contentContainerStyle={[
             Spaces.gap[24],
@@ -206,7 +222,20 @@ function ProfileEdit({ navigation }) {
           ]}
           style={[Alignments.fill]}
         >
-          <View style={[Alignments.fill, Spaces.gap[24]]}>
+          <OnboardingWrapper
+            description="Mettez a jour vos informations personnelles, sportives et votre visibilite."
+            id="profile-edit-form"
+            order={1}
+            spotlight={{
+              borderRadius: 16,
+              maxHeight: 280,
+              overlayOpacity: 0.4,
+              paddingX: 2,
+              paddingY: 2,
+            }}
+            title="Edition du profil"
+          >
+            <View style={[Alignments.fill, Spaces.gap[24]]}>
             <View style={[Alignments.row, Spaces.marginVertical[24]]}>
               <SelectAvatar
                 currentAvatar={avatar}
@@ -568,17 +597,27 @@ function ProfileEdit({ navigation }) {
                 </View>
               )}
             />
-          </View>
+            </View>
+          </OnboardingWrapper>
         </ScrollView>
 
-        <Button
-          isLoading={updateUserMutation.isPending}
-          onPress={handleSubmit(handleFormSubmit)}
-          title={t('profile.actions.save')}
-          variant="Primary"
-        />
-      </KeyboardAvoidingView>
-    </ScreenContainer>
+          <OnboardingWrapper
+            description="Enregistrez vos modifications pour mettre a jour votre profil."
+            id="profile-edit-save"
+            order={2}
+            spotlight={{ borderRadius: 30, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+            title="Enregistrer"
+          >
+            <Button
+              isLoading={updateUserMutation.isPending}
+              onPress={handleSubmit(handleFormSubmit)}
+              title={t('profile.actions.save')}
+              variant="Primary"
+            />
+          </OnboardingWrapper>
+        </KeyboardAvoidingView>
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 

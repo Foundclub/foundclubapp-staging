@@ -26,6 +26,7 @@ import SearchAlerts from '@/views/search/SearchAlerts';
 import UserAddress from '@/views/onboarding/UserAddress';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
+import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
 import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserCategory from '@/views/onboarding/UserCategory';
 import UserLevel from '@/views/onboarding/UserLevel';
@@ -42,6 +43,8 @@ import NotificationList from '@/views/notification/NotificationList';
 import FacilityList from '@/views/facility/FacilityList';
 import FacilityForm from '@/views/facility/FacilityForm';
 import NewConversation from '@/views/NewConversation';
+import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
+import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 import AdWizardStack from './stacks/AdWizardStack';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
@@ -117,6 +120,31 @@ function PrivateNavigator() {
       <Stack.Screen
         component={LeagueTabNavigator}
         name={RouteNames.LeagueHomeTab}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={SearchHubLegacyRedirect}
+        name={RouteNames.SearchHub}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={SearchRouteRedirect}
+        name={RouteNames.SearchEvents}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={SearchRouteRedirect}
+        name={RouteNames.SearchClubs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={SearchRouteRedirect}
+        name={RouteNames.SearchReservations}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={SearchRouteRedirect}
+        name={RouteNames.SearchRecruitment}
         options={{ headerShown: false }}
       />
 
@@ -572,6 +600,20 @@ function PrivateNavigator() {
             ...commonOptions,
             headerRight: () => renderStepperIndicator(RouteNames.UserClubSearch),
             headerTitle: () => renderStepper(RouteNames.UserClubSearch),
+            headerTitleAlign: 'left',
+          }}
+        />
+      ) : null}
+
+      {canShowView(RouteNames.UserAffiliationGuide) ? (
+        <Stack.Screen
+          component={UserAffiliationGuide}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserAffiliationGuide}
+          options={{
+            ...commonOptions,
+            headerRight: () => renderStepperIndicator(RouteNames.UserAffiliationGuide),
+            headerTitle: () => renderStepper(RouteNames.UserAffiliationGuide),
             headerTitleAlign: 'left',
           }}
         />

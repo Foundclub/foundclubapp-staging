@@ -148,11 +148,12 @@ function HomeContent({ navigation, route }) {
       </View>
 
       {/* SegmentedControl - Figma exact design */}
-      <View style={[Alignments.alignCenter, Spaces.marginBottom[24]]}>
+      <View style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[24]]}>
         <OnboardingWrapper
           description="Choisissez ici ce que vous cherchez : Événements, Clubs ou Profils."
           id="search-tabs"
           order={1}
+          style={Alignments.fullWidth}
           title="Navigation"
         >
           <SegmentedControl
@@ -170,7 +171,7 @@ function HomeContent({ navigation, route }) {
 
 function Home(props) {
   return (
-    <OnboardingProvider>
+    <OnboardingProvider flowId="home-search-onboarding-v1">
       <HomeContent {...props} />
     </OnboardingProvider>
   );

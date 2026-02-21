@@ -8,11 +8,13 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -35,7 +37,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
  * @returns {import('react').ReactElement} Club details screen component
  */
 function ClubDetails({ navigation, route }) {
-  const { clubId } = route?.params ?? {};
+  const { clubId, fromOnboardingAffiliation = false } = route?.params ?? {};
 
   // hooks
   const {
@@ -45,6 +47,8 @@ function ClubDetails({ navigation, route }) {
     canContactAdmin,
     canEditClub,
     canJoinClub,
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
     inviteTrainer,
     refetchUserData,
     USER_ROLES,
@@ -54,6 +58,31 @@ function ClubDetails({ navigation, route }) {
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   const [selectedTab, setSelectedTab] = useState('infos');
+  const [joinRequestPending, setJoinRequestPending] = useState(false);
+
+  const handleGoToNextOnboardingStep = useCallback(() => {
+    if (!fromOnboardingAffiliation) return;
+
+    const parentNavigation = navigation.getParent?.();
+    const onboardingNavigation = parentNavigation || navigation;
+    const nextRoute = getNextOnboardingRoute(RouteNames.UserAffiliationGuide);
+    if (nextRoute) {
+      onboardingNavigation.navigate(nextRoute);
+      return;
+    }
+
+    markOnboardingComplete(userData?.documentId);
+    onboardingNavigation.reset({
+      index: 0,
+      routes: [{ name: getPostOnboardingHomeRoute() }],
+    });
+  }, [
+    fromOnboardingAffiliation,
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    navigation,
+    userData?.documentId,
+  ]);
 
   const {
     data: club,
@@ -76,25 +105,52 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
+  const hasPendingJoinRequest = useMemo(() => (
+    (userData?.clubMembershipRequests || [])
+      .some((r) => (r.club?.documentId === clubId || r.club?.id === clubId) && r.state === 'pending')
+  ), [userData?.clubMembershipRequests, clubId]);
+
   const createClubMembershipRequestMutation = useMutation({
     mutationFn: createClubMembershipRequest,
     onSuccess: () => {
+      setJoinRequestPending(true);
+      if (fromOnboardingAffiliation) {
+        refetch();
+        refetchUserData();
+        handleGoToNextOnboardingStep();
+        return;
+      }
+
       Alert.alert(
         t('clubDetails.alerts.joinClub.title'),
         t('clubDetails.alerts.joinClub.description'),
         [
           {
-            onPress: () => refetch(),
+            onPress: () => {
+              refetch();
+              refetchUserData();
+              handleGoToNextOnboardingStep();
+            },
             text: t('clubDetails.alerts.joinClub.actions.ok'),
           },
         ],
       );
+    },
+    onError: () => {
+      setJoinRequestPending(false);
     },
   });
 
   const claimClubMutation = useMutation({
     mutationFn: claimClub,
     onSuccess: () => {
+      if (fromOnboardingAffiliation) {
+        refetch();
+        refetchUserData();
+        handleGoToNextOnboardingStep();
+        return;
+      }
+
       Alert.alert(
         t('clubDetails.alerts.claimClub.title', 'Demande envoyée'),
         t('clubDetails.alerts.claimClub.description', 'Votre demande pour revendiquer ce club a été envoyée aux administrateurs.'),
@@ -103,6 +159,7 @@ function ClubDetails({ navigation, route }) {
             onPress: () => {
               refetch();
               refetchUserData();
+              handleGoToNextOnboardingStep();
             },
             text: t('common.ok', 'OK'),
           },
@@ -139,13 +196,19 @@ function ClubDetails({ navigation, route }) {
     );
   };
 
-  const coachs = useMemo(() => club?.members?.filter(
-    (user) => user.role.name === USER_ROLES.coach,
-  ), [club, USER_ROLES.coach]);
+  const coachs = useMemo(
+    () => (club?.members || []).filter(
+      (user) => user?.role?.name === USER_ROLES.coach,
+    ),
+    [club, USER_ROLES.coach],
+  );
 
-  const owners = useMemo(() => club?.members?.filter(
-    (user) => user.role.name === USER_ROLES.president,
-  ), [club, USER_ROLES.president]);
+  const owners = useMemo(
+    () => (club?.members || []).filter(
+      (user) => user?.role?.name === USER_ROLES.president,
+    ),
+    [club, USER_ROLES.president],
+  );
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
 
@@ -246,6 +309,9 @@ function ClubDetails({ navigation, route }) {
   };
 
   const handleAskToJoinClub = () => {
+    if (hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
+      return;
+    }
     if (canJoinClub && clubId && userData?.documentId) {
       createClubMembershipRequestMutation.mutate({
         club: clubId,
@@ -285,6 +351,7 @@ function ClubDetails({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
+      setJoinRequestPending(false);
       refetch();
     }, [refetch]),
   );
@@ -365,7 +432,8 @@ function ClubDetails({ navigation, route }) {
             Spaces.gap[16],
             Spaces.paddingHorizontal[24],
             Spaces.paddingBottom[40],
-            Spaces.marginTop[24],
+            Spaces.marginTop[64],
+            { overflow: 'visible' },
           ]}
           >
             {canEdit ? (
@@ -399,7 +467,7 @@ function ClubDetails({ navigation, route }) {
                 </Text>
               </TouchableOpacity>
             ) : null}
-            <View style={{ marginTop: -32 }}>
+            <View style={{ marginTop: -24, zIndex: 1 }}>
               {club?.logo?.url ? (
                 <ProfileAvatar
                   imageUrl={club.logo.url}
@@ -560,31 +628,14 @@ function ClubDetails({ navigation, route }) {
                             </TouchableOpacity>
                           ) : null
                         }
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (sponsor.link) {
-                              Linking.openURL(sponsor.link);
-                            }
-                          }}
-                          style={[
-                            Alignments.alignCenter,
-                          ]}
-                        >
-                          <ProfileAvatar
-                            imageUrl={sponsor?.logo?.url}
-                            size={55}
-                            enablePreview={false}
-                            style={[
-                              ApplicationStyle.borderWidth1,
-                              ApplicationStyle.borderColor.neutral00,
-                              { borderRadius: 8, width: 110, height: 55 },
-                            ]}
-                            imageStyle={{ borderRadius: 8, width: 110, height: 55 }}
-                          />
-                          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, maxWidth: 110, textAlign: 'center' }]}>
-                            {sponsor.title}
-                          </Text>
-                        </TouchableOpacity>
+                        <SponsorLogoTile
+                          imageUrl={sponsor?.logo?.url}
+                          link={sponsor.link}
+                          title={sponsor.title}
+                          width={110}
+                          height={55}
+                          titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
+                        />
                       </View>
                     ))}
                   </ScrollView>
@@ -677,8 +728,6 @@ function ClubDetails({ navigation, route }) {
                               source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
                               style={[
                                 ApplicationStyle.roundIcon40,
-                                ApplicationStyle.borderWidth1,
-                                ApplicationStyle.borderColor.neutral00,
                               ]}
                             />
                             <Text
@@ -749,8 +798,6 @@ function ClubDetails({ navigation, route }) {
                               source={user.avatar ? { uri: getImageUrl(user?.avatar?.url) } : Images.roundAvatar}
                               style={[
                                 ApplicationStyle.roundIcon40,
-                                ApplicationStyle.borderWidth1,
-                                ApplicationStyle.borderColor.neutral00,
                               ]}
                             />
                             <Text
@@ -773,9 +820,19 @@ function ClubDetails({ navigation, route }) {
       {
         canJoinClub && !isParentClubAdmin ? (
           <Button
+            disabled={hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
             onPress={handleAskToJoinClub}
-            style={Spaces.marginTop[12]}
-            title={t('clubDetails.actions.join')}
+            style={[
+              Spaces.marginTop[12],
+              (hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
+                ? { opacity: 0.7 }
+                : null,
+            ]}
+            title={
+              (hasPendingJoinRequest || joinRequestPending)
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club')
+            }
             variant="Primary"
           />
         ) : null
@@ -802,7 +859,7 @@ function ClubDetails({ navigation, route }) {
       }
       {
         /* Claim Club Button - Show if not member, not admin, and club has no owners */
-        !isMember && !canEdit && owners?.length === 0 && userData ? (
+        !isMember && !canEdit && !canJoinClub && owners?.length === 0 && userData ? (
           (() => {
             const hasPendingClubRequest = (userData.clubMembershipRequests || [])
               .some((r) => (r.club?.documentId === clubId || r.club?.id === clubId) && r.state === 'pending');

@@ -38,6 +38,29 @@ import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert 
 import { RouteNames } from '@/navigation/routeNames';
 
 /** @typedef {{ label: string; value: string }} Option */
+/**
+ * @typedef {{
+ *   activity?: string | string[];
+ *   category?: string | string[];
+ *   city?: { label?: string; value?: string };
+ *   club?: Option | null;
+ *   date?: Date | string | null;
+ *   level?: string | string[];
+ *   radius?: number;
+ *   team?: Option | null;
+ *   type?: string | string[];
+ *   geohash?: string;
+ * }} EventFilterFormValues
+ */
+/**
+ * @typedef {{
+ *   createAlertMode?: boolean;
+ *   editAlertMode?: boolean;
+ *   alertLabel?: string;
+ *   alertDocumentId?: string;
+ *   savedFilters?: EventFilterFormValues;
+ * }} EventFiltersRouteParams
+ */
 
 const filtersSchema = Joi.object({
   activity: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
@@ -63,12 +86,13 @@ const filtersSchema = Joi.object({
  * @returns {import('react').ReactElement} EventFilters component
  */
 function EventFilters({ navigation }) {
-  const route = useRoute();
-  const createAlertMode = route.params?.createAlertMode || false;
-  const editAlertMode = route.params?.editAlertMode || false;
-  const initialAlertLabel = route.params?.alertLabel || '';
-  const alertDocumentId = route.params?.alertDocumentId;
-  const savedFilters = route.params?.savedFilters;
+  const route = /** @type {{ params?: EventFiltersRouteParams }} */ (useRoute());
+  const routeParams = route.params || {};
+  const createAlertMode = routeParams.createAlertMode || false;
+  const editAlertMode = routeParams.editAlertMode || false;
+  const initialAlertLabel = routeParams.alertLabel || '';
+  const alertDocumentId = routeParams.alertDocumentId;
+  const savedFilters = routeParams.savedFilters;
 
   const isAlertMode = createAlertMode || editAlertMode;
 
@@ -88,7 +112,7 @@ function EventFilters({ navigation }) {
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [alertLabel, setAlertLabel] = useState(initialAlertLabel || '');
   const [isCreatingAlert, setIsCreatingAlert] = useState(false);
-  const [previewCount, setPreviewCount] = useState(null);
+  const [previewCount, setPreviewCount] = useState(/** @type {number | null} */ (null));
 
   // hooks
   const { t } = useTranslation();
@@ -144,7 +168,7 @@ function EventFilters({ navigation }) {
     setIsSaveModalVisible(true);
     // Fetch preview count
     try {
-      const currentFilters = getValues();
+      const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
       const result = await getPreviewCount(currentFilters, 'event');
       setPreviewCount(result.count);
     } catch (error) {
@@ -188,7 +212,7 @@ function EventFilters({ navigation }) {
     if (!alertLabel.trim()) return;
     
     // Validate city and radius
-    const currentFilters = getValues();
+    const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
     if (!currentFilters.city?.value || !currentFilters.radius) {
       Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
       return;
@@ -197,7 +221,7 @@ function EventFilters({ navigation }) {
     setIsCreatingAlert(true);
     try {
       // Generate geohash for location filtering
-      const filtersToSave = { ...currentFilters };
+      const filtersToSave = /** @type {EventFilterFormValues} */ ({ ...currentFilters });
       if (currentFilters.city?.value && typeof currentFilters.city.value === 'string') {
         const coords = currentFilters.city.value.split('|');
         if (coords.length === 2) {
@@ -228,8 +252,9 @@ function EventFilters({ navigation }) {
       setAlertLabel('');
       navigation.goBack();
     } catch (err) {
-      console.error(err);
-      Alert.alert('Erreur', err?.response?.data?.error?.message || 'Erreur lors de la sauvegarde');
+      const typedError = /** @type {any} */ (err);
+      console.error(typedError);
+      Alert.alert('Erreur', typedError?.response?.data?.error?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setIsCreatingAlert(false);
     }
@@ -358,7 +383,7 @@ function EventFilters({ navigation }) {
    *   date: string | null;
    * }} data - The filter data
    */
-  const handleApplyFilters = (data) => {
+  const handleApplyFilters = (/** @type {EventFilterFormValues} */ data) => {
     // format date params
     let startDateAfter = null;
     let startDateBefore = null;
@@ -377,7 +402,7 @@ function EventFilters({ navigation }) {
     const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
       parseFloat(coordinates[1]),
       parseFloat(coordinates[0]),
-      data.radius,
+      Number(data.radius || 20),
     ) : undefined;
 
     // Extract lat/lon for Haversine filtering
@@ -407,7 +432,7 @@ function EventFilters({ navigation }) {
 
   // Direct alert creation for createAlertMode (without modal, uses screen as alert name input)
   const handleSaveAlert = async () => {
-    const currentFilters = getValues();
+    const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
     
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
@@ -429,8 +454,9 @@ function EventFilters({ navigation }) {
         const alerts = existingAlerts.data || [];
         let duplicateCount = 0;
         
-        alerts.forEach((alert) => {
-          if (alert.label === baseLabel || alert.label.startsWith(baseLabel + ' (')) {
+        alerts.forEach((/** @type {{ label?: string }} */ alert) => {
+          const label = alert.label || '';
+          if (label === baseLabel || label.startsWith(baseLabel + ' (')) {
             duplicateCount++;
           }
         });
@@ -455,12 +481,12 @@ function EventFilters({ navigation }) {
     }
   };
 
-  const openInfoModal = (title, content) => {
+  const openInfoModal = (/** @type {string} */ title, /** @type {string} */ content) => {
     setInfoModalContent({ title, content });
     setInfoModalVisible(true);
   };
 
-  const renderLabel = (label, infoKey) => (
+  const renderLabel = (/** @type {string} */ label, /** @type {string} */ infoKey) => (
     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginBottom[8]]}>
       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
       <TouchableOpacity
@@ -546,7 +572,7 @@ function EventFilters({ navigation }) {
             },
           }) => (
             <AutocompleteAddressInput
-              address={value}
+              address={/** @type {Option | undefined} */ (value || undefined)}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
               placeholder={t('clubFilters.fields.city.placeholder')}
@@ -603,7 +629,7 @@ function EventFilters({ navigation }) {
                 const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
                 onChange(val);
               }}
-              value={value}
+              value={/** @type {any} */ (value || '')}
             />
           )}
         />
@@ -675,7 +701,7 @@ function EventFilters({ navigation }) {
                 const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
                 onChange(val);
               }}
-              value={value}
+              value={/** @type {any} */ (value || '')}
             />
           )}
         />
@@ -699,7 +725,7 @@ function EventFilters({ navigation }) {
                 const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
                 onChange(val);
               }}
-              value={value}
+              value={/** @type {any} */ (value || '')}
             />
           )}
         />
@@ -723,7 +749,7 @@ function EventFilters({ navigation }) {
                 const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
                 onChange(val);
               }}
-              value={value}
+              value={/** @type {any} */ (value || '')}
             />
           )}
         />

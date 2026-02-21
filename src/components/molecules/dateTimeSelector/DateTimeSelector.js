@@ -269,7 +269,7 @@ const DateTimeSelector = ({
     () => (
       /** @type {import('react-native').ViewStyle} */
       ({
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(1, 179, 244, 0.08)',
         borderColor: 'rgba(1, 179, 244, 0.30)',
         borderRadius: 14,
         borderWidth: 1,
@@ -299,7 +299,10 @@ const DateTimeSelector = ({
         onPress={handleOpen}
         style={[
           styles.inputButton,
-          { borderColor: Colors.neutral700, backgroundColor: Colors.neutral800 },
+          {
+            borderColor: 'rgba(1, 179, 244, 0.26)',
+            backgroundColor: 'rgba(1, 179, 244, 0.08)',
+          },
           buttonStyle,
         ]}
       >

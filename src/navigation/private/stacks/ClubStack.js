@@ -6,6 +6,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import AddCoach from '@/views/club/AddCoach';
 import AddSponsor from '@/views/club/AddSponsor';
+import AssignCoachTeams from '@/views/club/AssignCoachTeams';
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubEdit from '@/views/club/ClubEdit';
 import ClubFilters from '@/views/club/ClubFilters';
@@ -66,6 +67,14 @@ function ClubStack() {
         options={{
           ...commonOptions,
           headerTitle: t('clubMembershipRequestList.title'),
+        }}
+      />
+      <Stack.Screen
+        component={AssignCoachTeams}
+        name={RouteNames.AssignCoachTeams}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Assigner a une equipe',
         }}
       />
       <Stack.Screen

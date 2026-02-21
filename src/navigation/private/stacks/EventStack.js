@@ -16,6 +16,8 @@ import EventWizardType from '@/views/event/wizard/EventWizardType';
 import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
+import EventWizardParticipants from '@/views/event/wizard/EventWizardParticipants';
+import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
 import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
@@ -96,6 +98,16 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardLogistics}
           name={RouteNames.EventWizardLogistics}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardParticipants}
+          name={RouteNames.EventWizardParticipants}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardValidationMode}
+          name={RouteNames.EventWizardValidationMode}
           options={{ headerShown: false }}
         />
         <Stack.Screen

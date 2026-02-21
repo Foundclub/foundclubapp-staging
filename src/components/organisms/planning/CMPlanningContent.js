@@ -8,18 +8,19 @@ import { useQuery } from '@tanstack/react-query';
 import useTheme from '@/theme/themeContext';
 
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { getCMPlanning, getCMClubs } from '@/services/multisportClub/multisportClubService';
 import { getCMFacilities } from '@/services/facility/facilityService';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView/PlanningWeekTimelineViewV2';
 import { startOfWeek, endOfWeek } from 'date-fns';
 
+/** @typedef {{ documentId?: string; name?: string }} NamedEntity */
+
 /**
  * CM Planning Content - Reusable component for multisport planning
  * @param {object} props
  * @param {string} props.cmId - ID of the multisport club
- * @param {object} props.navigation - Navigation object
+ * @param {import('@react-navigation/native').NavigationProp<any>} props.navigation - Navigation object
  */
 function CMPlanningContent({ cmId, navigation }) {
     const {
@@ -28,8 +29,8 @@ function CMPlanningContent({ cmId, navigation }) {
     const { t } = useTranslation();
 
     // Filter states
-    const [selectedSectionId, setSelectedSectionId] = useState(null);
-    const [selectedFacilityId, setSelectedFacilityId] = useState(null);
+    const [selectedSectionId, setSelectedSectionId] = useState(/** @type {string | null} */ (null));
+    const [selectedFacilityId, setSelectedFacilityId] = useState(/** @type {string | null} */ (null));
 
     // Fetch sections (for filter)
     const { data: sectionsData } = useQuery({
@@ -37,7 +38,8 @@ function CMPlanningContent({ cmId, navigation }) {
         queryFn: () => getCMClubs(cmId),
         enabled: !!cmId,
     });
-    const sections = sectionsData?.data || [];
+    const typedSectionsData = /** @type {{ data?: NamedEntity[] } | undefined} */ (sectionsData);
+    const sections = typedSectionsData?.data || [];
 
     // Fetch facilities (for filter)
     const { data: facilitiesData } = useQuery({
@@ -45,7 +47,8 @@ function CMPlanningContent({ cmId, navigation }) {
         queryFn: () => getCMFacilities(cmId),
         enabled: !!cmId,
     });
-    const facilities = facilitiesData?.data || [];
+    const typedFacilitiesData = /** @type {{ data?: NamedEntity[] } | undefined} */ (facilitiesData);
+    const facilities = typedFacilitiesData?.data || [];
 
     // Date state
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -65,18 +68,18 @@ function CMPlanningContent({ cmId, navigation }) {
         queryFn: () => getCMPlanning(cmId, {
             from,
             to,
-            sectionId: selectedSectionId,
-            installationId: selectedFacilityId,
+            sectionId: selectedSectionId || undefined,
+            installationId: selectedFacilityId || undefined,
         }),
         enabled: !!cmId && !!from && !!to,
-        keepPreviousData: true,
     });
 
-    const rawSlots = planningData?.data || [];
+    const typedPlanningData = /** @type {{ data?: any[] } | undefined} */ (planningData);
+    const rawSlots = typedPlanningData?.data || [];
 
     // Map slots to component format
     const events = useMemo(() => {
-        return rawSlots.map(slot => ({
+        return rawSlots.map((/** @type {any} */ slot) => ({
             id: slot.eventId,
             title: slot.title,
             date: slot.startAt, // Ensure ISO string
@@ -92,7 +95,7 @@ function CMPlanningContent({ cmId, navigation }) {
         }));
     }, [rawSlots]);
 
-    const handleEventPress = (event) => {
+    const handleEventPress = (/** @type {{ documentId?: string }} */ event) => {
         // Always navigate to generic EventDetails via EventStack
         // @ts-ignore
         if (event?.documentId) {
@@ -103,7 +106,10 @@ function CMPlanningContent({ cmId, navigation }) {
         }
     };
 
-    const RenderFilterChip = ({ label, isSelected, onPress }) => (
+    const RenderFilterChip = (
+        /** @type {{ label: string; isSelected: boolean; onPress: () => void }} */
+        { label, isSelected, onPress }
+    ) => (
         <TouchableOpacity
             onPress={onPress}
             style={[
@@ -136,12 +142,12 @@ function CMPlanningContent({ cmId, navigation }) {
                         isSelected={!selectedSectionId}
                         onPress={() => setSelectedSectionId(null)}
                     />
-                    {sections.map((section) => (
+                    {sections.map((/** @type {NamedEntity} */ section) => (
                         <RenderFilterChip
                             key={section.documentId}
-                            label={section.name}
+                            label={section.name || ''}
                             isSelected={selectedSectionId === section.documentId}
-                            onPress={() => setSelectedSectionId(section.documentId)}
+                            onPress={() => setSelectedSectionId(section.documentId || null)}
                         />
                     ))}
                 </ScrollView>
@@ -153,12 +159,12 @@ function CMPlanningContent({ cmId, navigation }) {
                         isSelected={!selectedFacilityId}
                         onPress={() => setSelectedFacilityId(null)}
                     />
-                    {facilities.map((facility) => (
+                    {facilities.map((/** @type {NamedEntity} */ facility) => (
                         <RenderFilterChip
                             key={facility.documentId}
-                            label={facility.name}
+                            label={facility.name || ''}
                             isSelected={selectedFacilityId === facility.documentId}
-                            onPress={() => setSelectedFacilityId(facility.documentId)}
+                            onPress={() => setSelectedFacilityId(facility.documentId || null)}
                         />
                     ))}
                 </ScrollView>
@@ -167,7 +173,7 @@ function CMPlanningContent({ cmId, navigation }) {
             <WithDataWrapper
                 error={error?.message}
                 isLoading={isLoading}
-                wrapperStyle={{ flex: 1 }}
+                wrapperStyle={[{ flex: 1 }]}
             >
                 <PlanningWeekTimelineView
                     events={events}

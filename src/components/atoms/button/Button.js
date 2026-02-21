@@ -21,9 +21,15 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {(event: import('react-native').GestureResponderEvent) => void} [props.onPress]
  * @param {boolean} [props.isOption]
  * @param {'md' | 'sm' | 'small'} [props.size]
+ * @param {string} [props.accessibilityLabel]
+ * @param {string} [props.accessibilityHint]
+ * @param {import('react-native').AccessibilityRole} [props.accessibilityRole]
  * @returns {import('react').ReactElement}
  */
 function Button({
+  accessibilityHint,
+  accessibilityLabel,
+  accessibilityRole = 'button',
   disabled,
   icon,
   iconColor,
@@ -67,6 +73,9 @@ function Button({
 
   return (
     <TouchableOpacity
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
       disabled={isLoading || disabled}
       onPress={onPress}
       style={[

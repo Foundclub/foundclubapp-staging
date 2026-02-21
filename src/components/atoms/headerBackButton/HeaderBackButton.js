@@ -12,9 +12,15 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.withDefaultMargin]
  * @param {keyof import('../../../theme/types').Colors} [props.color]
  * @param {keyof import('../../../theme/types').Colors} [props.borderColor]
+ * @param {string} [props.accessibilityLabel]
+ * @param {string} [props.accessibilityHint]
+ * @param {import('react-native').AccessibilityRole} [props.accessibilityRole]
  * @returns {import('react').ReactElement}
  */
 function HeaderBackButton({
+  accessibilityHint = undefined,
+  accessibilityLabel = undefined,
+  accessibilityRole = 'button',
   borderColor = 'primary500',
   color = 'primary500',
   iconStyle = [],
@@ -28,20 +34,25 @@ function HeaderBackButton({
     || ApplicationStyle.borderColor.primary500;
   const resolvedTintColor = ApplicationStyle.tintColor[color]
     || ApplicationStyle.tintColor.primary500;
+  let defaultMarginStyle = null;
+  if (withDefaultMargin) {
+    defaultMarginStyle = Platform.OS === 'ios'
+      ? Spaces.marginLeft[16]
+      : Spaces.marginLeft[12];
+  }
 
   return (
     <TouchableOpacity
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
       onPress={onPress || navigation.goBack}
       style={[
         ApplicationStyle.borderRadius100,
         ApplicationStyle.borderWidth1,
         resolvedBorderColor,
-        Spaces.padding[12],
         Spaces.padding[8],
-        withDefaultMargin ? (
-          Platform.OS === 'ios'
-            ? Spaces.marginLeft[16] : Spaces.marginLeft[12]
-        ) : null,
+        defaultMarginStyle,
         style,
       ]}
     >

@@ -34,14 +34,10 @@ const AdWizardRecap = ({ navigation }) => {
       // Reset wizard state
       dispatch({ type: 'RESET' });
       
-      // Navigate to Home Tab -> Recruitment -> Ads with timestamp to force refresh
-      navigation.navigate(RouteNames.HomeTab, {
-        screen: RouteNames.Search,
-        params: {
-          initialSearchType: 'recrutement',
-          initialRecruitmentTab: 'annonces',
-          timestamp: Date.now(), // Unique value to force useEffect in RecrutementListContent
-        } 
+      // Navigate to dedicated recruitment search -> ads with timestamp to force refresh
+      navigation.navigate(RouteNames.SearchRecruitment, {
+        initialRecruitmentTab: 'annonces',
+        timestamp: Date.now(), // Unique value to force useEffect in RecrutementListContent
       });
     },
     onError: (error) => {

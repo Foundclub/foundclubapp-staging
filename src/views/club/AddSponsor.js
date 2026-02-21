@@ -122,8 +122,8 @@ function AddSponsor({ navigation, route }) {
               </Text>
               <SelectAvatar
                 containerStyle={{ height: 150, width: 300 }}
-                cropHeight={400}
-                cropWidth={800}
+                cropHeight={1600}
+                cropWidth={1600}
                 currentAvatar={logo}
                 imageStyle={{ height: 150, width: 300 }}
                 onAvatarSelected={setLogo}

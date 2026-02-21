@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import useTheme from '@/theme/themeContext';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
+import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useHistoryWizard } from './HistoryWizardContext';
 import { useSearchClubs } from '@/services/club/clubQueries';
 import { RouteNames } from '@/navigation/routeNames';
@@ -27,6 +31,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 const HistoryWizardClub = ({ navigation, route }) => {
   const { Colors, Fonts, Spaces, Alignments } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
   const { state, dispatch } = useHistoryWizard();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,15 +103,41 @@ const HistoryWizardClub = ({ navigation, route }) => {
   const canProceed = !!(state.club || state.multisportClub || (showCustomInput && customClubName.trim()));
 
   return (
-    <WizardStepLayout
-      title="Quel club ?"
-      subtitle="Recherche ton club ou saisis-le manuellement"
-      onBack={() => navigation.goBack()}
-      onNext={canProceed ? () => navigation.navigate(RouteNames.HistoryWizardCategory) : undefined}
-      onSkip={() => {}}
-      nextLabel={t('common.actions.next', 'Suivant')}
-      isNextDisabled={!canProceed}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.HISTORY_WIZARD}
+      userId={userData?.documentId}
     >
+      <WizardStepLayout
+        title="Quel club ?"
+        subtitle="Recherche ton club ou saisis-le manuellement"
+        onBack={() => navigation.goBack()}
+        onNext={canProceed ? () => navigation.navigate(RouteNames.HistoryWizardCategory) : undefined}
+        onSkip={() => {}}
+        nextLabel={t('common.actions.next', 'Suivant')}
+        isNextDisabled={!canProceed}
+      >
+        <OnboardingWrapper
+          description="Commencez par rechercher votre club ou saisir le nom manuellement."
+          id="history-wizard-club-input"
+          order={1}
+          spotlight={{
+            borderRadius: 16,
+            maxHeight: 280,
+            overlayOpacity: 0.4,
+            paddingX: 2,
+            paddingY: 2,
+          }}
+          title="Selection du club"
+        >
       {!showCustomInput ? (
         <View style={[Spaces.gap[16]]}>
           {/* Search Input */}
@@ -236,6 +267,7 @@ const HistoryWizardClub = ({ navigation, route }) => {
           )}
         </View>
       )}
+        </OnboardingWrapper>
 
       {/* Multisport Selection Modal */}
       <BottomModal
@@ -316,7 +348,8 @@ const HistoryWizardClub = ({ navigation, route }) => {
           )}
         </View>
       </BottomModal>
-    </WizardStepLayout>
+      </WizardStepLayout>
+    </TutorialFlowBoundary>
   );
 };
 

@@ -9,6 +9,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -18,7 +19,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClubs } from '@/services/club/clubQueries';
 
-import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
 import SearchComponent from '../searchComponent/searchComponent';
@@ -194,37 +194,20 @@ function ClubListContent() {
           {!isMultisport && item.sponsor?.length > 0 && (
             <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
               {item.sponsor.slice(0, 5).map((sponsor, idx) => (
-                <View
+                <SponsorLogoTile
                   key={sponsor.id || idx}
-                  style={[Alignments.alignCenter, Spaces.gap[4], { width: 40 }]}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: 'white',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Image
-                      source={{ uri: getImageUrl(sponsor.logo?.url) }}
-                      style={{ width: 30, height: 30, resizeMode: 'contain' }}
-                    />
-                  </View>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      Fonts.p4Bold,
-                      Fonts.neutral00,
-                      { fontSize: 10, textAlign: 'center', width: '100%' }
-                    ]}
-                  >
-                    {sponsor.title || sponsor.name || 'Sponsor'}
-                  </Text>
-                </View>
+                  imageUrl={sponsor.logo?.url}
+                  link={sponsor.link}
+                  title={sponsor.title || sponsor.name || 'Sponsor'}
+                  width={40}
+                  height={40}
+                  borderRadius={20}
+                  titleStyle={[
+                    Fonts.p4Bold,
+                    Fonts.neutral00,
+                    { fontSize: 10, textAlign: 'center' },
+                  ]}
+                />
               ))}
             </View>
           )}

@@ -1,13 +1,21 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
 import useTheme from '@/theme/themeContext';
+import Button from '@/components/atoms/button/Button';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import { getFacilities, getCMFacilities } from '@/services/facility/facilityService';
+import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
 
 /**
  * FacilitySelector component
@@ -18,128 +26,296 @@ import { getFacilities, getCMFacilities } from '@/services/facility/facilityServ
  * @param {string} props.facilityId - The current facility ID
  * @param {Function} props.onChange - Callback({ location, facilityId })
  * @param {string} props.error - Error message
+ * @param {Function} [props.onAddFacility] - Optional callback when pressing "add facility"
  */
-const FacilitySelector = ({ clubId, cmId, location, facilityId, onChange, error }) => {
-    const { t } = useTranslation();
-    const { Spaces, Fonts, Colors, Alignments } = useTheme();
-    const [mode, setMode] = useState(facilityId ? 'club' : 'external');
+const FacilitySelector = ({
+  clubId,
+  cmId,
+  location,
+  facilityId,
+  onChange,
+  error,
+  onAddFacility,
+}) => {
+  const { t } = useTranslation();
+  const {
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Images,
+    Spaces,
+  } = useTheme();
+  const [mode, setMode] = useState('club');
+  const cardSurfaceStyle = {
+    backgroundColor: 'rgba(4, 31, 44, 0.82)',
+    borderColor: 'rgba(1, 179, 244, 0.24)',
+    borderWidth: 1,
+  };
+  const fieldSurfaceStyle = {
+    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+    borderColor: 'rgba(1, 179, 244, 0.26)',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  };
+  const selectedBadgeStyle = {
+    backgroundColor: 'rgba(1, 179, 244, 0.16)',
+    borderColor: Colors.primary500,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  };
+  const selectedCheckStyle = {
+    alignItems: 'center',
+    backgroundColor: Colors.primary500,
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  };
 
-    // Fetch Club Facilities
-    const { data: clubFacilitiesData } = useQuery({
-        queryKey: ['facilities', clubId],
-        queryFn: () => getFacilities(clubId),
-        enabled: !!clubId,
+  const {
+    data: clubFacilitiesData,
+    isFetching: isFetchingClubFacilities,
+    isLoading: isLoadingClubFacilities,
+    refetch: refetchClubFacilities,
+  } = useQuery({
+    queryKey: ['facilities', clubId],
+    queryFn: () => getFacilities(clubId),
+    enabled: !!clubId,
+  });
+
+  const {
+    data: cmFacilitiesData,
+    isFetching: isFetchingCmFacilities,
+    isLoading: isLoadingCmFacilities,
+    refetch: refetchCmFacilities,
+  } = useQuery({
+    queryKey: ['cm-facilities', cmId],
+    queryFn: () => getCMFacilities(cmId),
+    enabled: !!cmId,
+  });
+
+  const isLoadingFacilities = (
+    (Boolean(clubId) && (isLoadingClubFacilities || isFetchingClubFacilities))
+    || (Boolean(cmId) && (isLoadingCmFacilities || isFetchingCmFacilities))
+  );
+
+  const facilities = useMemo(() => {
+    const clubFacilities = clubFacilitiesData?.data || [];
+    const cmFacilities = cmFacilitiesData?.data || [];
+
+    const allFacilities = [...clubFacilities];
+    cmFacilities.forEach((cmFacility) => {
+      if (!allFacilities.some((facility) => facility.documentId === cmFacility.documentId)) {
+        allFacilities.push({ ...cmFacility, isShared: true });
+      }
     });
-    
-    // Fetch CM Facilities (shared installations)
-    const { data: cmFacilitiesData } = useQuery({
-        queryKey: ['cm-facilities', cmId],
-        queryFn: () => getCMFacilities(cmId),
-        enabled: !!cmId,
+
+    return allFacilities;
+  }, [clubFacilitiesData, cmFacilitiesData]);
+  const isFocused = useIsFocused();
+
+  const getFacilityAddressLabel = (address) => {
+    if (!address) return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee');
+    if (typeof address === 'string') return address;
+    if (typeof address === 'object') {
+      return (
+        address?.label
+        || address?.description
+        || address?.address
+        || t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee')
+      );
+    }
+    return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee');
+  };
+
+  useEffect(() => {
+    if (facilityId) {
+      setMode('club');
+    }
+  }, [facilityId]);
+
+  useEffect(() => {
+    if (!isFocused || mode !== 'club') return;
+    if (clubId) refetchClubFacilities();
+    if (cmId) refetchCmFacilities();
+  }, [clubId, cmId, isFocused, mode, refetchClubFacilities, refetchCmFacilities]);
+
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    onChange({ location: null, facilityId: null });
+  };
+
+  const handleFacilityChange = (selectedId) => {
+    const selectedFacility = facilities.find(
+      (facility) => (facility.documentId || facility.id) === selectedId,
+    );
+
+    if (!selectedFacility) {
+      onChange({ location: null, facilityId: null });
+      return;
+    }
+
+    onChange({
+      location: {
+        label: selectedFacility.address,
+        value: '',
+      },
+      facilityId: selectedId,
     });
+  };
 
+  const handleAddressChange = (newLocation) => {
+    onChange({ location: newLocation, facilityId: null });
+  };
 
-    // Merge club facilities and CM facilities
-    const facilities = useMemo(() => {
-        const clubFacilities = clubFacilitiesData?.data || [];
-        const cmFacilities = cmFacilitiesData?.data || [];
-        
-        // Avoid duplicates by documentId
-        const allFacilities = [...clubFacilities];
-        cmFacilities.forEach(cmFac => {
-            if (!allFacilities.some(f => f.documentId === cmFac.documentId)) {
-                allFacilities.push({ ...cmFac, isShared: true }); // Mark as shared
-            }
-        });
-        
-        return allFacilities;
-    }, [clubFacilitiesData, cmFacilitiesData]);
+  return (
+    <View style={[Spaces.gap[16]]}>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('eventEdit.fields.location.label', 'Lieu')}
+      </Text>
 
-    const facilityOptions = facilities.map(f => ({
-        label: f.isShared ? `${f.name} (CM)` : f.name,
-        value: f.documentId || f.id,
-        address: f.address,
-    }));
+      <View style={{ alignItems: 'flex-start' }}>
+        <SegmentedControl
+          options={[
+            { label: t('eventEdit.locationMode.club', 'Club'), value: 'club' },
+            { label: t('eventEdit.locationMode.external', 'Exterieur'), value: 'external' },
+          ]}
+          value={mode}
+          onChange={handleModeChange}
+        />
+      </View>
 
-    useEffect(() => {
-        if (facilityId) {
-            setMode('club');
-        } else if (location && !facilityId) {
-            setMode('external');
-        }
-    }, [facilityId, location]);
-
-    const handleModeChange = (newMode) => {
-        setMode(newMode);
-        if (newMode === 'club') {
-            // If switching to club, maybe clear location if no facility selected?
-            // Or keep it. Let's clear to force selection.
-            onChange({ location: null, facilityId: null });
-        } else {
-            // If switching to external, clear facility
-            onChange({ location: null, facilityId: null });
-        }
-    };
-
-    const handleFacilityChange = (selectedId) => {
-        const selectedFacility = facilities.find(f => (f.documentId || f.id) === selectedId);
-        if (selectedFacility) {
-            // Construct location object from facility address
-            // Note: AutocompleteAddressInput expects { label, value: 'lat|lng' }
-            // If facility doesn't have lat/lng, we might have an issue if backend requires it.
-            // For now, let's assume facility address is a string.
-            // We might need to geocode it or just send the address label.
-            const loc = {
-                label: selectedFacility.address,
-                value: '', // We might not have coords
-            };
-            onChange({ location: loc, facilityId: selectedId });
-        } else {
-            onChange({ location: null, facilityId: null });
-        }
-    };
-
-    const handleAddressChange = (newLocation) => {
-        onChange({ location: newLocation, facilityId: null });
-    };
-
-    return (
+      {mode === 'club' ? (
         <View style={[Spaces.gap[16]]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('eventEdit.fields.location.label', 'Lieu')}
-            </Text>
-
-            <View style={{ alignItems: 'flex-start' }}>
-                <SegmentedControl
-                    options={[
-                        { label: t('eventEdit.locationMode.club', 'Club'), value: 'club' },
-                        { label: t('eventEdit.locationMode.external', 'Extérieur'), value: 'external' },
-                    ]}
-                    value={mode}
-                    onChange={handleModeChange}
-                />
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[16], cardSurfaceStyle]}>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventEdit.fields.facility.label', 'Installation')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('eventWizard.steps.location.installationHelper', 'Choisis une installation de ton club.')}
+              </Text>
             </View>
 
-            {mode === 'club' ? (
-                <AutocompleteSelect
-                    label={t('eventEdit.fields.facility.label', 'Installation')}
-                    placeholder={t('eventEdit.fields.facility.placeholder', 'Sélectionner une installation')}
-                    options={facilityOptions}
-                    value={facilityOptions.find(o => o.value === facilityId)?.label || ''}
-                    setValue={(option) => handleFacilityChange(option?.value)}
-                    error={error}
-                />
-            ) : (
-                <AutocompleteAddressInput
-                    address={location}
-                    label={null} // Already showed label above
-                    placeholder={t('eventEdit.fields.location.placeholder')}
-                    setAddress={handleAddressChange}
-                    error={error}
-                />
-            )}
+            {isLoadingFacilities ? (
+              <View style={[Spaces.paddingVertical[12]]}>
+                <ActivityIndicator color={Colors.primary500} />
+              </View>
+            ) : null}
+
+            {!isLoadingFacilities && facilities.length === 0 ? (
+              <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], fieldSurfaceStyle]}>
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                  {t('eventWizard.steps.location.noInstallationsTitle', 'Aucune installation pour le moment')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {t(
+                    'eventWizard.steps.location.noInstallations',
+                    'Ajoute une installation ou passe en mode Exterieur pour saisir une adresse.',
+                  )}
+                </Text>
+              </View>
+            ) : null}
+
+            {!isLoadingFacilities && facilities.length > 0 ? (
+              <ScrollView
+                style={{ maxHeight: 280 }}
+                contentContainerStyle={[Spaces.gap[12], { paddingBottom: 2, paddingRight: 2 }]}
+                showsVerticalScrollIndicator={facilities.length > 3}
+                nestedScrollEnabled
+              >
+                {facilities.map((facility) => {
+                  const id = facility.documentId || facility.id;
+                  const isSelected = facilityId === id;
+                  return (
+                    <TouchableOpacity
+                      key={`wizard-facility-${id}`}
+                      activeOpacity={0.86}
+                      onPress={() => handleFacilityChange(id)}
+                      style={[
+                        ApplicationStyle.card,
+                        Spaces.padding[16],
+                        Spaces.gap[8],
+                        {
+                          backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.22)' : 'rgba(1, 179, 244, 0.10)',
+                          borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+                          minHeight: 84,
+                          shadowColor: isSelected ? Colors.primary500 : 'transparent',
+                          shadowOpacity: isSelected ? 0.24 : 0,
+                          shadowRadius: isSelected ? 8 : 0,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={{
+                          alignItems: 'center',
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[Fonts.p2Bold, isSelected ? Fonts.primary100 : Fonts.neutral00, { flex: 1, marginRight: 12 }]}
+                        >
+                          {facility.isShared ? `${facility.name} (CM)` : facility.name}
+                        </Text>
+                        {isSelected ? (
+                          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+                            <View style={selectedCheckStyle}>
+                              <Image
+                                source={Images.check}
+                                style={{ height: 11, tintColor: Colors.neutral900, width: 11 }}
+                              />
+                            </View>
+                            <View style={[selectedBadgeStyle, { marginLeft: 8 }]}>
+                              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                                {t('common.selected', 'Selectionnee')}
+                              </Text>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
+                        {getFacilityAddressLabel(facility.address)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+          </View>
+
+          {onAddFacility ? (
+            <Button
+              onPress={() => onAddFacility()}
+              style={{ marginTop: 2 }}
+              title={`+ ${t('eventWizard.steps.location.addInstallation', 'Ajouter une installation')}`}
+              variant="Secondary"
+            />
+          ) : null}
         </View>
-    );
+      ) : (
+        <AutocompleteAddressInput
+          address={location}
+          label={null}
+          placeholder={t('eventEdit.fields.location.placeholder')}
+          setAddress={handleAddressChange}
+          error={error}
+          wrapperStyle={fieldSurfaceStyle}
+        />
+      )}
+
+      {error ? (
+        <Text style={[Fonts.p3, Fonts.error700]}>
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
 };
 
 export default FacilitySelector;

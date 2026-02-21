@@ -11,6 +11,7 @@
  * @property {EventFilters} [eventFilters] - The filters for events.
  * @property {AuthSession[]} [authSessions] - Stored sessions for account switch.
  * @property {boolean} [isAddingAccount] - Indicates add-account flow state.
+ * @property {{ type?: string } | null} [pendingNotification] - Notification waiting for navigation readiness.
  */
 
 /**

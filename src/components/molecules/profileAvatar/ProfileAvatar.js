@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -24,11 +24,32 @@ const ProfileAvatar = ({
     imageStyle,
     enablePreview = true,
 }) => {
-    const { ApplicationStyle, Images, Colors } = useTheme();
+    const { ApplicationStyle, Images } = useTheme();
     const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
     const processedUrl = getImageUrl(imageUrl);
     const hasImage = !!processedUrl;
+    const flattenedStyle = StyleSheet.flatten([{ height: size, width: size }, style]) || {};
+    const resolvedWidth = typeof flattenedStyle.width === 'number' ? flattenedStyle.width : size;
+    const resolvedHeight = typeof flattenedStyle.height === 'number' ? flattenedStyle.height : size;
+    const isCircular = Math.abs(resolvedWidth - resolvedHeight) < 1;
+    const normalizedBorderColor = typeof flattenedStyle.borderColor === 'string'
+        ? flattenedStyle.borderColor.replace(/\s/g, '').toLowerCase()
+        : '';
+    const hasCircleBorder = typeof flattenedStyle.borderWidth === 'number' && flattenedStyle.borderWidth > 0;
+    const isWhiteLikeBorder = [
+        '#fff',
+        '#ffffff',
+        '#e6f7fe',
+        'white',
+        'rgb(255,255,255)',
+        'rgba(255,255,255,1)',
+        'rgba(255,255,255,1.0)',
+    ].includes(normalizedBorderColor);
+    const shouldSuppressCircleBorder = isCircular && hasCircleBorder && isWhiteLikeBorder;
+    const resolvedRadius = isCircular
+        ? resolvedWidth / 2
+        : (typeof flattenedStyle.borderRadius === 'number' ? flattenedStyle.borderRadius : 0);
 
     const handlePress = () => {
         if (hasImage && enablePreview) {
@@ -45,14 +66,32 @@ const ProfileAvatar = ({
                 style={[
                     { width: size, height: size },
                     style,
+                    {
+                        borderRadius: resolvedRadius,
+                        height: resolvedHeight,
+                        overflow: 'hidden',
+                        width: resolvedWidth,
+                    },
+                    shouldSuppressCircleBorder && {
+                        borderColor: 'transparent',
+                        borderWidth: 0,
+                    },
                 ]}
             >
                 <Image
                     source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
                     style={[
-                        ApplicationStyle.borderRadius24, // Default round
-                        { width: size, height: size, borderRadius: size / 2 },
-
+                        ApplicationStyle.borderRadius24,
+                        {
+                            backgroundColor: 'transparent',
+                            borderRadius: resolvedRadius,
+                            height: resolvedHeight,
+                            width: resolvedWidth,
+                        },
+                        shouldSuppressCircleBorder && {
+                            borderColor: 'transparent',
+                            borderWidth: 0,
+                        },
                         imageStyle,
                     ]}
                 />

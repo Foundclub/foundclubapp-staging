@@ -6,7 +6,7 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,7 +35,6 @@ import { useGetEvents } from '@/services/event/eventQueries';
 import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import Input from '@/components/molecules/input/Input';
-import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
@@ -67,6 +66,7 @@ import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
  * @param {Function} [props.onLoadMore] - Callback for loading more events (optional)
  * @param {boolean} [props.isLoading] - External loading state (optional)
  * @param {boolean} [props.isPlanning] - Whether the list is displayed in planning mode (optional)
+ * @param {(key: 'filters' | 'card', layout: { x: number; y: number; width: number; height: number }) => void} [props.onTutorialLayout]
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
@@ -76,10 +76,13 @@ function EventListContent({
   events: propEvents,
   onLoadMore,
   isLoading: propIsLoading,
+  onTutorialLayout,
 }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
   const [isMapView, setIsMapView] = useState(false);
+  const filtersTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
+  const firstCardTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
 
   // Date Picker State
   // Date Picker State
@@ -100,6 +103,21 @@ function EventListContent({
   const { getClubInitials } = useClub();
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
+
+  const emitTutorialLayout = useCallback((key, ref) => {
+    if (!onTutorialLayout || !ref?.current) return;
+    requestAnimationFrame(() => {
+      ref.current?.measureInWindow((x, y, width, height) => {
+        if (!width || !height) return;
+        onTutorialLayout(key, {
+          height: Math.round(height),
+          width: Math.round(width),
+          x: Math.round(x),
+          y: Math.round(y),
+        });
+      });
+    });
+  }, [onTutorialLayout]);
 
   const eventsConfig = useMemo(() => ({
     ...(showFilters ? eventFilters : {}),
@@ -257,7 +275,7 @@ function EventListContent({
 
   const handleFindEvent = () => {
     // @ts-expect-error because of react navigation type definitions
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.Search });
+    navigation.navigate(RouteNames.SearchEvents);
   };
 
   const handleSearchField = useCallback((/** @type {string} */ q) => {
@@ -326,26 +344,21 @@ function EventListContent({
    * @param {FCEvent} param.item
    * @returns {import('react').ReactElement} The rendered event item
    */
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item, index }) => {
     const isReservation = item?.type?.name === 'Réservation';
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const showAbout = isPlanning || isManager;
-
-    if (isReservation) {
-      return (
-        <EventCardNew
-          actionLabel={showAbout ? t('eventList.actions.about') : undefined}
-          item={item}
-          onDecline={() => {}}
-          onJoin={() => {}}
-          onLogin={() => {}}
-          onParticipate={() => (showAbout ? handleEventSelect(item) : handleParticipateToEvent(item))}
-          onPress={() => handleEventSelect(item)}
-        />
-      );
-    }
-
-    return (
+    const card = isReservation ? (
+      <EventCardNew
+        actionLabel={showAbout ? t('eventList.actions.about') : undefined}
+        item={item}
+        onDecline={() => {}}
+        onJoin={() => {}}
+        onLogin={() => {}}
+        onParticipate={() => (showAbout ? handleEventSelect(item) : handleParticipateToEvent(item))}
+        onPress={() => handleEventSelect(item)}
+      />
+    ) : (
       <EventCardNew
         item={item}
         onDecline={() => handleDeclineEvent(item)}
@@ -354,6 +367,17 @@ function EventListContent({
         onParticipate={() => handleParticipateToEvent(item)}
         onPress={() => handleEventSelect(item)}
       />
+    );
+
+    if (!onTutorialLayout || index !== 0) return card;
+
+    return (
+      <View
+        onLayout={() => emitTutorialLayout('card', firstCardTargetRef)}
+        ref={firstCardTargetRef}
+      >
+        {card}
+      </View>
     );
   };
 
@@ -367,15 +391,8 @@ function EventListContent({
     />
   );
 
-  // useEffect to log the filters select and use in the request
-  useEffect(() => {
-    console.log('Event filters updated:', eventFilters);
-  }, [eventFilters, refetch, showFilters]);
-
   return (
-    <View style={[Spaces.gap[40], Alignments.fill]}>
-
-
+    <View style={[Spaces.gap[24], Alignments.fill]}>
       {isMapView ? (
         <SearchMap
           items={events}
@@ -407,7 +424,7 @@ function EventListContent({
               renderItem={renderItem}
               ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
               ListHeaderComponent={
-                <View style={[Spaces.gap[24], Spaces.marginBottom[24]]}>
+                <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
                   {!propEvents && featuredEvents.length > 0 ? (
                     <FeaturedEvents events={featuredEvents} />
                   ) : null}
@@ -425,21 +442,17 @@ function EventListContent({
 
                   {showFilters ? (
                     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-                      <View style={{ flex: 1 }}>
-                        <OnboardingWrapper
-                          description="Recherchez par mot-clé ou utilisez les filtres avancés."
-                          id="search-filters"
-                          order={2}
-                          style={{}}
-                          title="Filtres"
-                        >
-                          <SearchComponent
-                            filterNumber={filterCount}
-                            handleSearchField={handleSearchField}
-                            openFilters={handleOpenFilters}
-                            searchDefaultValue={eventFilters?.q}
-                          />
-                        </OnboardingWrapper>
+                      <View
+                        onLayout={() => emitTutorialLayout('filters', filtersTargetRef)}
+                        ref={filtersTargetRef}
+                        style={{ flex: 1 }}
+                      >
+                        <SearchComponent
+                          filterNumber={filterCount}
+                          handleSearchField={handleSearchField}
+                          openFilters={handleOpenFilters}
+                          searchDefaultValue={eventFilters?.q}
+                        />
                       </View>
                     </View>
                   ) : null}
@@ -465,3 +478,5 @@ function EventListContent({
 }
 
 export default EventListContent;
+
+

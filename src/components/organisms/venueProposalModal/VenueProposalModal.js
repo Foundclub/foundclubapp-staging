@@ -16,18 +16,28 @@ import {
   toParisUtcDateFromLocalSelection,
 } from '@/utils/parisTime';
 
+/**
+ * @param {Date} [sourceDate]
+ */
 const buildDefaultStartTime = (sourceDate = getParisNowAsDeviceDate()) => {
   const date = new Date(sourceDate);
   date.setHours(20, 0, 0, 0);
   return date;
 };
 
+/**
+ * @param {Date} [sourceDate]
+ */
 const buildDefaultEndTime = (sourceDate = getParisNowAsDeviceDate()) => {
   const date = new Date(sourceDate);
   date.setHours(21, 0, 0, 0);
   return date;
 };
 
+/**
+ * @param {Date | string | number | null | undefined} value
+ * @param {Date} [fallback]
+ */
 const safeDate = (value, fallback = getParisNowAsDeviceDate()) => {
   if (value === 0 || value === '0') {
     return new Date(fallback);
@@ -41,6 +51,10 @@ const safeDate = (value, fallback = getParisNowAsDeviceDate()) => {
   return parsed;
 };
 
+/**
+ * @param {Date} left
+ * @param {Date} right
+ */
 const isSameCalendarDay = (left, right) => (
   left.getFullYear() === right.getFullYear()
   && left.getMonth() === right.getMonth()
@@ -48,8 +62,30 @@ const isSameCalendarDay = (left, right) => (
 );
 
 /**
+ * @typedef {object} VenueProposalPayload
+ * @property {string} venue
+ * @property {string} address
+ * @property {string} addressCity
+ * @property {{ address: string; fallback_label: string; label: string }} addressObject
+ * @property {string} date
+ * @property {string} endDate
+ */
+
+/**
+ * @typedef {object} VenueProposalModalProps
+ * @property {Date | string | null | undefined} [initialDate]
+ * @property {Date | string | null | undefined} [initialEndTime]
+ * @property {Date | string | null | undefined} [initialStartTime]
+ * @property {boolean} isVisible
+ * @property {() => void} onClose
+ * @property {(payload: VenueProposalPayload) => void} onSend
+ * @property {(() => void) | undefined} [onSkip]
+ */
+
+/**
  * Proposal modal used to negotiate venue/date/time for a league match.
  * V1 simplification: one free text field for place/address.
+ * @param {VenueProposalModalProps} props
  */
 function VenueProposalModal({
   initialDate,
@@ -66,7 +102,9 @@ function VenueProposalModal({
   const [date, setDate] = useState(getParisNowAsDeviceDate());
   const [startTime, setStartTime] = useState(() => buildDefaultStartTime());
   const [endTime, setEndTime] = useState(() => buildDefaultEndTime());
-  const modalScrollRef = useRef(null);
+  const modalScrollRef = useRef(
+    /** @type {{ scrollTo?: (options: { y: number; animated?: boolean }) => void; scrollToOffset?: (options: { offset: number; animated?: boolean }) => void } | null} */ (null),
+  );
   const hasHydratedInitialValuesRef = useRef(false);
   const [dateSelectorY, setDateSelectorY] = useState(0);
   const [timeSelectorY, setTimeSelectorY] = useState(0);
@@ -186,13 +224,13 @@ function VenueProposalModal({
     setVenueInput('');
   };
 
-  const setDateFromPreset = (presetDate) => {
+  const setDateFromPreset = (/** @type {Date} */ presetDate) => {
     const next = new Date(presetDate);
     next.setHours(date.getHours(), date.getMinutes(), 0, 0);
     setDate(next);
   };
 
-  const scrollModalTo = useCallback((y, animated = true) => {
+  const scrollModalTo = useCallback((/** @type {number} */ y, animated = true) => {
     const ref = modalScrollRef.current;
     if (!ref) return;
 
@@ -206,7 +244,7 @@ function VenueProposalModal({
     }
   }, []);
 
-  const handleSelectorOpen = useCallback((target = 'date') => {
+  const handleSelectorOpen = useCallback((/** @type {'date' | 'time'} */ target = 'date') => {
     const baseY = target === 'time' ? timeSelectorY : dateSelectorY;
     const firstY = Math.max(baseY - 12, 0);
     const expandedBoost = target === 'time' ? 130 : 170;
@@ -269,7 +307,7 @@ function VenueProposalModal({
         </View>
 
         <View
-          onLayout={(event) => {
+          onLayout={(/** @type {{ nativeEvent?: { layout?: { y?: number } } }} */ event) => {
             setDateSelectorY(event?.nativeEvent?.layout?.y || 0);
           }}
         >
@@ -317,7 +355,7 @@ function VenueProposalModal({
         </View>
 
         <View
-          onLayout={(event) => {
+          onLayout={(/** @type {{ nativeEvent?: { layout?: { y?: number } } }} */ event) => {
             setTimeSelectorY(event?.nativeEvent?.layout?.y || 0);
           }}
           style={{ flexDirection: 'row', gap: 16 }}

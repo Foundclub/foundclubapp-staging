@@ -3,7 +3,30 @@ import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 
 const DEFAULT_DEDUPE_TTL_MS = 15000;
 
-const SmartNotificationContext = createContext({
+/**
+ * @typedef {{
+ *   type?: string;
+ *   dedupeKey?: string;
+ *   notificationId?: string;
+ *   matchId?: string;
+ *   phase?: string;
+ *   [key: string]: any;
+ * }} SmartNotificationPayload
+ */
+
+/**
+ * @typedef {{
+ *   activeRecap: SmartNotificationPayload | null;
+ *   activeSnackbar: SmartNotificationPayload | null;
+ *   consumeNotification: (payload?: SmartNotificationPayload) => void;
+ *   dismissRecap: () => void;
+ *   dismissSnackbar: () => void;
+ *   openRecapSheet: () => void;
+ *   recapSheetVisible: boolean;
+ * }} SmartNotificationContextValue
+ */
+
+const SmartNotificationContext = createContext(/** @type {SmartNotificationContextValue} */ ({
   activeRecap: null,
   activeSnackbar: null,
   consumeNotification: () => {},
@@ -11,25 +34,25 @@ const SmartNotificationContext = createContext({
   dismissSnackbar: () => {},
   openRecapSheet: () => {},
   recapSheetVisible: false,
-});
+}));
 
-const isRecapType = (type) => (
+const isRecapType = (/** @type {string | undefined} */ type) => (
   type === NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED
   || type === NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED
 );
 
-const getDedupeKey = (payload = {}) => {
+const getDedupeKey = (/** @type {SmartNotificationPayload} */ payload = {}) => {
   if (payload.dedupeKey) return String(payload.dedupeKey);
   if (payload.notificationId) return String(payload.notificationId);
   return `${payload.type || 'unknown'}:${payload.matchId || ''}:${payload.phase || ''}`;
 };
 
-export const SmartNotificationProvider = ({ children }) => {
-  const [queue, setQueue] = useState([]);
-  const [activeSnackbar, setActiveSnackbar] = useState(null);
-  const [activeRecap, setActiveRecap] = useState(null);
+export const SmartNotificationProvider = (/** @type {{ children?: import('react').ReactNode }} */ { children }) => {
+  const [queue, setQueue] = useState(/** @type {SmartNotificationPayload[]} */ ([]));
+  const [activeSnackbar, setActiveSnackbar] = useState(/** @type {SmartNotificationPayload | null} */ (null));
+  const [activeRecap, setActiveRecap] = useState(/** @type {SmartNotificationPayload | null} */ (null));
   const [recapSheetVisible, setRecapSheetVisible] = useState(false);
-  const dedupeRef = useRef(new Map());
+  const dedupeRef = useRef(/** @type {Map<string, number>} */ (new Map()));
 
   const cleanupDedupeCache = useCallback(() => {
     const now = Date.now();
@@ -40,7 +63,7 @@ export const SmartNotificationProvider = ({ children }) => {
     }
   }, []);
 
-  const consumeNotification = useCallback((payload = {}) => {
+  const consumeNotification = useCallback((/** @type {SmartNotificationPayload} */ payload = {}) => {
     if (!payload?.type) return;
     cleanupDedupeCache();
     const dedupeKey = getDedupeKey(payload);

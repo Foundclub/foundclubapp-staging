@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -28,10 +28,9 @@ function UserSportHistory({ navigation }) {
   // We don't save the history here anymore, it's done via the wizard
   // So we just handle navigation
   const handleNext = () => {
-    markOnboardingComplete(userData?.documentId);
-    
     const nextRoute = getNextOnboardingRoute(RouteNames.UserSportHistory);
     if (!nextRoute) {
+      markOnboardingComplete(userData?.documentId);
       navigation.navigate(getPostOnboardingHomeRoute());
     } else {
       navigation.navigate(nextRoute);
@@ -103,11 +102,12 @@ function UserSportHistory({ navigation }) {
           title={t('common.actions.next', 'Suivant')}
           variant="Primary"
         />
-        <TouchableOpacity onPress={handleSkip} style={[Alignments.alignCenter]}>
-          <Text style={[Fonts.p1, Fonts.neutral300, Fonts.underlineText]}>
-            {t('profile.actions.ignore', 'Ignorer')}
-          </Text>
-        </TouchableOpacity>
+        <Button
+          accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
+          onPress={handleSkip}
+          title={t('common.actions.continueLater', 'Continuer plus tard')}
+          variant="Secondary"
+        />
       </View>
     </ScreenContainer>
   );

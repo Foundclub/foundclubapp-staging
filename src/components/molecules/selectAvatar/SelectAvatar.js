@@ -101,9 +101,12 @@ function SelectAvatar({
       const result = await launchCamera({
         mediaType: 'photo',
         includeBase64: false,
+        includeExtra: true,
         maxWidth: cropWidth || 1000,
         maxHeight: cropHeight || 1000,
         quality: 0.8,
+        saveToPhotos: false,
+        cameraType: 'back',
       });
       handleResponse(result);
     } catch (error) {
@@ -117,6 +120,7 @@ function SelectAvatar({
       const result = await launchImageLibrary({
         mediaType: 'photo',
         includeBase64: false,
+        includeExtra: true,
         maxWidth: cropWidth || 1000,
         maxHeight: cropHeight || 1000,
         quality: 0.8,

@@ -196,6 +196,21 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : null;
 
+    case NOTIFICATION_TYPES.AFFILIATION_HELP_REQUEST:
+      return {
+        params: {
+          params: { filter: 'pending' },
+          screen: RouteNames.AdminClaimList,
+        },
+        route: RouteNames.AdminStack,
+      };
+
+    case NOTIFICATION_TYPES.AFFILIATION_HELP_STATUS:
+      return {
+        params: {},
+        route: RouteNames.NotificationList,
+      };
+
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
       return eventDetailsDestination(payload.eventId) || { params: {}, route: RouteNames.MyEventList };
 

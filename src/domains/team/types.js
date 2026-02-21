@@ -13,6 +13,7 @@
 /**
  * @typedef {object} ExternalStandingRow
  * @property {number | string} [rank]
+ * @property {string} [teamId]
  * @property {string} [teamName]
  * @property {number | string} [points]
  * @property {number | string} [played]
@@ -57,6 +58,7 @@
  * @property {number} [losses] - League losses
  * @property {number} [streak] - Current streak
  * @property {number} [radius] - Search radius preference
+ * @property {boolean} [isLeague]
  * @property {string} [city] - Team city
  * @property {TeamAddress} [address]
  * @property {string | object} [home_base] - League home base payload
@@ -65,6 +67,12 @@
  * @property {LeagueSlot[]} [slots] - Team recurring slots
  * @property {ExternalStandingRow[]} [externalStandingData] - Parsed standings
  * @property {ExternalCalendarMatch[]} [externalCalendarData] - Parsed calendar
+ * @property {'fff' | 'ffbb'} [externalProvider] - External competition provider
+ * @property {'not_configured' | 'configured' | 'syncing' | 'synced' | 'error'} [externalSyncStatus]
+ * @property {string} [externalSyncError]
+ * @property {string} [externalSyncUpdatedAt]
+ * @property {string} [externalDataLastUpdate]
+ * @property {string} [externalTeamId]
  * @property {string} [externalTeamName] - Team alias used in external sources
  * @property {Avatar} [crest] - League crest
  * @property {Avatar} [logo] - Team logo

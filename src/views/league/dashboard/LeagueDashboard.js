@@ -13,7 +13,6 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import Button from '@/components/atoms/button/Button';
 import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
-import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
@@ -285,9 +284,6 @@ const LeagueDashboard = () => {
                             teamName={userTeam.name}
                             nextDivisionElo={1300}
                         />
-                        <View style={{ alignItems: 'center', marginBottom: 4, marginTop: -8 }}>
-                            <DivisionBadge division={userTeam?.division || 10} size={46} />
-                        </View>
 
                         {/* CTA Matchmaking */}
                         <View style={{ marginVertical: 24 }}>

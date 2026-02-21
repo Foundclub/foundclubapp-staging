@@ -1,10 +1,10 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, View, Alert
+  KeyboardAvoidingView, Platform, View
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -18,6 +18,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -25,7 +26,7 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetTeam } from '@/services/team/teamQueries';
-import { createTeam, updateTeam, previewScraping } from '@/services/team/teamService';
+import { createTeam, updateTeam } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -42,7 +43,6 @@ const defaultValues = {
   address: null,
   city: '',
   geohash: '',
-  externalStandingUrl: '',
 };
 
 const teamSchema = Joi.object({
@@ -56,7 +56,6 @@ const teamSchema = Joi.object({
   address: Joi.object().allow(null).optional(),
   city: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
-  externalStandingUrl: Joi.string().allow('', null).uri({ allowRelative: false }).optional().label('Lien FFBB'),
 }).unknown(true);
 
 /**
@@ -65,12 +64,13 @@ const teamSchema = Joi.object({
  * @returns {import('react').ReactElement} Team edit screen component
  */
 function TeamEdit({ navigation, route }) {
-  const { clubId, teamId } = route?.params ?? {};
+  const { clubId, preselectedTrainerId, teamId } = route?.params ?? {};
   // local state
   const [activitySearch, setActivitySearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
+  const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
   const [levelSearch, setLevelSearch] = useState('');
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const preselectionAppliedRef = useRef(false);
 
   // hooks
   // Determine effective club ID (from params or team data)
@@ -79,7 +79,7 @@ function TeamEdit({ navigation, route }) {
   });
 
   const effectiveClubId = clubId || teamData?.club?.documentId;
-  const { data: clubData } = useGetClub(effectiveClubId);
+  const { data: clubData, refetch: refetchClubData } = useGetClub(effectiveClubId);
 
   // Track if we have already initialized the form to avoid overwrites
   const isInitialized = useRef(false);
@@ -106,6 +106,7 @@ function TeamEdit({ navigation, route }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    setValue,
     reset,
     setFocus,
     getValues
@@ -176,7 +177,6 @@ function TeamEdit({ navigation, route }) {
         address: teamAddress || null,
         city: teamData.city || teamData.club?.city || clubData?.city || '',
         geohash: teamData.geohash || teamData.club?.geohash || clubData?.geohash || '',
-        externalStandingUrl: teamData.externalStandingUrl || '',
       });
       isInitialized.current = true;
     } 
@@ -193,32 +193,6 @@ function TeamEdit({ navigation, route }) {
         }
     }
   }, [teamData, clubData, reset, teamId]);
-
-  const handlePreviewScraping = async () => {
-    const url = getValues('externalStandingUrl');
-    if (!url) {
-        Alert.alert('Erreur', 'Veuillez entrer une URL valide.');
-        return;
-    }
-    setIsPreviewLoading(true);
-    try {
-        const result = await previewScraping(url);
-        // Scraper now returns { standings: [...], calendar: [...] }
-        const standings = result?.data?.standings || result?.data?.data || [];
-        
-         if (standings.length > 0) {
-            const firstTeam = standings[0];
-            Alert.alert('Succès', `Classement trouvé !\n1er: ${firstTeam.teamName} (${firstTeam.points} pts)`);
-         } else {
-            Alert.alert('Info', 'Aucune donnée de classement trouvée pour cette URL.');
-         }
-    } catch (e) {
-        Alert.alert('Erreur', 'Impossible de récupérer les données. Vérifiez l\'URL.');
-        console.error(e);
-    } finally {
-        setIsPreviewLoading(false);
-    }
-  };
 
   const sectionOptions = useMemo(() => (
     sections?.map((section) => ({
@@ -286,26 +260,52 @@ function TeamEdit({ navigation, route }) {
     return members;
   }, [clubData?.members, userData]);
 
-  const handleFormSubmit = (data) => {
-    // Helper to format relation for Strapi v5 connect syntax
-    const toConnect = (id) => (id ? { connect: [{ documentId: id }] } : undefined);
-    
-    // Trainers is array
-    const formattedTrainers = data.trainers?.length
-      ? { connect: data.trainers.map((id) => ({ documentId: id })) }
-      : undefined;
+  useEffect(() => {
+    if (teamId || !preselectedTrainerId || preselectionAppliedRef.current) return;
+    const trainerExists = trainerOptions.some((option) => option.value === preselectedTrainerId);
+    if (!trainerExists) return;
 
-    // Activities is a single string ID in form but array relation
-    const formattedActivities = data.activities
-      ? { connect: [{ documentId: data.activities }] }
-      : undefined;
+    const currentTrainers = getValues('trainers') || [];
+    if (!currentTrainers.includes(preselectedTrainerId)) {
+      setValue('trainers', [...currentTrainers, preselectedTrainerId], {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    preselectionAppliedRef.current = true;
+  }, [getValues, preselectedTrainerId, setValue, teamId, trainerOptions]);
+
+  const handleTrainerCreated = useCallback((createdTrainer) => {
+    if (!createdTrainer?.documentId) return;
+
+    const currentTrainers = getValues('trainers') || [];
+    if (!currentTrainers.includes(createdTrainer.documentId)) {
+      setValue(
+        'trainers',
+        [...currentTrainers, createdTrainer.documentId],
+        { shouldDirty: true, shouldValidate: true }
+      );
+    }
+
+    refetchClubData();
+  }, [getValues, refetchClubData, setValue]);
+
+  const handleFormSubmit = (data) => {
+    // Keep relation payload as raw IDs for /teams REST API.
+    // Backend controller handles relation normalization.
+    const formattedTrainers = Array.isArray(data.trainers)
+      ? data.trainers.filter(Boolean)
+      : [];
+
+    // Activities is single-select in form, but backend expects an array of IDs
+    const formattedActivities = data.activities ? [data.activities] : [];
 
     const finalData = {
         ...data,
-        activities: formattedActivities, // Array relation via connect
-        category: toConnect(data.category),
-        level: toConnect(data.level),
-        section: toConnect(data.section),
+        activities: formattedActivities,
+        category: data.category || undefined,
+        level: data.level || undefined,
+        section: data.section || undefined,
         trainers: formattedTrainers,
         city: data.address?.city || data.city,
         geohash: data.address?.geohash || data.geohash,
@@ -510,38 +510,6 @@ function TeamEdit({ navigation, route }) {
 
             <Controller
               control={control}
-              name="externalStandingUrl"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <View style={[Spaces.gap[8]]}>
-                    <Input
-                      enterKeyHint="done"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      label={t('teamEdit.fields.externalStandingUrl.label', 'Lien Classement (FFBB)')}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      placeholder="https://resultats.ffbb.com/..."
-                      ref={ref}
-                      value={value}
-                      autoCapitalize="none"
-                      keyboardType="url"
-                    />
-                     <Button
-                        title={isPreviewLoading ? "Test en cours..." : "Tester le lien"}
-                        onPress={handlePreviewScraping}
-                        disabled={isPreviewLoading || !value}
-                        variant="SecondaryLight"
-                        style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8 }}
-                     />
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
               name="trainers"
               render={({
                 field: {
@@ -549,6 +517,8 @@ function TeamEdit({ navigation, route }) {
                 },
               }) => (
                 <AutocompleteSelect
+                  actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
+                  onActionPress={() => setIsCreateTrainerModalVisible(true)}
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   isMulti
                   label={t('teamEdit.fields.trainers.label')}
@@ -573,8 +543,14 @@ function TeamEdit({ navigation, route }) {
           variant="Primary"
         />
       </KeyboardAvoidingView>
+      <CreateTrainerModal
+        isVisible={isCreateTrainerModalVisible}
+        onClose={() => setIsCreateTrainerModalVisible(false)}
+        onTrainerCreated={handleTrainerCreated}
+      />
     </ScreenContainer>
   );
 }
 
 export default TeamEdit;
+

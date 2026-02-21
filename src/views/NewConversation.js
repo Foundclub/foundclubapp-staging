@@ -18,7 +18,17 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 import client from '@/services/client';
 
+/**
+ * @typedef {import('@/domains/auth/types').User} User
+ * @typedef {import('@/domains/team/types').Team} Team
+ * @typedef {{ documentId?: string; name?: string }} TeamFilter
+ */
+
 // Simple service to search users
+/**
+ * @param {{ query: string; clubId?: string; multisportId?: string }} params
+ * @returns {Promise<User[]>}
+ */
 const searchUsers = async ({ query, clubId, multisportId }) => {
   // Strict scope check: Must have at least one scope to search
   if (!clubId && !multisportId) {
@@ -77,9 +87,12 @@ const searchUsers = async ({ query, clubId, multisportId }) => {
       limit: 100,
     },
   });
-  return data;
+  return /** @type {User[]} */ (data || []);
 };
 
+/**
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
+ */
 const NewConversation = ({ navigation }) => {
   const { t } = useTranslation();
   const {
@@ -89,8 +102,8 @@ const NewConversation = ({ navigation }) => {
   const { startWhisperChat } = useMessaging();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
-  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [selectedUserIds, setSelectedUserIds] = useState(/** @type {Set<string>} */ (new Set()));
+  const [selectedTeamId, setSelectedTeamId] = useState(/** @type {string | null} */ (null));
   const [isCreating, setIsCreating] = useState(false);
 
   // Determine scope
@@ -104,7 +117,7 @@ const NewConversation = ({ navigation }) => {
     // Combine myTeams (active player) and trainedTeams (coach)
     // Assuming userData is populated with these, or useAuth provides them.
     // 'allMyTeams' from useAuth is a good candidate if available.
-    return allMyTeams || [];
+    return /** @type {TeamFilter[]} */ (allMyTeams || []);
   }, [allMyTeams]);
 
   const { data: users, isLoading } = useQuery({
@@ -122,13 +135,13 @@ const NewConversation = ({ navigation }) => {
      if (!users) return [];
      
      // 1. Filter out self
-     let filtered = users.filter(u => u.documentId !== userData?.documentId);
+     let filtered = users.filter((/** @type {User} */ u) => u.documentId !== userData?.documentId);
 
      // 2. Filter by Team if selected
      if (selectedTeamId) {
-         filtered = filtered.filter(u => {
+         filtered = filtered.filter((/** @type {User} */ u) => {
              const userTeams = [...(u.myTeams || []), ...(u.trainedTeams || [])];
-             return userTeams.some(team => team.documentId === selectedTeamId);
+             return userTeams.some((/** @type {Team} */ team) => team.documentId === selectedTeamId);
          });
      }
 
@@ -140,7 +153,7 @@ const NewConversation = ({ navigation }) => {
          'Autre': []
      };
 
-     filtered.forEach(u => {
+     filtered.forEach((/** @type {User} */ u) => {
          const roleName = u.role?.name;
          // Map API roles to Display Sections
          if (roleName === 'Dirigeant' || roleName === 'President' || roleName === 'ClubAdmin') {
@@ -165,18 +178,20 @@ const NewConversation = ({ navigation }) => {
      return sections;
   }, [users, userData, selectedTeamId]);
 
-  const toggleSelection = (user) => {
+  const toggleSelection = (/** @type {User} */ user) => {
+      const userId = user.documentId || '';
+      if (!userId) return;
       const newSet = new Set(selectedUserIds);
-      if (newSet.has(user.documentId)) {
-          newSet.delete(user.documentId);
+      if (newSet.has(userId)) {
+          newSet.delete(userId);
       } else {
-          newSet.add(user.documentId);
+          newSet.add(userId);
       }
       setSelectedUserIds(newSet);
   };
 
   const handleCreate = async () => {
-    if (selectedUserIds.size === 0) return;
+    if (selectedUserIds.size === 0 || !userData?.documentId) return;
     setIsCreating(true);
     try {
         const participants = [userData.documentId, ...Array.from(selectedUserIds)];
@@ -191,14 +206,14 @@ const NewConversation = ({ navigation }) => {
     }
   };
 
-  const renderSectionHeader = ({ section: { title } }) => (
+  const renderSectionHeader = (/** @type {{ section: { title: string } }} */ { section: { title } }) => (
     <View style={[Spaces.marginTop[16], Spaces.marginBottom[8]]}>
       <Text style={[Fonts.h4Bold, Fonts.primary500]}>{title.toUpperCase()}</Text>
     </View>
   );
 
-  const renderItem = ({ item }) => {
-     const isSelected = selectedUserIds.has(item.documentId);
+  const renderItem = (/** @type {{ item: User }} */ { item }) => {
+     const isSelected = selectedUserIds.has(item.documentId || '');
      return (
         <TouchableOpacity 
            onPress={() => toggleSelection(item)}
@@ -282,12 +297,12 @@ const NewConversation = ({ navigation }) => {
                     data={[{ documentId: null, name: 'Tous' }, ...accessibleTeams]}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={Spaces.gap[8]}
-                    keyExtractor={(item) => item.documentId || 'all'}
-                    renderItem={({ item }) => {
+                    keyExtractor={(item) => item.documentId || item.name || 'all'}
+                    renderItem={(/** @type {{ item: TeamFilter & { documentId?: string | null } }} */ { item }) => {
                         const isSelected = selectedTeamId === item.documentId;
                         return (
                             <TouchableOpacity
-                                onPress={() => setSelectedTeamId(item.documentId)}
+                                onPress={() => setSelectedTeamId(item.documentId || null)}
                                 style={[
                                     Spaces.paddingHorizontal[16],
                                     Spaces.paddingVertical[8],
@@ -321,7 +336,7 @@ const NewConversation = ({ navigation }) => {
                     sections={processedSections}
                     renderItem={renderItem}
                     renderSectionHeader={renderSectionHeader}
-                    keyExtractor={(item) => item.documentId}
+                    keyExtractor={(item) => item.documentId || Math.random().toString()}
                     contentContainerStyle={Spaces.paddingBottom[80]}
                     stickySectionHeadersEnabled={false}
                     ListEmptyComponent={

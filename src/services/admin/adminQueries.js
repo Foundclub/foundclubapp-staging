@@ -1,7 +1,22 @@
-import { useQuery } from '@tanstack/react-query';
-import { getAdminStats, getPendingClubClaims, getClubClaimsRequestList, getLeagueDisputes } from './adminService';
-
-// ... existing hooks
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+    approveClubClaim,
+    getAdminClub,
+    getAdminClubs,
+    getAdminStats,
+    getAdminUser,
+    getAdminUsers,
+    getClubClaimRequest,
+    getClubClaimsRequestList,
+    getLeagueDisputes,
+    getPendingClubClaims,
+    processAffiliationHelpRequest,
+    refuseAffiliationHelpRequest,
+    refuseClubClaim,
+    resolveLeagueDispute,
+    updateAdminClub,
+    updateAdminUser,
+} from './adminService';
 
 /**
  * Hook to get club claims list
@@ -16,16 +31,14 @@ export const useGetClubClaimsRequestList = (params) => useQuery({
 /**
  * Hook to get single claim request
  * @param {string} documentId
+ * @param {'claim'|'club_not_found'|'team_not_found'} [requestType]
  * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>}
  */
-export const useGetClubClaimRequest = (documentId) => useQuery({
-    queryKey: ['admin', 'claims', 'detail', documentId],
-    queryFn: () => getClubClaimRequest(documentId),
+export const useGetClubClaimRequest = (documentId, requestType) => useQuery({
+    queryKey: ['admin', 'claims', 'detail', documentId, requestType],
+    queryFn: () => getClubClaimRequest(documentId, requestType),
     enabled: !!documentId,
 });
-
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { approveClubClaim, refuseClubClaim, getClubClaimRequest, resolveLeagueDispute } from './adminService';
 
 /**
  * Hook to approve claim
@@ -35,8 +48,8 @@ export const useApproveClubClaim = () => {
     return useMutation({
         mutationFn: approveClubClaim,
         onSuccess: () => {
-             queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
-             queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         },
     });
 };
@@ -49,8 +62,38 @@ export const useRefuseClubClaim = () => {
     return useMutation({
         mutationFn: refuseClubClaim,
         onSuccess: () => {
-             queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
-             queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        },
+    });
+};
+
+/**
+ * Hook to process affiliation help request (club/team not found).
+ */
+export const useProcessAffiliationHelpRequest = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (/** @type {{ documentId: string; adminNote?: string }} */ payload) =>
+            processAffiliationHelpRequest(payload.documentId, { adminNote: payload.adminNote }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+        },
+    });
+};
+
+/**
+ * Hook to refuse affiliation help request (club/team not found).
+ */
+export const useRefuseAffiliationHelpRequest = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (/** @type {{ documentId: string; adminNote?: string }} */ payload) =>
+            refuseAffiliationHelpRequest(payload.documentId, { adminNote: payload.adminNote }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin', 'claims'] });
+            queryClient.invalidateQueries({ queryKey: ['adminStats'] });
         },
     });
 };
@@ -75,12 +118,10 @@ export const useGetPendingClubClaims = () => useQuery({
 
 // ================== ADMIN USERS ==================
 
-import { getAdminUsers, getAdminUser, updateAdminUser, getAdminClubs, getAdminClub, updateAdminClub } from './adminService';
-
 /**
  * Hook to get admin users list
  */
-export const useGetAdminUsers = (params) => useQuery({
+export const useGetAdminUsers = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
     queryKey: ['admin', 'users', params],
     queryFn: () => getAdminUsers(params),
 });
@@ -88,7 +129,7 @@ export const useGetAdminUsers = (params) => useQuery({
 /**
  * Hook to get single user
  */
-export const useGetAdminUser = (documentId) => useQuery({
+export const useGetAdminUser = (/** @type {string | undefined} */ documentId) => useQuery({
     queryKey: ['admin', 'users', 'detail', documentId],
     queryFn: () => getAdminUser(documentId),
     enabled: !!documentId,
@@ -100,7 +141,7 @@ export const useGetAdminUser = (documentId) => useQuery({
 export const useUpdateAdminUser = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ documentId, data }) => updateAdminUser(documentId, data),
+        mutationFn: (/** @type {{ documentId: string; data: Record<string, any> }} */ payload) => updateAdminUser(payload.documentId, payload.data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
         },
@@ -112,7 +153,7 @@ export const useUpdateAdminUser = () => {
 /**
  * Hook to get admin clubs list
  */
-export const useGetAdminClubs = (params) => useQuery({
+export const useGetAdminClubs = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
     queryKey: ['admin', 'clubs', params],
     queryFn: () => getAdminClubs(params),
 });
@@ -120,7 +161,7 @@ export const useGetAdminClubs = (params) => useQuery({
 /**
  * Hook to get single club
  */
-export const useGetAdminClub = (documentId) => useQuery({
+export const useGetAdminClub = (/** @type {string | undefined} */ documentId) => useQuery({
     queryKey: ['admin', 'clubs', 'detail', documentId],
     queryFn: () => getAdminClub(documentId),
     enabled: !!documentId,
@@ -132,7 +173,7 @@ export const useGetAdminClub = (documentId) => useQuery({
 export const useUpdateAdminClub = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ documentId, data }) => updateAdminClub(documentId, data),
+        mutationFn: (/** @type {{ documentId: string; data: Record<string, any> }} */ payload) => updateAdminClub(payload.documentId, payload.data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'clubs'] });
         },
@@ -144,7 +185,7 @@ export const useUpdateAdminClub = () => {
 /**
  * Hook to get League disputes list
  */
-export const useGetLeagueDisputes = (params) => useQuery({
+export const useGetLeagueDisputes = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
     queryKey: ['admin', 'league-disputes', params],
     queryFn: () => getLeagueDisputes(params),
 });
@@ -155,10 +196,10 @@ export const useGetLeagueDisputes = (params) => useQuery({
 export const useResolveLeagueDispute = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ matchId, scoreA, scoreB, reason }) => resolveLeagueDispute(matchId, {
-            scoreA,
-            scoreB,
-            reason,
+        mutationFn: (/** @type {{ matchId: string; scoreA: number; scoreB: number; reason?: string }} */ payload) => resolveLeagueDispute(payload.matchId, {
+            scoreA: payload.scoreA,
+            scoreB: payload.scoreB,
+            reason: payload.reason,
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'league-disputes'] });

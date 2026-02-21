@@ -380,25 +380,69 @@ export const removePlayerFromTeam = async (teamId, playerId) => {
 };
 
 /**
- * Preview scraping data
+ * Preview external competition data (provider auto-detection: FFF/FFBB)
+ * @param {string} teamId
  * @param {string} url
  * @returns {Promise<object>}
  */
-export const previewScraping = async (url) => {
-  const response = await client.post('/teams/preview-scraping', { 
-    url // Sending direct body as controller expects ctx.request.body.url
-  });
+export const previewExternalCompetition = async (teamId, url) => {
+  const response = await client.post(`/teams/${teamId}/external-competition/preview`, { url });
   return response.data;
 };
 
 /**
- * Refresh team scraping data
+ * Connect external competition source to a team.
+ * @param {string} teamId
+ * @param {string} url
+ * @param {{ externalTeamId?: string | null, externalTeamName?: string | null }} [selectedTeam]
+ * @returns {Promise<object>}
+ */
+export const connectExternalCompetition = async (teamId, url, selectedTeam) => {
+  const payload = {
+    url,
+    ...(selectedTeam ? { selectedTeam } : {}),
+  };
+  const response = await client.post(`/teams/${teamId}/external-competition/connect`, payload);
+  return response.data;
+};
+
+/**
+ * Refresh external competition data for a team.
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const refreshExternalCompetition = async (teamId) => {
+  const response = await client.post(`/teams/${teamId}/external-competition/refresh`);
+  return response.data;
+};
+
+/**
+ * Get external competition sync status for a team.
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const getExternalCompetitionStatus = async (teamId) => {
+  const response = await client.get(`/teams/${teamId}/external-competition/status`);
+  return response.data;
+};
+
+/**
+ * Legacy wrapper.
+ * @param {string} url
+ * @returns {Promise<object>}
+ */
+export const previewScraping = async (url) => {
+  const response = await client.post('/teams/preview-scraping', { url });
+  return response.data;
+};
+
+/**
+ * Legacy wrapper.
  * @param {string} teamId
  * @returns {Promise<object>}
  */
 export const refreshTeamScraping = async (teamId) => {
-  const response = await client.post(`/teams/${teamId}/refresh-scraping`);
-  return response.data;
+  return refreshExternalCompetition(teamId);
 };
 
 /**

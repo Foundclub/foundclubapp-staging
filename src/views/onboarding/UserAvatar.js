@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -108,14 +108,12 @@ function UserAvatar({ navigation }) {
           title={t('profile.actions.save')}
           variant="Primary"
         />
-        <TouchableOpacity
+        <Button
+          accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
           onPress={handleSkip}
-          style={[Alignments.alignCenter]}
-        >
-          <Text style={[Fonts.p1, Fonts.neutral300, Fonts.underlineText]}>
-            {t('profile.actions.ignore')}
-          </Text>
-        </TouchableOpacity>
+          title={t('common.actions.continueLater', 'Continuer plus tard')}
+          variant="Secondary"
+        />
       </View>
     </ScreenContainer>
   );

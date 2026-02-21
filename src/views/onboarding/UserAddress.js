@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View,
+  Alert, KeyboardAvoidingView, Platform, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,11 +120,12 @@ function UserAddress({ navigation }) {
             title={t('common.actions.next', 'Suivant')}
             variant="Primary"
           />
-          <TouchableOpacity onPress={handleSkip} style={[Alignments.alignCenter]}>
-            <Text style={[Fonts.p1, Fonts.neutral300, Fonts.underlineText]}>
-              {t('profile.actions.ignore', 'Ignorer')}
-            </Text>
-          </TouchableOpacity>
+          <Button
+            accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
+            onPress={handleSkip}
+            title={t('common.actions.continueLater', 'Continuer plus tard')}
+            variant="Secondary"
+          />
         </View>
       </KeyboardAvoidingView>
     </ScreenContainer>

@@ -9,25 +9,43 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/services/userHistory/userHistoryQueries';
 
 /**
+ * @typedef {{
+ *   id?: string | number;
+ *   documentId?: string;
+ *   isCurrentlyActive?: boolean;
+ *   startYear?: number | string;
+ *   endYear?: number | string;
+ *   customClubName?: string;
+ *   club?: { name?: string; logo?: { url?: string } };
+ *   multisport_club?: { name?: string; logo?: { url?: string } };
+ *   category?: { name?: string };
+ *   level?: { name?: string };
+ * }} UserHistoryItem
+ */
+/**
  * UserHistorySection - Displays user's sports history (CV)
  * @param {object} props
- * @param {string} props.userId - The user's documentId (optional, if not provided shows current user's history)
+ * @param {string} [props.userId] - The user's documentId (optional, if not provided shows current user's history)
  * @param {boolean} props.isOwnProfile - Whether this is the current user's profile
- * @param {Function} props.onAddPress - Callback when add button is pressed
- * @param {Function} props.onEditPress - Callback when edit button is pressed
+ * @param {() => void} [props.onAddPress] - Callback when add button is pressed
+ * @param {(item: UserHistoryItem) => void} [props.onEditPress] - Callback when edit button is pressed
+ * @param {string} [props.bestLevel] - User best level display
+ * @param {string} [props.preferredSport] - Preferred sport display
  */
 function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress, bestLevel, preferredSport }) {
   const { Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
   
-  const { data: histories, isLoading } = userId 
+  const { data: historiesData, isLoading } = userId 
     ? useGetUserHistories(userId) 
     : useGetMyHistories();
+  const histories = Array.isArray(historiesData) ? historiesData : [];
   
   const deleteHistoryMutation = useDeleteHistory();
 
-  const handleDelete = (historyId) => {
+  const handleDelete = (/** @type {string | number | undefined} */ historyId) => {
+    if (!historyId) return;
     Alert.alert(
       t('common.actions.delete', 'Supprimer'),
       t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
@@ -46,7 +64,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
   };
 
   // Format year range display
-  const formatYearRange = (item) => {
+  const formatYearRange = (/** @type {UserHistoryItem} */ item) => {
     if (item.isCurrentlyActive || !item.endYear) {
       return `${item.startYear} - Aujourd'hui`;
     }
@@ -57,7 +75,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
   };
 
   // Get club display name
-  const getClubName = (item) => {
+  const getClubName = (/** @type {UserHistoryItem} */ item) => {
     if (item.club?.name) {
       return item.club.name;
     }
@@ -68,7 +86,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
   };
 
   // Render club logo or shield with initials
-  const renderClubLogo = (item) => {
+  const renderClubLogo = (/** @type {UserHistoryItem} */ item) => {
     // If club has a logo, show it
     const logoUrl = item.club?.logo?.url || item.multisport_club?.logo?.url;
     
@@ -116,7 +134,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
         </Text>
         {isOwnProfile && (
           <TouchableOpacity
-            onPress={onAddPress}
+            onPress={() => onAddPress?.()}
             style={{
               width: 32,
               height: 32,
@@ -127,7 +145,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
             }}
           >
             <Image 
-              source={require('@/assets/icons/plus.png')} 
+              source={/** @type {any} */ (require('@/assets/icons/plus.png'))} 
               style={{ width: 14, height: 14, tintColor: '#FFF' }}
               resizeMode="contain"
             />
@@ -146,7 +164,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           Spaces.gap[12]
         ]}>
           <Image
-            source={require('@/assets/icons/flag.png')}
+            source={/** @type {any} */ (require('@/assets/icons/flag.png'))}
             style={{ width: 20, height: 20, tintColor: Colors.primary500 }}
             resizeMode="contain"
           />
@@ -166,7 +184,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
       )}
 
       {/* Empty state */}
-      {(!histories || histories.length === 0) && (
+      {histories.length === 0 && (
         <View style={[
           Spaces.padding[24],
           Alignments.alignCenter,
@@ -186,7 +204,7 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           </Text>
           {isOwnProfile && (
             <TouchableOpacity
-              onPress={onAddPress}
+              onPress={() => onAddPress?.()}
               style={[Spaces.marginTop[16]]}
             >
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
@@ -198,12 +216,14 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
       )}
 
       {/* History list */}
-      {histories && histories.length > 0 && (
+      {histories.length > 0 && (
         <View style={[Spaces.gap[12]]}>
-          {histories.map((item) => (
+          {histories.map((/** @type {UserHistoryItem} */ item) => (
             <TouchableOpacity
               key={item.documentId || item.id}
-              onPress={() => isOwnProfile && onEditPress?.(item)}
+              onPress={() => {
+                if (isOwnProfile) onEditPress?.(item);
+              }}
               disabled={!isOwnProfile}
               style={[
                 Spaces.padding[16],

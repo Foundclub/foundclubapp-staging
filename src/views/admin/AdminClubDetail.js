@@ -5,6 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import useTheme from '@/theme/themeContext';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Loader from '@/components/atoms/loader/Loader';
 import { useGetAdminClub } from '@/services/admin/adminQueries';
 import { updateAdminUser } from '@/services/admin/adminService';
@@ -185,20 +186,16 @@ const AdminClubDetail = () => {
                                     ApplicationStyle.borderRadius16,
                                     Spaces.padding[12],
                                     Spaces.marginRight[12],
-                                    Alignments.alignCenter,
-                                    { width: 100 }
+                                    Alignments.alignCenter
                                 ]}>
-                                    {sponsor.logo?.url ? (
-                                        <Image
-                                            source={{ uri: sponsor.logo.url }}
-                                            style={{ width: 60, height: 40 }}
-                                            resizeMode="contain"
-                                        />
-                                    ) : (
-                                        <View style={{ height: 40, justifyContent: 'center' }}>
-                                            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{sponsor.name}</Text>
-                                        </View>
-                                    )}
+                                    <SponsorLogoTile
+                                        imageUrl={sponsor.logo?.url}
+                                        link={sponsor.link}
+                                        title={sponsor.title || sponsor.name}
+                                        width={100}
+                                        height={50}
+                                        titleStyle={[Fonts.p2, { color: Colors.neutral300 }]}
+                                    />
                                 </View>
                             ))}
                         </ScrollView>

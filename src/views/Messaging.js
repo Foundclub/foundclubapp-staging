@@ -16,10 +16,13 @@ import useTheme from '@/theme/themeContext';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,7 +33,7 @@ import { useGetChats } from '@/services/chat/chatQueries';
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
  */
-function Messaging({ navigation }) {
+function Messaging({ navigation, route }) {
   // hooks
   const { t } = useTranslation();
   const {
@@ -410,87 +413,119 @@ function Messaging({ navigation }) {
   );
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.paddingBottom[24],
-        Spaces.gap[24],
-        Alignments.column,
-        Alignments.fill,
-      ]}
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={TutorialIds.MESSAGING}
+      userId={userData?.documentId}
     >
-      {/* header */}
-      <View style={[
-        Spaces.marginTop[16],
-        Alignments.row,
-        Alignments.alignCenter,
-        Alignments.justifySpaceBetween]}
-      >
-        <LeagueHeaderSwitch />
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <NotificationBadge />
-          <ProfileButton />
-        </View>
-      </View>
-      <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>
-        {t('messaging.title')}
-      </Text>
-      {renderSearch()}
-      <WithDataWrapper
-        error={error?.message}
-        isLoading={isLoading}
-        wrapperStyle={[Alignments.fill]}
-      >
-        <View style={[
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingBottom[24],
+          Spaces.gap[24],
+          Alignments.column,
           Alignments.fill,
-          ApplicationStyle.borderRadius2]}
+        ]}
+      >
+        {/* header */}
+        <View style={[
+          Spaces.marginTop[16],
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween]}
         >
-          <FlashList
-            data={filteredChats}
-            keyExtractor={(item) => item.documentId}
-            ListEmptyComponent={renderEmptyList}
-            onEndReached={() => hasNextPage && fetchNextPage()}
-            onEndReachedThreshold={0.5}
-            onRefresh={refetch}
-            refreshing={isLoading}
-            renderItem={renderChat}
-            showsVerticalScrollIndicator={false}
-          />
+          <LeagueHeaderSwitch />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <NotificationBadge />
+            <ProfileButton />
+          </View>
         </View>
-      </WithDataWrapper>
-      
-      { (userData?.role?.name === 'Entraineur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
-        <View style={{
+        <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>
+          {t('messaging.title')}
+        </Text>
+        <OnboardingWrapper
+          description="Recherchez une conversation, ouvrez un chat et utilisez les actions rapides."
+          id="messaging-main-content"
+          order={1}
+          spotlight={{
+            borderRadius: 16,
+            maxHeight: 280,
+            overlayOpacity: 0.4,
+            paddingX: 2,
+            paddingY: 2,
+          }}
+          style={{ flex: 1 }}
+          title="Messagerie"
+        >
+          <View style={[Alignments.fill]}>
+            {renderSearch()}
+            <WithDataWrapper
+              error={error?.message}
+              isLoading={isLoading}
+              wrapperStyle={[Alignments.fill]}
+            >
+              <View style={[
+                Alignments.fill,
+                ApplicationStyle.borderRadius2]}
+              >
+                <FlashList
+                  data={filteredChats}
+                  keyExtractor={(item) => item.documentId}
+                  ListEmptyComponent={renderEmptyList}
+                  onEndReached={() => hasNextPage && fetchNextPage()}
+                  onEndReachedThreshold={0.5}
+                  onRefresh={refetch}
+                  refreshing={isLoading}
+                  renderItem={renderChat}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+            </WithDataWrapper>
+          </View>
+        </OnboardingWrapper>
+        
+        {(userData?.role?.name === 'Entraineur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
+          <View style={{
             position: 'absolute',
             bottom: 20,
             left: 20,
             right: 20,
-        }}>
+          }}
+          >
             <TouchableOpacity
-                onPress={() => navigation.navigate('NewConversation')}
-                style={{
-                    backgroundColor: Colors.primary500,
-                    borderRadius: 25,
-                    paddingVertical: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: "#000",
-                    shadowOffset: {
-                        width: 0,
-                        height: 2,
-                    },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 3.84,
-                    elevation: 5,
-                }}
+              onPress={() => navigation.navigate('NewConversation')}
+              style={{
+                backgroundColor: Colors.primary500,
+                borderRadius: 25,
+                paddingVertical: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
             >
-                <Text style={[Fonts.h4Bold, { color: Colors.neutral900 }]}>
-                    {t('messaging.newConversation', 'Nouvelle conversation')}
-                </Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                + {t('messaging.newConversation', 'Nouvelle conversation')}
+              </Text>
             </TouchableOpacity>
-        </View>
-      )}
-    </ScreenContainer>
+          </View>
+        )}
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 

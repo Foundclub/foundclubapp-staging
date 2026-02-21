@@ -2,18 +2,18 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
-import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {{
@@ -152,20 +152,15 @@ function FeaturedReservationCard({
               contentContainerStyle={[{ gap: horizontalScale(12) }]}
             >
               {sponsors.map((/** @type {Sponsor} */ sponsor, idx) => (
-                <TouchableOpacity
+                <SponsorLogoTile
                   key={sponsor.link || idx}
-                  onPress={() => {
-                    if (sponsor.link) {
-                      Linking.openURL(sponsor.link);
-                    }
-                  }}
-                  style={styles.sponsorWrapper}
-                >
-                  <Image
-                    source={{ uri: getImageUrl(sponsor.logo?.url) }}
-                    style={styles.sponsorLogo}
-                  />
-                </TouchableOpacity>
+                  imageUrl={sponsor.logo?.url}
+                  link={sponsor.link}
+                  title={sponsor.title}
+                  width={92}
+                  height={46}
+                  titleStyle={styles.sponsorTitle}
+                />
               ))}
             </ScrollView>
           </View>
@@ -281,19 +276,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(6),
     paddingHorizontal: horizontalScale(16),
   },
-  sponsorWrapper: {
-    width: moderateScale(30),
-    height: moderateScale(30),
-    borderRadius: moderateScale(15),
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  sponsorLogo: {
-    width: '80%',
-    height: '80%',
-    resizeMode: 'contain',
+  sponsorTitle: {
+    color: '#EAF8FF',
+    fontSize: moderateScale(10),
   },
 });
 

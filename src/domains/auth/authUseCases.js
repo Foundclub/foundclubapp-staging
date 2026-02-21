@@ -31,8 +31,8 @@ export const getAuthTokens = () => {
  */
 export const getOnboardingViews = ({
   avatar, birthdate, firstname, lastname, role, section, documentId,
-  preferredSport, position, height, weight, bestLevel, category, sportsHistory, isLookingForClub,
-  address,
+  preferredSport, position, height, weight, bestLevel, category, sportsHistory,
+  address, club, myTeams, trainedTeams,
 }) => {
   // Check if user has already completed onboarding once
   const hasCompletedOnboarding = (() => {
@@ -53,6 +53,18 @@ export const getOnboardingViews = ({
   }
 
   const roleName = role?.name || USER_ROLES.new;
+  const hasClubAffiliation = !!(club?.documentId || club?.id);
+  const hasTeamAffiliation = (Array.isArray(myTeams) ? myTeams.length : 0)
+    + (Array.isArray(trainedTeams) ? trainedTeams.length : 0) > 0;
+  const shouldShowAffiliationGuide = (() => {
+    if (roleName === USER_ROLES.coach || roleName === USER_ROLES.president) {
+      return !hasClubAffiliation;
+    }
+    if (roleName === USER_ROLES.player) {
+      return !hasTeamAffiliation;
+    }
+    return false;
+  })();
 
   const baseViews = (() => {
     switch (roleName) {
@@ -62,6 +74,8 @@ export const getOnboardingViews = ({
           { canShow: true, index: 2, route: RouteNames.UserBirthdate },
           { canShow: true, index: 3, route: RouteNames.UserAddress },
           { canShow: true, index: 4, route: RouteNames.UserAvatar },
+          { canShow: shouldShowAffiliationGuide, index: 5, route: RouteNames.UserAffiliationGuide },
+          { canShow: true, index: 6, route: RouteNames.Welcome },
         ];
       case USER_ROLES.player:
         return [
@@ -78,12 +92,21 @@ export const getOnboardingViews = ({
           { canShow: true, index: 10, route: RouteNames.UserCategory },
           { canShow: true, index: 11, route: RouteNames.UserSportHistory },
           { canShow: true, index: 12, route: RouteNames.UserClubSearch },
+          { canShow: shouldShowAffiliationGuide, index: 13, route: RouteNames.UserAffiliationGuide },
+          { canShow: true, index: 14, route: RouteNames.Welcome },
         ];
       case USER_ROLES.president:
+        return [
+          { canShow: true, index: 1, route: RouteNames.UserName },
+          { canShow: true, index: 2, route: RouteNames.UserAvatar },
+          { canShow: shouldShowAffiliationGuide, index: 3, route: RouteNames.UserAffiliationGuide },
+          { canShow: true, index: 4, route: RouteNames.Welcome },
+        ];
       case USER_ROLES.superAdmin:
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserAvatar },
+          { canShow: true, index: 3, route: RouteNames.Welcome },
         ];
       default:
         return [
@@ -101,6 +124,7 @@ export const getOnboardingViews = ({
           { canShow: true, index: 11, route: RouteNames.UserCategory },
           { canShow: true, index: 12, route: RouteNames.UserSportHistory },
           { canShow: true, index: 13, route: RouteNames.UserClubSearch },
+          { canShow: true, index: 14, route: RouteNames.Welcome },
         ];
     }
   })();
@@ -133,6 +157,10 @@ export const getOnboardingViews = ({
       if (position) {
         return Object.assign(view, { canShow: false });
       }
+      // If user skipped preferred sport, do not show position selection.
+      if (!preferredSport) {
+        return Object.assign(view, { canShow: false });
+      }
       // If sport is set but doesn't have positions, skip this step
       if (preferredSport && !SPORTS_WITH_POSITIONS.includes(preferredSport.toLowerCase())) {
         return Object.assign(view, { canShow: false });
@@ -148,9 +176,6 @@ export const getOnboardingViews = ({
       return Object.assign(view, { canShow: false });
     }
     if (view.route === RouteNames.UserSportHistory && sportsHistory) {
-      return Object.assign(view, { canShow: false });
-    }
-    if (view.route === RouteNames.UserClubSearch && isLookingForClub !== undefined && isLookingForClub !== null) {
       return Object.assign(view, { canShow: false });
     }
     return view;
@@ -282,6 +307,8 @@ export const NOTIFICATION_TYPES = {
   // Clubs
   CLUB_MEMBERSHIP_REQUEST: 'clubMembershipRequest',
   CLUB_REQUEST: 'clubRequest',
+  AFFILIATION_HELP_REQUEST: 'affiliationHelpRequest',
+  AFFILIATION_HELP_STATUS: 'affiliationHelpStatus',
 
   // Teams
   NEW_TEAM: 'newTeam',
@@ -358,6 +385,7 @@ export const sanitizeUser = (user) => {
     bestLevel,
     category,
     address,
+    geohash,
   } = user;
 
   const sanitizedRole = role ? {
@@ -391,5 +419,6 @@ export const sanitizeUser = (user) => {
     bestLevel,
     category,
     address,
+    geohash,
   };
 };

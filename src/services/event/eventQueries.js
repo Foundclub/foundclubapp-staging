@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import {
+  getEventAttendance,
   getEventById,
   getEvents,
   getEventTypes,
@@ -27,6 +28,19 @@ export const useGetEvent = (documentId, options = {}) => useQuery({
   enabled: !!documentId,
   queryFn: () => getEventById(documentId),
   queryKey: ['event', documentId],
+  ...options,
+});
+
+/**
+ * React Query hook to fetch attendance/lateness for event participants
+ * @param {string} eventId
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
+ */
+export const useGetEventAttendance = (eventId, options = {}) => useQuery({
+  enabled: !!eventId,
+  queryFn: () => getEventAttendance(eventId),
+  queryKey: ['eventAttendance', eventId],
   ...options,
 });
 

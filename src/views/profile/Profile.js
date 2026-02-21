@@ -1,6 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -20,20 +25,25 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getImageUrl } from '@/utils/imageUrl';
+
+/** @typedef {import('@/store/types').AuthSession} AuthSession */
 
 /**
  * Profile screen component. Displays user information and profile management options.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Profile screen component
  */
-function Profile({ navigation }) {
+function Profile({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
@@ -55,7 +65,15 @@ function Profile({ navigation }) {
   } = useAuth();
 
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [switchingAccountId, setSwitchingAccountId] = useState(null);
+  const [switchingAccountId, setSwitchingAccountId] = useState(/** @type {string | null} */ (null));
+  const safeAuthSessions = authSessions || [];
+  const multisportClubs = userData?.multisportClubs || [];
+
+  useEffect(() => {
+    if (!route?.params?.openAccountModal) return;
+    setIsAccountModalVisible(true);
+    navigation.setParams({ openAccountModal: false });
+  }, [navigation, route?.params?.openAccountModal]);
 
   const canManageClub = useMemo(() => {
     if (!userData?.club?.documentId) {
@@ -66,15 +84,13 @@ function Profile({ navigation }) {
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => {
-    // @ts-expect-error multisportClubs not in User type yet
-    return (userData?.multisportClubs?.length || 0) > 0;
-  }, [userData]);
+    return multisportClubs.length > 0;
+  }, [multisportClubs]);
 
   // Get the first multisport club for quick access
   const firstMultisportClub = useMemo(() => {
-    // @ts-expect-error multisportClubs not in User type yet  
-    return userData?.multisportClubs?.[0] || null;
-  }, [userData]);
+    return multisportClubs[0] || null;
+  }, [multisportClubs]);
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
@@ -103,9 +119,10 @@ function Profile({ navigation }) {
 
   /**
    * Opens the multisport club dashboard screen.
-   * @param {string} cmId - The documentId of the MultisportClub
+   * @param {string | undefined} cmId - The documentId of the MultisportClub
    */
   const handleOpenMultisportClub = (cmId) => {
+    if (!cmId) return;
     navigation.navigate(RouteNames.CMDashboard, { cmId });
   };
 
@@ -127,9 +144,10 @@ function Profile({ navigation }) {
       logoutMutation.mutate(fcmToken || '');
     },
     onError: (error) => {
+      const normalizedError = /** @type {any} */ (error);
       // Extract specific error message if available
-      const errorMessage = error?.response?.data?.error?.message 
-        || error?.message 
+      const errorMessage = normalizedError?.response?.data?.error?.message 
+        || normalizedError?.message 
         || t('profile.alerts.deleteError', 'Une erreur est survenue lors de la suppression du compte.');
 
       Alert.alert(t('common.error'), errorMessage);
@@ -174,7 +192,7 @@ function Profile({ navigation }) {
     }
   };
 
-  const handleSwitchAccount = async (session) => {
+  const handleSwitchAccount = async (/** @type {AuthSession} */ session) => {
     const targetId = session?.user?.documentId || session?.user?.id;
     if (!targetId || switchingAccountId) return;
 
@@ -190,7 +208,7 @@ function Profile({ navigation }) {
   const handleAddAccount = () => {
     // Limit to 5 accounts maximum
     const MAX_ACCOUNTS = 5;
-    if (authSessions?.length >= MAX_ACCOUNTS) {
+    if (safeAuthSessions.length >= MAX_ACCOUNTS) {
       Alert.alert(
         t('profile.alerts.maxAccounts.title', 'Limite atteinte'),
         t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectés.`),
@@ -250,8 +268,8 @@ function Profile({ navigation }) {
     }
     
     // Check if user is admin of a MultisportClub (Dirigeant Omnisport)
-    if (userData?.multisportClubs?.length > 0) {
-      const cm = userData.multisportClubs[0];
+    if (multisportClubs.length > 0) {
+      const cm = multisportClubs[0];
       return (
         <TouchableOpacity
           onPress={() => handleOpenMultisportClub(cm.documentId)}
@@ -375,17 +393,169 @@ function Profile({ navigation }) {
     }, [refetchUserData]),
   );
 
-  return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.gap[32],
-        Spaces.paddingTop[0],
-        Spaces.paddingBottom[12],
-        Alignments.justifySpaceBetween,
-        Alignments.fill,
-      ]}
+  const activeProfileTutorialId = route?.params?.tutorialId === TutorialIds.ACCOUNT_SWITCHER_MODAL
+    ? TutorialIds.ACCOUNT_SWITCHER_MODAL
+    : route?.params?.tutorialId === TutorialIds.LOGOUT_CONFIRMATION
+      ? TutorialIds.LOGOUT_CONFIRMATION
+      : TutorialIds.PROFILE_MAIN;
+  const isProfileMainTutorial = activeProfileTutorialId === TutorialIds.PROFILE_MAIN;
+  const isAccountSwitcherTutorial = activeProfileTutorialId === TutorialIds.ACCOUNT_SWITCHER_MODAL;
+  const isLogoutTutorial = activeProfileTutorialId === TutorialIds.LOGOUT_CONFIRMATION;
+
+  const profileActionsContent = (
+    <View style={[
+      Spaces.gap[16]]}
     >
+      <TabButton
+        isActive={false}
+        onPress={handleEditUser}
+        title={t('profile.actions.edit')}
+      />
+      {canManageClub ? (
+        <TabButton
+          isActive={false}
+          onPress={handleOpenClub}
+          title={t('profile.actions.manageClub')}
+        />
+      ) : null}
+      {canManageMultisportClub && firstMultisportClub ? (
+        <TabButton
+          isActive={false}
+          onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
+          title={t('profile.actions.manageClub', 'GÃ©rer mon club')}
+        />
+      ) : null}
+      <TabButton
+        isActive={false}
+        onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
+        title={t('profile.actions.manageAlerts', 'GÃ©rer mes alertes')}
+      />
+      {canManageClub ? (
+        <TabButton
+          isActive={false}
+          onPress={handleManageClubMembershipRequests}
+          title={t('profile.actions.manageClubJoinRequests')}
+        />
+      ) : null}
+      {canManageClub ? (
+        <TabButton
+          isActive={false}
+          onPress={() => navigation.navigate(RouteNames.ClubStack, {
+            screen: RouteNames.RequestsDashboard,
+            params: { clubId: userData?.club?.documentId },
+          })}
+          title={t('profile.actions.manageEventRequests', "Gerer les demandes d'evenements")}
+        />
+      ) : null}
+      {canManageTeam && userData?.club ? (
+        <TabButton
+          isActive={false}
+          onPress={handleManageTeamMembershipRequests}
+          title={t('profile.actions.manageTeamJoinRequests')}
+        />
+      ) : null}
+      {userData?.role?.name === USER_ROLES.superAdmin ? (
+        <TabButton
+          isActive={false}
+          onPress={() => navigation.navigate(RouteNames.AdminStack, {
+            screen: RouteNames.AdminDashboard,
+          })}
+          title="Espace Administration"
+        />
+      ) : null}
+
+      <TabButton
+        isActive={false}
+        onPress={() => setIsAccountModalVisible(true)}
+        title={t('profile.actions.switchAccount', 'Changer de compte')}
+      />
+    </View>
+  );
+
+  const accountSwitcherContent = (
+    <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
+      {safeAuthSessions.map((session, index) => {
+        const isCurrent = session?.user?.documentId === userData?.documentId;
+        // For current user, use userData which has full info; for others use session data
+        const user = isCurrent ? userData : session?.user;
+        const displayName = user?.firstname && user?.lastname
+          ? `${user.firstname} ${user.lastname}`
+          : user?.phone || user?.username || 'Compte';
+        const roleName = user?.role?.name === 'Authenticated'
+          ? 'Dirigeant'
+          : user?.role?.name || 'Utilisateur';
+        const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
+
+        return (
+          <TouchableOpacity
+            key={index}
+            disabled={Boolean(switchingAccountId)}
+            onPress={() => !isCurrent && !switchingAccountId && handleSwitchAccount(session)}
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.padding[12],
+              ApplicationStyle.borderRadius8,
+              ApplicationStyle.backgroundColor.primary700,
+              isCurrent && { borderWidth: 1, borderColor: '#01b3f4' },
+              switchingAccountId && { opacity: 0.6 },
+            ]}
+          >
+            <ProfileAvatar
+              imageUrl={avatarUrl}
+              size={40}
+              style={{ marginRight: 12 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                {roleName}
+              </Text>
+            </View>
+            {switchingAccountId === (session?.user?.documentId || session?.user?.id) && (
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>Changement...</Text>
+            )}
+            {isCurrent && switchingAccountId !== (session?.user?.documentId || session?.user?.id) && (
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>Actif</Text>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+
+      <Button
+        onPress={handleAddAccount}
+        title={t('profile.actions.addAccount', 'Ajouter un compte')}
+        variant="Secondary"
+      />
+    </View>
+  );
+
+  return (
+    <TutorialFlowBoundary
+      onForceStartHandled={() => {
+        navigation.setParams({
+          startTutorial: undefined,
+          tutorialId: undefined,
+          tutorialStartToken: undefined,
+          tutorialSource: undefined,
+        });
+      }}
+      routeParams={route?.params}
+      tutorialId={activeProfileTutorialId}
+      userId={userData?.documentId}
+    >
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.gap[32],
+          Spaces.paddingTop[0],
+          Spaces.paddingBottom[12],
+          Alignments.justifySpaceBetween,
+          Alignments.fill,
+        ]}
+      >
       <View style={[
         Alignments.justifyCenter,
         Alignments.alignCenter,
@@ -462,91 +632,52 @@ function Profile({ navigation }) {
             )}
           </View>
         </WithDataWrapper>
-        <View style={[
-          Spaces.gap[16]]}
-        >
-          <TabButton
-            isActive={false}
-            onPress={handleEditUser}
-            title={t('profile.actions.edit')}
-          />
-          {canManageClub ? (
-            <TabButton
-              isActive={false}
-              onPress={handleOpenClub}
-              title={t('profile.actions.manageClub')}
-            />
-          ) : null}
-          {canManageMultisportClub && firstMultisportClub ? (
-            <TabButton
-              isActive={false}
-              onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
-              title={t('profile.actions.manageClub', 'Gérer mon club')}
-            />
-          ) : null}
-          <TabButton
-            isActive={false}
-            onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
-            title={t('profile.actions.manageAlerts', 'Gérer mes alertes')}
-          />
-          {canManageClub ? (
-            <TabButton
-              isActive={false}
-              onPress={handleManageClubMembershipRequests}
-              title={t('profile.actions.manageClubJoinRequests')}
-            />
-          ) : null}
-          {canManageClub ? (
-            <TabButton
-              isActive={false}
-              onPress={() => navigation.navigate(RouteNames.ClubStack, {
-                screen: RouteNames.RequestsDashboard,
-                params: { clubId: userData?.club?.documentId },
-              })}
-              title={t('profile.actions.manageEventRequests', "Gerer les demandes d'evenements")}
-            />
-          ) : null}
-          {canManageTeam && userData?.club ? (
-            <TabButton
-              isActive={false}
-              onPress={handleManageTeamMembershipRequests}
-              title={t('profile.actions.manageTeamJoinRequests')}
-            />
-          ) : null}
-          {userData?.role?.name === USER_ROLES.superAdmin ? (
-            <TabButton
-              isActive={false}
-              onPress={() => navigation.navigate(RouteNames.AdminStack, {
-                screen: RouteNames.AdminDashboard,
-              })}
-              title="Espace Administration"
-            />
-          ) : null}
-
-          <TabButton
-            isActive={false}
-            onPress={() => setIsAccountModalVisible(true)}
-            title={t('profile.actions.switchAccount', 'Changer de compte')}
-          />
-        </View>
+        {isProfileMainTutorial ? (
+          <OnboardingWrapper
+            description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
+            id="profile-main-actions"
+            order={1}
+            spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+            title="Actions profil"
+          >
+            {profileActionsContent}
+          </OnboardingWrapper>
+        ) : profileActionsContent}
 
         {/* Sports History Section */}
         <UserHistorySection
+          userId={userData?.documentId || ''}
           isOwnProfile={true}
           bestLevel={userData?.bestLevel}
           preferredSport={userData?.preferredSport}
           onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
-          onEditPress={(entry) => {
+          onEditPress={(/** @type {any} */ entry) => {
             // TODO: Pass entry to wizard for editing
             navigation.navigate(RouteNames.HistoryWizardClub);
           }}
         />
 
-        <Button
-          onPress={handleLogout}
-          title={t('profile.actions.logout')}
-          variant="Secondary"
-        />
+        {isLogoutTutorial ? (
+          <OnboardingWrapper
+            description="Ce bouton lance la confirmation de deconnexion de votre session."
+            id="profile-logout-action"
+            order={2}
+            spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+            title="Deconnexion"
+          >
+            <Button
+              onPress={handleLogout}
+              title={t('profile.actions.logout')}
+              variant="Secondary"
+            />
+          </OnboardingWrapper>
+        ) : (
+          <Button
+            onPress={handleLogout}
+            title={t('profile.actions.logout')}
+            variant="Secondary"
+          />
+        )}
         <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
           <TouchableOpacity onPress={handleDeleteAccount}>
             <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
@@ -555,71 +686,28 @@ function Profile({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <BottomModal
-        close={() => setIsAccountModalVisible(false)}
-        hideCloseButton
-        isVisible={isAccountModalVisible}
-      >
-        <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
-          {authSessions?.map((session, index) => {
-            const isCurrent = session?.user?.documentId === userData?.documentId;
-            // For current user, use userData which has full info; for others use session data
-            const user = isCurrent ? userData : session?.user;
-            const displayName = user?.firstname && user?.lastname
-              ? `${user.firstname} ${user.lastname}`
-              : user?.phone || user?.username || 'Compte';
-            const roleName = user?.role?.name === 'Authenticated' 
-              ? 'Dirigeant'
-              : user?.role?.name || 'Utilisateur';
-            const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
-            
-            return (
-              <TouchableOpacity
-                key={index}
-                disabled={Boolean(switchingAccountId)}
-                onPress={() => !isCurrent && !switchingAccountId && handleSwitchAccount(session)}
-                style={[
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Spaces.padding[12],
-                  ApplicationStyle.borderRadius8,
-                  ApplicationStyle.backgroundColor.primary700,
-                  isCurrent && { borderWidth: 1, borderColor: '#01b3f4' },
-                  switchingAccountId && { opacity: 0.6 },
-                ]}
-              >
-                <ProfileAvatar
-                  imageUrl={avatarUrl}
-                  size={40}
-                  style={{ marginRight: 12 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]} numberOfLines={1}>
-                    {displayName}
-                  </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    {roleName}
-                  </Text>
-                </View>
-                {switchingAccountId === (session?.user?.documentId || session?.user?.id) && (
-                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>Changement...</Text>
-                )}
-                {isCurrent && switchingAccountId !== (session?.user?.documentId || session?.user?.id) && (
-                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>Actif</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-
-          <Button
-            onPress={handleAddAccount}
-            title={t('profile.actions.addAccount', 'Ajouter un compte')}
-            variant="Secondary"
-          />
-        </View>
-      </BottomModal>
-    </ScreenContainer>
+        <BottomModal
+          close={() => setIsAccountModalVisible(false)}
+          hideCloseButton
+          isVisible={isAccountModalVisible}
+        >
+          {isAccountSwitcherTutorial ? (
+            <OnboardingWrapper
+              description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+              id="profile-account-switcher-modal"
+              order={1}
+              spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+              title="Changer de compte"
+            >
+              {accountSwitcherContent}
+            </OnboardingWrapper>
+          ) : accountSwitcherContent}
+        </BottomModal>
+      </ScreenContainer>
+    </TutorialFlowBoundary>
   );
 }
 
 export default Profile;
+
+

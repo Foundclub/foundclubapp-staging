@@ -24,8 +24,10 @@ import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
 
 // Create a storage instance for notifications
+/** @type {MMKV | null} */
 let notificationStorageInstance = null;
 
+/** @returns {MMKV} */
 const getNotificationStorage = () => {
   if (!notificationStorageInstance) {
     notificationStorageInstance = new MMKV({
@@ -36,8 +38,11 @@ const getNotificationStorage = () => {
 };
 
 const notificationStorage = {
+  /** @param {string} key */
   getString: (key) => getNotificationStorage().getString(key),
+  /** @param {string} key @param {string | number | boolean} value */
   set: (key, value) => getNotificationStorage().set(key, value),
+  /** @param {string} key */
   contains: (key) => getNotificationStorage().contains(key),
 };
 
@@ -56,9 +61,14 @@ const isNotificationDuplicate = (messageId) => {
   return false;
 };
 
+/**
+ * @param {string | number | Date} dateInput
+ * @returns {string | null}
+ */
 const formatDateForGoogleCalendar = (dateInput) => {
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) return null;
+  /** @param {number} value */
   const pad = (value) => String(value).padStart(2, '0');
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
@@ -125,9 +135,10 @@ const onDisplayNotification = async ({ body, data, title }) => {
 
 /**
  * Handle notifications for the application
- * @param {object} props - The props
- * @param {Function} props.navigate - The navigation prop
- * @param {(payload: any) => void} [props.onSmartNotification] - In-app smart notification callback
+ * @param {{
+ *  navigate: (routeName: string, params?: Record<string, unknown>) => boolean | void;
+ *  onSmartNotification?: (payload: any) => void;
+ * }} props - The props
  * @inheritdoc
  */
 const useNotifications = ({ navigate, onSmartNotification }) => {
@@ -141,7 +152,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
     mutationFn: addDeviceToken,
     onError: (error) => {
-      console.error('[FCM] Failed to save token to backend:', error);
+      const statusCode = error?.status || error?.response?.status;
+      if (statusCode === 401 || statusCode === 403) {
+        console.warn('[FCM] Token registration denied by backend permissions/auth. Notifications disabled for this session.');
+      } else {
+        console.error('[FCM] Failed to save token to backend:', error);
+      }
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
     },
     onSuccess: (_, token) => {
@@ -165,9 +181,24 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
     return __DEV__;
   })());
-  const promptedCalendarMatchesRef = useRef(new Set());
+  const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
 
-  const openCalendarFromNotification = useCallback(async (notificationData) => {
+  /**
+   * @typedef {{
+   *  type?: string;
+   *  matchDate?: string;
+   *  date?: string;
+   *  teamName?: string;
+   *  opponentName?: string;
+   *  venue?: string;
+   *  location?: string;
+   *  matchId?: string;
+   *  dedupeKey?: string;
+   *  [key: string]: any;
+   * }} NotificationData
+   */
+
+  const openCalendarFromNotification = useCallback(async (/** @type {NotificationData} */ notificationData) => {
     const startIso = notificationData?.matchDate || notificationData?.date;
     const startDate = startIso ? new Date(startIso) : new Date();
     const endDate = new Date(startDate.getTime() + (60 * 60 * 1000));
@@ -186,7 +217,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
   }, []);
 
-  const maybePromptAddToCalendar = useCallback((notificationData) => {
+  const maybePromptAddToCalendar = useCallback((/** @type {NotificationData | undefined} */ notificationData) => {
     if (!notificationData || notificationData.type !== NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) return;
     const key = notificationData.matchId || notificationData.dedupeKey;
     if (!key) return;
@@ -207,7 +238,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   }, [openCalendarFromNotification]);
 
   // methods
-  const handleNavigateOnOpen = useCallback((/** @type {remoteMessageData} */remoteMessageData) => {
+  const handleNavigateOnOpen = useCallback((/** @type {any} */ remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
     console.log('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
     if (!notificationData?.type) {
@@ -216,10 +247,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     if (notificationData.type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
-      maybePromptAddToCalendar(notificationData);
+      maybePromptAddToCalendar(/** @type {NotificationData} */ (notificationData));
     }
 
-    const tryNavigate = (routeName, params) => {
+    const tryNavigate = (/** @type {string} */ routeName, /** @type {Record<string, unknown> | undefined} */ params) => {
       const navigated = navigate(routeName, params);
       if (navigated === false) {
         const fallback = navigate(RouteNames.NotificationList);
@@ -278,7 +309,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
 
       if (messageType === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
-        maybePromptAddToCalendar(normalizedData);
+        maybePromptAddToCalendar(/** @type {NotificationData} */ (normalizedData));
       }
 
       if (
@@ -315,7 +346,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(normalizeNotificationPayload(detail.notification.data)),
+          normalizeNotificationPayload(detail.notification.data),
         );
       }
     }
@@ -326,7 +357,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
-          /** @type {{type: string, bookingId: string}} */(normalizeNotificationPayload(detail.notification.data)),
+          normalizeNotificationPayload(detail.notification.data),
         );
       }
     }
@@ -377,11 +408,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           throw new Error('Failed to get FCM token');
         }
       } catch (err) {
-        const errorMessage = typeof err === 'string' ? err : err?.message || JSON.stringify(err);
+        const typedError = /** @type {any} */ (err);
+        const errorMessage = typeof typedError === 'string' ? typedError : typedError?.message || JSON.stringify(typedError);
         if (errorMessage.includes('FIS_AUTH_ERROR')) {
           console.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in Local). Notifications skipped.');
         } else {
-          console.error('[FCM] Error retrieving token:', err);
+          console.error('[FCM] Error retrieving token:', typedError);
         }
         // Do not throw error here to prevent app crash
         // throw new Error(`Failed to retrieve token: ${err}`);
@@ -417,7 +449,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     let attempts = 0;
     const maxAttempts = 20;
     const interval = setInterval(() => {
-      const handled = handleNavigateOnOpen(pendingNotification);
+      const handled = handleNavigateOnOpen(/** @type {any} */ (pendingNotification));
       if (handled || attempts >= maxAttempts) {
         dispatch({ type: 'SET_PENDING_NOTIFICATION', payload: null });
         clearInterval(interval);

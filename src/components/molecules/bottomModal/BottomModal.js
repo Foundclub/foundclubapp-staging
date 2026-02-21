@@ -28,6 +28,8 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
+ * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode]
+ * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
  * @param {React.MutableRefObject<any>} [props.scrollViewRef] - Optional ref forwarded to BottomSheetScrollView
  * @param {object} [props.scrollViewProps] - Optional extra props forwarded to BottomSheetScrollView
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
@@ -35,6 +37,7 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({
+  androidKeyboardInputMode = 'adjustResize',
   children,
   close,
   closeIconTintColor = 'primary200',
@@ -43,6 +46,7 @@ function BottomModal({
   footerComponent,
   hideCloseButton = false,
   isVisible,
+  keyboardBehavior = 'interactive',
   scrollable = true,
   scrollViewProps,
   scrollViewRef,
@@ -53,18 +57,35 @@ function BottomModal({
    * @type {React.MutableRefObject<import('@gorhom/bottom-sheet').BottomSheetModal | null>}
    */
   const modalRef = useRef(null);
+  const visibilityRef = useRef(false);
   const insets = useSafeAreaInsets();
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
   } = useTheme();
 
   useEffect(() => {
+    if (!modalRef.current) return;
+    if (visibilityRef.current === isVisible) return;
+    visibilityRef.current = isVisible;
+
     if (isVisible) {
-      modalRef.current?.present();
-    } else {
-      modalRef.current?.dismiss();
+      modalRef.current.present();
+      return;
     }
-  }, [isVisible, modalRef.current?.present]);
+
+    modalRef.current.dismiss();
+  }, [isVisible]);
+
+  useEffect(() => () => {
+    visibilityRef.current = false;
+    modalRef.current?.dismiss();
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    if (!visibilityRef.current) return;
+    visibilityRef.current = false;
+    close?.();
+  }, [close]);
 
   // renders
   const renderBackdrop = useCallback(
@@ -104,7 +125,7 @@ function BottomModal({
   return (
     <BottomSheetModal
       backdropComponent={renderBackdrop}
-      android_keyboardInputMode="adjustResize"
+      android_keyboardInputMode={androidKeyboardInputMode}
       backgroundStyle={[
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
@@ -115,9 +136,9 @@ function BottomModal({
       enablePanDownToClose
       handleComponent={null}
       index={0}
-      keyboardBehavior={Platform.OS === 'ios' ? 'interactive' : 'extend'}
+      keyboardBehavior={keyboardBehavior}
       keyboardBlurBehavior="restore"
-      onDismiss={close}
+      onDismiss={handleDismiss}
       ref={modalRef}
       topInset={insets.top + 20}
     >
@@ -162,14 +183,15 @@ function BottomModal({
             style={[
               snapPoints ? Alignments.fill : { maxHeight: Dimensions.get('screen').height * 0.7 },
             ]}
+            keyboardShouldPersistTaps="handled"
             {...scrollViewProps}
           >
             {children}
           </BottomSheetScrollView>
         ) : (
-          <View style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
+          <BottomSheetView style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
             {children}
-          </View>
+          </BottomSheetView>
         )}
 
         {/* Fixed Footer */}

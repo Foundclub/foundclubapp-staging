@@ -1,5 +1,14 @@
 const LEAGUE_TIMEZONE = 'Europe/Paris';
 
+/**
+ * @typedef {{ year: number; month: number; day: number; hour: number; minute: number; second: number }} ZonedDateParts
+ */
+
+/**
+ * @param {Date} date
+ * @param {string} [timeZone]
+ * @returns {ZonedDateParts}
+ */
 const getZonedDateParts = (date, timeZone = LEAGUE_TIMEZONE) => {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -13,7 +22,7 @@ const getZonedDateParts = (date, timeZone = LEAGUE_TIMEZONE) => {
   });
 
   const parts = formatter.formatToParts(date);
-  const values = {};
+  const values = /** @type {Record<string, string>} */ ({});
   for (const part of parts) {
     if (part.type !== 'literal') values[part.type] = part.value;
   }
@@ -28,6 +37,11 @@ const getZonedDateParts = (date, timeZone = LEAGUE_TIMEZONE) => {
   };
 };
 
+/**
+ * @param {ZonedDateParts} localDateTime
+ * @param {string} [timeZone]
+ * @returns {Date}
+ */
 const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
   let utcMs = Date.UTC(
     localDateTime.year,
@@ -69,6 +83,10 @@ const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
   return new Date(utcMs);
 };
 
+/**
+ * @param {Date} localDate
+ * @returns {Date | null}
+ */
 export const toParisUtcDateFromLocalSelection = (localDate) => {
   if (!(localDate instanceof Date) || Number.isNaN(localDate.getTime())) return null;
   return toUtcFromZonedLocal({
@@ -81,11 +99,19 @@ export const toParisUtcDateFromLocalSelection = (localDate) => {
   }, LEAGUE_TIMEZONE);
 };
 
+/**
+ * @param {Date} localDate
+ * @returns {string | null}
+ */
 export const toParisIsoFromLocalSelection = (localDate) => {
   const utcDate = toParisUtcDateFromLocalSelection(localDate);
   return utcDate ? utcDate.toISOString() : null;
 };
 
+/**
+ * @param {string | number | Date} instantLike
+ * @returns {Date | null}
+ */
 export const toDeviceDateFromParisInstant = (instantLike) => {
   const instant = new Date(instantLike);
   if (Number.isNaN(instant.getTime())) return null;

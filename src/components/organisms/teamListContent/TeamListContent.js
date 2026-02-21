@@ -39,6 +39,8 @@ import { Alert } from 'react-native';
  * @param {string} [props.clubId] - The ID of the club to fetch teams for
  * @param {string} [props.playerId] - The ID of the player to fetch teams for
  * @param {boolean} [props.isLeagueMode] - League mode renders squads instead of classic teams.
+ * @param {string} [props.assignmentTrainerId] - Optional trainer to preselect on TeamDetails trainer picker.
+ * @param {string} [props.assignmentTrainerName] - Optional trainer display name for assignment flow.
  * @returns {import('react').ReactElement} Team list content component
  */
 
@@ -46,6 +48,8 @@ function TeamListContent({
   clubId = undefined,
   playerId = undefined,
   isLeagueMode = false,
+  assignmentTrainerId = undefined,
+  assignmentTrainerName = undefined,
 }) {
   const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState('');
@@ -177,9 +181,13 @@ function TeamListContent({
     // @ts-expect-error because of react navigation type definitions
     /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
       screen: RouteNames.TeamDetails,
-      params: { teamId: team.documentId },
+      params: {
+        teamId: team.documentId,
+        assignmentTrainerId,
+        assignmentTrainerName,
+      },
     });
-  }, [navigation, isLeagueMode]);
+  }, [assignmentTrainerId, assignmentTrainerName, navigation, isLeagueMode]);
 
   useFocusEffect(
     useCallback(() => {

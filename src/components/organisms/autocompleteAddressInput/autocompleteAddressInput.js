@@ -28,6 +28,7 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @param {boolean} [props.disabled] - Disable state.
  * @param {number} [props.minChars] - Minimum query length before fetching.
  * @param {string} [props.type] - Optional BAN type hint.
+ * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.wrapperStyle]
  * @param {object} [props.styles] - Optional compatibility style prop.
  * @returns {import('react').ReactElement}
  */
@@ -41,6 +42,7 @@ function AutocompleteAddressInput({
   placeholder,
   setAddress,
   type,
+  wrapperStyle,
 }) {
   const DEBOUNCE_MS = 350;
   const safeMinChars = Number.isFinite(minChars) ? Math.max(1, minChars) : 3;
@@ -133,6 +135,7 @@ function AutocompleteAddressInput({
       setSearchValue={setAddressSearch}
       setValue={handleSetValue}
       value={selectedAddress?.label || ''}
+      wrapperStyle={wrapperStyle}
     />
   );
 }

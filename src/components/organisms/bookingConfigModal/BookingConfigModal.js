@@ -17,9 +17,29 @@ import Button from '@/components/atoms/button/Button';
 import { useCreateBooking } from '@/services/facility/facilityQueries';
 
 /**
+ * @typedef {object} BookingDurationOption
+ * @property {number} duration
+ * @property {number} slots
+ * @property {number} price
+ * @property {string} label
+ */
+
+/**
+ * @typedef {object} BookingConfigModalProps
+ * @property {boolean} isVisible
+ * @property {() => void} onClose
+ * @property {(() => void) | undefined} [onSuccess]
+ * @property {{ documentId?: string; slotDuration?: number; pricePerSlot?: number } | undefined} [facility]
+ * @property {string | Date} date
+ * @property {{ time: string; maxDuration?: number } | undefined} [selectedSlot]
+ * @property {any} [availability]
+ */
+
+/**
  * BookingConfigModal - Two-step booking configuration
  * Step 1: Duration selection
  * Step 2: Mode selection (Private vs Shared/Match Ouvert)
+ * @param {BookingConfigModalProps} props
  */
 function BookingConfigModal({
   isVisible,
@@ -35,7 +55,7 @@ function BookingConfigModal({
 
   // State
   const [step, setStep] = useState(1);
-  const [selectedDuration, setSelectedDuration] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState(/** @type {BookingDurationOption | null} */ (null));
   const [mode, setMode] = useState('private');
   const [currentPlayers, setCurrentPlayers] = useState(1);
   const [targetPlayers, setTargetPlayers] = useState(10);
@@ -49,7 +69,7 @@ function BookingConfigModal({
     
     const slotDuration = facility.slotDuration || 30;
     const maxDuration = selectedSlot.maxDuration || slotDuration;
-    const options = [];
+    const options = /** @type {BookingDurationOption[]} */ ([]);
     
     let duration = slotDuration;
     while (duration <= maxDuration && duration <= 180) { // Max 3 hours
@@ -101,11 +121,11 @@ function BookingConfigModal({
 
   // Handle booking confirmation
   const handleConfirm = useCallback(async () => {
-    if (!facility || !selectedSlot || !selectedDuration) return;
+    if (!facility || !selectedSlot || !selectedDuration || !endTime) return;
 
     try {
       await createBookingMutation.mutateAsync({
-        facilityId: facility.documentId,
+        facilityId: facility.documentId || '',
         date,
         startTime: selectedSlot.time,
         endTime,

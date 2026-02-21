@@ -40,21 +40,21 @@ LocaleConfig.locales.fr = {
 LocaleConfig.defaultLocale = 'fr';
 
 /**
- * PlanningCalendarView component
- * @param {object} props
- * @param {any[]} props.events - List of events to display
- * @param {Function} props.onEventPress - Callback when an event is pressed
- * @param {Function} [props.onParticipate] - Callback for participation
- * @returns {React.ReactElement} PlanningCalendarView component
+ * @typedef {{
+ *   id?: string | number;
+ *   documentId?: string;
+ *   date?: string;
+ *   type?: { name?: string };
+ * }} PlanningEvent
  */
 /**
  * PlanningCalendarView component
  * @param {object} props
- * @param {any[]} props.events - List of events to display
- * @param {Function} props.onEventPress - Callback when an event is pressed
- * @param {Function} [props.onParticipate] - Callback for participation
+ * @param {PlanningEvent[]} [props.events] - List of events to display
+ * @param {(event: PlanningEvent) => void} [props.onEventPress] - Callback when an event is pressed
+ * @param {(event: PlanningEvent) => void} [props.onParticipate] - Callback for participation
  * @param {Date} [props.currentDate] - Current selected date (controlled)
- * @param {Function} [props.onDateSelect] - Callback when date changes
+ * @param {(date: Date) => void} [props.onDateSelect] - Callback when date changes
  * @returns {React.ReactElement} PlanningCalendarView component
  */
 function PlanningCalendarView({ 
@@ -82,7 +82,7 @@ function PlanningCalendarView({
         return internalDate;
     }, [propDate, internalDate]);
 
-    const handleDateChange = (dateString) => {
+    const handleDateChange = (/** @type {string} */ dateString) => {
         if (onDateSelect) {
             onDateSelect(parseISO(dateString));
         } else {
@@ -92,7 +92,7 @@ function PlanningCalendarView({
 
     // Group events by date for the calendar markers
     const markedDates = useMemo(() => {
-        const markers = {};
+        const markers = /** @type {Record<string, any>} */ ({});
 
         // Mark today
         const today = format(new Date(), 'yyyy-MM-dd');
@@ -110,7 +110,7 @@ function PlanningCalendarView({
         };
 
         // Mark event days
-        events.forEach((event) => {
+        events.forEach((/** @type {PlanningEvent} */ event) => {
             if (!event.date) return;
 
             const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
@@ -141,16 +141,16 @@ function PlanningCalendarView({
                 ...markers[selectedDate],
                 selected: true,
                 selectedColor: Colors.primary500,
-                selectedTextColor: Colors.neutral900,
+                selectedTextColor: Colors.neutral00,
             };
         } else {
             markers[selectedDate] = {
                 selected: true,
                 selectedColor: Colors.primary500,
-                selectedTextColor: Colors.neutral900,
+                selectedTextColor: Colors.neutral00,
                 customStyles: {
                     text: {
-                        color: Colors.neutral900,
+                        color: Colors.neutral00,
                         fontWeight: 'bold',
                     },
                 },
@@ -162,13 +162,13 @@ function PlanningCalendarView({
 
     // Filter events for the selected date
     const selectedEvents = useMemo(() => {
-        return events.filter((event) => {
+        return events.filter((/** @type {PlanningEvent} */ event) => {
             if (!event.date) return false;
             return isSameDay(new Date(event.date), parseISO(selectedDate));
         });
     }, [events, selectedDate]);
 
-    const renderItem = ({ item }) => {
+    const renderItem = (/** @type {{ item: PlanningEvent }} */ { item }) => {
         const isReservation = item?.type?.name === 'Réservation';
         const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
         // Always allow seeing details/about in planning view
@@ -189,6 +189,10 @@ function PlanningCalendarView({
         return (
             <EventCard
                 item={item}
+                onDecline={() => {}}
+                onJoin={() => {}}
+                onLogin={() => {}}
+                onParticipate={() => onParticipate?.(item)}
                 onPress={() => onEventPress?.(item)}
             />
         );
@@ -221,12 +225,12 @@ function PlanningCalendarView({
                     calendarBackground: 'transparent',
                     textSectionTitleColor: Colors.neutral400,
                     selectedDayBackgroundColor: Colors.primary500,
-                    selectedDayTextColor: Colors.neutral900,
+                    selectedDayTextColor: Colors.neutral00,
                     todayTextColor: Colors.primary500,
                     dayTextColor: Colors.neutral00,
                     textDisabledColor: Colors.neutral600,
                     dotColor: Colors.primary500,
-                    selectedDotColor: Colors.neutral900,
+                    selectedDotColor: Colors.neutral00,
                     arrowColor: Colors.primary500,
                     monthTextColor: Colors.neutral00,
                     indicatorColor: Colors.primary500,
@@ -242,7 +246,7 @@ function PlanningCalendarView({
             />
 
             <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[24], Alignments.fill]}>
-                <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16]]}>
+                <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[16]]}>
                     {format(parseISO(selectedDate), 'EEEE d MMMM yyyy', { locale: fr })}
                 </Text>
 
@@ -250,7 +254,7 @@ function PlanningCalendarView({
                     <FlashList
                         data={selectedEvents}
                         estimatedItemSize={200}
-                        keyExtractor={(item) => item?.documentId || 'unknown'}
+                        keyExtractor={(item, index) => item?.documentId || String(item?.id || index)}
                         ListEmptyComponent={renderEmptyList}
                         renderItem={renderItem}
                         showsVerticalScrollIndicator={false}

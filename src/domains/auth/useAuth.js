@@ -61,6 +61,8 @@ const useAuth = () => {
     },
     onSuccess: async (data) => {
       console.log('[useAuth] loginMutation onSuccess, data.user:', data?.user?.documentId);
+      // Ensure OTP confirmation state cannot leak to another account flow
+      setConfirm(undefined);
       queryClient.clear();
       appDispatch({
         payload: data,
@@ -98,10 +100,11 @@ const useAuth = () => {
     },
   });
 
-  const { auth, authSessions } = useAppContext()[0];
+  const { auth, authSessions, isAddingAccount } = useAppContext()[0];
 
   const switchAccount = useCallback(async (session) => {
     console.log('[useAuth] switchAccount called for:', session?.user?.email);
+    setConfirm(undefined);
     queryClient.clear();
 
     // Switch app session immediately so UI reacts on first tap.
@@ -124,6 +127,7 @@ const useAuth = () => {
 
   const addAccount = useCallback(async () => {
     console.log('[useAuth] addAccount called. Dispatching PREPARE_ADD_ACCOUNT');
+    setConfirm(undefined);
     // Sign out from Firebase SDK to ensure a clean slate for the new account
     // This does NOT remove the session from our app state (authSessions) because we don't trigger the reducer here
     await logout().catch((e) => console.log('[useAuth] logout failed', e?.message || 'Unknown error'));
@@ -140,8 +144,10 @@ const useAuth = () => {
     isLoading: userDataLoading,
     refetch: refetchUserData,
   } = useQuery({
+    enabled: Boolean(auth?.token) && !isAddingAccount,
     queryFn: getMe,
-    queryKey: ['get-me'],
+    // Scope by current token to avoid cross-account stale cache reuse
+    queryKey: ['get-me', auth?.token || 'no-token'],
   });
 
   // Sync user data to global state/sessions when it changes (e.g. after edit)
@@ -368,6 +374,7 @@ const useAuth = () => {
 
   const cancelAddAccount = useCallback(() => {
     console.log('[useAuth] cancelAddAccount called');
+    setConfirm(undefined);
     queryClient.clear(); // Clear stale data from previous partial login attempts
     // Restore the first available session from authSessions
     const previousSession = authSessions?.[0];
@@ -413,7 +420,7 @@ const useAuth = () => {
     switchAccount,
     addAccount,
     cancelAddAccount,
-    isAddingAccount: useAppContext()[0].isAddingAccount,
+    isAddingAccount,
   };
 };
 

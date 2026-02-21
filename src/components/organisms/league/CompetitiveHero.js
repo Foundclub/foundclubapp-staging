@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -38,9 +39,9 @@ const CompetitiveHero = ({
       ]}
     >
       <View style={styles.centered}>
-        <Text style={[Fonts.h4, { color: Colors.gold500, letterSpacing: 2, marginBottom: 4 }]}>
-          DIVISION {division}
-        </Text>
+        <View style={styles.divisionBadgeWrap}>
+          <DivisionBadge division={division} size={72} />
+        </View>
 
         <View style={[styles.centered, { marginVertical: 12 }]}>
           <Text style={[Fonts.h1Bold, { color: Colors.neutral00, fontSize: 48, lineHeight: 56 }]}>
@@ -53,7 +54,7 @@ const CompetitiveHero = ({
 
         <View style={styles.progressContainer}>
           <View style={styles.rowBetween}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Division {division}</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
             <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
               {nextDivisionElo} PTS{' '}
               <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
@@ -98,6 +99,9 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingVertical: 24,
+  },
+  divisionBadgeWrap: {
+    marginBottom: 4,
   },
   progressContainer: {
     marginTop: 8,

@@ -6,11 +6,13 @@ import { useNavigation } from '@react-navigation/native';
 
 import {
   cancelEvent,
+  markCoachArrival,
+  markSelfArrival,
   missingEvent,
   remindUnansweredPlayers,
   requestFeatured,
+  updateCoachLateMinutes,
   updateEvent,
-  toggleLateEvent,
 } from '@/services/event/eventService';
 import {
   acceptEventParticipation,
@@ -147,8 +149,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.joinSuccess.title', 'Participation confirmée'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant à cette réservation !')
+        t('reservation.joinSuccess.title', 'Participation confirmÃ©e'),
+        t('reservation.joinSuccess.message', 'Vous participez maintenant Ã  cette rÃ©servation !')
       );
     },
     onError: (error) => {
@@ -163,8 +165,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.bookFull.success.title', 'Réservation privatisée'),
-        t('reservation.bookFull.success.message', 'Votre réservation est maintenant complète.')
+        t('reservation.bookFull.success.title', 'RÃ©servation privatisÃ©e'),
+        t('reservation.bookFull.success.message', 'Votre rÃ©servation est maintenant complÃ¨te.')
       );
     },
     onError: (error) => {
@@ -179,7 +181,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.openForPlayers.success.title', 'Réservation ouverte'),
+        t('reservation.openForPlayers.success.title', 'RÃ©servation ouverte'),
         t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !')
       );
     },
@@ -195,8 +197,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.sosAlert.success.title', 'Alerte SOS lancée ! 🔥'),
-        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiés.')
+        t('reservation.sosAlert.success.title', 'Alerte SOS lancÃ©e ! ðŸ”¥'),
+        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiÃ©s.')
       );
     },
     onError: (error) => {
@@ -204,15 +206,52 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
   });
 
-  const toggleLateMutation = useMutation({
-    mutationFn: ({ eventId, userId }) => toggleLateEvent(eventId, userId),
+  const selfArrivalMutation = useMutation({
+    mutationFn: ({ eventId, payload }) => markSelfArrival(eventId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
+      refetchParticipations();
+    },
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre arrivée."
+      );
+    },
+  });
+
+  const coachArrivalMutation = useMutation({
+    mutationFn: ({ eventId, userId, payload }) => markCoachArrival(eventId, userId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teamStats'] });
+      refetch();
+      refetchParticipations();
     },
     onError: () => {
-        Alert.alert(t('common.error'), "Impossible de modifier le statut de retard.");
-    }
+      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivÃ©e.");
+    },
+  });
+
+  const updateLateMinutesMutation = useMutation({
+    mutationFn: ({ eventId, userId, payload }) => updateCoachLateMinutes(eventId, userId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teamStats'] });
+      refetch();
+      refetchParticipations();
+    },
+    onError: () => {
+      Alert.alert(t('common.error'), "Impossible de modifier le retard.");
+    },
   });
 
   const requestFeaturedMutation = useMutation({
@@ -221,8 +260,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise à la une a été envoyée au dirigeant du club.')
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyÃ©e'),
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise Ã  la une a Ã©tÃ© envoyÃ©e au dirigeant du club.')
       );
     },
     onError: (error) => {
@@ -245,7 +284,9 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     bookFullMutation,
     openForPlayersMutation,
     sosAlertMutation,
-    toggleLateMutation,
+    selfArrivalMutation,
+    coachArrivalMutation,
+    updateLateMinutesMutation,
     requestFeaturedMutation,
   };
 };

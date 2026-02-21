@@ -94,16 +94,12 @@ const SearchAlerts = ({ navigation }) => {
         if (alert.type === 'event') {
             // Apply filters to app context and navigate to Search (events tab)
             appDispatch({ type: 'SET_EVENT_FILTERS', payload: alert.filters || {} });
-            navigation.navigate(RouteNames.HomeTab, {
-                screen: RouteNames.Search,
-                params: { initialTab: 'events' },
-            });
+            navigation.navigate(RouteNames.SearchEvents);
         } else if (alert.type === 'mercato') {
             // Apply mercato filters and navigate to Search (mercato tab)
             appDispatch({ type: 'SET_MERCATO_FILTERS', payload: alert.filters || {} });
-            navigation.navigate(RouteNames.HomeTab, {
-                screen: RouteNames.Search,
-                params: { initialTab: 'mercato' },
+            navigation.navigate(RouteNames.SearchRecruitment, {
+                initialRecruitmentTab: 'profils',
             });
         }
     };
