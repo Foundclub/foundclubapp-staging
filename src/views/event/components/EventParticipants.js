@@ -10,8 +10,20 @@ import useTheme from '@/theme/themeContext';
 
 const SHARE_ICON = require('@/assets/icons/share2.png');
 
-/** @typedef {import('@/domains/auth/types').User} User */
-/** @typedef {{ documentId?: string; user: User }} PendingParticipation */
+/**
+ * @typedef {{
+ *   id?: string | number;
+ *   documentId?: string;
+ *   firstname?: string;
+ *   lastname?: string;
+ *   email?: string;
+ *   phone?: string;
+ *   phoneNumber?: string;
+ *   position?: string;
+ *   avatar?: { url?: string };
+ * }} User
+ */
+/** @typedef {{ documentId?: string; user: User; sourceTeam?: { documentId?: string; name?: string }; participationStatus?: string; isActive?: boolean }} PendingParticipation */
 /**
  * @typedef {object} ParticipationsByStatus
  * @property {User[]} participating
@@ -22,11 +34,30 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
  * @typedef {{ arrivedAt?: string | null, lateMinutes?: number | null, source?: string | null, manualOverride?: boolean }} AttendanceState
  */
 /**
+ * @typedef {{
+ *   key: string;
+ *   teamName: string;
+ *   isHome?: boolean;
+ *   allowCoachActions?: boolean;
+ *   participating: User[];
+ *   missing: User[];
+ *   notAnswered: User[];
+ *   pending?: PendingParticipation[];
+ *   historical?: {
+ *     participating?: User[];
+ *     missing?: User[];
+ *     pending?: PendingParticipation[];
+ *   };
+ * }} TeamParticipationSection
+ */
+/**
  * @typedef {object} EventParticipantsProps
  * @property {import('@/domains/event/types').FCEvent | undefined} event
  * @property {ParticipationsByStatus | undefined} participationsByStatus
  * @property {PendingParticipation[]} pendingParticipations
+ * @property {TeamParticipationSection[]} [teamParticipationSections]
  * @property {boolean} canEdit
+ * @property {boolean} [canApprovePendingRequests]
  * @property {(user?: User) => void} handleUserPress
  * @property {() => void} handleRemindPlayers
  * @property {() => void} handleShare
@@ -46,7 +77,9 @@ const EventParticipants = ({
   event,
   participationsByStatus,
   pendingParticipations,
+  teamParticipationSections = [],
   canEdit,
+  canApprovePendingRequests = canEdit,
   handleUserPress,
   handleRemindPlayers,
   handleShare,
@@ -68,7 +101,7 @@ const EventParticipants = ({
     const attendance = userId ? attendanceByUserId[userId] : null;
     return (
       <ParticipantItem
-        key={player.documentId}
+        key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
         attendance={attendance}
         allowLiveLate={Boolean(options.allowLiveLate)}
         canEdit={Boolean(options.showCoachActions)}
@@ -85,53 +118,184 @@ const EventParticipants = ({
     );
   };
 
+  const renderPendingCard = (participation, indexKey) => (
+    <TouchableOpacity
+      key={participation.documentId || `pending-${indexKey}`}
+      onPress={() => handleUserPress(participation.user)}
+      style={[
+        ApplicationStyle.borderRadius24,
+        Alignments.row,
+        Alignments.fill,
+        ApplicationStyle.backgroundColor.primary700,
+        Spaces.padding[24],
+        Spaces.gap[24],
+      ]}
+    >
+      <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, Alignments.fill]}>
+        <ProfileAvatar
+          imageUrl={participation.user.avatar?.url}
+          size={40}
+          style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
+          imageStyle={{ borderRadius: 40 }}
+        />
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
+            {`${participation.user.firstname || ''} ${participation.user.lastname || ''}`.trim()}
+          </Text>
+          {participation?.sourceTeam?.name ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {participation.sourceTeam.name}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {canApprovePendingRequests ? (
+        <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyCenter]}>
+          <Button
+            icon="check"
+            isOption
+            onPress={() => handleUpdateParticipation && handleUpdateParticipation(participation.documentId, 'accepted')}
+            variant="Primary"
+          />
+          <Button
+            icon="close"
+            isOption
+            onPress={() => handleUpdateParticipation && handleUpdateParticipation(participation.documentId, 'declined')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+
+  const renderStatusGroup = (title, players, options = {}) => {
+    if (!players?.length) return null;
+    return (
+      <>
+        <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+          {title}
+        </Text>
+        {players.map((player) => renderParticipant(player, options))}
+      </>
+    );
+  };
+
+  const renderTeamSection = (section) => {
+    const pending = section.pending || [];
+    const historical = section.historical || {};
+    const historicalPending = historical.pending || [];
+    const historicalParticipating = historical.participating || [];
+    const historicalMissing = historical.missing || [];
+    const hasHistorical = historicalPending.length
+      || historicalParticipating.length
+      || historicalMissing.length;
+
+    return (
+      <View
+        key={section.key}
+        style={[
+          Spaces.gap[12],
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Spaces.padding[16],
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {section.teamName}
+          </Text>
+          {section.isHome ? (
+            <Text style={[Fonts.p4, Fonts.primary500]}>
+              {t('eventDetails.invitedTeams.homeTeamBadge', 'Equipe organisatrice')}
+            </Text>
+          ) : (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('eventDetails.invitedTeams.invitedTeamBadge', 'Equipe invitee')}
+            </Text>
+          )}
+        </View>
+
+        {canApprovePendingRequests && pending.length > 0 ? (
+          <View style={[Spaces.gap[12]]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('eventDetails.fields.participationRequests')}
+            </Text>
+            {pending.map(renderPendingCard)}
+          </View>
+        ) : null}
+
+        {renderStatusGroup(
+          t('eventDetails.participationStatus.participating'),
+          section.participating,
+          {
+            allowLiveLate: true,
+            keyPrefix: `${section.key}-present`,
+            showCoachActions: section.allowCoachActions ?? canEdit,
+          }
+        )}
+
+        {renderStatusGroup(
+          t('eventDetails.participationStatus.missing'),
+          section.missing,
+          {
+            allowLiveLate: false,
+            keyPrefix: `${section.key}-missing`,
+          }
+        )}
+
+        {section.notAnswered?.length ? (
+          <>
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.spaceBetween, Spaces.gap[16]]}>
+              <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+                {t('eventDetails.participationStatus.notAnswered')}
+              </Text>
+              {canEdit ? (
+                <Button isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+              ) : null}
+            </View>
+            {section.notAnswered.map((player) => renderParticipant(player, {
+              allowLiveLate: false,
+              keyPrefix: `${section.key}-not-answered`,
+            }))}
+          </>
+        ) : null}
+
+        {hasHistorical ? (
+          <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+              {t('eventDetails.invitedTeams.historicalTitle', 'Historique equipe retiree')}
+            </Text>
+            {historicalPending.length > 0 ? (
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('eventDetails.invitedTeams.historicalPending', '{{count}} reponse(s) en attente').replace('{{count}}', String(historicalPending.length))}
+              </Text>
+            ) : null}
+            {historicalParticipating.map((player) => renderParticipant(player, {
+              allowLiveLate: false,
+              keyPrefix: `${section.key}-hist-present`,
+              showCoachActions: false,
+            }))}
+            {historicalMissing.map((player) => renderParticipant(player, {
+              allowLiveLate: false,
+              keyPrefix: `${section.key}-hist-missing`,
+              showCoachActions: false,
+            }))}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const hasTeamSections = teamParticipationSections.length > 0;
+
   return (
     <View style={[Spaces.gap[16], Alignments.fill]}>
-      {canEdit && pendingParticipations?.length > 0 && (
+      {!hasTeamSections && canApprovePendingRequests && pendingParticipations?.length > 0 && (
         <View style={[Spaces.gap[16], Alignments.fill]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('eventDetails.fields.participationRequests')}
           </Text>
-          {pendingParticipations.map((participation) => (
-            <TouchableOpacity
-              key={participation.documentId}
-              onPress={() => handleUserPress(participation.user)}
-              style={[
-                ApplicationStyle.borderRadius24,
-                Alignments.row,
-                Alignments.fill,
-                ApplicationStyle.backgroundColor.primary700,
-                Spaces.padding[24],
-                Spaces.gap[24],
-              ]}
-            >
-              <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, Alignments.fill]}>
-                <ProfileAvatar
-                  imageUrl={participation.user.avatar?.url}
-                  size={40}
-                  style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
-                  imageStyle={{ borderRadius: 40 }}
-                />
-                <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
-                  {`${participation.user.firstname} ${participation.user.lastname}`}
-                </Text>
-              </View>
-              <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyCenter]}>
-                <Button
-                  icon="check"
-                  isOption
-                  onPress={() => handleUpdateParticipation && handleUpdateParticipation(participation.documentId, 'accepted')}
-                  variant="Primary"
-                />
-                <Button
-                  icon="close"
-                  isOption
-                  onPress={() => handleUpdateParticipation && handleUpdateParticipation(participation.documentId, 'declined')}
-                  variant="Secondary"
-                />
-              </View>
-            </TouchableOpacity>
-          ))}
+          {pendingParticipations.map(renderPendingCard)}
         </View>
       )}
 
@@ -155,49 +319,51 @@ const EventParticipants = ({
         </TouchableOpacity>
       )}
 
-      {participationsByStatus ? (
+      {hasTeamSections ? (
+        <View style={[Spaces.gap[12]]}>
+          {teamParticipationSections.map(renderTeamSection)}
+        </View>
+      ) : participationsByStatus ? (
         <>
-          {participationsByStatus.participating.length > 0 && (
-            <>
-              <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-                {t('eventDetails.participationStatus.participating')}
-              </Text>
-              {participationsByStatus.participating.map((player) => renderParticipant(player, {
-                showCoachActions: canEdit,
-                allowLiveLate: true,
-              }))}
-            </>
+          {renderStatusGroup(
+            t('eventDetails.participationStatus.participating'),
+            participationsByStatus.participating || [],
+            {
+              allowLiveLate: true,
+              keyPrefix: 'legacy-present',
+              showCoachActions: canEdit,
+            }
           )}
-
-          {participationsByStatus.missing.length > 0 && (
-            <>
-              <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-                {t('eventDetails.participationStatus.missing')}
-              </Text>
-              {participationsByStatus.missing.map((player) => renderParticipant(player, {
-                allowLiveLate: false,
-              }))}
-            </>
+          {renderStatusGroup(
+            t('eventDetails.participationStatus.missing'),
+            participationsByStatus.missing || [],
+            {
+              allowLiveLate: false,
+              keyPrefix: 'legacy-missing',
+            }
           )}
-
-          {participationsByStatus.notAnswered.length > 0 && (
+          {(participationsByStatus.notAnswered || []).length > 0 && (
             <>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.spaceBetween, Spaces.gap[16]]}>
                 <Text style={[Fonts.h4Bold, Fonts.primary500]}>
                   {t('eventDetails.participationStatus.notAnswered')}
                 </Text>
-                <Button isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                {canEdit ? (
+                  <Button isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                ) : null}
               </View>
-              {participationsByStatus.notAnswered.map((player) => renderParticipant(player, {
+              {(participationsByStatus.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
+                keyPrefix: 'legacy-not-answered',
               }))}
             </>
           )}
         </>
       ) : (
-        event?.participations?.map((player) => renderParticipant(player, {
+        (event?.participations || []).map((player) => renderParticipant(player, {
           showCoachActions: canEdit,
           allowLiveLate: true,
+          keyPrefix: 'fallback',
         }))
       )}
     </View>
@@ -275,7 +441,7 @@ const ParticipantItem = ({
             imageStyle={{ borderRadius: 40 }}
           />
           <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-            {`${player.firstname} ${player.lastname}`}
+            {`${player.firstname || ''} ${player.lastname || ''}`.trim()}
           </Text>
         </View>
         <View
@@ -301,7 +467,7 @@ const ParticipantItem = ({
           <Button
             onPress={() => onMarkArrival && onMarkArrival(player)}
             size="sm"
-            title="Arrivé"
+            title="Arrive"
             variant="Primary"
           />
           <Button

@@ -215,6 +215,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       return eventDetailsDestination(payload.eventId) || { params: {}, route: RouteNames.MyEventList };
 
     case NOTIFICATION_TYPES.EVENT_REMINDER:
+    case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
     case NOTIFICATION_TYPES.NEW_PARTICIPATION:
     case NOTIFICATION_TYPES.PARTICIPATION_REQUEST:
     case NOTIFICATION_TYPES.RESERVATION_PLAYER_JOINED:

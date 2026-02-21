@@ -16,6 +16,13 @@ import useAuth from '@/domains/auth/useAuth';
 
 import { addDeviceToken } from '@/services/auth/authService';
 import {
+  consumePendingOpenNotification,
+  displayEventRsvpActionableNotification,
+  ensureNotificationActionSetup,
+  handleEventRsvpActionPress,
+  isEventRsvpActionablePayload,
+} from '@/services/notificationActions/rsvpActions';
+import {
   normalizeNotificationPayload,
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
@@ -96,20 +103,23 @@ const requestUserPermission = async () => {
  * @returns {Promise<void>}
  */
 const onDisplayNotification = async ({ body, data, title }) => {
-  // Create a channel for android with high importance
-  const channelId = await notifee.createChannel({
-    id: 'default',
-    importance: 4,
-    name: 'Default Channel',
-    sound: 'default',
-    vibration: true,
-  });
+  const normalizedData = normalizeNotificationPayload(data || {});
+  await ensureNotificationActionSetup();
+
+  if (isEventRsvpActionablePayload(normalizedData)) {
+    await displayEventRsvpActionableNotification({
+      body,
+      data: normalizedData,
+      title,
+    });
+    return;
+  }
 
   if (title || body) {
     // Display a notification
     await notifee.displayNotification({
       android: {
-        channelId,
+        channelId: 'default',
         importance: 4,
         pressAction: {
           id: 'default',
@@ -118,7 +128,7 @@ const onDisplayNotification = async ({ body, data, title }) => {
         sound: 'default',
       },
       body,
-      data,
+      data: normalizedData,
       ios: {
         critical: true,
         foregroundPresentationOptions: {
@@ -182,6 +192,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     return __DEV__;
   })());
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
+
+  useEffect(() => {
+    ensureNotificationActionSetup().catch((error) => {
+      console.warn('[Notifications] Failed to setup notification actions:', error);
+    });
+  }, []);
 
   /**
    * @typedef {{
@@ -333,28 +349,28 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
 
       onDisplayNotification({
-        body: remoteMessage.notification?.body || '',
-        data: remoteMessage.data,
-        title: remoteMessage.notification?.title || '',
+        body: remoteMessage.notification?.body || normalizedData?.body || '',
+        data: remoteMessage.data || {},
+        title: remoteMessage.notification?.title || normalizedData?.title || '',
       });
     });
     return unsubscribe;
   }, [onSmartNotification, maybePromptAddToCalendar]);
 
   // open notification when app is in foreground
-  useEffect(() => notifee.onForegroundEvent(({ detail, type }) => {
-      if (type === EventType.PRESS) {
-      if (detail.notification?.data?.type) {
-        handleNavigateOnOpen(
-          normalizeNotificationPayload(detail.notification.data),
-        );
+  useEffect(() => notifee.onForegroundEvent(async ({ detail, type }) => {
+    if (type === EventType.ACTION_PRESS) {
+      const result = await handleEventRsvpActionPress({
+        notificationData: detail.notification?.data || {},
+        pressActionId: detail?.pressAction?.id,
+      });
+      if (result?.handled && detail.notification?.id) {
+        await notifee.cancelNotification(detail.notification.id);
       }
+      return;
     }
-  }), [handleNavigateOnOpen]);
 
-  // open notification when app is in background (notifee part to use custom display)
-  useEffect(() => notifee.onBackgroundEvent(async ({ detail, type }) => {
-    if (type === EventType.PRESS) {
+      if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
           normalizeNotificationPayload(detail.notification.data),
@@ -426,21 +442,36 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       retreiveFCMToken();
     }
 
-    // Check for initial notification (Cold Start)
+    const queuePendingNotification = (payload, source) => {
+      if (payload?.type) {
+        console.log(`[FCM] Storing pending notification from ${source}`);
+        dispatch({
+          type: 'SET_PENDING_NOTIFICATION',
+          payload,
+        });
+      }
+    };
+
+    // Check for initial notification (Cold Start) - Firebase remote push
     getMessaging().getInitialNotification().then(remoteMessage => {
       if (remoteMessage) {
         console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-        if (normalizedData?.type) {
-           // Store it in context to be handled when navigation is ready
-           console.log('[FCM] Storing pending notification in context');
-           dispatch({ 
-              type: 'SET_PENDING_NOTIFICATION', 
-              payload: normalizedData,
-           });
-        }
+        queuePendingNotification(normalizedData, 'fcm');
       }
     });
+
+    // Check Notifee initial notification (local/actionable notifications)
+    notifee.getInitialNotification().then((initialNotification) => {
+      const normalizedData = normalizeNotificationPayload(
+        initialNotification?.notification?.data || {}
+      );
+      queuePendingNotification(normalizedData, 'notifee');
+    });
+
+    // Consume pending open intent captured by background headless handler
+    const storedPending = consumePendingOpenNotification();
+    queuePendingNotification(storedPending, 'storage');
 
   }, [saveToken, userData, dispatch]);
 

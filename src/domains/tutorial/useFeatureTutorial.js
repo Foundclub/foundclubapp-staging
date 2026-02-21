@@ -8,15 +8,20 @@ import {
 import { getTutorialFlowId } from './tutorialIds';
 import {
   CURRENT_TUTORIAL_PROGRAM_VERSION,
+  getEntryGateChoice,
   getTutorialProgramVersion,
   getTutorialState,
   hasSeenHomeHubTutorial,
+  isAutoTutorialEnabled,
   markTutorialCompleted,
   markTutorialSeen,
   resetAllTutorialsForUser,
   resetTutorialState,
+  setAutoTutorialEnabled,
+  setEntryGateChoice,
   setHomeHubTutorialSeen,
   setTutorialProgramVersion,
+  skipAllAutoTutorials,
 } from './tutorialStorage';
 
 const programVersionHandledUsers = new Set();
@@ -43,6 +48,8 @@ function useFeatureTutorial({
   );
 
   const tutorialState = getTutorialState(userId, tutorialId);
+  const entryGateChoice = getEntryGateChoice(userId);
+  const autoTutorialEnabled = isAutoTutorialEnabled(userId);
 
   const seenAt = tutorialState?.seenAt;
   const completedAt = tutorialState?.completedAt;
@@ -61,7 +68,14 @@ function useFeatureTutorial({
   const forceStartKey = shouldForceStart
     ? `${requestedTutorialId || tutorialId}:${String(tutorialStartToken || 'legacy')}`
     : '';
-  const shouldAutoStart = Boolean(autoStart && userId && !seenAt && !shouldForceStart);
+  const shouldAutoStart = Boolean(
+    autoStart
+    && userId
+    && !seenAt
+    && !shouldForceStart
+    && autoTutorialEnabled
+    && entryGateChoice !== 'pending',
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -115,9 +129,30 @@ function useFeatureTutorial({
     return deletedCount;
   }, [notifyUpdated, userId]);
 
+  const setEntryChoice = useCallback((choice) => {
+    if (!userId) return;
+    setEntryGateChoice(userId, choice);
+    notifyUpdated();
+  }, [notifyUpdated, userId]);
+
+  const setAutoEnabled = useCallback((enabled) => {
+    if (!userId) return;
+    setAutoTutorialEnabled(userId, enabled);
+    notifyUpdated();
+  }, [notifyUpdated, userId]);
+
+  const skipAllAuto = useCallback(() => {
+    if (!userId) return;
+    skipAllAutoTutorials(userId);
+    notifyUpdated();
+  }, [notifyUpdated, userId]);
+
   return {
+    autoTutorialEnabled,
     completedAt,
+    entryGateChoice,
     flowId,
+    forceStartKey,
     hasSeen: Boolean(seenAt),
     hasSeenHomeHub: hasSeenHomeHubTutorial(userId),
     markCompleted,
@@ -126,9 +161,11 @@ function useFeatureTutorial({
     resetAllTutorials,
     resetTutorial,
     seenAt,
+    setAutoEnabled,
+    setEntryChoice,
     shouldAutoStart,
     shouldForceStart,
-    forceStartKey,
+    skipAllAuto,
     source,
     tutorialSource,
   };

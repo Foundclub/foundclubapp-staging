@@ -202,6 +202,8 @@ function HomeHubContent({ auth, navigation, route }) {
   const [{ fcmToken }] = useAppContext();
   const { isGold, toggleMode } = useAppMode();
   const {
+    currentStep,
+    currentStepIndex,
     isActive: isOnboardingActive,
     refreshCurrentStep,
     startOnboarding,
@@ -215,10 +217,12 @@ function HomeHubContent({ auth, navigation, route }) {
   });
 
   const [activeTutorialModal, setActiveTutorialModal] = useState(/** @type {'center' | 'feature' | null} */ (null));
+  const [isEntryGateVisible, setIsEntryGateVisible] = useState(false);
   const isFocused = useIsFocused();
   const scrollRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
   const refreshCurrentStepRef = useRef(refreshCurrentStep);
   const pendingNavigationActionRef = useRef(/** @type {null | (() => void)} */ (null));
+  const previousTutorialStepRef = useRef(/** @type {{ id?: string; index?: number } | null} */ (null));
   const sectionAnchorsRef = useRef({
     account: { height: 0, y: 0 },
     league: { height: 0, y: 0 },
@@ -278,13 +282,36 @@ function HomeHubContent({ auth, navigation, route }) {
     if (isFocused) return;
     tutorialDebugLog('homehub.unfocused.resetModals');
     setActiveTutorialModal(null);
+    setIsEntryGateVisible(false);
     pendingNavigationActionRef.current = null;
   }, [isFocused]);
 
   useEffect(() => {
     if (!isOnboardingActive) return;
     setActiveTutorialModal(null);
+    setIsEntryGateVisible(false);
   }, [isOnboardingActive]);
+
+  useEffect(() => {
+    if (!isFocused || !userData?.documentId) {
+      setIsEntryGateVisible(false);
+      return;
+    }
+    if (isOnboardingActive || homeHubTutorial.shouldForceStart) {
+      setIsEntryGateVisible(false);
+      return;
+    }
+    const shouldShowEntryGate = homeHubTutorial.entryGateChoice === 'pending';
+    setIsEntryGateVisible((previousValue) => (
+      previousValue === shouldShowEntryGate ? previousValue : shouldShowEntryGate
+    ));
+  }, [
+    homeHubTutorial.entryGateChoice,
+    homeHubTutorial.shouldForceStart,
+    isFocused,
+    isOnboardingActive,
+    userData?.documentId,
+  ]);
 
   const registerSectionAnchor = useCallback((sectionKey, event) => {
     const nextY = event?.nativeEvent?.layout?.y ?? 0;
@@ -338,6 +365,19 @@ function HomeHubContent({ auth, navigation, route }) {
     tryScroll();
   }, []);
 
+  const scrollToTop = useCallback(() => {
+    const REFRESH_DELAYS = [80, 180, 320];
+    scrollRef.current?.scrollTo({
+      animated: true,
+      y: 0,
+    });
+    REFRESH_DELAYS.forEach((delay) => {
+      setTimeout(() => {
+        refreshCurrentStepRef.current?.();
+      }, delay);
+    });
+  }, []);
+
   const scrollToSearchSection = useCallback(() => {
     scrollToSection('search');
   }, [scrollToSection]);
@@ -357,6 +397,70 @@ function HomeHubContent({ auth, navigation, route }) {
   const scrollToAccountSection = useCallback(() => {
     scrollToSection('account');
   }, [scrollToSection]);
+
+  const getHomeHubSectionForStepId = useCallback((stepId) => {
+    if (!stepId || typeof stepId !== 'string') return null;
+    if (!stepId.startsWith('homehub-')) return null;
+    if (stepId === 'homehub-header') return 'top';
+
+    const normalized = stepId.replace('homehub-', '');
+
+    if (normalized.startsWith('manage')) return 'manage';
+    if (normalized.startsWith('search')) return 'search';
+    if (normalized === 'league') return 'league';
+    if (normalized.startsWith('profile')) return 'profile';
+    if (normalized.startsWith('quick')) return 'quick';
+    if (normalized.startsWith('account') || normalized === 'tutorialCenter') return 'account';
+
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (!isOnboardingActive) {
+      previousTutorialStepRef.current = null;
+      return;
+    }
+
+    const currentId = currentStep?.id;
+    const currentIndex = currentStepIndex;
+    const previous = previousTutorialStepRef.current;
+
+    const hasPrevious = typeof previous?.index === 'number';
+    const isBackward = hasPrevious && typeof currentIndex === 'number' && currentIndex < previous.index;
+
+    if (isBackward) {
+      const previousSection = getHomeHubSectionForStepId(previous?.id);
+      const currentSection = getHomeHubSectionForStepId(currentId);
+
+      if (currentSection && currentSection !== previousSection) {
+        tutorialDebugLog('homehub.backwardScroll', {
+          currentId,
+          currentIndex,
+          fromIndex: previous?.index,
+          fromSection: previousSection,
+          toSection: currentSection,
+        });
+
+        if (currentSection === 'top') {
+          scrollToTop();
+        } else {
+          scrollToSection(currentSection);
+        }
+      }
+    }
+
+    previousTutorialStepRef.current = {
+      id: currentId,
+      index: currentIndex,
+    };
+  }, [
+    currentStep?.id,
+    currentStepIndex,
+    getHomeHubSectionForStepId,
+    isOnboardingActive,
+    scrollToSection,
+    scrollToTop,
+  ]);
 
   const openTutorialCenterModal = useCallback(() => {
     setActiveTutorialModal('center');
@@ -449,6 +553,24 @@ function HomeHubContent({ auth, navigation, route }) {
       launchHomeTutorialFlow();
     });
   }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow]);
+
+  const handleEntryStartTutorial = useCallback(() => {
+    homeHubTutorial.setEntryChoice('start');
+    homeHubTutorial.setAutoEnabled(true);
+    setIsEntryGateVisible(false);
+    closeTutorialModals();
+    homeHubTutorial.resetTutorial();
+    scrollRef.current?.scrollTo({ animated: false, y: 0 });
+    InteractionManager.runAfterInteractions(() => {
+      launchHomeTutorialFlow();
+    });
+  }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow]);
+
+  const handleEntrySkipTutorial = useCallback(() => {
+    homeHubTutorial.skipAllAuto();
+    setIsEntryGateVisible(false);
+    closeTutorialModals();
+  }, [closeTutorialModals, homeHubTutorial]);
 
   const navigateToTutorial = useCallback((tutorialId) => {
     const tutorialParams = {
@@ -1210,6 +1332,80 @@ function HomeHubContent({ auth, navigation, route }) {
           </BottomModal>
         </>
       ) : null}
+
+      {isEntryGateVisible ? (
+        <View
+          style={[
+            Alignments.absolute,
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.paddingHorizontal[24],
+            {
+              backgroundColor: 'rgba(0, 18, 24, 0.88)',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              top: 0,
+              zIndex: 60,
+            },
+          ]}
+        >
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[24],
+              Spaces.gap[12],
+              {
+                alignSelf: 'center',
+                borderColor: `${Colors.primary500}66`,
+                maxWidth: 380,
+                width: '100%',
+              },
+            ]}
+          >
+            <Image
+              resizeMode="contain"
+              source={Images.logo}
+              style={{
+                alignSelf: 'center',
+                height: 20,
+                maxWidth: 186,
+                minWidth: 140,
+                width: '62%',
+              }}
+            />
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('homeHubTutorial.entry.title', 'Bienvenue sur FoundClub')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'homeHubTutorial.entry.subtitle',
+                'FoundClub est un outil concu pour vous accompagner dans toute votre aventure sportive, peu importe votre sport.',
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'homeHubTutorial.entry.description',
+                'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l application par vous meme.',
+              )}
+            </Text>
+            <View style={[Spaces.gap[8], Spaces.marginTop[4]]}>
+              <Button
+                onPress={handleEntryStartTutorial}
+                title={t('homeHubTutorial.entry.actions.start', 'Lancer le tutoriel complet')}
+                variant="Primary"
+              />
+              <Button
+                onPress={handleEntrySkipTutorial}
+                title={t('homeHubTutorial.entry.actions.skip', 'Passer')}
+                variant="Secondary"
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -1229,6 +1425,7 @@ function HomeHub({ navigation, route }) {
 
   return (
     <TutorialFlowBoundary
+      autoStart={false}
       onForceStartHandled={handleForceStartHandled}
       routeParams={route?.params}
       tutorialId={TutorialIds.HOME_HUB}

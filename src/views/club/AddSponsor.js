@@ -15,7 +15,6 @@ import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetClub } from '@/services/club/clubQueries';
 import { getClubById, updateClub } from '@/services/club/clubService';
 import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
@@ -52,6 +51,8 @@ function AddSponsor({ navigation, route }) {
   );
   const { t } = useTranslation();
   const { Alignments, Fonts, Spaces } = useTheme();
+  const rawRatio = logo?.width && logo?.height ? logo.width / logo.height : 2;
+  const previewRatio = Math.min(Math.max(rawRatio, 0.7), 3.2);
 
   const {
     control,
@@ -121,11 +122,15 @@ function AddSponsor({ navigation, route }) {
                 {t('addSponsor.fields.logo')}
               </Text>
               <SelectAvatar
-                containerStyle={{ height: 150, width: 300 }}
-                cropHeight={1600}
-                cropWidth={1600}
+                containerStyle={{
+                  aspectRatio: previewRatio,
+                  maxHeight: 220,
+                  minHeight: 120,
+                  width: '100%',
+                }}
                 currentAvatar={logo}
-                imageStyle={{ height: 150, width: 300 }}
+                imageStyle={{ height: '100%', width: '100%' }}
+                imageResizeMode="contain"
                 onAvatarSelected={setLogo}
                 size={80}
               />

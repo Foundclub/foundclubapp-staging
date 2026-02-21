@@ -319,6 +319,20 @@ const useAuth = () => {
     [userData],
   );
 
+  const canManageEvent = useCallback((event) => {
+    const roleName = userData?.role?.name;
+    if (roleName !== USER_ROLES.coach && roleName !== USER_ROLES.president) {
+      return false;
+    }
+
+    const trainedTeamIds = new Set((userData?.trainedTeams || []).map(({ documentId }) => documentId));
+    const organizerTeamId = event?.team?.documentId;
+    const invitedTeamIds = (event?.invitedTeams || []).map((team) => team?.documentId).filter(Boolean);
+
+    if (organizerTeamId && trainedTeamIds.has(organizerTeamId)) return true;
+    return invitedTeamIds.some((teamId) => trainedTeamIds.has(teamId));
+  }, [userData]);
+
   const canJoinClub = useMemo(() => {
     if (userData?.role.name === USER_ROLES.coach) {
       return !userData?.club;
@@ -390,6 +404,7 @@ const useAuth = () => {
     canContactAdmin,
     canEditClub,
     canEditEvent,
+    canManageEvent,
     canJoinClub,
     canJoinTeam,
     canManageEvents,

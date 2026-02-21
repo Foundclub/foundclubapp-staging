@@ -318,6 +318,7 @@ export const NOTIFICATION_TYPES = {
   // Events
   EVENT_CANCELLATION: 'eventCancellation',
   EVENT_REMINDER: 'eventReminder',
+  EVENT_TEAM_INVITED: 'eventTeamInvited',
   NEW_PARTICIPATION: 'newParticipation',
   PARTICIPATION_REQUEST: 'participationRequest',
   FEATURED_REQUEST: 'featuredRequest',

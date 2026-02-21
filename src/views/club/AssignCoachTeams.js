@@ -144,7 +144,7 @@ function AssignCoachTeams({ navigation, route }) {
         clubId,
         preselectedTrainerId: trainerId,
       },
-      screen: RouteNames.TeamEdit,
+      screen: RouteNames.TeamWizardName,
     });
   }, [clubId, navigation, trainerId]);
 

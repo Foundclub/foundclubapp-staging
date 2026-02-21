@@ -33,6 +33,9 @@ const EventHeader = ({ event }) => {
   const sectionName = event?.team?.section?.name;
   const logoUrl = event?.team?.club?.logo?.url;
   const locationDetails = event?.locationDetails;
+  const invitedTeamNames = (event?.invitedTeams || [])
+    .map((team) => team?.name)
+    .filter(Boolean);
 
   const getLocationText = () => {
     try {
@@ -152,6 +155,17 @@ const EventHeader = ({ event }) => {
             </View>
           )}
         </View>
+
+        {invitedTeamNames.length > 0 && (
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              Equipes invitees
+            </Text>
+            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {invitedTeamNames.join(' • ')}
+            </Text>
+          </View>
+        )}
       </View>
     </ImageBackground>
   );

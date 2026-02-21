@@ -20,12 +20,21 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {number} props.size Size of the avatar in pixels
  * @param {number} [props.cropWidth] Width of the crop area
  * @param {number} [props.cropHeight] Height of the crop area
+ * @param {'cover' | 'contain' | 'stretch' | 'center' | 'repeat'} [props.imageResizeMode]
  * @param {import('react-native').ViewStyle} [props.containerStyle] Custom container style
  * @param {import('react-native').ImageStyle} [props.imageStyle] Custom image style
  * @returns {import('react').ReactElement} SelectAvatar component
  */
 function SelectAvatar({
-  containerStyle, cropHeight, cropWidth, currentAvatar, imageStyle, onAvatarSelected, onDelete, size = 95,
+  containerStyle,
+  cropHeight,
+  cropWidth,
+  currentAvatar,
+  imageResizeMode = 'cover',
+  imageStyle,
+  onAvatarSelected,
+  onDelete,
+  size = 95,
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const {
@@ -149,6 +158,7 @@ function SelectAvatar({
             <>
               <Image
                 source={{ uri: currentAvatar.path || getImageUrl(currentAvatar.url) }}
+                resizeMode={imageResizeMode}
                 style={[
                   ApplicationStyle.borderRadius24,
                   { height: size, width: size },
@@ -210,12 +220,16 @@ function SelectAvatar({
 
       <BottomModal
         close={() => { setIsModalVisible(false); }}
+        contentContainerStyle={[Spaces.paddingBottom[16]]}
         hideCloseButton
         isVisible={isModalVisible}
+        scrollable={false}
+        snapPoints={['34%']}
       >
         <View style={[
-          Spaces.paddingTop[32],
+          Spaces.paddingTop[20],
           Spaces.gap[24],
+          Spaces.paddingBottom[8],
         ]}
         >
           <Button

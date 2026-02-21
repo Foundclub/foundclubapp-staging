@@ -173,6 +173,9 @@ function EventCardNew({
     const teamMetaLine = [teamCategory, teamSection, teamLevel]
         .filter((value) => !!value)
         .join(' • ');
+    const invitedTeamNames = (item?.invitedTeams || [])
+        .map((team) => team?.name)
+        .filter(Boolean);
 
     return (
 
@@ -225,6 +228,11 @@ function EventCardNew({
                             <Text style={[styles.clubName, showClubHeader && { fontSize: 20 }]} numberOfLines={2}>{clubName}</Text>
                             {teamName ? <Text style={styles.category} numberOfLines={1}>{teamName}</Text> : null}
                             {teamMetaLine ? <Text style={styles.teamMetaInline} numberOfLines={1}>{teamMetaLine}</Text> : null}
+                            {invitedTeamNames.length > 0 ? (
+                                <Text style={styles.invitedTeamsInline} numberOfLines={1}>
+                                    {`Equipes invitees: ${invitedTeamNames.join(', ')}`}
+                                </Text>
+                            ) : null}
                         </View>
                     </View>
 
@@ -520,6 +528,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 3,
         color: '#D9F4FF',
+    },
+    invitedTeamsInline: {
+        fontFamily: 'Montserrat-Medium',
+        fontSize: 11,
+        marginTop: 2,
+        color: '#9ED9F0',
     },
     dateTimeContainer: {
         flexDirection: 'row',

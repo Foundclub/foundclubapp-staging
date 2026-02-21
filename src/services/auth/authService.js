@@ -2,7 +2,7 @@ import { signInWithPhoneNumber as firebaseSignInWithPhoneNumber, getAuth } from 
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
-import { getDeviceId } from 'react-native-device-info';
+import { getDeviceId, getVersion } from 'react-native-device-info';
 
 import client from '@/services/client';
 
@@ -501,8 +501,10 @@ export const addDeviceToken = async (token) => {
     });
     const result = await client.post('/user-fcm-token/me/device', {
       data: {
+        appVersion: getVersion(),
         device: getDeviceId(),
         platform: Platform.OS,
+        supportsPushActions: true,
         token,
       },
     });

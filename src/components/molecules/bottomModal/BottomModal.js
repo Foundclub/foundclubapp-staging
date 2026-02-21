@@ -175,6 +175,7 @@ function BottomModal({
             ref={scrollViewRef}
             contentContainerStyle={[
               Spaces.paddingHorizontal[24],
+              !headerComponent ? Spaces.paddingTop[12] : null,
               // If there's no footer, add some bottom padding for scroll
               footerComponent ? Spaces.paddingBottom[16] : Spaces.paddingBottom[40],
               { minHeight: 100 },
@@ -189,7 +190,12 @@ function BottomModal({
             {children}
           </BottomSheetScrollView>
         ) : (
-          <BottomSheetView style={[Spaces.paddingHorizontal[24], contentContainerStyle]}>
+          <BottomSheetView style={[
+            Spaces.paddingHorizontal[24],
+            !headerComponent ? Spaces.paddingTop[12] : null,
+            contentContainerStyle,
+          ]}
+          >
             {children}
           </BottomSheetView>
         )}

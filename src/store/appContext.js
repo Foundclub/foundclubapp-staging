@@ -55,6 +55,7 @@ const initStore = {
     return storedSessions;
   })(),
   clubFilters: undefined,
+  teamFilters: undefined,
   eventFilters: undefined,
   mercatoFilters: undefined,
   reservationFilters: undefined,

@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 
-import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
-import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
+
+import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
+
+import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 
 /**
  * @param {{
+ *  autoStart?: boolean;
  *  children: import('react').ReactNode;
  *  enableOverlay?: boolean;
  *  onForceStartHandled?: () => void;
@@ -113,6 +116,7 @@ function TutorialFlowBoundaryInner({
 
 /**
  * @param {{
+ *  autoStart?: boolean;
  *  children: import('react').ReactNode;
  *  enableOverlay?: boolean;
  *  onForceStartHandled?: () => void;
@@ -124,6 +128,7 @@ function TutorialFlowBoundaryInner({
  * @returns {import('react').ReactElement}
  */
 function TutorialFlowBoundary({
+  autoStart = true,
   children,
   enableOverlay = true,
   onForceStartHandled,
@@ -133,7 +138,7 @@ function TutorialFlowBoundary({
   userId,
 }) {
   const tutorial = useFeatureTutorial({
-    autoStart: true,
+    autoStart,
     routeParams,
     tutorialId,
     userId,

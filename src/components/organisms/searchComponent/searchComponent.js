@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -28,13 +28,17 @@ function SearchComponent({
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
 
+  useEffect(() => {
+    setSearch(searchDefaultValue);
+  }, [searchDefaultValue]);
+
   /**
    * Handles the change in the search input.
    * @param {string} text
    */
   const handleChange = (text) => {
     setSearch(text);
-    if (text.length >= 3) {
+    if (text.length === 0 || text.length >= 3) {
       handleSearchField(text);
     }
   };

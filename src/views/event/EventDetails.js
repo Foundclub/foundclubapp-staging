@@ -43,10 +43,34 @@ import EventReservationActions from './components/EventReservationActions';
 import { useEventMutations } from './hooks/useEventMutations';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
-/** @typedef {import('@/domains/auth/types').User} User */
-/** @typedef {{ documentId?: string; participationStatus?: string; user: User }} EventParticipation */
+/**
+ * @typedef {{
+ *   id?: string | number;
+ *   documentId?: string;
+ *   firstname?: string;
+ *   lastname?: string;
+ *   avatar?: { url?: string };
+ * }} User
+ */
+/** @typedef {{ documentId?: string; participationStatus?: string; isActive?: boolean; sourceTeam?: { documentId?: string; name?: string }; user: User }} EventParticipation */
 
 const START_TIME_RE = /^(\d{1,2}):(\d{2})/;
+
+const getUserKey = (user) => {
+  if (user?.documentId) return `doc:${user.documentId}`;
+  if (user?.id) return `id:${String(user.id)}`;
+  return null;
+};
+
+const uniqueUsers = (users = []) => {
+  const map = new Map();
+  users.forEach((user) => {
+    const key = getUserKey(user);
+    if (!key || map.has(key)) return;
+    map.set(key, user);
+  });
+  return Array.from(map.values());
+};
 
 const resolveEventStartAt = (event) => {
   const eventDate = event?.date ? new Date(event.date) : null;
@@ -92,20 +116,22 @@ function EventDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { canEditEvent, userData } = useAuth();
+  const { canEditEvent, canManageEvent, userData } = useAuth();
   const { sendMessage } = useMessaging();
 
   const { data: event, error, isLoading, refetch } = useGetEvent(eventId);
-  const canEdit = Boolean(canEditEvent(event?.team?.documentId || ''));
+  const canEdit = Boolean(canManageEvent(event));
+  const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
 
   const isTeamMember = useMemo(() => {
     const userDocId = userData?.documentId;
     if (!userDocId) return false;
-    const players = event?.team?.players || [];
-    const trainers = event?.team?.trainers || [];
+    const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
+    const players = teams.flatMap((team) => team?.players || []);
+    const trainers = teams.flatMap((team) => team?.trainers || []);
     return players.some((player) => player?.documentId === userDocId)
       || trainers.some((trainer) => trainer?.documentId === userDocId);
-  }, [event?.team?.players, event?.team?.trainers, userData?.documentId]);
+  }, [event?.invitedTeams, event?.team, userData?.documentId]);
 
   const { data: attendancePayload, refetch: refetchAttendance } = useGetEventAttendance(
     eventId || '',
@@ -146,7 +172,7 @@ function EventDetails({ navigation, route }) {
 
   const { data: eventParticipations, refetch: refetchParticipations } = useGetEventParticipations(
     eventId || '',
-    canEdit ? undefined : userData?.documentId,
+    undefined,
     { pageSize: 100 }
   );
 
@@ -246,42 +272,163 @@ function EventDetails({ navigation, route }) {
     serverNowMs,
   ]);
 
-  const hasPendingRequest = useMemo(() => {
-    const myParticipations = /** @type {EventParticipation[]} */ (eventParticipations?.pages?.[0]?.data || []);
-    return myParticipations.some(
-      (participation) =>
-        participation.participationStatus === 'pending'
-        && participation.user.documentId === userData?.documentId
-    );
-  }, [eventParticipations, userData?.documentId]);
+  const allEventParticipations = useMemo(
+    () => /** @type {EventParticipation[]} */ (eventParticipations?.pages?.[0]?.data || []),
+    [eventParticipations]
+  );
+
+  const activeEventParticipations = useMemo(
+    () => allEventParticipations.filter((participation) => participation?.isActive !== false),
+    [allEventParticipations]
+  );
+
+  const hasPendingRequest = useMemo(() => activeEventParticipations.some(
+    (participation) =>
+      participation.participationStatus === 'pending'
+      && participation.user.documentId === userData?.documentId
+  ), [activeEventParticipations, userData?.documentId]);
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
-      eventParticipations?.pages?.[0]?.data?.filter((participation) => participation.participationStatus === 'pending') || []
+      activeEventParticipations.filter((participation) => participation.participationStatus === 'pending')
     ),
-    [eventParticipations]
+    [activeEventParticipations]
   );
+
+  const teamParticipationSections = useMemo(() => {
+    if (!event) return [];
+
+    const teamBuckets = [
+      event?.team ? {
+        isHome: true,
+        key: event.team.documentId || 'home-team',
+        players: uniqueUsers(event.team.players || []),
+        teamName: event.team.name || 'Equipe organisatrice',
+      } : null,
+      ...((event?.invitedTeams || []).map((team) => ({
+        isHome: false,
+        key: team?.documentId || `invited-${team?.name || 'team'}`,
+        players: uniqueUsers(team?.players || []),
+        teamName: team?.name || 'Equipe invitee',
+      }))),
+    ].filter(Boolean);
+
+    const participatingKeys = new Set((event?.participations || []).map((participant) => getUserKey(participant)).filter(Boolean));
+    const missingKeys = new Set((event?.missings || []).map((missing) => getUserKey(missing)).filter(Boolean));
+
+    const pendingByUserKey = new Map();
+    pendingParticipations.forEach((participation) => {
+      const key = getUserKey(participation?.user);
+      if (!key) return;
+      pendingByUserKey.set(key, participation);
+    });
+
+    const historicalByTeam = new Map();
+    allEventParticipations
+      .filter((participation) => participation?.isActive === false && participation?.user)
+      .forEach((participation) => {
+        const teamKey = participation?.sourceTeam?.documentId
+          || `removed-${participation?.sourceTeam?.name || 'team'}`;
+        const teamName = participation?.sourceTeam?.name || 'Equipe retiree';
+        const current = historicalByTeam.get(teamKey) || {
+          key: teamKey,
+          teamName,
+          missing: [],
+          participating: [],
+          pending: [],
+        };
+        if (participation.participationStatus === 'missing') {
+          current.missing.push(participation.user);
+        } else if (participation.participationStatus === 'accepted') {
+          current.participating.push(participation.user);
+        } else if (participation.participationStatus === 'pending') {
+          current.pending.push(participation);
+        }
+        historicalByTeam.set(teamKey, current);
+      });
+
+    const sections = teamBuckets.map((bucket) => {
+      const participating = bucket.players.filter((player) => participatingKeys.has(getUserKey(player)));
+      const missing = bucket.players.filter((player) => missingKeys.has(getUserKey(player)));
+      const pending = bucket.players
+        .map((player) => pendingByUserKey.get(getUserKey(player)))
+        .filter(Boolean);
+      const notAnswered = bucket.players.filter((player) => {
+        const key = getUserKey(player);
+        return !participatingKeys.has(key) && !missingKeys.has(key) && !pendingByUserKey.has(key);
+      });
+
+      const historical = historicalByTeam.get(bucket.key) || {
+        missing: [],
+        participating: [],
+        pending: [],
+      };
+
+      return {
+        ...bucket,
+        allowCoachActions: canEdit,
+        historical: {
+          missing: uniqueUsers(historical.missing || []),
+          participating: uniqueUsers(historical.participating || []),
+          pending: historical.pending || [],
+        },
+        missing: uniqueUsers(missing),
+        notAnswered: uniqueUsers(notAnswered),
+        participating: uniqueUsers(participating),
+        pending,
+      };
+    });
+
+    const existingSectionKeys = new Set(sections.map((section) => section.key));
+    historicalByTeam.forEach((historicalSection, key) => {
+      if (existingSectionKeys.has(key)) return;
+      sections.push({
+        allowCoachActions: false,
+        historical: {
+          missing: uniqueUsers(historicalSection.missing || []),
+          participating: uniqueUsers(historicalSection.participating || []),
+          pending: historicalSection.pending || [],
+        },
+        isHome: false,
+        key,
+        missing: [],
+        notAnswered: [],
+        participating: [],
+        pending: [],
+        players: [],
+        teamName: historicalSection.teamName,
+      });
+    });
+
+    return sections;
+  }, [allEventParticipations, canEdit, event, pendingParticipations]);
 
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
       return { missing: [], notAnswered: [], participating: event?.participations || [] };
     }
 
-    const teamPlayers = event?.team?.players || [];
+    const teamPlayers = uniqueUsers([
+      ...(event?.team?.players || []),
+      ...((event?.invitedTeams || []).flatMap((team) => team?.players || [])),
+    ]);
     const participatingPlayers = event?.participations || [];
     const missingPlayers = event?.missings || [];
-    const notAnsweredPlayers = teamPlayers.filter(
-      (player) =>
-        !participatingPlayers.some((participant) => participant.documentId === player.documentId)
-        && !missingPlayers.some((missing) => missing.documentId === player.documentId)
-    );
+    const pendingKeys = new Set((pendingParticipations || []).map((participation) => getUserKey(participation?.user)).filter(Boolean));
+
+    const notAnsweredPlayers = teamPlayers.filter((player) => {
+      const key = getUserKey(player);
+      return !participatingPlayers.some((participant) => getUserKey(participant) === key)
+        && !missingPlayers.some((missing) => getUserKey(missing) === key)
+        && !pendingKeys.has(key);
+    });
 
     return {
       missing: missingPlayers,
       notAnswered: notAnsweredPlayers,
       participating: participatingPlayers,
     };
-  }, [canEdit, event]);
+  }, [canEdit, event, pendingParticipations]);
 
   const canRequestFeatured = useMemo(() => {
     const hasParentMultisport = Boolean(event?.team?.club?.parentMultisport);
@@ -370,7 +517,7 @@ function EventDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleDeleteParticipation = useCallback(() => {
-    const myParticipation = eventParticipations?.pages?.[0]?.data?.find(
+    const myParticipation = activeEventParticipations.find(
       (participation) => participation.user.documentId === userData?.documentId
     );
 
@@ -400,7 +547,7 @@ function EventDetails({ navigation, route }) {
         ]
       );
     }
-  }, [event, eventParticipations, mutations, t, userData?.documentId]);
+  }, [activeEventParticipations, event, mutations, t, userData?.documentId]);
 
   const handleExportParticipants = useCallback(async () => {
     if (!eventId) return;
@@ -680,6 +827,7 @@ function EventDetails({ navigation, route }) {
 
           <EventParticipants
             attendanceByUserId={attendanceByUserId}
+            canApprovePendingRequests={canApprovePendingRequests}
             canEdit={canEdit}
             event={event}
             eventStartAt={eventStartAt}
@@ -693,6 +841,7 @@ function EventDetails({ navigation, route }) {
             onCoachMarkArrival={handleCoachMarkArrival}
             participationsByStatus={participationsByStatus}
             pendingParticipations={pendingParticipations}
+            teamParticipationSections={teamParticipationSections}
           />
         </WithDataWrapper>
       </ScrollView>

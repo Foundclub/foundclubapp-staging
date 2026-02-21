@@ -59,7 +59,7 @@ function TeamList({ navigation, route }) {
   const handleAddTeam = () => {
     navigation.navigate(RouteNames.TeamStack, {
       params: { clubId },
-      screen: RouteNames.TeamEdit,
+      screen: RouteNames.TeamWizardName,
     });
   };
 

@@ -116,6 +116,9 @@ export default function appReducer(state, action) {
     case 'SET_CLUB_FILTERS': {
       return { ...state, clubFilters: action.payload };
     }
+    case 'SET_TEAM_FILTERS': {
+      return { ...state, teamFilters: action.payload };
+    }
     case 'SET_EVENT_FILTERS': {
       return { ...state, eventFilters: action.payload };
     }

@@ -103,7 +103,7 @@ function Profile({ navigation, route }) {
   };
 
   const handleFindTeam = () => {
-    navigation.navigate(RouteNames.HomeTab);
+    navigation.navigate(RouteNames.SearchClubs);
   };
 
   const handleLogout = () => {
@@ -422,13 +422,13 @@ function Profile({ navigation, route }) {
         <TabButton
           isActive={false}
           onPress={() => handleOpenMultisportClub(firstMultisportClub.documentId)}
-          title={t('profile.actions.manageClub', 'GÃ©rer mon club')}
+          title={t('profile.actions.manageClub', 'G\u00e9rer mon club')}
         />
       ) : null}
       <TabButton
         isActive={false}
         onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
-        title={t('profile.actions.manageAlerts', 'GÃ©rer mes alertes')}
+        title={t('profile.actions.manageAlerts', 'G\u00e9rer mes alertes')}
       />
       {canManageClub ? (
         <TabButton

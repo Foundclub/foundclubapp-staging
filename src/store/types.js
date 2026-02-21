@@ -5,6 +5,7 @@
  * @property {string} [theme] - The current theme.
  * @property {{ totalViews: number, views: { route: string; index: number; }[] }} [onboardingViews]
  * @property {ClubFilters} [clubFilters] - The filters for the club.
+ * @property {TeamFilters} [teamFilters] - The filters for teams.
  * @property {MercatoFilters} [mercatoFilters] - Recruitment marketplace filters.
  * @property {ReservationFilters} [reservationFilters] - Reservation filters.
  * @property {SquadFilters} [squadFilters] - League squad filters.
@@ -56,6 +57,15 @@
  * @property {string} activity
  * @property {{label: string, value: string}} city
  * @property {number} radius
+ */
+
+/**
+ * @typedef {object} TeamFilters
+ * @property {string} [name]
+ * @property {string} [activities]
+ * @property {string} [section]
+ * @property {string[]} [category]
+ * @property {string[]} [level]
  */
 
 /**

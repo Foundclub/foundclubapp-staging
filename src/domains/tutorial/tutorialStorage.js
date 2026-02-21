@@ -1,12 +1,14 @@
 import { storage } from '@/store/appContext';
 
-import { getTutorialFlowId, TUTORIAL_FLOW_PREFIX } from './tutorialIds';
+import { getTutorialFlowId, TUTORIAL_FLOW_PREFIX, TutorialIdList } from './tutorialIds';
 
 const TUTORIAL_STORAGE_PREFIX = 'tutorial-v1';
 const ONBOARDING_PROGRESS_PREFIX = 'onboarding-progress-v1';
 const FEATURE_SEEN_MAP_SUFFIX = 'feature_seen_map';
 const HOME_HUB_SEEN_SUFFIX = 'homehub_seen';
 const PROGRAM_VERSION_SUFFIX = 'program_version';
+const ENTRY_GATE_CHOICE_SUFFIX = 'entry_gate_choice';
+const AUTO_ENABLED_SUFFIX = 'auto_enabled';
 
 const CURRENT_TUTORIAL_PROGRAM_VERSION = 1;
 
@@ -15,6 +17,8 @@ const toSafeUserId = (userId) => userId || 'anonymous';
 const getFeatureSeenMapKey = (userId) => `${TUTORIAL_STORAGE_PREFIX}:${toSafeUserId(userId)}:${FEATURE_SEEN_MAP_SUFFIX}`;
 const getHomeHubSeenKey = (userId) => `${TUTORIAL_STORAGE_PREFIX}:${toSafeUserId(userId)}:${HOME_HUB_SEEN_SUFFIX}`;
 const getProgramVersionKey = (userId) => `${TUTORIAL_STORAGE_PREFIX}:${toSafeUserId(userId)}:${PROGRAM_VERSION_SUFFIX}`;
+const getEntryGateChoiceKey = (userId) => `${TUTORIAL_STORAGE_PREFIX}:${toSafeUserId(userId)}:${ENTRY_GATE_CHOICE_SUFFIX}`;
+const getAutoEnabledKey = (userId) => `${TUTORIAL_STORAGE_PREFIX}:${toSafeUserId(userId)}:${AUTO_ENABLED_SUFFIX}`;
 const getOnboardingProgressKey = (tutorialId, userId) => `${ONBOARDING_PROGRESS_PREFIX}:${getTutorialFlowId(tutorialId, userId)}:completed`;
 
 /**
@@ -93,7 +97,9 @@ export const markTutorialCompleted = (userId, tutorialId, source = 'auto') => {
  * @param {string} tutorialId
  * @returns {boolean}
  */
-export const hasSeenTutorial = (userId, tutorialId) => Boolean(getTutorialState(userId, tutorialId)?.seenAt);
+export const hasSeenTutorial = (userId, tutorialId) => (
+  Boolean(getTutorialState(userId, tutorialId)?.seenAt)
+);
 
 /**
  * @param {string | undefined | null} userId
@@ -129,6 +135,79 @@ export const setTutorialProgramVersion = (userId, version = CURRENT_TUTORIAL_PRO
 
 /**
  * @param {string | undefined | null} userId
+ * @returns {'pending' | 'start' | 'skip'}
+ */
+export const getEntryGateChoice = (userId) => {
+  const rawValue = storage.getString(getEntryGateChoiceKey(userId));
+  if (rawValue === 'start' || rawValue === 'skip') {
+    return rawValue;
+  }
+  return 'pending';
+};
+
+/**
+ * @param {string | undefined | null} userId
+ * @param {'pending' | 'start' | 'skip'} choice
+ */
+export const setEntryGateChoice = (userId, choice) => {
+  const normalizedChoice = choice === 'start' || choice === 'skip' ? choice : 'pending';
+  if (normalizedChoice === 'pending') {
+    storage.delete(getEntryGateChoiceKey(userId));
+    return;
+  }
+  storage.set(getEntryGateChoiceKey(userId), normalizedChoice);
+};
+
+/**
+ * @param {string | undefined | null} userId
+ * @returns {boolean}
+ */
+export const isAutoTutorialEnabled = (userId) => {
+  const key = getAutoEnabledKey(userId);
+  if (!storage.contains?.(key)) {
+    return true;
+  }
+  const rawValue = storage.getBoolean(key);
+  if (typeof rawValue === 'boolean') return rawValue;
+  return true;
+};
+
+/**
+ * @param {string | undefined | null} userId
+ * @param {boolean} enabled
+ */
+export const setAutoTutorialEnabled = (userId, enabled) => {
+  if (enabled) {
+    storage.delete(getAutoEnabledKey(userId));
+    return;
+  }
+  storage.set(getAutoEnabledKey(userId), false);
+};
+
+/**
+ * Disable all automatic tutorials while keeping manual launch available.
+ * @param {string | undefined | null} userId
+ */
+export const skipAllAutoTutorials = (userId) => {
+  const now = new Date().toISOString();
+  const seenMap = getTutorialSeenMap(userId);
+
+  TutorialIdList.forEach((tutorialId) => {
+    seenMap[tutorialId] = {
+      ...seenMap[tutorialId],
+      seenAt: now,
+      source: 'manual',
+    };
+  });
+
+  storage.set(getFeatureSeenMapKey(userId), JSON.stringify(seenMap));
+  setHomeHubTutorialSeen(userId, true);
+  setEntryGateChoice(userId, 'skip');
+  setAutoTutorialEnabled(userId, false);
+};
+
+/**
+ * @param {string | undefined | null} userId
  * @param {string} tutorialId
  */
 export const resetTutorialState = (userId, tutorialId) => {
@@ -151,7 +230,9 @@ export const resetAllTutorialsForUser = (userId) => {
   storage.delete(getFeatureSeenMapKey(normalizedUserId));
   storage.delete(getHomeHubSeenKey(normalizedUserId));
   storage.delete(getProgramVersionKey(normalizedUserId));
-  deletedCount += 3;
+  storage.delete(getEntryGateChoiceKey(normalizedUserId));
+  storage.delete(getAutoEnabledKey(normalizedUserId));
+  deletedCount += 5;
 
   const allKeys = storage.getAllKeys?.() || [];
   allKeys.forEach((key) => {

@@ -482,9 +482,15 @@ export default {
       },
     },
     participationStatus: {
-      missing: 'Absent·e·s',
-      notAnswered: 'Sans réponse',
-      participating: 'Présent·e·s',
+      missing: 'Absent\u00b7e\u00b7s',
+      notAnswered: 'Sans r\u00e9ponse',
+      participating: 'Pr\u00e9sent\u00b7e\u00b7s',
+    },
+    invitedTeams: {
+      homeTeamBadge: 'Equipe organisatrice',
+      invitedTeamBadge: 'Equipe invitee',
+      historicalTitle: 'Historique equipe retiree',
+      historicalPending: '{{count}} reponse(s) en attente',
     },
   },
   eventEdit: {
@@ -982,6 +988,15 @@ export default {
     actions: {
       scrollDown: 'Descendre',
     },
+    entry: {
+      title: 'Bienvenue sur FoundClub',
+      subtitle: 'FoundClub est un outil concu pour vous accompagner dans toute votre aventure sportive, peu importe votre sport.',
+      description: 'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l application par vous meme.',
+      actions: {
+        start: 'Lancer le tutoriel complet',
+        skip: 'Passer',
+      },
+    },
     reset: {
       title: 'Reinitialiser les tutoriels',
       description: 'Tous les tutoriels seront remis a zero pour ce compte.',
@@ -1220,8 +1235,9 @@ export default {
       findClub: 'Trouver mon club',
       findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
-      logout: 'Déconnexion',
-      manageClub: 'Gérer mon club',
+      logout: 'D\u00e9connexion',
+      manageClub: 'G\u00e9rer mon club',
+      manageAlerts: 'G\u00e9rer mes alertes',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
       manageEvents: 'Gérer mes évènements',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
@@ -1623,3 +1639,5 @@ export default {
     sectionCreated: 'La section a été créée avec succès.',
   },
 };
+
+

@@ -139,6 +139,14 @@ export const getEventById = async (documentId) => {
         'team.players.avatar',
         'team.trainers',
         'team.trainers.avatar',
+        'invitedTeams',
+        'invitedTeams.players',
+        'invitedTeams.players.avatar',
+        'invitedTeams.trainers',
+        'invitedTeams.trainers.avatar',
+        'invitedTeams.category',
+        'invitedTeams.level',
+        'invitedTeams.section',
         'type',
         'missings',
         'participations.avatar',
@@ -565,6 +573,29 @@ export const getEvents = async (params = {}) => {
  */
 export const missingEvent = async (eventId) => {
   const response = await client.post(`/events/${eventId}/missing`);
+  return response.data;
+};
+
+/**
+ * Respond to an event RSVP.
+ * @param {string} eventId
+ * @param {'present' | 'absent'} answer
+ * @param {{ source?: 'push_action' | 'in_app', notificationId?: string }} [meta]
+ * @returns {Promise<any>}
+ */
+export const respondToEventRsvp = async (eventId, answer, meta = {}) => {
+  if (!eventId) {
+    throw new Error('Missing eventId for RSVP');
+  }
+  if (answer !== 'present' && answer !== 'absent') {
+    throw new Error(`Unsupported RSVP answer: ${String(answer)}`);
+  }
+
+  const response = await client.post(`/events/${eventId}/rsvp`, {
+    answer,
+    notificationId: meta.notificationId,
+    source: meta.source || 'in_app',
+  });
   return response.data;
 };
 
