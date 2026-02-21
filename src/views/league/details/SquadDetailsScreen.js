@@ -489,7 +489,12 @@ const SquadDetailsScreen = ({ navigation, route }) => {
              {/* League badges */}
              <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
                  {team?.division ? (
-                    <DivisionBadge division={team.division} size={44} />
+                    <DivisionBadge
+                        division={team.division}
+                        showChrome={false}
+                        showLabel={false}
+                        size={44}
+                    />
                  ) : null}
                  {team?.elo ? (
                      <View style={{

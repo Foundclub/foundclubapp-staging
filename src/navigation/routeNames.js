@@ -56,6 +56,8 @@ export const RouteNames = /** @type {const} */ ({
   CMMembers: 'CMMembers',
   CMTeams: 'CMTeams',
   RequestsDashboard: 'RequestsDashboard',
+  RequestsHub: 'RequestsHub',
+  RequestsTab: 'RequestsTab',
   Search: 'Search',
   SearchEvents: 'SearchEvents',
   SearchClubs: 'SearchClubs',

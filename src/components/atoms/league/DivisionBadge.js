@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, NativeModules, StyleSheet, Text, UIManager, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,36 +7,78 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import Div1Badge from '@/assets/league/divisions/DIV-1.svg';
+import Div2Badge from '@/assets/league/divisions/Div-2.svg';
+import Div3Badge from '@/assets/league/divisions/Div-3.svg';
+import Div4Badge from '@/assets/league/divisions/Div-4.svg';
+import Div5Badge from '@/assets/league/divisions/Div-5.svg';
 import useTheme from '@/theme/themeContext';
+import { clampLeagueDivision } from '@/utils/league/division';
 
-const clampDivision = (value) => {
-  const parsed = Number.parseInt(String(value), 10);
-  if (Number.isNaN(parsed)) return 10;
-  return Math.max(1, Math.min(10, parsed));
+const BADGE_COMPONENTS = /** @type {Record<number, import('react').ComponentType<any>>} */ ({
+  1: Div1Badge,
+  2: Div2Badge,
+  3: Div3Badge,
+  4: Div4Badge,
+  5: Div5Badge,
+});
+
+const hasSvgNativeSupport = () => {
+  const native = NativeModules || {};
+  const hasNativeModule = Object.keys(native).some((key) => key.toLowerCase().includes('rnsvg'));
+  if (hasNativeModule) return true;
+
+  const managerNames = [
+    'RNSVGSvgView',
+    'RNSVGPath',
+    'RNSVGGroup',
+    'RNSVGRect',
+    'RNSVGCircle',
+    'RCTRNSVGPath',
+  ];
+
+  if (typeof UIManager?.getViewManagerConfig === 'function') {
+    return managerNames.some((name) => Boolean(UIManager.getViewManagerConfig(name)));
+  }
+
+  return managerNames.some((name) => Boolean(UIManager?.[name]));
 };
 
-const getImageForDivision = (images, division) => {
+const SVG_NATIVE_READY = hasSvgNativeSupport();
+
+/**
+ * @param {number} division
+ * @returns {import('react').ComponentType<any>}
+ */
+const getBadgeComponent = (division) => BADGE_COMPONENTS[division] || BADGE_COMPONENTS[5];
+
+const getLegacyImageForDivision = (images, division) => {
   const key = `division${String(division).padStart(2, '0')}`;
-  return images?.[key] || images?.division10 || images?.shield;
+  return images?.[key] || images?.division05 || images?.shield;
 };
 
 const DivisionBadge = ({
-  division = 10,
+  division = 5,
+  showChrome = true,
   showLabel = true,
   size = 54,
 }) => {
   const { Colors, Fonts, Images } = useTheme();
-  const normalizedDivision = clampDivision(division);
-  const imageSource = useMemo(
-    () => getImageForDivision(Images, normalizedDivision),
+  const normalizedDivision = clampLeagueDivision(division);
+  const BadgeComponent = useMemo(
+    () => getBadgeComponent(normalizedDivision),
+    [normalizedDivision]
+  );
+  const legacyImageSource = useMemo(
+    () => getLegacyImageForDivision(Images, normalizedDivision),
     [Images, normalizedDivision]
   );
 
-  const pulse = useSharedValue(0.35);
+  const pulse = useSharedValue(0.14);
 
   useEffect(() => {
     pulse.value = withRepeat(
-      withTiming(0.75, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      withTiming(0.32, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
       -1,
       true
     );
@@ -44,50 +86,71 @@ const DivisionBadge = ({
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: pulse.value,
-    transform: [{ scale: 1 + (pulse.value * 0.08) }],
+    transform: [{ scale: 1 + (pulse.value * 0.05) }],
   }));
 
-  const glowSize = size + 14;
+  const glowSize = size + 10;
+  const iconSize = showChrome ? Math.max(28, size - 10) : size;
 
   return (
     <View style={[styles.wrapper, { width: size + 16 }]}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.glow,
-          glowStyle,
-          {
-            backgroundColor: 'rgba(250, 204, 21, 0.35)',
-            borderColor: Colors.gold500,
-            height: glowSize,
-            width: glowSize,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.imageWrap,
-          {
-            backgroundColor: 'rgba(9, 27, 42, 0.95)',
-            borderColor: Colors.gold500,
-            height: size,
-            width: size,
-          },
-        ]}
-      >
-        <Image
-          source={imageSource}
-          style={{ height: size - 8, width: size - 8 }}
-          resizeMode="contain"
-        />
-      </View>
+      {showChrome ? (
+        <>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.glow,
+              glowStyle,
+              {
+                backgroundColor: 'rgba(255, 215, 0, 0.09)',
+                borderColor: 'rgba(255, 215, 0, 0.42)',
+                height: glowSize,
+                width: glowSize,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.imageWrap,
+              {
+                backgroundColor: 'rgba(1, 36, 52, 0.98)',
+                borderColor: 'rgba(255, 215, 0, 0.72)',
+                height: size,
+                width: size,
+              },
+            ]}
+          >
+            {SVG_NATIVE_READY ? (
+              <BadgeComponent height={iconSize} width={iconSize} />
+            ) : (
+              <Image
+                source={legacyImageSource}
+                style={{ height: iconSize, width: iconSize }}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </>
+      ) : (
+        <View style={[styles.plainIconWrap, { height: size, width: size }]}>
+          {SVG_NATIVE_READY ? (
+            <BadgeComponent height={iconSize} width={iconSize} />
+          ) : (
+            <Image
+              source={legacyImageSource}
+              style={{ height: iconSize, width: iconSize }}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      )}
       {showLabel ? (
         <View
           style={[
             styles.labelChip,
             {
-              backgroundColor: 'rgba(250, 204, 21, 0.18)',
-              borderColor: 'rgba(250, 204, 21, 0.55)',
+              backgroundColor: 'rgba(1, 179, 244, 0.16)',
+              borderColor: 'rgba(1, 179, 244, 0.52)',
             },
           ]}
         >
@@ -110,13 +173,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 6,
   },
   labelChip: {
     borderRadius: 999,
     borderWidth: 1,
-    marginTop: -6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    marginTop: -4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  plainIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   wrapper: {
     alignItems: 'center',
@@ -125,4 +197,3 @@ const styles = StyleSheet.create({
 });
 
 export default DivisionBadge;
-

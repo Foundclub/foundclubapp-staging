@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -13,6 +13,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import useAuth from '@/domains/auth/useAuth';
+import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { useGetClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestQueries';
@@ -184,6 +185,14 @@ function ClubMembershipRequestList({ navigation, route }) {
       );
     },
   });
+
+  useEffect(() => {
+    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'club',
+      source: 'profile',
+    });
+  }, [navigation]);
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -378,6 +387,29 @@ function ClubMembershipRequestList({ navigation, route }) {
           isLoading={isLoading && !isFetchingNextPage}
           wrapperStyle={[Alignments.fill]}
         >
+          <TouchableOpacity
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'club',
+              source: 'profile',
+            })}
+            style={[
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.marginBottom[12],
+              {
+                backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                borderColor: `${Colors.primary500}66`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+            </Text>
+          </TouchableOpacity>
           <OnboardingWrapper
             description="Traitez ici les demandes d adhesion au club et assignez les profils valides."
             id="club-membership-requests-list"

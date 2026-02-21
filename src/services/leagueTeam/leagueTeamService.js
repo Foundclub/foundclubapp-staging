@@ -1,6 +1,7 @@
 
 import client from '@/services/client';
 import { Platform } from 'react-native';
+import { clampLeagueDivision } from '@/utils/league/division';
 
 /**
  * @typedef {object} LeagueTeamData
@@ -255,12 +256,13 @@ export const getLeagueTeamById = async (id) => {
  * @param {number} division 
  * @returns {Promise<Team[]>}
  */
-export const getRanking = async (division = 10) => {
+export const getRanking = async (division = 5) => {
+    const normalizedDivision = clampLeagueDivision(division);
     try {
         const response = await client.get('/league-teams', {
             params: {
                 filters: {
-                    division: { $eq: division }
+                    division: { $eq: normalizedDivision }
                 },
                 sort: ['elo:desc', 'wins:desc'], // Sort by ELO, then Wins
                 populate: ['crest']
@@ -600,7 +602,7 @@ export const searchSquads = async (filters) => {
         }
 
         const division = Number.parseInt(String(/** @type {any} */ (divisionRaw ?? '')), 10);
-        if (Number.isFinite(division) && division >= 1 && division <= 10) {
+        if (Number.isFinite(division) && division >= 1 && division <= 5) {
             conditions.push({ division: { $eq: division } });
         }
 

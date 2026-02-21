@@ -19,6 +19,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import { RouteNames } from '@/navigation/routeNames';
 import { getEntityDocumentId } from '@/utils/entityId';
+import { clampLeagueDivision, getNextDivisionTargetElo } from '@/utils/league/division';
 
 /**
  * @typedef {{ rank: number, name: string, points: number, form: string, isMe: boolean }} LeaderboardEntry
@@ -68,7 +69,7 @@ const LeagueDashboard = () => {
                     setMatchHistory(Array.isArray(history) ? history : []);
 
                     // Fetch Ranking for current division
-                    const division = Number(team?.division) || 10;
+                    const division = clampLeagueDivision(team?.division);
                     const rankings = await getRanking(division);
                     setRankingData(Array.isArray(rankings) ? rankings : []);
 
@@ -202,7 +203,7 @@ const LeagueDashboard = () => {
             <View>
                 <SectionHeader 
                     title="LEADERBOARD" 
-                    subtitle={`DIVISION ${userTeam?.division || 10}`}
+                    subtitle={`DIVISION ${clampLeagueDivision(userTeam?.division)}`}
                 />
                 
                 <LeagueCard style={{ padding: 0, overflow: 'hidden', ...leagueSurface }}>
@@ -282,7 +283,7 @@ const LeagueDashboard = () => {
                                 return index >= 0 ? index + 1 : '-';
                             })()}
                             teamName={userTeam.name}
-                            nextDivisionElo={1300}
+                            nextDivisionElo={getNextDivisionTargetElo(userTeam?.division)}
                         />
 
                         {/* CTA Matchmaking */}

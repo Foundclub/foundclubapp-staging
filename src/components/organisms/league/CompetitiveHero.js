@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import useTheme from '@/theme/themeContext';
+import { clampLeagueDivision, getNextDivisionTargetElo, isMaxDivision } from '@/utils/league/division';
 
 /**
  * Hero component for League Dashboard.
@@ -11,21 +12,31 @@ import useTheme from '@/theme/themeContext';
  * @param {number|string} [props.division]
  * @param {number|string} [props.rank]
  * @param {string} [props.teamName]
- * @param {number} [props.nextDivisionElo]
+ * @param {number | null} [props.nextDivisionElo]
  * @returns {import('react').ReactElement}
  */
 const CompetitiveHero = ({
   elo = 1200,
-  division = 10,
+  division = 5,
   rank = '-',
   teamName,
-  nextDivisionElo = 1300,
+  nextDivisionElo = null,
 }) => {
   const { Colors, Fonts } = useTheme();
+  const heroSurfaceColor = 'rgba(1, 36, 52, 0.92)';
+  const heroBorderColor = 'rgba(255, 215, 0, 0.78)';
+  const progressTrackColor = 'rgba(173, 177, 178, 0.26)';
 
+  const normalizedDivision = clampLeagueDivision(division);
+  const targetElo = Number.isFinite(Number(nextDivisionElo))
+    ? Number(nextDivisionElo)
+    : getNextDivisionTargetElo(normalizedDivision);
+  const maxDivisionReached = isMaxDivision(normalizedDivision);
   const range = 200;
-  const minElo = nextDivisionElo - range;
-  const progress = Math.min(Math.max(((elo - minElo) / range) * 100, 0), 100);
+  const minElo = Number.isFinite(targetElo) ? targetElo - range : elo;
+  const progress = Number.isFinite(targetElo)
+    ? Math.min(Math.max(((elo - minElo) / range) * 100, 0), 100)
+    : 100;
 
   return (
     <LeagueCard
@@ -33,14 +44,19 @@ const CompetitiveHero = ({
       style={[
         styles.container,
         {
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.gold500,
+          backgroundColor: heroSurfaceColor,
+          borderColor: heroBorderColor,
         },
       ]}
     >
       <View style={styles.centered}>
         <View style={styles.divisionBadgeWrap}>
-          <DivisionBadge division={division} size={72} />
+          <DivisionBadge
+            division={normalizedDivision}
+            showChrome={false}
+            showLabel={false}
+            size={96}
+          />
         </View>
 
         <View style={[styles.centered, { marginVertical: 12 }]}>
@@ -52,24 +68,34 @@ const CompetitiveHero = ({
           </Text>
         </View>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.rowBetween}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
-            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-              {nextDivisionElo} PTS{' '}
-              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                (PROMOTION)
-              </Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.rowBetween}>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
+              {maxDivisionReached ? (
+                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Division max</Text>
+              ) : (
+                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+                  {targetElo} PTS{' '}
+                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                    (PROMOTION)
+                  </Text>
+                </Text>
+              )}
+            </View>
+            <View style={[styles.track, { backgroundColor: progressTrackColor }]}>
+              <View style={[styles.bar, { width: `${progress}%`, backgroundColor: Colors.gold500 }]} />
+            </View>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
+              {maxDivisionReached ? (
+                <Text style={{ color: Colors.gold500 }}>Tu es deja au plus haut niveau.</Text>
+              ) : (
+                <>
+                  <Text style={{ color: Colors.gold500 }}>{Math.max((targetElo || elo) - elo, 0)}</Text>{' '}
+                  points pour la promotion
+                </>
+              )}
             </Text>
           </View>
-          <View style={[styles.track, { backgroundColor: Colors.neutral700 }]}>
-            <View style={[styles.bar, { width: `${progress}%`, backgroundColor: Colors.gold500 }]} />
-          </View>
-          <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
-            <Text style={{ color: Colors.gold500 }}>{Math.max(nextDivisionElo - elo, 0)}</Text>{' '}
-            points pour la promotion
-          </Text>
-        </View>
 
         <View style={[styles.rowBetween, { marginTop: 16 }]}>
           <View>

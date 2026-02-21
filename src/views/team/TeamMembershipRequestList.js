@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -14,6 +14,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import useAuth from '@/domains/auth/useAuth';
+import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { useGetTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestQueries';
@@ -35,6 +36,7 @@ function TeamMembershipRequestList({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
+    Colors,
     Fonts,
     Images,
     Spaces,
@@ -66,6 +68,14 @@ function TeamMembershipRequestList({ navigation, route }) {
       refetch();
     },
   });
+
+  useEffect(() => {
+    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'team',
+      source: 'profile',
+    });
+  }, [navigation]);
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -242,6 +252,29 @@ function TeamMembershipRequestList({ navigation, route }) {
             || rejectRequestMutation.isPending}
           wrapperStyle={[Alignments.fill]}
         >
+          <TouchableOpacity
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'team',
+              source: 'profile',
+            })}
+            style={[
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.marginBottom[12],
+              {
+                backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                borderColor: `${Colors.primary500}66`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+            </Text>
+          </TouchableOpacity>
           <OnboardingWrapper
             description="Ici vous pouvez accepter ou refuser les demandes d adhesion a vos equipes."
             id="team-membership-requests-list"

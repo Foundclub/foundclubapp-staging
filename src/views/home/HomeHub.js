@@ -6,7 +6,9 @@
   useState,
 } from 'react';
 import { useIsFocused } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Alert,
   Image,
@@ -28,6 +30,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -37,6 +40,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
 const tutorialDebugLog = (...args) => {
@@ -66,6 +70,9 @@ const tutorialDebugLog = (...args) => {
  *  disabled?: boolean;
  *  icon?: keyof import('@/theme/types').AllImages;
  *  accentColor?: string;
+ *  layout?: 'half' | 'full';
+ *  emphasis?: 'default' | 'primary';
+ *  subtitleLines?: 1 | 2;
  *  tutorial?: HomeCardTutorial;
  * }} HomeCard
  */
@@ -74,21 +81,15 @@ const tutorialDebugLog = (...args) => {
  * @param {{
  *  title: string;
  *  cards: HomeCard[];
- *  Colors: import('@/theme/types').Colors;
  *  Fonts: import('@/theme/types').Fonts;
  *  Spaces: import('@/theme/types').Spaces;
  *  Alignments: import('@/theme/types').Alignments;
- *  ApplicationStyle: import('@/theme/types').ApplicationStyle;
- *  Images: import('@/theme/types').Images;
  * }} props
  */
 function HomeSection({
   Alignments,
-  ApplicationStyle,
   cards,
-  Colors,
   Fonts,
-  Images,
   Spaces,
   title,
 }) {
@@ -100,54 +101,27 @@ function HomeSection({
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{title}</Text>
       <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
         {cards.map((card) => {
+          const isFullCard = isSingleCardSection || card.layout === 'full';
           const cardContainerStyle = {
-            flexBasis: isSingleCardSection ? '100%' : '48.5%',
-            maxWidth: isSingleCardSection ? '100%' : '48.5%',
+            flexBasis: isFullCard ? '100%' : '48.5%',
+            maxWidth: isFullCard ? '100%' : '48.5%',
             marginBottom: 12,
-            minWidth: isSingleCardSection ? undefined : 140,
-            width: isSingleCardSection ? '100%' : undefined,
+            minWidth: isFullCard ? undefined : 140,
+            width: isFullCard ? '100%' : undefined,
           };
 
           const body = (
-            <TouchableOpacity
-              activeOpacity={0.86}
+            <HomeActionCard
+              accentColor={card.accentColor}
               disabled={card.disabled}
+              emphasis={card.emphasis}
+              icon={card.icon}
+              layout={isFullCard ? 'full' : 'half'}
               onPress={card.onPress}
-              style={[
-                {
-                  backgroundColor: 'rgba(23,56,68,0.94)',
-                  borderColor: `${card.accentColor || Colors.primary500}66`,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  justifyContent: 'space-between',
-                  minHeight: 166,
-                  overflow: 'hidden',
-                  padding: 12,
-                  position: 'relative',
-                  width: '100%',
-                },
-                ApplicationStyle.borderRadius16,
-                ApplicationStyle.borderWidth1,
-                card.disabled && ApplicationStyle.opacityHalfVisible,
-              ]}
-            >
-              <View style={{ backgroundColor: `${card.accentColor || Colors.primary500}14`, borderRadius: 40, height: 72, position: 'absolute', right: -24, top: -16, width: 72 }} />
-              <View style={{ backgroundColor: `${card.accentColor || Colors.primary500}1F`, borderRadius: 40, height: 48, left: -20, position: 'absolute', top: 92, width: 48 }} />
-
-              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                <View style={{ alignItems: 'center', backgroundColor: `${card.accentColor || Colors.primary500}24`, borderColor: `${card.accentColor || Colors.primary500}66`, borderRadius: 12, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 }}>
-                  <Image source={Images[card.icon || 'search']} style={{ height: 18, tintColor: card.accentColor || Colors.primary500, width: 18 }} />
-                </View>
-                <View style={{ alignItems: 'center', backgroundColor: `${card.accentColor || Colors.primary500}22`, borderColor: `${card.accentColor || Colors.primary500}55`, borderRadius: 10, borderWidth: 1, height: 24, justifyContent: 'center', width: 24 }}>
-                  <Image source={Images.arrowRight} style={{ height: 12, tintColor: card.accentColor || Colors.primary500, width: 12 }} />
-                </View>
-              </View>
-
-              <View style={[Spaces.marginTop[12], Spaces.gap[6]]}>
-                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{card.title}</Text>
-                <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral200]}>{card.subtitle}</Text>
-              </View>
-            </TouchableOpacity>
+              subtitle={card.subtitle}
+              subtitleLines={card.subtitleLines}
+              title={card.title}
+            />
           );
 
           if (!card.tutorial) {
@@ -218,6 +192,8 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const [activeTutorialModal, setActiveTutorialModal] = useState(/** @type {'center' | 'feature' | null} */ (null));
   const [isEntryGateVisible, setIsEntryGateVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const isFocused = useIsFocused();
   const scrollRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
   const refreshCurrentStepRef = useRef(refreshCurrentStep);
@@ -237,6 +213,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const isPresident = roleName === USER_ROLES.president;
   const hasManageSection = isCoach || isPresident;
   const routeParams = route?.params;
+  const scrollBottomPadding = tabBarHeight + insets.bottom + 16;
 
   const trainedTeamIds = useMemo(
     () => (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean),
@@ -621,9 +598,10 @@ function HomeHubContent({ auth, navigation, route }) {
           return;
         }
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.TeamStack, {
-            params: { ...tutorialParams, teamIds: trainedTeamIds },
-            screen: RouteNames.TeamMembershipRequests,
+          navigateToRequestsHub(navigation, {
+            ...tutorialParams,
+            initialFilter: 'team',
+            source: 'home',
           });
         });
         return;
@@ -636,31 +614,42 @@ function HomeHubContent({ auth, navigation, route }) {
           return;
         }
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ClubStack, {
-            params: { ...tutorialParams, clubId },
-            screen: RouteNames.ClubMembershipRequests,
+          navigateToRequestsHub(navigation, {
+            ...tutorialParams,
+            initialFilter: 'club',
+            source: 'home',
           });
         });
         return;
       case TutorialIds.FEATURED_REQUESTS:
         if (cmId) {
           navigateAfterClosingModals(() => {
-            navigation.navigate(RouteNames.FeaturedRequests, { ...tutorialParams, cmId });
+            navigateToRequestsHub(navigation, {
+              ...tutorialParams,
+              initialFilter: 'featured',
+              source: 'home',
+            });
           });
           return;
         }
         if (clubId) {
-          const dashboardTutorialParams = {
-            ...tutorialParams,
-            tutorialId: TutorialIds.REQUESTS_DASHBOARD,
-          };
           navigateAfterClosingModals(() => {
-            navigation.navigate(RouteNames.ClubStack, {
-              params: { ...dashboardTutorialParams, clubId },
-              screen: RouteNames.RequestsDashboard,
+            navigateToRequestsHub(navigation, {
+              ...tutorialParams,
+              initialFilter: 'event',
+              source: 'home',
             });
           });
         }
+        return;
+      case TutorialIds.REQUESTS_DASHBOARD:
+        navigateAfterClosingModals(() => {
+          navigateToRequestsHub(navigation, {
+            ...tutorialParams,
+            initialFilter: 'all',
+            source: 'home',
+          });
+        });
         return;
       case TutorialIds.PROFILE_MAIN:
         navigateAfterClosingModals(() => {
@@ -762,62 +751,21 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
   }, [navigation]);
 
-  const handleOpenTeamMembershipRequests = useCallback(() => {
-    if (!trainedTeamIds.length) {
+  const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
+    const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
+    if (!hasRequestsContext) {
       Alert.alert(
-        t('homeHub.alerts.noTrainedTeams.title', 'Aucune equipe disponible'),
-        t('homeHub.alerts.noTrainedTeams.description', 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.'),
+        t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
+        t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gerer les demandes a la une.'),
       );
       return;
     }
-    navigation.navigate(RouteNames.TeamStack, {
-      params: { teamIds: trainedTeamIds },
-      screen: RouteNames.TeamMembershipRequests,
+
+    navigateToRequestsHub(navigation, {
+      initialFilter,
+      source: 'home',
     });
-  }, [navigation, t, trainedTeamIds]);
-
-  const handleOpenClubMembershipRequests = useCallback(() => {
-    if (!clubId) {
-      Alert.alert(
-        t('homeHub.alerts.noClub.title', 'Club introuvable'),
-        t('homeHub.alerts.noClub.description', 'Votre compte doit etre rattache a un club pour gerer ces demandes.'),
-      );
-      return;
-    }
-    navigation.navigate(RouteNames.ClubStack, {
-      params: { clubId },
-      screen: RouteNames.ClubMembershipRequests,
-    });
-  }, [clubId, navigation, t]);
-
-  const handleOpenFeaturedRequests = useCallback(() => {
-    if (cmId) {
-      navigation.navigate(RouteNames.FeaturedRequests, { cmId });
-      return;
-    }
-
-    if (clubId) {
-      Alert.alert(
-        t('homeHub.alerts.featuredFallback.title', 'Information'),
-        t('homeHub.alerts.featuredFallback.description', 'Aucun club omnisport detecte. Redirection vers les demandes du club.'),
-        [{
-          onPress: () => {
-            navigation.navigate(RouteNames.ClubStack, {
-              params: { clubId },
-              screen: RouteNames.RequestsDashboard,
-            });
-          },
-          text: t('common.actions.ok', 'OK'),
-        }],
-      );
-      return;
-    }
-
-    Alert.alert(
-      t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
-      t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gerer les demandes a la une.'),
-    );
-  }, [clubId, cmId, navigation, t]);
+  }, [clubId, cmId, navigation, t, trainedTeamIds.length]);
 
   const handleOpenProfile = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile });
@@ -897,14 +845,7 @@ function HomeHubContent({ auth, navigation, route }) {
     if (isCoach || isPresident) {
       options.push(
         { id: TutorialIds.EVENT_WIZARD_TYPE, label: t('homeHub.cards.manage.addEvent.title', 'Ajouter un evenement') },
-        { id: TutorialIds.TEAM_MEMBERSHIP_REQUESTS, label: t('homeHub.cards.manage.teamRequests.title', 'Demandes adhesion equipes') },
-      );
-    }
-
-    if (isPresident) {
-      options.push(
-        { id: TutorialIds.CLUB_MEMBERSHIP_REQUESTS, label: t('homeHub.cards.manage.clubRequests.title', 'Demandes adhesion club') },
-        { id: TutorialIds.FEATURED_REQUESTS, label: t('homeHub.cards.manage.featuredRequests.title', 'Demandes evenements a la une') },
+        { id: TutorialIds.REQUESTS_DASHBOARD, label: t('homeHub.cards.manage.requests.title', 'Demandes') },
       );
     }
 
@@ -924,80 +865,32 @@ function HomeHubContent({ auth, navigation, route }) {
 
   /** @type {HomeCard[]} */
   const manageSectionCards = useMemo(() => {
-    if (isCoach) {
+    if (isCoach || isPresident) {
       return [
         {
           accentColor: Colors.primary500,
+          emphasis: 'primary',
           icon: 'calendar',
           key: 'manage-add-event',
+          layout: 'full',
           onPress: handleAddEvent,
           subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
           tutorial: makeTutorial('manageAddEvent', 2, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
-        },
-        {
-          accentColor: Colors.primary500,
-          icon: 'users',
-          key: 'manage-team-requests',
-          onPress: handleOpenTeamMembershipRequests,
-          subtitle: t('homeHub.cards.manage.teamRequests.subtitle'),
-          title: t('homeHub.cards.manage.teamRequests.title'),
-          tutorial: makeTutorial(
-            'manageTeamRequests',
-            3,
-            'Demandes adhesion equipes',
-            'Validez ou refusez les demandes pour rejoindre vos equipes.',
-            {
-              nextAction: 'scrollDown',
-              nextLabel: scrollDownLabel,
-              onNext: scrollToSearchSection,
-            },
-          ),
-        },
-      ];
-    }
-
-    if (isPresident) {
-      return [
-        {
-          accentColor: Colors.primary500,
-          icon: 'calendar',
-          key: 'manage-add-event',
-          onPress: handleAddEvent,
-          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
-          title: t('homeHub.cards.manage.addEvent.title'),
-          tutorial: makeTutorial('manageAddEvent', 2, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
-        },
-        {
-          accentColor: Colors.primary500,
-          icon: 'users',
-          key: 'manage-team-requests',
-          onPress: handleOpenTeamMembershipRequests,
-          subtitle: t('homeHub.cards.manage.teamRequests.subtitle'),
-          title: t('homeHub.cards.manage.teamRequests.title'),
-          tutorial: makeTutorial('manageTeamRequests', 3, 'Demandes adhesion equipes', 'Validez ou refusez les demandes pour rejoindre vos equipes.'),
-        },
-        {
-          accentColor: Colors.primary500,
-          icon: 'shield',
-          key: 'manage-club-requests',
-          onPress: handleOpenClubMembershipRequests,
-          subtitle: t('homeHub.cards.manage.clubRequests.subtitle'),
-          title: t('homeHub.cards.manage.clubRequests.title'),
-          tutorial: makeTutorial('manageClubRequests', 4, 'Demandes adhesion club', 'Traitez les demandes d adhesion recues par votre club.'),
         },
         {
           accentColor: Colors.primary500,
           icon: 'bell',
-          key: 'manage-featured-requests',
-          onPress: handleOpenFeaturedRequests,
-          subtitle: t('homeHub.cards.manage.featuredRequests.subtitle'),
-          title: t('homeHub.cards.manage.featuredRequests.title'),
+          key: 'manage-requests',
+          onPress: () => handleOpenRequestsHub('all'),
+          subtitle: t('homeHub.cards.manage.requests.subtitle'),
+          title: t('homeHub.cards.manage.requests.title'),
           tutorial: makeTutorial(
-            'manageFeaturedRequests',
-            5,
-            'Demandes evenements a la une',
-            'Validez les demandes d evenements a la une de votre organisation.',
+            'manageRequests',
+            3,
+            'Demandes',
+            'Regroupez et traitez toutes les demandes depuis un seul ecran.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1012,9 +905,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [
     Colors.primary500,
     handleAddEvent,
-    handleOpenClubMembershipRequests,
-    handleOpenFeaturedRequests,
-    handleOpenTeamMembershipRequests,
+    handleOpenRequestsHub,
     isCoach,
     isPresident,
     makeTutorial,
@@ -1079,6 +970,7 @@ function HomeHubContent({ auth, navigation, route }) {
       accentColor: Colors.gold500,
       icon: 'trophy',
       key: 'league-entry',
+      layout: 'full',
       onPress: handleOpenLeague,
       subtitle: t('homeHub.cards.league.subtitle'),
       title: t('homeHub.cards.league.title'),
@@ -1261,7 +1153,7 @@ function HomeHubContent({ auth, navigation, route }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[36]]}
+        contentContainerStyle={[Spaces.gap[24], { paddingBottom: scrollBottomPadding }]}
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
@@ -1284,22 +1176,22 @@ function HomeHubContent({ auth, navigation, route }) {
         </OnboardingWrapper>
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={manageSectionCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={isPresident ? t('homeHub.sections.manageClub') : t('homeHub.sections.manageTeams')} />
+          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} Spaces={Spaces} title={isPresident ? t('homeHub.sections.manageClub') : t('homeHub.sections.manageTeams')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('search', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={searchCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={t('homeHub.sections.search')} />
+          <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.search')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('league', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={leagueCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={t('homeHub.sections.league')} />
+          <HomeSection Alignments={Alignments} cards={leagueCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.league')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('profile', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={profileCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={t('homeHub.sections.profile')} />
+          <HomeSection Alignments={Alignments} cards={profileCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.profile')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('quick', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={quickNavCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={t('homeHub.sections.quickNav')} />
+          <HomeSection Alignments={Alignments} cards={quickNavCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.quickNav')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('account', event)}>
-          <HomeSection Alignments={Alignments} ApplicationStyle={ApplicationStyle} cards={accountCards} Colors={Colors} Fonts={Fonts} Images={Images} Spaces={Spaces} title={t('homeHub.sections.account')} />
+          <HomeSection Alignments={Alignments} cards={accountCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.account')} />
         </View>
       </ScrollView>
 

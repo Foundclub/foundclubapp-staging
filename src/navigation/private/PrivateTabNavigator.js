@@ -4,9 +4,11 @@ import { Image, Text, View } from 'react-native';
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+import { useRequestsHubData } from '@/services/requests/requestsHubQueries';
 // screens
 import MyEventsList from '@/views/event/MyEventList';
 import Messaging from '@/views/Messaging';
+import RequestsHub from '@/views/requests/RequestsHub';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import MyTeamList from '@/views/team/MyTeamList';
 // utils and misc
@@ -32,6 +34,19 @@ function PrivateTabNavigator() {
   const { unreadCount } = useUnreadMessages();
   const { canManageTeam, userData } = useAuth();
   const insets = useSafeAreaInsets();
+  const trainedTeamIds = (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean);
+  const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
+  const cmId = userData?.multisportClubs?.[0]?.documentId || '';
+
+  const requestsHubQuery = useRequestsHubData({
+    clubId,
+    cmId,
+    teamIds: trainedTeamIds,
+  }, {
+    enabled: Boolean(canManageTeam && userData?.documentId),
+    refetchInterval: 45_000,
+  });
+  const requestsCount = requestsHubQuery?.data?.counts?.total || 0;
 
   /**
    * Render tab bar icon.
@@ -137,6 +152,24 @@ function PrivateTabNavigator() {
               label: canManageTeam && userData?.multisportClubs?.length > 0
                 ? t('menu.myClub')
                 : t('menu.myTeams'),
+              renderTabBarIcon,
+            }),
+          }}
+        />
+      ) : null}
+      {canManageTeam ? (
+        <Tab.Screen
+          component={RequestsHub}
+          initialParams={{ source: 'home' }}
+          name={RouteNames.RequestsTab}
+          options={{
+            headerShown: false,
+            ...getTabScreenCommonOptions({
+              activeColor: Colors.primary500,
+              badge: requestsCount,
+              bottomInset: insets.bottom,
+              icon: Images.bell,
+              label: t('menu.requests', 'Demandes'),
               renderTabBarIcon,
             }),
           }}

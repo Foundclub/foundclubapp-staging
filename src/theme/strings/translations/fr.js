@@ -867,8 +867,8 @@ export default {
     sections: {
       account: 'Compte',
       league: 'FoundClub League',
-      manageClub: 'Gerer mon club',
-      manageTeams: 'Gerer mes equipes',
+      manageClub: 'G\u00e9rer mon club',
+      manageTeams: 'G\u00e9rer mes \u00e9quipes',
       profile: 'Mon profil',
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
@@ -876,26 +876,30 @@ export default {
     cards: {
       manage: {
         addEvent: {
-          title: 'Ajouter un evenement',
-          subtitle: 'Creer rapidement un entrainement, un match ou une seance d essai pour vos equipes.',
+          title: 'Ajouter un \u00e9v\u00e9nement',
+          subtitle: 'Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d essai.',
+        },
+        requests: {
+          title: 'Demandes',
+          subtitle: 'Traitez toutes les demandes de votre organisation depuis un seul ecran.',
         },
         teamRequests: {
-          title: 'Demandes adhesion equipes',
-          subtitle: 'Traiter les demandes d adhesion des joueurs vers vos equipes.',
+          title: 'Demandes adh\u00e9sion \u00e9quipes',
+          subtitle: 'Traite les demandes d adh\u00e9sion des joueurs \u00e0 vos \u00e9quipes.',
         },
         clubRequests: {
-          title: 'Demandes adhesion club',
-          subtitle: 'Valider ou refuser les demandes d adhesion au club.',
+          title: 'Demandes adh\u00e9sion club',
+          subtitle: 'Valider ou refuser les demandes d adh\u00e9sion au club.',
         },
         featuredRequests: {
-          title: 'Demandes evenements a la une',
-          subtitle: 'Gerer les demandes d evenements a la une pour votre organisation.',
+          title: 'Demandes \u00e9v\u00e9nements \u00e0 la une',
+          subtitle: 'Traite les demandes d \u00e9v\u00e9nements \u00e0 la une du club.',
         },
       },
       search: {
         events: {
-          title: 'Evenement',
-          subtitle: 'Rechercher detections, seances d essai, entrainements, matchs, stages et tournois.',
+          title: '\u00c9v\u00e9nement',
+          subtitle: 'Trouve des d\u00e9tections, s\u00e9ances d essai, entra\u00eenements et matchs.',
         },
         clubs: {
           title: 'Club',
@@ -903,7 +907,7 @@ export default {
         },
         reservations: {
           title: 'Reservations',
-          subtitle: 'Reserver le terrain de votre choix football a 5, padel et autres.',
+          subtitle: 'R\u00e9serve rapidement un terrain (foot \u00e0 5, padel, etc.).',
         },
         ads: {
           title: 'Annonces',
@@ -928,7 +932,7 @@ export default {
           subtitle: 'Ajouter ou ajuster votre historique sportif.',
         },
         alerts: {
-          title: 'Gerer mes alertes',
+          title: 'G\u00e9rer mes alertes',
           subtitle: 'Creer des alertes pour recevoir des notifications personnalisees selon vos recherches.',
         },
       },
@@ -1024,6 +1028,10 @@ export default {
         title: 'Ajouter un evenement',
         description: 'Creez un entrainement, match ou detection pour vos equipes.',
       },
+      manageRequests: {
+        title: 'Demandes',
+        description: 'Regroupez et traitez toutes les demandes depuis un seul onglet.',
+      },
       manageTeamRequests: {
         title: 'Demandes adhesion equipes',
         description: 'Validez ou refusez les demandes pour rejoindre vos equipes.',
@@ -1096,6 +1104,36 @@ export default {
         title: 'Tutoriels et aide',
         description: 'Relancez un tutoriel quand vous voulez, ou remettez tout a zero.',
       },
+    },
+  },
+  requestsHub: {
+    title: 'Demandes',
+    forbidden: 'Cet onglet est reserve aux coachs et dirigeants.',
+    empty: 'Aucune demande en attente',
+    partialError: 'Source indisponible',
+    actionError: 'Impossible de traiter la demande.',
+    migratedBannerTitle: 'Ce flux est migre vers Demandes.',
+    migratedBannerAction: "Ouvrir l'onglet Demandes",
+    assignNow: 'Assigner maintenant',
+    clubAssignedTitle: 'Entraineur ajoute',
+    clubAssignedMessage: '{{name}} a ete ajoute au club. Voulez-vous l assigner a une equipe maintenant ?',
+    rejectEventTitle: 'Refuser la demande ?',
+    rejectEventMessage: 'L evenement sera annule.',
+    rejectFeaturedTitle: 'Refuser la demande ?',
+    rejectFeaturedMessage: 'Le demandeur sera notifie du refus.',
+    filters: {
+      all: 'Toutes',
+      team: 'Equipe',
+      club: 'Club',
+      event: 'Evenement',
+      featured: 'A la une',
+    },
+    types: {
+      team: 'Equipe',
+      club: 'Club',
+      event: 'Evenement',
+      featured: 'A la une',
+      unknown: 'Demande',
     },
   },
   searchTypeSwitcher: {
@@ -1173,6 +1211,7 @@ export default {
     myClub: 'Mon club',
     myTeams: 'Mes équipes',
     planning: 'Mon planning',
+    requests: 'Demandes',
     search: 'Rechercher',
   },
   messaging: {
@@ -1238,6 +1277,7 @@ export default {
       logout: 'D\u00e9connexion',
       manageClub: 'G\u00e9rer mon club',
       manageAlerts: 'G\u00e9rer mes alertes',
+      manageRequests: 'Gerer mes demandes',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
       manageEvents: 'Gérer mes évènements',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
@@ -1639,5 +1679,3 @@ export default {
     sectionCreated: 'La section a été créée avec succès.',
   },
 };
-
-

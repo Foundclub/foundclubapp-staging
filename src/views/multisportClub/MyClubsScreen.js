@@ -21,6 +21,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 import { useGetMe } from '@/services/auth/authQueries';
 import { useGetCMClubs, useGetCMHighlightRequests } from '@/services/multisportClub/multisportClubQueries';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * @typedef {object} ClubSectionItem
@@ -140,7 +141,10 @@ function MyClubsScreen({ navigation }) {
   }, [navigation]);
 
   const handleInboxPress = useCallback(() => {
-    navigation.navigate(RouteNames.HighlightRequestsInbox, { cmId: cmId || '' });
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'featured',
+      source: 'cm_dashboard',
+    });
   }, [navigation, cmId]);
 
   const handleAddSection = useCallback(() => {

@@ -30,7 +30,7 @@ const FutCard = ({ team, variant = 'classic' }) => {
                 
                 <View style={[styles.divisionBox, { borderColor: BorderColor }]}>
                     <Text style={[Fonts.h2, { color: AccentColor }]}>
-                        D{team.division || 10}
+                        D{team.division || 5}
                     </Text>
                 </View>
             </View>

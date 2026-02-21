@@ -916,7 +916,10 @@ const MatchCenterScreen = () => {
 
             const city = getOpponentCity(opponentDetails);
             const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0) ? `+/- ${opponentDetails.radius} km` : 'Rayon Standard';
-            const division = opponentDetails?.division || '?';
+            const parsedDivision = Number.parseInt(String(opponentDetails?.division), 10);
+            const division = Number.isFinite(parsedDivision)
+                ? Math.max(1, Math.min(5, parsedDivision))
+                : '?';
             // Recurring slot display
             const recurringDayKey = String(opponentDetails?.recurring_day || currentMatch?.recurring_day || '').toLowerCase();
             const recurringDay = DAY_MAP[recurringDayKey] || recurringDayKey || '?';
@@ -1399,7 +1402,9 @@ const MatchCenterScreen = () => {
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                         <View style={{ marginRight: 8 }}>
                             <DivisionBadge
-                                division={mySquad?.division || 10}
+                                division={mySquad?.division || 5}
+                                showChrome={false}
+                                showLabel={false}
                                 size={34}
                             />
                         </View>
@@ -1415,7 +1420,15 @@ const MatchCenterScreen = () => {
                     {renderMatchCardContent()}
                 </View>
             ) : (
-                <LeagueCard style={{ marginTop: 8, marginBottom: 26, padding: 0, overflow: 'hidden' }}>
+                <LeagueCard
+                    style={{
+                        marginBottom: 26,
+                        marginTop: 8,
+                        overflow: 'hidden',
+                        padding: 0,
+                        ...leagueSurface,
+                    }}
+                >
                     <View style={{ padding: 20 }}>
                          {renderMatchCardContent()}
                     </View>
@@ -1853,7 +1866,7 @@ const MatchCenterScreen = () => {
                         <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{squad.name}</Text>
                             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                                 {squad?.sport || 'Sport'} - Div {squad?.division || 10}
+                                 {squad?.sport || 'Sport'} - Div {squad?.division || 5}
                             </Text>
                         </View>
                          {areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && (

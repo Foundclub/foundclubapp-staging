@@ -16,13 +16,14 @@ import useAuth from '@/domains/auth/useAuth';
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 import useTheme from '@/theme/themeContext';
 import { getEntityDocumentId } from '@/utils/entityId';
+import { clampLeagueDivision } from '@/utils/league/division';
 
 const RankingScreen = () => {
     const { Colors, Fonts } = useTheme();
     const navigation = /** @type {any} */ (useNavigation());
     const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
-    const [division, setDivision] = useState(10);
+    const [division, setDivision] = useState(5);
     const [loading, setLoading] = useState(true);
     const [ranking, setRanking] = useState(/** @type {Team[]} */ ([]));
 
@@ -37,7 +38,7 @@ const RankingScreen = () => {
             try {
                 const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
                 if (teams && teams.length > 0) {
-                    setDivision(teams[0].division || 10);
+                    setDivision(clampLeagueDivision(teams[0].division));
                 }
             } catch (error) {
                 console.log(error);
@@ -65,7 +66,7 @@ const RankingScreen = () => {
 
     const changeDivision = (/** @type {number} */ delta) => {
         const nextDivision = division + delta;
-        if (nextDivision >= 1 && nextDivision <= 10) {
+        if (nextDivision >= 1 && nextDivision <= 5) {
             setDivision(nextDivision);
         }
     };

@@ -25,7 +25,7 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import { getFieldError } from '@/utils/form/formUtils';
 
 const DEFAULT_RADIUS_KM = 20;
-const DIVISION_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const DIVISION_OPTIONS = [1, 2, 3, 4, 5];
 
 const SPORT_OPTIONS = [
   { label: 'Football a 5', value: 'football5' },
@@ -84,7 +84,7 @@ const normalizeCityFilter = (value) => {
 const toDivisionValue = (value) => {
   const parsed = Number.parseInt(String(value || ''), 10);
   if (!Number.isFinite(parsed)) return null;
-  if (parsed < 1 || parsed > 10) return null;
+  if (parsed < 1 || parsed > 5) return null;
   return parsed;
 };
 

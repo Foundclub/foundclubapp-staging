@@ -32,6 +32,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -174,22 +175,11 @@ function Profile({ navigation, route }) {
     );
   };
 
-  const handleManageClubMembershipRequests = () => {
-    if (userData?.club?.documentId) {
-      navigation.navigate(RouteNames.ClubStack, {
-        screen: RouteNames.ClubMembershipRequests,
-        params: { clubId: userData.club.documentId },
-      });
-    }
-  };
-
-  const handleManageTeamMembershipRequests = () => {
-    if (userData?.club?.documentId) {
-      navigation.navigate(RouteNames.TeamStack, {
-        screen: RouteNames.TeamMembershipRequests,
-        params: { teamIds: userData.trainedTeams?.map((team) => team.documentId) },
-      });
-    }
+  const handleOpenRequestsHub = () => {
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'all',
+      source: 'profile',
+    });
   };
 
   const handleSwitchAccount = async (/** @type {AuthSession} */ session) => {
@@ -430,28 +420,11 @@ function Profile({ navigation, route }) {
         onPress={() => navigation.navigate(RouteNames.SearchAlerts)}
         title={t('profile.actions.manageAlerts', 'G\u00e9rer mes alertes')}
       />
-      {canManageClub ? (
+      {canManageTeam ? (
         <TabButton
           isActive={false}
-          onPress={handleManageClubMembershipRequests}
-          title={t('profile.actions.manageClubJoinRequests')}
-        />
-      ) : null}
-      {canManageClub ? (
-        <TabButton
-          isActive={false}
-          onPress={() => navigation.navigate(RouteNames.ClubStack, {
-            screen: RouteNames.RequestsDashboard,
-            params: { clubId: userData?.club?.documentId },
-          })}
-          title={t('profile.actions.manageEventRequests', "Gerer les demandes d'evenements")}
-        />
-      ) : null}
-      {canManageTeam && userData?.club ? (
-        <TabButton
-          isActive={false}
-          onPress={handleManageTeamMembershipRequests}
-          title={t('profile.actions.manageTeamJoinRequests')}
+          onPress={handleOpenRequestsHub}
+          title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
         />
       ) : null}
       {userData?.role?.name === USER_ROLES.superAdmin ? (

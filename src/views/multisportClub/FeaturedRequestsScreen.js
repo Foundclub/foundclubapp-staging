@@ -1,4 +1,4 @@
-﻿import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -18,6 +18,7 @@ import { getPendingFeaturedRequests, approveFeatured, rejectFeatured } from '@/s
 import { formatDateWithDayPrefix } from '@/utils/date';
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * Screen for multisport club admins to manage featured event requests
@@ -31,6 +32,14 @@ function FeaturedRequestsScreen({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'featured',
+      source: 'cm_dashboard',
+    });
+  }, [navigation]);
 
   const {
     data: pendingRequests,
@@ -150,6 +159,28 @@ function FeaturedRequestsScreen({ navigation, route }) {
               }}
               title="Demandes a la une"
             >
+              <TouchableOpacity
+                onPress={() => navigateToRequestsHub(navigation, {
+                  initialFilter: 'featured',
+                  source: 'cm_dashboard',
+                })}
+                style={[
+                  ApplicationStyle.borderRadius12,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[12],
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: 'rgba(1, 179, 244, 0.45)',
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral100]}>
+                  {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+                </Text>
+              </TouchableOpacity>
               {requests.length === 0 ? (
                 <View style={[ApplicationStyle.borderRadius16, ApplicationStyle.backgroundColor.primary700, Spaces.padding[24], Alignments.alignCenter]}>
                   <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>

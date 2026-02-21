@@ -247,8 +247,24 @@ function TeamListContent({
           ]}
         >
           {item?.activities?.[0]?.name ? (
-            <Tag text={item.activities[0].name} />
-          ) : (item.sport && <Tag text={item.sport} />)}
+            <Tag
+              text={item.activities[0].name}
+              style={{
+                backgroundColor: `${Colors.primary500}1A`,
+                borderColor: Colors.primary500,
+              }}
+              textStyle={Fonts.p3Bold}
+            />
+          ) : (item.sport && (
+            <Tag
+              text={item.sport}
+              style={{
+                backgroundColor: `${Colors.primary500}1A`,
+                borderColor: Colors.primary500,
+              }}
+              textStyle={Fonts.p3Bold}
+            />
+          ))}
         </View>
 
         <View
@@ -271,7 +287,7 @@ function TeamListContent({
               <ProfileAvatar
                 imageUrl={item.club.logo.url}
                 size={60}
-                style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 60 }]}
+                style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.primary500, { borderRadius: 60 }]}
               />
             ) : (
               <TeamShield
@@ -286,20 +302,27 @@ function TeamListContent({
               {item.name}
             </Text>
             {isLeagueMode ? (
-              <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>Division {item.division || 10}</Text>
+              <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>Division {item.division || 5}</Text>
             ) : null}
           </View>
         </View>
 
         {!isLeagueMode ? (
-          <View style={[Alignments.fullWidth, Spaces.marginVertical[16], ApplicationStyle.separator, ApplicationStyle.backgroundColor.neutral500]} />
+          <View
+            style={[
+              Alignments.fullWidth,
+              Spaces.marginVertical[16],
+              ApplicationStyle.separator,
+              { backgroundColor: `${Colors.primary500}40` },
+            ]}
+          />
         ) : null}
 
         {!isLeagueMode ? (
           <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
             {item?.section ? (
-              <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                {t('teamList.fields.section')} : <Text style={[Fonts.p2, Fonts.primary100]}>{item.section.name}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+                {t('teamList.fields.section')} : <Text style={[Fonts.p2, Fonts.neutral00]}>{item.section.name}</Text>
               </Text>
             ) : null}
           </View>
@@ -359,15 +382,35 @@ function TeamListContent({
       <View style={[{ position: 'relative' }]}>
         <TouchableOpacity
           onPress={() => handleTeamSelect(item)}
+          activeOpacity={0.88}
           style={[
-            Spaces.padding[24],
             Spaces.marginVertical[12],
-            ApplicationStyle.backgroundColor.primary700,
             ApplicationStyle.borderRadius24,
-            isPending && { borderColor: '#EAB308', borderWidth: 1 },
+            {
+              borderColor: isPending ? '#EAB308' : Colors.primary500,
+              borderWidth: 1,
+              overflow: 'hidden',
+              shadowColor: Colors.primary500,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.22,
+              shadowRadius: 12,
+              elevation: 4,
+            },
           ]}
         >
-          {renderContent()}
+          <LinearGradient
+            colors={['rgba(1, 179, 244, 0.20)', 'rgba(1, 179, 244, 0.06)', 'rgba(1, 179, 244, 0.02)']}
+            end={{ x: 1, y: 1 }}
+            start={{ x: 0, y: 0 }}
+            style={[
+              Spaces.padding[24],
+              {
+                backgroundColor: 'rgba(7, 35, 52, 0.90)',
+              },
+            ]}
+          >
+            {renderContent()}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     );

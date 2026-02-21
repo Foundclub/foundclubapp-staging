@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { View, Text, FlatList, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, FlatList, Alert, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -13,6 +13,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import { getEvents, updateEvent, cancelEvent } from '@/services/event/eventService';
 import { useGetMe } from '@/services/auth/authQueries';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * RequestsDashboard component
@@ -24,6 +25,14 @@ const RequestsDashboard = ({ navigation, route }) => {
   const { data: userData } = useGetMe();
 
   const clubId = route?.params?.clubId || userData?.trainedTeams?.[0]?.club?.documentId;
+
+  useEffect(() => {
+    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
+    navigateToRequestsHub(navigation, {
+      initialFilter: 'event',
+      source: 'home',
+    });
+  }, [navigation]);
 
   const { data: pendingEvents, isLoading } = useQuery({
     queryKey: ['pendingEvents', clubId],
@@ -43,7 +52,7 @@ const RequestsDashboard = ({ navigation, route }) => {
   const updateMutation = useMutation({
     mutationFn: updateEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries(['pendingEvents']);
+      queryClient.invalidateQueries({ queryKey: ['pendingEvents'] });
       Alert.alert(t('common.success'), t('requests.approvedSuccess'));
     },
   });
@@ -51,7 +60,7 @@ const RequestsDashboard = ({ navigation, route }) => {
   const cancelMutation = useMutation({
     mutationFn: cancelEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries(['pendingEvents']);
+      queryClient.invalidateQueries({ queryKey: ['pendingEvents'] });
       Alert.alert(t('common.success'), t('requests.rejectedSuccess'));
     },
   });
@@ -152,6 +161,29 @@ const RequestsDashboard = ({ navigation, route }) => {
           style={{ flex: 1 }}
           title="Demandes en attente"
         >
+          <TouchableOpacity
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'event',
+              source: 'home',
+            })}
+            style={[
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.marginBottom[12],
+              {
+                backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                borderColor: `${Colors.primary500}66`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('requestsHub.migratedBannerTitle', 'Ce flux est migre vers Demandes.')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+            </Text>
+          </TouchableOpacity>
           <FlatList
             data={pendingEvents}
             renderItem={renderItem}

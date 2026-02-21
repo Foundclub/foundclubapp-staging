@@ -9,6 +9,7 @@ import Animated, {
 import Button from '@/components/atoms/button/Button';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import useTheme from '@/theme/themeContext';
+import { clampLeagueDivision, isMaxDivision } from '@/utils/league/division';
 
 const AUTO_HIDE_MS = 4800;
 
@@ -79,9 +80,11 @@ const MatchFinalPosterModal = ({
   const scoreLabel = recap?.scoreLabel || `${recap?.myScore ?? '-'}-${recap?.opponentScore ?? '-'}`;
   const eloBefore = Number.isFinite(Number(recap?.eloBefore)) ? Number(recap.eloBefore) : 0;
   const eloAfter = Number.isFinite(Number(recap?.eloAfter)) ? Number(recap.eloAfter) : eloBefore;
-  const divisionBefore = Number.isFinite(Number(recap?.divisionBefore)) ? Number(recap.divisionBefore) : null;
-  const divisionAfter = Number.isFinite(Number(recap?.divisionAfter)) ? Number(recap.divisionAfter) : divisionBefore;
-  const divisionChanged = Boolean(recap?.divisionChanged && divisionBefore && divisionAfter && divisionBefore !== divisionAfter);
+  const parsedDivisionBefore = Number.isFinite(Number(recap?.divisionBefore)) ? Number(recap.divisionBefore) : null;
+  const parsedDivisionAfter = Number.isFinite(Number(recap?.divisionAfter)) ? Number(recap.divisionAfter) : parsedDivisionBefore;
+  const divisionBefore = parsedDivisionBefore !== null ? clampLeagueDivision(parsedDivisionBefore) : null;
+  const divisionAfter = parsedDivisionAfter !== null ? clampLeagueDivision(parsedDivisionAfter) : 5;
+  const divisionChanged = Boolean(divisionBefore && divisionAfter && divisionBefore !== divisionAfter && recap?.divisionChanged !== false);
   const delta = formatDelta(recap?.eloDelta);
 
   return (
@@ -93,7 +96,7 @@ const MatchFinalPosterModal = ({
             styles.poster,
             cardStyle,
             {
-              backgroundColor: 'rgba(8, 26, 40, 0.98)',
+              backgroundColor: 'rgba(1, 36, 52, 0.96)',
               borderColor: Colors.gold500,
             },
           ]}
@@ -110,7 +113,15 @@ const MatchFinalPosterModal = ({
             {recap?.resultLabel || recap?.result || 'Resultat enregistre'}
           </Text>
 
-          <View style={[styles.eloCard, { borderColor: 'rgba(1, 179, 244, 0.35)' }]}>
+          <View
+            style={[
+              styles.eloCard,
+              {
+                backgroundColor: 'rgba(1, 53, 75, 0.42)',
+                borderColor: 'rgba(1, 179, 244, 0.35)',
+              },
+            ]}
+          >
             <View style={styles.eloHeader}>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO avant: {eloBefore}</Text>
               <Text style={[Fonts.h4Bold, { color: Number(recap?.eloDelta) >= 0 ? Colors.success500 : Colors.error500 }]}>{delta}</Text>
@@ -128,17 +139,22 @@ const MatchFinalPosterModal = ({
           </View>
 
           <View style={styles.divisionRow}>
-            <DivisionBadge division={divisionAfter || 10} size={72} />
+            <DivisionBadge
+              division={divisionAfter || 5}
+              showChrome={false}
+              showLabel={false}
+              size={72}
+            />
             <View style={{ alignItems: 'center' }}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                 {divisionChanged
                   ? `Division ${divisionBefore} -> ${divisionAfter}`
-                  : `Division ${divisionAfter || 10}`}
+                  : `Division ${divisionAfter || 5}`}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
                 {divisionChanged
                   ? (divisionAfter < divisionBefore ? 'Promotion' : 'Relegation')
-                  : 'Maintien'}
+                  : (isMaxDivision(divisionAfter) ? 'Division max atteinte' : 'Maintien')}
               </Text>
             </View>
           </View>
@@ -216,4 +232,3 @@ const styles = StyleSheet.create({
 });
 
 export default MatchFinalPosterModal;
-

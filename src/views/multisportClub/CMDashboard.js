@@ -18,6 +18,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { getMultisportClubById, getCMClubs, deleteCMSection } from '@/services/multisportClub/multisportClubService';
@@ -411,7 +412,10 @@ function CMDashboard({ navigation, route }) {
               </View>
             </View>
             <Button
-              onPress={() => navigation.navigate(RouteNames.FeaturedRequests, { cmId })}
+              onPress={() => navigateToRequestsHub(navigation, {
+                initialFilter: 'featured',
+                source: 'cm_dashboard',
+              })}
               title="Gérer les demandes à la une"
               variant="Secondary"
               icon="bell"

@@ -170,19 +170,34 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.TEAM_REQUEST:
       return {
         params: {
-          params: payload.teamId ? { teamId: String(payload.teamId) } : {},
-          screen: RouteNames.TeamMembershipRequests,
+          params: {
+            initialFilter: 'team',
+            source: 'notification',
+          },
+          screen: RouteNames.RequestsTab,
         },
-        route: RouteNames.TeamStack,
+        route: RouteNames.HomeTab,
       };
 
     case NOTIFICATION_TYPES.CLUB_MEMBERSHIP_REQUEST:
+      if (payload.requestType === 'claim') {
+        return {
+          params: {
+            params: payload.clubId ? { clubId: String(payload.clubId) } : {},
+            screen: RouteNames.ClubMembershipRequests,
+          },
+          route: RouteNames.ClubStack,
+        };
+      }
       return {
         params: {
-          params: payload.clubId ? { clubId: String(payload.clubId) } : {},
-          screen: RouteNames.ClubMembershipRequests,
+          params: {
+            initialFilter: 'club',
+            source: 'notification',
+          },
+          screen: RouteNames.RequestsTab,
         },
-        route: RouteNames.ClubStack,
+        route: RouteNames.HomeTab,
       };
 
     case NOTIFICATION_TYPES.CLUB_REQUEST:

@@ -19,6 +19,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { RouteNames } from '@/navigation/routeNames';
 import { getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 import { getImageUrl } from '@/utils/imageUrl';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * @typedef {{ url?: string }} ImageAsset
@@ -112,7 +113,10 @@ function MultisportClubDetails({ navigation, route }) {
    */
   const handleFeaturedRequestsPress = useCallback(() => {
     if (cmId) {
-      navigation.navigate(RouteNames.FeaturedRequests, { cmId });
+      navigateToRequestsHub(navigation, {
+        initialFilter: 'featured',
+        source: 'cm_dashboard',
+      });
     }
   }, [cmId, navigation]);
 

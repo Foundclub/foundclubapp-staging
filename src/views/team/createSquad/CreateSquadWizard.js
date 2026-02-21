@@ -126,15 +126,15 @@ const CreateSquadWizard = ({ navigation }) => {
 
         // Level to ELO/Division Mapping
         const levelValue = squadData.level?.value || 'beginner';
-        let elo = 1000;
-        let division = 10;
+        let elo = 900;
+        let division = 5;
         
         switch (levelValue) {
-            case 'beginner': elo = 1000; division = 10; break;
-            case 'intermediate': elo = 1200; division = 9; break;
-            case 'advanced': elo = 1300; division = 8; break;
-            case 'expert': elo = 1400; division = 7; break;
-            default: elo = 1000; division = 10;
+            case 'beginner': elo = 900; division = 5; break;
+            case 'intermediate': elo = 1000; division = 5; break;
+            case 'advanced': elo = 1100; division = 5; break;
+            case 'expert': elo = 1200; division = 5; break;
+            default: elo = 900; division = 5;
         }
 
         const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
