@@ -7,8 +7,6 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
-
 /**
  * @typedef {'half' | 'full'} HomeCardLayout
  * @typedef {'default' | 'primary'} HomeCardEmphasis
@@ -41,6 +39,7 @@ function HomeActionCard({
 }) {
   const {
     Alignments,
+    ApplicationStyle,
     Colors,
     Fonts,
     Images,
@@ -51,8 +50,7 @@ function HomeActionCard({
   const accentBorderColor = emphasis === 'primary' ? resolvedAccentColor : `${resolvedAccentColor}CC`;
   const borderColor = disabled ? `${resolvedAccentColor}66` : accentBorderColor;
   const minHeight = layout === 'full' ? 136 : 154;
-  const cardBackgroundColor = disabled ? `${Colors.primary900}CC` : `${Colors.primary900}F2`;
-  const topTintColor = emphasis === 'primary' ? `${resolvedAccentColor}16` : `${resolvedAccentColor}12`;
+  const cardBackgroundColor = disabled ? `${Colors.primary700}99` : Colors.primary700;
 
   return (
     <Pressable
@@ -74,19 +72,19 @@ function HomeActionCard({
         },
       ])}
     >
-      <GlassSurface
-        blurAmount={emphasis === 'primary' ? 18 : 14}
-        borderColor={borderColor}
-        borderRadius={16}
-        fallbackColor={cardBackgroundColor}
-        style={{
-          justifyContent: 'space-between',
-          minHeight,
-          padding: 12,
-        }}
-        tintColor="rgba(0, 20, 30, 0.46)"
-        topHighlightColor={topTintColor}
-        topHighlightHeight={56}
+      <View
+        style={[
+          ApplicationStyle.card,
+          {
+            backgroundColor: cardBackgroundColor,
+            borderColor,
+            borderRadius: 16,
+            borderWidth: 1,
+            justifyContent: 'space-between',
+            minHeight,
+            padding: 12,
+          },
+        ]}
       >
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View
@@ -129,7 +127,7 @@ function HomeActionCard({
           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
           <Text numberOfLines={subtitleLines} style={[Fonts.p3, Fonts.neutral200]}>{subtitle}</Text>
         </View>
-      </GlassSurface>
+      </View>
     </Pressable>
   );
 }

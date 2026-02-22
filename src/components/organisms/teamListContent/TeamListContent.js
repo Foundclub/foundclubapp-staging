@@ -13,7 +13,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '@/components/atoms/button/Button';
-import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -440,24 +439,19 @@ function TeamListContent({
             },
           ]}
         >
-          <GlassSurface
-            blurAmount={14}
-            borderColor={cardAccentColor}
-            borderRadius={24}
-            fallbackColor={`${Colors.primary900}F2`}
-            style={[
-              {
-                justifyContent: 'center',
-                minHeight: isCompactScreen ? 140 : 152,
-                padding: cardPadding,
-              },
-            ]}
-            tintColor="rgba(0, 20, 30, 0.46)"
-            topHighlightColor={`${cardAccentColor}12`}
-            topHighlightHeight={62}
+          <View
+            style={{
+              backgroundColor: Colors.primary700,
+              borderColor: cardAccentColor,
+              borderRadius: 24,
+              borderWidth: 1,
+              justifyContent: 'center',
+              minHeight: isCompactScreen ? 152 : 168,
+              padding: cardPadding,
+            }}
           >
             {renderClassicContent()}
-          </GlassSurface>
+          </View>
         </TouchableOpacity>
       </View>
     );
