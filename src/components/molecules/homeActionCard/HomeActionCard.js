@@ -7,6 +7,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
+
 /**
  * @typedef {'half' | 'full'} HomeCardLayout
  * @typedef {'default' | 'primary'} HomeCardEmphasis
@@ -72,31 +74,20 @@ function HomeActionCard({
         },
       ])}
     >
-      <View
+      <GlassSurface
+        blurAmount={emphasis === 'primary' ? 18 : 14}
+        borderColor={borderColor}
+        borderRadius={16}
+        fallbackColor={cardBackgroundColor}
         style={{
-          backgroundColor: cardBackgroundColor,
-          borderColor,
-          borderRadius: 16,
-          borderWidth: 1,
           justifyContent: 'space-between',
           minHeight,
-          overflow: 'hidden',
           padding: 12,
-          position: 'relative',
         }}
+        tintColor="rgba(0, 20, 30, 0.46)"
+        topHighlightColor={topTintColor}
+        topHighlightHeight={56}
       >
-        <View
-          pointerEvents="none"
-          style={{
-            backgroundColor: topTintColor,
-            height: 56,
-            left: 0,
-            position: 'absolute',
-            right: 0,
-            top: 0,
-          }}
-        />
-
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View
             style={{
@@ -138,7 +129,7 @@ function HomeActionCard({
           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
           <Text numberOfLines={subtitleLines} style={[Fonts.p3, Fonts.neutral200]}>{subtitle}</Text>
         </View>
-      </View>
+      </GlassSurface>
     </Pressable>
   );
 }
