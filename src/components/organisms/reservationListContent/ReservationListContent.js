@@ -21,6 +21,8 @@ import { createEventParticipation } from '@/services/eventParticipation/eventPar
 import { horizontalScale } from '@/theme/scaling';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { useSearchReservations } from '@/services/search/searchQueries';
+import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
@@ -50,6 +52,11 @@ function ReservationListContent({ showFilters = false }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedActivity, setSelectedActivity] = useState(/** @type {string | null} */ (null)); // Activity quick filter
   const [{ reservationFilters }, appDispatch] = useAppContext();
+  const activeSearchText = useMemo(
+    () => (typeof reservationFilters?.q === 'string' ? reservationFilters.q.trim() : ''),
+    [reservationFilters?.q],
+  );
+  const isSmartSearchEnabled = activeSearchText.length >= 2;
 
   // Activity options for quick filters
   const activityOptions = [
@@ -67,7 +74,11 @@ function ReservationListContent({ showFilters = false }) {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      refetch();
+      if (isSmartSearchEnabled) {
+        refetchSmart();
+      } else {
+        refetch();
+      }
       setIsJoinModalVisible(false);
     },
   });
@@ -120,7 +131,34 @@ function ReservationListContent({ showFilters = false }) {
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetReservations({ ...activeFilters, pageSize: 15 });
+  } = useGetReservations({ ...activeFilters, pageSize: 15 }, {
+    enabled: !isSmartSearchEnabled,
+  });
+  const {
+    data: smartPages,
+    error: smartError,
+    fetchNextPage: fetchSmartNextPage,
+    hasNextPage: hasSmartNextPage,
+    isFetchingNextPage: isFetchingSmartNextPage,
+    isLoading: isSmartLoading,
+    refetch: refetchSmart,
+  } = useSearchReservations({
+    activity: activeFilters?.activity || activeFilters?.activitySlug,
+    category: activeFilters?.category,
+    club: activeFilters?.club,
+    lat: activeFilters?.lat,
+    level: activeFilters?.level,
+    lon: activeFilters?.lon,
+    maxPricePerPerson: activeFilters?.maxPricePerPerson || activeFilters?.maxPrice,
+    pageSize: 15,
+    q: activeSearchText,
+    radius: activeFilters?.radius,
+    reservationMode: activeFilters?.reservationMode,
+    startDateAfter: activeFilters?.startDateAfter,
+    startDateBefore: activeFilters?.startDateBefore,
+  }, {
+    enabled: isSmartSearchEnabled,
+  });
 
   const {
     data: featuredData,
@@ -169,12 +207,39 @@ function ReservationListContent({ showFilters = false }) {
       || [];
     return allReservations;
   }, [requestPages]);
+  const smartReservations = useMemo(() => {
+    const pages = /** @type {ReservationPages} */ (smartPages || {});
+    return pages?.pages
+      ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
+        const items = mapSearchPayload(page);
+        return acc.concat(items);
+      }, [])
+      || [];
+  }, [smartPages]);
+  const displayedReservations = isSmartSearchEnabled ? smartReservations : reservations;
+  const activeError = isSmartSearchEnabled ? smartError : error;
+  const activeLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
+  const activeFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
 
   const handleEndReached = useCallback(() => {
+    if (isSmartSearchEnabled) {
+      if (hasSmartNextPage && !isFetchingSmartNextPage) {
+        fetchSmartNextPage();
+      }
+      return;
+    }
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [
+    fetchNextPage,
+    fetchSmartNextPage,
+    hasNextPage,
+    hasSmartNextPage,
+    isFetchingNextPage,
+    isFetchingSmartNextPage,
+    isSmartSearchEnabled,
+  ]);
 
   const handleFilterPress = useCallback(() => {
     navigation.navigate(RouteNames.ReservationFilters);
@@ -197,9 +262,13 @@ function ReservationListContent({ showFilters = false }) {
   }, [appDispatch, reservationFilters]);
 
   const handleRefresh = useCallback(() => {
-    refetch();
+    if (isSmartSearchEnabled) {
+      refetchSmart();
+    } else {
+      refetch();
+    }
     refetchFeatured();
-  }, [refetch, refetchFeatured]);
+  }, [isSmartSearchEnabled, refetch, refetchFeatured, refetchSmart]);
 
   const handleActivitySelect = useCallback((/** @type {string | null} */ activitySlug) => {
     setSelectedActivity(activitySlug);
@@ -210,22 +279,30 @@ function ReservationListContent({ showFilters = false }) {
    */
   const renderItem = useCallback(({ item }) => {
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
+    const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
     
     return (
-      <EventCardNew
-        actionLabel={isManager ? t('eventList.actions.about') : undefined}
-        item={item}
-        onDecline={() => {}}
-        onJoin={() => {}}
-        onLogin={() => {}}
-        onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
-        onPress={handleCardPress}
-      />
+      <View style={[Spaces.gap[8]]}>
+        {primaryReasonLabel ? (
+          <Text style={[Fonts.p3, Fonts.primary500]}>
+            {`Tri pertinence: ${primaryReasonLabel}`}
+          </Text>
+        ) : null}
+        <EventCardNew
+          actionLabel={isManager ? t('eventList.actions.about') : undefined}
+          item={item}
+          onDecline={() => {}}
+          onJoin={() => {}}
+          onLogin={() => {}}
+          onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
+          onPress={handleCardPress}
+        />
+      </View>
     );
-  }, [userData?.role?.name, t, handleCardPress, handleJoinEvent]);
+  }, [Fonts, Spaces, handleCardPress, handleJoinEvent, t, userData?.role?.name]);
 
   // Loading state
-  if (isLoading && !requestPages) {
+  if (activeLoading && !(isSmartSearchEnabled ? smartPages : requestPages)) {
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
         <Text style={[Fonts.p1, Fonts.neutral300]}>
@@ -236,11 +313,11 @@ function ReservationListContent({ showFilters = false }) {
   }
 
   // Error state
-  if (error && !requestPages) {
+  if (activeError && !(isSmartSearchEnabled ? smartPages : requestPages)) {
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
         <Text style={[Fonts.p1, Fonts.error500]}>
-          {error?.message || 'Une erreur est survenue'}
+          {activeError?.message || 'Une erreur est survenue'}
         </Text>
       </View>
     );
@@ -349,24 +426,29 @@ function ReservationListContent({ showFilters = false }) {
           searchDefaultValue={reservationFilters?.q}
         />
       </View>
+      {isSmartSearchEnabled ? (
+        <Text style={[Fonts.p3, Fonts.primary500]}>
+          Trie par pertinence
+        </Text>
+      ) : null}
     </View>
   );
 
   return (
     <View style={[Alignments.fill]}>
       <WithDataWrapper
-        error={error?.message}
-        isLoading={(isLoading && !isFetchingNextPage) || createEventParticipationMutation.isPending}
+        error={activeError?.message}
+        isLoading={(activeLoading && !activeFetchingNext) || createEventParticipationMutation.isPending}
         wrapperStyle={[Alignments.fill]}
       >
         <View style={[Alignments.fill]}>
           <FlashList
-            data={reservations}
+            data={displayedReservations}
             estimatedItemSize={200}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={renderEmptyList}
             ListHeaderComponent={renderHeader}
-            ListFooterComponent={isFetchingNextPage ? (
+            ListFooterComponent={activeFetchingNext ? (
               <ActivityIndicator
                 color={Colors.primary500}
                 size="large"
@@ -377,7 +459,7 @@ function ReservationListContent({ showFilters = false }) {
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={handleRefresh}
-            refreshing={isLoading && !isFetchingNextPage}
+            refreshing={activeLoading && !activeFetchingNext}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}

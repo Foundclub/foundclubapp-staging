@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -24,13 +24,29 @@ function SearchComponent({
   searchDefaultValue = '',
 }) {
   const [search, setSearch] = useState(searchDefaultValue);
+  const searchHandlerRef = useRef(handleSearchField);
   const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
 
   useEffect(() => {
     setSearch(searchDefaultValue);
   }, [searchDefaultValue]);
+
+  useEffect(() => {
+    searchHandlerRef.current = handleSearchField;
+  }, [handleSearchField]);
+
+  useEffect(() => {
+    const value = search || '';
+    const normalizedValue = value.length > 0 && value.length < 2 ? '' : value;
+
+    const timeout = setTimeout(() => {
+      searchHandlerRef.current?.(normalizedValue);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   /**
    * Handles the change in the search input.
@@ -38,9 +54,11 @@ function SearchComponent({
    */
   const handleChange = (text) => {
     setSearch(text);
-    if (text.length === 0 || text.length >= 3) {
-      handleSearchField(text);
-    }
+  };
+
+  const handleSubmit = () => {
+    const normalizedValue = search.length > 0 && search.length < 2 ? '' : search;
+    searchHandlerRef.current?.(normalizedValue);
   };
 
   return (
@@ -54,10 +72,13 @@ function SearchComponent({
 
       <View style={[Alignments.fill]}>
         <Input
+          density="compact"
           icon="search"
-          onBlur={() => handleSearchField(search)}
+          onBlur={handleSubmit}
           onChangeText={handleChange}
+          onSubmitEditing={handleSubmit}
           placeholder={placeholder}
+          placeholderTextColor={Colors.neutral300}
           value={search}
         />
       </View>
@@ -83,6 +104,7 @@ function SearchComponent({
         <Button
           icon="filter"
           onPress={openFilters}
+          size="sm"
           variant="Secondary"
         />
       </View>

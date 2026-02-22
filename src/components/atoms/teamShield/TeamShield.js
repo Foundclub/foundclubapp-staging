@@ -8,18 +8,20 @@ import useTheme from '@/theme/themeContext';
  * @param {string} props.initials - Team initials (max 3 letters)
  * @param {boolean} [props.isSmall] - Size of the shield
  * @param {boolean} [props.isNeutral] - Colors
+ * @param {boolean} [props.isGold] - League gold variant
  * @param {number} [props.size] - Explicit size override.
  * @returns {import('react').ReactElement} TeamShield component
  */
 function TeamShield({
   initials,
+  isGold = false,
   isNeutral = false,
   isSmall = false,
   size,
 }) {
   // hooks
   const {
-    Alignments, ApplicationStyle, Fonts, Images,
+    Alignments, ApplicationStyle, Colors, Fonts, Images,
   } = useTheme();
 
   // Format initials to max 3 letters uppercase
@@ -35,7 +37,11 @@ function TeamShield({
       <Image
         source={Images.shield}
         style={[
-          isNeutral ? ApplicationStyle.tintColor.neutral200 : ApplicationStyle.tintColor.primary200,
+          isGold
+            ? ApplicationStyle.tintColor.gold500
+            : isNeutral
+              ? ApplicationStyle.tintColor.neutral200
+              : ApplicationStyle.tintColor.primary200,
           {
             height: shieldSize,
             width: shieldSize,
@@ -47,7 +53,11 @@ function TeamShield({
       >
         <Text style={[
           isSmall ? Fonts.p2Black : Fonts.h4Black,
-          isNeutral ? Fonts.neutral700 : Fonts.primary700,
+          isGold
+            ? { color: Colors.neutral900 }
+            : isNeutral
+              ? Fonts.neutral700
+              : Fonts.primary700,
           { top: shieldSize / 3.5 },
         ]}
         >

@@ -25,6 +25,8 @@ import useTheme from '@/theme/themeContext';
  * @property {() => void} [onBottomIconPress]
  * @property {string} [iconColor]
  * @property {boolean} [lightMode]
+ * @property {'default' | 'compact'} [density]
+ * @property {string} [placeholderTextColor]
  * @property {string} [accessibilityLabel]
  * @property {string} [accessibilityHint]
  * @property {import('react-native').AccessibilityRole} [accessibilityRole]
@@ -52,6 +54,7 @@ const Input = forwardRef(
       Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
     } = useTheme();
     const hasLabel = Boolean(props.label);
+    const isCompact = props.density === 'compact';
 
     // methods
     const handleFocus = () => {
@@ -96,7 +99,7 @@ const Input = forwardRef(
               Spaces.paddingLeft[16],
               Spaces.paddingRight[4],
               Spaces.gap[16],
-              Platform.OS === 'ios' ? Spaces.paddingBottom[12] : Spaces.paddingBottom[0],
+              Platform.OS === 'ios' && !isCompact ? Spaces.paddingBottom[12] : Spaces.paddingBottom[0],
             ]}
             >
               {
@@ -112,6 +115,12 @@ const Input = forwardRef(
                   : null
               }
               <TextInput
+                accessibilityHint={props.accessibilityHint}
+                accessibilityLabel={props.accessibilityLabel}
+                accessibilityRole={props.accessibilityRole}
+                autoCapitalize={props.autoCapitalize}
+                autoComplete={props.autoComplete}
+                autoCorrect={props.autoCorrect}
                 autoFocus={props.autoFocus}
                 cursorColor={Colors.primary500}
                 editable={props.editable}
@@ -128,10 +137,7 @@ const Input = forwardRef(
                 onPressIn={props.onPressIn}
                 onSubmitEditing={props.onSubmitEditing}
                 placeholder={props.placeholder}
-                placeholderTextColor={Colors.neutral500}
-                accessibilityHint={props.accessibilityHint}
-                accessibilityLabel={props.accessibilityLabel}
-                accessibilityRole={props.accessibilityRole}
+                placeholderTextColor={props.placeholderTextColor || Colors.neutral500}
                 readOnly={props.readOnly}
                 ref={ref}
                 secureTextEntry={props.secureTextEntry}
@@ -142,13 +148,10 @@ const Input = forwardRef(
                   props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
                   Alignments.fill,
                   props.style,
-                  { minHeight: 30 },
+                  { minHeight: isCompact ? 24 : 30 },
                 ]}
                 textAlignVertical={props.textAlignVertical}
                 value={props.value}
-                autoCorrect={props.autoCorrect}
-                autoComplete={props.autoComplete}
-                autoCapitalize={props.autoCapitalize}
               />
               {
               props.iconBottom

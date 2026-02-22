@@ -374,12 +374,12 @@ function TeamDetails({ navigation, route }) {
     [canEditClub, canManageTeam, isMyTeam, team?.club?.documentId]
   );
   const showStandingsTab = useMemo(
-    () => !!(hasStandingData || canConfigureFFBB),
-    [hasStandingData, canConfigureFFBB]
+    () => !!(isMyTeam || hasStandingData || canConfigureFFBB),
+    [isMyTeam, hasStandingData, canConfigureFFBB]
   );
   const showCalendarTab = useMemo(
-    () => !!(hasCalendarData || canConfigureFFBB),
-    [hasCalendarData, canConfigureFFBB]
+    () => !!(isMyTeam || hasCalendarData || canConfigureFFBB),
+    [isMyTeam, hasCalendarData, canConfigureFFBB]
   );
   const showPerformanceTabs = useMemo(
     () => showStandingsTab || showCalendarTab,
@@ -824,21 +824,22 @@ function TeamDetails({ navigation, route }) {
           Alignments.alignCenter,
           Alignments.justifyCenter,
           Spaces.paddingVertical[8],
-          Spaces.paddingHorizontal[8],
-          { flex: 1, minHeight: 40 },
-          isActive && {
-            borderBottomWidth: 2,
-            borderBottomColor: Colors.primary500,
+          Spaces.paddingHorizontal[4],
+          {
+            borderRadius: 18,
+            flex: 1,
+            minHeight: 44,
           },
+          isActive
+            ? { backgroundColor: Colors.primary500 }
+            : null,
         ]}
       >
         <Text
-          adjustsFontSizeToFit
-          minimumFontScale={0.85}
           numberOfLines={1}
           style={[
-          isActive ? Fonts.p2Bold : Fonts.p2,
-          isActive ? Fonts.primary500 : Fonts.neutral00,
+          isActive ? Fonts.p3Bold : Fonts.p3,
+          isActive ? Fonts.neutral00 : Fonts.neutral100,
           Fonts.textCenter,
         ]}
         >
@@ -885,11 +886,16 @@ function TeamDetails({ navigation, route }) {
             Alignments.row,
             Alignments.alignCenter,
             Alignments.fullWidth,
+            Spaces.paddingHorizontal[4],
+            Spaces.paddingVertical[4],
             {
+              backgroundColor: 'rgba(23, 56, 68, 0.78)',
+              borderColor: `${Colors.primary500}55`,
+              borderRadius: 22,
+              borderWidth: 1,
               zIndex: 20,
               elevation: 20,
             },
-            Spaces.paddingHorizontal[16],
             Spaces.gap[4],
           ]}
         >

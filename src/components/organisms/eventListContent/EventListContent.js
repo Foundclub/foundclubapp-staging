@@ -34,6 +34,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { useSearchEvents } from '@/services/search/searchQueries';
+import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 import Input from '@/components/molecules/input/Input';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
@@ -124,6 +126,11 @@ function EventListContent({
     ...additionalFilters,
     pageSize: 15,
   }), [showFilters, eventFilters, additionalFilters]);
+  const activeSearchText = useMemo(
+    () => (typeof eventsConfig?.q === 'string' ? eventsConfig.q.trim() : ''),
+    [eventsConfig?.q],
+  );
+  const isSmartSearchEnabled = activeSearchText.length >= 2;
 
   // Get user's club and multisport club IDs for membership filtering
   const userClubId = userData?.club?.documentId;
@@ -162,10 +169,37 @@ function EventListContent({
     error,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage,
+	isFetchingNextPage,
     isLoading: isInternalLoading,
     refetch,
-  } = useGetEvents(eventsConfig, { enabled: !propEvents });
+  } = useGetEvents(eventsConfig, { enabled: !propEvents && !isSmartSearchEnabled });
+  const {
+    data: searchPages,
+    error: searchError,
+    fetchNextPage: fetchSearchNextPage,
+    hasNextPage: hasSearchNextPage,
+    isFetchingNextPage: isFetchingSearchNextPage,
+    isLoading: isSearchLoading,
+    refetch: refetchSearch,
+  } = useSearchEvents({
+    activity: eventsConfig?.activity,
+    category: eventsConfig?.category,
+    club: eventsConfig?.club?.value || eventsConfig?.club,
+    excludeType: eventsConfig?.excludeType,
+    lat: eventsConfig?.lat,
+    level: eventsConfig?.level,
+    lon: eventsConfig?.lon,
+    pageSize: eventsConfig?.pageSize || 15,
+    q: activeSearchText,
+    radius: eventsConfig?.radius,
+    sessionStatus: eventsConfig?.sessionStatus,
+    startDateAfter: eventsConfig?.startDateAfter,
+    startDateBefore: eventsConfig?.startDateBefore,
+    teamIds: eventsConfig?.teamIds,
+    type: eventsConfig?.type,
+  }, {
+    enabled: !propEvents && isSmartSearchEnabled,
+  });
 
   const {
     data: featuredPages,
@@ -183,7 +217,13 @@ function EventListContent({
     mutationFn: createEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      if (!propEvents) refetch(); // Keep local refetch for Safety
+      if (!propEvents) {
+        if (isSmartSearchEnabled) {
+          refetchSearch();
+        } else {
+          refetch();
+        }
+      }
       setIsJoinModalVisible(false);
     },
   });
@@ -195,6 +235,12 @@ function EventListContent({
       return acc.concat(items);
     }, [])
     || [], [requestPages]);
+  const smartEvents = useMemo(() => searchPages?.pages
+    ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
+      const items = mapSearchPayload(page);
+      return acc.concat(items);
+    }, [])
+    || [], [searchPages]);
 
   const featuredEvents = useMemo(() => featuredPages?.pages
     ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
@@ -207,8 +253,11 @@ function EventListContent({
     })
     || [], [featuredPages]);
 
-  const events = propEvents || internalEvents;
-  const isLoading = propIsLoading !== undefined ? propIsLoading : isInternalLoading;
+  const events = propEvents || (isSmartSearchEnabled ? smartEvents : internalEvents);
+  const activeError = isSmartSearchEnabled ? searchError : error;
+  const isLoading = propIsLoading !== undefined
+    ? propIsLoading
+    : (isSmartSearchEnabled ? isSearchLoading : isInternalLoading);
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -242,10 +291,23 @@ function EventListContent({
   const handleEndReached = useCallback(() => {
     if (onLoadMore) {
       onLoadMore();
+    } else if (isSmartSearchEnabled) {
+      if (hasSearchNextPage && !isFetchingSearchNextPage) {
+        fetchSearchNextPage();
+      }
     } else if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, onLoadMore]);
+  }, [
+    fetchNextPage,
+    fetchSearchNextPage,
+    hasNextPage,
+    hasSearchNextPage,
+    isFetchingNextPage,
+    isFetchingSearchNextPage,
+    isSmartSearchEnabled,
+    onLoadMore,
+  ]);
 
   /**
    * Mutation for marking an event as missing
@@ -255,7 +317,13 @@ function EventListContent({
     mutationFn: missingEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      if (!propEvents) refetch();
+      if (!propEvents) {
+        if (isSmartSearchEnabled) {
+          refetchSearch();
+        } else {
+          refetch();
+        }
+      }
     },
   });
 
@@ -331,10 +399,14 @@ function EventListContent({
   useFocusEffect(
     useCallback(() => {
       if (!propEvents) {
-        refetch();
+        if (isSmartSearchEnabled) {
+          refetchSearch();
+        } else {
+          refetch();
+        }
         refetchFeatured();
       }
-    }, [refetch, refetchFeatured, propEvents]),
+    }, [isSmartSearchEnabled, propEvents, refetch, refetchFeatured, refetchSearch]),
   );
 
   // renderers
@@ -369,14 +441,24 @@ function EventListContent({
       />
     );
 
-    if (!onTutorialLayout || index !== 0) return card;
+    const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
+    const wrappedCard = primaryReasonLabel ? (
+      <View style={[Spaces.gap[8]]}>
+        <Text style={[Fonts.p3, Fonts.primary500]}>
+          {`Tri pertinence: ${primaryReasonLabel}`}
+        </Text>
+        {card}
+      </View>
+    ) : card;
+
+    if (!onTutorialLayout || index !== 0) return wrappedCard;
 
     return (
       <View
         onLayout={() => emitTutorialLayout('card', firstCardTargetRef)}
         ref={firstCardTargetRef}
       >
-        {card}
+        {wrappedCard}
       </View>
     );
   };
@@ -401,8 +483,8 @@ function EventListContent({
         />
       ) : (
         <WithDataWrapper
-          error={error?.message}
-          isLoading={isLoading && !isFetchingNextPage}
+          error={activeError?.message}
+          isLoading={isLoading && !(isSmartSearchEnabled ? isFetchingSearchNextPage : isFetchingNextPage)}
           wrapperStyle={[Alignments.fill]}
         >
           <View style={[
@@ -417,10 +499,14 @@ function EventListContent({
               onEndReached={handleEndReached}
               onEndReachedThreshold={0.5}
               onRefresh={() => {
-                refetch();
+                if (isSmartSearchEnabled) {
+                  refetchSearch();
+                } else {
+                  refetch();
+                }
                 refetchFeatured();
               }}
-              refreshing={isLoading && !isFetchingNextPage}
+              refreshing={isLoading && !(isSmartSearchEnabled ? isFetchingSearchNextPage : isFetchingNextPage)}
               renderItem={renderItem}
               ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
               ListHeaderComponent={
@@ -455,6 +541,11 @@ function EventListContent({
                         />
                       </View>
                     </View>
+                  ) : null}
+                  {isSmartSearchEnabled ? (
+                    <Text style={[Fonts.p3, Fonts.primary500]}>
+                      Trie par pertinence
+                    </Text>
                   ) : null}
                 </View>
               }

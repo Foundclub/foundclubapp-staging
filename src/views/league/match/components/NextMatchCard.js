@@ -356,7 +356,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                 {/* Matchup */}
                 <View style={styles.matchup}>
                     <View style={styles.teamContainer}>
-                        <TeamShield initials={myTeam.name?.substring(0,2) || '??'} size={50} />
+                        <TeamShield initials={myTeam.name?.substring(0,2) || '??'} isGold size={50} />
                         <Text style={styles.teamName} numberOfLines={1}>{myTeam.name}</Text>
                     </View>
                     <Text style={styles.vsText}>VS</Text>
@@ -374,7 +374,7 @@ const NextMatchCard = ({ match, event, myTeamId, onRefresh, onPress }) => {
                                 {opponent.crest?.url ? ( 
                                     <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
                                 ) : (
-                                    <TeamShield initials={opponent.name?.substring(0,2) || '??'} size={50} />
+                                    <TeamShield initials={opponent.name?.substring(0,2) || '??'} isGold size={50} />
                                 )}
                                 <Text style={styles.teamName} numberOfLines={1}>{opponent.name}</Text>
                              </>

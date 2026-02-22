@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useAuth from '@/domains/auth/useAuth';
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
@@ -92,11 +93,7 @@ const RankingScreen = () => {
                     {item.crest?.url ? (
                         <Image source={{ uri: item.crest.url }} style={styles.crestImage} />
                     ) : (
-                        <View style={styles.crestFallback}>
-                            <Text style={[Fonts.p3Bold, { color: Colors.neutral400 }]}>
-                                {String(item.name || '??').substring(0, 2).toUpperCase()}
-                            </Text>
-                        </View>
+                        <TeamShield initials={String(item.name || '??').substring(0, 2)} isGold size={32} />
                     )}
                 </View>
                 <View>
@@ -176,11 +173,6 @@ const RankingScreen = () => {
 const styles = StyleSheet.create({
     backButton: {
         padding: 8,
-    },
-    crestFallback: {
-        alignItems: 'center',
-        flex: 1,
-        justifyContent: 'center',
     },
     crestImage: {
         height: '100%',

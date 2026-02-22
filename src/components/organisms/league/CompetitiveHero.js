@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
@@ -22,7 +22,7 @@ const CompetitiveHero = ({
   teamName,
   nextDivisionElo = null,
 }) => {
-  const { Colors, Fonts } = useTheme();
+  const { Colors, Fonts, Images } = useTheme();
   const heroSurfaceColor = 'rgba(1, 36, 52, 0.92)';
   const heroBorderColor = 'rgba(255, 215, 0, 0.78)';
   const progressTrackColor = 'rgba(173, 177, 178, 0.26)';
@@ -53,10 +53,19 @@ const CompetitiveHero = ({
         <View style={styles.divisionBadgeWrap}>
           <DivisionBadge
             division={normalizedDivision}
+            logoScale={1.4}
             showChrome={false}
             showLabel={false}
-            size={96}
+            size={124}
           />
+        </View>
+
+        <View style={styles.brandMarkWrap}>
+          <Image source={Images.logo} style={styles.brandLogo} />
+          <View style={styles.brandGap} />
+          <Text style={[Fonts.h3Bold, { color: Colors.gold500 }, styles.brandLeague]}>
+            LEAGUE
+          </Text>
         </View>
 
         <View style={[styles.centered, { marginVertical: 12 }]}>
@@ -120,6 +129,26 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     height: '100%',
   },
+  brandGap: {
+    width: 8,
+  },
+  brandLeague: {
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  brandLogo: {
+    height: 16,
+    resizeMode: 'contain',
+    width: 98,
+  },
+  brandMarkWrap: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: -2,
+  },
   centered: {
     alignItems: 'center',
   },
@@ -127,7 +156,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   divisionBadgeWrap: {
-    marginBottom: 4,
+    marginBottom: 10,
   },
   progressContainer: {
     marginTop: 8,

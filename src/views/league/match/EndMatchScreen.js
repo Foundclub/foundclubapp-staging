@@ -557,7 +557,7 @@ const EndMatchScreen = () => {
                     <LeagueCard style={[styles.scoreCard, leagueSurface]}>
                         <View style={styles.scoreContainer}>
                             <View style={styles.teamColumn}>
-                                <TeamShield initials={String(teamA?.name?.substring(0, 2) || '?')} size={64} />
+                                <TeamShield initials={String(teamA?.name?.substring(0, 2) || '?')} isGold size={64} />
                                 <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]} numberOfLines={1}>{teamA?.name}</Text>
                                 <TextInput
                                     style={[
@@ -590,7 +590,7 @@ const EndMatchScreen = () => {
                             </View>
 
                             <View style={styles.teamColumn}>
-                                <TeamShield initials={String(teamB?.name?.substring(0, 2) || '?')} size={64} />
+                                <TeamShield initials={String(teamB?.name?.substring(0, 2) || '?')} isGold size={64} />
                                 <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]} numberOfLines={1}>{teamB?.name}</Text>
                                 <TextInput
                                     style={[

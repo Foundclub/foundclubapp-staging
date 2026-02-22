@@ -136,11 +136,8 @@ const LeagueDashboard = () => {
                         width: '100%',
                         backgroundColor: Colors.gold500,
                         borderRadius: 30,
-                        shadowColor: Colors.gold500,
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 5,
-                        elevation: 5
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 219, 102, 0.35)',
                     }}
                     textStyle={{ color: Colors.neutral900 }}
                 />
@@ -295,10 +292,9 @@ const LeagueDashboard = () => {
                                 style={{ 
                                     backgroundColor: Colors.gold500, 
                                     height: 56,
-                                    shadowColor: Colors.gold500, 
-                                    shadowOpacity: 0.3, 
-                                    shadowRadius: 10, 
-                                    elevation: 5 
+                                    borderRadius: 30,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255, 219, 102, 0.35)',
                                 }}
                                 textStyle={{ ...Fonts.h4Bold, color: Colors.neutral900, lineHeight: undefined, letterSpacing: 1 }}
                             />

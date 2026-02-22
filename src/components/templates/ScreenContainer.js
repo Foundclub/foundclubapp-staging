@@ -1,6 +1,6 @@
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useMemo } from 'react';
-import { ImageBackground, View } from 'react-native';
+import { ImageBackground, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
  * @param {'bg1' | 'bg2' | 'bg3'} [props.bgImage]
  * @param {Array<import('react-native').ViewStyle>} [props.style]
  * @param {Array<import('react-native').ViewStyle>} [props.contentContainerStyle]
+ * @param {boolean} [props.responsiveHorizontalPadding]
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
@@ -19,16 +20,19 @@ function ScreenContainer({
   children,
   contentContainerStyle = [],
   gradient = null, // Default to no gradient
+  responsiveHorizontalPadding = false,
   style = [],
   withHeaderPadding = true,
   ...props
 }) {
   // hooks
   const {
-    Alignments, Images, Spaces,
+    Alignments, Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
   const headerHeightNative = useHeaderHeight();
+  const { width } = useWindowDimensions();
+  const horizontalPadding = responsiveHorizontalPadding && width <= 375 ? 16 : 24;
 
   // constants
   const containerSpaces = useMemo(() => {
@@ -48,7 +52,7 @@ function ScreenContainer({
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={[
                 Alignments.fill,
-                Spaces.paddingHorizontal[24],
+                { paddingHorizontal: horizontalPadding },
                 containerSpaces,
             ]}
         >
@@ -66,7 +70,7 @@ function ScreenContainer({
       source={Images[bgImage]}
       style={[
         Alignments.fill,
-        Spaces.paddingHorizontal[24],
+        { paddingHorizontal: horizontalPadding },
         containerSpaces,
         ...style,
       ]}

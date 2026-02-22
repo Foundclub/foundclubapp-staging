@@ -30,7 +30,7 @@ import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert 
 import { RouteNames } from '@/navigation/routeNames';
 
 /** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
-/** @typedef {{ createAlertMode?: boolean; editAlertMode?: boolean; alertLabel?: string; alertDocumentId?: string }} MercatoRouteParams */
+/** @typedef {{ createAlertMode?: boolean; editAlertMode?: boolean; alertLabel?: string; alertDocumentId?: string; savedFilters?: MercatoFiltersFormData }} MercatoRouteParams */
 /** @typedef {{ title: string; content: string }} InfoModalContent */
 /**
  * @typedef {import('@/store/types').MercatoFilters & {
@@ -60,6 +60,7 @@ function MercatoFilters({ navigation }) {
     const editAlertMode = routeParams.editAlertMode || false;
     const initialAlertLabel = routeParams.alertLabel || '';
     const alertDocumentId = routeParams.alertDocumentId;
+    const savedFilters = routeParams.savedFilters || null;
 
     const isAlertMode = createAlertMode || editAlertMode;
 
@@ -74,7 +75,7 @@ function MercatoFilters({ navigation }) {
 
     // Alert State
     const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
-    const [alertLabel, setAlertLabel] = useState('');
+    const [alertLabel, setAlertLabel] = useState(initialAlertLabel || '');
     const [isCreatingAlert, setIsCreatingAlert] = useState(false);
     const [previewCount, setPreviewCount] = useState(/** @type {number | null} */ (null));
 
@@ -87,6 +88,17 @@ function MercatoFilters({ navigation }) {
     const { getGeohashForPointAndRadius } = usePlaces();
     const insets = useSafeAreaInsets();
 
+    const defaultValues = useMemo(() => {
+        const source = (editAlertMode && savedFilters) ? savedFilters : (mercatoFilters || {});
+        return {
+            activity: source?.activity || source?.activityIds || [],
+            category: source?.category || source?.sectionIds || [],
+            city: source?.city || { label: '', value: '' },
+            radius: source?.radius || 20,
+            position: source?.position || source?.positions || [],
+        };
+    }, [editAlertMode, savedFilters, mercatoFilters]);
+
     const {
         control,
         formState: { errors: formErrors },
@@ -95,13 +107,7 @@ function MercatoFilters({ navigation }) {
         setValue,
         getValues,
     } = useForm({
-        defaultValues: {
-            activity: mercatoFilters?.activity || [],
-            category: mercatoFilters?.category || [],
-            city: mercatoFilters?.city || { label: '', value: '' },
-            radius: mercatoFilters?.radius || 20,
-            position: mercatoFilters?.position || [],
-        },
+        defaultValues,
         mode: 'onBlur',
         resolver: joiResolver(filtersSchema),
     });
@@ -111,7 +117,7 @@ function MercatoFilters({ navigation }) {
         setIsSaveModalVisible(true);
         // Fetch preview count
         try {
-            const currentFilters = /** @type {MercatoFiltersFormData} */ (getValues());
+            const currentFilters = buildNormalizedFiltersPayload(/** @type {MercatoFiltersFormData} */ (getValues()));
             const result = await getPreviewCount(currentFilters, 'mercato');
             setPreviewCount(result.count);
         } catch (error) {
@@ -155,6 +161,56 @@ function MercatoFilters({ navigation }) {
 
     const { data: allActivities } = useGetActivities();
     const { data: allSections } = useGetSections();
+
+    const toArray = React.useCallback((/** @type {unknown} */ value) => {
+        if (Array.isArray(value)) return value.map((v) => String(v || '')).filter(Boolean);
+        if (typeof value === 'string') return value ? [value] : [];
+        return [];
+    }, []);
+
+    const resolveActivityNames = React.useCallback((/** @type {unknown} */ idsValue) => {
+        const ids = toArray(idsValue);
+        if (!ids.length) return [];
+
+        const lookup = new Map(
+            (allActivities || []).map((activity) => [
+                String(activity.documentId || ''),
+                String(activity.name || '').trim(),
+            ]),
+        );
+
+        return ids
+            .map((id) => lookup.get(String(id)) || '')
+            .filter(Boolean);
+    }, [allActivities, toArray]);
+
+    const buildNormalizedFiltersPayload = React.useCallback((/** @type {MercatoFiltersFormData} */ rawData) => {
+        const data = rawData || {};
+        const cityValue = typeof data.city?.value === 'string' ? data.city.value : '';
+        const coordinates = cityValue ? cityValue.split('|') : undefined;
+        const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
+            parseFloat(coordinates[1]),
+            parseFloat(coordinates[0]),
+            Number(data.radius || 0),
+        ) : undefined;
+
+        const activityIds = toArray(data.activity || []);
+        const activityNames = resolveActivityNames(activityIds);
+        const sectionIds = toArray(data.category || []);
+        const positions = toArray(data.position || []);
+
+        return {
+            ...data,
+            activity: activityIds,
+            activityIds,
+            activityNames,
+            category: sectionIds,
+            sectionIds,
+            position: positions,
+            positions,
+            ...(geohash && { geohash }),
+        };
+    }, [getGeohashForPointAndRadius, resolveActivityNames, toArray]);
 
     const activities = useMemo(() => {
         const formattedActivities = allActivities?.map(({ documentId, name }) => ({
@@ -217,19 +273,7 @@ function MercatoFilters({ navigation }) {
      * @param {MercatoFiltersFormData} data
      */
     const handleApplyFilters = (data) => {
-        // format place params
-        const cityValue = typeof data.city?.value === 'string' ? data.city.value : '';
-        const coordinates = cityValue ? cityValue.split('|') : undefined;
-        const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
-            parseFloat(coordinates[1]),
-            parseFloat(coordinates[0]),
-            Number(data.radius || 0),
-        ) : undefined;
-
-        const payload = {
-            ...data,
-            ...(geohash && { geohash }),
-        };
+        const payload = buildNormalizedFiltersPayload(data);
 
         appDispatch({
             payload,
@@ -245,7 +289,7 @@ function MercatoFilters({ navigation }) {
 
     // Direct alert creation/update for createAlertMode
     const handleSaveAlert = async () => {
-        const currentFilters = /** @type {MercatoFiltersFormData} */ (getValues());
+        const currentFilters = buildNormalizedFiltersPayload(/** @type {MercatoFiltersFormData} */ (getValues()));
         
         // Validate city and radius
         if (!currentFilters.city?.value || !currentFilters.radius) {
@@ -301,10 +345,11 @@ function MercatoFilters({ navigation }) {
 
         setIsCreatingAlert(true);
         try {
+            const filtersToSave = buildNormalizedFiltersPayload(/** @type {MercatoFiltersFormData} */ (getValues()));
             if (editAlertMode && alertDocumentId) {
                 await updateSearchAlert(alertDocumentId, {
                     label: alertLabel,
-                    filters: getValues(),
+                    filters: filtersToSave,
                     isActive: true,
                 });
                 Alert.alert('Succès', 'Alerte modifiée avec succès');
@@ -312,7 +357,7 @@ function MercatoFilters({ navigation }) {
                 await createSearchAlert({
                     label: alertLabel,
                     type: 'mercato',
-                    filters: getValues(),
+                    filters: filtersToSave,
                     isActive: true,
                 });
                 Alert.alert('Succès', 'Alerte créée avec succès');
@@ -590,3 +635,4 @@ function MercatoFilters({ navigation }) {
 }
 
 export default MercatoFilters;
+

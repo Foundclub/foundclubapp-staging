@@ -875,6 +875,10 @@ export default {
     },
     cards: {
       manage: {
+        manageClub: {
+          title: 'G\u00e9rer mon club',
+          subtitle: 'Acc\u00e9dez \u00e0 votre espace club pour piloter votre organisation.',
+        },
         addEvent: {
           title: 'Ajouter un \u00e9v\u00e9nement',
           subtitle: 'Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d essai.',
@@ -1023,6 +1027,10 @@ export default {
       header: {
         title: 'Accueil FoundClub',
         description: 'Cette page vous donne un acces rapide a toutes les fonctionnalites principales.',
+      },
+      manageClub: {
+        title: 'Gerer mon club',
+        description: 'Accedez a votre espace club pour piloter votre organisation.',
       },
       manageAddEvent: {
         title: 'Ajouter un evenement',

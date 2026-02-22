@@ -72,9 +72,13 @@
  * @typedef {object} MercatoFilters
  * @property {string} [q]
  * @property {string | string[]} [activity]
+ * @property {string[]} [activityIds]
+ * @property {string[]} [activityNames]
  * @property {string | string[]} [position]
+ * @property {string[]} [positions]
  * @property {string} [bestLevel]
  * @property {string | string[]} [category]
+ * @property {string[]} [sectionIds]
  * @property {string} [preferredSport]
  * @property {{label: string, value: string | number | null}} [city]
  * @property {number | string} [radius]

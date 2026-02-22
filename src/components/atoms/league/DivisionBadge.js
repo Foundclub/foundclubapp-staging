@@ -7,7 +7,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Div1Badge from '@/assets/league/divisions/DIV-1.svg';
+import Div1Badge from '@/assets/league/divisions/Div-1.svg';
 import Div2Badge from '@/assets/league/divisions/Div-2.svg';
 import Div3Badge from '@/assets/league/divisions/Div-3.svg';
 import Div4Badge from '@/assets/league/divisions/Div-4.svg';
@@ -59,6 +59,8 @@ const getLegacyImageForDivision = (images, division) => {
 
 const DivisionBadge = ({
   division = 5,
+  logoScale = 1,
+  preferRaster = true,
   showChrome = true,
   showLabel = true,
   size = 54,
@@ -89,11 +91,17 @@ const DivisionBadge = ({
     transform: [{ scale: 1 + (pulse.value * 0.05) }],
   }));
 
+  const normalizedLogoScale = Number.isFinite(Number(logoScale))
+    ? Math.max(1, Math.min(1.8, Number(logoScale)))
+    : 1;
   const glowSize = size + 10;
   const iconSize = showChrome ? Math.max(28, size - 10) : size;
+  const scaledIconSize = Math.round(iconSize * normalizedLogoScale);
+  const badgeFrameSize = showChrome ? size + 16 : scaledIconSize;
+  const shouldUseSvg = SVG_NATIVE_READY && !preferRaster;
 
   return (
-    <View style={[styles.wrapper, { width: size + 16 }]}>
+    <View style={[styles.wrapper, { height: badgeFrameSize, width: badgeFrameSize }]}>
       {showChrome ? (
         <>
           <Animated.View
@@ -120,25 +128,25 @@ const DivisionBadge = ({
               },
             ]}
           >
-            {SVG_NATIVE_READY ? (
-              <BadgeComponent height={iconSize} width={iconSize} />
+            {shouldUseSvg ? (
+              <BadgeComponent height={scaledIconSize} width={scaledIconSize} />
             ) : (
               <Image
                 source={legacyImageSource}
-                style={{ height: iconSize, width: iconSize }}
+                style={{ height: scaledIconSize, width: scaledIconSize }}
                 resizeMode="contain"
               />
             )}
           </View>
         </>
       ) : (
-        <View style={[styles.plainIconWrap, { height: size, width: size }]}>
-          {SVG_NATIVE_READY ? (
-            <BadgeComponent height={iconSize} width={iconSize} />
+        <View style={[styles.plainIconWrap, { height: scaledIconSize, width: scaledIconSize }]}>
+          {shouldUseSvg ? (
+            <BadgeComponent height={scaledIconSize} width={scaledIconSize} />
           ) : (
             <Image
               source={legacyImageSource}
-              style={{ height: iconSize, width: iconSize }}
+              style={{ height: scaledIconSize, width: scaledIconSize }}
               resizeMode="contain"
             />
           )}

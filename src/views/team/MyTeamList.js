@@ -53,6 +53,7 @@ function MyTeamList({ navigation, route }) {
           Alignments.column,
           Alignments.fill,
         ]}
+        responsiveHorizontalPadding
       >
         <View style={[
           Spaces.marginTop[16],

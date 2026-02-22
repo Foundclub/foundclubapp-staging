@@ -91,13 +91,31 @@ const SearchAlerts = ({ navigation }) => {
 
     // Launch search with filters applied directly to results page
     const handleLaunchSearch = (/** @type {SearchAlertItem} */ alert) => {
+        const rawFilters = /** @type {Record<string, any>} */ (alert.filters || {});
         if (alert.type === 'event') {
+            const payload = {
+                ...rawFilters,
+                activity: rawFilters.activity || rawFilters.activityIds || [],
+                category: rawFilters.category || rawFilters.categoryIds || [],
+                level: rawFilters.level || rawFilters.levelIds || [],
+                type: rawFilters.type || rawFilters.typeIds || [],
+                ...(rawFilters.clubId && !rawFilters.club ? { club: { label: '', value: rawFilters.clubId } } : {}),
+            };
             // Apply filters to app context and navigate to Search (events tab)
-            appDispatch({ type: 'SET_EVENT_FILTERS', payload: alert.filters || {} });
+            appDispatch({ type: 'SET_EVENT_FILTERS', payload });
             navigation.navigate(RouteNames.SearchEvents);
         } else if (alert.type === 'mercato') {
+            const payload = {
+                ...rawFilters,
+                activity: rawFilters.activity || rawFilters.activityIds || [],
+                category: rawFilters.category || rawFilters.sectionIds || [],
+                position: rawFilters.position || rawFilters.positions || [],
+                activityIds: rawFilters.activityIds || rawFilters.activity || [],
+                sectionIds: rawFilters.sectionIds || rawFilters.category || [],
+                positions: rawFilters.positions || rawFilters.position || [],
+            };
             // Apply mercato filters and navigate to Search (mercato tab)
-            appDispatch({ type: 'SET_MERCATO_FILTERS', payload: alert.filters || {} });
+            appDispatch({ type: 'SET_MERCATO_FILTERS', payload });
             navigation.navigate(RouteNames.SearchRecruitment, {
                 initialRecruitmentTab: 'profils',
             });

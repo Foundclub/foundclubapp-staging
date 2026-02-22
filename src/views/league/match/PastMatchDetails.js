@@ -265,7 +265,7 @@ const PastMatchDetails = () => {
                     <LeagueCard isGold style={styles.scoreCard}>
                         <View style={styles.matchupRow}>
                             <View style={styles.teamBlock}>
-                                <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} size={62} />
+                                <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} isGold size={62} />
                                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
                                     {teamA?.name || 'Equipe A'}
                                 </Text>
@@ -281,7 +281,7 @@ const PastMatchDetails = () => {
                                 {opponent?.crest?.url ? (
                                     <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={styles.opponentCrest} />
                                 ) : (
-                                    <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} size={62} />
+                                    <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
                                 )}
                                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
                                     {teamB?.name || 'Equipe B'}

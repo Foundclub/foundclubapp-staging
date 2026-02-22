@@ -1,4 +1,3 @@
-import Joi from 'joi';
 import client from '../client';
 
 /**
@@ -8,6 +7,7 @@ import client from '../client';
  * @param {string} [params.role]
  * @param {string} [params.q]
  * @param {string|string[]} [params.activity] - Sport/activity filter
+ * @param {string|string[]} [params.activityNames] - Preferred sport names (canonical filter)
  * @param {string|string[]} [params.category] - Section (M/F) filter
  * @param {string|string[]} [params.position] - Position filter
  * @param {string} [params.geohash] - Location geohash filter
@@ -21,6 +21,7 @@ export const searchUsers = async (params = {}) => {
         role,
         q,
         activity,
+        activityNames,
         category,
         position,
         geohash,
@@ -61,7 +62,22 @@ export const searchUsers = async (params = {}) => {
     }
 
     // Sport/Activity filter (preferredSport field)
-    if (activity) {
+    const canonicalActivityNames = Array.isArray(activityNames)
+        ? activityNames
+        : (activityNames ? [activityNames] : []);
+
+    if (canonicalActivityNames.length > 0) {
+        filters.filters.$and = [
+            ...(filters.filters.$and || []),
+            {
+                $or: canonicalActivityNames
+                    .map((name) => String(name || '').trim())
+                    .filter(Boolean)
+                    .map((name) => ({ preferredSport: { $eqi: name } })),
+            },
+        ];
+    } else if (activity) {
+        // Legacy fallback
         const activityValues = Array.isArray(activity) ? activity : [activity];
         if (activityValues.length > 0) {
             filters.filters.preferredSport = { $in: activityValues };
@@ -90,7 +106,7 @@ export const searchUsers = async (params = {}) => {
     // Note: This may need custom backend implementation
     // For now, we pass it but Strapi standard API may not support it
     if (geohash) {
-        filters.filters.geohash = { $startswith: geohash };
+        filters.filters.geohash = { $startsWith: geohash };
     }
 
     const response = await client.get('/users', { params: filters });

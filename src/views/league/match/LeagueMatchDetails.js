@@ -373,7 +373,7 @@ function LeagueMatchDetails({ navigation, route }) {
         >
           <View style={styles.heroSection}>
             <View style={styles.teamColumn}>
-              <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} size={80} />
+              <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={80} />
               <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
             </View>
 
@@ -413,7 +413,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 </>
               ) : (
                 <>
-                  <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isNeutral={true} size={80} />
+                  <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={80} />
                   <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Equipe B'}</Text>
                 </>
               )}

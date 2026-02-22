@@ -54,21 +54,18 @@ function HomeActionCard({
       onPress={onPress}
       style={({ pressed }) => ([
         {
-          borderColor,
           borderRadius: 16,
-          borderWidth: emphasis === 'primary' ? 1.5 : 1,
-          overflow: 'hidden',
-          shadowColor: resolvedAccentColor,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.16,
-          shadowRadius: 10,
+          shadowColor: Colors.primary900,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 6,
           width: '100%',
-          elevation: 3,
+          elevation: 1,
         },
         pressed && {
           opacity: 0.92,
-          shadowOpacity: 0.1,
-          shadowRadius: 6,
+          shadowOpacity: 0.14,
+          shadowRadius: 4,
           elevation: 1,
         },
         disabled && {
@@ -81,24 +78,16 @@ function HomeActionCard({
         end={{ x: 1, y: 1 }}
         start={{ x: 0, y: 0 }}
         style={{
+          borderColor,
+          borderRadius: 16,
+          borderWidth: emphasis === 'primary' ? 1.5 : 1,
           justifyContent: 'space-between',
           minHeight,
+          overflow: 'hidden',
           padding: 12,
           position: 'relative',
         }}
       >
-        <View
-          style={{
-            backgroundColor: `${resolvedAccentColor}14`,
-            borderRadius: 40,
-            height: 72,
-            position: 'absolute',
-            right: -24,
-            top: -16,
-            width: 72,
-          }}
-        />
-
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View
             style={{

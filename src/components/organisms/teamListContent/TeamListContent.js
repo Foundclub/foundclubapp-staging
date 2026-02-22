@@ -3,8 +3,14 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
@@ -58,6 +64,9 @@ function TeamListContent({
   const { userData } = useAuth();
   const [{ teamFilters }] = useAppContext();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width <= 375;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -233,111 +242,141 @@ function TeamListContent({
     /** @type {any} */ (navigation).navigate(RouteNames.TeamFilters);
   }, [isLeagueMode, navigation]);
 
+  const listBottomPadding = useMemo(
+    () => (isLeagueMode ? 180 : 120) + insets.bottom,
+    [insets.bottom, isLeagueMode],
+  );
+
   const renderTeamCard = useCallback((/** @type {Team} */ item, isPending = false) => {
-    const renderContent = () => (
+    const pendingBorderColor = Colors.warning500 || Colors.gold500;
+    const cardAccentColor = isPending ? pendingBorderColor : Colors.primary500;
+    const cardPadding = isCompactScreen ? 16 : 24;
+    const sportLabel = item?.activities?.[0]?.name || item?.sport;
+    const isLeagueCard = isLeagueMode;
+
+    const activityTag = sportLabel ? (
+      <Tag
+        style={{
+          backgroundColor: `${Colors.primary500}14`,
+          borderColor: Colors.primary500,
+          maxWidth: isCompactScreen ? 96 : 128,
+        }}
+        text={sportLabel}
+        textStyle={Fonts.p3Bold}
+      />
+    ) : null;
+
+    let identityAvatar = (
+      <TeamShield
+        initials={getClubInitials(item.name)}
+        isGold={isLeagueCard}
+        isSmall={!isLeagueCard}
+        size={isLeagueCard ? 80 : undefined}
+      />
+    );
+
+    if (isLeagueCard && item.crest?.url) {
+      identityAvatar = (
+        <ProfileAvatar
+          imageUrl={item.crest.url}
+          size={80}
+          style={{ borderColor: Colors.gold500, borderRadius: 80, borderWidth: 1 }}
+        />
+      );
+    } else if (item?.club?.logo?.url) {
+      identityAvatar = (
+        <ProfileAvatar
+          imageUrl={item.club.logo.url}
+          size={60}
+          style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.primary500, { borderRadius: 60 }]}
+        />
+      );
+    }
+
+    const renderClassicContent = () => (
       <>
         <View
           style={[
             Alignments.fullWidth,
             Alignments.row,
-            Alignments.justifyEnd,
             Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
             Spaces.gap[8],
-            { position: 'absolute', top: 24, right: 24, zIndex: 1 },
           ]}
         >
-          {item?.activities?.[0]?.name ? (
-            <Tag
-              text={item.activities[0].name}
-              style={{
-                backgroundColor: `${Colors.primary500}1A`,
-                borderColor: Colors.primary500,
-              }}
-              textStyle={Fonts.p3Bold}
-            />
-          ) : (item.sport && (
-            <Tag
-              text={item.sport}
-              style={{
-                backgroundColor: `${Colors.primary500}1A`,
-                borderColor: Colors.primary500,
-              }}
-              textStyle={Fonts.p3Bold}
-            />
-          ))}
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { flex: 1, paddingRight: 8 }]}>
+            <View>{identityAvatar}</View>
+            <View style={[Alignments.fill]}>
+              <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {item.name}
+              </Text>
+            </View>
+          </View>
+          {activityTag}
         </View>
 
         <View
           style={[
-            Alignments.row,
             Alignments.fullWidth,
-            Alignments.alignCenter,
-            Spaces.gap[8],
-            isLeagueMode && { flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 16 },
+            Spaces.marginVertical[16],
+            ApplicationStyle.separator,
+            { backgroundColor: `${cardAccentColor}40` },
           ]}
-        >
-          <View>
-            {isLeagueMode && item.crest?.url ? (
-              <ProfileAvatar
-                imageUrl={item.crest.url}
-                size={80}
-                style={{ borderRadius: 80, borderWidth: 1, borderColor: Colors.gold500 }}
-              />
-            ) : (item?.club?.logo?.url ? (
-              <ProfileAvatar
-                imageUrl={item.club.logo.url}
-                size={60}
-                style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.primary500, { borderRadius: 60 }]}
-              />
-            ) : (
-              <TeamShield
-                initials={getClubInitials(item.name)}
-                isSmall={!isLeagueMode}
-                size={isLeagueMode ? 80 : undefined}
-              />
-            ))}
-          </View>
-          <View style={[Alignments.fill, isLeagueMode && { alignItems: 'center' }]}>
-            <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, isLeagueMode && Fonts.h2, isLeagueMode && { color: '#FFFFFF' }]}>
-              {item.name}
+        />
+
+        <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
+          {item?.section ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+              {t('teamList.fields.section')}
+              {' : '}
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{item.section.name}</Text>
             </Text>
-            {isLeagueMode ? (
-              <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 4 }]}>Division {item.division || 5}</Text>
-            ) : null}
-          </View>
+          ) : null}
         </View>
-
-        {!isLeagueMode ? (
-          <View
-            style={[
-              Alignments.fullWidth,
-              Spaces.marginVertical[16],
-              ApplicationStyle.separator,
-              { backgroundColor: `${Colors.primary500}40` },
-            ]}
-          />
-        ) : null}
-
-        {!isLeagueMode ? (
-          <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
-            {item?.section ? (
-              <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
-                {t('teamList.fields.section')} : <Text style={[Fonts.p2, Fonts.neutral00]}>{item.section.name}</Text>
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
       </>
     );
 
-    if (isLeagueMode) {
+    const renderLeagueContent = () => (
+      <View style={[Alignments.fullWidth, { flex: 1, position: 'relative' }]}>
+        <View style={{ position: 'absolute', right: 0, top: 0, zIndex: 2 }}>
+          {activityTag}
+        </View>
+
+        <View
+          style={[
+            Alignments.fullWidth,
+            {
+              alignItems: 'center',
+              flex: 1,
+              gap: 12,
+              justifyContent: 'center',
+              transform: [{ translateY: -10 }],
+            },
+          ]}
+        >
+          <View>{identityAvatar}</View>
+          <View style={{ alignItems: 'center', width: '100%' }}>
+            <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
+              {item.name}
+            </Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginTop: 4, textAlign: 'center' }]}>
+              DIV
+              {' '}
+              {item.division || 5}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+
+    if (isLeagueCard) {
       return (
-        <View style={[{ position: 'relative', marginVertical: 12, height: 250 }]}>
+        <View style={[{ height: 250, marginVertical: 12, position: 'relative' }]}>
           <TouchableOpacity onPress={() => handleTeamSelect(item)} activeOpacity={0.9} style={{ flex: 1 }}>
             <LinearGradient
-              colors={['rgba(165, 239, 255, 0.2)', 'rgba(110, 191, 244, 0.04)', 'rgba(70, 144, 213, 0)']}
-              start={{ x: 0, y: 0 }}
+              colors={[`${Colors.primary200}33`, `${Colors.primary200}0A`, `${Colors.primary200}00`]}
               end={{ x: 1, y: 1 }}
+              start={{ x: 0, y: 0 }}
               style={[
                 ApplicationStyle.borderRadius24,
                 {
@@ -348,30 +387,40 @@ function TeamListContent({
             />
 
             <MaskedView
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
               maskElement={(
                 <View
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    backgroundColor: 'transparent',
+                    borderColor: 'black',
                     borderRadius: 24,
                     borderWidth: 2,
-                    borderColor: 'black',
-                    backgroundColor: 'transparent',
+                    height: '100%',
+                    width: '100%',
                   }}
                 />
               )}
+              style={{ height: '100%', left: 0, position: 'absolute', top: 0, width: '100%' }}
             >
               <LinearGradient
-                colors={['#00C6FB', Colors.gold500]}
-                start={{ x: 0, y: 0 }}
+                colors={[Colors.primary500, Colors.gold500]}
                 end={{ x: 1, y: 1 }}
+                start={{ x: 0, y: 0 }}
                 style={{ flex: 1 }}
               />
             </MaskedView>
 
-            <View style={[Spaces.padding[24], { position: 'absolute', width: '100%', height: '100%', justifyContent: 'center' }]}>
-              {renderContent()}
+            <View
+              style={[
+                {
+                  height: '100%',
+                  justifyContent: 'center',
+                  padding: cardPadding,
+                  position: 'absolute',
+                  width: '100%',
+                },
+              ]}
+            >
+              {renderLeagueContent()}
             </View>
           </TouchableOpacity>
         </View>
@@ -381,40 +430,53 @@ function TeamListContent({
     return (
       <View style={[{ position: 'relative' }]}>
         <TouchableOpacity
+          activeOpacity={0.92}
           onPress={() => handleTeamSelect(item)}
-          activeOpacity={0.88}
           style={[
             Spaces.marginVertical[12],
-            ApplicationStyle.borderRadius24,
             {
-              borderColor: isPending ? '#EAB308' : Colors.primary500,
-              borderWidth: 1,
-              overflow: 'hidden',
-              shadowColor: Colors.primary500,
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.22,
-              shadowRadius: 12,
-              elevation: 4,
+              borderRadius: 24,
+              shadowColor: Colors.primary900,
+              shadowOffset: { height: 2, width: 0 },
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 1,
             },
           ]}
         >
-          <LinearGradient
-            colors={['rgba(1, 179, 244, 0.20)', 'rgba(1, 179, 244, 0.06)', 'rgba(1, 179, 244, 0.02)']}
-            end={{ x: 1, y: 1 }}
-            start={{ x: 0, y: 0 }}
+          <View
             style={[
-              Spaces.padding[24],
               {
-                backgroundColor: 'rgba(7, 35, 52, 0.90)',
+                borderColor: cardAccentColor,
+                borderRadius: 24,
+                borderWidth: 1,
+                overflow: 'hidden',
+              },
+              {
+                backgroundColor: `${Colors.primary900}E8`,
               },
             ]}
           >
-            {renderContent()}
-          </LinearGradient>
+            <LinearGradient
+              colors={[`${cardAccentColor}20`, `${cardAccentColor}0E`, 'rgba(23,56,68,0.94)']}
+              end={{ x: 1, y: 1 }}
+              start={{ x: 0, y: 0 }}
+              style={[
+                {
+                  justifyContent: 'center',
+                  minHeight: isCompactScreen ? 140 : 152,
+                  padding: cardPadding,
+                  position: 'relative',
+                },
+              ]}
+            >
+              {renderClassicContent()}
+            </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
     );
-  }, [Alignments, ApplicationStyle, Colors, Fonts, Spaces, getClubInitials, handleTeamSelect, isLeagueMode, t]);
+  }, [Alignments, ApplicationStyle, Colors, Fonts, Spaces, getClubInitials, handleTeamSelect, isCompactScreen, isLeagueMode, t]);
 
   const headerComponent = useMemo(() => (
     <View>
@@ -532,7 +594,7 @@ function TeamListContent({
             refreshing={isLoadingTeams && !isFetchingNextPage}
             renderItem={({ item }) => renderTeamCard(item, false)}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={{ paddingBottom: listBottomPadding }}
           />
         </View>
 

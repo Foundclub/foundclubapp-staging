@@ -11,6 +11,7 @@ import MatchmakingService from '../../../services/league/MatchmakingService';
 import { getMyLeagueTeam } from '../../../services/leagueTeam/leagueTeamService';
 import { getAvailableSlots } from '../../../services/teamSlot/teamSlotService';
 import useAuth from '../../../domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
 import { formatDateWithDayPrefix as formatDate } from '../../../utils/date';
 import {
     getLocationCoordinates,
@@ -42,6 +43,8 @@ import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchm
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+import { getImageUrl } from '@/utils/imageUrl';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 
 /**
  * @typedef {'loading' | 'initializing' | 'no_squad' | 'locker_room' | 'lobby' | 'radar' | 'match_found' | 'connection_error' | 'searching_start'} MatchCenterViewState
@@ -59,12 +62,80 @@ import DivisionBadge from '@/components/atoms/league/DivisionBadge';
  * @typedef {{address?: string, addressObject?: {label?: string, address?: string} | null, date?: string, endDate?: string, venue?: string}} VenueProposalPayload
  */
 
+/**
+ * Resolve Strapi media URL from multiple payload shapes.
+ * @param {unknown} media
+ * @returns {string | undefined}
+ */
+const resolveMediaUrl = (media) => {
+    if (!media) return undefined;
+    if (typeof media === 'string') return media;
+    if (typeof media !== 'object') return undefined;
+
+    const source = /** @type {Record<string, any>} */ (media);
+    const direct = [source.url, source.uri, source.path].find(
+        (value) => typeof value === 'string' && value.length > 0
+    );
+    if (direct) return direct;
+
+    const rootAttributes = source.attributes && typeof source.attributes === 'object'
+        ? /** @type {Record<string, any>} */ (source.attributes)
+        : null;
+    const rootAttributeUrl = rootAttributes
+        ? [rootAttributes.url, rootAttributes.uri, rootAttributes.path].find(
+            (value) => typeof value === 'string' && value.length > 0
+        )
+        : undefined;
+    if (rootAttributeUrl) return rootAttributeUrl;
+
+    const nestedData = source.data && typeof source.data === 'object'
+        ? /** @type {Record<string, any>} */ (source.data)
+        : null;
+    if (!nestedData) return undefined;
+
+    const nestedDirect = [nestedData.url, nestedData.uri, nestedData.path].find(
+        (value) => typeof value === 'string' && value.length > 0
+    );
+    if (nestedDirect) return nestedDirect;
+
+    const nestedAttributes = nestedData.attributes && typeof nestedData.attributes === 'object'
+        ? /** @type {Record<string, any>} */ (nestedData.attributes)
+        : null;
+    if (!nestedAttributes) return undefined;
+
+    return [nestedAttributes.url, nestedAttributes.uri, nestedAttributes.path].find(
+        (value) => typeof value === 'string' && value.length > 0
+    );
+};
+
 const MatchCenterScreen = () => {
     const swordsIcon = '\u2694\uFE0F';
     const radarIcon = '\uD83D\uDCE1';
     const navigation = /** @type {any} */ (useNavigation());
     const { userData } = useAuth();
+    const { getClubInitials } = useClub();
     const { Colors, Fonts, Images, Alignments, Spaces, ApplicationStyle } = useTheme();
+
+    /**
+     * Keep shield initials consistent with Squad cards (TeamListContent).
+     * @param {string | undefined | null} squadName
+     * @returns {string}
+     */
+    const getSquadShieldInitials = useCallback((squadName) => {
+        const normalizedName = typeof squadName === 'string' ? squadName : '';
+        const fromClubRules = getClubInitials(normalizedName);
+        return fromClubRules || String(normalizedName || '??').substring(0, 2).toUpperCase();
+    }, [getClubInitials]);
+
+    /**
+     * Resolve squad crest URL with backward-compatible fallbacks.
+     * @param {Team | null | undefined} squad
+     * @returns {string | undefined}
+     */
+    const getSquadLogoUri = useCallback((squad) => {
+        const media = squad?.crest || squad?.logo || squad?.club?.logo;
+        return getImageUrl(resolveMediaUrl(media));
+    }, []);
     
     // Data State
     const [mySquad, setMySquad] = useState(/** @type {Team | null} */ (null));
@@ -101,6 +172,9 @@ const MatchCenterScreen = () => {
     const [isAddingSearchSlot, setIsAddingSearchSlot] = useState(false);
     const [isSavingSearchSlot, setIsSavingSearchSlot] = useState(false);
     const [matchmakingServerNow, setMatchmakingServerNow] = useState(/** @type {string | null} */ (null));
+    const mySquadLogoUri = React.useMemo(() => getSquadLogoUri(mySquad), [getSquadLogoUri, mySquad]);
+    const userId = React.useMemo(() => getEntityDocumentId(userData), [userData]);
+    const mySquadId = React.useMemo(() => getEntityDocumentId(mySquad), [mySquad]);
 
     // DAY_MAP for display
     /** @type {Record<string, string>} */
@@ -275,14 +349,14 @@ const MatchCenterScreen = () => {
         } finally {
             setLoading(false);
         }
-    }, [userData, searchRadius, cancellationLikeStatuses]);
+    }, [cancellationLikeStatuses]);
 
     const loadMatchCenter = useCallback(async () => {
-        if (!userData) return;
+        if (!userId) return;
         setLoading(true);
         try {
             // A. Fetch User's LEAGUE Squads
-            const squads = await getMyLeagueTeam(getEntityDocumentId(userData)); 
+            const squads = await getMyLeagueTeam(userId); 
             setAllSquads(squads);
             
             if (squads.length === 0) {
@@ -293,9 +367,10 @@ const MatchCenterScreen = () => {
             }
 
             // Select initial squad (either currently selected or first one)
-            const initialSquad = mySquad && squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), getEntityDocumentId(mySquad))) 
-                ? mySquad 
-                : squads[0];
+            const matchedCurrentSquad = mySquadId
+                ? squads.find((/** @type {Team} */ s) => areSameEntityId(getEntityDocumentId(s), mySquadId))
+                : null;
+            const initialSquad = matchedCurrentSquad || squads[0];
             
             // Allow fetchMatchData to set mySquad and viewState
            await fetchMatchData(initialSquad);
@@ -305,7 +380,7 @@ const MatchCenterScreen = () => {
             Alert.alert("Erreur", "Impossible de charger le Match Center");
             setLoading(false);
         }
-    }, [userData, mySquad, fetchMatchData]);
+    }, [userId, mySquadId, fetchMatchData]);
 
     // 1. Load Squads & State on Focus
     useFocusEffect(
@@ -1382,22 +1457,55 @@ const MatchCenterScreen = () => {
                 <View style={{ 
                     width: 64, height: 64, borderRadius: 32, 
                     backgroundColor: Colors.neutral800, borderWidth: 2, borderColor: Colors.gold500,
-                    justifyContent: 'center', alignItems: 'center', marginRight: 16 
+                    justifyContent: 'center', alignItems: 'center', marginRight: 16, overflow: 'hidden',
                 }}>
-                    <Image source={Images.shield} style={{ width: 32, height: 32, tintColor: Colors.gold500 }}resizeMode="contain" />
+                    {mySquadLogoUri ? (
+                        <Image
+                            source={{ uri: mySquadLogoUri }}
+                            style={{ width: 58, height: 58, borderRadius: 29 }}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <TeamShield
+                            initials={getSquadShieldInitials(mySquad?.name)}
+                            isGold
+                            size={54}
+                        />
+                    )}
                 </View>
                 <View style={{ flex: 1 }}>
-                    <TouchableOpacity 
-                        onPress={() => setIsSquadSelectorVisible(true)}
-                        style={{ flexDirection: 'row', alignItems: 'center' }}
-                    >
-                         <Text style={[Fonts.h1Bold, { color: Colors.neutral00, textTransform: 'uppercase', lineHeight: 32 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                         <Text
+                            numberOfLines={1}
+                            style={[Fonts.h1Bold, { color: Colors.neutral00, textTransform: 'uppercase', lineHeight: 32, flexShrink: 1, marginRight: 12 }]}
+                        >
                             {mySquad ? mySquad.name : "Team Alpha"}
                         </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, opacity: 0.8 }}>
-                            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Changer</Text>
-                        </View>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setIsSquadSelectorVisible(true)}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Squad"
+                            accessibilityHint="Ouvre la liste des squads"
+                            style={{
+                                alignItems: 'center',
+                                backgroundColor: 'rgba(1, 179, 244, 0.14)',
+                                borderColor: 'rgba(1, 179, 244, 0.58)',
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                flexDirection: 'row',
+                                minHeight: 34,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                            }}
+                        >
+                            <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginRight: 6 }]}>Squad</Text>
+                            <Image
+                                source={Images.chevronDown}
+                                style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
+                            />
+                        </TouchableOpacity>
+                    </View>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                         <View style={{ marginRight: 8 }}>
@@ -1830,50 +1938,128 @@ const MatchCenterScreen = () => {
         <BottomModal
             isVisible={isSquadSelectorVisible}
             close={() => setIsSquadSelectorVisible(false)}
-            snapPoints={['50%']}
+            closeIconTintColor="primary200"
+            contentContainerStyle={{ paddingBottom: 18 }}
+            snapPoints={['48%', '76%']}
+            style={[
+                ApplicationStyle.backgroundColor.primary900,
+                {
+                    borderColor: 'rgba(1, 179, 244, 0.30)',
+                    borderWidth: 1,
+                },
+            ]}
             headerComponent={
-                <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center', marginBottom: 16 }]}>
-                     Changer d'equipe
-                </Text>
+                <View style={{ alignItems: 'center' }}>
+                    <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+                        Changer de squad
+                    </Text>
+                    <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
+                        Selectionne la squad active pour les matchs
+                    </Text>
+                </View>
             }
         >
             <View style={{ paddingBottom: 24 }}>
-                {allSquads.map((/** @type {Team} */ squad) => (
-                    <TouchableOpacity
-                        key={getEntityDocumentId(squad)}
-                        onPress={() => handleSquadSwitch(squad)}
+                {allSquads.length === 0 && (
+                    <View
                         style={[
-                            ApplicationStyle.backgroundColor.neutral800,
-                            Spaces.padding[16],
-                            ApplicationStyle.borderRadius12,
-                            Spaces.marginBottom[12],
-                            Alignments.row,
-                            Alignments.alignCenter,
-                            areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && { borderWidth: 1, borderColor: Colors.primary500 }
+                            ApplicationStyle.card,
+                            {
+                                alignItems: 'center',
+                                backgroundColor: 'rgba(10, 28, 43, 0.86)',
+                                borderColor: 'rgba(1, 179, 244, 0.30)',
+                                borderRadius: 14,
+                                paddingHorizontal: 16,
+                                paddingVertical: 18,
+                            },
                         ]}
                     >
-                         <View style={{ 
-                            width: 40, height: 40, borderRadius: 20, 
-                            backgroundColor: Colors.neutral900, borderWidth: 1, borderColor: Colors.gold500,
-                            justifyContent: 'center', alignItems: 'center', marginRight: 16 
-                        }}>
-                             {squad.crest?.url ? (
-                                   <Image source={{ uri: squad.crest?.url }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-                              ) : (
-                                   <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{squad.name.substring(0, 2).toUpperCase()}</Text>
-                              )}
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{squad.name}</Text>
-                            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                                 {squad?.sport || 'Sport'} - Div {squad?.division || 5}
-                            </Text>
-                        </View>
-                         {areSameEntityId(getEntityDocumentId(squad), getEntityDocumentId(mySquad)) && (
-                             <Text style={{ color: Colors.primary500, fontSize: 16 }}>OK</Text>
-                         )}
-                    </TouchableOpacity>
-                ))}
+                        <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                            Aucune squad disponible.
+                        </Text>
+                    </View>
+                )}
+                {allSquads.map((/** @type {Team} */ squad) => {
+                    const squadId = getEntityDocumentId(squad);
+                    const isActiveSquad = areSameEntityId(squadId, getEntityDocumentId(mySquad));
+                    const squadLogoUri = getSquadLogoUri(squad);
+                    const hasSquadLogo = Boolean(squadLogoUri);
+                    return (
+                        <TouchableOpacity
+                            key={squadId}
+                            onPress={() => handleSquadSwitch(squad)}
+                            style={[
+                                ApplicationStyle.card,
+                                Alignments.row,
+                                Alignments.alignCenter,
+                                {
+                                    backgroundColor: isActiveSquad ? 'rgba(1, 179, 244, 0.18)' : 'rgba(23, 56, 68, 0.52)',
+                                    borderColor: isActiveSquad ? 'rgba(1, 179, 244, 0.78)' : 'rgba(1, 179, 244, 0.35)',
+                                    borderRadius: 14,
+                                    marginBottom: 12,
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 12,
+                                },
+                            ]}
+                        >
+                            <View style={{ 
+                                width: 56,
+                                height: 56,
+                                borderRadius: 28,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                marginRight: 12,
+                                padding: 2,
+                                backgroundColor: 'rgba(0, 18, 24, 0.72)',
+                                borderWidth: 1,
+                                borderColor: hasSquadLogo ? 'rgba(1, 179, 244, 0.48)' : 'rgba(255, 215, 0, 0.55)',
+                            }}>
+                                {hasSquadLogo ? (
+                                    <Image
+                                        source={{ uri: squadLogoUri }}
+                                        style={{ width: 50, height: 50, transform: [{ scale: 1.08 }] }}
+                                        resizeMode="contain"
+                                    />
+                                ) : (
+                                    <TeamShield
+                                        initials={getSquadShieldInitials(squad?.name)}
+                                        isGold
+                                        size={48}
+                                    />
+                                )}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]}>
+                                        {squad?.name || 'Squad'}
+                                    </Text>
+                                    {isActiveSquad && (
+                                        <View style={{
+                                            alignItems: 'center',
+                                            backgroundColor: 'rgba(1, 179, 244, 0.14)',
+                                            borderColor: 'rgba(1, 179, 244, 0.45)',
+                                            borderRadius: 999,
+                                            borderWidth: 1,
+                                            flexDirection: 'row',
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 3,
+                                        }}
+                                        >
+                                            <Image
+                                                source={Images.check}
+                                                style={{ height: 12, marginRight: 4, tintColor: Colors.primary500, width: 12 }}
+                                            />
+                                            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Actif</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                                    {squad?.sport || 'Sport'} - Div {squad?.division || 5}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
         </BottomModal>
     );

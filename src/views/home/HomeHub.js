@@ -16,6 +16,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -93,21 +94,22 @@ function HomeSection({
   Spaces,
   title,
 }) {
+  const { width: screenWidth } = useWindowDimensions();
   if (!cards.length) return null;
   const isSingleCardSection = cards.length === 1;
+  const isCompactScreen = screenWidth <= 340;
 
   return (
     <View style={[Spaces.gap[12]]}>
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{title}</Text>
       <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
         {cards.map((card) => {
-          const isFullCard = isSingleCardSection || card.layout === 'full';
+          const isFullCard = isCompactScreen || isSingleCardSection || card.layout === 'full';
           const cardContainerStyle = {
             flexBasis: isFullCard ? '100%' : '48.5%',
             maxWidth: isFullCard ? '100%' : '48.5%',
             marginBottom: 12,
-            minWidth: isFullCard ? undefined : 140,
-            width: isFullCard ? '100%' : undefined,
+            width: isFullCard ? '100%' : '48.5%',
           };
 
           const body = (
@@ -767,9 +769,38 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [clubId, cmId, navigation, t, trainedTeamIds.length]);
 
+  const handleOpenManageClub = useCallback(() => {
+    if (clubId) {
+      navigation.navigate(RouteNames.ClubStack, {
+        params: { clubId },
+        screen: RouteNames.Club,
+      });
+      return;
+    }
+
+    if (cmId) {
+      navigation.navigate(RouteNames.CMDashboard, { cmId });
+      return;
+    }
+
+    Alert.alert(
+      t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
+      t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gerer les demandes a la une.'),
+    );
+  }, [clubId, cmId, navigation, t]);
+
   const handleOpenProfile = useCallback(() => {
-    navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile });
-  }, [navigation]);
+    const currentUserId = userData?.documentId || userData?.id;
+    if (!currentUserId) {
+      navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile });
+      return;
+    }
+
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId: currentUserId },
+      screen: RouteNames.UserDetails,
+    });
+  }, [navigation, userData?.documentId, userData?.id]);
 
   const handleEditProfile = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.ProfileEdit });
@@ -865,7 +896,53 @@ function HomeHubContent({ auth, navigation, route }) {
 
   /** @type {HomeCard[]} */
   const manageSectionCards = useMemo(() => {
-    if (isCoach || isPresident) {
+    if (isPresident) {
+      return [
+        {
+          accentColor: Colors.primary500,
+          emphasis: 'primary',
+          icon: 'users',
+          key: 'manage-club',
+          layout: 'full',
+          onPress: handleOpenManageClub,
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accedez a votre espace club et gerer votre organisation.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.manageClub.title', 'Gerer mon club'),
+          tutorial: makeTutorial('manageClub', 2, 'Gerer mon club', 'Accedez a votre espace club pour piloter votre organisation.'),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'calendar',
+          key: 'manage-add-event',
+          onPress: handleAddEvent,
+          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.addEvent.title'),
+          tutorial: makeTutorial('manageAddEvent', 3, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'bell',
+          key: 'manage-requests',
+          onPress: () => handleOpenRequestsHub('all'),
+          subtitle: t('homeHub.cards.manage.requests.subtitle'),
+          title: t('homeHub.cards.manage.requests.title'),
+          tutorial: makeTutorial(
+            'manageRequests',
+            4,
+            'Demandes',
+            'Regroupez et traitez toutes les demandes depuis un seul ecran.',
+            {
+              nextAction: 'scrollDown',
+              nextLabel: scrollDownLabel,
+              onNext: scrollToSearchSection,
+            },
+          ),
+        },
+      ];
+    }
+
+    if (isCoach) {
       return [
         {
           accentColor: Colors.primary500,
@@ -905,6 +982,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [
     Colors.primary500,
     handleAddEvent,
+    handleOpenManageClub,
     handleOpenRequestsHub,
     isCoach,
     isPresident,

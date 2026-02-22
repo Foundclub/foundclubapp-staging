@@ -23,7 +23,7 @@ import {
  * }} filters
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult}
  */
-export const useGetReservations = (filters = {}) => useInfiniteQuery({
+export const useGetReservations = (filters = {}, options = {}) => useInfiniteQuery({
   getNextPageParam: (lastPage) => {
     const { page, pageCount } = lastPage?.meta?.pagination || {};
     if (page < pageCount) {
@@ -34,6 +34,7 @@ export const useGetReservations = (filters = {}) => useInfiniteQuery({
   initialPageParam: 1,
   queryFn: ({ pageParam = 1 }) => getReservations({ ...filters, page: pageParam }),
   queryKey: ['reservations', filters],
+  ...options,
 });
 
 /**

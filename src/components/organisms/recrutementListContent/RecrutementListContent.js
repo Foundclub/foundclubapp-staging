@@ -16,6 +16,7 @@ import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/Recruitm
 // Services
 import { searchUsers } from '@/services/user/userService';
 import { getRecruitmentAds, getMyRecruitmentAds, getMyApplications } from '@/services/recruitment/recruitmentService';
+import { searchRecruitment, mapSearchPayload, getMatchReasonLabel } from '@/services/search/searchService';
 
 import { useAppContext } from '@/store/appContext';
 
@@ -53,6 +54,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [adSearchValue, setAdSearchValue] = useState('');
 
   // Handle external tab switching (e.g. from creation wizard)
   useEffect(() => {
@@ -133,18 +135,35 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
     else if (page > 1) setAdsLoadingMore(true);
 
     try {
-      const response = await getRecruitmentAds({
-        sport: userData?.preferredSport,
-        section: userData?.section?.name,
-        category: userData?.category,
-        minLevel: userData?.bestLevel,
-        isActive: true,
-        page,
-        pageSize: 10, // Default page size
-      });
-
-      const newAds = response.data || [];
-      const meta = response.meta || {};
+      const searchTerm = adSearchValue?.trim();
+      let newAds = [];
+      let meta = {};
+      if (searchTerm && searchTerm.length >= 2) {
+        const response = await searchRecruitment({
+          category: userData?.category,
+          level: userData?.bestLevel,
+          page,
+          pageSize: 10,
+          q: searchTerm,
+          section: userData?.section?.name,
+          sort: 'relevance',
+          sport: userData?.preferredSport,
+        });
+        newAds = mapSearchPayload(response);
+        meta = response.meta || {};
+      } else {
+        const response = await getRecruitmentAds({
+          category: userData?.category,
+          isActive: true,
+          minLevel: userData?.bestLevel,
+          page,
+          pageSize: 10,
+          section: userData?.section?.name,
+          sport: userData?.preferredSport,
+        });
+        newAds = response.data || [];
+        meta = response.meta || {};
+      }
 
       if (append) {
         setAds((prev) => [...prev, ...newAds]);
@@ -161,7 +180,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
       if (page === 1 && !isRefresh) setLoading(false);
       else if (page > 1) setAdsLoadingMore(false);
     }
-  }, [userData, isCoachOrAdmin]);
+  }, [adSearchValue, isCoachOrAdmin, userData]);
 
   // Load more ads Handler
   const handleLoadMoreAds = () => {
@@ -175,14 +194,28 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
     if (!isCoachOrAdmin) return;
     if (!isRefresh) setLoading(true);
     try {
-      const data = await getMyRecruitmentAds();
+      const searchTerm = adSearchValue?.trim();
+      let data = [];
+      if (searchTerm && searchTerm.length >= 2) {
+        const response = await searchRecruitment({
+          authorDocumentId: userData?.documentId,
+          includeInactive: true,
+          page: 1,
+          pageSize: 30,
+          q: searchTerm,
+          sort: 'relevance',
+        });
+        data = mapSearchPayload(response);
+      } else {
+        data = await getMyRecruitmentAds();
+      }
       setMyAds(data || []);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching my ads:', error);
     } finally {
       if (!isRefresh) setLoading(false);
     }
-  }, [isCoachOrAdmin]);
+  }, [adSearchValue, isCoachOrAdmin, userData?.documentId]);
 
   // Fetch my applications (for players)
    const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -213,7 +246,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         fetchAdsForPlayer(1, false);
       }
     }
-  }, [activeTab, isCoachOrAdmin]); // Removed fetch functions from dependencies recursively
+  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, fetchUsers, isCoachOrAdmin]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -406,13 +439,27 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
           + Créer une annonce
         </Text>
       </TouchableOpacity>
+      <View style={[Spaces.marginBottom[12]]}>
+        <SearchComponent
+          filterNumber={filtersCount}
+          handleSearchField={setAdSearchValue}
+          placeholder="Rechercher une annonce..."
+          searchDefaultValue={adSearchValue}
+          openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
+        />
+      </View>
+      {adSearchValue?.trim()?.length >= 2 ? (
+        <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginBottom[12]]}>
+          Trie par pertinence
+        </Text>
+      ) : null}
       {loading ? (
         <Loader />
       ) : (
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={myAds}
-          keyExtractor={(item) => String(item.id || Math.random())}
+          keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
@@ -420,9 +467,19 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
               Aucune annonce créée
             </Text>
           )}
-          renderItem={({ item }) => (
-            <RecruitmentAdCard ad={item} onPress={(/** @type {RecruitmentAdItem} */ ad) => handleAdCardPress(ad, true)} isOwner />
-          )}
+          renderItem={({ item }) => {
+            const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
+            return (
+              <View style={[Spaces.gap[8]]}>
+                {primaryReasonLabel ? (
+                  <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
+                    {`Tri pertinence: ${primaryReasonLabel}`}
+                  </Text>
+                ) : null}
+                <RecruitmentAdCard ad={item} onPress={(/** @type {RecruitmentAdItem} */ ad) => handleAdCardPress(ad, true)} isOwner />
+              </View>
+            );
+          }}
         />
       )}
     </>
@@ -495,6 +552,20 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
           </TouchableOpacity>
         </View>
       </View>
+      <View style={[Spaces.marginBottom[12]]}>
+        <SearchComponent
+          filterNumber={filtersCount}
+          handleSearchField={setAdSearchValue}
+          placeholder="Rechercher une annonce..."
+          searchDefaultValue={adSearchValue}
+          openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
+        />
+      </View>
+      {adSearchValue?.trim()?.length >= 2 ? (
+        <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginBottom[12]]}>
+          Trie par pertinence
+        </Text>
+      ) : null}
 
       {loading ? (
         <Loader />
@@ -502,7 +573,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={filteredAds}
-          keyExtractor={(item) => String(item.id || Math.random())}
+          keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(
@@ -519,9 +590,19 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
               </Text>
             </View>
           )}
-          renderItem={({ item }) => (
-            <RecruitmentAdCard ad={item} onPress={handleAdCardPress} />
-          )}
+          renderItem={({ item }) => {
+            const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
+            return (
+              <View style={[Spaces.gap[8]]}>
+                {primaryReasonLabel ? (
+                  <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
+                    {`Tri pertinence: ${primaryReasonLabel}`}
+                  </Text>
+                ) : null}
+                <RecruitmentAdCard ad={item} onPress={handleAdCardPress} />
+              </View>
+            );
+          }}
         />
       )}
     </>
@@ -618,7 +699,7 @@ const RecrutementListContent = ({ initialTab, timestamp }) => {
         <FlatList
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
           data={myApplications}
-          keyExtractor={(item) => String(item.id || Math.random())}
+          keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={(

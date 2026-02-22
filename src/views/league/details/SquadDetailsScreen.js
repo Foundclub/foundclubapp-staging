@@ -454,6 +454,7 @@ const SquadDetailsScreen = ({ navigation, route }) => {
                     ) : (
                     <TeamShield
                         initials={getClubInitials(team?.name || '')}
+                        isGold
                         size={80}
                     />
                     )}
