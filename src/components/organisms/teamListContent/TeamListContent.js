@@ -436,42 +436,36 @@ function TeamListContent({
             Spaces.marginVertical[12],
             {
               borderRadius: 24,
-              shadowColor: Colors.primary900,
-              shadowOffset: { height: 2, width: 0 },
-              shadowOpacity: 0.2,
-              shadowRadius: 6,
-              elevation: 1,
             },
           ]}
         >
           <View
             style={[
               {
+                backgroundColor: `${Colors.primary900}F2`,
                 borderColor: cardAccentColor,
                 borderRadius: 24,
                 borderWidth: 1,
+                justifyContent: 'center',
+                minHeight: isCompactScreen ? 140 : 152,
                 overflow: 'hidden',
-              },
-              {
-                backgroundColor: `${Colors.primary900}E8`,
+                padding: cardPadding,
+                position: 'relative',
               },
             ]}
           >
-            <LinearGradient
-              colors={[`${cardAccentColor}20`, `${cardAccentColor}0E`, 'rgba(23,56,68,0.94)']}
-              end={{ x: 1, y: 1 }}
-              start={{ x: 0, y: 0 }}
-              style={[
-                {
-                  justifyContent: 'center',
-                  minHeight: isCompactScreen ? 140 : 152,
-                  padding: cardPadding,
-                  position: 'relative',
-                },
-              ]}
-            >
-              {renderClassicContent()}
-            </LinearGradient>
+            <View
+              pointerEvents="none"
+              style={{
+                backgroundColor: `${cardAccentColor}12`,
+                height: 62,
+                left: 0,
+                position: 'absolute',
+                right: 0,
+                top: 0,
+              }}
+            />
+            {renderClassicContent()}
           </View>
         </TouchableOpacity>
       </View>

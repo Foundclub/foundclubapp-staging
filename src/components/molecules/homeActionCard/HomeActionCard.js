@@ -1,5 +1,9 @@
-import { Image, Pressable, Text, View } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import {
+  Image,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -42,8 +46,11 @@ function HomeActionCard({
   } = useTheme();
 
   const resolvedAccentColor = accentColor || Colors.primary500;
-  const borderColor = disabled ? `${resolvedAccentColor}66` : resolvedAccentColor;
+  const accentBorderColor = emphasis === 'primary' ? resolvedAccentColor : `${resolvedAccentColor}CC`;
+  const borderColor = disabled ? `${resolvedAccentColor}66` : accentBorderColor;
   const minHeight = layout === 'full' ? 136 : 154;
+  const cardBackgroundColor = disabled ? `${Colors.primary900}CC` : `${Colors.primary900}F2`;
+  const topTintColor = emphasis === 'primary' ? `${resolvedAccentColor}16` : `${resolvedAccentColor}12`;
 
   return (
     <Pressable
@@ -55,32 +62,22 @@ function HomeActionCard({
       style={({ pressed }) => ([
         {
           borderRadius: 16,
-          shadowColor: Colors.primary900,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 6,
           width: '100%',
-          elevation: 1,
         },
         pressed && {
-          opacity: 0.92,
-          shadowOpacity: 0.14,
-          shadowRadius: 4,
-          elevation: 1,
+          opacity: 0.94,
         },
         disabled && {
           opacity: 0.5,
         },
       ])}
     >
-      <LinearGradient
-        colors={[`${resolvedAccentColor}20`, `${resolvedAccentColor}0E`, 'rgba(23,56,68,0.94)']}
-        end={{ x: 1, y: 1 }}
-        start={{ x: 0, y: 0 }}
+      <View
         style={{
+          backgroundColor: cardBackgroundColor,
           borderColor,
           borderRadius: 16,
-          borderWidth: emphasis === 'primary' ? 1.5 : 1,
+          borderWidth: 1,
           justifyContent: 'space-between',
           minHeight,
           overflow: 'hidden',
@@ -88,6 +85,18 @@ function HomeActionCard({
           position: 'relative',
         }}
       >
+        <View
+          pointerEvents="none"
+          style={{
+            backgroundColor: topTintColor,
+            height: 56,
+            left: 0,
+            position: 'absolute',
+            right: 0,
+            top: 0,
+          }}
+        />
+
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <View
             style={{
@@ -101,7 +110,10 @@ function HomeActionCard({
               width: 36,
             }}
           >
-            <Image source={Images[icon]} style={{ height: 18, tintColor: resolvedAccentColor, width: 18 }} />
+            <Image
+              source={Images[icon]}
+              style={{ height: 18, tintColor: resolvedAccentColor, width: 18 }}
+            />
           </View>
           <View
             style={{
@@ -115,7 +127,10 @@ function HomeActionCard({
               width: 24,
             }}
           >
-            <Image source={Images.arrowRight} style={{ height: 12, tintColor: resolvedAccentColor, width: 12 }} />
+            <Image
+              source={Images.arrowRight}
+              style={{ height: 12, tintColor: resolvedAccentColor, width: 12 }}
+            />
           </View>
         </View>
 
@@ -123,7 +138,7 @@ function HomeActionCard({
           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
           <Text numberOfLines={subtitleLines} style={[Fonts.p3, Fonts.neutral200]}>{subtitle}</Text>
         </View>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
