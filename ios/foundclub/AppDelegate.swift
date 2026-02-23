@@ -7,7 +7,14 @@ import Firebase
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    FirebaseApp.configure()
+    if FirebaseApp.app() == nil {
+      if let plistPath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+         let options = FirebaseOptions(contentsOfFile: plistPath) {
+        FirebaseApp.configure(options: options)
+      } else {
+        NSLog("[foundclub][iOS] Firebase init skipped: GoogleService-Info.plist missing or invalid.")
+      }
+    }
     self.moduleName = "foundclub"
     self.dependencyProvider = RCTAppDependencyProvider()
 

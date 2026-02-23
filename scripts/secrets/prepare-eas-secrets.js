@@ -85,8 +85,29 @@ const resolveContentFromEnv = (envNames, validator) => {
 };
 
 const writeIfMissing = ({ targetPath, envNames, required, label, validator }) => {
+  const validateExistingFile = () => {
+    try {
+      const existingContent = fs.readFileSync(targetPath, 'utf8');
+      return validator(existingContent);
+    } catch (_error) {
+      return false;
+    }
+  };
+
   if (fs.existsSync(targetPath)) {
-    console.log(`[eas-secrets] ${label} already exists: ${path.relative(appRoot, targetPath)}`);
+    const isValidExistingFile = validateExistingFile();
+    if (isValidExistingFile) {
+      console.log(`[eas-secrets] ${label} already exists: ${path.relative(appRoot, targetPath)}`);
+      return true;
+    }
+
+    if (required) {
+      console.error(`[eas-secrets] ${label} exists but is invalid: ${path.relative(appRoot, targetPath)}`);
+      console.error(`[eas-secrets] Expected a valid ${label} file content.`);
+      return false;
+    }
+
+    console.warn(`[eas-secrets] ${label} exists but looks invalid. Continuing because it is optional.`);
     return true;
   }
 
