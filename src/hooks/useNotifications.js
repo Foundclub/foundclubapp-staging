@@ -25,6 +25,7 @@ import {
   isEventRsvpActionablePayload,
 } from '@/services/notificationActions/rsvpActions';
 
+import { createLogger } from '@/utils/logger/logger';
 import {
   normalizeNotificationPayload,
   resolveNotificationDestination,
@@ -33,6 +34,8 @@ import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
+
+const notificationsLogger = createLogger('notifications');
 
 // Create a storage instance for notifications
 /** @type {MMKV | null} */
@@ -172,14 +175,14 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       const typedError = /** @type {any} */ (error);
       const statusCode = typedError?.status || typedError?.response?.status;
       if (statusCode === 401 || statusCode === 403) {
-        console.warn('[FCM] Token registration denied by backend permissions/auth. Notifications disabled for this session.');
+        notificationsLogger.warn('Token registration denied by backend permissions/auth');
       } else {
-        console.error('[FCM] Failed to save token to backend:', typedError);
+        notificationsLogger.error('Failed to save token to backend', typedError);
       }
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
     },
     onSuccess: (_, token) => {
-      console.log('[FCM] Token saved to backend successfully');
+      notificationsLogger.debug('Token saved to backend');
       dispatch({ payload: token, type: 'SET_FCM_TOKEN' });
     },
   });
@@ -187,7 +190,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // api calls
   const saveToken = useCallback((/** @type {string} */token) => {
     if (token) {
-      console.log('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
+      notificationsLogger.debug('Calling saveTokenMutation');
       saveTokenMutation(token);
     }
   }, [saveTokenMutation]);
@@ -203,7 +206,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   useEffect(() => {
     ensureNotificationActionSetup().catch((error) => {
-      console.warn('[Notifications] Failed to setup notification actions:', error);
+      notificationsLogger.warn('Failed to setup notification actions', error);
     });
   }, []);
 
@@ -237,7 +240,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     try {
       await Linking.openURL(url);
     } catch (error) {
-      console.warn('[Calendar] Failed to open calendar URL:', error);
+      notificationsLogger.warn('Failed to open calendar URL', error);
     }
   }, []);
 
@@ -264,9 +267,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {any} */ remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
-    console.log('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
+    notificationsLogger.debug('handleNavigateOnOpen triggered', {
+      hasType: Boolean(notificationData?.type),
+      notificationId: notificationData?.notificationId,
+      type: notificationData?.type,
+    });
     if (!notificationData?.type) {
-      console.warn('[useNotifications] No type in notification data, cannot navigate');
+      notificationsLogger.warn('Missing notification type, using fallback navigation');
       const fallback = navigate(RouteNames.NotificationList);
       return fallback !== false;
     }
@@ -286,14 +293,21 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
     const destination = resolveNotificationDestination(notificationData);
     if (!destination?.route) {
-      console.warn('[useNotifications] Unknown notification type:', notificationData.type);
+      notificationsLogger.warn('Unknown notification type', { type: notificationData.type });
       const fallback = navigate(RouteNames.NotificationList);
-      console.log(`[NOTIF_OPENED] type=${notificationData.type} route=${RouteNames.NotificationList} fallback=invalid_destination`);
+      notificationsLogger.info('NOTIF_OPENED fallback=invalid_destination', {
+        route: RouteNames.NotificationList,
+        type: notificationData.type,
+      });
       return fallback !== false;
     }
 
     const handled = tryNavigate(destination.route, destination.params || {});
-    console.log(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
+    notificationsLogger.info('NOTIF_OPENED', {
+      handled: Boolean(handled),
+      route: destination.route,
+      type: notificationData.type,
+    });
     return handled;
   }, [navigate, maybePromptAddToCalendar]);
 
@@ -401,40 +415,40 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   useEffect(() => {
     const retreiveFCMToken = async () => {
       try {
-        console.log('[FCM] Starting token retrieval...');
+        notificationsLogger.debug('Starting token retrieval');
         const messagingInstance = getMessaging(getApp());
 
         if (Platform.OS === 'ios') {
-          console.log('[FCM] iOS detected - requesting permissions...');
+          notificationsLogger.debug('iOS detected - requesting permissions');
           // Ensure device is registered and has permissions
           const permResult = await requestUserPermission();
-          console.log('[FCM] Permission result:', permResult);
+          notificationsLogger.debug('iOS permission result', { permResult });
 
           // Double check registration
           const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
-          console.log('[FCM] Device registered for remote messages:', registered);
+          notificationsLogger.debug('Device registered for remote messages', { registered });
           if (!registered) {
-            console.log('[FCM] Registering device for remote messages...');
+            notificationsLogger.debug('Registering device for remote messages');
             await messagingInstance.registerDeviceForRemoteMessages();
-            console.log('[FCM] Device registered successfully');
+            notificationsLogger.debug('Device registered successfully');
           }
         } else {
           // For Android, just request permission
           const permissionGranted = await PermissionsAndroid.check(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
           );
-          console.log('[FCM] Android permission granted:', permissionGranted);
+          notificationsLogger.debug('Android permission status', { permissionGranted });
           if (!permissionGranted) {
             await requestUserPermission();
           }
         }
 
         // Finally get FCM token
-        console.log('[FCM] Getting FCM token...');
+        notificationsLogger.debug('Getting FCM token');
         const token = await getToken(messagingInstance);
-        console.log('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
+        notificationsLogger.debug('FCM token retrieval completed', { hasToken: Boolean(token) });
         if (token) {
-          console.log('[FCM] Saving token to backend...');
+          notificationsLogger.debug('Saving token to backend');
           saveToken(token);
         } else {
           throw new Error('Failed to get FCM token');
@@ -443,16 +457,19 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         const typedError = /** @type {any} */ (err);
         const errorMessage = typeof typedError === 'string' ? typedError : typedError?.message || JSON.stringify(typedError);
         if (errorMessage.includes('FIS_AUTH_ERROR')) {
-          console.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in Local). Notifications skipped.');
+          notificationsLogger.warn('Firebase Auth failed (likely SHA-1 mismatch), notifications skipped');
         } else {
-          console.error('[FCM] Error retrieving token:', typedError);
+          notificationsLogger.error('Error retrieving FCM token', typedError);
         }
         // Do not throw error here to prevent app crash
         // throw new Error(`Failed to retrieve token: ${err}`);
       }
     };
 
-    console.log('[FCM] useEffect triggered - userData:', !!userData, 'hasSynced:', hasSynced.current);
+    notificationsLogger.debug('FCM sync effect triggered', {
+      hasSynced: hasSynced.current,
+      hasUserData: Boolean(userData),
+    });
     if (userData && !hasSynced.current) {
       hasSynced.current = true;
       retreiveFCMToken();
@@ -463,7 +480,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       /** @type {string} */ source,
     ) => {
       if (payload?.type) {
-        console.log(`[FCM] Storing pending notification from ${source}`);
+        notificationsLogger.debug('Storing pending notification', { source, type: payload.type });
         dispatch({
           payload,
           type: 'SET_PENDING_NOTIFICATION',
@@ -476,7 +493,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     // Check for initial notification (Cold Start) - Firebase remote push
     messagingInstance.getInitialNotification().then((remoteMessage) => {
       if (remoteMessage) {
-        console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
+        notificationsLogger.debug('App opened from quit state by notification');
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
         queuePendingNotification(normalizedData, 'fcm');
       }
@@ -487,7 +504,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       if (!remoteMessage) return;
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       if (normalizedData?.type) {
-        console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
+        notificationsLogger.info('NOTIF_OPENED source=background_push', { type: normalizedData.type });
       }
       queuePendingNotification(normalizedData, 'fcm-background');
     });

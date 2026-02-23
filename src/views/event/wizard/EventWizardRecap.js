@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -33,7 +33,7 @@ const getErrorCode = (error) => (
 const buildWizardFormData = (wizardState) => {
   const eventDate = wizardState.date ? new Date(wizardState.date) : new Date();
   const start = wizardState.startTime ? new Date(wizardState.startTime) : new Date(eventDate);
-  const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (90 * 60000));
+  const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (60 * 60000));
 
   return {
     capacity: wizardState.capacity ?? null,

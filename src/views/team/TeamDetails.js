@@ -148,6 +148,15 @@ function TeamDetails({ navigation, route }) {
     .replace(/[^a-zA-Z0-9]/g, '')
     .toLowerCase();
 
+  const isSameExternalTeamName = (leftValue, rightValue) => {
+    const left = normalizeTeamName(leftValue);
+    const right = normalizeTeamName(rightValue);
+
+    if (!left || !right) return false;
+    if (left === right) return true;
+    return left.includes(right) || right.includes(left);
+  };
+
   const allMembers = useMemo(() => {
     const allTrainers = team?.trainers || [];
     const allPlayers = team?.players || [];
@@ -424,7 +433,7 @@ function TeamDetails({ navigation, route }) {
       return String(row.teamId) === String(team.externalTeamId);
     }
     if (team?.externalTeamName && row.teamName) {
-      return normalizeTeamName(row.teamName) === normalizeTeamName(team.externalTeamName);
+      return isSameExternalTeamName(row.teamName, team.externalTeamName);
     }
     return false;
   };
@@ -1369,12 +1378,18 @@ function TeamDetails({ navigation, route }) {
                 {/* Calendar filters + list */}
                 {(() => {
                   const modeOptions = [
-                    { key: 'upcoming', label: t('teamDetails.calendar.filters.upcoming', 'Prochaine rencontre') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.results', 'Resultats') },
-                    { key: 'all', label: t('teamDetails.calendar.filters.all', 'Tous') },
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon equipe') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Resultats poule') },
+                    { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
 
                   const nowTs = Date.now();
+                  const selectedExternalTeamId = team?.externalTeamId
+                    ? String(team.externalTeamId)
+                    : '';
+                  const normalizedExternalTeamName = team?.externalTeamName
+                    ? normalizeTeamName(team.externalTeamName)
+                    : '';
 
                   const normalizedMatches = team.externalCalendarData.map((match, index) => {
                     const matchDate = match?.date ? new Date(match.date) : null;
@@ -1384,7 +1399,7 @@ function TeamDetails({ navigation, route }) {
                                     && match?.awayScore !== null && match?.awayScore !== undefined
                     );
                     const isPlayed = Boolean(match?.played) || hasScore;
-                    const isUpcoming = !isPlayed || (dateTs !== null && dateTs >= nowTs);
+                    const isUpcoming = !isPlayed && (dateTs === null || dateTs >= nowTs);
                     const roundLabel = (
                       match?.round !== null && match?.round !== undefined && match?.round !== ''
                     ) ? String(match.round) : null;
@@ -1394,6 +1409,29 @@ function TeamDetails({ navigation, route }) {
                     const monthLabel = matchDate && !Number.isNaN(matchDate.getTime())
                       ? matchDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
                       : t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
+                    const homeTeamId = match?.homeTeamId ? String(match.homeTeamId) : '';
+                    const awayTeamId = match?.awayTeamId ? String(match.awayTeamId) : '';
+                    const isMyHomeTeamById = Boolean(
+                      selectedExternalTeamId && homeTeamId && homeTeamId === selectedExternalTeamId
+                    );
+                    const isMyAwayTeamById = Boolean(
+                      selectedExternalTeamId && awayTeamId && awayTeamId === selectedExternalTeamId
+                    );
+                    const isMyHomeTeamByName = Boolean(
+                      normalizedExternalTeamName
+                      && isSameExternalTeamName(match?.homeTeam, team?.externalTeamName)
+                    );
+                    const isMyAwayTeamByName = Boolean(
+                      normalizedExternalTeamName
+                      && isSameExternalTeamName(match?.awayTeam, team?.externalTeamName)
+                    );
+                    const isMyTeamMatch = (
+                      isMyHomeTeamById
+                      || isMyAwayTeamById
+                      || isMyHomeTeamByName
+                      || isMyAwayTeamByName
+                      || (!selectedExternalTeamId && !normalizedExternalTeamName)
+                    );
 
                     return {
                       ...match,
@@ -1406,12 +1444,23 @@ function TeamDetails({ navigation, route }) {
                         : `${match?.homeTeam || 'home'}-${match?.awayTeam || 'away'}-${match?.date || 'no-date'}-${index}`,
                       _monthKey: monthKey,
                       _monthLabel: monthLabel,
+                      _isMyTeamMatch: isMyTeamMatch,
+                      _isMyHomeTeam: isMyHomeTeamById || isMyHomeTeamByName,
+                      _isMyAwayTeam: isMyAwayTeamById || isMyAwayTeamByName,
+                      _homeTeamId: homeTeamId,
+                      _awayTeamId: awayTeamId,
                       _roundLabel: roundLabel,
                     };
                   });
 
                   const isUpcomingMode = calendarDisplayMode === 'upcoming';
                   const isMonthFilterMode = !isUpcomingMode;
+                  const useRoundFilters = Boolean(
+                    team?.externalProvider === 'ffbb' && !isUpcomingMode
+                  );
+                  const hasSelectedExternalTeam = Boolean(
+                    selectedExternalTeamId || normalizedExternalTeamName
+                  );
 
                   const modeScopedMatches = normalizedMatches.filter((match) => {
                     if (calendarDisplayMode === 'upcoming') return match._isUpcoming;
@@ -1419,7 +1468,11 @@ function TeamDetails({ navigation, route }) {
                     return true;
                   });
 
-                  const upcomingMatches = normalizedMatches
+                  const upcomingSourceMatches = hasSelectedExternalTeam
+                    ? normalizedMatches.filter((match) => match._isMyTeamMatch)
+                    : normalizedMatches;
+
+                  const upcomingMatches = upcomingSourceMatches
                     .filter((match) => match._isUpcoming)
                     .slice()
                     .sort((a, b) => {
@@ -1456,10 +1509,18 @@ function TeamDetails({ navigation, route }) {
                     : '--:--';
 
                   const monthMetaByKey = modeScopedMatches.reduce((acc, match) => {
-                    const key = match._monthKey || 'unknown';
+                    const key = useRoundFilters
+                      ? (match._roundLabel ? `round-${match._roundLabel}` : 'round-unknown')
+                      : (match._monthKey || 'unknown');
                     const current = acc[key] || {
                       count: 0,
-                      label: match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer'),
+                      label: useRoundFilters
+                        ? (
+                          match._roundLabel
+                            ? t('teamDetails.calendar.round.chip', 'J{{round}}', { round: match._roundLabel })
+                            : t('teamDetails.calendar.round.unknownShort', 'J?')
+                        )
+                        : (match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer')),
                     };
                     current.count += 1;
                     acc[key] = current;
@@ -1467,6 +1528,17 @@ function TeamDetails({ navigation, route }) {
                   }, /** @type {Record<string, { count: number; label: string }>} */ ({}));
 
                   const monthKeys = Object.keys(monthMetaByKey).sort((a, b) => {
+                    if (useRoundFilters) {
+                      if (a === 'round-unknown') return 1;
+                      if (b === 'round-unknown') return -1;
+                      const roundA = Number(String(a).replace('round-', ''));
+                      const roundB = Number(String(b).replace('round-', ''));
+                      if (Number.isNaN(roundA) && Number.isNaN(roundB)) return a.localeCompare(b);
+                      if (Number.isNaN(roundA)) return 1;
+                      if (Number.isNaN(roundB)) return -1;
+                      return roundA - roundB;
+                    }
+
                     if (a === 'unknown') return 1;
                     if (b === 'unknown') return -1;
                     return a.localeCompare(b);
@@ -1481,7 +1553,13 @@ function TeamDetails({ navigation, route }) {
                     : null;
 
                   const monthFilteredMatches = (isMonthFilterMode && activeMonthKey)
-                    ? modeScopedMatches.filter((match) => String(match._monthKey) === String(activeMonthKey))
+                    ? modeScopedMatches.filter((match) => {
+                      if (useRoundFilters) {
+                        const roundKey = match._roundLabel ? `round-${match._roundLabel}` : 'round-unknown';
+                        return String(roundKey) === String(activeMonthKey);
+                      }
+                      return String(match._monthKey) === String(activeMonthKey);
+                    })
                     : modeScopedMatches;
 
                   const displayMatches = isUpcomingMode
@@ -1502,20 +1580,39 @@ function TeamDetails({ navigation, route }) {
 
                   const groupedMatches = sortedMatches.reduce((groups, match) => {
                     const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
-                    const existingGroup = groups.find((group) => group.label === monthLabel);
+                    const roundLabel = match._roundLabel
+                      ? t('teamDetails.calendar.round.title', 'Journee {{round}}', { round: match._roundLabel })
+                      : t('teamDetails.calendar.round.unknown', 'Journee non precisee');
+                    const groupLabel = useRoundFilters ? roundLabel : monthLabel;
+                    const groupSubtitle = useRoundFilters ? monthLabel : null;
+                    const existingGroup = groups.find((group) => group.label === groupLabel);
                     if (existingGroup) {
                       existingGroup.matches.push(match);
                       return groups;
                     }
-                    return [...groups, { label: monthLabel, matches: [match] }];
+                    return [...groups, { label: groupLabel, matches: [match], subtitle: groupSubtitle }];
                   }, []);
 
                   const emptyLabel = calendarDisplayMode === 'upcoming'
-                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir.')
+                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir pour cette equipe.')
                     : calendarDisplayMode === 'results'
                       ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
                       : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
-                  const matchCountText = `${sortedMatches.length} match${sortedMatches.length > 1 ? 's' : ''}`;
+                  const totalVisibleMatches = isUpcomingMode ? upcomingMatches.length : sortedMatches.length;
+                  const matchCountText = `${totalVisibleMatches} match${totalVisibleMatches > 1 ? 's' : ''}`;
+                  const modeScopeText = isUpcomingMode
+                    ? (
+                      hasSelectedExternalTeam
+                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre equipe uniquement.')
+                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres a venir de la poule.')
+                    )
+                    : useRoundFilters
+                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organise par journee FFBB.')
+                      : t('teamDetails.calendar.scope.fullPool', 'Resultats et calendrier de toute la poule.');
+                  const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
+                  const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
+                  const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Equipe suivie');
+                  const followedTeamBadgeText = `${followedTeamLabel}: ${followedTeamName}`;
 
                   return (
                     <>
@@ -1547,6 +1644,42 @@ function TeamDetails({ navigation, route }) {
                           );
                         })}
                       </ScrollView>
+                      {showFollowedTeamBadge ? (
+                        <View
+                          style={[
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            ApplicationStyle.backgroundColor.primary700,
+                            ApplicationStyle.borderRadius24,
+                            Spaces.paddingVertical[8],
+                            Spaces.paddingHorizontal[12],
+                            Spaces.marginBottom[8],
+                            {
+                              alignSelf: 'flex-start',
+                              borderColor: `${Colors.primary500}66`,
+                              borderWidth: 1,
+                            },
+                          ]}
+                        >
+                          <View
+                            style={[
+                              {
+                                backgroundColor: Colors.primary500,
+                                borderRadius: 999,
+                                height: 8,
+                                marginRight: 8,
+                                width: 8,
+                              },
+                            ]}
+                          />
+                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                            {followedTeamBadgeText}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <Text style={[Fonts.p3, Fonts.primary100, Spaces.marginBottom[12]]}>
+                        {modeScopeText}
+                      </Text>
 
                       {isUpcomingMode ? (
                         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginBottom[16]]}>
@@ -1625,7 +1758,9 @@ function TeamDetails({ navigation, route }) {
                             ]}
                           >
                             <Text style={[Fonts.p2Bold, activeMonthKey === null ? Fonts.neutral900 : Fonts.neutral00]}>
-                              {t('teamDetails.calendar.months.all', 'Tous les mois')}
+                              {useRoundFilters
+                                ? t('teamDetails.calendar.rounds.all', 'Toutes les journees')
+                                : t('teamDetails.calendar.months.all', 'Tous les mois')}
                             </Text>
                           </TouchableOpacity>
                           {monthKeys.map((monthKey) => {
@@ -1669,13 +1804,14 @@ function TeamDetails({ navigation, route }) {
                             >
                               {group.label}
                             </Text>
+                            {group.subtitle ? (
+                              <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginBottom[8]]}>
+                                {group.subtitle}
+                              </Text>
+                            ) : null}
                             {group.matches.map((match) => {
-                              const isMyHomeTeam = team?.externalTeamName
-                                ? normalizeTeamName(match.homeTeam) === normalizeTeamName(team.externalTeamName)
-                                : false;
-                              const isMyAwayTeam = team?.externalTeamName
-                                ? normalizeTeamName(match.awayTeam) === normalizeTeamName(team.externalTeamName)
-                                : false;
+                              const isMyHomeTeam = Boolean(match?._isMyHomeTeam);
+                              const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
                               const statusLabel = match._isPlayed
                                 ? t('teamDetails.calendar.status.played', 'Termine')
                                 : t('teamDetails.calendar.status.upcoming', 'A venir');
@@ -1894,9 +2030,11 @@ function TeamDetails({ navigation, route }) {
         )}
         {canManageTeam && allMembers?.length > 1 && isMyTeam && (
           <Button
+            icon="envelope"
+            iconPosition="before"
             onPress={handleStartChat}
             style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-            title={t('teamDetails.actions.contactTeam')}
+            title={t('teamDetails.actions.teamChat', 'Équipe')}
             variant="PrimaryLight"
           />
         )}

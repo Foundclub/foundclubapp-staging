@@ -42,6 +42,7 @@ import { useGetEventParticipations } from '@/services/eventParticipation/eventPa
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
+import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { useEventMutations } from './hooks/useEventMutations';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
@@ -54,16 +55,24 @@ import { useEventMutations } from './hooks/useEventMutations';
  *   avatar?: { url?: string };
  * }} User
  */
-/** @typedef {{ documentId?: string; participationStatus?: string; isActive?: boolean; sourceTeam?: { documentId?: string; name?: string }; user: User }} EventParticipation */
+/** @typedef {{ documentId?: string; updatedAt?: string; participationStatus?: string; isActive?: boolean; sourceTeam?: { documentId?: string; name?: string }; user: User }} EventParticipation */
 
 const START_TIME_RE = /^(\d{1,2}):(\d{2})/;
 
+/**
+ * @param {User | null | undefined} user
+ * @returns {string | null}
+ */
 const getUserKey = (user) => {
   if (user?.documentId) return `doc:${user.documentId}`;
   if (user?.id) return `id:${String(user.id)}`;
   return null;
 };
 
+/**
+ * @param {User[]} [users]
+ * @returns {User[]}
+ */
 const uniqueUsers = (users = []) => {
   const map = new Map();
   users.forEach((user) => {
@@ -74,6 +83,10 @@ const uniqueUsers = (users = []) => {
   return Array.from(map.values());
 };
 
+/**
+ * @param {FCEvent | null | undefined} event
+ * @returns {Date | null}
+ */
 const resolveEventStartAt = (event) => {
   const eventDate = event?.date ? new Date(event.date) : null;
   if (!eventDate || Number.isNaN(eventDate.getTime())) return null;
@@ -93,7 +106,7 @@ const resolveEventStartAt = (event) => {
 };
 
 /**
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string } } }} props
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean } } }} props
  */
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
@@ -123,7 +136,7 @@ function EventDetails({ navigation, route }) {
 
   const {
     data: event, error, isLoading, refetch,
-  } = useGetEvent(eventId);
+  } = useGetEvent(eventId || '');
   const canEdit = Boolean(canManageEvent(event));
   const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
 
@@ -137,9 +150,26 @@ function EventDetails({ navigation, route }) {
       || trainers.some((trainer) => trainer?.documentId === userDocId);
   }, [event?.invitedTeams, event?.team, userData?.documentId]);
 
+  const isCurrentUserParticipating = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId) return false;
+    return (event?.participations || []).some(
+      (/** @type {User} */ participant) => participant?.documentId === currentUserId,
+    );
+  }, [event?.participations, userData?.documentId]);
+
+  const { canAccessAttendance, canSelfMarkArrival } = useMemo(
+    () => resolveEventAttendanceGate({
+      canEdit,
+      isCurrentUserParticipating,
+      isTeamMember,
+    }),
+    [canEdit, isCurrentUserParticipating, isTeamMember],
+  );
+
   const { data: attendancePayload, refetch: refetchAttendance } = useGetEventAttendance(
     eventId || '',
-    { enabled: Boolean(eventId && isTeamMember) },
+    { enabled: Boolean(eventId && canAccessAttendance) },
   );
 
   const eventStartAt = useMemo(() => {
@@ -174,16 +204,30 @@ function EventDetails({ navigation, route }) {
     setSelfArrivalMarkedLocal(false);
   }, [eventId]);
 
-  const { data: eventParticipations, refetch: refetchParticipations } = useGetEventParticipations(
-    eventId || '',
-    undefined,
-    { pageSize: 100 },
-  );
+  const {
+    data: eventParticipations,
+    fetchNextPage: fetchNextParticipationsPage,
+    hasNextPage: hasNextParticipationsPage,
+    isFetchingNextPage: isFetchingNextParticipationsPage,
+    refetch: refetchParticipations,
+  } = useGetEventParticipations(eventId || '', undefined, {
+    includeInactive: true,
+    pageSize: 100,
+  });
+
+  useEffect(() => {
+    if (!hasNextParticipationsPage || isFetchingNextParticipationsPage) return;
+    fetchNextParticipationsPage();
+  }, [
+    fetchNextParticipationsPage,
+    hasNextParticipationsPage,
+    isFetchingNextParticipationsPage,
+  ]);
 
   const mutations = useEventMutations(eventId, refetch, refetchParticipations);
 
   const attendanceByUserId = useMemo(() => {
-    const items = attendancePayload?.data?.items || [];
+    const items = /** @type {any[]} */ (attendancePayload?.data?.items || []);
     /** @type {Record<string, { arrivedAt?: string | null, lateMinutes?: number | null, source?: string | null, manualOverride?: boolean }>} */
     const map = {};
     items.forEach((item) => {
@@ -205,17 +249,6 @@ function EventDetails({ navigation, route }) {
     return attendanceByUserId[currentUserId] || null;
   }, [attendanceByUserId, userData?.documentId]);
 
-  const isCurrentUserParticipating = useMemo(() => {
-    const currentUserId = userData?.documentId;
-    if (!currentUserId) return false;
-    return (event?.participations || []).some(
-      (participant) => participant?.documentId === currentUserId,
-    );
-  }, [event?.participations, userData?.documentId]);
-
-  const canSelfMarkArrival = Boolean(
-    isTeamMember && !canEdit && isCurrentUserParticipating,
-  );
   const hasSelfArrived = Boolean(myAttendance?.arrivedAt || selfArrivalMarkedLocal);
 
   const selfArrivalTiming = useMemo(() => {
@@ -276,10 +309,20 @@ function EventDetails({ navigation, route }) {
     serverNowMs,
   ]);
 
-  const allEventParticipations = useMemo(
-    () => /** @type {EventParticipation[]} */ (eventParticipations?.pages?.[0]?.data || []),
-    [eventParticipations],
-  );
+  const allEventParticipations = useMemo(() => {
+    const pages = /** @type {any[]} */ (eventParticipations?.pages || []);
+    /** @type {Map<string, EventParticipation>} */
+    const deduped = new Map();
+    pages.forEach((page) => {
+      (page?.data || []).forEach((/** @type {EventParticipation} */ participation) => {
+        const key = participation?.documentId
+          || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
+        if (!key || deduped.has(key)) return;
+        deduped.set(key, participation);
+      });
+    });
+    return /** @type {EventParticipation[]} */ (Array.from(deduped.values()));
+  }, [eventParticipations?.pages]);
 
   const activeEventParticipations = useMemo(
     () => allEventParticipations.filter((participation) => participation?.isActive !== false),
@@ -298,8 +341,26 @@ function EventDetails({ navigation, route }) {
     [activeEventParticipations],
   );
 
-  const teamParticipationSections = useMemo(() => {
-    if (!event) return [];
+  const inactiveEventParticipations = useMemo(
+    () => allEventParticipations.filter((participation) => participation?.isActive === false),
+    [allEventParticipations],
+  );
+
+  const {
+    externalParticipationSection,
+    participantsSummary,
+    teamParticipationSections,
+  } = useMemo(() => {
+    if (!event) {
+      return {
+        externalParticipationSection: null,
+        participantsSummary: {
+          capacity: 0,
+          participatingCount: 0,
+        },
+        teamParticipationSections: [],
+      };
+    }
 
     const teamBuckets = [
       event?.team ? {
@@ -308,7 +369,7 @@ function EventDetails({ navigation, route }) {
         players: uniqueUsers(event.team.players || []),
         teamName: event.team.name || 'Equipe organisatrice',
       } : null,
-      ...((event?.invitedTeams || []).map((team) => ({
+      ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
         players: uniqueUsers(team?.players || []),
@@ -316,8 +377,28 @@ function EventDetails({ navigation, route }) {
       }))),
     ].filter(Boolean);
 
-    const participatingKeys = new Set((event?.participations || []).map((participant) => getUserKey(participant)).filter(Boolean));
-    const missingKeys = new Set((event?.missings || []).map((missing) => getUserKey(missing)).filter(Boolean));
+    const knownTeamPlayerKeys = new Set(
+      teamBuckets
+        .flatMap((bucket) => bucket.players || [])
+        .map((/** @type {User} */ player) => getUserKey(player))
+        .filter(Boolean),
+    );
+    const knownTeamSectionKeys = new Set(teamBuckets.map((bucket) => bucket.key));
+    const teamKeyByUserKey = new Map();
+    const teamNameByUserKey = new Map();
+    teamBuckets.forEach((bucket) => {
+      (bucket.players || []).forEach((/** @type {User} */ player) => {
+        const userKey = getUserKey(player);
+        if (!userKey || teamKeyByUserKey.has(userKey)) return;
+        teamKeyByUserKey.set(userKey, bucket.key);
+        teamNameByUserKey.set(userKey, bucket.teamName);
+      });
+    });
+
+    const participatingUsers = event?.participations || [];
+    const missingUsers = event?.missings || [];
+    const participatingKeys = new Set(participatingUsers.map((/** @type {User} */ participant) => getUserKey(participant)).filter(Boolean));
+    const missingKeys = new Set(missingUsers.map((/** @type {User} */ missing) => getUserKey(missing)).filter(Boolean));
 
     const pendingByUserKey = new Map();
     pendingParticipations.forEach((participation) => {
@@ -326,13 +407,44 @@ function EventDetails({ navigation, route }) {
       pendingByUserKey.set(key, participation);
     });
 
+    /** @type {Map<string, any>} */
     const historicalByTeam = new Map();
-    allEventParticipations
-      .filter((participation) => participation?.isActive === false && participation?.user)
+    const historicalExternal = /** @type {{ missing: User[]; participating: User[]; pending: EventParticipation[] }} */ ({
+      missing: [],
+      participating: [],
+      pending: [],
+    });
+    inactiveEventParticipations
+      .filter((participation) => participation?.user)
       .forEach((participation) => {
-        const teamKey = participation?.sourceTeam?.documentId
-          || `removed-${participation?.sourceTeam?.name || 'team'}`;
-        const teamName = participation?.sourceTeam?.name || 'Equipe retiree';
+        const userKey = getUserKey(participation?.user);
+        const sourceTeamId = participation?.sourceTeam?.documentId;
+        const sourceTeamKnown = Boolean(
+          sourceTeamId && knownTeamSectionKeys.has(sourceTeamId),
+        );
+        const fallbackTeamKey = userKey ? teamKeyByUserKey.get(userKey) : null;
+        const resolvedTeamKey = sourceTeamKnown ? sourceTeamId : fallbackTeamKey;
+        let resolvedTeamName = null;
+        if (sourceTeamKnown) {
+          resolvedTeamName = participation?.sourceTeam?.name || null;
+        } else if (userKey) {
+          resolvedTeamName = teamNameByUserKey.get(userKey) || null;
+        }
+        const isExternal = !resolvedTeamKey;
+
+        if (isExternal) {
+          if (participation.participationStatus === 'missing') {
+            historicalExternal.missing.push(participation.user);
+          } else if (participation.participationStatus === 'accepted') {
+            historicalExternal.participating.push(participation.user);
+          } else if (participation.participationStatus === 'pending') {
+            historicalExternal.pending.push(participation);
+          }
+          return;
+        }
+
+        const teamKey = resolvedTeamKey;
+        const teamName = resolvedTeamName || 'Equipe retiree';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -351,12 +463,12 @@ function EventDetails({ navigation, route }) {
       });
 
     const sections = teamBuckets.map((bucket) => {
-      const participating = bucket.players.filter((player) => participatingKeys.has(getUserKey(player)));
-      const missing = bucket.players.filter((player) => missingKeys.has(getUserKey(player)));
+      const participating = bucket.players.filter((/** @type {User} */ player) => participatingKeys.has(getUserKey(player)));
+      const missing = bucket.players.filter((/** @type {User} */ player) => missingKeys.has(getUserKey(player)));
       const pending = bucket.players
-        .map((player) => pendingByUserKey.get(getUserKey(player)))
+        .map((/** @type {User} */ player) => pendingByUserKey.get(getUserKey(player)))
         .filter(Boolean);
-      const notAnswered = bucket.players.filter((player) => {
+      const notAnswered = bucket.players.filter((/** @type {User} */ player) => {
         const key = getUserKey(player);
         return !participatingKeys.has(key) && !missingKeys.has(key) && !pendingByUserKey.has(key);
       });
@@ -403,8 +515,55 @@ function EventDetails({ navigation, route }) {
       });
     });
 
-    return sections;
-  }, [allEventParticipations, canEdit, event, pendingParticipations]);
+    const externalParticipating = uniqueUsers(
+      participatingUsers.filter((/** @type {User} */ user) => !knownTeamPlayerKeys.has(getUserKey(user))),
+    );
+    const externalMissing = uniqueUsers(
+      missingUsers.filter((/** @type {User} */ user) => !knownTeamPlayerKeys.has(getUserKey(user))),
+    );
+    const externalPending = pendingParticipations.filter(
+      (participation) => !knownTeamPlayerKeys.has(getUserKey(participation?.user)),
+    );
+    const externalHistorical = {
+      missing: uniqueUsers(historicalExternal.missing || []),
+      participating: uniqueUsers(historicalExternal.participating || []),
+      pending: historicalExternal.pending || [],
+    };
+
+    const hasExternalData = externalParticipating.length > 0
+      || externalMissing.length > 0
+      || externalPending.length > 0
+      || externalHistorical.participating.length > 0
+      || externalHistorical.missing.length > 0
+      || externalHistorical.pending.length > 0;
+
+    const visibleParticipating = uniqueUsers([
+      ...sections.flatMap((section) => section.participating || []),
+      ...externalParticipating,
+    ]);
+
+    return {
+      externalParticipationSection: hasExternalData
+        ? {
+          allowCoachActions: canEdit,
+          historical: externalHistorical,
+          isExternal: true,
+          key: 'external-participants',
+          missing: externalMissing,
+          notAnswered: [],
+          participating: externalParticipating,
+          pending: externalPending,
+          players: [],
+          teamName: 'Participants externes',
+        }
+        : null,
+      participantsSummary: {
+        capacity: Number(event?.capacity || 0),
+        participatingCount: visibleParticipating.length,
+      },
+      teamParticipationSections: sections,
+    };
+  }, [canEdit, event, inactiveEventParticipations, pendingParticipations]);
 
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
@@ -413,7 +572,7 @@ function EventDetails({ navigation, route }) {
 
     const teamPlayers = uniqueUsers([
       ...(event?.team?.players || []),
-      ...((event?.invitedTeams || []).flatMap((team) => team?.players || [])),
+      ...((event?.invitedTeams || []).flatMap((/** @type {any} */ team) => team?.players || [])),
     ]);
     const participatingPlayers = event?.participations || [];
     const missingPlayers = event?.missings || [];
@@ -421,8 +580,8 @@ function EventDetails({ navigation, route }) {
 
     const notAnsweredPlayers = teamPlayers.filter((player) => {
       const key = getUserKey(player);
-      return !participatingPlayers.some((participant) => getUserKey(participant) === key)
-        && !missingPlayers.some((missing) => getUserKey(missing) === key)
+      return !participatingPlayers.some((/** @type {User} */ participant) => getUserKey(participant) === key)
+        && !missingPlayers.some((/** @type {User} */ missing) => getUserKey(missing) === key)
         && !pendingKeys.has(key);
     });
 
@@ -441,7 +600,7 @@ function EventDetails({ navigation, route }) {
     return hasParentMultisport && isNotAlreadyFeatured && isNotPending && isNotApproved && canEdit;
   }, [canEdit, event?.featuredRequestStatus, event?.isFeatured, event?.team?.club?.parentMultisport]);
 
-  const computeLateMinutes = useCallback((arrivedAtIso) => {
+  const computeLateMinutes = useCallback((/** @type {string | null | undefined} */ arrivedAtIso) => {
     const eventStart = eventStartAt;
     const arrivedAt = arrivedAtIso ? new Date(arrivedAtIso) : null;
     if (!eventStart || !arrivedAt || Number.isNaN(arrivedAt.getTime())) return 0;
@@ -459,7 +618,7 @@ function EventDetails({ navigation, route }) {
 
   const handleJoinEvent = () => setIsJoinModalVisible(true);
 
-  const handleParticipateToEvent = (eventToJoin) => {
+  const handleParticipateToEvent = (/** @type {any} */ eventToJoin) => {
     if (!eventToJoin?.documentId || !userData?.documentId) return;
     mutations.createEventParticipationMutation.mutate({
       event: eventToJoin.documentId,
@@ -468,7 +627,7 @@ function EventDetails({ navigation, route }) {
     setIsJoinModalVisible(false);
   };
 
-  const handleDeclineEvent = (eventToDecline) => {
+  const handleDeclineEvent = (/** @type {any} */ eventToDecline) => {
     if (!eventToDecline?.documentId) return;
     mutations.missingEventMutation.mutate(eventToDecline.documentId);
   };
@@ -478,7 +637,7 @@ function EventDetails({ navigation, route }) {
     mutations.remindEventMutation.mutate(eventId);
   };
 
-  const handleUserPress = (user) => {
+  const handleUserPress = (/** @type {User | null | undefined} */ user) => {
     if (!user?.documentId) return;
     navigation.navigate(RouteNames.ProfileStack, {
       params: { userId: user.documentId },
@@ -486,7 +645,10 @@ function EventDetails({ navigation, route }) {
     });
   };
 
-  const handleUpdateParticipation = (participationId, status) => {
+  const handleUpdateParticipation = (
+    /** @type {string | undefined} */ participationId,
+    /** @type {string | undefined} */ status,
+  ) => {
     if (!participationId) return;
     setSelectedParticipationId(participationId);
 
@@ -531,7 +693,7 @@ function EventDetails({ navigation, route }) {
         [
           { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
           {
-            onPress: () => mutations.deleteParticipationMutation.mutate(myParticipation.documentId),
+            onPress: () => mutations.deleteParticipationMutation.mutate(String(myParticipation.documentId)),
             style: 'destructive',
             text: t('eventDetails.modals.deleteParticipation.actions.confirm'),
           },
@@ -540,7 +702,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    if (event?.missings?.some((missing) => missing.documentId === userData?.documentId)) {
+    if (event?.missings?.some((/** @type {User} */ missing) => missing.documentId === userData?.documentId)) {
       Alert.alert(
         t('eventDetails.modals.editResponse.title'),
         t('eventDetails.modals.editResponse.description'),
@@ -588,7 +750,7 @@ function EventDetails({ navigation, route }) {
     ]);
   };
 
-  const openCoachLateModal = useCallback((targetUser, mode) => {
+  const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
     if (!targetUser?.documentId) return;
 
     const nowIso = new Date(serverNowMs).toISOString();
@@ -613,11 +775,11 @@ function EventDetails({ navigation, route }) {
     setLateModalArrivedAt(null);
   }, []);
 
-  const handleCoachMarkArrival = useCallback((targetUser) => {
+  const handleCoachMarkArrival = useCallback((/** @type {User | null | undefined} */ targetUser) => {
     openCoachLateModal(targetUser, 'mark');
   }, [openCoachLateModal]);
 
-  const handleCoachEditLate = useCallback((targetUser) => {
+  const handleCoachEditLate = useCallback((/** @type {User | null | undefined} */ targetUser) => {
     openCoachLateModal(targetUser, 'edit');
   }, [openCoachLateModal]);
 
@@ -636,14 +798,14 @@ function EventDetails({ navigation, route }) {
     };
 
     if (lateModalMode === 'mark') {
-      mutations.coachArrivalMutation.mutate(
+      /** @type {any} */ (mutations.coachArrivalMutation).mutate(
         { eventId, payload, userId: lateModalUser.documentId },
         { onSuccess: () => closeLateModal() },
       );
       return;
     }
 
-    mutations.updateLateMinutesMutation.mutate(
+    /** @type {any} */ (mutations.updateLateMinutesMutation).mutate(
       { eventId, payload, userId: lateModalUser.documentId },
       { onSuccess: () => closeLateModal() },
     );
@@ -669,7 +831,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
     setSelfArrivalMarkedLocal(true);
-    mutations.selfArrivalMutation.mutate(
+    /** @type {any} */ (mutations.selfArrivalMutation).mutate(
       {
         eventId,
         payload: {},
@@ -678,7 +840,7 @@ function EventDetails({ navigation, route }) {
         onError: () => {
           setSelfArrivalMarkedLocal(false);
         },
-        onSuccess: (response) => {
+        onSuccess: (/** @type {any} */ response) => {
           const lateMinutesFromResponse = Math.max(0, Number(response?.data?.lateMinutes || 0));
           const arrivedAtRaw = response?.data?.arrivedAt || null;
           const eventStartMs = eventStartAt?.getTime() || null;
@@ -716,7 +878,7 @@ function EventDetails({ navigation, route }) {
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
-      const hasAlreadyJoined = event?.participations?.some((participation) => participation?.documentId === userDocumentId);
+      const hasAlreadyJoined = event?.participations?.some((/** @type {any} */ participation) => participation?.documentId === userDocumentId);
       return (
         <View>
           <EventReservationActions
@@ -768,10 +930,10 @@ function EventDetails({ navigation, route }) {
     useCallback(() => {
       refetch();
       refetchParticipations();
-      if (isTeamMember) {
+      if (canAccessAttendance) {
         refetchAttendance();
       }
-    }, [isTeamMember, refetch, refetchAttendance, refetchParticipations]),
+    }, [canAccessAttendance, refetch, refetchAttendance, refetchParticipations]),
   );
 
   useLayoutEffect(() => {
@@ -799,9 +961,9 @@ function EventDetails({ navigation, route }) {
     || mutations.updateLateMinutesMutation.isPending;
 
   return (
-    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[32], Spaces.gap[32], Alignments.fill]}>
+    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[32], Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
-        <Tag text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
+        <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
       </View>
 
       <ScrollView
@@ -811,7 +973,7 @@ function EventDetails({ navigation, route }) {
             onRefresh={() => {
               refetch();
               refetchParticipations();
-              if (isTeamMember) refetchAttendance();
+              if (canAccessAttendance) refetchAttendance();
             }}
             refreshing={isLoading}
           />
@@ -834,6 +996,7 @@ function EventDetails({ navigation, route }) {
             canEdit={canEdit}
             event={event}
             eventStartAt={eventStartAt}
+            externalParticipationSection={externalParticipationSection}
             handleExportParticipants={handleExportParticipants}
             handleRemindPlayers={handleRemindPlayers}
             handleShare={() => setIsShareModalVisible(true)}
@@ -842,6 +1005,7 @@ function EventDetails({ navigation, route }) {
             nowMs={serverNowMs}
             onCoachEditLate={handleCoachEditLate}
             onCoachMarkArrival={handleCoachMarkArrival}
+            participantsSummary={participantsSummary}
             participationsByStatus={participationsByStatus}
             pendingParticipations={pendingParticipations}
             teamParticipationSections={teamParticipationSections}
@@ -881,7 +1045,7 @@ function EventDetails({ navigation, route }) {
               <Button
                 icon="check"
                 isOption
-                onPress={() => mutations.updateEventMutation.mutate({ documentId: eventId, eventData: { featuredRequestStatus: 'approved', isFeatured: true } })}
+                onPress={() => /** @type {any} */ (mutations.updateEventMutation).mutate({ documentId: eventId || '', eventData: { featuredRequestStatus: 'approved', isFeatured: true } })}
                 style={{ flex: 1 }}
                 title="Valider"
                 variant="Primary"
@@ -889,7 +1053,7 @@ function EventDetails({ navigation, route }) {
               <Button
                 icon="close"
                 isOption
-                onPress={() => mutations.updateEventMutation.mutate({ documentId: eventId, eventData: { featuredRequestStatus: 'rejected' } })}
+                onPress={() => /** @type {any} */ (mutations.updateEventMutation).mutate({ documentId: eventId || '', eventData: { featuredRequestStatus: 'rejected' } })}
                 style={{ flex: 1 }}
                 title="Refuser"
                 variant="Secondary"
@@ -902,7 +1066,7 @@ function EventDetails({ navigation, route }) {
       <JoinEventModal
         clubName={event?.team?.club?.name || ''}
         createEventParticipationMutation={mutations.createEventParticipationMutation}
-        eventId={eventId}
+        eventId={eventId || ''}
         isVisible={isJoinModalVisible}
         onClose={() => setIsJoinModalVisible(false)}
       />
@@ -918,13 +1082,13 @@ function EventDetails({ navigation, route }) {
       <ReportEventModal
         isVisible={isReportModalVisible}
         onClose={() => setIsReportModalVisible(false)}
-        onSubmit={(reason) => mutations.reportEventMutation.mutate({ event: eventId, reason })}
+        onSubmit={(reason) => mutations.reportEventMutation.mutate({ event: eventId || '', reason })}
       />
       <ShareEventModal
         event={event}
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
-        onSelectChat={(chatId) => sendMessage(chatId, 'Partage', { event: eventId || '' })}
+        onSelectChat={(/** @type {string} */ chatId) => sendMessage(chatId, 'Partage', { event: eventId || '' })}
       />
 
       <Modal
@@ -940,7 +1104,7 @@ function EventDetails({ navigation, route }) {
             <Button
               onPress={() => {
                 setIsFeaturedModalVisible(false);
-                mutations.requestFeaturedMutation.mutate(eventId);
+                mutations.requestFeaturedMutation.mutate(eventId || '');
               }}
               title="Tout le club"
               variant="Primary"

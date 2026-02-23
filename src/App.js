@@ -24,16 +24,17 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
-const navigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: true,
-});
+const isStaging = process.env.ENV === 'staging';
+const sentryDsn = process.env.SENTRY_DSN;
+const isSentryEnabled = Boolean(sentryDsn);
+const navigationIntegration = isSentryEnabled
+  ? Sentry.reactNavigationIntegration({
+    enableTimeToInitialDisplay: true,
+  })
+  : { registerNavigationContainer: () => {} };
 
 // Désactiver Sentry en staging ou utiliser un projet Sentry séparé
-const isStaging = process.env.ENV === 'staging';
-
-const sentryDsn = process.env.SENTRY_DSN;
-
-if (sentryDsn) {
+if (isSentryEnabled) {
   Sentry.init({
     attachStacktrace: true,
     beforeSend: (event) => {
@@ -98,7 +99,7 @@ const queryClient = new QueryClient({
     onError: (error) => {
       // Capture exceptions to Sentry unless in allow list
       const shouldSkip = isAxiosError(error) && isInSentryExceptionsAllowList(error);
-      if (!shouldSkip) {
+      if (isSentryEnabled && !shouldSkip) {
         Sentry.captureException(error);
       }
     },
@@ -121,11 +122,19 @@ function App() {
                 <QueryClientProvider client={queryClient}>
                   <BottomSheetModalProvider>
                     <SessionManager />
-                    <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
-                      <AppNavigator navigationIntegration={navigationIntegration} />
-                      <NotificationBootstrap />
-                      <SmartNotificationHost />
-                    </Sentry.ErrorBoundary>
+                    {isSentryEnabled ? (
+                      <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+                        <AppNavigator navigationIntegration={navigationIntegration} />
+                        <NotificationBootstrap />
+                        <SmartNotificationHost />
+                      </Sentry.ErrorBoundary>
+                    ) : (
+                      <>
+                        <AppNavigator navigationIntegration={navigationIntegration} />
+                        <NotificationBootstrap />
+                        <SmartNotificationHost />
+                      </>
+                    )}
                   </BottomSheetModalProvider>
                 </QueryClientProvider>
               </SmartNotificationProvider>
@@ -137,4 +146,6 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+const RootApp = isSentryEnabled ? Sentry.wrap(App) : App;
+
+export default RootApp;
