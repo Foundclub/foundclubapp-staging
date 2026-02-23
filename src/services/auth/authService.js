@@ -49,22 +49,52 @@ const userSchema = Joi.object({
  * Keep this schema independent from "me" to allow strict field minimization
  * on backend without breaking profile views.
  */
-const publicUserSchema = Joi.object({
-  avatar: Joi.object({
-    url: Joi.string().allow(null, '').optional(),
-  }).allow(null).optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  birthdate: Joi.string().isoDate().allow(null).optional(),
-  club: Joi.object({
+const appImageSummarySchema = Joi.object({
+  url: Joi.string().allow(null, '').optional(),
+}).allow(null);
+
+const appEntitySummarySchema = Joi.object({
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  name: Joi.string().allow(null, '').optional(),
+}).allow(null);
+
+const appClubSummarySchema = Joi.object({
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  logo: appImageSummarySchema.optional(),
+  name: Joi.string().allow(null, '').optional(),
+  parentMultisport: Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
+    id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+    logo: appImageSummarySchema.optional(),
     name: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),
+}).allow(null);
+
+const appTeamSummarySchema = Joi.object({
+  activities: Joi.array().items(appEntitySummarySchema).optional(),
+  category: appEntitySummarySchema.optional(),
+  club: appClubSummarySchema.optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
+  level: appEntitySummarySchema.optional(),
+  name: Joi.string().allow(null, '').optional(),
+}).allow(null);
+
+const publicUserSchema = Joi.object({
+  avatar: appImageSummarySchema.optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  birthdate: Joi.string().isoDate().allow(null).optional(),
+  category: Joi.string().allow(null, '').optional(),
+  club: appClubSummarySchema.optional(),
   documentId: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().allow(null, '').optional(),
   height: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
   id: Joi.number().required(),
   isLookingForClub: Joi.boolean().allow(null).optional(),
   lastname: Joi.string().allow(null, '').optional(),
+  myTeams: Joi.array().items(appTeamSummarySchema).optional(),
   parentAccount: Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),
@@ -72,12 +102,13 @@ const publicUserSchema = Joi.object({
   preferredSport: Joi.string().allow(null, '').optional(),
   role: Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
+    id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
     name: Joi.string().allow(null, '').optional(),
+    type: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),
-  section: Joi.object({
-    documentId: Joi.string().allow(null, '').optional(),
-    name: Joi.string().allow(null, '').optional(),
-  }).allow(null).optional(),
+  section: appEntitySummarySchema.optional(),
+  sportsHistory: Joi.string().allow(null, '').optional(),
+  trainedTeams: Joi.array().items(appTeamSummarySchema).optional(),
   weight: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
 }).required();
 

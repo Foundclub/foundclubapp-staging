@@ -7,7 +7,6 @@ import { sanitizeUser } from '@/domains/auth/authUseCases';
 export default function appReducer(state, action) {
   switch (action.type) {
     case 'CANCEL_ADD_ACCOUNT': {
-      console.log('[appReducer] CANCEL_ADD_ACCOUNT dispatched. Setting isAddingAccount to false.');
       return {
         ...state,
         isAddingAccount: false,
@@ -28,7 +27,6 @@ export default function appReducer(state, action) {
       };
     }
     case 'PREPARE_ADD_ACCOUNT': {
-      console.log('[appReducer] PREPARE_ADD_ACCOUNT dispatched. Setting isAddingAccount to true, clearing auth temporarily.');
       return {
         ...state,
         auth: undefined, // Clear auth so PublicNavigator shows
@@ -50,20 +48,16 @@ export default function appReducer(state, action) {
         };
       }
 
-      console.log('[appReducer] SET_AUTHENTICATION payload:', JSON.stringify(sanitizedAuth?.user?.documentId || 'NO_USER'));
       // When logging in, add to sessions if not already present, or update if present
       const newSessions = [...(state.authSessions || [])];
-      console.log('[appReducer] Current sessions count:', newSessions.length);
 
       // Check if session already exists for this user
       const existingIndex = newSessions.findIndex((s) => s.user?.documentId === sanitizedAuth?.user?.documentId);
 
       if (existingIndex >= 0) {
         newSessions[existingIndex] = sanitizedAuth;
-        console.log('[appReducer] Updated existing session at index:', existingIndex);
       } else if (sanitizedAuth?.user) {
         newSessions.push(sanitizedAuth);
-        console.log('[appReducer] Added new session, new count:', newSessions.length);
       }
 
       return {

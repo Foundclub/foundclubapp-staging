@@ -34,22 +34,30 @@ export const createEventParticipation = async (eventParticipationData) => {
  * @param {{
  *   page?: number;
  *   pageSize?: number;
+ *   includeInactive?: boolean;
  * }} [params]
  * @returns {Promise<{data: EventParticipation[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
  */
 export const getEventParticipations = async (eventId, userId, params = {}) => {
   const {
+    includeInactive = false,
     page,
     pageSize,
   } = params;
 
-  const filters = {
-    filters: {
+  const activeFilter = includeInactive
+    ? undefined
+    : {
       $or: [
         { isActive: true },
         { isActive: { $null: true } },
       ],
+    };
+
+  const filters = {
+    filters: {
+      ...activeFilter,
       event: {
         documentId: eventId,
       },
@@ -62,6 +70,7 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
       pageSize: pageSize || 10,
     },
     populate: ['user', 'event', 'sourceTeam'],
+    sort: ['updatedAt:desc', 'createdAt:desc'],
   };
 
   const response = await client.get('/event-participations', { params: filters });
@@ -106,7 +115,10 @@ export const acceptEventParticipation = async (requestId) => {
  * @returns {Promise<EventParticipation>} - The updated request
  */
 export const declineEventParticipation = async ({ reason, requestId }) => {
-  const response = await client.post(`/event-participations/${requestId}/refuse`, { data: { reason } });
+  const response = await client.post(
+    `/event-participations/${requestId}/refuse`,
+    { data: { reason } },
+  );
   return response.data;
 };
 

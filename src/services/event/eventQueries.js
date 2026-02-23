@@ -7,6 +7,31 @@ import {
   getEventTypes,
 } from './eventService';
 
+const normalizeQueryValue = (value) => {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) {
+    return [...value].map((item) => normalizeQueryValue(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        const nextValue = value[key];
+        if (nextValue !== undefined) {
+          acc[key] = normalizeQueryValue(nextValue);
+        }
+        return acc;
+      }, {});
+  }
+  return value;
+};
+
+/**
+ * @param {Record<string, any> | undefined} params
+ * @returns {[string, Record<string, any>]}
+ */
+export const getEventsQueryKey = (params) => ['events', normalizeQueryValue(params || {})];
+
 /**
  * React Query hook to fetch event types
  * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
@@ -64,6 +89,7 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
   queryFn: ({ pageParam = 1 }) => getEvents({ ...params, page: pageParam }),
-  queryKey: ['events', params],
+  queryKey: getEventsQueryKey(params),
+  staleTime: 30 * 1000,
   ...options,
 });

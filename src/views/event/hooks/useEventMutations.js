@@ -151,8 +151,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.joinSuccess.title', 'Participation confirmÃ©e'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant Ã  cette rÃ©servation !'),
+        t('reservation.joinSuccess.title', 'Participation confirmee'),
+        t('reservation.joinSuccess.message', 'Vous participez maintenant a cette reservation.'),
       );
     },
   });
@@ -167,8 +167,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.bookFull.success.title', 'RÃ©servation privatisÃ©e'),
-        t('reservation.bookFull.success.message', 'Votre rÃ©servation est maintenant complÃ¨te.'),
+        t('reservation.bookFull.success.title', 'Reservation privatisee'),
+        t('reservation.bookFull.success.message', 'Votre reservation est maintenant complete.'),
       );
     },
   });
@@ -183,7 +183,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.openForPlayers.success.title', 'RÃ©servation ouverte'),
+        t('reservation.openForPlayers.success.title', 'Reservation ouverte'),
         t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !'),
       );
     },
@@ -199,8 +199,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
-        t('reservation.sosAlert.success.title', 'Alerte SOS lancÃ©e ! ðŸ”¥'),
-        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiÃ©s.'),
+        t('reservation.sosAlert.success.title', 'Alerte SOS lancee'),
+        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifies.'),
       );
     },
   });
@@ -210,7 +210,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre arrivée.",
+        error?.message || "Impossible d'enregistrer votre arrivee.",
       );
     },
     onSuccess: () => {
@@ -226,7 +226,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const coachArrivalMutation = useMutation({
     mutationFn: ({ eventId, payload, userId }) => markCoachArrival(eventId, userId, payload),
     onError: () => {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivÃ©e.");
+      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivee.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -262,8 +262,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('eventDetails.featuredRequest.success.title', 'Demande envoyÃ©e'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise Ã  la une a Ã©tÃ© envoyÃ©e au dirigeant du club.'),
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyee'),
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise a la une a ete envoyee au dirigeant du club.'),
       );
     },
   });

@@ -9,6 +9,10 @@ import {
 } from '@/services/auth/authService';
 import { isFirebaseBypassEnabled } from '@/services/auth/bypassPolicy';
 
+import { createLogger } from '@/utils/logger/logger';
+
+const sessionLogger = createLogger('session-manager');
+
 /**
  * Component to handle session restoration Logic.
  * This should be placed at the root of the app, inside Providers but outside Navigation.
@@ -36,25 +40,25 @@ function SessionManager() {
     // Skip session restoration via API in these cases:
     // - Bypass mode: session is already loaded from MMKV storage, no Firebase to subscribe to
     if (isFirebaseBypassEnabled()) {
-      console.log('[SessionManager] Bypass mode: session loaded from storage, skipping API');
+      sessionLogger.debug('Bypass mode enabled, skipping session restoration');
       return undefined;
     }
 
     const unsubscribe = subscribeToAuthState(async (user) => {
       // Skip if we're adding an account or already have a session
       if (isAddingAccountRef.current) {
-        console.log('[SessionManager] Skipping: Adding account mode');
+        sessionLogger.debug('Skipping auth subscription callback (adding account mode)');
         return;
       }
       if (hasRestoredRef.current) {
-        console.log('[SessionManager] Skipping: Session already restored');
+        sessionLogger.debug('Skipping auth subscription callback (session already restored)');
         return;
       }
 
       if (user) {
         // User is authenticated in Firebase, restore Strapi session
         try {
-          console.log('[SessionManager] Restoring session...');
+          sessionLogger.debug('Restoring session from Firebase auth state');
           const data = await login({});
 
           queryClient.clear();
@@ -64,7 +68,7 @@ function SessionManager() {
           });
           hasRestoredRef.current = true;
         } catch (error) {
-          console.warn('[SessionManager] Session restoration failed:', error);
+          sessionLogger.warn('Session restoration failed', error);
           appDispatch({ type: 'DELETE_AUTHENTICATION' });
         }
       }

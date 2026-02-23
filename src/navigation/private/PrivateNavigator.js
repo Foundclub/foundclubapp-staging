@@ -40,6 +40,7 @@ import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
+import PollDetails from '@/views/PollDetails';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
 import RequestsHub from '@/views/requests/RequestsHub';
@@ -341,11 +342,18 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={PollDetails}
+        name={RouteNames.PollDetails}
+        options={{
+          ...commonOptions,
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         component={NotificationList}
         name={RouteNames.NotificationList}
         options={{
-          ...commonOptions,
-          headerTitle: 'Notifications',
+          headerShown: false,
         }}
       />
       <Stack.Screen
