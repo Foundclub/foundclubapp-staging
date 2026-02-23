@@ -11,6 +11,9 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import { createLogger } from '@/utils/logger/logger';
+
+const otpLogger = createLogger('otp-form');
 
 const defaultValues = {
   code: '',
@@ -55,13 +58,12 @@ function OTPForm({
   const handleFormSubmit = async (data) => {
     if (isLocalSubmitting) return;
 
-    console.log('[OTPForm] handleFormSubmit called, confirm:', JSON.stringify(confirm));
     if (confirm && phoneNumber) {
       try {
         setIsLocalSubmitting(true);
         await loginMutation.mutateAsync({ code: data.code, confirm });
       } catch (error) {
-        console.log('[OTPForm] Login error:', error);
+        otpLogger.error('Login failed', error);
         // Reset local state on error so user can try again
         setIsLocalSubmitting(false);
       }

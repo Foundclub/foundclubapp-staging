@@ -58,9 +58,53 @@ const getAddressLabel = (address) => {
   return 'Adresse non renseignee';
 };
 
-const getSlotLabel = (value) => {
-  const slots = Number(value || 1);
-  return `${slots} ${slots > 1 ? 'slots' : 'slot'}`;
+const getAddressCoordinates = (address) => {
+  if (!address || typeof address !== 'object') return null;
+
+  if (typeof address.value === 'string' && address.value.includes('|')) {
+    const [lngValue, latValue] = address.value.split('|');
+    const lng = Number(lngValue);
+    const lat = Number(latValue);
+    if (Number.isFinite(lng) && Number.isFinite(lat)) {
+      return { lat, lng };
+    }
+  }
+
+  const coordinates = address?.geometry?.coordinates;
+  if (Array.isArray(coordinates) && coordinates.length >= 2) {
+    const lng = Number(coordinates[0]);
+    const lat = Number(coordinates[1]);
+    if (Number.isFinite(lng) && Number.isFinite(lat)) {
+      return { lat, lng };
+    }
+  }
+
+  return null;
+};
+
+const normalizeAddressPayload = (address) => {
+  const coordinates = getAddressCoordinates(address);
+  if (!coordinates) return null;
+
+  const description = typeof address === 'object'
+    ? String(address?.label || address?.description || '').trim()
+    : '';
+
+  return {
+    description: description || 'Adresse',
+    geometry: {
+      coordinates: [coordinates.lng, coordinates.lat],
+      type: 'Point',
+    },
+  };
+};
+
+const getCapacityLabel = (value, t) => {
+  const teams = Number(value || 1);
+  const unit = teams > 1
+    ? t('facilityForm.capacity.teamPlural', 'equipes simultanees')
+    : t('facilityForm.capacity.teamSingular', 'equipe simultanee');
+  return `${teams} ${unit}`;
 };
 
 /**
@@ -79,9 +123,11 @@ function FacilityForm() {
   const isEdit = !!facility;
 
   const {
+    clearErrors,
     control,
     formState: { errors },
     handleSubmit,
+    setError,
     watch,
   } = useForm({
     defaultValues: {
@@ -118,20 +164,23 @@ function FacilityForm() {
       return;
     }
 
-    let formattedData = { ...data };
-    if (data.address && typeof data.address === 'object' && data.address.value) {
-      const [lng, lat] = String(data.address.value).split('|').map(Number);
-      formattedData = {
-        ...data,
-        address: {
-          description: data.address.label,
-          geometry: {
-            coordinates: [lng, lat],
-            type: 'Point',
-          },
-        },
-      };
+    const normalizedAddress = normalizeAddressPayload(data.address);
+    if (!normalizedAddress) {
+      setError('address', {
+        message: t(
+          'facilityForm.errors.addressGeocodeRequired',
+          'Selectionnez une adresse geolocalisee dans la liste.',
+        ),
+        type: 'manual',
+      });
+      return;
     }
+    clearErrors('address');
+
+    const formattedData = {
+      ...data,
+      address: normalizedAddress,
+    };
 
     setLoading(true);
     try {
@@ -195,7 +244,6 @@ function FacilityForm() {
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
-        Spaces.paddingHorizontal[16],
         Alignments.fill,
       ]}
     >
@@ -307,13 +355,23 @@ function FacilityForm() {
               control={control}
               name="address"
               render={({ field: { onChange, value } }) => (
-                <AutocompleteAddressInput
-                  address={value}
-                  error={errors.address?.message}
-                  label={t('facilityForm.fields.address', 'Adresse (lieu exact)')}
-                  placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
-                  setAddress={onChange}
-                />
+                <View style={[Spaces.gap[6]]}>
+                  <AutocompleteAddressInput
+                    address={value}
+                    error={errors.address?.message}
+                    label={t('facilityForm.fields.address', 'Adresse (lieu exact)')}
+                    placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
+                    setAddress={onChange}
+                  />
+                  {!errors.address?.message ? (
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {t(
+                        'facilityForm.hints.addressSelection',
+                        'Selectionnez une adresse dans la liste pour activer le GPS.',
+                      )}
+                    </Text>
+                  ) : null}
+                </View>
               )}
             />
 
@@ -383,7 +441,7 @@ function FacilityForm() {
             </Text>
 
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-              {renderMetaChip(getSlotLabel(watchedMaxSlots), 'primary')}
+              {renderMetaChip(getCapacityLabel(watchedMaxSlots, t), 'primary')}
               {renderMetaChip(watchedType || t('facilityForm.defaults.type', 'Type inconnu'), 'neutral')}
             </View>
 

@@ -25,6 +25,28 @@ import client from '@/services/client';
  * @typedef {{ documentId?: string; name?: string }} TeamFilter
  */
 
+/**
+ * @param {TeamFilter & { id?: string | number } | undefined | null} team
+ * @returns {string}
+ */
+const getTeamIdentifier = (team) => {
+  const documentId = typeof team?.documentId === 'string' ? team.documentId.trim() : '';
+  if (documentId) return documentId;
+  if (team?.id !== undefined && team?.id !== null) return String(team.id);
+  return '';
+};
+
+/**
+ * @param {User | undefined | null} user
+ * @returns {string}
+ */
+const getUserIdentifier = (user) => {
+  const documentId = typeof user?.documentId === 'string' ? user.documentId.trim() : '';
+  if (documentId) return documentId;
+  if (user?.id !== undefined && user?.id !== null) return String(user.id);
+  return '';
+};
+
 // Simple service to search users
 /**
  * @param {{ query: string; clubId?: string; multisportId?: string }} params
@@ -114,13 +136,32 @@ function NewConversation({ navigation }) {
   const multisportId = userData?.multisportClubs?.[0]?.documentId || userData?.club?.parentMultisport?.documentId;
 
   // Get accessible teams for filtering
-  const accessibleTeams = useMemo(
-    () =>
-    // Combine myTeams (active player) and trainedTeams (coach)
-    // Assuming userData is populated with these, or useAuth provides them.
-    // 'allMyTeams' from useAuth is a good candidate if available.
-    /** @type {TeamFilter[]} */ (allMyTeams || []),
-    [allMyTeams],
+  const accessibleTeams = useMemo(() => {
+    const sourceTeams = /** @type {Array<TeamFilter & { id?: string | number }>} */ (allMyTeams || []);
+    const seenTeamKeys = new Set();
+    /** @type {TeamFilter[]} */
+    const uniqueTeams = [];
+
+    sourceTeams.forEach((team) => {
+      const teamId = getTeamIdentifier(team);
+      const teamName = typeof team?.name === 'string' ? team.name.trim() : '';
+      const fallbackKey = teamName ? `name:${teamName.toLowerCase()}` : '';
+      const dedupeKey = teamId || fallbackKey;
+      if (!dedupeKey || seenTeamKeys.has(dedupeKey)) return;
+
+      seenTeamKeys.add(dedupeKey);
+      uniqueTeams.push({
+        documentId: teamId,
+        name: teamName || t('common.team', 'Equipe'),
+      });
+    });
+
+    return uniqueTeams;
+  }, [allMyTeams, t]);
+
+  const teamFilters = useMemo(
+    () => [{ documentId: null, name: t('common.all', 'Tous') }, ...accessibleTeams],
+    [accessibleTeams, t],
   );
 
   const { data: users, isLoading } = useQuery({
@@ -137,14 +178,23 @@ function NewConversation({ navigation }) {
   const processedSections = useMemo(() => {
     if (!users) return [];
 
-    // 1. Filter out self
-    let filtered = users.filter((/** @type {User} */ u) => u.documentId !== userData?.documentId);
+    // 1. Filter out self and dedupe users by stable identifier
+    const currentUserId = getUserIdentifier(userData);
+    const seenUserIds = new Set();
+    let filtered = users.filter((/** @type {User} */ u) => {
+      const userId = getUserIdentifier(u);
+      if (!userId || userId === currentUserId || seenUserIds.has(userId)) {
+        return false;
+      }
+      seenUserIds.add(userId);
+      return true;
+    });
 
     // 2. Filter by Team if selected
     if (selectedTeamId) {
       filtered = filtered.filter((/** @type {User} */ u) => {
         const userTeams = [...(u.myTeams || []), ...(u.trainedTeams || [])];
-        return userTeams.some((/** @type {Team} */ team) => team.documentId === selectedTeamId);
+        return userTeams.some((/** @type {Team} */ team) => getTeamIdentifier(team) === selectedTeamId);
       });
     }
 
@@ -182,7 +232,7 @@ function NewConversation({ navigation }) {
   }, [users, userData, selectedTeamId]);
 
   const toggleSelection = (/** @type {User} */ user) => {
-    const userId = user.documentId || '';
+    const userId = getUserIdentifier(user);
     if (!userId) return;
     const newSet = new Set(selectedUserIds);
     if (newSet.has(userId)) {
@@ -216,7 +266,8 @@ function NewConversation({ navigation }) {
   );
 
   const renderItem = (/** @type {{ item: User }} */ { item }) => {
-    const isSelected = selectedUserIds.has(item.documentId || '');
+    const itemId = getUserIdentifier(item);
+    const isSelected = itemId ? selectedUserIds.has(itemId) : false;
     return (
       <TouchableOpacity
         onPress={() => toggleSelection(item)}
@@ -304,9 +355,15 @@ function NewConversation({ navigation }) {
         <View>
           <FlatList
             contentContainerStyle={Spaces.gap[8]}
-            data={[{ documentId: null, name: 'Tous' }, ...accessibleTeams]}
+            data={teamFilters}
             horizontal
-            keyExtractor={(item) => item.documentId || item.name || 'all'}
+            keyExtractor={(item, index) => {
+              const teamId = typeof item.documentId === 'string' && item.documentId.length > 0
+                ? item.documentId
+                : 'all';
+              const teamName = typeof item.name === 'string' ? item.name.trim().toLowerCase() : 'unknown';
+              return `team-filter:${teamId}:${teamName}:${index}`;
+            }}
             renderItem={(/** @type {{ item: TeamFilter & { documentId?: string | null } }} */ { item }) => {
               const isSelected = selectedTeamId === item.documentId;
               return (
@@ -345,7 +402,10 @@ function NewConversation({ navigation }) {
         ) : (
           <SectionList
             contentContainerStyle={Spaces.paddingBottom[80]}
-            keyExtractor={(item) => item.documentId || Math.random().toString()}
+            keyExtractor={(item, index) => {
+              const userId = getUserIdentifier(item);
+              return userId ? `user:${userId}` : `user:fallback:${index}`;
+            }}
             ListEmptyComponent={(
               <Text style={[Fonts.p2, Fonts.neutral500, Fonts.textCenter, Spaces.marginTop[32]]}>
                 {t('common.noResults', 'Aucun membre trouvé')}

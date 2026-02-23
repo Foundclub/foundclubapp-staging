@@ -7,6 +7,7 @@ import {
   Alert, ImageBackground, Linking, StatusBar, Text, TouchableOpacity, View,
 } from 'react-native';
 import 'dayjs/locale/fr';
+import DocumentPicker from 'react-native-document-picker';
 import {
   Actions,
   Bubble,
@@ -16,7 +17,7 @@ import {
   MessageImage,
   Time,
 } from 'react-native-gifted-chat';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -28,8 +29,10 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
+import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
+import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
 
@@ -42,8 +45,11 @@ import { cancelMatch, confirmMatch, updateMatch } from '@/services/league/league
 import { createMessageReport } from '@/services/messageReport/messageReportService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { createLogger } from '@/utils/logger/logger';
 
-import useSocket, { EVENTS } from '@/hooks/useSocket';
+import { EVENTS } from '@/hooks/useSocket';
+
+const conversationLogger = createLogger('conversation');
 
 /**
  * Chat conversation screen component
@@ -89,7 +95,7 @@ function Conversation({ navigation, route }) {
             try {
               await Linking.openURL(url);
             } catch (error) {
-              console.warn('[Conversation][Calendar] Failed to open URL:', error);
+              conversationLogger.warn('Failed to open calendar URL', error);
             }
           },
           text: 'Ajouter',
@@ -103,7 +109,10 @@ function Conversation({ navigation, route }) {
     deleteMessage,
     getConversationName,
     sendMessage,
-    updateLastReadMessage,
+    sendReadReceipt,
+    sendTypingStart,
+    sendTypingStop,
+    socket,
     updateMessage,
   } = useMessaging(chatId);
 
@@ -183,6 +192,7 @@ function Conversation({ navigation, route }) {
 
   // DEBUG LOGS
   const { bottom, top } = useSafeAreaInsets();
+  const HEADER_SIDE_WIDTH = 56;
 
   const { isPending: isReportingMessage, mutate: reportMessage } = useMutation({
     mutationFn: createMessageReport,
@@ -196,12 +206,12 @@ function Conversation({ navigation, route }) {
     },
   });
 
-  const { socket } = useSocket();
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [isUploading, setIsUploading] = useState(false);
+  const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
+  const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
-  const { sendReadReceipt, sendTypingStart, sendTypingStop } = useMessaging(chatId);
 
   // Event Participation Logic
   const queryClient = useQueryClient();
@@ -284,54 +294,180 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const handleChoosePhoto = async () => {
+  const uploadAndSendAttachment = async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
+    if (!asset?.uri || !chatId) return;
+
+    try {
+      setIsUploading(true);
+
+      const isVideo = typeof asset.type === 'string' && asset.type.startsWith('video/');
+      const defaultExtension = isVideo ? 'mp4' : 'jpg';
+      const formData = new FormData();
+
+      formData.append('files', /** @type {any} */ ({
+        name: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
+        type: asset.type || 'application/octet-stream',
+        uri: asset.uri,
+      }));
+
+      const uploadResponse = await client.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const uploadedFiles = Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
+      if (uploadedFiles.length === 0) {
+        Alert.alert('Erreur', 'Aucune piece jointe n a pu etre envoyee.');
+        return;
+      }
+
+      const uploadedMime = uploadedFiles?.[0]?.mime || asset.type || '';
+      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'piece-jointe';
+      const isImageAttachment = typeof uploadedMime === 'string'
+        && uploadedMime.startsWith('image/');
+
+      sendMessage(chatId, isImageAttachment ? '' : `Piece jointe: ${uploadedName}`, {
+        attachments: uploadedFiles,
+        sender: userData,
+      });
+    } catch (error) {
+      conversationLogger.warn('Attachment upload failed', error);
+      Alert.alert('Erreur', 'Impossible d envoyer cette piece jointe.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePickMedia = async () => {
     try {
       const response = await launchImageLibrary({
         includeBase64: false,
-        maxHeight: 1000,
-        maxWidth: 1000,
-        mediaType: 'photo',
+        mediaType: 'mixed',
         quality: 0.8,
+        selectionLimit: 1,
       });
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la sélection');
+        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la selection');
         return;
       }
 
-      if (response.assets && response.assets.length > 0) {
-        const image = response.assets[0];
+      const selectedAsset = response.assets?.[0];
+      if (!selectedAsset) return;
 
-        setIsUploading(true);
-
-        const formData = new FormData();
-        formData.append('files', /** @type {any} */ ({
-          name: image.fileName || `upload_${Date.now()}.jpg`,
-          type: image.type || 'image/jpeg',
-          uri: image.uri,
-        }));
-
-        const uploadResponse = await client.post('/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        if (uploadResponse.data && uploadResponse.data.length > 0) {
-          // Send message with attachment
-          sendMessage(chatId, '', {
-            attachments: uploadResponse.data,
-            sender: userData,
-          });
-        }
-        setIsUploading(false);
-      }
+      await uploadAndSendAttachment({
+        fileName: selectedAsset.fileName,
+        type: selectedAsset.type,
+        uri: selectedAsset.uri,
+      });
     } catch (error) {
-      setIsUploading(false);
-      console.warn('ImagePicker Error', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer l\'image');
+      conversationLogger.warn('Media picker failed', error);
+      Alert.alert('Erreur', 'Impossible d ouvrir la galerie.');
     }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const response = await launchCamera({
+        cameraType: 'back',
+        includeBase64: false,
+        mediaType: 'photo',
+        quality: 0.8,
+        saveToPhotos: false,
+      });
+
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Erreur', response.errorMessage || 'Impossible d ouvrir la camera');
+        return;
+      }
+
+      const selectedAsset = response.assets?.[0];
+      if (!selectedAsset) return;
+
+      await uploadAndSendAttachment({
+        fileName: selectedAsset.fileName,
+        type: selectedAsset.type,
+        uri: selectedAsset.uri,
+      });
+    } catch (error) {
+      conversationLogger.warn('Camera open failed', error);
+      Alert.alert('Erreur', 'Impossible de prendre la photo.');
+    }
+  };
+
+  const handlePickFile = async () => {
+    try {
+      const selectedFile = await DocumentPicker.pickSingle({
+        copyTo: 'cachesDirectory',
+        type: [DocumentPicker.types.allFiles],
+      });
+
+      const selectedUri = selectedFile.fileCopyUri || selectedFile.uri;
+      if (!selectedUri) {
+        Alert.alert('Erreur', 'Impossible de recuperer ce fichier.');
+        return;
+      }
+
+      await uploadAndSendAttachment({
+        fileName: selectedFile.name || `file_${Date.now()}`,
+        type: selectedFile.type || 'application/octet-stream',
+        uri: selectedUri,
+      });
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) return;
+      conversationLogger.warn('Document picker failed', error);
+      Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
+    }
+  };
+
+  const handleCreatePoll = () => {
+    setIsPollModalVisible(true);
+  };
+
+  const handleSubmitPoll = async (/** @type {{ question: string; options: string[]; allowMultipleVotes: boolean; isAnonymous: boolean }} */ payload) => {
+    const question = payload?.question?.trim() || '';
+    const options = Array.isArray(payload?.options) ? payload.options : [];
+
+    if (!question || options.length < 2) {
+      throw new Error('Le sondage est incomplet.');
+    }
+
+    const now = Date.now();
+    const pollComposition = {
+      allowMultipleVotes: !!payload.allowMultipleVotes,
+      createdAt: new Date(now).toISOString(),
+      createdBy: userData?.documentId || '',
+      isAnonymous: !!payload.isAnonymous,
+      options: options.map((label, index) => ({
+        id: `poll-option-${now}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        label,
+        voteCount: 0,
+        voters: [],
+      })),
+      pollId: `poll-${now}-${Math.random().toString(36).slice(2, 7)}`,
+      question,
+      type: 'poll',
+    };
+
+    if (!chatId) {
+      throw new Error('Conversation introuvable.');
+    }
+
+    sendMessage(chatId, '', {
+      composition: pollComposition,
+      sender: userData,
+    });
+    setIsPollModalVisible(false);
+  };
+
+  const runAttachmentAction = (/** @type {() => Promise<void> | void} */ action) => {
+    setIsAttachmentMenuVisible(false);
+    setTimeout(() => {
+      action();
+    }, 250);
   };
 
   /* Proposal Logic */
@@ -387,7 +523,7 @@ function Conversation({ navigation, route }) {
 
       Alert.alert('Envoye', 'Votre proposition a ete envoyee !');
     } catch (error) {
-      console.error('Send Proposal Error:', error);
+      conversationLogger.error('Send proposal failed', error);
       Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
     }
   };
@@ -420,7 +556,7 @@ function Conversation({ navigation, route }) {
 
     try {
       if (status === 'accepted') {
-        console.log('[Proposal] Accepting match:', matchId);
+        conversationLogger.debug('Accepting match proposal', { matchId });
         await confirmMatch(matchId);
         // Persist message update
         await updateMessage({
@@ -439,13 +575,13 @@ function Conversation({ navigation, route }) {
           },
           messageId: message.documentId || message._id || message.id,
         });
-        console.log('Proposal Declined');
+        conversationLogger.debug('Proposal declined');
       }
 
       // Invalidate to refresh match status elsewhere
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (error) {
-      console.error('Proposal Action Error:', error);
+      conversationLogger.error('Proposal action failed', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de la réponse.');
       // Rollback could go here
     }
@@ -499,11 +635,11 @@ function Conversation({ navigation, route }) {
             try {
               const resolvedTeamId = teamId;
               if (!resolvedTeamId) return;
-              console.log('[Conversation] Cancelling match:', matchId, 'Team:', resolvedTeamId);
+              conversationLogger.debug('Cancelling match', { matchId, teamId: resolvedTeamId });
               await cancelMatch(matchId, resolvedTeamId, 'Demande capitaine');
               navigation.goBack();
             } catch (error) {
-              console.error('[Conversation] Cancel match failed:', error);
+              conversationLogger.error('Cancel match failed', error);
               Alert.alert('Erreur', "Impossible d'annuler le match.");
             }
           },
@@ -517,11 +653,6 @@ function Conversation({ navigation, route }) {
   // Calculate title for Custom Header
   // Calculate title for Custom Header
   const title = useMemo(() => {
-    console.log('[Conversation] Debug Title Calc:', {
-      league_match: chatData?.league_match,
-      participantsCount: chatData?.participants?.length,
-      type: chatData?.type,
-    });
     let displayTitle = route.params?.title;
     if (!displayTitle && chatData?.type === 'league_match') {
       const matchDate = chatData?.league_match?.date;
@@ -547,8 +678,13 @@ function Conversation({ navigation, route }) {
     [chatData?.league_match],
   );
 
-  const showCancelButton = chatData?.type === 'league_match' && chatData?.league_match;
-  console.log('[Conversation] showCancelButton:', showCancelButton, 'type:', chatData?.type, 'hasLeagueMatch:', !!chatData?.league_match);
+  const isLeagueConversation = chatData?.type === 'league_match';
+  const showCancelButton = isLeagueConversation && chatData?.league_match;
+  conversationLogger.debug('Computed cancel button visibility', {
+    hasLeagueMatch: Boolean(chatData?.league_match),
+    showCancelButton: Boolean(showCancelButton),
+    type: chatData?.type,
+  });
 
   // Anonymization helper for league_match chats
   const getAnonymizedName = (/** @type {User} */ sender, /** @type {number} */ senderIndex) => {
@@ -587,6 +723,43 @@ function Conversation({ navigation, route }) {
     return isCaptain ? 'Capitaine Adverse' : 'Joueur Adverse';
   };
 
+  const voterNameDirectory = useMemo(() => {
+    /** @type {Map<string, string>} */
+    const directory = new Map();
+
+    const registerUser = (/** @type {any} */ user) => {
+      const userId = user?.documentId || user?.id;
+      if (!userId) return;
+
+      const firstname = (user?.firstname || '').trim();
+      const lastname = (user?.lastname || '').trim();
+      const fullName = `${firstname} ${lastname}`.trim();
+      const fallbackName = (user?.username || user?.email || '').trim();
+      const nextName = fullName || fallbackName || 'Membre';
+      directory.set(String(userId), nextName);
+    };
+
+    registerUser(userData);
+
+    if (Array.isArray(chatData?.participants)) {
+      chatData.participants.forEach((participant) => registerUser(participant));
+    }
+
+    if (Array.isArray(messagesPages?.pages)) {
+      messagesPages.pages.forEach((page) => {
+        if (!Array.isArray(page?.data)) return;
+        page.data.forEach((msg) => registerUser(msg?.sender));
+      });
+    }
+
+    return directory;
+  }, [chatData?.participants, messagesPages?.pages, userData]);
+
+  const resolveVoterName = (/** @type {string} */ voterId) => {
+    if (!voterId) return 'Membre';
+    return voterNameDirectory.get(String(voterId)) || 'Membre';
+  };
+
   const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
     const formattedMessages = page.data.map((msg, index) => ({
       _id: msg.id,
@@ -595,6 +768,10 @@ function Conversation({ navigation, route }) {
       documentId: msg.documentId,
       event: msg.event,
       image: msg.attachments?.[0]?.url
+        && (
+          (msg.attachments?.[0]?.mime || '').startsWith('image/')
+          || /\.(png|jpe?g|gif|webp)$/i.test(msg.attachments[0].url)
+        )
         ? (msg.attachments[0].url.startsWith('http')
           ? msg.attachments[0].url
           : `${process.env.API_URL || 'http://10.0.2.2:1337'}${msg.attachments[0].url}`)
@@ -632,6 +809,112 @@ function Conversation({ navigation, route }) {
       }
     });
     setReplyingTo(null);
+  };
+
+  const handleVoteOnPoll = async (
+    /** @type {import('react-native-gifted-chat').IMessage & { documentId?: string; id?: string | number; _id?: string | number }} */ message,
+    /** @type {string} */ optionId,
+  ) => {
+    const currentUserId = userData?.documentId || '';
+    const messageId = message?.documentId || message?._id || message?.id;
+    const composition = message?.composition;
+
+    if (!chatId || !currentUserId || !messageId || !optionId || composition?.type !== 'poll') return;
+
+    const options = Array.isArray(composition.options) ? composition.options : [];
+    if (options.length === 0) return;
+
+    const allowMultipleVotes = !!composition.allowMultipleVotes;
+    const currentSelection = options
+      .filter((option) => Array.isArray(option?.voters) && option.voters.includes(currentUserId))
+      .map((option) => String(option.id));
+
+    if (!allowMultipleVotes && currentSelection.length === 1 && currentSelection[0] === optionId) {
+      return;
+    }
+
+    let hasChange = false;
+    const nextOptions = options.map((option) => {
+      const voters = Array.isArray(option?.voters)
+        ? option.voters.filter((value) => typeof value === 'string' && value.length > 0)
+        : [];
+      const isTarget = String(option.id) === optionId;
+      const hasCurrentUser = voters.includes(currentUserId);
+      let nextVoters = voters;
+
+      if (allowMultipleVotes) {
+        if (isTarget && !hasCurrentUser) {
+          nextVoters = [...voters, currentUserId];
+        } else if (isTarget && hasCurrentUser) {
+          nextVoters = voters.filter((value) => value !== currentUserId);
+        }
+      } else if (isTarget && !hasCurrentUser) {
+        nextVoters = [...voters, currentUserId];
+      } else if (!isTarget && hasCurrentUser) {
+        nextVoters = voters.filter((value) => value !== currentUserId);
+      }
+
+      if (nextVoters.length !== voters.length) {
+        hasChange = true;
+      }
+
+      return {
+        ...option,
+        voteCount: nextVoters.length,
+        voters: nextVoters,
+      };
+    });
+
+    if (!hasChange) return;
+
+    const nextComposition = {
+      ...composition,
+      options: nextOptions,
+      updatedAt: new Date().toISOString(),
+    };
+
+    queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
+      if (!oldData?.pages) return oldData;
+
+      return {
+        ...oldData,
+        pages: oldData.pages.map((/** @type {any} */ page) => ({
+          ...page,
+          data: Array.isArray(page?.data)
+            ? page.data.map((/** @type {any} */ msg) => {
+              const msgId = msg?.documentId || msg?.id || msg?._id;
+              if (String(msgId) !== String(messageId)) return msg;
+              return { ...msg, composition: nextComposition };
+            })
+            : [],
+        })),
+      };
+    });
+
+    try {
+      await updateMessage({
+        data: {
+          composition: nextComposition,
+        },
+        messageId: String(messageId),
+      });
+    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      Alert.alert('Erreur', 'Impossible de sauvegarder ce vote.');
+    }
+  };
+
+  const handleOpenPollDetails = (
+    /** @type {import('react-native-gifted-chat').IMessage & { documentId?: string; id?: string | number; _id?: string | number }} */ message,
+  ) => {
+    const messageDocId = String(message?.documentId || message?._id || message?.id || '');
+    if (!chatId || !messageDocId || message?.composition?.type !== 'poll') return;
+
+    navigation.navigate(RouteNames.PollDetails, {
+      chatId,
+      messageId: messageDocId,
+      poll: message.composition,
+    });
   };
 
   /**
@@ -785,6 +1068,21 @@ function Conversation({ navigation, route }) {
 
     // Composition message
     if (currentMessage.composition) {
+      if (currentMessage.composition.type === 'poll') {
+        return (
+          <View style={{ marginBottom, marginTop }}>
+            <PollMessageBubble
+              currentUserId={userData?.documentId || ''}
+              isMe={!isLeft}
+              onOpenDetails={() => handleOpenPollDetails(currentMessage)}
+              onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
+              poll={currentMessage.composition}
+              resolveVoterName={resolveVoterName}
+            />
+          </View>
+        );
+      }
+
       if (currentMessage.composition.type === 'proposal') {
         return (
           <View style={{ marginBottom, marginTop }}>
@@ -942,27 +1240,29 @@ function Conversation({ navigation, route }) {
   }, [chatData, userData]);
 
   /**
-   * Render custom actions (attachment button)
-   * @param props
+   * Render custom actions (attachment buttons)
+   * @returns {React.ReactNode} Rendered actions component
    */
-  const renderActions = (/** @type {any} */ props) => (
+  const renderActions = () => (
     <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
+      {isLeagueConversation ? (
+        <TouchableOpacity
+          onPress={() => setIsProposalModalVisible(true)}
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.gold500,
+            borderRadius: 16,
+            height: 32,
+            justifyContent: 'center',
+            marginHorizontal: 4,
+            width: 32,
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>{'\uD83E\uDD1D'}</Text>
+        </TouchableOpacity>
+      ) : null}
       <TouchableOpacity
-        onPress={() => setIsProposalModalVisible(true)}
-        style={{
-          alignItems: 'center',
-          backgroundColor: Colors.gold500,
-          borderRadius: 16,
-          height: 32,
-          justifyContent: 'center',
-          marginHorizontal: 4,
-          width: 32,
-        }}
-      >
-        <Text style={{ fontSize: 16 }}>🤝</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={handleChoosePhoto}
+        onPress={() => setIsAttachmentMenuVisible(true)}
         style={{
           alignItems: 'center',
           backgroundColor: Colors.primary500,
@@ -973,7 +1273,6 @@ function Conversation({ navigation, route }) {
           width: 32,
         }}
       >
-        {/* We use a text plus or an image if available */}
         <View style={{
           backgroundColor: 'white', height: 2, position: 'absolute', width: 16,
         }}
@@ -1105,7 +1404,7 @@ function Conversation({ navigation, route }) {
             color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 2,
           }}
           >
-            ↑
+            {'\u2191'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1124,35 +1423,60 @@ function Conversation({ navigation, route }) {
       <View style={{
         alignItems: 'center',
         flexDirection: 'row',
-        justifyContent: 'space-between',
         paddingBottom: 10,
         paddingHorizontal: 16,
         paddingTop: top + 10,
         zIndex: 10,
       }}
       >
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-
-        <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text numberOfLines={1} style={[Fonts.h3, { color: Colors.neutral00 }]}>{title}</Text>
-          {!!subtitle && (
-          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
-          )}
+        <View style={{ alignItems: 'flex-start', width: HEADER_SIDE_WIDTH }}>
+          <HeaderBackButton
+            onPress={() => navigation.goBack()}
+            style={{ marginLeft: 0 }}
+            withDefaultMargin={false}
+          />
         </View>
 
-        <TouchableOpacity
-          onPress={() => setIsMenuVisible(true)}
-          style={{
-            alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            borderRadius: 20,
-            height: 40,
-            justifyContent: 'center',
-            width: 40,
-          }}
-        >
-          <Text style={{ color: Colors.neutral00, fontSize: 20, fontWeight: 'bold' }}>⋮</Text>
-        </TouchableOpacity>
+        <View style={{ alignItems: 'flex-start', flex: 1, paddingHorizontal: 16 }}>
+          <Text
+            numberOfLines={1}
+            style={[Fonts.h3, { color: Colors.neutral00 }]}
+          >
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p3, { color: Colors.neutral300 }]}
+            >
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={{ alignItems: 'flex-end', width: HEADER_SIDE_WIDTH }}>
+          <TouchableOpacity
+            onPress={() => setIsMenuVisible(true)}
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: 20,
+              height: 40,
+              justifyContent: 'center',
+              width: 40,
+            }}
+          >
+            <Text
+              style={{
+                color: Colors.neutral00,
+                fontSize: 20,
+                fontWeight: 'bold',
+              }}
+            >
+              {'\u22EE'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={[Alignments.fill]}>
@@ -1222,6 +1546,51 @@ function Conversation({ navigation, route }) {
             />
           </View>
         </BottomModal>
+
+        <BottomModal
+          close={() => setIsAttachmentMenuVisible(false)}
+          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 18 }}
+          hideCloseButton
+          isVisible={isAttachmentMenuVisible}
+        >
+          <View style={Spaces.gap[16]}>
+            <Button
+              disabled={isUploading}
+              isLoading={isUploading}
+              onPress={() => runAttachmentAction(handleTakePhoto)}
+              title={t('conversation.attachments.takePhoto', 'Prendre une photo')}
+              variant="PrimaryLight"
+            />
+            <Button
+              disabled={isUploading}
+              onPress={() => runAttachmentAction(handlePickMedia)}
+              title={t('conversation.attachments.pickMedia', 'Envoyer un media')}
+              variant="SecondaryLight"
+            />
+            <Button
+              disabled={isUploading}
+              onPress={() => runAttachmentAction(handlePickFile)}
+              title={t('conversation.attachments.pickFile', 'Envoyer un fichier')}
+              variant="SecondaryLight"
+            />
+            <Button
+              onPress={() => runAttachmentAction(handleCreatePoll)}
+              title={t('conversation.attachments.createPoll', 'Creer un sondage')}
+              variant="SecondaryLight"
+            />
+            <Button
+              onPress={() => setIsAttachmentMenuVisible(false)}
+              title={t('common.cancel', 'Fermer')}
+              variant="PrimaryLight"
+            />
+          </View>
+        </BottomModal>
+
+        <PollCreationModal
+          isVisible={isPollModalVisible}
+          onClose={() => setIsPollModalVisible(false)}
+          onSubmit={handleSubmitPoll}
+        />
 
         <BottomModal
           close={() => {

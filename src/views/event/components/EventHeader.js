@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
-import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Image, ImageBackground, Text, View,
+  Image, ImageBackground, Linking, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
@@ -20,11 +20,17 @@ const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 
 const getBackgroundImage = (typeName) => {
-  const normalizedType = typeName?.toLowerCase() || '';
-  if (normalizedType.includes('match') || normalizedType.includes('compétition') || normalizedType.includes('tournoi')) return BG_MATCH;
-  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return BG_TRAINING;
-  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return BG_DETECTION;
-  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return BG_RESERVATION;
+  const normalizedType = (typeName?.toLowerCase() || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (
+    normalizedType.includes('match')
+    || normalizedType.includes('competition')
+    || normalizedType.includes('tournoi')
+  ) return BG_MATCH;
+  if (normalizedType.includes('entrainement')) return BG_TRAINING;
+  if (normalizedType.includes('detection')) return BG_DETECTION;
+  if (normalizedType.includes('reservation')) return BG_RESERVATION;
   return BG_OTHER;
 };
 
@@ -37,6 +43,7 @@ function EventHeader({ event }) {
   const {
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { getClubInitials } = useClub();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
@@ -48,15 +55,75 @@ function EventHeader({ event }) {
     .map((team) => team?.name)
     .filter(Boolean);
 
-  const getLocationText = () => {
+  const getParsedLocationDetails = () => {
     try {
-      if (!locationDetails) return '';
-      const parsed = JSON.parse(locationDetails);
-      const addr = parsed?.address;
-      return (typeof addr === 'object' ? addr?.description : addr) || '';
+      if (!locationDetails) return null;
+      return JSON.parse(locationDetails);
     } catch (e) {
-      return '';
+      return null;
     }
+  };
+
+  const getLocationText = () => {
+    const parsed = getParsedLocationDetails();
+    const addr = parsed?.address;
+    const detailAddress = typeof addr === 'object' ? addr?.description : addr;
+    return detailAddress || event?.location?.label || '';
+  };
+
+  const getLocationCoordinates = () => {
+    const eventLat = Number(event?.location?.lat);
+    const eventLng = Number(event?.location?.lng);
+    if (Number.isFinite(eventLat) && Number.isFinite(eventLng)) {
+      return { lat: eventLat, lng: eventLng };
+    }
+
+    const parsed = getParsedLocationDetails();
+    const geometryCoordinates = parsed?.address?.geometry?.coordinates;
+    if (!Array.isArray(geometryCoordinates) || geometryCoordinates.length < 2) return null;
+
+    const lng = Number(geometryCoordinates[0]);
+    const lat = Number(geometryCoordinates[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    return { lat, lng };
+  };
+
+  const handleOpenLocationInGps = () => {
+    const addressLabel = getLocationText().trim();
+    if (!addressLabel) return;
+
+    const coordinates = getLocationCoordinates();
+    const encodedAddress = encodeURIComponent(addressLabel);
+    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+
+    const nativeUrl = coordinates
+      ? Platform.select({
+        android: `geo:${coordinates.lat},${coordinates.lng}?q=${coordinates.lat},${coordinates.lng}(${encodedAddress})`,
+        default: fallbackUrl,
+        ios: `maps:${coordinates.lat},${coordinates.lng}?q=${encodedAddress}`,
+      })
+      : Platform.select({
+        android: `geo:0,0?q=${encodedAddress}`,
+        default: fallbackUrl,
+        ios: `maps:0,0?q=${encodedAddress}`,
+      });
+
+    if (!nativeUrl) {
+      Linking.openURL(fallbackUrl).catch(() => {});
+      return;
+    }
+
+    Linking.canOpenURL(nativeUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(nativeUrl);
+        }
+        return Linking.openURL(fallbackUrl);
+      })
+      .catch(() => {
+        Linking.openURL(fallbackUrl).catch(() => {});
+      });
   };
 
   return (
@@ -114,20 +181,29 @@ function EventHeader({ event }) {
 
       {/* Info: Location, Date, Time, Team Category */}
       <View style={[Spaces.gap[24], Alignments.fill]}>
-        {locationDetails && (
-          <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
-            <Image
-              source={Images.pin}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-            />
-            <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
-              {getLocationText()}
+        {getLocationText() ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleOpenLocationInGps}
+            style={[Alignments.justifyCenter, Spaces.gap[8]]}
+          >
+            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
+              <Image
+                source={Images.pin}
+                style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+              />
+              <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
+                {getLocationText()}
+              </Text>
+            </View>
+            <Text style={[Fonts.p4, Fonts.primary500, Fonts.textCenter]}>
+              {t('common.openInGps', 'Ouvrir dans le GPS')}
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        ) : null}
 
-        <View style={[Alignments.row, Alignments.fill, Spaces.gap[16]]}>
-          {event?.date && (
+        {event?.date && (
+          <View style={[Alignments.row, Alignments.fill, Spaces.gap[16]]}>
             <View style={[Spaces.gap[8]]}>
               <View style={[Alignments.row, Spaces.gap[8]]}>
                 <Image
@@ -151,21 +227,21 @@ function EventHeader({ event }) {
                 </Text>
               </View>
             </View>
-          )}
 
-          <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
+            <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
 
-          {event?.team && (
-            <View style={[Spaces.gap[8]]}>
-              <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                {event?.team?.category?.name}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                {event?.team?.level?.name}
-              </Text>
-            </View>
-          )}
-        </View>
+            {event?.team && (
+              <View style={[Spaces.gap[8]]}>
+                <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                  {event?.team?.category?.name}
+                </Text>
+                <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                  {event?.team?.level?.name}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
@@ -173,7 +249,7 @@ function EventHeader({ event }) {
               Equipes invitees
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              {invitedTeamNames.join(' • ')}
+              {invitedTeamNames.join(' \u2022 ')}
             </Text>
           </View>
         )}

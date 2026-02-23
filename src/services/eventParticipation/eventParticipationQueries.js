@@ -10,6 +10,7 @@ import {
  * @param {string} [userId]
  * @param {{
  *   pageSize?: number;
+ *   includeInactive?: boolean;
  * }} [params]
  * @param {any} [options]
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<{

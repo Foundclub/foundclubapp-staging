@@ -344,6 +344,7 @@ export default {
       create: 'Creer',
       delete: 'Supprimer',
       ok: 'OK',
+      openInGps: 'Ouvrir dans le GPS',
       photoFromCamera: 'Prendre une photo',
       photoFromGallery: 'Choisir depuis la gallerie',
       save: 'Enregistrer',
@@ -429,6 +430,8 @@ export default {
       participations: 'Participants',
     },
     invitedTeams: {
+      externalBadge: 'Ouvert a tous',
+      externalHistoricalTitle: 'Historique participants externes',
       historicalPending: '{{count}} reponse(s) en attente',
       historicalTitle: 'Historique equipe retiree',
       homeTeamBadge: 'Equipe organisatrice',
@@ -842,6 +845,29 @@ export default {
         subtitle: "Definis qui peut voir l'evenement.",
         title: 'Visibilite',
       },
+    },
+  },
+  facilityForm: {
+    capacity: {
+      teamPlural: 'equipes simultanees',
+      teamSingular: 'equipe simultanee',
+    },
+    errors: {
+      addressGeocodeRequired: 'Selectionnez une adresse geolocalisee dans la liste.',
+    },
+    hints: {
+      addressSelection: 'Selectionnez une adresse dans la liste pour activer le GPS.',
+    },
+  },
+  facilityList: {
+    capacity: {
+      hintPlural: 'Capacite simultanee: {{count}} equipes',
+      hintSingular: 'Capacite simultanee: {{count}} equipe',
+      teamPlural: 'equipes simultanees',
+      teamSingular: 'equipe simultanee',
+    },
+    defaults: {
+      addressMissing: 'Adresse non renseignee',
     },
   },
   home: {
@@ -1490,6 +1516,7 @@ export default {
   teamDetails: {
     actions: {
       contactTeam: 'Contacter',
+      teamChat: 'Équipe',
       edit: 'Modifier',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
@@ -1628,6 +1655,7 @@ export default {
     fields: {
       category: 'Catégorie',
       level: 'Niveau',
+      members: 'Membres',
       section: 'Section',
     },
     noData: 'Aucune équipe trouvée.',
@@ -1675,6 +1703,9 @@ export default {
       section: 'Section',
       sport: 'Sport',
       weight: 'Poids (kg)',
+    },
+    historySummary: {
+      count: '{{count}} experience(s)',
     },
     notSet: 'Non renseigne',
     private: 'Prive',

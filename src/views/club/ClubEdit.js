@@ -1,6 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,16 +11,20 @@ import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetClub } from '@/services/club/clubQueries';
 import { updateClubInfo } from '@/services/club/clubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[] }} */
 const defaultValues = {
+  activites: [],
   addressDetails: '',
   email: '',
   name: '',
@@ -28,6 +32,7 @@ const defaultValues = {
 };
 
 const clubSchema = Joi.object({
+  activites: Joi.array().items(Joi.string().allow('')).optional(),
   addressDetails: Joi.string().allow('').optional(),
   email: Joi.string().email({ tlds: { allow: false } }).allow('').optional(),
   name: Joi.string().required(),
@@ -40,7 +45,7 @@ const clubSchema = Joi.object({
  * @returns {import('react').ReactElement} Club edit screen component
  */
 function ClubEdit({ navigation, route }) {
-  const { clubId } = route.params;
+  const { clubId } = route?.params ?? {};
 
   // hooks
   const {
@@ -55,6 +60,20 @@ function ClubEdit({ navigation, route }) {
     /** @type {Avatar | undefined} */
     (undefined),
   );
+  const [activitySearch, setActivitySearch] = useState('');
+
+  const { data: allActivities } = useGetActivities();
+
+  const activityOptions = useMemo(() => (allActivities || []).reduce((/** @type {Option[]} */ acc, activity) => {
+    const activityName = String(activity?.name || '').trim();
+    if (!activityName) return acc;
+    if (activitySearch && !activityName.toLowerCase().includes(activitySearch.toLowerCase())) return acc;
+    acc.push({
+      label: activityName,
+      value: activity.documentId || '',
+    });
+    return acc;
+  }, []), [allActivities, activitySearch]);
 
   useEffect(() => {
     if (clubData?.logo?.url) {
@@ -92,6 +111,7 @@ function ClubEdit({ navigation, route }) {
   useEffect(() => {
     if (clubData) {
       reset({
+        activites: (clubData.activites || []).map((activity) => activity.documentId).filter(Boolean),
         addressDetails: clubData.addressDetails ? JSON.parse(clubData.addressDetails)?.address : '',
         email: clubData.email || '',
         name: clubData.name || '',
@@ -106,13 +126,13 @@ function ClubEdit({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     if (clubData) {
-      updateClubMutation.mutate({
+      updateClubMutation.mutate(/** @type {any} */ ({
         documentId: clubData.documentId,
         ...data,
         logo,
         // We need to handle addressDetails specifically if we want to save it as JSON string
         addressDetails: data.addressDetails ? JSON.stringify({ address: data.addressDetails }) : undefined,
-      });
+      }));
     }
   };
 
@@ -229,6 +249,36 @@ function ClubEdit({ navigation, route }) {
                   placeholder={t('club.fields.address.placeholder') || 'Adresse'}
                   ref={ref}
                   value={value}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="activites"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <AutocompleteSelect
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
+                  isMulti
+                  isSearchable
+                  label={t('clubDetails.titles.activities') || 'Sports'}
+                  onBlur={onBlur}
+                  options={activityOptions}
+                  placeholder={t('clubFilters.fields.activity.placeholder') || 'Selectionner une activite'}
+                  ref={ref}
+                  searchValue={activitySearch}
+                  setSearchValue={setActivitySearch}
+                  setValue={(/** @type {Option[] | null} */ options) => onChange(
+                    options?.map((option) => option.value).filter(Boolean) || [],
+                  )}
+                  value={(Array.isArray(value) ? value : [])
+                    .map((activityId) => activityOptions.find((option) => option.value === activityId)?.label)
+                    .filter(Boolean)
+                    .join(', ')}
                 />
               )}
             />

@@ -1,3 +1,4 @@
+/* eslint-disable import/order, perfectionist/sort-imports */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useMemo, useState,
@@ -13,16 +14,20 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   deleteDeviceToken,
-  getMe, login, logout, signInWithPhoneNumber, subscribeToAuthState,
+  getMe, login, logout, signInWithPhoneNumber,
 } from '@/services/auth/authService';
 
+import { createLogger } from '@/utils/logger/logger';
 import {
   formatBirthdateToDisplay,
   formatBirthdateToSend,
   getAuthTokens, getOnboardingViews, profileFieldToDisplay, sanitizeUser, USER_ROLES,
 } from './authUseCases';
-import { SPORTS_WITH_POSITIONS } from '@/constants/positions';
+
 import { useAppMode } from '@/context/AppModeContext';
+/* eslint-enable import/order, perfectionist/sort-imports */
+
+const authLogger = createLogger('auth');
 
 /**
  * Custom hook to manage authentication
@@ -60,7 +65,7 @@ const useAuth = () => {
       Alert.alert(t('APIerrors.OTP_ERROR'), message);
     },
     onSuccess: async (data) => {
-      console.log('[useAuth] loginMutation onSuccess, data.user:', data?.user?.documentId);
+      authLogger.debug('Login mutation succeeded', { userDocumentId: data?.user?.documentId });
       // Ensure OTP confirmation state cannot leak to another account flow
       setConfirm(undefined);
       queryClient.clear();
@@ -78,7 +83,7 @@ const useAuth = () => {
           await deleteDeviceToken(token);
         }
       } catch (error) {
-        console.warn('[FCM] Failed to delete device token on logout:', error?.message || error);
+        authLogger.warn('Failed to delete device token on logout', error?.message || error);
       } finally {
         appDispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
       }
@@ -101,7 +106,7 @@ const useAuth = () => {
   const { auth, authSessions, isAddingAccount } = useAppContext()[0];
 
   const switchAccount = useCallback(async (session) => {
-    console.log('[useAuth] switchAccount called for:', session?.user?.email);
+    authLogger.debug('Switching account', { userDocumentId: session?.user?.documentId || session?.user?.id });
     setConfirm(undefined);
     queryClient.clear();
 
@@ -111,24 +116,17 @@ const useAuth = () => {
       type: 'SWITCH_ACCOUNT',
     });
 
-    // Re-authenticate with Firebase in background for push/SDK sync.
-    if (session?.idToken) {
-      try {
-        const auth = (await import('@react-native-firebase/auth')).default;
-        await auth().signInWithCustomToken(session.idToken);
-        console.log('[useAuth] Firebase re-auth successful');
-      } catch (error) {
-        console.warn('[useAuth] Firebase re-auth failed (token may be expired):', error?.message);
-      }
-    }
+    // NOTE: We intentionally skip Firebase re-auth here.
+    // session.idToken is a Firebase ID token, not a custom token accepted by signInWithCustomToken.
+    authLogger.debug('Skipped Firebase re-auth on account switch (requires backend custom token flow)');
   }, [appDispatch, queryClient]);
 
   const addAccount = useCallback(async () => {
-    console.log('[useAuth] addAccount called. Dispatching PREPARE_ADD_ACCOUNT');
+    authLogger.debug('Preparing add-account flow');
     setConfirm(undefined);
     // Sign out from Firebase SDK to ensure a clean slate for the new account
     // This does NOT remove the session from our app state (authSessions) because we don't trigger the reducer here
-    await logout().catch((e) => console.log('[useAuth] logout failed', e?.message || 'Unknown error'));
+    await logout().catch((e) => authLogger.warn('Logout failed before add-account flow', e?.message || 'Unknown error'));
 
     queryClient.clear();
     appDispatch({
@@ -165,17 +163,9 @@ const useAuth = () => {
       const hasChanged = !isDeepEqual(sanitizedUserData, currentContextUserData);
 
       if (hasChanged) {
-        console.log('[useAuth] User data changed. Dispatching update.');
-        console.log('[useAuth DEBUG] sanitizedUserData keys:', Object.keys(sanitizedUserData || {}));
-        console.log('[useAuth DEBUG] currentContextUserData keys:', Object.keys(currentContextUserData || {}));
-        console.log('[useAuth DEBUG] sanitizedUserData.documentId:', sanitizedUserData?.documentId);
-        console.log('[useAuth DEBUG] currentContextUserData.documentId:', currentContextUserData?.documentId);
-        // Log stringified versions (first 500 chars)
-        const newStr = JSON.stringify(sanitizedUserData);
-        const oldStr = JSON.stringify(currentContextUserData);
-        console.log('[useAuth DEBUG] New (first 500):', newStr?.substring(0, 500));
-        console.log('[useAuth DEBUG] Old (first 500):', oldStr?.substring(0, 500));
-        console.log('[useAuth DEBUG] Lengths - New:', newStr?.length, 'Old:', oldStr?.length);
+        authLogger.debug('User data changed, dispatching update', {
+          userDocumentId: sanitizedUserData?.documentId,
+        });
 
         appDispatch({
           payload: userData,
@@ -201,10 +191,6 @@ const useAuth = () => {
    * @param {string | undefined} param.phoneNumber
    */
   const inviteTrainer = ({ clubName, firstname, phoneNumber }) => {
-    // Create an invitation message with download links
-    const appStoreUrl = process.env.APP_STORE_URL;
-    const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
-
     // Construct the message
     const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
       clubName,
@@ -260,10 +246,6 @@ const useAuth = () => {
    * @returns {void}
    */
   const inviteTeamPlayers = ({ clubName, teamName }) => {
-    // Create an invitation message with download links
-    const appStoreUrl = process.env.APP_STORE_URL;
-    const googlePlayUrl = process.env.GOOGLE_PLAY_URL;
-
     // Smart install link logic
     const baseUrl = process.env.API_URL ? process.env.API_URL.replace('/api', '') : 'https://foundclub.com';
     // We need teamId here! The function signature is ({ clubName, teamName }).
@@ -382,13 +364,15 @@ const useAuth = () => {
   }, [userData]);
 
   const cancelAddAccount = useCallback(() => {
-    console.log('[useAuth] cancelAddAccount called');
+    authLogger.debug('Cancel add-account flow');
     setConfirm(undefined);
     queryClient.clear(); // Clear stale data from previous partial login attempts
     // Restore the first available session from authSessions
     const previousSession = authSessions?.[0];
     if (previousSession) {
-      console.log('[useAuth] Restoring previous session:', previousSession?.user?.email);
+      authLogger.debug('Restoring previous session', {
+        userDocumentId: previousSession?.user?.documentId || previousSession?.user?.id,
+      });
       appDispatch({ payload: previousSession, type: 'SWITCH_ACCOUNT' });
     }
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
