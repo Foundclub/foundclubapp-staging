@@ -1,35 +1,46 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useHistoryWizard } from './HistoryWizardContext';
-import { useGetLevels } from '@/services/level/levelQueries';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-const HistoryWizardLevel = ({ navigation }) => {
+import { useGetLevels } from '@/services/level/levelQueries';
+
+import { useHistoryWizard } from './HistoryWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function HistoryWizardLevel({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useHistoryWizard();
+  const { dispatch, state } = useHistoryWizard();
   const { data: levels, isLoading } = useGetLevels();
 
   const handleSelectLevel = (level) => {
-    dispatch({ type: 'SET_LEVEL', payload: level });
+    dispatch({ payload: level, type: 'SET_LEVEL' });
   };
 
   return (
     <WizardStepLayout
-      title="Quel niveau ?"
-      subtitle="Sélectionne le niveau de compétition"
+      isNextDisabled={!state.level}
       onBack={() => navigation.goBack()}
       onNext={() => navigation.navigate(RouteNames.HistoryWizardPeriod)}
-      isNextDisabled={!state.level}
-      showSkip
       onSkip={() => navigation.navigate(RouteNames.HistoryWizardPeriod)}
+      showSkip
+      subtitle="Sélectionne le niveau de compétition"
+      title="Quel niveau ?"
     >
       {isLoading ? (
-        <ActivityIndicator size="large" color={Colors.primary500} />
+        <ActivityIndicator color={Colors.primary500} size="large" />
       ) : (
         <View style={[Spaces.gap[12]]}>
           {levels?.map((level) => {
@@ -39,14 +50,14 @@ const HistoryWizardLevel = ({ navigation }) => {
                 key={level.documentId}
                 onPress={() => handleSelectLevel(level)}
                 style={{
-                  backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
-                  borderRadius: 12,
-                  padding: 20,
-                  borderWidth: 2,
-                  borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                  flexDirection: 'row',
                   alignItems: 'center',
+                  backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                  borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  flexDirection: 'row',
                   justifyContent: 'space-between',
+                  padding: 20,
                 }}
               >
                 <Text style={[Fonts.p1Bold, { color: isSelected ? Colors.primary500 : Colors.neutral00 }]}>
@@ -62,6 +73,6 @@ const HistoryWizardLevel = ({ navigation }) => {
       )}
     </WizardStepLayout>
   );
-};
+}
 
 export default HistoryWizardLevel;

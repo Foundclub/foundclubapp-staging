@@ -3,12 +3,18 @@ export const colors = {
   error500: '#ff284f',
   error700: '#d02544',
 
+  gold100: '#FFF8E1',
+  gold200: '#FFE082',
+  gold500: '#FFD700',
+  gold700: '#C5A000',
+  gold900: '#3D2E0F',
   neutral00: '#ffffff',
   neutral100: '#e5e6e6',
   neutral200: '#d3d4d4',
   neutral300: '#adb1b2',
   neutral400: '#92979a',
   neutral50: '#f1f2f2',
+
   neutral500: '#777c7e',
   neutral600: '#5f6366',
   neutral700: '#474b4c',
@@ -18,29 +24,23 @@ export const colors = {
   primary100: '#e6f7fe',
   primary200: '#99e1fb',
   primary500: '#01b3f4',
+
   primary700: '#173844',
   primary900: '#001218',
-
   success100: '#d4fcf0',
   success500: '#27d6a3',
+
   success700: '#399379',
-  
   warning100: '#fff4e5',
   warning500: '#ffa115',
   warning700: '#cc7a00',
   warning900: '#8a4f00',
 
-  gold100: '#FFF8E1',
-  gold200: '#FFE082',
-  gold500: '#FFD700',
-  gold700: '#C5A000',
-  gold900: '#3D2E0F',
-
   // @deprecated compatibility aliases (to remove after design-system migration)
+  danger500: '#ff284f',
+  error: '#ff284f',
   primary: '#01b3f4',
   secondary: '#ffa115',
-  error: '#ff284f',
-  danger500: '#ff284f',
   textSecondary: '#adb1b2',
 
   transparent: 'transparent',

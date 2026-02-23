@@ -2,17 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
-import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 /**
  * User sports history input screen
@@ -20,11 +20,13 @@ import { markOnboardingComplete } from '@/domains/auth/authUseCases';
  */
 function UserSportHistory({ navigation }) {
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
-  
+
   // We don't save the history here anymore, it's done via the wizard
   // So we just handle navigation
   const handleNext = () => {
@@ -41,11 +43,11 @@ function UserSportHistory({ navigation }) {
     // Navigate to the wizard, asking to return here afterwards
     // We also ask to reset the wizard context to start fresh
     navigation.navigate('ProfileStack', {
-      screen: RouteNames.HistoryWizardClub,
-      params: { 
+      params: {
+        resetContext: true,
         returnRoute: RouteNames.UserSportHistory,
-        resetContext: true
-      }
+      },
+      screen: RouteNames.HistoryWizardClub,
     });
   };
 
@@ -83,16 +85,16 @@ function UserSportHistory({ navigation }) {
         {/* Reusing UserHistorySection directly */}
         {/* We wrap it in a View to ensure it doesn't stretch weirdly */}
         <View style={{ flex: 1 }}>
-           <UserHistorySection
-            userId={userData?.documentId} 
-             isOwnProfile={true}
-             onAddPress={handleAddExperience}
-             onEditPress={(entry) => {
-               // Optional: Allow editing during onboarding
-               // For now let's just allow adding, or we can enable editing too
-               // To enable editing we'd need to pass the entry to the wizard
-             }}
-           />
+          <UserHistorySection
+            isOwnProfile
+            onAddPress={handleAddExperience}
+            onEditPress={(entry) => {
+              // Optional: Allow editing during onboarding
+              // For now let's just allow adding, or we can enable editing too
+              // To enable editing we'd need to pass the entry to the wizard
+            }}
+            userId={userData?.documentId}
+          />
         </View>
       </View>
 

@@ -10,11 +10,11 @@
  * @property {'whisper' | 'club' | 'team' | 'league_match' | 'multisport' | string} type - Chat type
  * @property {User[]} participants - The users participating in the chat
  * @property {ChatMessage[]} [messages] - The messages in the chat
-  * @property {Date} createdAt - When the chat was created
-  * @property {Date} updatedAt - When the chat was last updated
-  * @property {Club} [club] - The club this chat belongs to
-  * @property {Team} [team] - The team this chat belongs to
-  * @property {LeagueMatch} [league_match] - Linked league match
+ * @property {Date} createdAt - When the chat was created
+ * @property {Date} updatedAt - When the chat was last updated
+ * @property {Club} [club] - The club this chat belongs to
+ * @property {Team} [team] - The team this chat belongs to
+ * @property {LeagueMatch} [league_match] - Linked league match
  * @property {MultisportClubRef} [multisportClub] - Linked multisport club
  * @property {User[]} [archivedBy] - Users who archived the chat
  * @property {User[]} [pinnedBy] - Users who pinned the chat

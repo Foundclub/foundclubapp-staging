@@ -1,21 +1,23 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  TextInput,
-  Modal,
-  Alert,
-} from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -26,22 +28,24 @@ import { getImageUrl } from '@/utils/imageUrl';
  * TacticalSelection - Step 1: Select players for the composition
  * Displays team players with checkboxes for multi-selection
  */
-const TacticalSelection = () => {
-  const { Colors, Fonts, Alignments, Spaces } = useTheme();
+function TacticalSelection() {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   // Get players from navigation params
   /** @type {{players?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string}} */
   const params = route.params || {};
-  const { 
-    players: teamPlayers = [], 
-    eventId, 
-    sport = 'football',
+  const {
+    eventId,
     existingComposition,
+    players: teamPlayers = [],
+    sport = 'football',
     teamId,
   } = params;
-  
+
   // Initialize selected IDs from existing composition
   const initialSelectedIds = useMemo(() => {
     if (existingComposition?.placements?.length) {
@@ -50,7 +54,7 @@ const TacticalSelection = () => {
     }
     return new Set();
   }, [existingComposition]);
-  
+
   // State
   /** @type {[Set<string>, React.Dispatch<React.SetStateAction<Set<string>>>]} */
   const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
@@ -62,7 +66,7 @@ const TacticalSelection = () => {
   /** @type {TacticalPlayer[]} */
   const initialManualPlayers = existingComposition?.manualPlayers || [];
   const [manualPlayers, setManualPlayers] = useState(initialManualPlayers);
-  
+
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   /** @type {[TacticalPlayer|null, React.Dispatch<React.SetStateAction<TacticalPlayer|null>>]} */
@@ -70,7 +74,7 @@ const TacticalSelection = () => {
   const [editFirstname, setEditFirstname] = useState('');
   const [editLastname, setEditLastname] = useState('');
   const [editNumber, setEditNumber] = useState('');
-  
+
   // Number overrides for team players (store overridden jersey numbers)
   const [numberOverrides, setNumberOverrides] = useState(
     /** @type {Record<string, string>} */ ({}),
@@ -80,7 +84,7 @@ const TacticalSelection = () => {
   const allPlayers = useMemo(() => {
     const seenIds = new Set();
     const result = /** @type {TacticalPlayer[]} */ ([]);
-    
+
     // Add team players first
     for (const p of teamPlayers) {
       const id = p.id || p.documentId || '';
@@ -89,7 +93,7 @@ const TacticalSelection = () => {
         result.push(p);
       }
     }
-    
+
     // Add manual players if not already in team players
     for (const p of manualPlayers) {
       const id = p.id || p.documentId || '';
@@ -98,7 +102,7 @@ const TacticalSelection = () => {
         result.push(p);
       }
     }
-    
+
     return result;
   }, [teamPlayers, manualPlayers]);
 
@@ -106,16 +110,14 @@ const TacticalSelection = () => {
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) return allPlayers;
     const q = searchQuery.toLowerCase();
-    return allPlayers.filter((/** @type {TacticalPlayer} */ p) =>
-      p.firstname?.toLowerCase().includes(q) || 
-      p.lastname?.toLowerCase().includes(q) ||
-      String(p.number || '').includes(q)
-    );
+    return allPlayers.filter((/** @type {TacticalPlayer} */ p) => p.firstname?.toLowerCase().includes(q)
+      || p.lastname?.toLowerCase().includes(q)
+      || String(p.number || '').includes(q));
   }, [allPlayers, searchQuery]);
 
   // Toggle selection
   const toggleSelection = useCallback((/** @type {string} */ playerId) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(playerId)) {
         newSet.delete(playerId);
@@ -128,7 +130,7 @@ const TacticalSelection = () => {
 
   // Select all
   const selectAll = useCallback(() => {
-    setSelectedIds(new Set(allPlayers.map(p => p.id || p.documentId || '')));
+    setSelectedIds(new Set(allPlayers.map((p) => p.id || p.documentId || '')));
   }, [allPlayers]);
 
   // Clear selection
@@ -142,19 +144,19 @@ const TacticalSelection = () => {
       Alert.alert('Erreur', 'Prénom et nom requis');
       return;
     }
-    
+
     const newPlayer = {
-      id: `manual_${Date.now()}`,
+      avatar: null,
       documentId: `manual_${Date.now()}`,
       firstname: manualFirstname.trim(),
+      id: `manual_${Date.now()}`,
+      isManual: true,
       lastname: manualLastname.trim(),
       number: manualNumber.trim() || undefined,
-      avatar: null,
-      isManual: true,
     };
-    
-    setManualPlayers(prev => [...prev, newPlayer]);
-    setSelectedIds(prev => new Set([...prev, newPlayer.id])); // Auto-select
+
+    setManualPlayers((prev) => [...prev, newPlayer]);
+    setSelectedIds((prev) => new Set([newPlayer.id, ...prev])); // Auto-select
     setManualFirstname('');
     setManualLastname('');
     setManualNumber('');
@@ -177,24 +179,24 @@ const TacticalSelection = () => {
   const handleSaveEdit = useCallback(() => {
     if (!editingPlayer) return;
     const playerId = editingPlayer.id || editingPlayer.documentId || '';
-    
+
     if (editingPlayer.isManual || String(playerId).startsWith('manual_')) {
       // Update manual player in list
-      setManualPlayers(prev => prev.map(p => 
-        (p.id || p.documentId) === playerId
-          ? { ...p, firstname: editFirstname.trim(), lastname: editLastname.trim(), number: editNumber.trim() || undefined }
-          : p
-      ));
+      setManualPlayers((prev) => prev.map((p) => ((p.id || p.documentId) === playerId
+        ? {
+          ...p, firstname: editFirstname.trim(), lastname: editLastname.trim(), number: editNumber.trim() || undefined,
+        }
+        : p)));
     } else {
       // Store number override for team player
       if (editNumber.trim()) {
-        setNumberOverrides(prev => ({
+        setNumberOverrides((prev) => ({
           ...prev,
           [playerId]: editNumber.trim(),
         }));
       } else {
         // Remove override if empty
-        setNumberOverrides(prev => {
+        setNumberOverrides((prev) => {
           const next = { ...prev };
           delete next[playerId];
           return next;
@@ -209,19 +211,17 @@ const TacticalSelection = () => {
   const handleDeletePlayer = useCallback(() => {
     if (!editingPlayer) return;
     const playerId = editingPlayer.id || editingPlayer.documentId || '';
-    
+
     if (editingPlayer.isManual || String(playerId).startsWith('manual_')) {
       Alert.alert(
         'Supprimer',
         `Supprimer ${editingPlayer.firstname} ${editingPlayer.lastname} ?`,
         [
-          { text: 'Annuler', style: 'cancel' },
+          { style: 'cancel', text: 'Annuler' },
           {
-            text: 'Supprimer',
-            style: 'destructive',
             onPress: () => {
-              setManualPlayers(prev => prev.filter(p => (p.id || p.documentId) !== playerId));
-              setSelectedIds(prev => {
+              setManualPlayers((prev) => prev.filter((p) => (p.id || p.documentId) !== playerId));
+              setSelectedIds((prev) => {
                 const next = new Set(prev);
                 next.delete(playerId);
                 return next;
@@ -229,8 +229,10 @@ const TacticalSelection = () => {
               setEditModalVisible(false);
               setEditingPlayer(null);
             },
+            style: 'destructive',
+            text: 'Supprimer',
           },
-        ]
+        ],
       );
     }
   }, [editingPlayer]);
@@ -241,17 +243,15 @@ const TacticalSelection = () => {
       Alert.alert('Attention', 'Sélectionnez au moins un joueur');
       return;
     }
-    
-    const selectedPlayers = allPlayers.filter(p => 
-      selectedIds.has(p.id || '') || selectedIds.has(p.documentId || '')
-    );
-    
+
+    const selectedPlayers = allPlayers.filter((p) => selectedIds.has(p.id || '') || selectedIds.has(p.documentId || ''));
+
     // @ts-ignore
     navigation.navigate('TacticalBoardV2', {
-      selectedPlayers,
       eventId,
-      sport,
       existingComposition, // Pass through for loading positions
+      selectedPlayers,
+      sport,
       teamId, // Pass through for future team default composition
     });
   }, [selectedIds, allPlayers, eventId, sport, existingComposition, teamId, navigation]);
@@ -266,57 +266,61 @@ const TacticalSelection = () => {
       || selectedIds.has(String(item.documentId || ''));
     const initials = `${item.firstname?.charAt(0) || ''}${item.lastname?.charAt(0) || ''}`.toUpperCase();
     const isManualPlayer = item.isManual || String(playerId).startsWith('manual_');
-    
+
     // Get display number (with override for team players)
     const displayNumber = isManualPlayer ? item.number : (numberOverrides[playerId] || item.number);
-    
+
     // Avatar URI - null for manual players (force initials)
     const rawAvatarUrl = isManualPlayer ? null : (
       typeof item.avatar === 'string' ? item.avatar : item.avatar?.url
     );
     const avatarUri = rawAvatarUrl ? getImageUrl(rawAvatarUrl) : null;
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onLongPress={() => handleEditPlayer(item)}
+        onPress={() => toggleSelection(playerId)}
         style={[
           styles.playerRow,
-          { 
-            backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
+          {
+            backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
             borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-          }
+          },
         ]}
-        onPress={() => toggleSelection(playerId)}
-        onLongPress={() => handleEditPlayer(item)}
-        activeOpacity={0.7}
       >
         {/* Checkbox */}
         <View style={[
           styles.checkbox,
-          { 
-            borderColor: isSelected ? Colors.primary500 : Colors.neutral300,
+          {
             backgroundColor: isSelected ? Colors.primary500 : 'transparent',
-          }
-        ]}>
+            borderColor: isSelected ? Colors.primary500 : Colors.neutral300,
+          },
+        ]}
+        >
           {isSelected && <Text style={styles.checkmark}>✓</Text>}
         </View>
-        
+
         {/* Avatar - Initials for manual players */}
-        <View style={[styles.avatar, { backgroundColor: isManualPlayer ? Colors.primary500 + '40' : Colors.neutral700 }]}>
+        <View style={[styles.avatar, { backgroundColor: isManualPlayer ? `${Colors.primary500}40` : Colors.neutral700 }]}>
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
           ) : (
             <Text style={[styles.avatarInitials, { color: isManualPlayer ? Colors.primary500 : Colors.neutral00 }]}>{initials}</Text>
           )}
         </View>
-        
+
         {/* Info */}
         <View style={styles.playerInfo}>
           <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>
-            {item.firstname} {item.lastname}
+            {item.firstname}
+            {' '}
+            {item.lastname}
           </Text>
           {displayNumber && (
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              N°{displayNumber}
+              N°
+              {displayNumber}
             </Text>
           )}
           {isManualPlayer && (
@@ -325,12 +329,14 @@ const TacticalSelection = () => {
             </Text>
           )}
         </View>
-        
+
         {/* Edit button */}
-        <TouchableOpacity 
-          style={[styles.editBtn, { backgroundColor: Colors.neutral700 }]}
+        <TouchableOpacity
+          hitSlop={{
+            bottom: 10, left: 10, right: 10, top: 10,
+          }}
           onPress={() => handleEditPlayer(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={[styles.editBtn, { backgroundColor: Colors.neutral700 }]}
         >
           <Text style={{ color: Colors.neutral00, fontSize: 12 }}>✏️</Text>
         </TouchableOpacity>
@@ -350,23 +356,23 @@ const TacticalSelection = () => {
       {/* Search & Actions */}
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[12]]}>
         <TextInput
-          style={[styles.searchInput, { backgroundColor: Colors.neutral800, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
+          onChangeText={setSearchQuery}
           placeholder="Rechercher..."
           placeholderTextColor={Colors.neutral300}
+          style={[styles.searchInput, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
           value={searchQuery}
-          onChangeText={setSearchQuery}
         />
       </View>
 
       {/* Quick Actions */}
       <View style={[styles.actionsRow, Spaces.paddingHorizontal[24]]}>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]} onPress={selectAll}>
+        <TouchableOpacity onPress={selectAll} style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]}>
           <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>Tout sélectionner</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]} onPress={clearSelection}>
+        <TouchableOpacity onPress={clearSelection} style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]}>
           <Text style={[Fonts.p3, { color: Colors.neutral300, fontWeight: '600' }]}>Effacer</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}>
           <Text style={[Fonts.p3, { color: '#FFF', fontWeight: '600' }]}>+ Ajouter</Text>
         </TouchableOpacity>
       </View>
@@ -374,76 +380,82 @@ const TacticalSelection = () => {
       {/* Selection Count */}
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[12], Spaces.paddingBottom[8]]}>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-          {selectedIds.size} joueur{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+          {selectedIds.size}
+          {' '}
+          joueur
+          {selectedIds.size > 1 ? 's' : ''}
+          {' '}
+          sélectionné
+          {selectedIds.size > 1 ? 's' : ''}
         </Text>
       </View>
 
       {/* Player List */}
       <FlatList
+        contentContainerStyle={[Spaces.paddingHorizontal[24], styles.listContent]}
         data={filteredPlayers}
         keyExtractor={(item) => String(item.id || item.documentId || Math.random())}
-        renderItem={renderPlayer}
-        contentContainerStyle={[Spaces.paddingHorizontal[24], styles.listContent]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
+        ListEmptyComponent={(
           <View style={styles.emptyState}>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
               {searchQuery ? 'Aucun résultat' : 'Aucun joueur dans l\'équipe'}
             </Text>
           </View>
-        }
+        )}
+        renderItem={renderPlayer}
+        showsVerticalScrollIndicator={false}
       />
 
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: Colors.neutral900, borderTopColor: Colors.neutral700 }]}>
-        <Button 
+        <Button
+          disabled={selectedIds.size === 0}
+          onPress={handleValidate}
           title={`Valider (${selectedIds.size})`}
           variant="Primary"
-          onPress={handleValidate}
-          disabled={selectedIds.size === 0}
         />
       </View>
 
       {/* Add Manual Player Modal */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+      <Modal animationType="fade" onRequestClose={() => setModalVisible(false)} transparent visible={modalVisible}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
-            <Text style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center', marginBottom: 20 }]}>
+            <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
               Ajouter un joueur
             </Text>
-            
+
             <TextInput
+              autoFocus
+              onChangeText={setManualFirstname}
               placeholder="Prénom *"
               placeholderTextColor={Colors.neutral300}
+              style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={manualFirstname}
-              onChangeText={setManualFirstname}
-              style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
-              autoFocus
             />
-            
+
             <TextInput
+              onChangeText={setManualLastname}
               placeholder="Nom *"
               placeholderTextColor={Colors.neutral300}
+              style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={manualLastname}
-              onChangeText={setManualLastname}
-              style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
             />
-            
+
             <TextInput
-              placeholder="Numéro (optionnel)"
-              placeholderTextColor={Colors.neutral300}
-              value={manualNumber}
-              onChangeText={setManualNumber}
               keyboardType="number-pad"
               maxLength={2}
-              style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
+              onChangeText={setManualNumber}
+              placeholder="Numéro (optionnel)"
+              placeholderTextColor={Colors.neutral300}
+              style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
+              value={manualNumber}
             />
-            
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]} onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
                 <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]} onPress={handleAddManualPlayer}>
+              <TouchableOpacity onPress={handleAddManualPlayer} style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}>
                 <Text style={[Fonts.p1, { color: '#FFF', fontWeight: '700' }]}>Ajouter</Text>
               </TouchableOpacity>
             </View>
@@ -452,60 +464,60 @@ const TacticalSelection = () => {
       </Modal>
 
       {/* Edit Player Modal */}
-      <Modal visible={editModalVisible} transparent animationType="fade" onRequestClose={() => setEditModalVisible(false)}>
+      <Modal animationType="fade" onRequestClose={() => setEditModalVisible(false)} transparent visible={editModalVisible}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
-            <Text style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center', marginBottom: 20 }]}>
-              {editingPlayer?.isManual || String(editingPlayer?.id || '').startsWith('manual_') 
-                ? 'Modifier le joueur' 
+            <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
+              {editingPlayer?.isManual || String(editingPlayer?.id || '').startsWith('manual_')
+                ? 'Modifier le joueur'
                 : 'Modifier le numéro'}
             </Text>
-            
+
             {/* Only show name fields for manual players */}
             {(editingPlayer?.isManual || String(editingPlayer?.id || '').startsWith('manual_')) && (
               <>
                 <TextInput
+                  onChangeText={setEditFirstname}
                   placeholder="Prénom"
                   placeholderTextColor={Colors.neutral300}
+                  style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
                   value={editFirstname}
-                  onChangeText={setEditFirstname}
-                  style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
                 />
-                
+
                 <TextInput
+                  onChangeText={setEditLastname}
                   placeholder="Nom"
                   placeholderTextColor={Colors.neutral300}
+                  style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
                   value={editLastname}
-                  onChangeText={setEditLastname}
-                  style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
                 />
               </>
             )}
-            
+
             <TextInput
-              placeholder="Numéro"
-              placeholderTextColor={Colors.neutral300}
-              value={editNumber}
-              onChangeText={setEditNumber}
               keyboardType="number-pad"
               maxLength={2}
-              style={[styles.input, { backgroundColor: Colors.neutral900, color: Colors.neutral00, borderColor: Colors.neutral700 }]}
+              onChangeText={setEditNumber}
+              placeholder="Numéro"
+              placeholderTextColor={Colors.neutral300}
+              style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
+              value={editNumber}
             />
-            
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]} onPress={() => setEditModalVisible(false)}>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
                 <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]} onPress={handleSaveEdit}>
+              <TouchableOpacity onPress={handleSaveEdit} style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}>
                 <Text style={[Fonts.p1, { color: '#FFF', fontWeight: '700' }]}>Enregistrer</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* Delete button for manual players */}
             {(editingPlayer?.isManual || String(editingPlayer?.id || '').startsWith('manual_')) && (
-              <TouchableOpacity 
-                style={[styles.deleteBtn, { borderColor: Colors.error500 }]} 
+              <TouchableOpacity
                 onPress={handleDeletePlayer}
+                style={[styles.deleteBtn, { borderColor: Colors.error500 }]}
               >
                 <Text style={[Fonts.p1, { color: Colors.error500, fontWeight: '600' }]}>Supprimer ce joueur</Text>
               </TouchableOpacity>
@@ -515,12 +527,62 @@ const TacticalSelection = () => {
       </Modal>
     </ScreenContainer>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  header: {
+  actionBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  actionsRow: {
     flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
+  },
+  avatar: {
     alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+    width: 44,
+  },
+  avatarImage: {
+    borderRadius: 22,
+    height: 44,
+    width: 44,
+  },
+  avatarInitials: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkbox: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 2,
+    height: 24,
+    justifyContent: 'center',
+    marginRight: 12,
+    width: 24,
+  },
+  checkmark: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  footer: {
+    borderTopWidth: 1,
+    padding: 16,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     paddingRight: 16,
     paddingVertical: 8,
@@ -528,123 +590,73 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44,
   },
-  searchInput: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    paddingTop: 12,
-    gap: 8,
-  },
-  actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
   listContent: {
     paddingBottom: 20,
-  },
-  playerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  checkmark: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  avatarInitials: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   playerInfo: {
     flex: 1,
   },
-  emptyState: {
+  playerRow: {
     alignItems: 'center',
-    paddingVertical: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 8,
+    padding: 12,
   },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
+  searchInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
+  deleteBtn: {
     alignItems: 'center',
-    padding: 24,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingVertical: 12,
   },
-  modalContent: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 20,
-    padding: 24,
+  editBtn: {
+    alignItems: 'center',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
   },
   input: {
     borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     fontSize: 16,
     marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  modalBtn: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flex: 1,
+    paddingVertical: 14,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
   },
-  modalBtn: {
+  modalContent: {
+    borderRadius: 20,
+    maxWidth: 340,
+    padding: 24,
+    width: '100%',
+  },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  deleteBtn: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
+    padding: 24,
   },
 });
 

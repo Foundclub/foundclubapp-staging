@@ -35,34 +35,34 @@ export const getUnreadStatus = (
  * @returns {string} The generated conversation name
  */
 export const getConversationName = ({
-  chatClub, chatMultisportClub, chatParticipants, chatTeam, chatType, meId, chatLeagueMatch,
+  chatClub, chatLeagueMatch, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
 }) => {
   switch (chatType) {
     case 'club':
       return chatClub?.name || '';
+    case 'league_match':
+      // Logic: "Match vs [Opponent]"
+      // We need to identify the opponent team name.
+      // We assume the user is part of one of the teams.
+      // However, we might not have the full team list here easily.
+      // We rely on chatLeagueMatch being passed.
+      if (chatLeagueMatch) {
+        const teamA = chatLeagueMatch.team_a;
+        const teamB = chatLeagueMatch.team_b;
+        const date = chatLeagueMatch.date ? new Date(chatLeagueMatch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '';
+
+        // If we can't determine "my" team easily (complicated logic), just show "Match [Date]"
+        // Or "Team A vs Team B"
+        // User requested to avoid opponent name and use "Match X" or "Match [Date]"
+        // Since we don't have match number easily, we use date.
+        return `Match du ${date}`;
+        return `Match ${date}`;
+      }
+      return 'Match de Ligue';
     case 'multisport':
       return chatMultisportClub?.name || '';
     case 'team':
       return chatTeam?.name || '';
-    case 'league_match':
-       // Logic: "Match vs [Opponent]"
-       // We need to identify the opponent team name.
-       // We assume the user is part of one of the teams.
-       // However, we might not have the full team list here easily.
-       // We rely on chatLeagueMatch being passed.
-       if (chatLeagueMatch) {
-            const teamA = chatLeagueMatch.team_a;
-            const teamB = chatLeagueMatch.team_b;
-            const date = chatLeagueMatch.date ? new Date(chatLeagueMatch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '';
-            
-            // If we can't determine "my" team easily (complicated logic), just show "Match [Date]"
-            // Or "Team A vs Team B"
-            // User requested to avoid opponent name and use "Match X" or "Match [Date]"
-            // Since we don't have match number easily, we use date.
-            return `Match du ${date}`;
-            return `Match ${date}`;
-       }
-       return 'Match de Ligue';
     case 'whisper': {
       const participant = chatParticipants?.find(
         (p) => p.documentId !== meId,

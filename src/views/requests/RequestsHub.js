@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -8,16 +11,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
 
-import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import useAuth from '@/domains/auth/useAuth';
 import {
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
+import useTheme from '@/theme/themeContext';
+
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { acceptClubMembershipRequest, rejectClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import {
   approveFeatured,
@@ -33,7 +40,6 @@ import {
   acceptTeamMembershipRequest,
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
-import useTheme from '@/theme/themeContext';
 
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
 
@@ -44,14 +50,14 @@ const normalizeFilter = (value) => {
 
 const getSourceErrorLabel = (source, t) => {
   switch (source) {
-    case 'team':
-      return t('requestsHub.types.team', 'Equipe');
     case 'club':
       return t('requestsHub.types.club', 'Club');
     case 'event':
       return t('requestsHub.types.event', 'Evenement');
     case 'featured':
       return t('requestsHub.types.featured', 'A la une');
+    case 'team':
+      return t('requestsHub.types.team', 'Equipe');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }
@@ -82,7 +88,7 @@ function RequestsHub({ navigation, route }) {
 
   const trainedTeamIds = useMemo(
     () => (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean),
-    [userData?.trainedTeams]
+    [userData?.trainedTeams],
   );
   const clubId = userData?.club?.documentId || userData?.trainedTeams?.[0]?.club?.documentId || '';
   const cmId = userData?.multisportClubs?.[0]?.documentId || '';
@@ -140,7 +146,7 @@ function RequestsHub({ navigation, route }) {
       t('requestsHub.clubAssignedTitle', 'Entraineur ajoute'),
       t(
         'requestsHub.clubAssignedMessage',
-        "{{name}} a ete ajoute au club. Voulez-vous l'assigner a une equipe maintenant ?"
+        "{{name}} a ete ajoute au club. Voulez-vous l'assigner a une equipe maintenant ?",
       ).replace('{{name}}', trainerName),
       [
         { style: 'cancel', text: t('common.actions.askLater', 'Plus tard') },
@@ -158,7 +164,7 @@ function RequestsHub({ navigation, route }) {
           },
           text: t('requestsHub.assignNow', 'Assigner maintenant'),
         },
-      ]
+      ],
     );
   }, [clubId, navigation, t]);
 
@@ -184,7 +190,7 @@ function RequestsHub({ navigation, route }) {
             style: 'destructive',
             text: t('common.actions.confirm', 'Confirmer'),
           },
-        ]
+        ],
       );
       return;
     }
@@ -202,7 +208,7 @@ function RequestsHub({ navigation, route }) {
             style: 'destructive',
             text: t('common.actions.confirm', 'Confirmer'),
           },
-        ]
+        ],
       );
       return;
     }
@@ -248,7 +254,7 @@ function RequestsHub({ navigation, route }) {
     } catch (actionError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        actionError?.message || t('requestsHub.actionError', "Impossible de traiter la demande.")
+        actionError?.message || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
       );
     } finally {
       setProcessingItemId('');
@@ -272,13 +278,23 @@ function RequestsHub({ navigation, route }) {
   ]).filter((chip) => availableFilters.includes(chip.key)), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];
+  const canGoBack = typeof navigation?.canGoBack === 'function' && navigation.canGoBack();
+
+  const handleBackPress = useCallback(() => {
+    if (canGoBack) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate(RouteNames.HomeTab);
+  }, [canGoBack, navigation]);
 
   if (!canManageTeam) {
     return (
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.justifyCenter, Alignments.alignCenter, Spaces.padding[24]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            {t('requestsHub.forbidden', "Cet onglet est reserve aux coachs et dirigeants.")}
+            {t('requestsHub.forbidden', 'Cet onglet est reserve aux coachs et dirigeants.')}
           </Text>
         </View>
       </ScreenContainer>
@@ -295,6 +311,13 @@ function RequestsHub({ navigation, route }) {
         isLoading={requestsQuery.isLoading}
         wrapperStyle={[Alignments.fill, Spaces.gap[16], Spaces.paddingTop[16]]}
       >
+        <View style={[Alignments.row, Alignments.alignCenter]}>
+          <HeaderBackButton
+            onPress={handleBackPress}
+            withDefaultMargin={false}
+          />
+        </View>
+
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('requestsHub.title', 'Demandes')}
         </Text>
@@ -340,7 +363,9 @@ function RequestsHub({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p3Bold, Fonts.error500]}>
-                  {t('requestsHub.partialError', 'Source indisponible')}: {getSourceErrorLabel(sourceError?.source, t)}
+                  {t('requestsHub.partialError', 'Source indisponible')}
+                  :
+                  {getSourceErrorLabel(sourceError?.source, t)}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {sourceError?.message}

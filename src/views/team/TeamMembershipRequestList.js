@@ -2,20 +2,22 @@ import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image, Text, TouchableOpacity, View,
+} from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import useAuth from '@/domains/auth/useAuth';
-import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { useGetTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestQueries';
 import {
@@ -144,6 +146,7 @@ function TeamMembershipRequestList({ navigation, route }) {
         ]}
       >
         <ProfileAvatar
+          imageStyle={{ borderRadius: 40 }}
           imageUrl={item?.user?.avatar?.url}
           size={40}
           style={[
@@ -151,7 +154,6 @@ function TeamMembershipRequestList({ navigation, route }) {
             ApplicationStyle.borderColor.neutral00,
             { borderRadius: 40 },
           ]}
-          imageStyle={{ borderRadius: 40 }}
         />
         {item?.user?.firstname && item?.user?.lastname && (
           <View style={[
@@ -186,7 +188,7 @@ function TeamMembershipRequestList({ navigation, route }) {
         )}
       </View>
       <View style={[Alignments.row,
-      Spaces.gap[12], Spaces.marginTop[12]]}
+        Spaces.gap[12], Spaces.marginTop[12]]}
       >
         <Button
           icon="check"
@@ -228,8 +230,8 @@ function TeamMembershipRequestList({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}

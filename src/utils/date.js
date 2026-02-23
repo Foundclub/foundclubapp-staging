@@ -11,20 +11,20 @@ const WEEKDAY_PREFIX_FR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
  * @returns {string} - The formatted date string
  */
 export const formatDateWithDayPrefix = (value, options) => {
-    if (!value) return options?.fallback ?? '';
+  if (!value) return options?.fallback ?? '';
 
-    const date = typeof value === 'string' ? new Date(value) : value;
+  const date = typeof value === 'string' ? new Date(value) : value;
 
-    if (Number.isNaN(date.getTime())) {
-        return options?.fallback ?? '';
-    }
+  if (Number.isNaN(date.getTime())) {
+    return options?.fallback ?? '';
+  }
 
-    const weekday = WEEKDAY_PREFIX_FR[date.getDay()];
+  const weekday = WEEKDAY_PREFIX_FR[date.getDay()];
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
 
-    const formatted = `${day}/${month}/${year}`;
-    return `${weekday} ${formatted}`;
+  const formatted = `${day}/${month}/${year}`;
+  return `${weekday} ${formatted}`;
 };

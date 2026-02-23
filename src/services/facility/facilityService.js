@@ -1,68 +1,68 @@
 import client from '@/services/client';
 
 const getFacilities = async (clubId) => {
-    try {
-        const response = await client.get(`/facilities?filters[club][documentId][$eq]=${clubId}&populate=*`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching facilities:', error);
-        throw error;
-    }
+  try {
+    const response = await client.get(`/facilities?filters[club][documentId][$eq]=${clubId}&populate=*`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching facilities:', error);
+    throw error;
+  }
 };
 
 /**
  * Get facilities for a multisport club
  * @param {string} cmId - MultisportClub documentId
- * @returns {Promise<Object>} List of facilities
+ * @returns {Promise<object>} List of facilities
  */
 const getCMFacilities = async (cmId) => {
-    try {
-        const response = await client.get(`/facilities?filters[multisportClub][documentId][$eq]=${cmId}&populate=*`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching CM facilities:', error);
-        throw error;
-    }
+  try {
+    const response = await client.get(`/facilities?filters[multisportClub][documentId][$eq]=${cmId}&populate=*`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching CM facilities:', error);
+    throw error;
+  }
 };
 
 const getFacility = async (id) => {
-    try {
-        const response = await client.get(`/facilities/${id}?populate=*`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching facility:', error);
-        throw error;
-    }
+  try {
+    const response = await client.get(`/facilities/${id}?populate=*`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching facility:', error);
+    throw error;
+  }
 };
 
 const createFacility = async (data) => {
-    try {
-        const response = await client.post('/facilities', { data });
-        return response.data;
-    } catch (error) {
-        console.error('Error creating facility:', error);
-        throw error;
-    }
+  try {
+    const response = await client.post('/facilities', { data });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating facility:', error);
+    throw error;
+  }
 };
 
 const updateFacility = async (id, data) => {
-    try {
-        const response = await client.put(`/facilities/${id}`, { data });
-        return response.data;
-    } catch (error) {
-        console.error('Error updating facility:', error);
-        throw error;
-    }
+  try {
+    const response = await client.put(`/facilities/${id}`, { data });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating facility:', error);
+    throw error;
+  }
 };
 
 const deleteFacility = async (id) => {
-    try {
-        const response = await client.delete(`/facilities/${id}`);
-        return response.data;
-    } catch (error) {
-        console.error('Error deleting facility:', error);
-        throw error;
-    }
+  try {
+    const response = await client.delete(`/facilities/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting facility:', error);
+    throw error;
+  }
 };
 
 /**
@@ -72,13 +72,13 @@ const deleteFacility = async (id) => {
  * @returns {Promise<{facility: object, date: string, slots: Array}>}
  */
 const getAvailability = async (facilityId, date) => {
-    try {
-        const response = await client.get(`/facilities/${facilityId}/availability?date=${date}`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching availability:', error);
-        throw error;
-    }
+  try {
+    const response = await client.get(`/facilities/${facilityId}/availability?date=${date}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching availability:', error);
+    throw error;
+  }
 };
 
 /**
@@ -94,13 +94,13 @@ const getAvailability = async (facilityId, date) => {
  * @returns {Promise<object>} The created event/booking
  */
 const createBooking = async (data) => {
-    try {
-        const response = await client.post('/events/booking', { data });
-        return response.data;
-    } catch (error) {
-        console.error('Error creating booking:', error);
-        throw error;
-    }
+  try {
+    const response = await client.post('/events/booking', { data });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    throw error;
+  }
 };
 
 /**
@@ -108,23 +108,23 @@ const createBooking = async (data) => {
  * @returns {Promise<Array>} List of bookable facilities
  */
 const getBookableFacilities = async () => {
-    try {
-        const response = await client.get('/facilities?filters[isBookable][$eq]=true&populate=*');
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching bookable facilities:', error);
-        throw error;
-    }
+  try {
+    const response = await client.get('/facilities?filters[isBookable][$eq]=true&populate=*');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching bookable facilities:', error);
+    throw error;
+  }
 };
 
 export {
-    getFacilities,
-    getCMFacilities,
-    getFacility,
-    createFacility,
-    updateFacility,
-    deleteFacility,
-    getAvailability,
-    createBooking,
-    getBookableFacilities,
+  createBooking,
+  createFacility,
+  deleteFacility,
+  getAvailability,
+  getBookableFacilities,
+  getCMFacilities,
+  getFacilities,
+  getFacility,
+  updateFacility,
 };

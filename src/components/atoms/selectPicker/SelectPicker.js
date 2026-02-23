@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import {
+  FlatList, Modal, Text, TouchableOpacity, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -11,74 +14,79 @@ import useTheme from '@/theme/themeContext';
  * @param {string} [props.placeholder]
  * @returns {import('react').ReactElement}
  */
-const SelectPicker = ({ items, value, onValueChange, placeholder }) => {
-    const { Colors, Fonts, Spaces, ApplicationStyle, Alignments } = useTheme();
-    const [visible, setVisible] = React.useState(false);
+function SelectPicker({
+  items, onValueChange, placeholder, value,
+}) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
+  const [visible, setVisible] = React.useState(false);
 
-    const selectedItem = items.find(item => item.value === value);
+  const selectedItem = items.find((item) => item.value === value);
 
-    return (
-        <View>
-            <TouchableOpacity
-                onPress={() => setVisible(true)}
-                style={[
-                    ApplicationStyle.backgroundColor.neutral800,
-                    Spaces.padding[12],
-                    ApplicationStyle.borderRadius8,
-                    Alignments.row,
-                    Alignments.justifySpaceBetween,
-                    Alignments.alignCenter
-                ]}
-            >
-                <Text style={[Fonts.p2, Fonts.neutral00]}>
-                    {selectedItem ? selectedItem.label : placeholder || 'Sélectionner'}
-                </Text>
-                <Text style={[Fonts.p2, Fonts.neutral300]}>▼</Text>
-            </TouchableOpacity>
+  return (
+    <View>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        style={[
+          ApplicationStyle.backgroundColor.neutral800,
+          Spaces.padding[12],
+          ApplicationStyle.borderRadius8,
+          Alignments.row,
+          Alignments.justifySpaceBetween,
+          Alignments.alignCenter,
+        ]}
+      >
+        <Text style={[Fonts.p2, Fonts.neutral00]}>
+          {selectedItem ? selectedItem.label : placeholder || 'Sélectionner'}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral300]}>▼</Text>
+      </TouchableOpacity>
 
-            <Modal
-                visible={visible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setVisible(false)}
-            >
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+        transparent
+        visible={visible}
+      >
+        <TouchableOpacity
+          onPress={() => setVisible(false)}
+          style={[
+            Alignments.fill,
+            { backgroundColor: 'rgba(0,0,0,0.5)' },
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+          ]}
+        >
+          <View style={[
+            ApplicationStyle.backgroundColor.neutral900,
+            { maxHeight: '50%', width: '80%' },
+            ApplicationStyle.borderRadius16,
+            Spaces.padding[16],
+          ]}
+          >
+            <FlatList
+              data={items}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                    style={[
-                        Alignments.fill,
-                        { backgroundColor: 'rgba(0,0,0,0.5)' },
-                        Alignments.justifyCenter,
-                        Alignments.alignCenter
-                    ]}
-                    onPress={() => setVisible(false)}
+                  onPress={() => {
+                        onValueChange(item.value);
+                        setVisible(false);
+                      }}
+                  style={[Spaces.paddingVertical[12], { borderBottomColor: Colors.neutral800, borderBottomWidth: 1 }]}
                 >
-                    <View style={[
-                        ApplicationStyle.backgroundColor.neutral900,
-                        { width: '80%', maxHeight: '50%' },
-                        ApplicationStyle.borderRadius16,
-                        Spaces.padding[16]
-                    ]}>
-                        <FlatList
-                            data={items}
-                            keyExtractor={item => item.value}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[Spaces.paddingVertical[12], { borderBottomWidth: 1, borderBottomColor: Colors.neutral800 }]}
-                                    onPress={() => {
-                                        onValueChange(item.value);
-                                        setVisible(false);
-                                    }}
-                                >
-                                    <Text style={[Fonts.p1, Fonts.neutral00, item.value === value && { color: Colors.primary500 }]}>
-                                        {item.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
+                  <Text style={[Fonts.p1, Fonts.neutral00, item.value === value && { color: Colors.primary500 }]}>
+                        {item.label}
+                      </Text>
                 </TouchableOpacity>
-            </Modal>
-        </View>
-    );
-};
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+}
 
 export default SelectPicker;

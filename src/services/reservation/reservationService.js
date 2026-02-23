@@ -52,9 +52,9 @@ export const getReservations = async (filters = {}) => {
       pageSize = 15,
       q,
       reservationMode,
-      startTime,
       startDateAfter,
       startDateBefore,
+      startTime,
       type,
     } = filters;
 
@@ -152,8 +152,8 @@ export const getReservations = async (filters = {}) => {
       meta: {
         pagination: {
           page: 1,
-          pageSize: 15,
           pageCount: 0,
+          pageSize: 15,
           total: 0,
         },
       },
@@ -164,7 +164,7 @@ export const getReservations = async (filters = {}) => {
 /**
  * Get featured reservations
  * Returns featured items if available, otherwise returns latest reservations chronologically
- * @param {number} [limit=10] - Maximum number of items to return
+ * @param {number} [limit] - Maximum number of items to return
  * @returns {Promise<{data: Reservation[], meta: {isFeatured: boolean, pagination: object}}>}
  */
 export const getFeaturedReservations = async (limit = 10) => {
@@ -186,8 +186,8 @@ export const getFeaturedReservations = async (limit = 10) => {
         isFeatured: false,
         pagination: {
           page: 1,
-          pageSize: 0,
           pageCount: 0,
+          pageSize: 0,
           total: 0,
         },
       },
@@ -263,4 +263,3 @@ export const triggerSosAlert = async (reservationId) => {
   const response = await client.post(`/events/${reservationId}/sos-alert`);
   return response.data;
 };
-

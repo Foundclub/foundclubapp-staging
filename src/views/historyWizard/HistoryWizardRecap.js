@@ -1,25 +1,36 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useHistoryWizard } from './HistoryWizardContext';
-import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
+
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
-const defaultClubIcon = require('@/assets/icons/shield.png');
+import { useHistoryWizard } from './HistoryWizardContext';
 const calendarIcon = require('@/assets/icons/calendar.png');
+const defaultClubIcon = require('@/assets/icons/shield.png');
 
-const HistoryWizardRecap = ({ navigation }) => {
-  const { Colors, Fonts, Spaces, Alignments } = useTheme();
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function HistoryWizardRecap({ navigation }) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useHistoryWizard();
-  
+  const { dispatch, state } = useHistoryWizard();
+
   const createHistoryMutation = useCreateHistory();
   const updateHistoryMutation = useUpdateHistory();
-  
+
   const isEditing = !!state.editingEntry;
   const isLoading = createHistoryMutation.isPending || updateHistoryMutation.isPending;
 
@@ -42,24 +53,23 @@ const HistoryWizardRecap = ({ navigation }) => {
 
   const handleSubmit = () => {
     console.log('DEBUG: HistoryWizardRecap state:', JSON.stringify(state, null, 2));
-    
+
     const data = {
-      club: state.club?.documentId || null,
-      multisport_club: state.multisportClub?.documentId || null,
-      customClubName: state.useCustomClub ? state.customClubName : null,
       category: state.category?.documentId || null,
-      level: state.level?.documentId || null,
-      startYear: state.startYear,
+      club: state.club?.documentId || null,
+      customClubName: state.useCustomClub ? state.customClubName : null,
       endYear: state.isCurrentlyActive ? null : state.endYear,
       isCurrentlyActive: state.isCurrentlyActive,
+      level: state.level?.documentId || null,
+      multisport_club: state.multisportClub?.documentId || null,
+      startYear: state.startYear,
     };
 
     console.log('DEBUG: HistoryWizardRecap submitting data:', JSON.stringify(data, null, 2));
 
-
     const onSuccess = () => {
       dispatch({ type: 'RESET' });
-      
+
       if (state.returnRoute) {
         // If a specific return route was asked (e.g. Onboarding), go there
         navigation.navigate(state.returnRoute);
@@ -73,7 +83,7 @@ const HistoryWizardRecap = ({ navigation }) => {
     };
 
     if (isEditing) {
-      updateHistoryMutation.mutate({ id: state.editingEntry.documentId, data }, { onSuccess });
+      updateHistoryMutation.mutate({ data, id: state.editingEntry.documentId }, { onSuccess });
     } else {
       createHistoryMutation.mutate(data, { onSuccess });
     }
@@ -81,112 +91,120 @@ const HistoryWizardRecap = ({ navigation }) => {
 
   return (
     <WizardStepLayout
-      title="Récapitulatif"
-      subtitle="Vérifie les informations avant de valider"
+      isNextLoading={isLoading}
+      nextLabel={isEditing ? 'Enregistrer' : 'Valider'}
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
-      nextLabel={isEditing ? 'Enregistrer' : 'Valider'}
-      isNextLoading={isLoading}
+      subtitle="Vérifie les informations avant de valider"
+      title="Récapitulatif"
     >
       <View style={[Spaces.gap[32]]}>
         {/* Club Card - Premium Design */}
         <View style={{
           backgroundColor: Colors.neutral800,
+          borderColor: `${Colors.primary500}40`,
           borderRadius: 20,
-          padding: 24,
           borderWidth: 1,
-          borderColor: Colors.primary500 + '40',
+          elevation: 4,
+          padding: 24,
           shadowColor: Colors.primary500,
           shadowOpacity: 0.1,
           shadowRadius: 12,
-          elevation: 4,
-        }}>
+        }}
+        >
           {/* Club Logo - Centered Top */}
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
             <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 20,
-              backgroundColor: '#FFFFFF',
               alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 2,
+              backgroundColor: '#FFFFFF',
               borderColor: Colors.primary500,
-            }}>
+              borderRadius: 20,
+              borderWidth: 2,
+              height: 80,
+              justifyContent: 'center',
+              width: 80,
+            }}
+            >
               <Image
-                source={(state.club?.logo?.url || state.multisportClub?.logo?.url) 
-                  ? { uri: getImageUrl(state.club?.logo?.url || state.multisportClub?.logo?.url) } 
+                resizeMode="contain"
+                source={(state.club?.logo?.url || state.multisportClub?.logo?.url)
+                  ? { uri: getImageUrl(state.club?.logo?.url || state.multisportClub?.logo?.url) }
                   : defaultClubIcon}
                 style={{
-                  width: 56,
                   height: 56,
                   tintColor: (state.club?.logo?.url || state.multisportClub?.logo?.url) ? undefined : Colors.primary500,
+                  width: 56,
                 }}
-                resizeMode="contain"
               />
             </View>
           </View>
 
           {/* Club Name - Centered */}
-          <Text 
-            style={[
-              Fonts.h3Bold, 
-              { 
-                color: Colors.neutral00, 
-                textAlign: 'center',
-                marginBottom: 16,
-              }
-            ]}
+          <Text
             numberOfLines={2}
+            style={[
+              Fonts.h3Bold,
+              {
+                color: Colors.neutral00,
+                marginBottom: 16,
+                textAlign: 'center',
+              },
+            ]}
           >
             {getClubName()}
           </Text>
 
           {/* Tags Row - Centered */}
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'center', 
+          <View style={{
+            flexDirection: 'row',
             flexWrap: 'wrap',
             gap: 8,
+            justifyContent: 'center',
             marginBottom: 16,
-          }}>
+          }}
+          >
             {state.category && (
               <View style={{
                 backgroundColor: Colors.primary500,
+                borderRadius: 20,
                 paddingHorizontal: 14,
                 paddingVertical: 6,
-                borderRadius: 20,
-              }}>
+              }}
+              >
                 <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>{state.category.name}</Text>
               </View>
             )}
             {state.level && (
               <View style={{
                 backgroundColor: 'transparent',
-                paddingHorizontal: 14,
-                paddingVertical: 6,
+                borderColor: Colors.neutral500,
                 borderRadius: 20,
                 borderWidth: 1,
-                borderColor: Colors.neutral500,
-              }}>
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+              }}
+              >
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{state.level.name}</Text>
               </View>
             )}
           </View>
 
           {/* Period - Centered with Icon */}
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'center',
+          <View style={{
+            alignItems: 'center',
             backgroundColor: Colors.neutral900,
-            paddingVertical: 12,
-            paddingHorizontal: 20,
             borderRadius: 12,
-          }}>
-            <Image 
-              source={calendarIcon} 
-              style={{ width: 18, height: 18, marginRight: 8, tintColor: Colors.primary500 }} 
+            flexDirection: 'row',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+          }}
+          >
+            <Image
+              source={calendarIcon}
+              style={{
+                height: 18, marginRight: 8, tintColor: Colors.primary500, width: 18,
+              }}
             />
             <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
               {getPeriodText()}
@@ -194,11 +212,12 @@ const HistoryWizardRecap = ({ navigation }) => {
             {state.isCurrentlyActive && (
               <View style={{
                 backgroundColor: '#10B981',
-                paddingHorizontal: 8,
-                paddingVertical: 2,
                 borderRadius: 10,
                 marginLeft: 10,
-              }}>
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+              }}
+              >
                 <Text style={[Fonts.p3, { color: '#FFFFFF', fontWeight: 'bold' }]}>ACTIF</Text>
               </View>
             )}
@@ -208,12 +227,13 @@ const HistoryWizardRecap = ({ navigation }) => {
         {/* Warning Declaration - Compact */}
         <View style={{
           backgroundColor: Colors.neutral800,
-          borderRadius: 16,
-          padding: 16,
-          borderWidth: 1,
           borderColor: '#F59E0B' + '40',
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          borderRadius: 16,
+          borderWidth: 1,
+          padding: 16,
+        }}
+        >
+          <View style={{ alignItems: 'flex-start', flexDirection: 'row' }}>
             <Text style={{ fontSize: 20, marginRight: 12 }}>⚠️</Text>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, { color: '#F59E0B', marginBottom: 4 }]}>
@@ -228,6 +248,6 @@ const HistoryWizardRecap = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default HistoryWizardRecap;

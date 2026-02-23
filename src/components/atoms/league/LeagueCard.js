@@ -10,8 +10,8 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.isGold]
  * @returns {import('react').ReactElement}
  */
-const LeagueCard = ({ children, style, isGold = false }) => {
-  const { Colors, ApplicationStyle } = useTheme();
+function LeagueCard({ children, isGold = false, style }) {
+  const { ApplicationStyle, Colors } = useTheme();
 
   return (
     <View
@@ -25,7 +25,7 @@ const LeagueCard = ({ children, style, isGold = false }) => {
       {children}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {

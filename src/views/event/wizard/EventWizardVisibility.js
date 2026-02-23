@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useEventWizard } from './EventWizardContext';
 
 const VISIBILITY_OPTIONS = [
   {
+    descriptionKey: 'eventWizard.steps.visibility.publicDesc',
     key: 'open',
     titleKey: 'eventWizard.steps.visibility.public',
-    descriptionKey: 'eventWizard.steps.visibility.publicDesc',
   },
   {
+    descriptionKey: 'eventWizard.steps.visibility.privateDesc',
     key: 'closed',
     titleKey: 'eventWizard.steps.visibility.private',
-    descriptionKey: 'eventWizard.steps.visibility.privateDesc',
   },
 ];
 
-const EventWizardVisibility = ({ navigation }) => {
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardVisibility({ navigation }) {
   const {
     ApplicationStyle,
     Colors,
@@ -28,7 +36,7 @@ const EventWizardVisibility = ({ navigation }) => {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const [sessionStatus, setSessionStatus] = useState(state.sessionStatus || 'open');
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
@@ -38,20 +46,20 @@ const EventWizardVisibility = ({ navigation }) => {
 
   const handleNext = () => {
     dispatch({
-      type: 'SET_META',
       payload: { sessionStatus },
+      type: 'SET_META',
     });
     navigation.navigate(RouteNames.EventWizardLocation);
   };
 
   return (
     <WizardStepLayout
-      stepCount={10}
-      stepIndex={8}
-      title={t('eventWizard.steps.visibility.title')}
-      subtitle={t('eventWizard.steps.visibility.subtitle')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
+      stepCount={10}
+      stepIndex={8}
+      subtitle={t('eventWizard.steps.visibility.subtitle')}
+      title={t('eventWizard.steps.visibility.title')}
     >
       <View style={[Spaces.gap[16]]}>
         {VISIBILITY_OPTIONS.map((option) => {
@@ -86,6 +94,6 @@ const EventWizardVisibility = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardVisibility;

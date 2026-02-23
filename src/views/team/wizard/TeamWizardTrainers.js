@@ -1,15 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
+
+import { USER_ROLES } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
-import { USER_ROLES } from '@/domains/auth/authUseCases';
-import useAuth from '@/domains/auth/useAuth';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetClub } from '@/services/club/clubQueries';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetClub } from '@/services/club/clubQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -20,7 +23,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 function TeamWizardTrainers({ navigation }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
 
   const { data: clubData, refetch: refetchClubData } = useGetClub(state.clubId, {
@@ -60,7 +63,7 @@ function TeamWizardTrainers({ navigation }) {
     const next = Array.isArray(state.trainers) ? [...state.trainers] : [];
     if (!next.includes(createdTrainer.documentId)) {
       next.push(createdTrainer.documentId);
-      dispatch({ type: 'SET_TRAINERS', payload: next });
+      dispatch({ payload: next, type: 'SET_TRAINERS' });
     }
 
     refetchClubData();
@@ -69,27 +72,27 @@ function TeamWizardTrainers({ navigation }) {
   return (
     <>
       <WizardStepLayout
-        title={t('teamWizard.steps.trainers.title', 'Entraineurs (optionnel)')}
-        subtitle={t('teamWizard.steps.trainers.subtitle', 'Ajoute un ou plusieurs entraineurs pour encadrer cette equipe.')}
-        stepIndex={7}
-        stepCount={8}
+        nextLabel={t('common.next', 'Suivant')}
         onBack={() => navigation.navigate(RouteNames.TeamWizardLevel)}
         onNext={() => navigation.navigate(RouteNames.TeamWizardRecap)}
         onSkip={() => {}}
-        nextLabel={t('common.next', 'Suivant')}
+        stepCount={8}
+        stepIndex={7}
+        subtitle={t('teamWizard.steps.trainers.subtitle', 'Ajoute un ou plusieurs entraineurs pour encadrer cette equipe.')}
+        title={t('teamWizard.steps.trainers.title', 'Entraineurs (optionnel)')}
       >
         <View>
           <AutocompleteSelect
-            isMulti
             actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
-            onActionPress={() => setIsCreateTrainerModalVisible(true)}
+            isMulti
             label={t('teamEdit.fields.trainers.label')}
+            onActionPress={() => setIsCreateTrainerModalVisible(true)}
             options={trainerOptions}
             placeholder={t('teamEdit.fields.trainers.placeholder')}
             setValue={(/** @type {Option[] | null} */ options) => {
               dispatch({
-                type: 'SET_TRAINERS',
                 payload: options?.map((option) => option.value) || [],
+                type: 'SET_TRAINERS',
               });
             }}
             value={selectedValue}

@@ -2,7 +2,7 @@ import client from '@/services/client';
 
 /**
  * Get recruitment ads matching player profile
- * @param {Object} filters - Filters for matching
+ * @param {object} filters - Filters for matching
  * @param {string} [filters.sport] - Sport to match
  * @param {string} [filters.section] - Section (Masculine/Féminine)
  * @param {string} [filters.category] - Category (U15, Senior, etc.)
@@ -16,6 +16,13 @@ export const getRecruitmentAds = async (filters = {}) => {
   try {
     const { page = 1, pageSize = 20 } = filters;
     const params = {
+      filters: {
+        isActive: true,
+      },
+      pagination: {
+        page,
+        pageSize,
+      },
       populate: [
         'team',
         'team.club',
@@ -27,15 +34,8 @@ export const getRecruitmentAds = async (filters = {}) => {
         'candidates',
         'category',
         'section',
-        'level'
+        'level',
       ],
-      filters: {
-        isActive: true,
-      },
-      pagination: {
-        page,
-        pageSize,
-      },
     };
 
     // Apply filters
@@ -64,7 +64,7 @@ export const getRecruitmentAds = async (filters = {}) => {
 /**
  * Get a single recruitment ad by ID
  * @param {string} adId - Ad documentId
- * @returns {Promise<Object>} Ad data
+ * @returns {Promise<object>} Ad data
  */
 export const getRecruitmentAd = async (adId) => {
   try {
@@ -80,7 +80,7 @@ export const getRecruitmentAd = async (adId) => {
         'candidates',
         'category',
         'section',
-        'level'
+        'level',
       ],
     };
 
@@ -100,6 +100,10 @@ export const getMyRecruitmentAds = async () => {
   try {
     const response = await client.get('/recruitment-ads', {
       params: {
+        filters: {
+          // The backend should filter by author = current user
+          // We'll rely on the controller to handle this
+        },
         populate: [
           'team',
           'team.club',
@@ -111,12 +115,8 @@ export const getMyRecruitmentAds = async () => {
           'candidates',
           'category',
           'section',
-          'level'
+          'level',
         ],
-        filters: {
-          // The backend should filter by author = current user
-          // We'll rely on the controller to handle this
-        },
         sort: ['createdAt:desc'],
       },
     });
@@ -129,7 +129,7 @@ export const getMyRecruitmentAds = async () => {
 
 /**
  * Create a recruitment ad
- * @param {Object} adData - Ad data
+ * @param {object} adData - Ad data
  * @param {string} adData.team - Team documentId
  * @param {string} adData.position - Position required
  * @param {string} [adData.minLevel] - Minimum level required
@@ -137,7 +137,7 @@ export const getMyRecruitmentAds = async () => {
  * @param {string} [adData.type] - 'saison' or 'ponctuel'
  * @param {string} [adData.validationMode] - 'auto' or 'manual'
  * @param {string} [adData.event] - Event documentId (for ponctuel type)
- * @returns {Promise<Object>} Created ad
+ * @returns {Promise<object>} Created ad
  */
 export const createRecruitmentAd = async (adData) => {
   try {
@@ -158,7 +158,7 @@ export const createRecruitmentAd = async (adData) => {
 /**
  * Apply to a recruitment ad
  * @param {string} adId - Ad documentId
- * @returns {Promise<Object>} Application result
+ * @returns {Promise<object>} Application result
  */
 export const applyToRecruitmentAd = async (adId) => {
   try {
@@ -173,7 +173,7 @@ export const applyToRecruitmentAd = async (adId) => {
 /**
  * Renew a recruitment ad (extend by 30 days)
  * @param {string} adId - Ad documentId
- * @returns {Promise<Object>} Renewal result
+ * @returns {Promise<object>} Renewal result
  */
 export const renewRecruitmentAd = async (adId) => {
   try {
@@ -188,8 +188,8 @@ export const renewRecruitmentAd = async (adId) => {
 /**
  * Update a recruitment ad
  * @param {string} adId - Ad documentId
- * @param {Object} adData - Updated data
- * @returns {Promise<Object>} Updated ad
+ * @param {object} adData - Updated data
+ * @returns {Promise<object>} Updated ad
  */
 export const updateRecruitmentAd = async (adId, adData) => {
   try {
@@ -224,8 +224,15 @@ export const deleteRecruitmentAd = async (adId) => {
 export const getMyApplications = async (userId) => {
   try {
     if (!userId) return [];
-    
+
     const params = {
+      filters: {
+        candidates: {
+          id: {
+            $eq: userId,
+          },
+        },
+      },
       populate: [
         'team',
         'team.club',
@@ -234,15 +241,8 @@ export const getMyApplications = async (userId) => {
         'event',
         'category',
         'section',
-        'level'
+        'level',
       ],
-      filters: {
-        candidates: {
-          id: {
-            $eq: userId
-          }
-        }
-      },
       sort: ['createdAt:desc'],
     };
 

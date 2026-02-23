@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -9,6 +11,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import Input from '@/components/molecules/input/Input';
+
 import {
   getParisNowAsDeviceDate,
   toDeviceDateFromParisInstant,
@@ -193,7 +196,7 @@ function VenueProposalModal({
     const startUtcDate = toParisUtcDateFromLocalSelection(finalStartDate);
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
-      Alert.alert('Erreur', "Impossible de convertir le creneau selectionne.");
+      Alert.alert('Erreur', 'Impossible de convertir le creneau selectionne.');
       return;
     }
 
@@ -235,12 +238,12 @@ function VenueProposalModal({
     if (!ref) return;
 
     if (typeof ref.scrollTo === 'function') {
-      ref.scrollTo({ y, animated });
+      ref.scrollTo({ animated, y });
       return;
     }
 
     if (typeof ref.scrollToOffset === 'function') {
-      ref.scrollToOffset({ offset: y, animated });
+      ref.scrollToOffset({ animated, offset: y });
     }
   }, []);
 

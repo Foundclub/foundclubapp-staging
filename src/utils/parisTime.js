@@ -11,14 +11,14 @@ const LEAGUE_TIMEZONE = 'Europe/Paris';
  */
 const getZonedDateParts = (date, timeZone = LEAGUE_TIMEZONE) => {
   const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
     hour12: false,
+    minute: '2-digit',
+    month: '2-digit',
+    second: '2-digit',
+    timeZone,
+    year: 'numeric',
   });
 
   const parts = formatter.formatToParts(date);
@@ -50,7 +50,7 @@ const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
     localDateTime.hour,
     localDateTime.minute,
     localDateTime.second || 0,
-    0
+    0,
   );
 
   const desiredMinutes = Date.UTC(
@@ -60,7 +60,7 @@ const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
     localDateTime.hour,
     localDateTime.minute,
     localDateTime.second || 0,
-    0
+    0,
   ) / 60000;
 
   for (let i = 0; i < 4; i += 1) {
@@ -72,7 +72,7 @@ const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
       actual.hour,
       actual.minute,
       actual.second || 0,
-      0
+      0,
     ) / 60000;
 
     const diffMinutes = desiredMinutes - actualMinutes;
@@ -90,12 +90,12 @@ const toUtcFromZonedLocal = (localDateTime, timeZone = LEAGUE_TIMEZONE) => {
 export const toParisUtcDateFromLocalSelection = (localDate) => {
   if (!(localDate instanceof Date) || Number.isNaN(localDate.getTime())) return null;
   return toUtcFromZonedLocal({
-    year: localDate.getFullYear(),
-    month: localDate.getMonth() + 1,
     day: localDate.getDate(),
     hour: localDate.getHours(),
     minute: localDate.getMinutes(),
+    month: localDate.getMonth() + 1,
     second: localDate.getSeconds(),
+    year: localDate.getFullYear(),
   }, LEAGUE_TIMEZONE);
 };
 

@@ -15,11 +15,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import useTheme from '@/theme/themeContext';
+
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 
 import SearchScreenShell from './components/SearchScreenShell';
 
@@ -78,15 +79,23 @@ const isCloseLayout = (a, b) => {
 const getFallbackAnchor = (target, viewportWidth, viewportHeight) => {
   const width = Math.max(120, viewportWidth - 56);
   if (target === 'header') {
-    return { height: 42, width: Math.min(260, width), x: (viewportWidth - Math.min(260, width)) / 2, y: 150 };
+    return {
+      height: 42, width: Math.min(260, width), x: (viewportWidth - Math.min(260, width)) / 2, y: 150,
+    };
   }
   if (target === 'switcher') {
-    return { height: 44, width: Math.min(viewportWidth - 28, 360), x: 14, y: 206 };
+    return {
+      height: 44, width: Math.min(viewportWidth - 28, 360), x: 14, y: 206,
+    };
   }
   if (target === 'filters') {
-    return { height: 56, width: viewportWidth - 40, x: 20, y: 414 };
+    return {
+      height: 56, width: viewportWidth - 40, x: 20, y: 414,
+    };
   }
-  return { height: 208, width: viewportWidth - 30, x: 15, y: Math.round(viewportHeight * 0.56) };
+  return {
+    height: 208, width: viewportWidth - 30, x: 15, y: Math.round(viewportHeight * 0.56),
+  };
 };
 
 const getFocusLayout = (target, anchor, viewportWidth, viewportHeight) => {
@@ -295,10 +304,30 @@ function SearchEventsScreen({ navigation, route }) {
         visible={isTutorialVisible}
       >
         <View style={styles.modalRoot}>
-          <View pointerEvents="none" style={[styles.overlayPart, { backgroundColor: Colors.neutral900, height: topHeight, left: 0, opacity: 0.5, right: 0, top: 0 }]} />
-          <View pointerEvents="none" style={[styles.overlayPart, { backgroundColor: Colors.neutral900, bottom: 0, left: 0, opacity: 0.5, right: 0, top: topHeight + focusLayout.height }]} />
-          <View pointerEvents="none" style={[styles.overlayPart, { backgroundColor: Colors.neutral900, height: focusLayout.height, left: 0, opacity: 0.5, top: topHeight, width: leftWidth }]} />
-          <View pointerEvents="none" style={[styles.overlayPart, { backgroundColor: Colors.neutral900, height: focusLayout.height, opacity: 0.5, right: 0, top: topHeight, width: rightWidth }]} />
+          <View
+            pointerEvents="none"
+            style={[styles.overlayPart, {
+              backgroundColor: Colors.neutral900, height: topHeight, left: 0, opacity: 0.5, right: 0, top: 0,
+            }]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.overlayPart, {
+              backgroundColor: Colors.neutral900, bottom: 0, left: 0, opacity: 0.5, right: 0, top: topHeight + focusLayout.height,
+            }]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.overlayPart, {
+              backgroundColor: Colors.neutral900, height: focusLayout.height, left: 0, opacity: 0.5, top: topHeight, width: leftWidth,
+            }]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.overlayPart, {
+              backgroundColor: Colors.neutral900, height: focusLayout.height, opacity: 0.5, right: 0, top: topHeight, width: rightWidth,
+            }]}
+          />
 
           <View
             pointerEvents="none"
@@ -360,7 +389,9 @@ function SearchEventsScreen({ navigation, route }) {
 
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral400]}>
-                  {stepIndex + 1}/{EVENT_TUTORIAL_STEPS.length}
+                  {stepIndex + 1}
+                  /
+                  {EVENT_TUTORIAL_STEPS.length}
                 </Text>
                 <Pressable
                   onPress={handleNextStep}

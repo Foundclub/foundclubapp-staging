@@ -1,21 +1,32 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable, StyleSheet, Text, View,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+
 import useTheme from '@/theme/themeContext';
 
 const AUTO_HIDE_MS = 4000;
 
-const MatchRecapBanner = ({
-  visible,
-  payload,
+/**
+ *
+ * @param root0
+ * @param root0.onDismiss
+ * @param root0.onOpenDetails
+ * @param root0.payload
+ * @param root0.visible
+ */
+function MatchRecapBanner({
   onDismiss,
   onOpenDetails,
-}) => {
+  payload,
+  visible,
+}) {
   const { Colors, Fonts } = useTheme();
   const translateY = useSharedValue(-110);
   const opacity = useSharedValue(0);
@@ -66,10 +77,10 @@ const MatchRecapBanner = ({
       >
         <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Recap match</Text>
         <View style={styles.row}>
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }]} numberOfLines={1}>{resultLabel}</Text>
+          <Text numberOfLines={1} style={[Fonts.h4, { color: Colors.neutral00 }]}>{resultLabel}</Text>
           <Text style={[Fonts.h4Bold, { color: Colors.primary500 }]}>{scoreLabel}</Text>
         </View>
-        <Text style={[Fonts.p3, { color: Colors.neutral300 }]} numberOfLines={1}>
+        <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
           Touchez pour voir le detail complet.
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
@@ -78,7 +89,7 @@ const MatchRecapBanner = ({
       </Pressable>
     </Animated.View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {

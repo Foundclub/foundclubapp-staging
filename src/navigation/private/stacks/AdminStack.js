@@ -1,24 +1,27 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
+import AdminClaimList from '@/views/admin/AdminClaimList';
+import AdminClubDetail from '@/views/admin/AdminClubDetail';
+import AdminClubList from '@/views/admin/AdminClubList';
+import AdminDashboard from '@/views/admin/AdminDashboard';
+import AdminEvents from '@/views/admin/AdminEvents';
+import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
+import AdminReports from '@/views/admin/AdminReports';
+import AdminRevenue from '@/views/admin/AdminRevenue';
+import AdminUserDetail from '@/views/admin/AdminUserDetail';
+import AdminUserList from '@/views/admin/AdminUserList';
+import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
+
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
-import AdminDashboard from '@/views/admin/AdminDashboard';
-import AdminEvents from '@/views/admin/AdminEvents';
-import AdminReports from '@/views/admin/AdminReports';
-import AdminRevenue from '@/views/admin/AdminRevenue';
-import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
-import AdminClaimList from '@/views/admin/AdminClaimList';
-import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
-import AdminUserList from '@/views/admin/AdminUserList';
-import AdminUserDetail from '@/views/admin/AdminUserDetail';
-import AdminClubList from '@/views/admin/AdminClubList';
-import AdminClubDetail from '@/views/admin/AdminClubDetail';
-import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
-
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function AdminStack() {
   const { t } = useTranslation();
 

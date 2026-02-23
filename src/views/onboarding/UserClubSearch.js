@@ -1,9 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, Text, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -14,7 +17,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 /**
  * User club search status screen
@@ -24,7 +26,9 @@ function UserClubSearch({ navigation }) {
   const [isLooking, setIsLooking] = useState(/** @type {boolean | null} */ (null));
 
   const { getNextOnboardingRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
@@ -93,10 +97,10 @@ function UserClubSearch({ navigation }) {
               Spaces.padding[24],
               Alignments.alignCenter,
               {
+                backgroundColor: isLooking === true ? `${Colors.primary500}20` : Colors.neutral800,
+                borderColor: isLooking === true ? Colors.primary500 : Colors.neutral700,
                 borderRadius: 16,
                 borderWidth: 2,
-                borderColor: isLooking === true ? Colors.primary500 : Colors.neutral700,
-                backgroundColor: isLooking === true ? Colors.primary500 + '20' : Colors.neutral800,
               },
             ]}
           >
@@ -114,10 +118,10 @@ function UserClubSearch({ navigation }) {
               Spaces.padding[24],
               Alignments.alignCenter,
               {
+                backgroundColor: isLooking === false ? `${Colors.primary500}20` : Colors.neutral800,
+                borderColor: isLooking === false ? Colors.primary500 : Colors.neutral700,
                 borderRadius: 16,
                 borderWidth: 2,
-                borderColor: isLooking === false ? Colors.primary500 : Colors.neutral700,
-                backgroundColor: isLooking === false ? Colors.primary500 + '20' : Colors.neutral800,
               },
             ]}
           >

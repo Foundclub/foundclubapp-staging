@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation } from '@tanstack/react-query';
 import {
   useCallback,
   useEffect,
@@ -14,27 +14,28 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
-import { deleteAccount } from '@/services/auth/authService';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
-
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { deleteAccount } from '@/services/auth/authService';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
@@ -52,17 +53,17 @@ function Profile({ navigation, route }) {
   const [{ fcmToken }] = useAppContext();
   const { getClubInitials } = useClub();
   const {
+    addAccount,
+    authSessions,
     canEditClub,
     canJoinClub,
     canManageTeam,
     logoutMutation,
     refetchUserData,
+    switchAccount,
     userData,
     userDataError,
     userDataLoading,
-    authSessions,
-    switchAccount,
-    addAccount,
   } = useAuth();
 
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
@@ -84,14 +85,10 @@ function Profile({ navigation, route }) {
   }, [userData, canEditClub]);
 
   // Check if user is admin of a MultisportClub
-  const canManageMultisportClub = useMemo(() => {
-    return multisportClubs.length > 0;
-  }, [multisportClubs]);
+  const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
 
   // Get the first multisport club for quick access
-  const firstMultisportClub = useMemo(() => {
-    return multisportClubs[0] || null;
-  }, [multisportClubs]);
+  const firstMultisportClub = useMemo(() => multisportClubs[0] || null, [multisportClubs]);
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
@@ -113,8 +110,8 @@ function Profile({ navigation, route }) {
 
   const handleOpenClub = () => {
     navigation.navigate(RouteNames.ClubStack, {
-      screen: RouteNames.Club,
       params: { clubId: userData?.club?.documentId },
+      screen: RouteNames.Club,
     });
   };
 
@@ -134,24 +131,24 @@ function Profile({ navigation, route }) {
    */
   const handleOpenTeam = (teamId) => {
     navigation.navigate(RouteNames.TeamStack, {
-      screen: RouteNames.TeamDetails,
       params: { teamId },
+      screen: RouteNames.TeamDetails,
     });
   };
 
   const deleteAccountMutation = useMutation({
     mutationFn: deleteAccount,
-    onSuccess: () => {
-      logoutMutation.mutate(fcmToken || '');
-    },
     onError: (error) => {
       const normalizedError = /** @type {any} */ (error);
       // Extract specific error message if available
-      const errorMessage = normalizedError?.response?.data?.error?.message 
-        || normalizedError?.message 
+      const errorMessage = normalizedError?.response?.data?.error?.message
+        || normalizedError?.message
         || t('profile.alerts.deleteError', 'Une erreur est survenue lors de la suppression du compte.');
 
       Alert.alert(t('common.error'), errorMessage);
+    },
+    onSuccess: () => {
+      logoutMutation.mutate(fcmToken || '');
     },
   });
 
@@ -223,6 +220,7 @@ function Profile({ navigation, route }) {
         >
           {userData?.club?.logo?.url ? (
             <ProfileAvatar
+              imageStyle={{ borderRadius: 60 }}
               imageUrl={userData.club.logo.url}
               size={60}
               style={[
@@ -230,7 +228,6 @@ function Profile({ navigation, route }) {
                 ApplicationStyle.borderColor.neutral00,
                 { borderRadius: 60 },
               ]}
-              imageStyle={{ borderRadius: 60 }}
             />
           ) : (
             <TeamShield
@@ -249,14 +246,14 @@ function Profile({ navigation, route }) {
           <Text
             numberOfLines={2}
             style={[Fonts.p1Black, Fonts.neutral00,
-            { maxWidth: '90%' }]}
+              { maxWidth: '90%' }]}
           >
             {userData?.club?.name}
           </Text>
         </TouchableOpacity>
       );
     }
-    
+
     // Check if user is admin of a MultisportClub (Dirigeant Omnisport)
     if (multisportClubs.length > 0) {
       const cm = multisportClubs[0];
@@ -271,6 +268,7 @@ function Profile({ navigation, route }) {
         >
           {cm?.logo?.url ? (
             <ProfileAvatar
+              imageStyle={{ borderRadius: 60 }}
               imageUrl={cm.logo.url}
               size={60}
               style={[
@@ -278,7 +276,6 @@ function Profile({ navigation, route }) {
                 ApplicationStyle.borderColor.primary500,
                 { borderRadius: 60 },
               ]}
-              imageStyle={{ borderRadius: 60 }}
             />
           ) : (
             <TeamShield
@@ -293,19 +290,20 @@ function Profile({ navigation, route }) {
           />
           <View style={[Spaces.gap[4], { flex: 1 }]}>
             <Text
-              numberOfLines={1}
               ellipsizeMode="tail"
+              numberOfLines={1}
               style={[Fonts.p1Black, Fonts.neutral00]}
             >
               {cm?.name}
             </Text>
             <View style={{
+              alignSelf: 'flex-start',
               backgroundColor: '#01b3f4', // primary500
+              borderRadius: 3,
               paddingHorizontal: 6,
               paddingVertical: 1,
-              borderRadius: 3,
-              alignSelf: 'flex-start',
-            }}>
+            }}
+            >
               <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' }}>
                 CM
               </Text>
@@ -314,7 +312,7 @@ function Profile({ navigation, route }) {
         </TouchableOpacity>
       );
     }
-    
+
     if (canJoinClub || userData?.role?.name === USER_ROLES.president) {
       return (
         <Button
@@ -338,6 +336,7 @@ function Profile({ navigation, route }) {
         >
           {team?.club?.logo?.url ? (
             <ProfileAvatar
+              imageStyle={{ borderRadius: 60 }}
               imageUrl={team.club.logo.url}
               size={60}
               style={[
@@ -345,7 +344,6 @@ function Profile({ navigation, route }) {
                 ApplicationStyle.borderColor.neutral00,
                 { borderRadius: 60 },
               ]}
-              imageStyle={{ borderRadius: 60 }}
             />
           ) : (
             <TeamShield
@@ -461,8 +459,8 @@ function Profile({ navigation, route }) {
 
         return (
           <TouchableOpacity
-            key={index}
             disabled={Boolean(switchingAccountId)}
+            key={index}
             onPress={() => !isCurrent && !switchingAccountId && handleSwitchAccount(session)}
             style={[
               Alignments.row,
@@ -470,7 +468,7 @@ function Profile({ navigation, route }) {
               Spaces.padding[12],
               ApplicationStyle.borderRadius8,
               ApplicationStyle.backgroundColor.primary700,
-              isCurrent && { borderWidth: 1, borderColor: '#01b3f4' },
+              isCurrent && { borderColor: '#01b3f4', borderWidth: 1 },
               switchingAccountId && { opacity: 0.6 },
             ]}
           >
@@ -480,7 +478,7 @@ function Profile({ navigation, route }) {
               style={{ marginRight: 12 }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]} numberOfLines={1}>
+              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                 {displayName}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -511,8 +509,8 @@ function Profile({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -529,61 +527,61 @@ function Profile({ navigation, route }) {
           Alignments.fill,
         ]}
       >
-      <View style={[
-        Alignments.justifyCenter,
-        Alignments.alignCenter,
-        Spaces.gap[12]]}
-      >
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('profile.titles.profile').toUpperCase()}
-        </Text>
         <View style={[
-          ApplicationStyle.separator,
-          ApplicationStyle.backgroundColor.neutral00,
-          { width: 98 }]}
-        />
-        <View style={[{ maxWidth: '80%' }, Alignments.alignCenter]}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.primary500]}>
-            {userData?.role?.name?.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-      <ScrollView
-        contentContainerStyle={[
-          Spaces.gap[32],
-        ]}
-        refreshControl={(
-          <RefreshControl
-            onRefresh={refetchUserData}
-            refreshing={userDataLoading}
-          />
-        )}
-        showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
-      >
-
-        <WithDataWrapper
-          error={userDataError?.message}
-          isLoading={userDataLoading}
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[12]]}
         >
-          <View
-            style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              Spaces.gap[24],
-            ]}
-          >
-            <ProfileAvatar
-              imageUrl={userData?.avatar?.url}
-              size={80}
-              style={[
-                ApplicationStyle.borderColor.neutral00,
-                ApplicationStyle.borderWidth1,
-                { borderRadius: 80 },
-              ]}
-              imageStyle={{ borderRadius: 80 }}
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('profile.titles.profile').toUpperCase()}
+          </Text>
+          <View style={[
+            ApplicationStyle.separator,
+            ApplicationStyle.backgroundColor.neutral00,
+            { width: 98 }]}
+          />
+          <View style={[{ maxWidth: '80%' }, Alignments.alignCenter]}>
+            <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.primary500]}>
+              {userData?.role?.name?.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+        <ScrollView
+          contentContainerStyle={[
+            Spaces.gap[32],
+          ]}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={refetchUserData}
+              refreshing={userDataLoading}
             />
-            {userData?.firstname && userData?.lastname && (
+        )}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+
+          <WithDataWrapper
+            error={userDataError?.message}
+            isLoading={userDataLoading}
+          >
+            <View
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.gap[24],
+              ]}
+            >
+              <ProfileAvatar
+                imageStyle={{ borderRadius: 80 }}
+                imageUrl={userData?.avatar?.url}
+                size={80}
+                style={[
+                  ApplicationStyle.borderColor.neutral00,
+                  ApplicationStyle.borderWidth1,
+                  { borderRadius: 80 },
+                ]}
+              />
+              {userData?.firstname && userData?.lastname && (
               <View style={[
                 { maxWidth: '70%' },
                 Alignments.justifyStart,
@@ -602,63 +600,67 @@ function Profile({ navigation, route }) {
                 </Text>
                 {renderUserClub()}
               </View>
-            )}
-          </View>
-        </WithDataWrapper>
-        {isProfileMainTutorial ? (
-          <OnboardingWrapper
-            description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
-            id="profile-main-actions"
-            order={1}
-            spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
-            title="Actions profil"
-          >
-            {profileActionsContent}
-          </OnboardingWrapper>
-        ) : profileActionsContent}
+              )}
+            </View>
+          </WithDataWrapper>
+          {isProfileMainTutorial ? (
+            <OnboardingWrapper
+              description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
+              id="profile-main-actions"
+              order={1}
+              spotlight={{
+                borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+              }}
+              title="Actions profil"
+            >
+              {profileActionsContent}
+            </OnboardingWrapper>
+          ) : profileActionsContent}
 
-        {/* Sports History Section */}
-        <UserHistorySection
-          userId={userData?.documentId || ''}
-          isOwnProfile={true}
-          bestLevel={userData?.bestLevel}
-          preferredSport={userData?.preferredSport}
-          onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
-          onEditPress={(/** @type {any} */ entry) => {
+          {/* Sports History Section */}
+          <UserHistorySection
+            bestLevel={userData?.bestLevel}
+            isOwnProfile
+            onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
+            onEditPress={(/** @type {any} */ entry) => {
             // TODO: Pass entry to wizard for editing
-            navigation.navigate(RouteNames.HistoryWizardClub);
-          }}
-        />
+              navigation.navigate(RouteNames.HistoryWizardClub);
+            }}
+            preferredSport={userData?.preferredSport}
+            userId={userData?.documentId || ''}
+          />
 
-        {isLogoutTutorial ? (
-          <OnboardingWrapper
-            description="Ce bouton lance la confirmation de deconnexion de votre session."
-            id="profile-logout-action"
-            order={2}
-            spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
-            title="Deconnexion"
-          >
+          {isLogoutTutorial ? (
+            <OnboardingWrapper
+              description="Ce bouton lance la confirmation de deconnexion de votre session."
+              id="profile-logout-action"
+              order={2}
+              spotlight={{
+                borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+              }}
+              title="Deconnexion"
+            >
+              <Button
+                onPress={handleLogout}
+                title={t('profile.actions.logout')}
+                variant="Secondary"
+              />
+            </OnboardingWrapper>
+          ) : (
             <Button
               onPress={handleLogout}
               title={t('profile.actions.logout')}
               variant="Secondary"
             />
-          </OnboardingWrapper>
-        ) : (
-          <Button
-            onPress={handleLogout}
-            title={t('profile.actions.logout')}
-            variant="Secondary"
-          />
-        )}
-        <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
-          <TouchableOpacity onPress={handleDeleteAccount}>
-            <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-              {t('profile.actions.deleteAccount')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          )}
+          <View style={[Alignments.fullWidth, Alignments.alignCenter]}>
+            <TouchableOpacity onPress={handleDeleteAccount}>
+              <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                {t('profile.actions.deleteAccount')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
         <BottomModal
           close={() => setIsAccountModalVisible(false)}
           hideCloseButton
@@ -669,7 +671,9 @@ function Profile({ navigation, route }) {
               description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
               id="profile-account-switcher-modal"
               order={1}
-              spotlight={{ borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+              spotlight={{
+                borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+              }}
               title="Changer de compte"
             >
               {accountSwitcherContent}
@@ -682,5 +686,3 @@ function Profile({ navigation, route }) {
 }
 
 export default Profile;
-
-

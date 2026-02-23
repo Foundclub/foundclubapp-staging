@@ -3,7 +3,7 @@
  */
 
 /**
- * @typedef {Object} TacticalPlayer
+ * @typedef {object} TacticalPlayer
  * @property {string} [id] - Unique player identifier
  * @property {string} [documentId] - Strapi document ID
  * @property {string} [firstname] - First name
@@ -14,7 +14,7 @@
  */
 
 /**
- * @typedef {Object} FieldPlayer
+ * @typedef {object} FieldPlayer
  * @property {string} [id] - Player ID
  * @property {string} [documentId] - Strapi document ID
  * @property {string} [firstname] - First name
@@ -27,7 +27,7 @@
  */
 
 /**
- * @typedef {Object} TacticalComposition
+ * @typedef {object} TacticalComposition
  * @property {string} [sportContext]
  * @property {FieldPlayer[]} placements
  */

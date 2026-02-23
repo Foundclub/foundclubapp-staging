@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
-import { Image, NativeModules, StyleSheet, Text, UIManager, View } from 'react-native';
+import {
+  Image, NativeModules, StyleSheet, Text, UIManager, View,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,13 +9,16 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+
+import useTheme from '@/theme/themeContext';
+
+import { clampLeagueDivision } from '@/utils/league/division';
+
 import Div1Badge from '@/assets/league/divisions/Div-1.svg';
 import Div2Badge from '@/assets/league/divisions/Div-2.svg';
 import Div3Badge from '@/assets/league/divisions/Div-3.svg';
 import Div4Badge from '@/assets/league/divisions/Div-4.svg';
 import Div5Badge from '@/assets/league/divisions/Div-5.svg';
-import useTheme from '@/theme/themeContext';
-import { clampLeagueDivision } from '@/utils/league/division';
 
 const BADGE_COMPONENTS = /** @type {Record<number, import('react').ComponentType<any>>} */ ({
   1: Div1Badge,
@@ -57,23 +62,33 @@ const getLegacyImageForDivision = (images, division) => {
   return images?.[key] || images?.division05 || images?.shield;
 };
 
-const DivisionBadge = ({
+/**
+ *
+ * @param root0
+ * @param root0.division
+ * @param root0.logoScale
+ * @param root0.preferRaster
+ * @param root0.showChrome
+ * @param root0.showLabel
+ * @param root0.size
+ */
+function DivisionBadge({
   division = 5,
   logoScale = 1,
   preferRaster = true,
   showChrome = true,
   showLabel = true,
   size = 54,
-}) => {
+}) {
   const { Colors, Fonts, Images } = useTheme();
   const normalizedDivision = clampLeagueDivision(division);
   const BadgeComponent = useMemo(
     () => getBadgeComponent(normalizedDivision),
-    [normalizedDivision]
+    [normalizedDivision],
   );
   const legacyImageSource = useMemo(
     () => getLegacyImageForDivision(Images, normalizedDivision),
-    [Images, normalizedDivision]
+    [Images, normalizedDivision],
   );
 
   const pulse = useSharedValue(0.14);
@@ -82,7 +97,7 @@ const DivisionBadge = ({
     pulse.value = withRepeat(
       withTiming(0.32, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
       -1,
-      true
+      true,
     );
   }, [pulse]);
 
@@ -132,9 +147,9 @@ const DivisionBadge = ({
               <BadgeComponent height={scaledIconSize} width={scaledIconSize} />
             ) : (
               <Image
+                resizeMode="contain"
                 source={legacyImageSource}
                 style={{ height: scaledIconSize, width: scaledIconSize }}
-                resizeMode="contain"
               />
             )}
           </View>
@@ -145,9 +160,9 @@ const DivisionBadge = ({
             <BadgeComponent height={scaledIconSize} width={scaledIconSize} />
           ) : (
             <Image
+              resizeMode="contain"
               source={legacyImageSource}
               style={{ height: scaledIconSize, width: scaledIconSize }}
-              resizeMode="contain"
             />
           )}
         </View>
@@ -162,12 +177,15 @@ const DivisionBadge = ({
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>DIV {normalizedDivision}</Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+            DIV
+            {normalizedDivision}
+          </Text>
         </View>
       ) : null}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   glow: {
@@ -179,13 +197,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
+    elevation: 6,
     justifyContent: 'center',
     overflow: 'hidden',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { height: 2, width: 0 },
     shadowOpacity: 0.24,
     shadowRadius: 8,
-    elevation: 6,
   },
   labelChip: {
     borderRadius: 999,

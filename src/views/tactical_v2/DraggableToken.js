@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import {
+  Image, StyleSheet, Text, View,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 
 import useTheme from '@/theme/themeContext';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -14,8 +17,7 @@ import { getImageUrl } from '@/utils/imageUrl';
 /**
  * DraggableToken - Player token for tactical board
  * Stateless component - position controlled by parent via Animated style
- * 
- * @param {Object} props
+ * @param {object} props
  * @param {TacticalPlayer} props.player
  * @param {boolean} [props.isOnField] - Different style for field vs bench
  * @param {boolean} [props.isGhost] - Ghost/Clone style for dragging
@@ -24,15 +26,15 @@ import { getImageUrl } from '@/utils/imageUrl';
  * @param {import('react-native-reanimated').SharedValue<number>} [props.scale]
  * @param {import('react-native-reanimated').SharedValue<number>} [props.opacity]
  */
-const DraggableToken = ({
-  player,
-  isOnField = false,
+function DraggableToken({
   isGhost = false,
+  isOnField = false,
+  opacity,
+  player,
+  scale,
   translateX,
   translateY,
-  scale,
-  opacity,
-}) => {
+}) {
   const { Colors } = useTheme();
 
   // Initials
@@ -43,16 +45,14 @@ const DraggableToken = ({
   }, [player]);
 
   // Check if player is manually added (no profile photo for manual players)
-  const isManualPlayer = useMemo(() => {
-    return player?.isManual || String(player?.id || '').startsWith('manual_');
-  }, [player]);
+  const isManualPlayer = useMemo(() => player?.isManual || String(player?.id || '').startsWith('manual_'), [player]);
 
   // Handle avatar source (string vs object vs null)
   // Manual players always show initials, never a photo
   const avatarUri = useMemo(() => {
     if (isManualPlayer) return null; // Force initials for manual players
     if (!player?.avatar) return null;
-    
+
     let rawUrl = null;
     if (typeof player.avatar === 'string') {
       rawUrl = player.avatar;
@@ -61,7 +61,7 @@ const DraggableToken = ({
     } else if (player.avatar?.formats?.thumbnail?.url && typeof player.avatar.formats.thumbnail.url === 'string') {
       rawUrl = player.avatar.formats.thumbnail.url;
     }
-    
+
     // Use getImageUrl to properly prefix relative URLs
     return rawUrl ? getImageUrl(rawUrl) : null;
   }, [player?.avatar, isManualPlayer]);
@@ -69,15 +69,16 @@ const DraggableToken = ({
   // Animated style for ghost token (follows finger)
   const animatedStyle = useAnimatedStyle(() => {
     'worklet';
+
     if (!isGhost || !translateX || !translateY) return {};
-    
+
     return {
+      opacity: opacity?.value ?? 1,
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { scale: scale?.value ?? 1 },
       ],
-      opacity: opacity?.value ?? 1,
     };
   });
 
@@ -85,16 +86,16 @@ const DraggableToken = ({
   if (isGhost) {
     return (
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.ghostToken,
-          { 
+          {
             backgroundColor: Colors.primary500,
             borderColor: Colors.neutral00,
             shadowColor: Colors.primary500,
           },
           animatedStyle,
         ]}
-        pointerEvents="none"
       >
         <View style={styles.ghostAvatarContainer}>
           {avatarUri ? (
@@ -103,7 +104,7 @@ const DraggableToken = ({
             <Text style={styles.ghostInitials}>{initials}</Text>
           )}
         </View>
-        <Text style={styles.ghostName} numberOfLines={1}>{player?.firstname || ''}</Text>
+        <Text numberOfLines={1} style={styles.ghostName}>{player?.firstname || ''}</Text>
       </Animated.View>
     );
   }
@@ -130,15 +131,15 @@ const DraggableToken = ({
             </View>
           )}
         </View>
-        
+
         {player?.number && (
           <View style={[styles.jerseyBadge, { backgroundColor: Colors.neutral900 }]}>
             <Text style={styles.jerseyNumber}>{player.number}</Text>
           </View>
         )}
-        
+
         <View style={styles.fieldNameBadge}>
-          <Text style={styles.fieldName} numberOfLines={1}>
+          <Text numberOfLines={1} style={styles.fieldName}>
             {player?.firstname || ''}
           </Text>
         </View>
@@ -164,53 +165,40 @@ const DraggableToken = ({
           <Text style={[styles.benchInitials, { color: Colors.neutral00 }]}>{initials}</Text>
         )}
       </View>
-      
+
       {player?.number && (
         <View style={[styles.benchJerseyBadge, { backgroundColor: Colors.primary500 }]}>
           <Text style={styles.benchJerseyNumber}>{player.number}</Text>
         </View>
       )}
-      
+
       <View style={styles.benchNameContainer}>
-        <Text style={[styles.benchFirstName, { color: Colors.neutral00 }]} numberOfLines={1}>
+        <Text numberOfLines={1} style={[styles.benchFirstName, { color: Colors.neutral00 }]}>
           {player?.firstname || ''}
         </Text>
-        <Text style={[styles.benchLastName, { color: Colors.neutral300 }]} numberOfLines={1}>
+        <Text numberOfLines={1} style={[styles.benchLastName, { color: Colors.neutral300 }]}>
           {player?.lastname || ''}
         </Text>
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   // === GHOST TOKEN (Dragging overlay) ===
-  ghostToken: {
-    position: 'absolute',
-    width: 70,
-    height: 88,
-    borderRadius: 35,
-    borderWidth: 3,
-    alignItems: 'center',
-    paddingTop: 6,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
-    elevation: 30,
+  ghostAvatar: {
+    borderRadius: 26,
+    height: 52,
+    width: 52,
   },
   ghostAvatarContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 26,
+    height: 52,
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  ghostAvatar: {
     width: 52,
-    height: 52,
-    borderRadius: 26,
   },
   ghostInitials: {
     color: '#FFF',
@@ -223,69 +211,48 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
     textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
+    textShadowOffset: { height: 1, width: 0 },
     textShadowRadius: 4,
+  },
+  ghostToken: {
+    alignItems: 'center',
+    borderRadius: 35,
+    borderWidth: 3,
+    elevation: 30,
+    height: 88,
+    paddingTop: 6,
+    position: 'absolute',
+    shadowOffset: { height: 12, width: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    width: 70,
   },
 
   // === FIELD TOKEN (On pitch) ===
-  fieldToken: {
-    width: 58,
-    height: 72,
-    borderRadius: 29,
-    borderWidth: 3,
-    alignItems: 'center',
-    paddingTop: 4,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 12,
+  fieldAvatar: {
+    borderRadius: 20,
+    height: 40,
+    width: 40,
   },
   fieldAvatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 2,
     borderColor: '#FFF',
-  },
-  fieldAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  fieldInitialsContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 22,
+    borderWidth: 2,
+    height: 44,
+    overflow: 'hidden',
+    width: 44,
   },
   fieldInitials: {
     color: '#FFF',
     fontSize: 14,
     fontWeight: '800',
   },
-  jerseyBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  fieldInitialsContainer: {
     alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  jerseyNumber: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  fieldNameBadge: {
-    marginTop: 2,
-    paddingHorizontal: 6,
-    maxWidth: 65,
+    width: 40,
   },
   fieldName: {
     color: '#FFF',
@@ -293,56 +260,86 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
+    textShadowOffset: { height: 1, width: 0 },
     textShadowRadius: 2,
+  },
+  fieldNameBadge: {
+    marginTop: 2,
+    maxWidth: 65,
+    paddingHorizontal: 6,
+  },
+  fieldToken: {
+    alignItems: 'center',
+    borderRadius: 29,
+    borderWidth: 3,
+    elevation: 12,
+    height: 72,
+    paddingTop: 4,
+    shadowOffset: { height: 6, width: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    width: 58,
+  },
+  jerseyBadge: {
+    alignItems: 'center',
+    borderColor: '#FFF',
+    borderRadius: 10,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    width: 20,
+  },
+  jerseyNumber: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 
   // === BENCH TOKEN ===
-  benchToken: {
-    width: 68,
-    height: 84,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    paddingTop: 8,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+  benchAvatar: {
+    borderRadius: 22,
+    height: 44,
+    width: 44,
   },
   benchAvatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  benchAvatar: {
     width: 44,
-    height: 44,
-    borderRadius: 22,
+  },
+  benchFirstName: {
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   benchInitials: {
     fontSize: 14,
     fontWeight: '700',
   },
   benchJerseyBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
     alignItems: 'center',
+    borderRadius: 9,
+    height: 18,
     justifyContent: 'center',
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    width: 18,
   },
   benchJerseyNumber: {
     color: '#FFF',
     fontSize: 9,
     fontWeight: '700',
+  },
+  benchLastName: {
+    fontSize: 8,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   benchNameContainer: {
     alignItems: 'center',
@@ -350,15 +347,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     width: '100%',
   },
-  benchFirstName: {
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  benchLastName: {
-    fontSize: 8,
-    fontWeight: '500',
-    textAlign: 'center',
+  benchToken: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    elevation: 6,
+    height: 84,
+    marginHorizontal: 4,
+    paddingTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    width: 68,
   },
 });
 

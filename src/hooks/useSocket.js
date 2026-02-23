@@ -10,12 +10,12 @@ export const EVENTS = {
   LEAVE_CHAT: 'leave-chat',
   LEFT: 'left',
   MESSAGE_DELETED: 'message-deleted',
+  MESSAGE_READ: 'message-read',
   MESSAGE_RECEIVED: 'message-received',
+  READ_MESSAGE: 'read-message',
   SEND_MESSAGE: 'send-message',
   TYPING_START: 'typing-start',
   TYPING_STOP: 'typing-stop',
-  READ_MESSAGE: 'read-message',
-  MESSAGE_READ: 'message-read',
 };
 
 /**

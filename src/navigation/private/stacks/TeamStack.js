@@ -1,32 +1,34 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
-import { commonOptions } from '@/navigation/commonOptions';
-import { RouteNames } from '@/navigation/routeNames';
-
+import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
+import SquadEditScreen from '@/views/league/edit/SquadEditScreen';
+import CreateSquadWizard from '@/views/team/createSquad/CreateSquadWizard';
 import MyTeamList from '@/views/team/MyTeamList';
 import TeamDetails from '@/views/team/TeamDetails';
 import TeamEdit from '@/views/team/TeamEdit';
 import TeamFilters from '@/views/team/TeamFilters';
-import CreateSquadWizard from '@/views/team/createSquad/CreateSquadWizard';
 import TeamList from '@/views/team/TeamList';
 import TeamMembershipRequestList from '@/views/team/TeamMembershipRequestList';
 import TeamStatsScreen from '@/views/team/TeamStatsScreen';
-import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
-import SquadEditScreen from '@/views/league/edit/SquadEditScreen';
-
-import TeamWizardName from '@/views/team/wizard/TeamWizardName';
-import TeamWizardDescription from '@/views/team/wizard/TeamWizardDescription';
-import TeamWizardSection from '@/views/team/wizard/TeamWizardSection';
 import TeamWizardActivity from '@/views/team/wizard/TeamWizardActivity';
 import TeamWizardCategory from '@/views/team/wizard/TeamWizardCategory';
-import TeamWizardLevel from '@/views/team/wizard/TeamWizardLevel';
-import TeamWizardTrainers from '@/views/team/wizard/TeamWizardTrainers';
-import TeamWizardRecap from '@/views/team/wizard/TeamWizardRecap';
 import { TeamWizardProvider } from '@/views/team/wizard/TeamWizardContext';
+import TeamWizardDescription from '@/views/team/wizard/TeamWizardDescription';
+import TeamWizardLevel from '@/views/team/wizard/TeamWizardLevel';
+import TeamWizardName from '@/views/team/wizard/TeamWizardName';
+import TeamWizardRecap from '@/views/team/wizard/TeamWizardRecap';
+import TeamWizardSection from '@/views/team/wizard/TeamWizardSection';
+import TeamWizardTrainers from '@/views/team/wizard/TeamWizardTrainers';
+
+import { commonOptions } from '@/navigation/commonOptions';
+import { RouteNames } from '@/navigation/routeNames';
 
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function TeamStack() {
   const { t } = useTranslation();
 

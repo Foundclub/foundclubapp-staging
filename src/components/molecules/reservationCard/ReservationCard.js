@@ -5,14 +5,16 @@ import {
   Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
-import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import Tag from '@/components/atoms/tag/Tag';
-import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import useTheme from '@/theme/themeContext';
 
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
+import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+import { formatDateWithDayPrefix } from '@/utils/date';
+import { getShortAddress } from '@/utils/location';
 
 /**
  * ReservationCard component - PIXEL-PERFECT Figma design
@@ -24,7 +26,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
  * @param {Function} [props.onParticipate] - The function to call when participate button is pressed
  * @returns {import('react').ReactElement} ReservationCard component
  */
-function ReservationCard({ item, onPress, onParticipate }) {
+function ReservationCard({ item, onParticipate, onPress }) {
   const { t } = useTranslation();
   const {
     Alignments,
@@ -45,14 +47,12 @@ function ReservationCard({ item, onPress, onParticipate }) {
   };
 
   // Parse location
-  const getLocation = () => {
-    return getShortAddress(
-      item.locationDetails ||
-      item.club?.addressDetails ||
-      item.team?.club?.addressDetails ||
-      item.location
-    );
-  };
+  const getLocation = () => getShortAddress(
+    item.locationDetails
+      || item.club?.addressDetails
+      || item.team?.club?.addressDetails
+      || item.location,
+  );
 
   return (
     <TouchableOpacity
@@ -68,10 +68,10 @@ function ReservationCard({ item, onPress, onParticipate }) {
           <View style={styles.logo}>
             {item?.team?.club?.logo?.url ? (
               <ProfileAvatar
+                imageStyle={{ borderRadius: 20 }}
                 imageUrl={item.team.club.logo.url}
                 size={40}
                 style={{ borderRadius: 20 }}
-                imageStyle={{ borderRadius: 20 }}
               />
             ) : (
               <TeamShield
@@ -83,7 +83,7 @@ function ReservationCard({ item, onPress, onParticipate }) {
           </View>
           {/* Nom + Catégorie */}
           <View style={styles.headerTextContainer}>
-            <Text style={styles.clubName} numberOfLines={1}>
+            <Text numberOfLines={1} style={styles.clubName}>
               {item.team?.club?.name || 'FoundClub'}
             </Text>
             <Text style={styles.category}>
@@ -105,14 +105,14 @@ function ReservationCard({ item, onPress, onParticipate }) {
         <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[8]]}>
           {(item?.club?.sponsor || item?.team?.club?.sponsor).map((/** @type {any} */ sponsor, /** @type {number} */ idx) => (
             <SponsorLogoTile
-              key={sponsor.documentId || idx}
-              imageUrl={sponsor.logo?.url}
-              link={sponsor.link}
-              title={sponsor.title}
-              showTitle={false}
-              width={30}
-              height={30}
               borderRadius={15}
+              height={30}
+              imageUrl={sponsor.logo?.url}
+              key={sponsor.documentId || idx}
+              link={sponsor.link}
+              showTitle={false}
+              title={sponsor.title}
+              width={30}
             />
           ))}
         </View>
@@ -125,7 +125,7 @@ function ReservationCard({ item, onPress, onParticipate }) {
       <View style={styles.infoBlock1}>
         {/* Colonne 1: Joueurs + Niveau */}
         <View style={styles.infoCol}>
-          <SvgIcon color="#FFFFFF" name="users" width={22} height={22} />
+          <SvgIcon color="#FFFFFF" height={22} name="users" width={22} />
           <View style={styles.infoTextRow}>
             <Text style={styles.infoText}>
               {item.team?.level?.name || 'U18'}
@@ -138,7 +138,7 @@ function ReservationCard({ item, onPress, onParticipate }) {
         </View>
         {/* Colonne 2: Sport */}
         <View style={styles.infoCol}>
-          <SvgIcon color="#FFFFFF" name="Player" width={18} height={20} />
+          <SvgIcon color="#FFFFFF" height={20} name="Player" width={18} />
           <Text style={styles.infoText}>
             {item.activity?.name || 'Basketball'}
           </Text>
@@ -153,14 +153,14 @@ function ReservationCard({ item, onPress, onParticipate }) {
             source={Images.pin}
             style={[styles.icon18, { tintColor: '#FFFFFF' }]}
           />
-          <Text style={styles.infoTextMultiline} numberOfLines={2}>
+          <Text numberOfLines={2} style={styles.infoTextMultiline}>
             {getLocation() || 'Stade Jean Bouin 13001 Marseille'}
           </Text>
         </View>
         {/* Colonne 2: Date */}
         {item.date && (
           <View style={styles.infoCol}>
-            <SvgIcon color="#FFFFFF" name="calendar-days" width={20} height={20} />
+            <SvgIcon color="#FFFFFF" height={20} name="calendar-days" width={20} />
             <Text style={[Fonts.p2, Fonts.neutral00]}>
               {formatDateWithDayPrefix(item.date)}
             </Text>
@@ -173,18 +173,22 @@ function ReservationCard({ item, onPress, onParticipate }) {
         {/* Colonne 1: Prix */}
         {item.pricePerPerson != null && (
           <View style={styles.infoCol}>
-            <SvgIcon color="#FFFFFF" name="money_bag" width={18} height={18} />
+            <SvgIcon color="#FFFFFF" height={18} name="money_bag" width={18} />
             <Text style={styles.infoText}>
-              {item.pricePerPerson}€/pers
+              {item.pricePerPerson}
+              €/pers
             </Text>
           </View>
         )}
         {/* Colonne 2: Horaire */}
         {item.startTime && item.endTime && (
           <View style={styles.infoCol}>
-            <SvgIcon color="#FFFFFF" name="clock-two-thirty" width={22} height={22} />
+            <SvgIcon color="#FFFFFF" height={22} name="clock-two-thirty" width={22} />
             <Text style={styles.infoText}>
-              {formatTime(item.startTime)} - {formatTime(item.endTime)}
+              {formatTime(item.startTime)}
+              {' '}
+              -
+              {formatTime(item.endTime)}
             </Text>
           </View>
         )}
@@ -192,9 +196,9 @@ function ReservationCard({ item, onPress, onParticipate }) {
 
       {/* Bouton Participer */}
       <TouchableOpacity
+        activeOpacity={0.8}
         onPress={() => onParticipate?.(item)}
         style={styles.button}
-        activeOpacity={0.8}
       >
         <Text style={styles.buttonText}>
           {t('reservation.actions.participate') || 'Participer'}
@@ -207,172 +211,171 @@ function ReservationCard({ item, onPress, onParticipate }) {
 const styles = StyleSheet.create({
   // Container principal - 303x278px
   container: {
-    position: 'relative',
-    width: 303,
-    height: 278,
     backgroundColor: '#173844',
     borderRadius: 24,
+    height: 278,
     marginRight: 16,
+    position: 'relative',
+    width: 303,
   },
   // Header - Frame 1441
+  category: {
+    color: '#01B3F4',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  clubName: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Black',
+    fontSize: 12,
+    lineHeight: 18,
+  },
   header: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    left: 16,
     position: 'absolute',
     top: 24,
-    left: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
   },
   headerLeft: {
+    alignItems: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#474B4C',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontFamily: 'Montserrat-Black',
-    fontSize: 5,
-    lineHeight: 22,
-    color: '#01B3F4',
   },
   headerTextContainer: {
     flexDirection: 'column',
     gap: 0,
   },
-  clubName: {
-    fontFamily: 'Montserrat-Black',
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#FFFFFF',
+  logo: {
+    alignItems: 'center',
+    backgroundColor: '#474B4C',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
-  category: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12,
-    lineHeight: 18,
+  logoText: {
     color: '#01B3F4',
+    fontFamily: 'Montserrat-Black',
+    fontSize: 5,
+    lineHeight: 22,
   },
   // Badge - position absolute
   badge: {
+    borderColor: '#01B3F4',
+    borderRadius: 7.33,
+    borderWidth: 0.437,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
     position: 'absolute',
     right: 8,
     top: 8,
-    borderWidth: 0.437,
-    borderColor: '#01B3F4',
-    borderRadius: 7.33,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
   },
   badgeText: {
+    color: '#01B3F4',
     fontFamily: 'Montserrat-Regular',
     fontSize: 12,
     lineHeight: 18,
-    color: '#01B3F4',
   },
   // Sponsors - Frame 1419
   // Ligne séparatrice
   separator: {
+    backgroundColor: '#FFFFFF',
+    height: 0.5,
+    left: 40,
     position: 'absolute',
     top: 110,
-    left: 40,
     width: 247,
-    height: 0.5,
-    backgroundColor: '#FFFFFF',
   },
   // Info bloc 1 - Frame 1455 (2 colonnes)
   infoBlock1: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    left: 17,
     position: 'absolute',
     top: 115, // Moved up
-    left: 17,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
     width: 273,
   },
   // Info bloc 2 - Frame 1456 (2 colonnes)
   infoBlock2: {
+    flexDirection: 'row',
+    gap: 15,
+    justifyContent: 'space-between',
+    left: 19,
     position: 'absolute',
     top: 145, // Moved up
-    left: 19,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
     width: 273,
   },
   // Info bloc 3 (2 colonnes)
   infoBlock3: {
+    flexDirection: 'row',
+    gap: 15,
+    justifyContent: 'space-between',
+    left: 19,
     position: 'absolute',
     top: 175, // Moved up
-    left: 19,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
     width: 273,
   },
   infoCol: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     gap: 8, // Increased gap
   },
-  infoTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  infoText: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12, // Increased from 10
-    lineHeight: 14,
-    color: '#FFFFFF',
-  },
-  infoTextMultiline: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12, // Increased from 10
-    lineHeight: 14,
-    color: '#FFFFFF',
-    flex: 1,
-  },
   infoDivider: {
-    width: 2,
+    borderWidth: 0, // Removed border width, use background color for divider line if needed, or keep border.
     height: 10, // Adjusted height
-    borderWidth: 0, // Removed border width, use background color for divider line if needed, or keep border. 
+    width: 2,
     // Wait, original was borderLeftWidth? No, it was width 2, height 0, borderWidth 1.
     // Let's make it a simple line.
     backgroundColor: '#FFFFFF',
-    width: 1,
     height: 12,
+    width: 1,
+  },
+  infoText: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12, // Increased from 10
+    lineHeight: 14,
+  },
+  infoTextMultiline: {
+    color: '#FFFFFF',
+    flex: 1,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12, // Increased from 10
+    lineHeight: 14,
+  },
+  infoTextRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
   },
   // Icon 18x18 -> 22x22
   icon18: {
-    width: 22,
     height: 22,
     resizeMode: 'contain',
+    width: 22,
   },
   // Bouton Participer
   button: {
-    position: 'absolute',
-    bottom: 16, // Slightly adjusted
-    left: (303 - 222) / 2,
-    width: 222,
-    height: 42.68,
+    alignItems: 'center',
     backgroundColor: '#01B3F4',
     borderRadius: 21.56,
+    bottom: 16, // Slightly adjusted
+    height: 42.68,
     justifyContent: 'center',
-    alignItems: 'center',
+    left: (303 - 222) / 2,
+    position: 'absolute',
+    width: 222,
   },
   buttonText: {
+    color: '#001218',
     fontFamily: 'Montserrat-Bold',
     fontSize: 14.45,
     lineHeight: 21,
-    color: '#001218',
   },
 });
 
 export default ReservationCard;
-

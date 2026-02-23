@@ -1,8 +1,9 @@
+import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
-import useAuth from '@/domains/auth/useAuth';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import SearchScreenShell from './components/SearchScreenShell';
 
@@ -18,8 +19,8 @@ function SearchClubsScreen({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}

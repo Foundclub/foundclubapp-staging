@@ -8,14 +8,15 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
-import { useGetChats } from '@/services/chat/chatQueries';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import Button from '@/components/atoms/button/Button';
+
+import { useGetChats } from '@/services/chat/chatQueries';
 
 /**
  * @typedef {object} CompositionData
@@ -38,19 +39,21 @@ import Button from '@/components/atoms/button/Button';
  * @param {import('@/domains/event/types').FCEvent} [props.event] - The event for context
  * @returns {import('react').ReactElement}
  */
-const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, event }) => {
+function ShareCompositionModal({
+  composition, event, isVisible, onClose, onSelectChat,
+}) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { userData, allMyTeams } = useAuth();
+  const { allMyTeams, userData } = useAuth();
   const { getClubInitials } = useClub();
   const { getConversationName } = useMessaging();
 
   const {
     data: chatsData,
-    isLoading,
     error,
+    isLoading,
   } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
@@ -65,40 +68,40 @@ const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, 
     ) : [];
 
     const priority = {
-        'multisport': 0,
-        'club': 1,
-        'team': 2,
-        'whisper': 3
+      club: 1,
+      multisport: 0,
+      team: 2,
+      whisper: 3,
     };
-    
+
     const canWriteInChat = (chat) => {
-        if (!chat || !userData) return false;
-        
-        // Whisper and Team chats: All participants can write
-        if (chat.type === 'whisper' || chat.type === 'team') return true;
+      if (!chat || !userData) return false;
 
-        // Club Chat: Only Club Admins can write
-        if (chat.type === 'club') {
-           return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
-        }
+      // Whisper and Team chats: All participants can write
+      if (chat.type === 'whisper' || chat.type === 'team') return true;
 
-        // Multisport Chat: Only Multisport Admins can write
-        if (chat.type === 'multisport') {
-           const admins = chat.multisportClub?.admins || [];
-           return admins.some(admin => admin.documentId === userData.documentId);
-        }
+      // Club Chat: Only Club Admins can write
+      if (chat.type === 'club') {
+        return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
+      }
 
-        return false;
+      // Multisport Chat: Only Multisport Admins can write
+      if (chat.type === 'multisport') {
+        const admins = chat.multisportClub?.admins || [];
+        return admins.some((admin) => admin.documentId === userData.documentId);
+      }
+
+      return false;
     };
-    
+
     // Filter chats where user can write
     const writableChats = chats.filter(canWriteInChat);
 
     return writableChats.sort((a, b) => {
-        const pA = priority[a.type] ?? 99;
-        const pB = priority[b.type] ?? 99;
-        if (pA !== pB) return pA - pB;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      const pA = priority[a.type] ?? 99;
+      const pB = priority[b.type] ?? 99;
+      if (pA !== pB) return pA - pB;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [chatsData?.pages, userData]);
 
@@ -109,23 +112,23 @@ const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, 
       const placements = composition.placements || [];
       const players = event?.team?.players || [];
       const manualPlayers = composition.manualPlayers || [];
-      
+
       const findName = (id) => {
-        const p = players.find(u => u.documentId === id || u.id === id);
+        const p = players.find((u) => u.documentId === id || u.id === id);
         if (p) return `${p.firstname} ${p.lastname}`;
-        const mp = manualPlayers.find(u => u.id === id || u.documentId === id);
+        const mp = manualPlayers.find((u) => u.id === id || u.documentId === id);
         if (mp) return `${mp.firstname} ${mp.lastname}`;
         return 'Joueur';
       };
 
-      const starters = placements.map(pl => findName(pl.playerId)).join('\n- ');
+      const starters = placements.map((pl) => findName(pl.playerId)).join('\n- ');
       const playerCount = placements.length;
-      
+
       const message = `📋 Composition d'équipe\n\n⚽ Titulaires (${playerCount}):\n- ${starters}\n\nRetrouvez le détail sur FoundClub !`;
-      
+
       await Share.share({
         message,
-        title: `Composition ${event?.subject || 'Match'}`
+        title: `Composition ${event?.subject || 'Match'}`,
       });
     } catch (err) {
       console.error(err);
@@ -136,19 +139,19 @@ const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, 
     switch (chat.type) {
       case 'club':
         if (chat?.club?.logo?.url) {
-            return <ProfileAvatar imageUrl={chat.club.logo.url} size={40} enablePreview={false} />;
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.club.logo.url} size={40} />;
         }
         return <TeamShield initials={getClubInitials(chat?.club?.name || '')} isNeutral isSmall />;
-      case 'team':
-        if (chat?.team?.logo?.url) {
-            return <ProfileAvatar imageUrl={chat.team.logo.url} size={40} enablePreview={false} />;
-        }
-        return <TeamShield initials={getClubInitials(chat?.team?.name || '')} isSmall />;
       case 'multisport':
         if (chat?.multisportClub?.logo?.url) {
-            return <ProfileAvatar imageUrl={chat.multisportClub.logo.url} size={40} enablePreview={false} />;
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.multisportClub.logo.url} size={40} />;
         }
         return <TeamShield initials={getClubInitials(chat?.multisportClub?.name || '')} isNeutral isSmall />;
+      case 'team':
+        if (chat?.team?.logo?.url) {
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.team.logo.url} size={40} />;
+        }
+        return <TeamShield initials={getClubInitials(chat?.team?.name || '')} isSmall />;
       case 'whisper':
       default: {
         const participant = chat.participants?.find((p) => p.documentId !== userData?.documentId) || chat.participants?.[0];
@@ -165,10 +168,13 @@ const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, 
         Alignments.alignCenter,
         Spaces.paddingVertical[12],
         Spaces.paddingHorizontal[16],
-        { borderBottomWidth: 1, borderBottomColor: Colors.neutral800 },
+        { borderBottomColor: Colors.neutral800, borderBottomWidth: 1 },
       ]}
     >
-      <View style={{ width: 40, height: 40, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        alignItems: 'center', height: 40, justifyContent: 'center', marginRight: 12, width: 40,
+      }}
+      >
         {renderAvatar(chat)}
       </View>
       <Text style={[Fonts.p2Bold, Fonts.neutral00, Alignments.fill]}>
@@ -181,53 +187,53 @@ const ShareCompositionModal = ({ isVisible, onClose, onSelectChat, composition, 
           meId: userData?.documentId,
         })}
       </Text>
-      <Image source={Images.arrowRight} style={{ width: 20, height: 20, tintColor: Colors.neutral500 }} />
+      <Image source={Images.arrowRight} style={{ height: 20, tintColor: Colors.neutral500, width: 20 }} />
     </TouchableOpacity>
   );
 
   return (
     <BottomModal
-      isVisible={isVisible}
       close={onClose}
-      height="80%"
       headerComponent={(
         <Text style={[Fonts.h3, Fonts.neutral00, { textAlign: 'center' }, Spaces.paddingTop[24]]}>
-            {t('composition.shareTitle', 'Partager la composition')}
+          {t('composition.shareTitle', 'Partager la composition')}
         </Text>
       )}
+      height="80%"
+      isVisible={isVisible}
     >
-        <View style={[Alignments.fill, Spaces.gap[16]]}>
-            {/* Native Share Option */}
-            <View style={[Spaces.paddingHorizontal[16]]}>
-                <Button
-                    onPress={handleNativeShare}
-                    title={t('event.shareViaOther', 'Partager via... (SMS, Mail)')}
-                    variant="Secondary"
-                    style={{ backgroundColor: Colors.neutral800 }}
-                    textStyle={{ color: Colors.neutral00 }}
-                    icon="share"
-                />
-            </View>
-
-            <View style={[Spaces.paddingHorizontal[16], Spaces.marginTop[8]]}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>
-                    {t('event.shareInChat', 'Partager dans une conversation')}
-                </Text>
-            </View>
-
-            {/* List */}
-            <WithDataWrapper isLoading={isLoading} error={error?.message} wrapperStyle={[Alignments.fill]}>
-                <FlashList
-                    data={allChats}
-                    renderItem={renderItem}
-                    estimatedItemSize={64}
-                    keyExtractor={(item) => item.documentId}
-                    contentContainerStyle={[Spaces.paddingBottom[24]]}
-                />
-            </WithDataWrapper>
+      <View style={[Alignments.fill, Spaces.gap[16]]}>
+        {/* Native Share Option */}
+        <View style={[Spaces.paddingHorizontal[16]]}>
+          <Button
+            icon="share"
+            onPress={handleNativeShare}
+            style={{ backgroundColor: Colors.neutral800 }}
+            textStyle={{ color: Colors.neutral00 }}
+            title={t('event.shareViaOther', 'Partager via... (SMS, Mail)')}
+            variant="Secondary"
+          />
         </View>
+
+        <View style={[Spaces.paddingHorizontal[16], Spaces.marginTop[8]]}>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('event.shareInChat', 'Partager dans une conversation')}
+          </Text>
+        </View>
+
+        {/* List */}
+        <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
+          <FlashList
+            contentContainerStyle={[Spaces.paddingBottom[24]]}
+            data={allChats}
+            estimatedItemSize={64}
+            keyExtractor={(item) => item.documentId}
+            renderItem={renderItem}
+          />
+        </WithDataWrapper>
+      </View>
     </BottomModal>
   );
-};
+}
 
 export default ShareCompositionModal;

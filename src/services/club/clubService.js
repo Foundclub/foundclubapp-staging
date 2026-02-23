@@ -32,6 +32,7 @@ const clubSchema = Joi.object({
 }).required();
 
 const clubListSchema = Joi.object({
+  _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
   activites: Joi.array().items(activitySchema).optional(),
   address: Joi.object().optional(), // Optional for multisport clubs
   documentId: Joi.string().optional(),
@@ -39,11 +40,10 @@ const clubListSchema = Joi.object({
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
   isCustomer: Joi.boolean().optional().default(false), // Optional for multisport
-  maxTeamNumber: Joi.number().optional(), // Optional - multisport uses maxSectionNumber
   maxSectionNumber: Joi.number().optional(), // For multisport clubs
+  maxTeamNumber: Joi.number().optional(), // Optional - multisport uses maxSectionNumber
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('', null).optional(),
-  _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
   sectionsCount: Joi.number().optional(), // For multisport clubs
 }).required();
 
@@ -65,11 +65,11 @@ export const getClubs = async (params = {}) => {
   const {
     activity,
     geohash,
+    includeMultisport = true, // By default, include multisport clubs
     isCustomer,
     name,
     page,
     pageSize,
-    includeMultisport = true, // By default, include multisport clubs
   } = params;
 
   const filters = {
@@ -78,15 +78,15 @@ export const getClubs = async (params = {}) => {
       page: page || 1,
       pageSize: pageSize || 7,
     },
-    sort: {
-      isCustomer: 'desc',
-      name: 'asc',
-    },
     populate: {
       logo: true,
       sponsor: {
         populate: ['logo'],
       },
+    },
+    sort: {
+      isCustomer: 'desc',
+      name: 'asc',
     },
   };
 
@@ -125,7 +125,7 @@ export const getClubs = async (params = {}) => {
 
   // Fetch regular clubs
   const clubsResponse = await client.get('/clubs', { params: filters });
-  
+
   // Add type marker to regular clubs
   const clubsWithType = (clubsResponse.data?.data || []).map((/** @type {Club} */ club) => ({
     ...club,
@@ -201,7 +201,7 @@ export const getClubs = async (params = {}) => {
 
     const validationResult = await schema.validateAsync(
       { data: allData, meta: updatedMeta },
-      { allowUnknown: true }
+      { allowUnknown: true },
     );
     return validationResult;
   } catch (error) {
@@ -226,14 +226,14 @@ export const getClubById = async (id) => {
         members: {
           populate: ['avatar', 'role'],
         },
+        parentMultisport: {
+          fields: ['documentId', 'name'],
+        },
         sponsor: {
           populate: 'logo',
         },
         teams: {
           populate: '*',
-        },
-        parentMultisport: {
-          fields: ['documentId', 'name'],
         },
       },
     },
@@ -274,9 +274,9 @@ export const updateClub = async (clubData) => {
     // Log club logo info
     if (clubData.logo) {
       console.log('[DEBUG - FRONTEND] Club Logo:', {
+        documentId: clubData.logo.documentId,
         hasDocumentId: !!clubData.logo.documentId,
         hasId: !!clubData.logo.id,
-        documentId: clubData.logo.documentId,
         id: clubData.logo.id,
         url: clubData.logo.url,
       });
@@ -287,13 +287,13 @@ export const updateClub = async (clubData) => {
       console.log('[DEBUG - FRONTEND] Sponsors count:', clubData.sponsor.length);
       clubData.sponsor.forEach((sponsor, index) => {
         console.log(`[DEBUG - FRONTEND] Sponsor[${index}]:`, {
-          title: sponsor.title,
           hasLogo: !!sponsor.logo,
-          logoHasDocumentId: sponsor.logo?.documentId ? true : false,
-          logoHasId: sponsor.logo?.id ? true : false,
           logoDocumentId: sponsor.logo?.documentId,
+          logoHasDocumentId: !!sponsor.logo?.documentId,
+          logoHasId: !!sponsor.logo?.id,
           logoId: sponsor.logo?.id,
           logoUrl: sponsor.logo?.url,
+          title: sponsor.title,
         });
       });
     }
@@ -383,7 +383,6 @@ export const updateClub = async (clubData) => {
           );
         }
       });
-
     }
 
     // Handle club logo
@@ -406,7 +405,7 @@ export const updateClub = async (clubData) => {
         // Let's assume standard multipart: `logo` as key for file.
         // @ts-expect-error - React Native FormData supports file descriptor objects.
         formData.append('files.logo', fileToUpload);
-      } 
+      }
       // Existing logo (sent as ID)
       else if (clubDataCopy.logo.documentId) {
         formData.append('logo', clubDataCopy.logo.documentId);
@@ -494,18 +493,18 @@ export const uploadFile = async (file) => {
     const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const auth = getAuthTokens();
     const token = auth?.token;
-    
+
     console.log('[DEBUG] UPLOAD URL:', `${process.env.API_URL}/upload`);
     console.log('[DEBUG] UPLOAD Headers:', JSON.stringify({ Authorization: token ? 'Bearer [HIDDEN]' : 'None' }));
 
     // Use native fetch to avoid Axios issues with FormData on Android
     const response = await fetch(`${process.env.API_URL}/upload`, {
-      method: 'POST',
+      body: formData,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         // Do NOT set Content-Type manually, fetch sets it with boundary
       },
-      body: formData,
+      method: 'POST',
     });
 
     if (!response.ok) {
@@ -518,8 +517,8 @@ export const uploadFile = async (file) => {
     if (data && data.length > 0) {
       console.log('[DEBUG] Upload success. ID:', data[0].id);
       return {
-        id: data[0].id,
         documentId: data[0].documentId || data[0].id,
+        id: data[0].id,
       };
     }
     throw new Error('Upload failed: No data received from server');

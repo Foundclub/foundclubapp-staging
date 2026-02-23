@@ -1,13 +1,23 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-const TestScreen = ({ navigation }) => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'cyan' }}>
-        <Text>Test Screen Works!</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text>Go Back</Text>
-        </TouchableOpacity>
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function TestScreen({ navigation }) {
+  return (
+    <View style={{
+      alignItems: 'center', backgroundColor: 'cyan', flex: 1, justifyContent: 'center',
+    }}
+    >
+      <Text>Test Screen Works!</Text>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text>Go Back</Text>
+      </TouchableOpacity>
     </View>
-);
+  );
+}
 
 export default TestScreen;

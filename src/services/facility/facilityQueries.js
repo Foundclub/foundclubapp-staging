@@ -1,59 +1,63 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAvailability, createBooking, getBookableFacilities, getFacilities, getFacility } from './facilityService';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import {
+  createBooking, getAvailability, getBookableFacilities, getFacilities, getFacility,
+} from './facilityService';
 
 /**
  * Hook to get availability for a facility on a specific date
+ * @param facilityId
+ * @param date
+ * @param options
  */
-export const useGetFacilityAvailability = (facilityId, date, options = {}) => {
-  return useQuery({
-    queryKey: ['facility-availability', facilityId, date],
-    queryFn: () => getAvailability(facilityId, date),
-    enabled: !!facilityId && !!date,
-    staleTime: 1000 * 60, // 1 minute - slots can change
-    ...options,
-  });
-};
+export const useGetFacilityAvailability = (facilityId, date, options = {}) => useQuery({
+  enabled: !!facilityId && !!date,
+  queryFn: () => getAvailability(facilityId, date),
+  queryKey: ['facility-availability', facilityId, date],
+  staleTime: 1000 * 60, // 1 minute - slots can change
+  ...options,
+});
 
 /**
  * Hook to get all bookable facilities
+ * @param options
  */
-export const useGetBookableFacilities = (options = {}) => {
-  return useQuery({
-    queryKey: ['bookable-facilities'],
-    queryFn: getBookableFacilities,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    ...options,
-  });
-};
+export const useGetBookableFacilities = (options = {}) => useQuery({
+  queryFn: getBookableFacilities,
+  queryKey: ['bookable-facilities'],
+  staleTime: 1000 * 60 * 5, // 5 minutes
+  ...options,
+});
 
 /**
  * Hook to get facilities for a club
+ * @param clubId
+ * @param options
  */
-export const useGetFacilities = (clubId, options = {}) => {
-  return useQuery({
-    queryKey: ['facilities', clubId],
-    queryFn: () => getFacilities(clubId),
-    enabled: !!clubId,
-    staleTime: 1000 * 60 * 5,
-    ...options,
-  });
-};
+export const useGetFacilities = (clubId, options = {}) => useQuery({
+  enabled: !!clubId,
+  queryFn: () => getFacilities(clubId),
+  queryKey: ['facilities', clubId],
+  staleTime: 1000 * 60 * 5,
+  ...options,
+});
 
 /**
  * Hook to get a single facility
+ * @param facilityId
+ * @param options
  */
-export const useGetFacility = (facilityId, options = {}) => {
-  return useQuery({
-    queryKey: ['facility', facilityId],
-    queryFn: () => getFacility(facilityId),
-    enabled: !!facilityId,
-    staleTime: 1000 * 60 * 5,
-    ...options,
-  });
-};
+export const useGetFacility = (facilityId, options = {}) => useQuery({
+  enabled: !!facilityId,
+  queryFn: () => getFacility(facilityId),
+  queryKey: ['facility', facilityId],
+  staleTime: 1000 * 60 * 5,
+  ...options,
+});
 
 /**
  * Hook to create a booking
+ * @param options
  */
 export const useCreateBooking = (options = {}) => {
   const queryClient = useQueryClient();
@@ -62,8 +66,8 @@ export const useCreateBooking = (options = {}) => {
     mutationFn: createBooking,
     onSuccess: (data, variables) => {
       // Invalidate availability for this facility
-      queryClient.invalidateQueries({ 
-        queryKey: ['facility-availability', variables.facilityId] 
+      queryClient.invalidateQueries({
+        queryKey: ['facility-availability', variables.facilityId],
       });
       // Invalidate events/reservations
       queryClient.invalidateQueries({ queryKey: ['events'] });

@@ -1,63 +1,73 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Alert, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Image } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { Controller, useForm } from 'react-hook-form';
 import { joiResolver } from '@hookform/resolvers/joi';
-import Joi from 'joi';
 import Slider from '@react-native-community/slider';
+import Joi from 'joi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import Input from '@/components/molecules/input/Input';
+
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
-import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
-import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
+import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
+import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
+
 import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
 
 const schema = Joi.object({
-  name: Joi.string().required().min(3).label('Nom'),
   address: Joi.object().allow(null).optional().label('Adresse'),
-  division: Joi.number().optional().allow(null, '').label('Division'), 
-  elo: Joi.number().optional().allow(null, '').label('ELO'),
-  sport: Joi.string().required().label('Sport'),
-  section: Joi.string().valid('Male', 'Female', 'Mixed').required().label('Section'),
   category: Joi.string().optional().allow('', null).label('Catégorie'),
-  radius: Joi.number().min(5).max(100).default(20).label('Rayon'),
+  division: Joi.number().optional().allow(null, '').label('Division'),
+  elo: Joi.number().optional().allow(null, '').label('ELO'),
+  name: Joi.string().required().min(3).label('Nom'),
+  radius: Joi.number().min(5).max(100).default(20)
+    .label('Rayon'),
+  section: Joi.string().valid('Male', 'Female', 'Mixed').required().label('Section'),
+  sport: Joi.string().required().label('Sport'),
 });
 
 /**
  * @param {{ navigation: any, route: { params?: { teamId?: string } } }} props
  */
-const SquadEditScreen = ({ navigation, route }) => {
+function SquadEditScreen({ navigation, route }) {
   const { teamId } = route.params || {};
   const safeTeamId = String(teamId || '');
-  const { Colors, Fonts, Spaces, Alignments } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
 
   const { data: team, isLoading } = useGetLeagueTeam(safeTeamId);
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sportSearchValue, setSportSearchValue] = useState('');
   const [categorySearchValue, setCategorySearchValue] = useState('');
 
-  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
-    resolver: joiResolver(schema),
+  const {
+    control, formState: { errors }, handleSubmit, reset, watch,
+  } = useForm({
     defaultValues: {
-      name: '',
       address: null,
+      category: 'Senior',
       division: '',
       elo: '',
-      sport: 'Football',
+      name: '',
+      radius: 20,
       section: 'Male',
-      category: 'Senior',
-      radius: 20
-    }
+      sport: 'Football',
+    },
+    resolver: joiResolver(schema),
   });
 
   const radiusValue = watch('radius');
@@ -72,7 +82,7 @@ const SquadEditScreen = ({ navigation, route }) => {
       })) || [];
 
     if (sportSearchValue) {
-      return formatted.filter(a => a.label.toLowerCase().includes(sportSearchValue.toLowerCase()));
+      return formatted.filter((a) => a.label.toLowerCase().includes(sportSearchValue.toLowerCase()));
     }
     return formatted;
   }, [allActivities, sportSearchValue]);
@@ -85,7 +95,7 @@ const SquadEditScreen = ({ navigation, route }) => {
     })) || [];
 
     if (categorySearchValue) {
-      return formatted.filter(c => c.label.toLowerCase().includes(categorySearchValue.toLowerCase()));
+      return formatted.filter((c) => c.label.toLowerCase().includes(categorySearchValue.toLowerCase()));
     }
     return formatted;
   }, [allCategories, categorySearchValue]);
@@ -98,7 +108,7 @@ const SquadEditScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     navigation.setOptions({
-        headerTitle: 'Éditer la Squad',
+      headerTitle: 'Éditer la Squad',
     });
   }, [navigation]);
 
@@ -106,14 +116,14 @@ const SquadEditScreen = ({ navigation, route }) => {
     if (team) {
       const normalizedHomeBase = normalizeLocationInput(team.home_base);
       reset({
-        name: team.name || '',
         address: /** @type {any} */ (normalizedHomeBase || null),
+        category: team.category || 'Senior',
         division: team.division ? String(team.division) : '',
         elo: team.elo ? String(team.elo) : '',
-        sport: team.sport || 'Football',
+        name: team.name || '',
+        radius: normalizedHomeBase?.radius || 20,
         section: team.section || 'Male',
-        category: team.category || 'Senior',
-        radius: normalizedHomeBase?.radius || 20
+        sport: team.sport || 'Football',
       });
     }
   }, [team, reset]);
@@ -129,12 +139,12 @@ const SquadEditScreen = ({ navigation, route }) => {
       }
 
       await updateLeagueTeam(/** @type {any} */ ({
+        category: data.category,
         documentId: teamId,
-        name: data.name,
         home_base: homeBasePayload,
-        sport: data.sport,
+        name: data.name,
         section: data.section,
-        category: data.category
+        sport: data.sport,
       }));
       Alert.alert('Succès', 'Squad mise à jour');
       navigation.goBack();
@@ -148,144 +158,148 @@ const SquadEditScreen = ({ navigation, route }) => {
 
   return (
     <ScreenContainer bgImage="bg2">
-       <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-       >
-      <ScrollView contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], Spaces.gap[24], Spaces.paddingBottom[40]]}>
-        
-        <Controller
-          control={control}
-          name="name"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Nom de la Squad"
-              placeholder="Ex: Les Invincibles"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              error={errors.name?.message}
-            />
-          )}
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], Spaces.gap[24], Spaces.paddingBottom[40]]}>
 
-        <View style={[Alignments.row, Spaces.gap[16]]}>
-            <View style={{ flex: 1 }}>
-                <Controller
-                    control={control}
-                    name="sport"
-                    render={({ field: { onChange, value } }) => (
-                        <AutocompleteSelect
-                            label="Sport"
-                            placeholder="Sélectionner"
-                            options={activities}
-                            value={value}
-                            setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
-                            searchValue={sportSearchValue}
-                            setSearchValue={setSportSearchValue}
-                            error={errors.sport?.message}
-                            disabled={true}
-                        />
-                    )}
-                />
-            </View>
-            <View style={{ flex: 1 }}>
-                <Controller
-                    control={control}
-                    name="section"
-                    render={({ field: { onChange, value } }) => (
-                        <AutocompleteSelect
-                            label="Section"
-                            placeholder="Sélectionner"
-                            options={sections}
-                            value={sections.find(s => s.value === value)?.label || value}
-                            setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
-                            isSearchable={false}
-                            error={errors.section?.message}
-                        />
-                    )}
-                />
-            </View>
-        </View>
-
-        <Controller
-          control={control}
-          name="category"
-          render={({ field: { onChange, value } }) => (
-            <AutocompleteSelect
-                label="Catégorie"
-                placeholder="Ex: Senior"
-                options={categories}
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { onBlur, onChange, value } }) => (
+              <Input
+                error={errors.name?.message}
+                label="Nom de la Squad"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder="Ex: Les Invincibles"
                 value={value}
-                setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
+              />
+            )}
+          />
+
+          <View style={[Alignments.row, Spaces.gap[16]]}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="sport"
+                render={({ field: { onChange, value } }) => (
+                  <AutocompleteSelect
+                    disabled
+                    error={errors.sport?.message}
+                    label="Sport"
+                    options={activities}
+                    placeholder="Sélectionner"
+                    searchValue={sportSearchValue}
+                    setSearchValue={setSportSearchValue}
+                    setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="section"
+                render={({ field: { onChange, value } }) => (
+                  <AutocompleteSelect
+                    error={errors.section?.message}
+                    isSearchable={false}
+                    label="Section"
+                    options={sections}
+                    placeholder="Sélectionner"
+                    setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
+                    value={sections.find((s) => s.value === value)?.label || value}
+                  />
+                )}
+              />
+            </View>
+          </View>
+
+          <Controller
+            control={control}
+            name="category"
+            render={({ field: { onChange, value } }) => (
+              <AutocompleteSelect
+                error={errors.category?.message}
+                isSearchable
+                label="Catégorie"
+                options={categories}
+                placeholder="Ex: Senior"
                 searchValue={categorySearchValue}
                 setSearchValue={setCategorySearchValue}
-                isSearchable={true}
-                error={errors.category?.message}
-            />
-          )}
-        />
+                setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
+                value={value}
+              />
+            )}
+          />
 
-        <Controller
+          <Controller
             control={control}
             name="address"
             render={({ field: { onChange, value } }) => (
-                <AutocompleteAddressInput
-                    label="QG (Adresse principale)"
-                    placeholder="Rechercher une adresse"
-                    address={/** @type {any} */ (value || undefined)}
-                    setAddress={onChange}
-                />
+              <AutocompleteAddressInput
+                address={/** @type {any} */ (value || undefined)}
+                label="QG (Adresse principale)"
+                placeholder="Rechercher une adresse"
+                setAddress={onChange}
+              />
             )}
-        />
+          />
 
-        <View>
+          <View>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[8]]}>
-                <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Rayon de déplacement</Text>
-                <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>{radiusValue} km</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Rayon de déplacement</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                {radiusValue}
+                {' '}
+                km
+              </Text>
             </View>
             <Controller
-                control={control}
-                name="radius"
-                render={({ field: { onChange, value } }) => (
-                    <Slider
-                        style={{ width: '100%', height: 40 }}
-                        minimumValue={5}
-                        maximumValue={100}
-                        step={5}
-                        value={value}
-                        onValueChange={onChange}
-                        minimumTrackTintColor={Colors.primary500}
-                        maximumTrackTintColor={Colors.neutral500}
-                        thumbTintColor={Colors.primary500}
-                    />
-                )}
+              control={control}
+              name="radius"
+              render={({ field: { onChange, value } }) => (
+                <Slider
+                  maximumTrackTintColor={Colors.neutral500}
+                  maximumValue={100}
+                  minimumTrackTintColor={Colors.primary500}
+                  minimumValue={5}
+                  onValueChange={onChange}
+                  step={5}
+                  style={{ height: 40, width: '100%' }}
+                  thumbTintColor={Colors.primary500}
+                  value={value}
+                />
+              )}
             />
             <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>Distance max pour vos matchs a l'extérieur</Text>
-        </View>
-        
-        <View style={{ marginTop: 24 }}>
+          </View>
+
+          <View style={{ marginTop: 24 }}>
             <Button
-                title="Enregistrer"
-                onPress={handleSubmit(onSubmit)}
-                isLoading={isSubmitting || isLoading}
-                disabled={isSubmitting}
-                variant="Primary"
+              disabled={isSubmitting}
+              isLoading={isSubmitting || isLoading}
+              onPress={handleSubmit(onSubmit)}
+              title="Enregistrer"
+              variant="Primary"
             />
-        </View>
+          </View>
 
-        <View style={{ marginTop: 12 }}>
-             <Button
-                title="Annuler"
-                variant="Secondary"
-                onPress={() => navigation.goBack()}
+          <View style={{ marginTop: 12 }}>
+            <Button
+              onPress={() => navigation.goBack()}
+              title="Annuler"
+              variant="Secondary"
             />
-        </View>
+          </View>
 
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
-};
+}
 
 export default SquadEditScreen;

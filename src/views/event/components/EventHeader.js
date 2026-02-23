@@ -1,19 +1,23 @@
-
-import React from 'react';
-import { View, Text, Image, ImageBackground } from 'react-native';
 import { format } from 'date-fns';
-import useTheme from '@/theme/themeContext';
-import { formatDateWithDayPrefix } from '@/utils/date';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import React from 'react';
+import {
+  Image, ImageBackground, Text, View,
+} from 'react-native';
+
 import useClub from '@/domains/club/useClub';
+import useTheme from '@/theme/themeContext';
+
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+import { formatDateWithDayPrefix } from '@/utils/date';
 
 // Assets
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
-const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
-const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
-const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
+const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
+const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
+const BG_MATCH = require('@/assets/background-card-event/card-match.png');
+const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 
 const getBackgroundImage = (typeName) => {
   const normalizedType = typeName?.toLowerCase() || '';
@@ -24,8 +28,15 @@ const getBackgroundImage = (typeName) => {
   return BG_OTHER;
 };
 
-const EventHeader = ({ event }) => {
-  const { ApplicationStyle, Fonts, Images, Spaces, Alignments } = useTheme();
+/**
+ *
+ * @param root0
+ * @param root0.event
+ */
+function EventHeader({ event }) {
+  const {
+    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+  } = useTheme();
   const { getClubInitials } = useClub();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
@@ -39,20 +50,20 @@ const EventHeader = ({ event }) => {
 
   const getLocationText = () => {
     try {
-        if (!locationDetails) return '';
-        const parsed = JSON.parse(locationDetails);
-        const addr = parsed?.address;
-        return (typeof addr === 'object' ? addr?.description : addr) || '';
+      if (!locationDetails) return '';
+      const parsed = JSON.parse(locationDetails);
+      const addr = parsed?.address;
+      return (typeof addr === 'object' ? addr?.description : addr) || '';
     } catch (e) {
-        return '';
+      return '';
     }
   };
 
   return (
     <ImageBackground
-      source={backgroundImage}
       imageStyle={{ borderRadius: 24 }}
       resizeMode="cover"
+      source={backgroundImage}
       style={[
         ApplicationStyle.borderRadius24,
         Alignments.alignCenter,
@@ -73,6 +84,7 @@ const EventHeader = ({ event }) => {
       >
         {logoUrl ? (
           <ProfileAvatar
+            imageStyle={{ borderRadius: 60 }}
             imageUrl={logoUrl}
             size={60}
             style={[
@@ -80,7 +92,6 @@ const EventHeader = ({ event }) => {
               ApplicationStyle.borderColor.neutral00,
               { borderRadius: 60 },
             ]}
-            imageStyle={{ borderRadius: 60 }}
           />
         ) : (
           <TeamShield
@@ -169,6 +180,6 @@ const EventHeader = ({ event }) => {
       </View>
     </ImageBackground>
   );
-};
+}
 
 export default EventHeader;

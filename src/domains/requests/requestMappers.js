@@ -3,7 +3,6 @@
  * @typedef {'team' | 'club' | 'event' | 'featured'} RequestHubType
  * @typedef {'pending'} RequestHubStatus
  * @typedef {'accept' | 'reject' | 'validate'} RequestHubAction
- *
  * @typedef {object} RequestHubItem
  * @property {string} id
  * @property {RequestHubType} type
@@ -33,10 +32,10 @@ const toIsoString = (value) => {
 
 const resolveRequesterName = (requester = {}) => {
   const firstname = normalizeString(
-    requester?.firstname || requester?.firstName || requester?.requesterFirstname
+    requester?.firstname || requester?.firstName || requester?.requesterFirstname,
   );
   const lastname = normalizeString(
-    requester?.lastname || requester?.lastName || requester?.requesterLastname
+    requester?.lastname || requester?.lastName || requester?.requesterLastname,
   );
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
 
@@ -50,6 +49,36 @@ const toStableTime = (value) => {
   return date.getTime();
 };
 
+const resolveRequesterAvatarUrl = (requester = {}) => {
+  const directAvatar = requester?.avatar;
+
+  if (typeof directAvatar === 'string' && directAvatar.trim()) {
+    return directAvatar.trim();
+  }
+
+  if (directAvatar && typeof directAvatar === 'object') {
+    const directUrl = normalizeString(directAvatar?.url);
+    if (directUrl) return directUrl;
+
+    const nestedUrl = normalizeString(directAvatar?.data?.attributes?.url);
+    if (nestedUrl) return nestedUrl;
+  }
+
+  const nestedUserAvatar = requester?.user?.avatar;
+  if (typeof nestedUserAvatar === 'string' && nestedUserAvatar.trim()) {
+    return nestedUserAvatar.trim();
+  }
+  if (nestedUserAvatar && typeof nestedUserAvatar === 'object') {
+    const nestedDirectUrl = normalizeString(nestedUserAvatar?.url);
+    if (nestedDirectUrl) return nestedDirectUrl;
+
+    const nestedDeepUrl = normalizeString(nestedUserAvatar?.data?.attributes?.url);
+    if (nestedDeepUrl) return nestedDeepUrl;
+  }
+
+  return '';
+};
+
 /**
  * @param {Record<string, any>} request
  * @returns {RequestHubItem}
@@ -57,7 +86,9 @@ const toStableTime = (value) => {
 export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
   const teamName = normalizeString(request?.team?.name) || 'Equipe';
-  const requesterName = resolveRequesterName(request?.user || {});
+  const requester = request?.user || {};
+  const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
 
   return {
     actions: { primary: 'accept', secondary: 'reject' },
@@ -65,9 +96,10 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     id: `team:${requestId}`,
     meta: {
       raw: request,
-      requestId,
+      requesterAvatarUrl,
       requesterId: normalizeString(request?.user?.documentId),
       requesterName,
+      requestId,
       teamId: normalizeString(request?.team?.documentId),
       teamName,
     },
@@ -87,6 +119,8 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
   const clubName = normalizeString(request?.club?.name) || 'Club';
   const requester = request?.requester || request?.user || {};
   const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
+    || resolveRequesterAvatarUrl(request?.user || {});
 
   return {
     actions: { primary: 'accept', secondary: 'reject' },
@@ -96,9 +130,10 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
       clubId: normalizeString(request?.club?.documentId),
       clubName,
       raw: request,
-      requestId,
+      requesterAvatarUrl,
       requesterId: normalizeString(requester?.documentId || request?.user?.documentId),
       requesterName,
+      requestId,
     },
     status: 'pending',
     subtitle: `${requesterName} demande une affiliation au club ${clubName}.`,
@@ -194,4 +229,3 @@ export const buildRequestHubCounts = (items = []) => {
 
   return counts;
 };
-

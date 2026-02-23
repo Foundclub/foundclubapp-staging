@@ -1,10 +1,15 @@
 import React from 'react';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import CMPlanningContent from '@/components/organisms/planning/CMPlanningContent';
+
 import useTheme from '@/theme/themeContext';
+
+import CMPlanningContent from '@/components/organisms/planning/CMPlanningContent';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 /**
  * CM Planning - Unified planning view for all sections of a MultisportClub
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
  */
 function CMPlanningScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};

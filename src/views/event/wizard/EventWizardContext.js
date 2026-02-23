@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useReducer, useMemo } from 'react';
+import React, {
+  createContext, useContext, useMemo, useReducer,
+} from 'react';
 
 const EventWizardContext = createContext();
 
@@ -12,7 +14,7 @@ const createDefaultTimeRange = () => {
 };
 
 const createInitialState = () => {
-  const { start, end } = createDefaultTimeRange();
+  const { end, start } = createDefaultTimeRange();
   return {
     // Step 1: Type
     type: null,
@@ -25,16 +27,16 @@ const createInitialState = () => {
 
     // Step 4: Logistics
     date: new Date(),
-    startTime: start,
     endTime: end,
     isRecurrent: false,
+    pricePerPerson: null,
+    recurrenceDays: [],
+    recurrenceEndDate: null,
     recurrenceFrequency: 'week',
     recurrenceInterval: 1,
-    recurrenceDays: [],
     recurrenceStartDate: null,
-    recurrenceEndDate: null,
     reservationMode: 'FULL_GROUP',
-    pricePerPerson: null,
+    startTime: start,
     // Step 5: Participants
     capacity: null,
     totalPlayers: null,
@@ -46,44 +48,54 @@ const createInitialState = () => {
     sessionStatus: 'open',
 
     // Step 9: Location
-    location: null,
     facility: null,
+    location: null,
   };
 };
 
+/**
+ *
+ * @param state
+ * @param action
+ */
 function eventWizardReducer(state, action) {
   switch (action.type) {
-    case 'SET_TYPE':
-      return { ...state, type: action.payload };
-    case 'SET_TEAM':
-      return { ...state, team: action.payload, invitedTeams: [] };
+    case 'RESET':
+      return createInitialState();
     case 'SET_INVITES':
       return { ...state, invitedTeams: action.payload };
-    case 'SET_LOGISTICS':
-      return { ...state, ...action.payload };
-    case 'SET_PARTICIPANTS':
-      return { ...state, ...action.payload };
-    case 'SET_VALIDATION_MODE':
-      return { ...state, validationMode: action.payload };
     case 'SET_LOCATION':
       return {
         ...state,
-        location: action.payload.location,
         facility: action.payload.facility,
+        location: action.payload.location,
       };
+    case 'SET_LOGISTICS':
+      return { ...state, ...action.payload };
     case 'SET_META':
       return { ...state, ...action.payload };
-    case 'RESET':
-      return createInitialState();
+    case 'SET_PARTICIPANTS':
+      return { ...state, ...action.payload };
+    case 'SET_TEAM':
+      return { ...state, invitedTeams: [], team: action.payload };
+    case 'SET_TYPE':
+      return { ...state, type: action.payload };
+    case 'SET_VALIDATION_MODE':
+      return { ...state, validationMode: action.payload };
     default:
       return state;
   }
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
 export function EventWizardProvider({ children }) {
   const [state, dispatch] = useReducer(eventWizardReducer, undefined, createInitialState);
 
-  const value = useMemo(() => ({ state, dispatch }), [state]);
+  const value = useMemo(() => ({ dispatch, state }), [state]);
 
   return (
     <EventWizardContext.Provider value={value}>
@@ -92,6 +104,9 @@ export function EventWizardProvider({ children }) {
   );
 }
 
+/**
+ *
+ */
 export function useEventWizard() {
   const context = useContext(EventWizardContext);
   if (!context) {

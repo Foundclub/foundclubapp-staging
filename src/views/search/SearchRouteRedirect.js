@@ -17,7 +17,6 @@ const SEARCH_ROUTES = new Set([
 /**
  * Redirects stack-level search routes to tab-level search routes
  * so the bottom tab bar stays visible.
- *
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */

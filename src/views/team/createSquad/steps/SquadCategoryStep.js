@@ -1,11 +1,24 @@
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import { getCategories } from '@/services/category/categoryService';
 
-const SquadCategoryStep = ({ data, updateData, onNext, onPrev }) => {
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onNext
+ * @param root0.onPrev
+ * @param root0.updateData
+ */
+function SquadCategoryStep({
+  data, onNext, onPrev, updateData,
+}) {
   const { Colors, Fonts } = useTheme();
 
   const [categories, setCategories] = React.useState([]);
@@ -16,9 +29,9 @@ const SquadCategoryStep = ({ data, updateData, onNext, onPrev }) => {
       try {
         const result = await getCategories();
         // Map to format { label: name, value: documentId }
-        const options = result.map(c => ({
+        const options = result.map((c) => ({
           label: c.name,
-          value: c.documentId
+          value: c.documentId,
         }));
         setCategories(options);
       } catch (error) {
@@ -31,42 +44,40 @@ const SquadCategoryStep = ({ data, updateData, onNext, onPrev }) => {
     fetchCategories();
   }, []);
 
-  const isValid = useMemo(() => {
-    return !!data.category;
-  }, [data.category]);
+  const isValid = useMemo(() => !!data.category, [data.category]);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 40 }]}>
-             Dans quelle catégorie ?
-          </Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
+        <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
+          Dans quelle catégorie ?
+        </Text>
 
-          <AutocompleteSelect
-            placeholder="Sélectionner une catégorie"
-            options={categories}
-            value={data.category?.label}
-            setValue={(item) => updateData('category', item)}
-            isSearchable={false}
-            isLoading={loading}
-          />
-       </View>
+        <AutocompleteSelect
+          isLoading={loading}
+          isSearchable={false}
+          options={categories}
+          placeholder="Sélectionner une catégorie"
+          setValue={(item) => updateData('category', item)}
+          value={data.category?.label}
+        />
+      </View>
 
-      <View style={{ marginBottom: 20, gap: 10 }}>
+      <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
-            title="Continuer"
-            onPress={onNext}
-            disabled={!isValid}
-            variant="Primary"
+          disabled={!isValid}
+          onPress={onNext}
+          title="Continuer"
+          variant="Primary"
         />
         <Button
-            title="Retour"
-            onPress={onPrev}
-            variant="Secondary"
+          onPress={onPrev}
+          title="Retour"
+          variant="Secondary"
         />
       </View>
     </View>
   );
-};
+}
 
 export default SquadCategoryStep;

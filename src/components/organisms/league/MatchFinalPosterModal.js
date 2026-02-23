@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Modal, Pressable, StyleSheet, Text, View,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+
+import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
-import useTheme from '@/theme/themeContext';
+
 import { clampLeagueDivision, isMaxDivision } from '@/utils/league/division';
 
 const AUTO_HIDE_MS = 4800;
@@ -33,13 +38,22 @@ const getStatusUi = (status, colors) => {
   return { chip: 'Match annule', color: colors.error500 };
 };
 
-const MatchFinalPosterModal = ({
-  visible,
-  payload,
+/**
+ *
+ * @param root0
+ * @param root0.onClose
+ * @param root0.onOpenDetails
+ * @param root0.onRelaunchSearch
+ * @param root0.payload
+ * @param root0.visible
+ */
+function MatchFinalPosterModal({
   onClose,
   onOpenDetails,
   onRelaunchSearch,
-}) => {
+  payload,
+  visible,
+}) {
   const { Colors, Fonts } = useTheme();
   const entry = useSharedValue(0);
   const eloProgress = useSharedValue(0);
@@ -47,7 +61,7 @@ const MatchFinalPosterModal = ({
   const finalStatus = String(payload?.finalStatus || recap?.finalStatus || payload?.phase || '').toLowerCase();
   const statusUi = useMemo(
     () => getStatusUi(finalStatus, Colors),
-    [Colors, finalStatus]
+    [Colors, finalStatus],
   );
 
   useEffect(() => {
@@ -88,9 +102,9 @@ const MatchFinalPosterModal = ({
   const delta = formatDelta(recap?.eloDelta);
 
   return (
-    <Modal transparent animationType="none" visible={visible} onRequestClose={onClose}>
+    <Modal animationType="none" onRequestClose={onClose} transparent visible={visible}>
       <Animated.View style={[styles.overlay, overlayStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
         <Animated.View
           style={[
             styles.poster,
@@ -108,8 +122,8 @@ const MatchFinalPosterModal = ({
             </View>
           </View>
 
-          <Text style={[Fonts.h1Bold, { color: Colors.gold500, textAlign: 'center', marginTop: 8 }]}>{scoreLabel}</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center', marginTop: 4 }]}>
+          <Text style={[Fonts.h1Bold, { color: Colors.gold500, marginTop: 8, textAlign: 'center' }]}>{scoreLabel}</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
             {recap?.resultLabel || recap?.result || 'Resultat enregistre'}
           </Text>
 
@@ -123,9 +137,15 @@ const MatchFinalPosterModal = ({
             ]}
           >
             <View style={styles.eloHeader}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO avant: {eloBefore}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                ELO avant:
+                {eloBefore}
+              </Text>
               <Text style={[Fonts.h4Bold, { color: Number(recap?.eloDelta) >= 0 ? Colors.success500 : Colors.error500 }]}>{delta}</Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ELO apres: {eloAfter}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                ELO apres:
+                {eloAfter}
+              </Text>
             </View>
             <View style={[styles.eloTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
               <Animated.View
@@ -160,20 +180,20 @@ const MatchFinalPosterModal = ({
           </View>
 
           <View style={styles.actions}>
-            <Button title="Voir details" variant="Primary" onPress={onOpenDetails} />
+            <Button onPress={onOpenDetails} title="Voir details" variant="Primary" />
             <Button
-              title="Relancer une recherche"
-              variant="Secondary"
               onPress={onRelaunchSearch}
               style={{ borderColor: Colors.gold500 }}
               textStyle={{ color: Colors.gold500 }}
+              title="Relancer une recherche"
+              variant="Secondary"
             />
           </View>
         </Animated.View>
       </Animated.View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   actions: {

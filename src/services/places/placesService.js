@@ -144,7 +144,7 @@ const fetchPlacesFromGeoSearch = async (/** @type {string} */ search, /** @type 
 /**
  * @param {string} search
  * @param {string[]} types
- * @param {number} [index=0]
+ * @param {number} [index]
  * @returns {Promise<Place[]>}
  */
 const searchByTypeWithFallback = async (search, types, index = 0) => {

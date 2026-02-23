@@ -1,26 +1,43 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-const WizardStepLayout = ({
+/**
+ *
+ * @param root0
+ * @param root0.children
+ * @param root0.isNextDisabled
+ * @param root0.isNextLoading
+ * @param root0.nextLabel
+ * @param root0.onBack
+ * @param root0.onNext
+ * @param root0.onSkip
+ * @param root0.showSkip
+ * @param root0.stepCount
+ * @param root0.stepIndex
+ * @param root0.subtitle
+ * @param root0.title
+ */
+function WizardStepLayout({
   children,
-  title,
-  subtitle,
-  onNext,
-  onBack,
   isNextDisabled = false,
   isNextLoading = false,
   nextLabel,
-  showSkip = false,
+  onBack,
+  onNext,
   onSkip,
-  stepIndex,
+  showSkip = false,
   stepCount,
-}) => {
+  stepIndex,
+  subtitle,
+  title,
+}) {
   const {
     Alignments,
     ApplicationStyle,
@@ -90,8 +107,8 @@ const WizardStepLayout = ({
 
         <ScrollView
           contentContainerStyle={[Spaces.paddingBottom[24]]}
-          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {children}
         </ScrollView>
@@ -109,25 +126,25 @@ const WizardStepLayout = ({
           {onBack ? (
             <Button
               onPress={onBack}
+              style={{ flex: 1 }}
               title={t('common.back', 'Retour')}
               variant="Secondary"
-              style={{ flex: 1 }}
             />
           ) : null}
           {onNext ? (
             <Button
-              onPress={onNext}
-              title={nextLabel || t('common.next', 'Suivant')}
-              variant="Primary"
               disabled={isNextDisabled}
               isLoading={isNextLoading}
+              onPress={onNext}
               style={{ flex: 1 }}
+              title={nextLabel || t('common.next', 'Suivant')}
+              variant="Primary"
             />
           ) : null}
         </View>
       </View>
     </ScreenContainer>
   );
-};
+}
 
 export default WizardStepLayout;

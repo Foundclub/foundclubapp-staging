@@ -5,6 +5,7 @@ import React, {
   useRef,
 } from 'react';
 import { View } from 'react-native';
+
 import { useOnboarding } from '@/context/OnboardingContext';
 
 const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
@@ -40,21 +41,21 @@ const tutorialDebugLog = (...args) => {
  * }} props
  * @returns {import('react').ReactElement}
  */
-const OnboardingWrapper = ({
-  id,
-  order,
-  title,
-  description,
-  onNext,
-  nextLabel,
-  nextAction,
-  spotlight,
+function OnboardingWrapper({
   children,
+  description,
+  id,
+  nextAction,
+  nextLabel,
+  onNext,
+  order,
+  spotlight,
   style,
-}) => {
+  title,
+}) {
   const onboardingContext = useOnboarding() || {};
-  const currentStep = onboardingContext.currentStep;
-  const isActive = onboardingContext.isActive;
+  const { currentStep } = onboardingContext;
+  const { isActive } = onboardingContext;
   const registerStep = onboardingContext.registerStep || (() => {});
   const unregisterStep = onboardingContext.unregisterStep || (() => {});
   const viewRef = useRef(/** @type {import('react-native').View | null} */ (null));
@@ -220,6 +221,6 @@ const OnboardingWrapper = ({
       {children}
     </View>
   );
-};
+}
 
 export default OnboardingWrapper;

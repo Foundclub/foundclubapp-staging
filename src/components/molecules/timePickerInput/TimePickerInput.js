@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from 'react';
+import {
+  Modal, Platform, Text, TouchableOpacity, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
 /**
  * TimePickerInput - A time input component with native iOS picker
- * @param {Object} props
+ * @param {object} props
  * @param {string} props.label - Input label
  * @param {string} props.value - Time value in HH:mm format
- * @param {function} props.onChange - Callback when time changes
+ * @param {Function} props.onChange - Callback when time changes
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.error] - Error message
  */
-const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error }) => {
-  const { Colors, Fonts, Spaces, ApplicationStyle, Alignments } = useTheme();
+function TimePickerInput({
+  error, label, onChange, placeholder = 'HH:mm', value,
+}) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
 
   // Parse the value to a Date object for the picker
@@ -64,13 +71,14 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
-          error && { borderWidth: 1, borderColor: Colors.error500 },
+          error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
       >
         <Text style={[
           Fonts.p1,
-          value ? Fonts.neutral00 : { color: Colors.neutral300 }
-        ]}>
+          value ? Fonts.neutral00 : { color: Colors.neutral300 },
+        ]}
+        >
           {displayValue}
         </Text>
       </TouchableOpacity>
@@ -84,15 +92,15 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
       {/* iOS: Show modal with picker */}
       {Platform.OS === 'ios' && showPicker && (
         <Modal
-          transparent
           animationType="slide"
-          visible={showPicker}
           onRequestClose={() => setShowPicker(false)}
+          transparent
+          visible={showPicker}
         >
           <TouchableOpacity
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
             activeOpacity={1}
             onPress={() => setShowPicker(false)}
+            style={{ backgroundColor: 'rgba(0,0,0,0.5)', flex: 1 }}
           >
             <View style={{ flex: 1 }} />
             <View style={{
@@ -100,15 +108,17 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               paddingBottom: 34,
-            }}>
+            }}
+            >
               {/* Header with Done button */}
               <View style={[
                 Alignments.row,
                 Alignments.justifySpaceBetween,
                 Spaces.paddingHorizontal[16],
                 Spaces.paddingVertical[12],
-                { borderBottomWidth: 1, borderBottomColor: Colors.neutral100 }
-              ]}>
+                { borderBottomColor: Colors.neutral100, borderBottomWidth: 1 },
+              ]}
+              >
                 <TouchableOpacity onPress={() => setShowPicker(false)}>
                   <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Annuler</Text>
                 </TouchableOpacity>
@@ -117,16 +127,16 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
                   <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>OK</Text>
                 </TouchableOpacity>
               </View>
-              
+
               <DateTimePicker
-                value={getDateFromValue()}
-                mode="time"
                 display="spinner"
-                onChange={handleChange}
-                textColor={Colors.neutral00}
                 locale="fr-FR"
                 minuteInterval={5}
+                mode="time"
+                onChange={handleChange}
                 style={{ height: 200 }}
+                textColor={Colors.neutral00}
+                value={getDateFromValue()}
               />
             </View>
           </TouchableOpacity>
@@ -136,15 +146,15 @@ const TimePickerInput = ({ label, value, onChange, placeholder = 'HH:mm', error 
       {/* Android: Show inline picker */}
       {Platform.OS === 'android' && showPicker && (
         <DateTimePicker
-          value={getDateFromValue()}
-          mode="time"
           display="default"
+          is24Hour
+          mode="time"
           onChange={handleChange}
-          is24Hour={true}
+          value={getDateFromValue()}
         />
       )}
     </View>
   );
-};
+}
 
 export default TimePickerInput;

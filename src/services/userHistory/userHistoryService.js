@@ -1,19 +1,20 @@
 import Joi from 'joi';
+
 import client from '@/services/client';
 
 /**
  * User History validation schema
  */
 export const userHistorySchema = Joi.object({
-  documentId: Joi.string().required(),
-  id: Joi.number().required(),
+  category: Joi.object().allow(null).optional(),
   club: Joi.object().allow(null).optional(),
   customClubName: Joi.string().allow(null, '').optional(),
-  category: Joi.object().allow(null).optional(),
+  documentId: Joi.string().required(),
+  endYear: Joi.number().allow(null).optional(),
+  id: Joi.number().required(),
+  isCurrentlyActive: Joi.boolean().optional(),
   level: Joi.object().allow(null).optional(),
   startYear: Joi.number().required(),
-  endYear: Joi.number().allow(null).optional(),
-  isCurrentlyActive: Joi.boolean().optional(),
 }).required();
 
 /**

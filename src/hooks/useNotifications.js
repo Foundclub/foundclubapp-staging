@@ -4,14 +4,16 @@ import {
   getMessaging,
   getToken,
   onMessage,
+  onNotificationOpenedApp,
   requestPermission,
 } from '@react-native-firebase/messaging';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
-import { Alert, Linking, PermissionsAndroid, Platform } from 'react-native';
+import {
+  Alert, Linking, PermissionsAndroid, Platform,
+} from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
-import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 
 import { addDeviceToken } from '@/services/auth/authService';
@@ -22,10 +24,12 @@ import {
   handleEventRsvpActionPress,
   isEventRsvpActionablePayload,
 } from '@/services/notificationActions/rsvpActions';
+
 import {
   normalizeNotificationPayload,
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
+import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
@@ -47,7 +51,10 @@ const getNotificationStorage = () => {
 const notificationStorage = {
   /** @param {string} key */
   getString: (key) => getNotificationStorage().getString(key),
-  /** @param {string} key @param {string | number | boolean} value */
+  /**
+   * @param {string} key @param {string | number | boolean} value
+   * @param value
+   */
   set: (key, value) => getNotificationStorage().set(key, value),
   /** @param {string} key */
   contains: (key) => getNotificationStorage().contains(key),
@@ -128,7 +135,7 @@ const onDisplayNotification = async ({ body, data, title }) => {
         sound: 'default',
       },
       body,
-      data: normalizedData,
+      data: /** @type {any} */ (normalizedData),
       ios: {
         critical: true,
         foregroundPresentationOptions: {
@@ -162,11 +169,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
     mutationFn: addDeviceToken,
     onError: (error) => {
-      const statusCode = error?.status || error?.response?.status;
+      const typedError = /** @type {any} */ (error);
+      const statusCode = typedError?.status || typedError?.response?.status;
       if (statusCode === 401 || statusCode === 403) {
         console.warn('[FCM] Token registration denied by backend permissions/auth. Notifications disabled for this session.');
       } else {
-        console.error('[FCM] Failed to save token to backend:', error);
+        console.error('[FCM] Failed to save token to backend:', typedError);
       }
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
     },
@@ -179,7 +187,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // api calls
   const saveToken = useCallback((/** @type {string} */token) => {
     if (token) {
-      console.log('[FCM] Calling saveTokenMutation with token:', token.substring(0, 20) + '...');
+      console.log('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
       saveTokenMutation(token);
     }
   }, [saveTokenMutation]);
@@ -244,10 +252,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       'Match confirme',
       'Ajouter ce match a votre agenda ?',
       [
-        { text: 'Plus tard', style: 'cancel' },
+        { style: 'cancel', text: 'Plus tard' },
         {
-          text: 'Ajouter',
           onPress: () => openCalendarFromNotification(notificationData),
+          text: 'Ajouter',
         },
       ],
     );
@@ -258,8 +266,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
     console.log('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
     if (!notificationData?.type) {
-        console.warn('[useNotifications] No type in notification data, cannot navigate');
-        return false;
+      console.warn('[useNotifications] No type in notification data, cannot navigate');
+      const fallback = navigate(RouteNames.NotificationList);
+      return fallback !== false;
     }
 
     if (notificationData.type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
@@ -278,30 +287,34 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const destination = resolveNotificationDestination(notificationData);
     if (!destination?.route) {
       console.warn('[useNotifications] Unknown notification type:', notificationData.type);
-      return false;
+      const fallback = navigate(RouteNames.NotificationList);
+      console.log(`[NOTIF_OPENED] type=${notificationData.type} route=${RouteNames.NotificationList} fallback=invalid_destination`);
+      return fallback !== false;
     }
 
-    return tryNavigate(destination.route, destination.params || {});
+    const handled = tryNavigate(destination.route, destination.params || {});
+    console.log(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
+    return handled;
   }, [navigate, maybePromptAddToCalendar]);
 
   const smartForegroundTypes = useRef(new Set([
+    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED,
     NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND,
-    NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED,
+    NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED,
     NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED,
-    NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED,
+    NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
     NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
     NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
-    NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED,
-    NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED,
-    NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED,
     NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT,
     NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST,
+    NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED,
     NOTIFICATION_TYPES.MATCH_FOUND,
   ]));
 
@@ -348,10 +361,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         return;
       }
 
+      const fallbackBody = typeof normalizedData?.body === 'string' ? normalizedData.body : '';
+      const fallbackTitle = typeof normalizedData?.title === 'string' ? normalizedData.title : '';
+
       onDisplayNotification({
-        body: remoteMessage.notification?.body || normalizedData?.body || '',
+        body: remoteMessage.notification?.body || fallbackBody,
         data: remoteMessage.data || {},
-        title: remoteMessage.notification?.title || normalizedData?.title || '',
+        title: remoteMessage.notification?.title || fallbackTitle,
       });
     });
     return unsubscribe;
@@ -370,7 +386,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       return;
     }
 
-      if (type === EventType.PRESS) {
+    if (type === EventType.PRESS) {
       if (detail.notification?.data?.type) {
         handleNavigateOnOpen(
           normalizeNotificationPayload(detail.notification.data),
@@ -442,18 +458,23 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       retreiveFCMToken();
     }
 
-    const queuePendingNotification = (payload, source) => {
+    const queuePendingNotification = (
+      /** @type {Record<string, any> | undefined | null} */ payload,
+      /** @type {string} */ source,
+    ) => {
       if (payload?.type) {
         console.log(`[FCM] Storing pending notification from ${source}`);
         dispatch({
-          type: 'SET_PENDING_NOTIFICATION',
           payload,
+          type: 'SET_PENDING_NOTIFICATION',
         });
       }
     };
 
+    const messagingInstance = getMessaging(getApp());
+
     // Check for initial notification (Cold Start) - Firebase remote push
-    getMessaging().getInitialNotification().then(remoteMessage => {
+    messagingInstance.getInitialNotification().then((remoteMessage) => {
       if (remoteMessage) {
         console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
@@ -461,10 +482,20 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
     });
 
+    // Handle app opened from BACKGROUND state by Firebase remote push.
+    const unsubscribeNotificationOpened = onNotificationOpenedApp(messagingInstance, (remoteMessage) => {
+      if (!remoteMessage) return;
+      const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+      if (normalizedData?.type) {
+        console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
+      }
+      queuePendingNotification(normalizedData, 'fcm-background');
+    });
+
     // Check Notifee initial notification (local/actionable notifications)
     notifee.getInitialNotification().then((initialNotification) => {
       const normalizedData = normalizeNotificationPayload(
-        initialNotification?.notification?.data || {}
+        initialNotification?.notification?.data || {},
       );
       queuePendingNotification(normalizedData, 'notifee');
     });
@@ -473,6 +504,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const storedPending = consumePendingOpenNotification();
     queuePendingNotification(storedPending, 'storage');
 
+    return () => {
+      unsubscribeNotificationOpened();
+    };
   }, [saveToken, userData, dispatch]);
 
   useEffect(() => {
@@ -482,7 +516,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const interval = setInterval(() => {
       const handled = handleNavigateOnOpen(/** @type {any} */ (pendingNotification));
       if (handled || attempts >= maxAttempts) {
-        dispatch({ type: 'SET_PENDING_NOTIFICATION', payload: null });
+        dispatch({ payload: null, type: 'SET_PENDING_NOTIFICATION' });
         clearInterval(interval);
       }
       attempts += 1;

@@ -1,9 +1,6 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
-import { commonOptions } from '@/navigation/commonOptions';
-import { RouteNames } from '@/navigation/routeNames';
-
 import AddCoach from '@/views/club/AddCoach';
 import AddSponsor from '@/views/club/AddSponsor';
 import AssignCoachTeams from '@/views/club/AssignCoachTeams';
@@ -18,8 +15,14 @@ import FacilityForm from '@/views/facility/FacilityForm';
 import FacilityList from '@/views/facility/FacilityList';
 import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
 
+import { commonOptions } from '@/navigation/commonOptions';
+import { RouteNames } from '@/navigation/routeNames';
+
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function ClubStack() {
   const { t } = useTranslation();
 

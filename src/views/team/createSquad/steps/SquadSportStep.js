@@ -1,11 +1,24 @@
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import { getActivities } from '@/services/activity/activityService';
 
-const SquadSportStep = ({ data, updateData, onNext, onPrev }) => {
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onNext
+ * @param root0.onPrev
+ * @param root0.updateData
+ */
+function SquadSportStep({
+  data, onNext, onPrev, updateData,
+}) {
   const { Colors, Fonts, Spaces } = useTheme();
 
   const [sports, setSports] = React.useState([]);
@@ -17,15 +30,15 @@ const SquadSportStep = ({ data, updateData, onNext, onPrev }) => {
         const activities = await getActivities({
           filters: {
             isLeague: {
-              $eq: true
-            }
-          }
+              $eq: true,
+            },
+          },
         });
         // Map to format { label: name, value: documentId or id }
         // The service returns the data array directly validated
-        const options = activities.map(a => ({
+        const options = activities.map((a) => ({
           label: a.name,
-          value: a.documentId
+          value: a.documentId,
         }));
         setSports(options);
       } catch (error) {
@@ -38,42 +51,40 @@ const SquadSportStep = ({ data, updateData, onNext, onPrev }) => {
     fetchSports();
   }, []);
 
-  const isValid = useMemo(() => {
-    return !!data.sport;
-  }, [data.sport]);
+  const isValid = useMemo(() => !!data.sport, [data.sport]);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 40 }]}>
-             Quel est votre sport ?
-          </Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
+        <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
+          Quel est votre sport ?
+        </Text>
 
-          <AutocompleteSelect
-            placeholder="Sélectionner un sport"
-            options={sports}
-            value={data.sport?.label}
-            setValue={(item) => updateData('sport', item)}
-            isSearchable={false}
-            isLoading={loading}
-          />
-       </View>
+        <AutocompleteSelect
+          isLoading={loading}
+          isSearchable={false}
+          options={sports}
+          placeholder="Sélectionner un sport"
+          setValue={(item) => updateData('sport', item)}
+          value={data.sport?.label}
+        />
+      </View>
 
-      <View style={{ marginBottom: 20, gap: 10 }}>
+      <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
-            title="Continuer"
-            onPress={onNext}
-            disabled={!isValid}
-            variant="Primary"
+          disabled={!isValid}
+          onPress={onNext}
+          title="Continuer"
+          variant="Primary"
         />
         <Button
-            title="Retour"
-            onPress={onPrev}
-            variant="Secondary"
+          onPress={onPrev}
+          title="Retour"
+          variant="Secondary"
         />
       </View>
     </View>
   );
-};
+}
 
 export default SquadSportStep;

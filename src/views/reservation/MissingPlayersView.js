@@ -1,9 +1,11 @@
 import { FlashList } from '@shopify/flash-list';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { startOfDay, isBefore, differenceInHours } from 'date-fns';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ActivityIndicator, StyleSheet, Text, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -12,8 +14,8 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetReservations } from '@/services/reservation/reservationQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { useGetReservations } from '@/services/reservation/reservationQueries';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
@@ -49,7 +51,7 @@ function MissingPlayersView({ navigation }) {
     isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetReservations({ 
+  } = useGetReservations({
     pageSize: 20,
     startDateAfter: startOfDay(new Date()).toISOString(),
     // Note: Backend should filter by bookingStatus === 'shared', but we'll filter client-side as backup
@@ -89,7 +91,7 @@ function MissingPlayersView({ navigation }) {
       // SOS alerts first
       if (a.isLastMinuteAlert && !b.isLastMinuteAlert) return -1;
       if (!a.isLastMinuteAlert && b.isLastMinuteAlert) return 1;
-      
+
       // Then by hours until event (closest first)
       const hoursA = differenceInHours(new Date(a.date), new Date());
       const hoursB = differenceInHours(new Date(b.date), new Date());
@@ -100,7 +102,7 @@ function MissingPlayersView({ navigation }) {
   // Handlers
   const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
-      navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: item.documentId } });
+      navigation.navigate('EventStack', { params: { eventId: item.documentId }, screen: 'EventDetails' });
     }
   }, [navigation]);
 
@@ -120,18 +122,16 @@ function MissingPlayersView({ navigation }) {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const renderItem = useCallback((/** @type {{ item: FCEvent }} */ { item }) => {
-    return (
-      <EventCardNew
-        item={item}
-        onDecline={() => {}}
-        onJoin={() => {}}
-        onLogin={() => {}}
-        onParticipate={() => handleJoinEvent(item)}
-        onPress={handleCardPress}
-      />
-    );
-  }, [handleCardPress, handleJoinEvent]);
+  const renderItem = useCallback((/** @type {{ item: FCEvent }} */ { item }) => (
+    <EventCardNew
+      item={item}
+      onDecline={() => {}}
+      onJoin={() => {}}
+      onLogin={() => {}}
+      onParticipate={() => handleJoinEvent(item)}
+      onPress={handleCardPress}
+    />
+  ), [handleCardPress, handleJoinEvent]);
 
   const renderEmptyList = () => (
     <View style={[
@@ -162,7 +162,7 @@ function MissingPlayersView({ navigation }) {
       <Text style={[Fonts.p2, Fonts.neutral300]}>
         {t('reservation.missingPlayers.subtitle', 'Rejoignez une réservation qui manque de joueurs')}
       </Text>
-      
+
       {/* Stats */}
       <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[16]]}>
         <View style={styles.statBadge}>
@@ -188,11 +188,12 @@ function MissingPlayersView({ navigation }) {
       >
         <View style={[Alignments.fill, Spaces.padding[16]]}>
           <FlashList
+            contentContainerStyle={{ paddingBottom: 100 }}
             data={sharedReservations}
             estimatedItemSize={220}
+            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={renderEmptyList}
-            ListHeaderComponent={renderHeader}
             ListFooterComponent={isFetchingNextPage ? (
               <ActivityIndicator
                 color={Colors.primary500}
@@ -200,14 +201,13 @@ function MissingPlayersView({ navigation }) {
                 style={Spaces.marginVertical[16]}
               />
             ) : null}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+            ListHeaderComponent={renderHeader}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refetch}
             refreshing={isLoading && !isFetchingNextPage}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
           />
         </View>
       </WithDataWrapper>
@@ -225,26 +225,26 @@ function MissingPlayersView({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  statBadge: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
   sosBadge: {
     backgroundColor: 'rgba(255, 107, 53, 0.2)',
   },
-  statNumber: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 24,
-    color: '#FFFFFF',
+  statBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    flex: 1,
+    padding: 16,
   },
   statLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
     fontFamily: 'Montserrat-Medium',
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 4,
+  },
+  statNumber: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 24,
   },
 });
 

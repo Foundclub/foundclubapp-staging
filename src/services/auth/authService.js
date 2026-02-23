@@ -6,35 +6,42 @@ import { getDeviceId, getVersion } from 'react-native-device-info';
 
 import client from '@/services/client';
 
-// Check if Firebase bypass is enabled
-const BYPASS_FIREBASE = process.env.BYPASS_FIREBASE_AUTH === 'true';
+import { isFirebaseBypassEnabled } from './bypassPolicy';
+
+const isLocalAppEnvironment = () => String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
+const logAuthDebug = (...args) => {
+  if (isLocalAppEnvironment()) {
+    // Keep verbose auth logs strictly local to avoid noisy production runtime logs.
+    console.log(...args);
+  }
+};
 
 /**
  * User validation schema
  */
 const userSchema = Joi.object({
   avatar: Joi.object().allow(null).optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
   birthdate: Joi.string().isoDate().allow(null).optional(),
+  category: Joi.string().allow(null, '').optional(),
+  clubMembershipRequests: Joi.array().items(Joi.object({
+    club: Joi.object().optional(),
+    documentId: Joi.string().required(),
+    state: Joi.string().required(),
+  })).optional(),
   documentId: Joi.string().allow(null, '').optional(),
   email: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().allow(null, '').optional(),
+  geohash: Joi.string().allow(null, '').optional(),
+  height: Joi.number().allow(null, '').optional(),
   id: Joi.number().required(),
+  isLookingForClub: Joi.boolean().allow(null).optional(),
   lastname: Joi.string().allow(null, '').optional(),
   phoneNumber: Joi.string().required(),
-  section: Joi.object().allow(null).optional(),
-  preferredSport: Joi.string().allow(null, '').optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  category: Joi.string().allow(null, '').optional(),
-  geohash: Joi.string().allow(null, '').optional(),
-  weight: Joi.number().allow(null, '').optional(),
-  height: Joi.number().allow(null, '').optional(),
   position: Joi.string().allow(null, '').optional(),
-  isLookingForClub: Joi.boolean().allow(null).optional(),
-  clubMembershipRequests: Joi.array().items(Joi.object({
-    documentId: Joi.string().required(),
-    state: Joi.string().required(),
-    club: Joi.object().optional(),
-  })).optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
+  section: Joi.object().allow(null).optional(),
+  weight: Joi.number().allow(null, '').optional(),
 }).required();
 
 /**
@@ -43,20 +50,26 @@ const userSchema = Joi.object({
  * on backend without breaking profile views.
  */
 const publicUserSchema = Joi.object({
-  id: Joi.number().required(),
-  documentId: Joi.string().allow(null, '').optional(),
-  firstname: Joi.string().allow(null, '').optional(),
-  lastname: Joi.string().allow(null, '').optional(),
-  birthdate: Joi.string().isoDate().allow(null).optional(),
-  preferredSport: Joi.string().allow(null, '').optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  position: Joi.string().allow(null, '').optional(),
-  weight: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
-  height: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
-  isLookingForClub: Joi.boolean().allow(null).optional(),
   avatar: Joi.object({
     url: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  birthdate: Joi.string().isoDate().allow(null).optional(),
+  club: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+    name: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  firstname: Joi.string().allow(null, '').optional(),
+  height: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
+  id: Joi.number().required(),
+  isLookingForClub: Joi.boolean().allow(null).optional(),
+  lastname: Joi.string().allow(null, '').optional(),
+  parentAccount: Joi.object({
+    documentId: Joi.string().allow(null, '').optional(),
+  }).allow(null).optional(),
+  position: Joi.string().allow(null, '').optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
   role: Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
     name: Joi.string().allow(null, '').optional(),
@@ -65,13 +78,7 @@ const publicUserSchema = Joi.object({
     documentId: Joi.string().allow(null, '').optional(),
     name: Joi.string().allow(null, '').optional(),
   }).allow(null).optional(),
-  club: Joi.object({
-    documentId: Joi.string().allow(null, '').optional(),
-    name: Joi.string().allow(null, '').optional(),
-  }).allow(null).optional(),
-  parentAccount: Joi.object({
-    documentId: Joi.string().allow(null, '').optional(),
-  }).allow(null).optional(),
+  weight: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
 }).required();
 
 /**
@@ -90,12 +97,12 @@ const roleSchema = Joi.object({
  */
 export const signInWithPhoneNumber = async (phoneNumber) => {
   // BYPASS MODE: Skip Firebase and return fake confirmation
-  if (BYPASS_FIREBASE) {
-    console.log('[BYPASS] Firebase Auth bypassed - returning fake confirmation');
+  if (isFirebaseBypassEnabled()) {
+    logAuthDebug('[BYPASS] Firebase Auth bypassed - returning fake confirmation');
     return Promise.resolve({
       confirm: async () => ({ phoneNumber }),
-      verificationId: 'bypass-verification-id',
       phoneNumber,
+      verificationId: 'bypass-verification-id',
     });
   }
 
@@ -122,18 +129,18 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
  */
 export const login = async ({ code, confirm }) => {
   // BYPASS MODE: Skip Firebase and login directly with phone number
-  if (BYPASS_FIREBASE) {
-    console.log('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
-    console.log('[BYPASS] confirm object received:', JSON.stringify(confirm));
+  if (isFirebaseBypassEnabled()) {
+    logAuthDebug('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
+    logAuthDebug('[BYPASS] confirm object received:', JSON.stringify(confirm));
     const phoneNumber = typeof confirm?.phoneNumber === 'string' ? confirm.phoneNumber.trim() : '';
     if (!phoneNumber) {
       throw new Error('Missing phone number in confirmation. Please restart login.');
     }
-    console.log('[BYPASS] phoneNumber to send to API:', phoneNumber);
+    logAuthDebug('[BYPASS] phoneNumber to send to API:', phoneNumber);
 
     try {
       const result = await client.post('/firebase-auth/login-bypass', { phoneNumber });
-      console.log('[BYPASS] Login API response received, jwt:', !!result.data?.jwt);
+      logAuthDebug('[BYPASS] Login API response received, jwt:', !!result.data?.jwt);
       const schema = Joi.object({
         data: Joi.object().required(),
         jwt: Joi.string().required(),
@@ -141,7 +148,7 @@ export const login = async ({ code, confirm }) => {
       await schema.validateAsync(result.data, { allowUnknown: true });
 
       const userData = result.data.data || result.data.user;
-      console.log('[BYPASS] User data extracted, documentId:', userData?.documentId);
+      logAuthDebug('[BYPASS] User data extracted, documentId:', userData?.documentId);
 
       const authResult = {
         idToken: 'bypass-token',
@@ -149,7 +156,7 @@ export const login = async ({ code, confirm }) => {
         token: result.data.jwt,
         user: userData,
       };
-      console.log('[BYPASS] Returning auth result with user documentId:', authResult.user?.documentId);
+      logAuthDebug('[BYPASS] Returning auth result with user documentId:', authResult.user?.documentId);
       return authResult;
     } catch (error) {
       const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
@@ -190,7 +197,7 @@ export const login = async ({ code, confirm }) => {
 };
 
 export const logout = async () => {
-  if (BYPASS_FIREBASE) {
+  if (isFirebaseBypassEnabled()) {
     return Promise.resolve();
   }
 
@@ -212,8 +219,8 @@ export const logout = async () => {
 
 /**
  * Subscribe to auth state changes
- * @param {function} onAuthStateChanged
- * @returns {function} unsubscribe
+ * @param {Function} onAuthStateChanged
+ * @returns {Function} unsubscribe
  */
 export const subscribeToAuthState = (onAuthStateChanged) => {
   const auth = getAuth();
@@ -233,7 +240,7 @@ export const getMe = async () => {
     });
     return validationResult;
   } catch (error) {
-// ... existing code ...
+    // ... existing code ...
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch user data: ${errorToDisplay}`);
   }
@@ -265,17 +272,26 @@ export const updateMe = async (userData) => {
       }
     });
 
-    console.log('[updateMe] base payload:', JSON.stringify(userDataCopy));
+    logAuthDebug('[updateMe] base payload:', JSON.stringify(userDataCopy));
 
     // Handle avatar file separately
-    if (userDataCopy.avatar && userDataCopy.avatar.path) {
+    const avatarPath = userDataCopy?.avatar?.path || userDataCopy?.avatar?.uri;
+    if (userDataCopy.avatar && avatarPath) {
+      const normalizedUri = (Platform.OS === 'ios' && avatarPath.startsWith('file://'))
+        ? avatarPath.replace('file://', '')
+        : avatarPath;
+      const extension = normalizedUri.split('.').pop()?.toLowerCase();
+      const fallbackExtension = extension && extension.length <= 4 ? extension : 'jpg';
+      const defaultMimeType = fallbackExtension === 'png' ? 'image/png' : 'image/jpeg';
       const fileToUpload = {
-        name: userDataCopy.avatar.path.split('/').pop(),
-        type: userDataCopy.avatar.mime,
-        uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
+        name: userDataCopy.avatar.filename
+          || userDataCopy.avatar.fileName
+          || `avatar.${fallbackExtension}`,
+        type: userDataCopy.avatar.mime || userDataCopy.avatar.type || defaultMimeType,
+        uri: normalizedUri,
       };
 
-      console.log('[updateMe] Avatar file to upload:', fileToUpload);
+      logAuthDebug('[updateMe] Avatar file to upload:', fileToUpload);
 
       if (!fileToUpload.uri || !fileToUpload.type || !fileToUpload.name) {
         console.warn('[updateMe] Invalid file properties!');
@@ -295,23 +311,32 @@ export const updateMe = async (userData) => {
         } else {
           valueToSend = value.toString();
         }
-        console.log(`[updateMe] Appending ${key}: ${valueToSend}`);
+        logAuthDebug(`[updateMe] Appending ${key}: ${valueToSend}`);
         formData.append(key, valueToSend);
       }
     });
 
-    console.log('[updateMe] Sending request to /firebase-auth/update via fetch');
+    const resolvedApiBaseUrl = client?.defaults?.baseURL
+      || ((__DEV__ && Platform.OS === 'android')
+        ? 'http://10.0.2.2:1337/api'
+        : process.env.API_URL);
+    if (!resolvedApiBaseUrl) {
+      throw new Error('API base URL is missing');
+    }
+    const endpoint = `${resolvedApiBaseUrl.replace(/\/$/, '')}/firebase-auth/update`;
+
+    logAuthDebug('[updateMe] Sending request to /firebase-auth/update via fetch');
     const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const auth = getAuthTokens();
 
     // Use native fetch to avoid Axios/FormData issues on Android
-    const response = await fetch(`${process.env.API_URL}/firebase-auth/update`, {
-      method: 'PUT',
+    const response = await fetch(endpoint, {
+      body: formData,
       headers: {
         ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
         // Do NOT set Content-Type, let fetch generate the boundary
       },
-      body: formData,
+      method: 'PUT',
     });
 
     if (!response.ok) {
@@ -341,7 +366,7 @@ export const createTrainer = async (userData) => {
 
   const userDataCopy = {
     ...userData,
-    username: userData.phoneNumber
+    username: userData.phoneNumber,
   };
 
   if (userData.birthdate) {
@@ -355,14 +380,14 @@ export const createTrainer = async (userData) => {
         delete userDataCopy.birthdate; // Date invalide
       }
     } else {
-       // Format peut-être déjà YYYY-MM-DD ou invalide ?
-       // On essaie de l'utiliser tel quel si valide, sinon on supprime
-       const fallbackDate = new Date(userData.birthdate);
-       if (!isNaN(fallbackDate.getTime())) {
-         userDataCopy.birthdate = format(fallbackDate, 'yyyy-MM-dd');
-       } else {
-         delete userDataCopy.birthdate;
-       }
+      // Format peut-être déjà YYYY-MM-DD ou invalide ?
+      // On essaie de l'utiliser tel quel si valide, sinon on supprime
+      const fallbackDate = new Date(userData.birthdate);
+      if (!isNaN(fallbackDate.getTime())) {
+        userDataCopy.birthdate = format(fallbackDate, 'yyyy-MM-dd');
+      } else {
+        delete userDataCopy.birthdate;
+      }
     }
   } else {
     delete userDataCopy.birthdate;
@@ -396,9 +421,7 @@ export const createTrainer = async (userData) => {
     }
   });
 
-  console.log('[createTrainer] Sending formData:', JSON.stringify(userDataCopy)); // Only logging text fields, file param is hidden in formData object handling
-
-  console.log('[createTrainer] Sending formData:', JSON.stringify(userDataCopy));
+  logAuthDebug('[createTrainer] Sending formData:', JSON.stringify(userDataCopy));
 
   try {
     const result = await client.post(
@@ -494,7 +517,7 @@ export const getUserById = async (id) => {
  */
 export const addDeviceToken = async (token) => {
   try {
-    console.log('[FCM] Registering device token', {
+    logAuthDebug('[FCM] Registering device token', {
       device: getDeviceId(),
       platform: Platform.OS,
       tokenPrefix: token ? `${token.slice(0, 12)}...` : 'none',

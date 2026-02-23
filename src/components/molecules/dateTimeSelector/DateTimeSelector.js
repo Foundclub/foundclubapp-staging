@@ -5,9 +5,10 @@ import {
   ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import useTheme from '@/theme/themeContext';
 
 const ITEM_HEIGHT = 50;
 
@@ -35,15 +36,15 @@ const ITEM_HEIGHT = 50;
  * @param {WheelPickerProps} props
  * @returns {import('react').ReactElement}
  */
-export const WheelPicker = ({
+export function WheelPicker({
   data,
-  selectedValue,
-  onValueChange,
   formatItem,
-  width = 80,
   isOpen,
+  onValueChange,
+  selectedValue,
   visibleItems = 5,
-}) => {
+  width = 80,
+}) {
   const PICKER_HEIGHT = ITEM_HEIGHT * visibleItems;
   const centerOffset = ((visibleItems - 1) * ITEM_HEIGHT) / 2;
   const { Colors, Fonts } = useTheme();
@@ -82,7 +83,7 @@ export const WheelPicker = ({
   };
 
   return (
-    <View style={[styles.wheelContainer, { width, height: PICKER_HEIGHT }]}>
+    <View style={[styles.wheelContainer, { height: PICKER_HEIGHT, width }]}>
       <View
         pointerEvents="none"
         style={[
@@ -96,12 +97,12 @@ export const WheelPicker = ({
       />
 
       <ScrollView
-        ref={scrollRef}
         bounces={false}
         contentContainerStyle={{ paddingVertical: centerOffset }}
         decelerationRate="fast"
         nestedScrollEnabled
         onMomentumScrollEnd={handleScrollComplete}
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         snapToAlignment="start"
         snapToInterval={ITEM_HEIGHT}
@@ -115,8 +116,8 @@ export const WheelPicker = ({
 
           return (
             <TouchableOpacity
-              key={`${itemValue}-${index}`}
               activeOpacity={0.7}
+              key={`${itemValue}-${index}`}
               onPress={() => {
                 onValueChange(itemValue);
                 scrollRef.current?.scrollTo({
@@ -145,7 +146,7 @@ export const WheelPicker = ({
       </ScrollView>
     </View>
   );
-};
+}
 
 /**
  * @typedef {'date' | 'time'} DateTimeMode
@@ -172,7 +173,7 @@ export const WheelPicker = ({
  * @param {DateTimeSelectorProps} props
  * @returns {import('react').ReactElement}
  */
-const DateTimeSelector = ({
+function DateTimeSelector({
   buttonStyle,
   buttonTextStyle,
   display = 'modal',
@@ -182,7 +183,7 @@ const DateTimeSelector = ({
   onChange,
   onOpen,
   value,
-}) => {
+}) {
   const { Colors, Fonts, Spaces } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -300,8 +301,8 @@ const DateTimeSelector = ({
         style={[
           styles.inputButton,
           {
-            borderColor: 'rgba(1, 179, 244, 0.26)',
             backgroundColor: 'rgba(1, 179, 244, 0.08)',
+            borderColor: 'rgba(1, 179, 244, 0.26)',
           },
           buttonStyle,
         ]}
@@ -485,12 +486,12 @@ const DateTimeSelector = ({
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   inlineTimePickersRow: {
-    paddingVertical: 12,
     justifyContent: 'space-between',
+    paddingVertical: 12,
   },
   inputButton: {
     alignItems: 'center',

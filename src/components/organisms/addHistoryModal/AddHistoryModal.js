@@ -18,9 +18,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 import { useGetCategories } from '@/services/category/categoryQueries';
-import { useGetLevels } from '@/services/level/levelQueries';
 import { useSearchClubs } from '@/services/club/clubQueries';
-import { useCreateHistory, useUpdateHistory, useDeleteHistory } from '@/services/userHistory/userHistoryQueries';
+import { useGetLevels } from '@/services/level/levelQueries';
+import { useCreateHistory, useDeleteHistory, useUpdateHistory } from '@/services/userHistory/userHistoryQueries';
 
 const searchIcon = require('@/assets/icons/search.png');
 
@@ -41,8 +41,10 @@ const searchIcon = require('@/assets/icons/search.png');
  * AddHistoryModal - Modal form to add/edit a sports history entry
  * @param {{ visible: boolean; onClose: () => void; editingEntry?: HistoryEntry | null }} props
  */
-function AddHistoryModal({ visible, onClose, editingEntry = null }) {
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+function AddHistoryModal({ editingEntry = null, onClose, visible }) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -114,23 +116,23 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
 
   const handleSubmit = () => {
     const data = {
+      category: selectedCategory?.documentId || null,
       club: selectedClub?.documentId || null,
       customClubName: useCustomClub ? customClubName : null,
-      category: selectedCategory?.documentId || null,
-      level: selectedLevel?.documentId || null,
-      startYear,
       endYear: isCurrentlyActive ? null : endYear,
       isCurrentlyActive,
+      level: selectedLevel?.documentId || null,
+      startYear,
     };
 
     if (isEditing) {
       updateHistoryMutation.mutate(
-        { id: editingEntry.documentId, data },
-        { onSuccess: () => { onClose(); } }
+        { data, id: editingEntry.documentId },
+        { onSuccess: () => { onClose(); } },
       );
     } else {
       createHistoryMutation.mutate(data, {
-        onSuccess: () => { onClose(); }
+        onSuccess: () => { onClose(); },
       });
     }
   };
@@ -138,7 +140,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
   const handleDelete = () => {
     if (editingEntry) {
       deleteHistoryMutation.mutate(editingEntry.documentId, {
-        onSuccess: () => { onClose(); }
+        onSuccess: () => { onClose(); },
       });
     }
   };
@@ -149,29 +151,32 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
     <Modal
       animationType="slide"
       onRequestClose={onClose}
-      transparent={true}
+      transparent
       visible={visible}
     >
       <View style={{
-        flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
+        flex: 1,
         justifyContent: 'flex-end',
-      }}>
+      }}
+      >
         <View style={{
           backgroundColor: Colors.neutral900,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           maxHeight: '90%',
           paddingBottom: insets.bottom + 16,
-        }}>
+        }}
+        >
           {/* Header */}
           <View style={[
             Spaces.padding[16],
             Alignments.row,
             Alignments.justifySpaceBetween,
             Alignments.alignCenter,
-            { borderBottomWidth: 1, borderBottomColor: Colors.neutral700 }
-          ]}>
+            { borderBottomColor: Colors.neutral700, borderBottomWidth: 1 },
+          ]}
+          >
             <TouchableOpacity onPress={onClose}>
               <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Annuler</Text>
             </TouchableOpacity>
@@ -181,35 +186,41 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
             <View style={{ width: 50 }} />
           </View>
 
-          <ScrollView style={[Spaces.padding[16]]} contentContainerStyle={[{ rowGap: 20 }]}>
+          <ScrollView contentContainerStyle={[{ rowGap: 20 }]} style={[Spaces.padding[16]]}>
             {/* Club Selection */}
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Club</Text>
-              
+
               {!useCustomClub ? (
                 <>
                   {/* Club search */}
                   <View style={{
-                    flexDirection: 'row',
                     alignItems: 'center',
                     backgroundColor: Colors.neutral800,
+                    borderColor: Colors.neutral700,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: Colors.neutral700,
+                    flexDirection: 'row',
                     paddingHorizontal: 12,
-                  }}>
-                    <Image source={/** @type {any} */ (searchIcon)} style={{ width: 20, height: 20, tintColor: Colors.neutral500, marginRight: 8 }} />
+                  }}
+                  >
+                    <Image
+                      source={/** @type {any} */ (searchIcon)}
+                      style={{
+                        height: 20, marginRight: 8, tintColor: Colors.neutral500, width: 20,
+                      }}
+                    />
                     <TextInput
-                      value={selectedClub?.name || clubSearch}
                       onChangeText={(text) => {
                         setClubSearch(text);
                         setSelectedClub(null);
                       }}
                       placeholder="Rechercher un club..."
                       placeholderTextColor={Colors.neutral500}
-                      style={[Fonts.p1, { flex: 1, color: Colors.neutral00, paddingVertical: 14 }]}
+                      style={[Fonts.p1, { color: Colors.neutral00, flex: 1, paddingVertical: 14 }]}
+                      value={selectedClub?.name || clubSearch}
                     />
-                    {searchingClubs && <ActivityIndicator size="small" color={Colors.primary500} />}
+                    {searchingClubs && <ActivityIndicator color={Colors.primary500} size="small" />}
                   </View>
 
                   {/* Club results */}
@@ -223,7 +234,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                               setSelectedClub(club);
                               setClubSearch('');
                             }}
-                            style={[Spaces.padding[12], { borderBottomWidth: 1, borderBottomColor: Colors.neutral700 }]}
+                            style={[Spaces.padding[12], { borderBottomColor: Colors.neutral700, borderBottomWidth: 1 }]}
                           >
                             <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{club.name}</Text>
                           </TouchableOpacity>
@@ -243,7 +254,6 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                 <>
                   {/* Custom club name input */}
                   <TextInput
-                    value={customClubName}
                     onChangeText={setCustomClubName}
                     placeholder="Nom du club..."
                     placeholderTextColor={Colors.neutral500}
@@ -252,12 +262,13 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                       { padding: 14 },
                       {
                         backgroundColor: Colors.neutral800,
+                        borderColor: Colors.neutral700,
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: Colors.neutral700,
                         color: Colors.neutral00,
-                      }
+                      },
                     ]}
+                    value={customClubName}
                   />
                   <TouchableOpacity onPress={() => { setUseCustomClub(false); setCustomClubName(''); }}>
                     <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
@@ -278,12 +289,12 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                       key={cat.documentId}
                       onPress={() => setSelectedCategory(cat)}
                       style={{
+                        backgroundColor: selectedCategory?.documentId === cat.documentId ? Colors.primary500 : Colors.neutral800,
+                        borderColor: selectedCategory?.documentId === cat.documentId ? Colors.primary500 : Colors.neutral700,
+                        borderRadius: 20,
+                        borderWidth: 1,
                         paddingHorizontal: 16,
                         paddingVertical: 10,
-                        borderRadius: 20,
-                        backgroundColor: selectedCategory?.documentId === cat.documentId ? Colors.primary500 : Colors.neutral800,
-                        borderWidth: 1,
-                        borderColor: selectedCategory?.documentId === cat.documentId ? Colors.primary500 : Colors.neutral700,
                       }}
                     >
                       <Text style={[Fonts.p2, { color: selectedCategory?.documentId === cat.documentId ? '#FFF' : Colors.neutral300 }]}>
@@ -305,12 +316,12 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                       key={lvl.documentId}
                       onPress={() => setSelectedLevel(lvl)}
                       style={{
+                        backgroundColor: selectedLevel?.documentId === lvl.documentId ? Colors.primary500 : Colors.neutral800,
+                        borderColor: selectedLevel?.documentId === lvl.documentId ? Colors.primary500 : Colors.neutral700,
+                        borderRadius: 20,
+                        borderWidth: 1,
                         paddingHorizontal: 16,
                         paddingVertical: 10,
-                        borderRadius: 20,
-                        backgroundColor: selectedLevel?.documentId === lvl.documentId ? Colors.primary500 : Colors.neutral800,
-                        borderWidth: 1,
-                        borderColor: selectedLevel?.documentId === lvl.documentId ? Colors.primary500 : Colors.neutral700,
                       }}
                     >
                       <Text style={[Fonts.p2, { color: selectedLevel?.documentId === lvl.documentId ? '#FFF' : Colors.neutral300 }]}>
@@ -336,10 +347,10 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                           key={`start-${y}`}
                           onPress={() => setStartYear(y)}
                           style={{
+                            backgroundColor: startYear === y ? Colors.primary500 : Colors.neutral800,
+                            borderRadius: 8,
                             paddingHorizontal: 12,
                             paddingVertical: 8,
-                            borderRadius: 8,
-                            backgroundColor: startYear === y ? Colors.primary500 : Colors.neutral800,
                           }}
                         >
                           <Text style={[Fonts.p2, { color: startYear === y ? '#FFF' : Colors.neutral300 }]}>{y}</Text>
@@ -353,10 +364,10 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
               {/* End Year / Currently Active */}
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginTop[8]]}>
                 <Switch
-                  value={isCurrentlyActive}
                   onValueChange={setIsCurrentlyActive}
-                  trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
                   thumbColor="#FFF"
+                  trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
+                  value={isCurrentlyActive}
                 />
                 <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>J'y suis toujours</Text>
               </View>
@@ -366,15 +377,15 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                   <Text style={[Fonts.p3, { color: Colors.neutral500, marginBottom: 4 }]}>Fin</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={[Alignments.row, Spaces.gap[8]]}>
-                      {yearOptions.filter(y => y >= startYear).slice(0, 15).map((y) => (
+                      {yearOptions.filter((y) => y >= startYear).slice(0, 15).map((y) => (
                         <TouchableOpacity
                           key={`end-${y}`}
                           onPress={() => setEndYear(y)}
                           style={{
+                            backgroundColor: endYear === y ? Colors.primary500 : Colors.neutral800,
+                            borderRadius: 8,
                             paddingHorizontal: 12,
                             paddingVertical: 8,
-                            borderRadius: 8,
-                            backgroundColor: endYear === y ? Colors.primary500 : Colors.neutral800,
                           }}
                         >
                           <Text style={[Fonts.p2, { color: endYear === y ? '#FFF' : Colors.neutral300 }]}>{y}</Text>
@@ -389,13 +400,18 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
             {/* Warning Declaration */}
             <View style={{
               backgroundColor: Colors.neutral800,
-              borderRadius: 12,
-              borderLeftWidth: 4,
               borderLeftColor: '#F59E0B',
+              borderLeftWidth: 4,
+              borderRadius: 12,
               padding: 16,
-            }}>
+            }}
+            >
               <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                ⚠️ <Text style={{ fontWeight: 'bold' }}>Déclaration sur l'honneur :</Text> Les informations saisies doivent être exactes. Tout historique peut être vérifié par la communauté et signalé en cas de fausse déclaration.
+                ⚠️
+                {' '}
+                <Text style={{ fontWeight: 'bold' }}>Déclaration sur l'honneur :</Text>
+                {' '}
+                Les informations saisies doivent être exactes. Tout historique peut être vérifié par la communauté et signalé en cas de fausse déclaration.
               </Text>
             </View>
 
@@ -408,7 +424,7 @@ function AddHistoryModal({ visible, onClose, editingEntry = null }) {
                 title={isEditing ? 'Enregistrer les modifications' : 'Ajouter à mon parcours'}
                 variant="Primary"
               />
-              
+
               {isEditing && (
                 <Button
                   isLoading={deleteHistoryMutation.isPending}

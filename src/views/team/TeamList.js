@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -14,7 +15,6 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -69,8 +69,8 @@ function TeamList({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}

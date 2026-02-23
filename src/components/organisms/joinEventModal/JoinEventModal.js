@@ -59,14 +59,6 @@ function JoinEventModal({
   return (
     <BottomModal
       close={handleClose}
-      hideCloseButton
-      isVisible={isVisible}
-      snapPoints={['90%']}
-      headerComponent={(
-        <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
-          {t('eventList.joinModal.title')}
-        </Text>
-      )}
       footerComponent={(
         <View style={[Spaces.gap[16]]}>
           <Button
@@ -82,6 +74,14 @@ function JoinEventModal({
           />
         </View>
       )}
+      headerComponent={(
+        <Text style={[Fonts.p1Black, Fonts.neutral00, { textAlign: 'center' }]}>
+          {t('eventList.joinModal.title')}
+        </Text>
+      )}
+      hideCloseButton
+      isVisible={isVisible}
+      snapPoints={['90%']}
     >
       <View style={[Spaces.gap[32]]}>
         <Text style={[Fonts.p1, Fonts.neutral00]}>

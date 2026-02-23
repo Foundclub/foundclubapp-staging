@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
+import {
   Alert,
-  KeyboardAvoidingView, 
-  Platform, 
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  Text, 
-  TextInput, 
-  View 
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,7 +32,9 @@ function UserPhysique({ navigation }) {
   const [weight, setWeight] = useState('');
 
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
@@ -73,12 +75,12 @@ function UserPhysique({ navigation }) {
         Alignments.fill,
       ]}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[Alignments.fill]}
         keyboardVerticalOffset={100}
+        style={[Alignments.fill]}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={[
             Alignments.justifySpaceBetween,
             { flexGrow: 1 },
@@ -100,48 +102,48 @@ function UserPhysique({ navigation }) {
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Taille (cm)</Text>
                 <TextInput
-                  value={height}
+                  keyboardType="numeric"
+                  maxLength={3}
                   onChangeText={setHeight}
                   placeholder="Ex: 180"
                   placeholderTextColor={Colors.neutral500}
-                  keyboardType="numeric"
-                  maxLength={3}
                   returnKeyType="next"
                   style={[
-                    Fonts.p1, 
-                    Spaces.padding[16], 
-                    { 
-                      backgroundColor: Colors.neutral800, 
-                      borderRadius: 12, 
-                      borderWidth: 1, 
+                    Fonts.p1,
+                    Spaces.padding[16],
+                    {
+                      backgroundColor: Colors.neutral800,
                       borderColor: Colors.neutral700,
+                      borderRadius: 12,
+                      borderWidth: 1,
                       color: Colors.neutral00,
-                    }
+                    },
                   ]}
+                  value={height}
                 />
               </View>
 
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Poids (kg)</Text>
                 <TextInput
-                  value={weight}
+                  keyboardType="numeric"
+                  maxLength={3}
                   onChangeText={setWeight}
                   placeholder="Ex: 75"
                   placeholderTextColor={Colors.neutral500}
-                  keyboardType="numeric"
-                  maxLength={3}
                   returnKeyType="done"
                   style={[
-                    Fonts.p1, 
-                    Spaces.padding[16], 
-                    { 
-                      backgroundColor: Colors.neutral800, 
-                      borderRadius: 12, 
-                      borderWidth: 1, 
+                    Fonts.p1,
+                    Spaces.padding[16],
+                    {
+                      backgroundColor: Colors.neutral800,
                       borderColor: Colors.neutral700,
+                      borderRadius: 12,
+                      borderWidth: 1,
                       color: Colors.neutral00,
-                    }
+                    },
                   ]}
+                  value={weight}
                 />
               </View>
             </View>
@@ -169,4 +171,3 @@ function UserPhysique({ navigation }) {
 }
 
 export default UserPhysique;
-

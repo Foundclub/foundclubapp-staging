@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  startOfDay, isBefore,
+  isBefore, startOfDay,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -13,9 +13,6 @@ import {
   Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import DateSlider from '@/components/molecules/dateSlider/DateSlider';
-
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -23,11 +20,19 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import Input from '@/components/molecules/input/Input';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -36,14 +41,8 @@ import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useSearchEvents } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
-import Input from '@/components/molecules/input/Input';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
-import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
-import SearchMap from '@/components/organisms/searchMap/SearchMap';
-import EmptyState from '@/components/atoms/emptyState/EmptyState';
-import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 
@@ -73,12 +72,12 @@ import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
  */
 function EventListContent({
   additionalFilters,
-  showFilters = false,
-  isPlanning = false,
   events: propEvents,
-  onLoadMore,
   isLoading: propIsLoading,
+  isPlanning = false,
+  onLoadMore,
   onTutorialLayout,
+  showFilters = false,
 }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
@@ -134,18 +133,18 @@ function EventListContent({
 
   // Get user's club and multisport club IDs for membership filtering
   const userClubId = userData?.club?.documentId;
-  const userCmIds = useMemo(() => userData?.multisportClubs?.map(cm => cm.documentId) || [], [userData?.multisportClubs]);
+  const userCmIds = useMemo(() => userData?.multisportClubs?.map((cm) => cm.documentId) || [], [userData?.multisportClubs]);
   // Also get CM from user's teams
-  const teamCmIds = useMemo(() => userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [], [userData?.trainedTeams]);
-  const allCmIds = useMemo(() => [...new Set([...userCmIds, ...teamCmIds])], [userCmIds, teamCmIds]);
+  const teamCmIds = useMemo(() => userData?.trainedTeams?.map((t) => t.club?.parentMultisport?.documentId).filter(Boolean) || [], [userData?.trainedTeams]);
+  const allCmIds = useMemo(() => [...new Set([...teamCmIds, ...userCmIds])], [userCmIds, teamCmIds]);
 
   const featuredEventsConfig = useMemo(() => {
     const config = /** @type {Record<string, any>} */ ({
       ...(showFilters ? eventFilters : {}),
       ...additionalFilters,
       isFeatured: true,
-      sessionStatus: 'open',
       pageSize: 5,
+      sessionStatus: 'open',
     });
 
     if (isPlanning) {
@@ -169,7 +168,7 @@ function EventListContent({
     error,
     fetchNextPage,
     hasNextPage,
-	isFetchingNextPage,
+    isFetchingNextPage,
     isLoading: isInternalLoading,
     refetch,
   } = useGetEvents(eventsConfig, { enabled: !propEvents && !isSmartSearchEnabled });
@@ -333,7 +332,7 @@ function EventListContent({
       return;
     }
     console.log('Navigating to event:', event.documentId);
-    /** @type {any} */ (navigation).navigate('EventStack', { screen: 'EventDetails', params: { eventId: event.documentId } });
+    /** @type {any} */ (navigation).navigate('EventStack', { params: { eventId: event.documentId }, screen: 'EventDetails' });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {
@@ -414,9 +413,10 @@ function EventListContent({
    * Renders an individual event item
    * @param {object} param - The item to render
    * @param {FCEvent} param.item
+   * @param param.index
    * @returns {import('react').ReactElement} The rendered event item
    */
-  const renderItem = ({ item, index }) => {
+  const renderItem = ({ index, item }) => {
     const isReservation = item?.type?.name === 'Réservation';
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const showAbout = isPlanning || isManager;
@@ -465,11 +465,11 @@ function EventListContent({
 
   const renderEmptyList = () => (
     <EmptyState
-      icon={Images.search}
-      title={t('eventList.noData')}
-      description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
       actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
+      description={!showFilters ? t('eventList.emptyDesc', 'Essayez de modifier vos filtres ou lancez une nouvelle recherche.') : undefined}
+      icon={Images.search}
       onAction={!showFilters ? handleFindEvent : undefined}
+      title={t('eventList.noData')}
     />
   );
 
@@ -494,22 +494,10 @@ function EventListContent({
             <FlashList
               data={/** @type {FCEvent[]} */ (events)}
               estimatedItemSize={200}
+              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
               keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
               ListEmptyComponent={renderEmptyList}
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={0.5}
-              onRefresh={() => {
-                if (isSmartSearchEnabled) {
-                  refetchSearch();
-                } else {
-                  refetch();
-                }
-                refetchFeatured();
-              }}
-              refreshing={isLoading && !(isSmartSearchEnabled ? isFetchingSearchNextPage : isFetchingNextPage)}
-              renderItem={renderItem}
-              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-              ListHeaderComponent={
+              ListHeaderComponent={(
                 <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
                   {!propEvents && featuredEvents.length > 0 ? (
                     <FeaturedEvents events={featuredEvents} />
@@ -521,8 +509,8 @@ function EventListContent({
                       Événements à partir de
                     </Text>
                     <DateSlider
-                      selectedDate={selectedDate}
                       onDateSelected={handleDateSelected}
+                      selectedDate={selectedDate}
                     />
                   </View>
 
@@ -548,7 +536,19 @@ function EventListContent({
                     </Text>
                   ) : null}
                 </View>
-              }
+              )}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.5}
+              onRefresh={() => {
+                if (isSmartSearchEnabled) {
+                  refetchSearch();
+                } else {
+                  refetch();
+                }
+                refetchFeatured();
+              }}
+              refreshing={isLoading && !(isSmartSearchEnabled ? isFetchingSearchNextPage : isFetchingNextPage)}
+              renderItem={renderItem}
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -569,5 +569,3 @@ function EventListContent({
 }
 
 export default EventListContent;
-
-

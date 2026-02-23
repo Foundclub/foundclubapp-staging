@@ -15,12 +15,12 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {Function} props.onInvite - Function to call when clicking on "Invite"
  * @param {string} props.trainerName - Name of the trainer
  */
-const TrainerInvitedModal = ({
+function TrainerInvitedModal({
   isVisible,
   onClose,
   onInvite,
   trainerName,
-}) => {
+}) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -33,11 +33,6 @@ const TrainerInvitedModal = ({
   return (
     <BottomModal
       close={onClose}
-      hideCloseButton
-      isVisible={isVisible}
-      headerComponent={( // Removed headerComponent to have custom layout inside children for better control
-        null
-      )}
       footerComponent={(
         <View style={[Spaces.gap[16], { paddingBottom: 20 }]}>
           <Button
@@ -52,9 +47,14 @@ const TrainerInvitedModal = ({
           />
         </View>
       )}
+      headerComponent={( // Removed headerComponent to have custom layout inside children for better control
+        null
+      )}
+      hideCloseButton
+      isVisible={isVisible}
     >
       <View style={[Spaces.gap[24], Alignments.alignCenter, { paddingVertical: 20 }]}>
-        <Text style={[Fonts.h2, { textAlign: 'center', color: Colors.primary500 }]}>
+        <Text style={[Fonts.h2, { color: Colors.primary500, textAlign: 'center' }]}>
           {t('addCoach.alerts.success.title')}
         </Text>
         <Text style={[Fonts.p1, { textAlign: 'center' }]}>
@@ -63,6 +63,6 @@ const TrainerInvitedModal = ({
       </View>
     </BottomModal>
   );
-};
+}
 
 export default TrainerInvitedModal;

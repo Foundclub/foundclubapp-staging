@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import usePlaces from '@/domains/places/usePlaces';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -17,7 +18,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import usePlaces from '@/domains/places/usePlaces';
 
 /**
  * User address input screen component.
@@ -56,18 +56,18 @@ function UserAddress({ navigation }) {
         // @ts-ignore
         const coords = address.value.split('|');
         if (coords.length === 2) {
-           // Value is "lon|lat" (from AutocompleteAddressInput usage)
-           geohash = getGeohashForPointAndRadius(
-             parseFloat(coords[1]), // lat
-             parseFloat(coords[0]), // lon
-             0.001 // High precision
-           );
+          // Value is "lon|lat" (from AutocompleteAddressInput usage)
+          geohash = getGeohashForPointAndRadius(
+            parseFloat(coords[1]), // lat
+            parseFloat(coords[0]), // lon
+            0.001, // High precision
+          );
         }
       }
 
-      updateUserMutation.mutate({ 
+      updateUserMutation.mutate({
         address,
-        geohash
+        geohash,
       });
     }
   };
@@ -103,15 +103,15 @@ function UserAddress({ navigation }) {
           </View>
 
           <View style={[Spaces.gap[16]]}>
-             <AutocompleteAddressInput
-                address={address}
-                label={t('profile.fields.city.label', 'Ville')}
-                placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
-                setAddress={setAddress}
-             />
+            <AutocompleteAddressInput
+              address={address}
+              label={t('profile.fields.city.label', 'Ville')}
+              placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
+              setAddress={setAddress}
+            />
           </View>
         </View>
-        
+
         <View style={[Spaces.gap[16]]}>
           <Button
             disabled={!address || updateUserMutation.isPending}

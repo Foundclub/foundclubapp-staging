@@ -1,20 +1,20 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Text, View, KeyboardAvoidingView, Platform, ScrollView,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
-import { useMutation, useQuery } from '@tanstack/react-query';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Input from '@/components/molecules/input/Input';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { createCMSection, getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 import { getActivities } from '@/services/activity/activityService';
+import { createCMSection, getMultisportClubById } from '@/services/multisportClub/multisportClubService';
 
 /** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
 /**
@@ -52,8 +52,8 @@ function CreateSectionScreen({ navigation, route }) {
 
   // Fetch activities
   const { data: activities = [] } = useQuery({
-    queryKey: ['activities'],
     queryFn: getActivities,
+    queryKey: ['activities'],
     select: (data) => (Array.isArray(data) ? data : []).map((act) => ({
       label: act?.name || '',
       value: act?.documentId || '',
@@ -62,9 +62,9 @@ function CreateSectionScreen({ navigation, route }) {
 
   // Fetch CM details for pre-filling address
   const { data: cmDetails } = useQuery({
-    queryKey: ['multisportClub', cmId],
-    queryFn: () => getMultisportClubById(cmId),
     enabled: !!cmId,
+    queryFn: () => getMultisportClubById(cmId),
+    queryKey: ['multisportClub', cmId],
   });
 
   // Pre-fill address when cmDetails is loaded
@@ -80,7 +80,7 @@ function CreateSectionScreen({ navigation, route }) {
         // Fallback if only text address
         setAddress({
           label: cmDetails.addressDetails,
-          value: null, 
+          value: null,
         });
       }
     }
@@ -88,18 +88,6 @@ function CreateSectionScreen({ navigation, route }) {
 
   const createMutation = useMutation({
     mutationFn: (/** @type {SectionPayload} */ data) => createCMSection(cmId || '', data),
-    onSuccess: (result) => {
-      Alert.alert(
-        'Section créée',
-        `La section "${result?.data?.name || name}" a été créée avec succès.${managerPhone ? '\nUne demande d\'adhésion a été créée pour le dirigeant.' : ''}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ],
-      );
-    },
     onError: (error) => {
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
@@ -109,6 +97,18 @@ function CreateSectionScreen({ navigation, route }) {
         typeof message === 'string' ? message : 'Une erreur est survenue lors de la création de la section.',
       );
     },
+    onSuccess: (result) => {
+      Alert.alert(
+        'Section créée',
+        `La section "${result?.data?.name || name}" a été créée avec succès.${managerPhone ? '\nUne demande d\'adhésion a été créée pour le dirigeant.' : ''}`,
+        [
+          {
+            onPress: () => navigation.goBack(),
+            text: 'OK',
+          },
+        ],
+      );
+    },
   });
 
   const handleCreate = () => {
@@ -116,7 +116,7 @@ function CreateSectionScreen({ navigation, route }) {
       Alert.alert('Erreur', 'Le nom de la section est obligatoire.');
       return;
     }
-    
+
     // Address validation (optional, but requested precise address)
     if (!address || !address.label) {
       Alert.alert('Erreur', 'L\'adresse est obligatoire.');
@@ -124,11 +124,11 @@ function CreateSectionScreen({ navigation, route }) {
     }
 
     createMutation.mutate({
-      name: name.trim(),
-      activites: selectedActivity ? [selectedActivity.value] : [], 
+      activites: selectedActivity ? [selectedActivity.value] : [],
       addressLabel: address.label,
       coordinates: address.value || undefined, // "lon|lat" from AutocompleteAddressInput
       managerPhone: managerPhone.trim() || undefined,
+      name: name.trim(),
     });
   };
 
@@ -168,16 +168,17 @@ function CreateSectionScreen({ navigation, route }) {
             ApplicationStyle.backgroundColor.primary700,
             Spaces.padding[16],
             Spaces.gap[16],
-          ]}>
+          ]}
+          >
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 Nom de la section *
               </Text>
               <Input
-                value={name}
+                autoCapitalize="words"
                 onChangeText={setName}
                 placeholder="Ex: Football, Basketball..."
-                autoCapitalize="words"
+                value={name}
               />
             </View>
 
@@ -186,11 +187,11 @@ function CreateSectionScreen({ navigation, route }) {
                 Sport
               </Text>
               <AutocompleteSelect
-                options={activities}
-                value={selectedActivity?.label} 
-                setValue={setSelectedActivity}
                 isSearchable
+                options={activities}
                 placeholder="Choisir un sport"
+                setValue={setSelectedActivity}
+                value={selectedActivity?.label}
               />
             </View>
 
@@ -200,8 +201,8 @@ function CreateSectionScreen({ navigation, route }) {
               </Text>
               <AutocompleteAddressInput
                 address={address}
-                setAddress={(value) => setAddress(value)}
                 placeholder="Ex: 10 rue de Paris..."
+                setAddress={(value) => setAddress(value)}
               />
             </View>
 
@@ -210,10 +211,10 @@ function CreateSectionScreen({ navigation, route }) {
                 Numéro du dirigeant (Optionnel)
               </Text>
               <Input
-                value={managerPhone}
+                keyboardType="phone-pad"
                 onChangeText={setManagerPhone}
                 placeholder="Ex: 0612345678"
-                keyboardType="phone-pad"
+                value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
                 Ce numéro sera utilisé pour assigner automatiquement le dirigeant lors de sa connexion.
@@ -228,7 +229,8 @@ function CreateSectionScreen({ navigation, route }) {
             Spaces.padding[16],
             Alignments.row,
             Spaces.gap[12],
-          ]}>
+          ]}
+          >
             <Text style={{ fontSize: 20 }}>💡</Text>
             <Text style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>
               Une fois la section créée, vous pourrez y ajouter des équipes, des événements et des membres.
@@ -239,10 +241,10 @@ function CreateSectionScreen({ navigation, route }) {
         {/* Submit Button */}
         <View style={[Spaces.paddingTop[16]]}>
           <Button
+            disabled={!isValid || createMutation.isPending}
             onPress={handleCreate}
             title={createMutation.isPending ? 'Création...' : 'Créer la section'}
             variant="Primary"
-            disabled={!isValid || createMutation.isPending}
           />
         </View>
       </KeyboardAvoidingView>

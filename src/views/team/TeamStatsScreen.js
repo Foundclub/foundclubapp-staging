@@ -1,27 +1,29 @@
 import React, { useMemo } from 'react';
-import { FlatList, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { FlatList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
-import { useGetTeamStats } from '@/services/stats/statsQueries';
-import StatRow from '@/components/molecules/statRow/StatRow';
+
 import Loader from '@/components/atoms/loader/Loader';
+import StatRow from '@/components/molecules/statRow/StatRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { useGetTeamStats } from '@/services/stats/statsQueries';
 
 /**
  * Get dynamic columns based on sport type
  * @param {string} sport - The sport name (normalized to lowercase)
  * @returns {Array<{key: string, label: string, isPrimary?: boolean}>}
  */
-const getColumnsForSport = (sport) => {
+const getColumnsForSport = (sport) =>
   // We only show Presence, Absence, Retard for ALL sports as requested
-  return [
+  [
     { key: 'attendanceCount', label: 'Prés.' },
     { key: 'absenceCount', label: 'Abs.' },
     { key: 'retardCount', label: 'Ret.' }, // Retard
-  ];
-};
+  ]
+;
 
 /**
  * TeamStatsScreen - Displays attendance and performance stats for team players
@@ -30,14 +32,14 @@ const getColumnsForSport = (sport) => {
 function TeamStatsScreen({ route }) {
   const { teamId, teamName: routeTeamName } = route.params || {};
   const { t } = useTranslation();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { data: statsData, isLoading, error } = useGetTeamStats(teamId);
+  const { data: statsData, error, isLoading } = useGetTeamStats(teamId);
 
-  const columns = useMemo(() => {
-    return getColumnsForSport(statsData?.sport);
-  }, [statsData?.sport]);
+  const columns = useMemo(() => getColumnsForSport(statsData?.sport), [statsData?.sport]);
 
   const teamName = statsData?.teamName || routeTeamName || 'Équipe';
 
@@ -52,45 +54,63 @@ function TeamStatsScreen({ route }) {
           Spaces.paddingVertical[20],
           {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)',
           },
         ]}
       >
         <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h1, { color: Colors.primary500, fontSize: 32, lineHeight: 40, textAlign: 'center' }]}>
+          <Text style={[Fonts.h1, {
+            color: Colors.primary500, fontSize: 32, lineHeight: 40, textAlign: 'center',
+          }]}
+          >
             {statsData?.data?.length || 0}
           </Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}>Joueurs</Text>
+          <Text style={[Fonts.p2, {
+            color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
+          }]}
+          >
+            Joueurs
+          </Text>
         </View>
-        
-        <View style={{ width: 1, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+        <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', height: '100%', width: 1 }} />
 
         <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32, lineHeight: 40, textAlign: 'center' }]}>
+          <Text style={[Fonts.h1, {
+            color: Colors.neutral00, fontSize: 32, lineHeight: 40, textAlign: 'center',
+          }]}
+          >
             {statsData?.totalEvents || 0}
           </Text>
-          <Text 
-            adjustsFontSizeToFit 
-            numberOfLines={1} 
-            style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}
+          <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={[Fonts.p2, {
+              color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
+            }]}
           >
             Événements
           </Text>
         </View>
-        
-        <View style={{ width: 1, height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+        <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', height: '100%', width: 1 }} />
 
         <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text 
-            adjustsFontSizeToFit 
+          <Text
+            adjustsFontSizeToFit
             numberOfLines={1}
-            style={[Fonts.h3Bold, { color: Colors.neutral00, textTransform: 'capitalize', textAlign: 'center' }]}
+            style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center', textTransform: 'capitalize' }]}
           >
             {statsData?.sport || '-'}
           </Text>
-           <Text style={[Fonts.p2, { color: Colors.neutral200, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }]}>Sport</Text>
+          <Text style={[Fonts.p2, {
+            color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
+          }]}
+          >
+            Sport
+          </Text>
         </View>
       </View>
 
@@ -104,13 +124,16 @@ function TeamStatsScreen({ route }) {
           Spaces.marginTop[24],
         ]}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
+        <Text style={[Fonts.p3Bold, {
+          color: Colors.neutral300, flex: 1, letterSpacing: 0.5, textTransform: 'uppercase',
+        }]}
+        >
           Joueur
         </Text>
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {columns.map((col) => (
-            <View key={col.key} style={[Alignments.alignCenter, { width: 44, justifyContent: 'center' }]}>
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral300, textTransform: 'uppercase', textAlign: 'center' }]}>
+            <View key={col.key} style={[Alignments.alignCenter, { justifyContent: 'center', width: 44 }]}>
+              <Text style={[Fonts.p4Bold, { color: Colors.neutral300, textAlign: 'center', textTransform: 'uppercase' }]}>
                 {col.label}
               </Text>
             </View>
@@ -151,22 +174,22 @@ function TeamStatsScreen({ route }) {
       ]}
     >
       <FlatList
+        contentContainerStyle={[Spaces.gap[0]]}
         data={statsData?.data || []}
         keyExtractor={(item) => item.user?.documentId || Math.random().toString()}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
+        ListEmptyComponent={(
           <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
             <Text style={[Fonts.p1, { color: Colors.neutral400 }]}>
               {t('teamStats.empty', 'Aucun joueur dans cette équipe')}
             </Text>
           </View>
-        }
-        renderItem={({ item, index }) => (
+        )}
+        ListHeaderComponent={renderHeader}
+        renderItem={({ index, item }) => (
           <View style={[Spaces.marginBottom[8]]}>
-            <StatRow player={item} columns={columns} isEven={index % 2 === 0} />
+            <StatRow columns={columns} isEven={index % 2 === 0} player={item} />
           </View>
         )}
-        contentContainerStyle={[Spaces.gap[0]]}
         showsVerticalScrollIndicator={false}
       />
     </ScreenContainer>

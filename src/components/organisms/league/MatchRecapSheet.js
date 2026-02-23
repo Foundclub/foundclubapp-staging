@@ -1,15 +1,28 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Button from '@/components/atoms/button/Button';
+import {
+  Modal, Pressable, StyleSheet, Text, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
-const MatchRecapSheet = ({
-  visible,
-  payload,
+import Button from '@/components/atoms/button/Button';
+
+/**
+ *
+ * @param root0
+ * @param root0.onClose
+ * @param root0.onOpenMatch
+ * @param root0.onRelaunchSearch
+ * @param root0.payload
+ * @param root0.visible
+ */
+function MatchRecapSheet({
   onClose,
   onOpenMatch,
   onRelaunchSearch,
-}) => {
+  payload,
+  visible,
+}) {
   const { Colors, Fonts } = useTheme();
   if (!visible || !payload) return null;
 
@@ -74,7 +87,7 @@ const MatchRecapSheet = ({
       </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   buttons: {

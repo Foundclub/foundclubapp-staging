@@ -1,26 +1,35 @@
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, Alert, TouchableOpacity } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert, FlatList, Text, TouchableOpacity, View,
+} from 'react-native';
 
+import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import Button from '@/components/atoms/button/Button';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
-import { getEvents, updateEvent, cancelEvent } from '@/services/event/eventService';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { useGetMe } from '@/services/auth/authQueries';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+import { cancelEvent, getEvents, updateEvent } from '@/services/event/eventService';
 
 /**
  * RequestsDashboard component
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
  */
-const RequestsDashboard = ({ navigation, route }) => {
+function RequestsDashboard({ navigation, route }) {
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const queryClient = useQueryClient();
   const { data: userData } = useGetMe();
 
@@ -35,18 +44,18 @@ const RequestsDashboard = ({ navigation, route }) => {
   }, [navigation]);
 
   const { data: pendingEvents, isLoading } = useQuery({
-    queryKey: ['pendingEvents', clubId],
+    enabled: !!clubId,
     queryFn: async () => {
       if (!clubId) return [];
       const res = await getEvents({
         club: { value: clubId },
-        validationMode: 'manual',
         sessionStatus: 'open',
         startDateAfter: new Date(),
+        validationMode: 'manual',
       });
       return res.data;
     },
-    enabled: !!clubId,
+    queryKey: ['pendingEvents', clubId],
   });
 
   const updateMutation = useMutation({
@@ -77,11 +86,11 @@ const RequestsDashboard = ({ navigation, route }) => {
       t('requests.rejectConfirmTitle'),
       t('requests.rejectConfirmMessage'),
       [
-        { text: t('common.cancel'), style: 'cancel' },
+        { style: 'cancel', text: t('common.cancel') },
         {
-          text: t('common.confirm'),
-          style: 'destructive',
           onPress: () => cancelMutation.mutate(event.documentId),
+          style: 'destructive',
+          text: t('common.confirm'),
         },
       ],
     );
@@ -96,35 +105,51 @@ const RequestsDashboard = ({ navigation, route }) => {
         ApplicationStyle.card,
         Spaces.padding[16],
         Spaces.marginBottom[16],
-        { borderLeftWidth: 4, borderLeftColor: Colors.warning500 },
+        { borderLeftColor: Colors.warning500, borderLeftWidth: 4 },
       ]}
       >
         <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignStart]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>{item.type?.name || 'Evenement'}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>{dateStr} • {item.startTime?.substring(0, 5)} - {item.endTime?.substring(0, 5)}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>Lieu: {item.facility?.name || item.locationDetails || 'Non defini'}</Text>
-            <Text style={[Fonts.p2, Fonts.primary500, Spaces.marginTop[4]]}>Equipe: {item.team?.name || 'Equipe inconnue'}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
+              {dateStr}
+              {' '}
+              •
+              {' '}
+              {item.startTime?.substring(0, 5)}
+              {' '}
+              -
+              {' '}
+              {item.endTime?.substring(0, 5)}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
+              Lieu:
+              {item.facility?.name || item.locationDetails || 'Non defini'}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.primary500, Spaces.marginTop[4]]}>
+              Equipe:
+              {item.team?.name || 'Equipe inconnue'}
+            </Text>
           </View>
         </View>
 
         <View style={[Alignments.row, Spaces.gap[16], Spaces.marginTop[16]]}>
           <View style={{ flex: 1 }}>
             <Button
-              title={t('common.reject', 'Refuser')}
-              variant="Secondary"
-              onPress={() => handleReject(item)}
               isLoading={cancelMutation.isPending}
+              onPress={() => handleReject(item)}
               style={{ borderColor: Colors.error500 }}
               textStyle={{ color: Colors.error500 }}
+              title={t('common.reject', 'Refuser')}
+              variant="Secondary"
             />
           </View>
           <View style={{ flex: 1 }}>
             <Button
+              isLoading={updateMutation.isPending}
+              onPress={() => handleApprove(item)}
               title={t('common.validate', 'Valider')}
               variant="Primary"
-              onPress={() => handleApprove(item)}
-              isLoading={updateMutation.isPending}
             />
           </View>
         </View>
@@ -138,8 +163,8 @@ const RequestsDashboard = ({ navigation, route }) => {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -185,10 +210,9 @@ const RequestsDashboard = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
           <FlatList
-            data={pendingEvents}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.documentId}
             contentContainerStyle={[Spaces.padding[16]]}
+            data={pendingEvents}
+            keyExtractor={(item) => item.documentId}
             ListEmptyComponent={
               !isLoading && (
                 <View style={[Alignments.center, Spaces.marginTop[40]]}>
@@ -196,11 +220,12 @@ const RequestsDashboard = ({ navigation, route }) => {
                 </View>
               )
             }
+            renderItem={renderItem}
           />
         </OnboardingWrapper>
       </ScreenContainer>
     </TutorialFlowBoundary>
   );
-};
+}
 
 export default RequestsDashboard;

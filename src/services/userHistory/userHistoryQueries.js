@@ -26,9 +26,9 @@ export const useGetMyHistories = (options = {}) => useQuery({
  * @returns {import('@tanstack/react-query').UseQueryResult}
  */
 export const useGetUserHistories = (userId, options = {}) => useQuery({
+  enabled: !!userId,
   queryFn: () => getUserHistories(userId),
   queryKey: ['userHistories', userId],
-  enabled: !!userId,
   ...options,
 });
 
@@ -38,7 +38,7 @@ export const useGetUserHistories = (userId, options = {}) => useQuery({
  */
 export const useCreateHistory = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: createHistory,
     onSuccess: () => {
@@ -53,9 +53,9 @@ export const useCreateHistory = () => {
  */
 export const useUpdateHistory = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }) => updateHistory(id, data),
+    mutationFn: ({ data, id }) => updateHistory(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userHistories'] });
     },
@@ -68,7 +68,7 @@ export const useUpdateHistory = () => {
  */
 export const useDeleteHistory = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: deleteHistory,
     onSuccess: () => {

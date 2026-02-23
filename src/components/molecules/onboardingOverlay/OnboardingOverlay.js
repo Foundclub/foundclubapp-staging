@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   Modal,
@@ -11,11 +12,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useOnboarding } from '@/context/OnboardingContext';
 import useTheme from '@/theme/themeContext';
+
+import { useOnboarding } from '@/context/OnboardingContext';
 
 const TOOLTIP_HORIZONTAL_MARGIN = 24;
 const TOOLTIP_VERTICAL_MARGIN = 28;
@@ -79,6 +80,9 @@ const buildFocusLayout = (layout, spotlight = {}, viewport = {}) => {
   };
 };
 
+/**
+ *
+ */
 function OnboardingOverlay() {
   const { t } = useTranslation();
   const {
@@ -132,7 +136,9 @@ function OnboardingOverlay() {
     });
   }
 
-  const { description, layout, spotlight, title } = currentStep;
+  const {
+    description, layout, spotlight, title,
+  } = currentStep;
   const focusLayout = buildFocusLayout(layout, spotlight, {
     height: safeViewportHeight,
     width: safeViewportWidth,
@@ -227,10 +233,30 @@ function OnboardingOverlay() {
       visible={isActive}
     >
       <View pointerEvents="box-none" style={styles.container}>
-        <View pointerEvents="none" style={[styles.overlayPart, overlayStyle, { height: topHeight, left: 0, right: 0, top: 0 }]} />
-        <View pointerEvents="none" style={[styles.overlayPart, overlayStyle, { bottom: 0, left: 0, right: 0, top: topHeight + focusLayout.height }]} />
-        <View pointerEvents="none" style={[styles.overlayPart, overlayStyle, { height: focusLayout.height, left: 0, top: topHeight, width: leftWidth }]} />
-        <View pointerEvents="none" style={[styles.overlayPart, overlayStyle, { height: focusLayout.height, right: 0, top: topHeight, width: rightWidth }]} />
+        <View
+          pointerEvents="none"
+          style={[styles.overlayPart, overlayStyle, {
+            height: topHeight, left: 0, right: 0, top: 0,
+          }]}
+        />
+        <View
+          pointerEvents="none"
+          style={[styles.overlayPart, overlayStyle, {
+            bottom: 0, left: 0, right: 0, top: topHeight + focusLayout.height,
+          }]}
+        />
+        <View
+          pointerEvents="none"
+          style={[styles.overlayPart, overlayStyle, {
+            height: focusLayout.height, left: 0, top: topHeight, width: leftWidth,
+          }]}
+        />
+        <View
+          pointerEvents="none"
+          style={[styles.overlayPart, overlayStyle, {
+            height: focusLayout.height, right: 0, top: topHeight, width: rightWidth,
+          }]}
+        />
 
         <View
           pointerEvents="none"
@@ -310,7 +336,9 @@ function OnboardingOverlay() {
 
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral400]}>
-                {currentStepIndex + 1}/{totalSteps}
+                {currentStepIndex + 1}
+                /
+                {totalSteps}
               </Text>
               <Pressable
                 accessibilityHint={t('onboardingAffiliation.a11y.tooltipNextHint')}
@@ -358,10 +386,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 20,
     position: 'absolute',
-    zIndex: 1000,
     shadowOffset: { height: 2, width: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    zIndex: 1000,
   },
   tooltipArrow: {
     borderLeftColor: 'transparent',

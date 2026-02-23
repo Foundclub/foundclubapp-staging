@@ -1,8 +1,7 @@
-
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Alert } from 'react-native';
 
 import {
   cancelEvent,
@@ -22,8 +21,8 @@ import {
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
 import {
-  joinReservation,
   bookFullReservation,
+  joinReservation,
   openForPlayers,
   triggerSosAlert,
 } from '@/services/reservation/reservationService';
@@ -94,7 +93,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
-      // Only go back if full update? Maybe context dependent. 
+      // Only go back if full update? Maybe context dependent.
       // The original code did navigation.goBack() on success.
       // But some updates like "Feature" might not want to go back?
       // Original code: navigation.goBack().
@@ -117,7 +116,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
-    }
+    },
   });
 
   const remindEventMutation = useMutation({
@@ -144,70 +143,76 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const joinReservationMutation = useMutation({
     mutationFn: (reservationId) => joinReservation(reservationId),
+    onError: (error) => {
+      Alert.alert(t('common.error'), error?.message || t('reservation.joinError'));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
         t('reservation.joinSuccess.title', 'Participation confirmÃ©e'),
-        t('reservation.joinSuccess.message', 'Vous participez maintenant Ã  cette rÃ©servation !')
+        t('reservation.joinSuccess.message', 'Vous participez maintenant Ã  cette rÃ©servation !'),
       );
-    },
-    onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.joinError'));
     },
   });
 
   const bookFullMutation = useMutation({
     mutationFn: (reservationId) => bookFullReservation(reservationId),
+    onError: (error) => {
+      Alert.alert(t('common.error'), error?.message || t('reservation.bookFull.error'));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
         t('reservation.bookFull.success.title', 'RÃ©servation privatisÃ©e'),
-        t('reservation.bookFull.success.message', 'Votre rÃ©servation est maintenant complÃ¨te.')
+        t('reservation.bookFull.success.message', 'Votre rÃ©servation est maintenant complÃ¨te.'),
       );
-    },
-    onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.bookFull.error'));
     },
   });
 
   const openForPlayersMutation = useMutation({
     mutationFn: ({ reservationId, targetPlayers }) => openForPlayers(reservationId, targetPlayers),
+    onError: (error) => {
+      Alert.alert(t('common.error'), error?.message || t('reservation.openForPlayers.error'));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
         t('reservation.openForPlayers.success.title', 'RÃ©servation ouverte'),
-        t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !')
+        t('reservation.openForPlayers.success.message', 'Les joueurs peuvent maintenant vous rejoindre !'),
       );
-    },
-    onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.openForPlayers.error'));
     },
   });
 
   const sosAlertMutation = useMutation({
     mutationFn: (reservationId) => triggerSosAlert(reservationId),
+    onError: (error) => {
+      Alert.alert(t('common.error'), error?.message || t('reservation.sosAlert.error'));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       refetch();
       Alert.alert(
         t('reservation.sosAlert.success.title', 'Alerte SOS lancÃ©e ! ðŸ”¥'),
-        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiÃ©s.')
+        t('reservation.sosAlert.success.message', 'Les joueurs proches seront notifiÃ©s.'),
       );
-    },
-    onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('reservation.sosAlert.error'));
     },
   });
 
   const selfArrivalMutation = useMutation({
     mutationFn: ({ eventId, payload }) => markSelfArrival(eventId, payload),
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre arrivée.",
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -215,17 +220,14 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
       refetchParticipations();
-    },
-    onError: (error) => {
-      Alert.alert(
-        t('common.error'),
-        error?.message || "Impossible d'enregistrer votre arrivée."
-      );
     },
   });
 
   const coachArrivalMutation = useMutation({
-    mutationFn: ({ eventId, userId, payload }) => markCoachArrival(eventId, userId, payload),
+    mutationFn: ({ eventId, payload, userId }) => markCoachArrival(eventId, userId, payload),
+    onError: () => {
+      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivÃ©e.");
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -233,14 +235,14 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
       refetchParticipations();
-    },
-    onError: () => {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivÃ©e.");
     },
   });
 
   const updateLateMinutesMutation = useMutation({
-    mutationFn: ({ eventId, userId, payload }) => updateCoachLateMinutes(eventId, userId, payload),
+    mutationFn: ({ eventId, payload, userId }) => updateCoachLateMinutes(eventId, userId, payload),
+    onError: () => {
+      Alert.alert(t('common.error'), 'Impossible de modifier le retard.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -248,45 +250,42 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
       refetchParticipations();
-    },
-    onError: () => {
-      Alert.alert(t('common.error'), "Impossible de modifier le retard.");
     },
   });
 
   const requestFeaturedMutation = useMutation({
     mutationFn: requestFeatured,
+    onError: (error) => {
+      Alert.alert(t('common.error'), error?.message || t('eventDetails.featuredRequest.error'));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
         t('eventDetails.featuredRequest.success.title', 'Demande envoyÃ©e'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise Ã  la une a Ã©tÃ© envoyÃ©e au dirigeant du club.')
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise Ã  la une a Ã©tÃ© envoyÃ©e au dirigeant du club.'),
       );
-    },
-    onError: (error) => {
-      Alert.alert(t('common.error'), error?.message || t('eventDetails.featuredRequest.error'));
     },
   });
 
   return {
-    createEventParticipationMutation,
     acceptParticipationMutation,
+    bookFullMutation,
+    cancelEventMutation,
+    coachArrivalMutation,
+    createEventParticipationMutation,
     declineParticipationMutation,
     deleteParticipationMutation,
+    joinReservationMutation,
     missingEventMutation,
-    cancelEventMutation,
-    updateEventMutation,
-    updateEventNoNavMutation,
+    openForPlayersMutation,
     remindEventMutation,
     reportEventMutation,
-    joinReservationMutation,
-    bookFullMutation,
-    openForPlayersMutation,
-    sosAlertMutation,
-    selfArrivalMutation,
-    coachArrivalMutation,
-    updateLateMinutesMutation,
     requestFeaturedMutation,
+    selfArrivalMutation,
+    sosAlertMutation,
+    updateEventMutation,
+    updateEventNoNavMutation,
+    updateLateMinutesMutation,
   };
 };

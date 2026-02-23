@@ -5,10 +5,10 @@ import client from '../client';
 const clubMembershipRequestSchema = Joi.object({
   club: Joi.object().required(),
   documentId: Joi.string().required(),
+  requester: Joi.object().unknown(true).optional(),
   requesterDisplayName: Joi.string().allow('', null).optional(),
   requesterFirstname: Joi.string().allow('', null).optional(),
   requesterLastname: Joi.string().allow('', null).optional(),
-  requester: Joi.object().unknown(true).optional(),
   state: Joi.string().valid('processed', 'refused', 'pending').required(),
   user: Joi.alternatives().try(
     Joi.object().unknown(true),
@@ -30,9 +30,9 @@ const toFlatUser = (user) => {
     return {
       ...attrs,
       ...nested,
+      avatar: nested.avatar || attrs.avatar || null,
       documentId: nested.documentId || attrs.documentId,
       id: nested.id || attrs.id,
-      avatar: nested.avatar || attrs.avatar || null,
     };
   }
 
@@ -108,11 +108,11 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
       const flatRequester = toFlatUser(rawRequester) || rawRequester;
       const requester = {
         ...flatRequester,
+        displayName: flatRequester?.displayName || item?.requesterDisplayName || '',
         firstname: flatRequester?.firstname || flatRequester?.firstName || item?.requesterFirstname || '',
         lastname: flatRequester?.lastname || flatRequester?.lastName || item?.requesterLastname || '',
-        username: flatRequester?.username || '',
         phoneNumber: flatRequester?.phoneNumber || flatRequester?.phone || '',
-        displayName: flatRequester?.displayName || item?.requesterDisplayName || '',
+        username: flatRequester?.username || '',
       };
       const flatUser = toFlatUser(item?.user);
 
@@ -125,8 +125,8 @@ export const getClubMembershipRequests = async (clubId, params = {}) => {
             || (typeof item?.user === 'string' ? item.user : undefined),
           firstname: flatUser?.firstname || flatUser?.firstName || requester?.firstname || '',
           lastname: flatUser?.lastname || flatUser?.lastName || requester?.lastname || '',
-          username: flatUser?.username || requester?.username || '',
           phoneNumber: flatUser?.phoneNumber || requester?.phoneNumber || item?.phoneNumber || '',
+          username: flatUser?.username || requester?.username || '',
         },
       };
     });

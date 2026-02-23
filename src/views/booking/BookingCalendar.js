@@ -1,3 +1,5 @@
+import { addDays, format, startOfDay } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,21 +10,22 @@ import {
   Text,
   View,
 } from 'react-native';
-import { format, addDays, startOfDay } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import useTheme from '@/theme/themeContext';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import { useGetFacility } from '@/services/facility/facilityQueries';
-import { useGetFacilityAvailability } from '@/services/facility/facilityQueries';
 
 import BookingConfigModal from '@/components/organisms/bookingConfigModal/BookingConfigModal';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { useGetFacility, useGetFacilityAvailability } from '@/services/facility/facilityQueries';
 
 /**
  * BookingCalendar - Smart Slots booking screen
  * Shows available time slots for a facility on a selected date
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
  */
-function BookingCalendar({ route, navigation }) {
+function BookingCalendar({ navigation, route }) {
   const { facilityId } = route.params || {};
   const { t } = useTranslation();
   const {
@@ -42,8 +45,8 @@ function BookingCalendar({ route, navigation }) {
 
   // Queries
   const { data: facility, isLoading: facilityLoading } = useGetFacility(facilityId);
-  const { 
-    data: availability, 
+  const {
+    data: availability,
     isLoading: availabilityLoading,
     refetch: refetchAvailability,
   } = useGetFacilityAvailability(facilityId, dateString);
@@ -85,7 +88,7 @@ function BookingCalendar({ route, navigation }) {
   const renderDateChip = (date) => {
     const isSelected = format(date, 'yyyy-MM-dd') === dateString;
     const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-    
+
     return (
       <Pressable
         key={date.toISOString()}
@@ -99,13 +102,15 @@ function BookingCalendar({ route, navigation }) {
         <Text style={[
           styles.dateDayName,
           isSelected && { color: Colors.primary500 },
-        ]}>
+        ]}
+        >
           {format(date, 'EEE', { locale: fr })}
         </Text>
         <Text style={[
           styles.dateDay,
           isSelected && { color: Colors.primary500 },
-        ]}>
+        ]}
+        >
           {format(date, 'd')}
         </Text>
         {isToday && (
@@ -118,12 +123,12 @@ function BookingCalendar({ route, navigation }) {
   // Render time slot chip
   const renderSlotChip = (slot) => {
     const isAvailable = slot.remaining > 0;
-    
+
     return (
       <Pressable
+        disabled={!isAvailable}
         key={slot.time}
         onPress={() => handleSlotPress(slot)}
-        disabled={!isAvailable}
         style={[
           styles.slotChip,
           !isAvailable && styles.slotChipDisabled,
@@ -133,12 +138,15 @@ function BookingCalendar({ route, navigation }) {
         <Text style={[
           styles.slotTime,
           !isAvailable && styles.slotTimeDisabled,
-        ]}>
+        ]}
+        >
           {slot.time}
         </Text>
         {isAvailable ? (
           <Text style={[styles.slotRemaining, { color: Colors.success500 }]}>
-            {slot.remaining} dispo
+            {slot.remaining}
+            {' '}
+            dispo
           </Text>
         ) : (
           <Text style={[styles.slotRemaining, styles.slotTimeDisabled]}>
@@ -164,10 +172,10 @@ function BookingCalendar({ route, navigation }) {
 
   return (
     <ScreenContainer bgImage="bg2" title={facilityData?.name || 'Réservation'}>
-      <ScrollView 
-        style={[Alignments.fill]}
+      <ScrollView
         contentContainerStyle={[Spaces.padding[16]]}
         showsVerticalScrollIndicator={false}
+        style={[Alignments.fill]}
       >
         {/* Facility Header */}
         <View style={[styles.header, Spaces.marginBottom[24]]}>
@@ -176,7 +184,13 @@ function BookingCalendar({ route, navigation }) {
           </Text>
           {facilityData?.activity?.name && (
             <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-              {facilityData.activity.name} • {facilityData.pricePerSlot || 0}€/{facilityData.slotDuration || 30}min
+              {facilityData.activity.name}
+              {' '}
+              •
+              {facilityData.pricePerSlot || 0}
+              €/
+              {facilityData.slotDuration || 30}
+              min
             </Text>
           )}
         </View>
@@ -186,10 +200,10 @@ function BookingCalendar({ route, navigation }) {
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
             Choisir une date
           </Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
+          <ScrollView
             contentContainerStyle={{ gap: 8 }}
+            horizontal
+            showsHorizontalScrollIndicator={false}
           >
             {dateOptions.map(renderDateChip)}
           </ScrollView>
@@ -198,9 +212,11 @@ function BookingCalendar({ route, navigation }) {
         {/* Time Slots Grid */}
         <View>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
-            Créneaux disponibles - {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
+            Créneaux disponibles -
+            {' '}
+            {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
           </Text>
-          
+
           {availabilityLoading ? (
             <View style={[Alignments.alignCenter, Spaces.padding[32]]}>
               <ActivityIndicator color={Colors.primary500} size="large" />
@@ -221,50 +237,67 @@ function BookingCalendar({ route, navigation }) {
 
       {/* Booking Modal */}
       <BookingConfigModal
+        availability={availability}
+        date={dateString}
+        facility={facilityData}
         isVisible={isModalVisible}
         onClose={handleModalClose}
         onSuccess={handleBookingSuccess}
-        facility={facilityData}
-        date={dateString}
         selectedSlot={selectedSlot}
-        availability={availability}
       />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 4,
-  },
   dateChip: {
     alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     minWidth: 60,
+    padding: 12,
+    paddingHorizontal: 16,
   },
   dateChipSelected: {
     backgroundColor: 'rgba(240, 85, 45, 0.15)',
   },
-  dateDayName: {
-    fontFamily: 'Montserrat-Medium',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'capitalize',
-  },
   dateDay: {
+    color: '#FFFFFF',
     fontFamily: 'Montserrat-Bold',
     fontSize: 18,
-    color: '#FFFFFF',
     marginTop: 2,
   },
-  todayDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  dateDayName: {
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  emptyState: {
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 32,
+  },
+  header: {
+    gap: 4,
+  },
+  slotChip: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 80,
+    padding: 12,
+    paddingHorizontal: 16,
+  },
+  slotChipDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    opacity: 0.5,
+  },
+  slotRemaining: {
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 11,
     marginTop: 4,
   },
   slotsGrid: {
@@ -272,36 +305,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  slotChip: {
-    alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    minWidth: 80,
-  },
-  slotChipDisabled: {
-    opacity: 0.5,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
   slotTime: {
+    color: '#FFFFFF',
     fontFamily: 'Montserrat-Bold',
     fontSize: 16,
-    color: '#FFFFFF',
   },
   slotTimeDisabled: {
     color: 'rgba(255,255,255,0.4)',
   },
-  slotRemaining: {
-    fontFamily: 'Montserrat-Medium',
-    fontSize: 11,
+  todayDot: {
+    borderRadius: 3,
+    height: 6,
     marginTop: 4,
-  },
-  emptyState: {
-    padding: 32,
-    borderRadius: 16,
-    alignItems: 'center',
+    width: 6,
   },
 });
 

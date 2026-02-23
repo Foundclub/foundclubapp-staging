@@ -3,75 +3,75 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import {
-    Image,
-    ImageBackground,
-    Linking,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    TouchableOpacity,
+  Image,
+  ImageBackground,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import useClub from '@/domains/club/useClub';
 import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
 import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
+
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import Tag from '@/components/atoms/tag/Tag';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+import { RouteNames } from '@/navigation/routeNames';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress } from '@/utils/location';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
-import Tag from '@/components/atoms/tag/Tag';
-import { RouteNames } from '@/navigation/routeNames';
-
 // Assets
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
-const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
-const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
-const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
-
-
+const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
+const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
+const BG_MATCH = require('@/assets/background-card-event/card-match.png');
+const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 
 const getBackgroundImage = (typeName) => {
-    const normalizedType = typeName?.toLowerCase() || '';
-    if (normalizedType.includes('match')) return BG_MATCH;
-    if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return BG_TRAINING;
-    if (normalizedType.includes('detection') || normalizedType.includes('détection')) return BG_DETECTION;
-    if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return BG_RESERVATION;
-    return BG_OTHER;
+  const normalizedType = typeName?.toLowerCase() || '';
+  if (normalizedType.includes('match')) return BG_MATCH;
+  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return BG_TRAINING;
+  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return BG_DETECTION;
+  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return BG_RESERVATION;
+  return BG_OTHER;
 };
 
 const getHeaderTitle = (typeName) => {
-    const normalizedType = typeName?.toLowerCase() || '';
-    if (normalizedType.includes('match')) return 'MATCH';
-    if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return 'ENTRAÎNEMENT';
-    if (normalizedType.includes('detection') || normalizedType.includes('détection')) return 'DÉTECTION';
-    if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return 'RÉSERVATION';
-    return typeName?.toUpperCase() || 'ÉVÈNEMENT';
+  const normalizedType = typeName?.toLowerCase() || '';
+  if (normalizedType.includes('match')) return 'MATCH';
+  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return 'ENTRAÎNEMENT';
+  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return 'DÉTECTION';
+  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return 'RÉSERVATION';
+  return typeName?.toUpperCase() || 'ÉVÈNEMENT';
 };
 
 const getDisplayLabel = (value) => {
-    if (!value) return '';
-    if (typeof value === 'string') return value.trim();
-    if (typeof value === 'object') {
-        if (typeof value.name === 'string') return value.name.trim();
-        if (typeof value.label === 'string') return value.label.trim();
-        if (typeof value.title === 'string') return value.title.trim();
-    }
-    return '';
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    if (typeof value.name === 'string') return value.name.trim();
+    if (typeof value.label === 'string') return value.label.trim();
+    if (typeof value.title === 'string') return value.title.trim();
+  }
+  return '';
 };
 
 const formatEventDateLabel = (value) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    const formatted = format(date, 'EEEE dd MMMM', { locale: fr });
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const formatted = format(date, 'EEEE dd MMMM', { locale: fr });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
 /**
@@ -84,622 +84,625 @@ const formatEventDateLabel = (value) => {
  * @param {Function} props.onParticipate
  * @param {Function} props.onLogin
  * @param {string} [props.actionLabel] - Custom label for the action button (used in reservations)
+ * @param props.onRefuse
+ * @param props.onValidate
+ * @param props.showClubHeader
  */
 function EventCardNew({
-    item,
-    onPress,
-    onJoin,
-    onDecline,
-    onParticipate,
-    onLogin,
-    onValidate,
-    onRefuse,
-    actionLabel,
-    showClubHeader = false,
+  actionLabel,
+  item,
+  onDecline,
+  onJoin,
+  onLogin,
+  onParticipate,
+  onPress,
+  onRefuse,
+  onValidate,
+  showClubHeader = false,
 }) {
-    const {
-        Alignments,
-        ApplicationStyle,
-        Colors,
-        Fonts,
-        Images,
-        Spaces,
-    } = useTheme();
-    const { t } = useTranslation();
-    const { getClubInitials } = useClub();
-    const { userData } = useAuth();
-    const { haveIAlreadyJoined } = useEvent();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Images,
+    Spaces,
+  } = useTheme();
+  const { t } = useTranslation();
+  const { getClubInitials } = useClub();
+  const { userData } = useAuth();
+  const { haveIAlreadyJoined } = useEvent();
 
-    // Check if user has already joined (for reservations)
-    const alreadyJoined = haveIAlreadyJoined({
-        participations: item?.participations,
-        userId: userData?.documentId,
-    });
+  // Check if user has already joined (for reservations)
+  const alreadyJoined = haveIAlreadyJoined({
+    participations: item?.participations,
+    userId: userData?.documentId,
+  });
 
-    // Booking status for reservations
-    const bookingStatus = item?.bookingStatus || 'open';
-    const isLastMinuteAlert = item?.isLastMinuteAlert || false;
-    const currentPlayers = item?.currentPlayers || 0;
-    const totalPlayers = item?.totalPlayers || 4;
-    const missingPlayers = item?.missingPlayers || (totalPlayers - currentPlayers);
-    const fillPercentage = totalPlayers > 0 ? (currentPlayers / totalPlayers) * 100 : 0;
-    const isShared = bookingStatus === 'shared';
-    const isBooked = bookingStatus === 'booked';
+  // Booking status for reservations
+  const bookingStatus = item?.bookingStatus || 'open';
+  const isLastMinuteAlert = item?.isLastMinuteAlert || false;
+  const currentPlayers = item?.currentPlayers || 0;
+  const totalPlayers = item?.totalPlayers || 4;
+  const missingPlayers = item?.missingPlayers || (totalPlayers - currentPlayers);
+  const fillPercentage = totalPlayers > 0 ? (currentPlayers / totalPlayers) * 100 : 0;
+  const isShared = bookingStatus === 'shared';
+  const isBooked = bookingStatus === 'booked';
 
-    const scale = useSharedValue(1);
-    const opacity = useSharedValue(1);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-        opacity: opacity.value,
-    }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
 
-    const handlePressIn = () => {
-        scale.value = withTiming(0.98, { duration: 100 });
-        opacity.value = withTiming(0.9, { duration: 100 });
-    };
+  const handlePressIn = () => {
+    scale.value = withTiming(0.98, { duration: 100 });
+    opacity.value = withTiming(0.9, { duration: 100 });
+  };
 
-    const handlePressOut = () => {
-        scale.value = withTiming(1, { duration: 100 });
-        opacity.value = withTiming(1, { duration: 100 });
-    };
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 100 });
+    opacity.value = withTiming(1, { duration: 100 });
+  };
 
-    const typeName = item?.type?.name || '';
-    const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
-    const backgroundImage = getBackgroundImage(typeName);
-    const headerTitle = getHeaderTitle(typeName);
+  const typeName = item?.type?.name || '';
+  const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
+  const backgroundImage = getBackgroundImage(typeName);
+  const headerTitle = getHeaderTitle(typeName);
 
-    // Sponsors
-    const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
+  // Sponsors
+  const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
 
-    // Location - check facility first (club installation), then other options
-    const locationText = 
-        item?.facility?.name ||
-        getShortAddress(item?.locationDetails) ||
-        getShortAddress(item?.club?.addressDetails) ||
-        getShortAddress(item?.team?.club?.addressDetails) ||
-        getShortAddress(item?.location) ||
-        null;
+  // Location - check facility first (club installation), then other options
+  const locationText = item?.facility?.name
+        || getShortAddress(item?.locationDetails)
+        || getShortAddress(item?.club?.addressDetails)
+        || getShortAddress(item?.team?.club?.addressDetails)
+        || getShortAddress(item?.location)
+        || null;
 
-    // Sport/Activity
-    const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ') || item?.type?.name || 'Sport';
+  // Sport/Activity
+  const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ') || item?.type?.name || 'Sport';
 
-    const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
-    const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
-    const teamName = item?.team?.name || '';
-    const teamSection = getDisplayLabel(item?.team?.section || item?.section);
-    const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
-    const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
-    const teamMetaLine = [teamCategory, teamSection, teamLevel]
-        .filter((value) => !!value)
-        .join(' • ');
-    const invitedTeamNames = (item?.invitedTeams || [])
-        .map((team) => team?.name)
-        .filter(Boolean);
+  const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
+  const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
+  const teamName = item?.team?.name || '';
+  const teamSection = getDisplayLabel(item?.team?.section || item?.section);
+  const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
+  const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
+  const teamMetaLine = [teamCategory, teamSection, teamLevel]
+    .filter((value) => !!value)
+    .join(' • ');
+  const invitedTeamNames = (item?.invitedTeams || [])
+    .map((team) => team?.name)
+    .filter(Boolean);
 
-    return (
+  return (
 
-        <Animated.View style={[styles.container, animatedStyle]}>
-            {/* Background Image */}
-            <ImageBackground
-                source={backgroundImage}
-                style={StyleSheet.absoluteFill}
-                imageStyle={styles.backgroundImage}
-                resizeMode="cover"
-            />
+    <Animated.View style={[styles.container, animatedStyle]}>
+      {/* Background Image */}
+      <ImageBackground
+        imageStyle={styles.backgroundImage}
+        resizeMode="cover"
+        source={backgroundImage}
+        style={StyleSheet.absoluteFill}
+      />
 
-            {/* Main Card Pressable (Background) */}
-            <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => onPress?.(item)}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-            />
+      {/* Main Card Pressable (Background) */}
+      <Pressable
+        onPress={() => onPress?.(item)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={StyleSheet.absoluteFill}
+      />
 
-            {/* Content Container */}
-            <View style={styles.contentContainer} pointerEvents="box-none">
+      {/* Content Container */}
+      <View pointerEvents="box-none" style={styles.contentContainer}>
 
-                {/* Non-interactive Content (Passes touches to background Pressable) */}
-                <View pointerEvents="none">
-                    {/* Header: Event Type or Sport for Reservations */}
-                    <View style={styles.headerContainer}>
-                        <Text style={styles.headerText}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
-                    </View>
+        {/* Non-interactive Content (Passes touches to background Pressable) */}
+        <View pointerEvents="none">
+          {/* Header: Event Type or Sport for Reservations */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerText}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
+          </View>
 
-                    {/* Club / Team Info */}
-                    <View style={styles.clubInfoContainer}>
-                        <View style={styles.clubLogoContainer}>
-                            {clubLogo ? (
-                                <ProfileAvatar
-                                    imageUrl={clubLogo}
-                                    size={40}
-                                    style={{ borderRadius: 20 }}
-                                    imageStyle={{ borderRadius: 20 }}
-                                />
-                            ) : (
-                                <TeamShield
-                                    initials={clubName ? getClubInitials(clubName) : ''}
-                                    isSmall
-                                    size={40}
-                                />
-                            )}
-                        </View>
-                        <View style={styles.clubTextContainer}>
-                            <Text style={[styles.clubName, showClubHeader && { fontSize: 20 }]} numberOfLines={2}>{clubName}</Text>
-                            {teamName ? <Text style={styles.category} numberOfLines={1}>{teamName}</Text> : null}
-                            {teamMetaLine ? <Text style={styles.teamMetaInline} numberOfLines={1}>{teamMetaLine}</Text> : null}
-                            {invitedTeamNames.length > 0 ? (
-                                <Text style={styles.invitedTeamsInline} numberOfLines={1}>
-                                    {`Equipes invitees: ${invitedTeamNames.join(', ')}`}
-                                </Text>
-                            ) : null}
-                        </View>
-                    </View>
-
-                    {/* Date + Time (Hidden for reservations as it's in details) */}
-                    {item?.date && !isReservation && (
-                        <View style={styles.dateTimeContainer}>
-                            <View style={styles.dateMetaGroup}>
-                                <Image source={Images.calendar} style={styles.dateMetaIcon} />
-                                <Text style={styles.dateText} numberOfLines={1}>
-                                    {formatEventDateLabel(item.date)}
-                                </Text>
-                            </View>
-                            <View style={styles.dateMetaGroupRight}>
-                                <Image source={Images.clock} style={styles.dateMetaIcon} />
-                                <Text style={styles.timeText}>
-                                    {item.startTime && item.endTime
-                                        ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
-                                        : format(new Date(item.date), 'HH:mm')}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Location + Sport (or Price for Reservation) */}
-                    <View style={styles.detailsContainer}>
-                        {isReservation ? (
-                            <>
-                                {/* Reservation Layout - Similar to Events */}
-                                {/* Date Row (Prominent) */}
-                                {item?.date && (
-                                    <View style={styles.dateTimeContainer}>
-                                        <View style={styles.dateMetaGroup}>
-                                            <Image source={Images.calendar} style={styles.dateMetaIcon} />
-                                            <Text style={styles.dateText} numberOfLines={1}>
-                                                {formatEventDateLabel(item.date)}
-                                            </Text>
-                                        </View>
-                                        <View style={styles.dateMetaGroupRight}>
-                                            <Image source={Images.clock} style={styles.dateMetaIcon} />
-                                            <Text style={styles.timeText}>
-                                                {item.startTime && item.endTime
-                                                    ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
-                                                    : (item.startTime ? item.startTime.substring(0, 5) : '')}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                )}
-
-                                {/* Status Badges */}
-                                {(isLastMinuteAlert || isShared || isBooked) && (
-                                    <View style={styles.statusBadgesRow}>
-                                        {isLastMinuteAlert && (
-                                            <View style={[styles.statusBadge, styles.sosBadge]}>
-                                                <Text style={styles.statusBadgeText}>🔥 Dernière minute</Text>
-                                            </View>
-                                        )}
-                                        {isShared && !isLastMinuteAlert && (
-                                            <View style={[styles.statusBadge, styles.sharedBadge]}>
-                                                <Text style={styles.statusBadgeText}>👥 Joueurs recherchés</Text>
-                                            </View>
-                                        )}
-                                        {isBooked && (
-                                            <View style={[styles.statusBadge, styles.bookedBadge]}>
-                                                <Text style={styles.statusBadgeText}>✅ Complet</Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                )}
-
-                                {/* Fill Gauge for shared reservations */}
-                                {isShared && (
-                                    <View style={styles.fillGaugeContainer}>
-                                        <View style={styles.fillGaugeBackground}>
-                                            <View 
-                                                style={[
-                                                    styles.fillGaugeFill, 
-                                                    { 
-                                                        width: `${fillPercentage}%`,
-                                                        backgroundColor: isLastMinuteAlert ? '#FF6B35' : '#01B3F4' 
-                                                    }
-                                                ]} 
-                                            />
-                                        </View>
-                                        <Text style={styles.fillGaugeText}>
-                                            {missingPlayers > 0 
-                                                ? `Il manque ${missingPlayers} joueur${missingPlayers > 1 ? 's' : ''} (${currentPlayers}/${totalPlayers})`
-                                                : `${currentPlayers}/${totalPlayers} joueurs`
-                                            }
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* Price + Players Row */}
-                                <View style={styles.detailRow}>
-                                    <View style={styles.detailLeft}>
-                                        <Image source={Images.euroCircle} style={styles.icon} />
-                                        <Text style={styles.detailText} numberOfLines={1}>
-                                            {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€ / pers` : 'Prix non défini'}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRight}>
-                                        <Image source={Images.running} style={styles.icon} />
-                                        <Text style={styles.detailText} numberOfLines={1}>
-                                            {!isShared && totalPlayers ? `${totalPlayers} joueurs` : (sportName || 'Sport')}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {/* Location Row */}
-                                <View style={styles.detailRow}>
-                                    <Image source={Images.pin} style={styles.icon} />
-                                    <Text style={styles.detailText} numberOfLines={1}>
-                                        {locationText || 'Lieu non défini'}
-                                    </Text>
-                                </View>
-                            </>
-                        ) : (
-                            <>
-                                {/* Standard Event Layout */}
-                                <View style={styles.detailRow}>
-                                    <View style={styles.detailLeft}>
-                                        <Image source={Images.pin} style={styles.icon} />
-                                        <Text style={styles.detailText} numberOfLines={1}>
-                                            {locationText || 'Lieu non défini'}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRightStandard}>
-                                        <Image source={Images.running} style={styles.icon} />
-                                        <Text style={[styles.detailText, { textAlign: 'right', flex: 0 }]} numberOfLines={1}>{sportName}</Text>
-                                    </View>
-                                </View>
-                            </>
-                        )}
-                    </View>
-
-                    {/* Sponsors */}
-                    {sponsors.length > 0 && (
-                        <View style={styles.sponsorsContainer}>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sponsorsScroll}>
-                                {sponsors.map((sponsor, index) => (
-                                    <SponsorLogoTile
-                                        key={sponsor.documentId || sponsor.id || index}
-                                        imageUrl={sponsor.logo?.url}
-                                        link={sponsor.link}
-                                        title={sponsor.title}
-                                        width={92}
-                                        height={46}
-                                        containerStyle={styles.sponsorItem}
-                                        titleStyle={styles.sponsorName}
-                                    />
-                                ))}
-                            </ScrollView>
-                        </View>
-                    )}
-                </View>
-
-                {/* CTA - Interactive (Captures touches) */}
-                <View style={[styles.ctaContainer, { zIndex: 999, elevation: 999 }]} pointerEvents="auto">
-                    {onValidate && onRefuse ? (
-                        <View style={{ flexDirection: 'row', gap: 10, zIndex: 999, elevation: 999 }}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    console.log('Valider pressed for item:', item?.documentId);
-                                    onValidate && onValidate(item);
-                                }}
-                                style={[styles.reservationButton, { flex: 1, backgroundColor: Colors.primary500 }]}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={styles.reservationButtonText}>Valider</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    console.log('Refuser pressed for item:', item?.documentId);
-                                    onRefuse && onRefuse(item);
-                                }}
-                                style={[
-                                    styles.reservationButton,
-                                    {
-                                        flex: 1,
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 1,
-                                        borderColor: Colors.error500
-                                    }
-                                ]}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[styles.reservationButtonText, { color: Colors.error500 }]}>Refuser</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : isReservation ? (
-                        alreadyJoined ? (
-                            <View style={[Alignments.fullWidth]}>
-                                <Tag
-                                    text={t('eventList.info.alreadyJoined', 'Je participe !')}
-                                    textStyle={Fonts.p1Bold}
-                                />
-                            </View>
-                        ) : (
-                            <Pressable
-                                onPress={() => onParticipate?.(item)}
-                                style={styles.reservationButton}
-                            >
-                                <Text style={styles.reservationButtonText}>
-                                    {actionLabel || t('reservation.actions.participate') || 'Réserver'}
-                                </Text>
-                            </Pressable>
-                        )
-                    ) : (
-                        <EventAnswerButtons
-                            event={item}
-                            onAbout={() => onPress?.(item)}
-                            onDecline={() => onDecline?.(item)}
-                            onJoin={() => onJoin?.(item)}
-                            onLogin={onLogin}
-                            onParticipate={() => onParticipate?.(item)}
-                        />
-                    )}
-                </View>
-
+          {/* Club / Team Info */}
+          <View style={styles.clubInfoContainer}>
+            <View style={styles.clubLogoContainer}>
+              {clubLogo ? (
+                <ProfileAvatar
+                  imageStyle={{ borderRadius: 20 }}
+                  imageUrl={clubLogo}
+                  size={40}
+                  style={{ borderRadius: 20 }}
+                />
+              ) : (
+                <TeamShield
+                    initials={clubName ? getClubInitials(clubName) : ''}
+                    isSmall
+                    size={40}
+                  />
+              )}
             </View>
-        </Animated.View>
-    );
+            <View style={styles.clubTextContainer}>
+              <Text numberOfLines={2} style={[styles.clubName, showClubHeader && { fontSize: 20 }]}>{clubName}</Text>
+              {teamName ? <Text numberOfLines={1} style={styles.category}>{teamName}</Text> : null}
+              {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
+              {invitedTeamNames.length > 0 ? (
+                <Text numberOfLines={1} style={styles.invitedTeamsInline}>
+                  {`Equipes invitees: ${invitedTeamNames.join(', ')}`}
+                </Text>
+              ) : null}
+            </View>
+          </View>
 
+          {/* Date + Time (Hidden for reservations as it's in details) */}
+          {item?.date && !isReservation && (
+            <View style={styles.dateTimeContainer}>
+              <View style={styles.dateMetaGroup}>
+                <Image source={Images.calendar} style={styles.dateMetaIcon} />
+                <Text numberOfLines={1} style={styles.dateText}>
+                  {formatEventDateLabel(item.date)}
+                </Text>
+              </View>
+              <View style={styles.dateMetaGroupRight}>
+                <Image source={Images.clock} style={styles.dateMetaIcon} />
+                <Text style={styles.timeText}>
+                  {item.startTime && item.endTime
+                    ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
+                    : format(new Date(item.date), 'HH:mm')}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Location + Sport (or Price for Reservation) */}
+          <View style={styles.detailsContainer}>
+            {isReservation ? (
+              <>
+                {/* Reservation Layout - Similar to Events */}
+                {/* Date Row (Prominent) */}
+                {item?.date && (
+                  <View style={styles.dateTimeContainer}>
+                    <View style={styles.dateMetaGroup}>
+                      <Image source={Images.calendar} style={styles.dateMetaIcon} />
+                      <Text numberOfLines={1} style={styles.dateText}>
+                              {formatEventDateLabel(item.date)}
+                            </Text>
+                    </View>
+                    <View style={styles.dateMetaGroupRight}>
+                      <Image source={Images.clock} style={styles.dateMetaIcon} />
+                      <Text style={styles.timeText}>
+                              {item.startTime && item.endTime
+                                ? `${item.startTime.substring(0, 5)} - ${item.endTime.substring(0, 5)}`
+                                : (item.startTime ? item.startTime.substring(0, 5) : '')}
+                            </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Status Badges */}
+                {(isLastMinuteAlert || isShared || isBooked) && (
+                  <View style={styles.statusBadgesRow}>
+                    {isLastMinuteAlert && (
+                    <View style={[styles.statusBadge, styles.sosBadge]}>
+                            <Text style={styles.statusBadgeText}>🔥 Dernière minute</Text>
+                          </View>
+                    )}
+                    {isShared && !isLastMinuteAlert && (
+                    <View style={[styles.statusBadge, styles.sharedBadge]}>
+                            <Text style={styles.statusBadgeText}>👥 Joueurs recherchés</Text>
+                          </View>
+                    )}
+                    {isBooked && (
+                    <View style={[styles.statusBadge, styles.bookedBadge]}>
+                            <Text style={styles.statusBadgeText}>✅ Complet</Text>
+                          </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Fill Gauge for shared reservations */}
+                {isShared && (
+                  <View style={styles.fillGaugeContainer}>
+                    <View style={styles.fillGaugeBackground}>
+                      <View
+                              style={[
+                                styles.fillGaugeFill,
+                                {
+                                  backgroundColor: isLastMinuteAlert ? '#FF6B35' : '#01B3F4',
+                                  width: `${fillPercentage}%`,
+                                },
+                              ]}
+                            />
+                    </View>
+                    <Text style={styles.fillGaugeText}>
+                      {missingPlayers > 0
+                              ? `Il manque ${missingPlayers} joueur${missingPlayers > 1 ? 's' : ''} (${currentPlayers}/${totalPlayers})`
+                              : `${currentPlayers}/${totalPlayers} joueurs`}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Price + Players Row */}
+                <View style={styles.detailRow}>
+                  <View style={styles.detailLeft}>
+                      <Image source={Images.euroCircle} style={styles.icon} />
+                      <Text numberOfLines={1} style={styles.detailText}>
+                        {item.pricePerPerson !== undefined ? `${item.pricePerPerson}€ / pers` : 'Prix non défini'}
+                      </Text>
+                    </View>
+                  <View style={styles.detailRight}>
+                      <Image source={Images.running} style={styles.icon} />
+                      <Text numberOfLines={1} style={styles.detailText}>
+                        {!isShared && totalPlayers ? `${totalPlayers} joueurs` : (sportName || 'Sport')}
+                      </Text>
+                    </View>
+                </View>
+
+                {/* Location Row */}
+                <View style={styles.detailRow}>
+                  <Image source={Images.pin} style={styles.icon} />
+                  <Text numberOfLines={1} style={styles.detailText}>
+                      {locationText || 'Lieu non défini'}
+                    </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Standard Event Layout */}
+                <View style={styles.detailRow}>
+                    <View style={styles.detailLeft}>
+                      <Image source={Images.pin} style={styles.icon} />
+                      <Text numberOfLines={1} style={styles.detailText}>
+                            {locationText || 'Lieu non défini'}
+                          </Text>
+                    </View>
+                    <View style={styles.detailRightStandard}>
+                      <Image source={Images.running} style={styles.icon} />
+                      <Text numberOfLines={1} style={[styles.detailText, { flex: 0, textAlign: 'right' }]}>{sportName}</Text>
+                    </View>
+                  </View>
+              </>
+            )}
+          </View>
+
+          {/* Sponsors */}
+          {sponsors.length > 0 && (
+            <View style={styles.sponsorsContainer}>
+              <ScrollView contentContainerStyle={styles.sponsorsScroll} horizontal showsHorizontalScrollIndicator={false}>
+                {sponsors.map((sponsor, index) => (
+                  <SponsorLogoTile
+                    containerStyle={styles.sponsorItem}
+                    height={46}
+                    imageUrl={sponsor.logo?.url}
+                    key={sponsor.documentId || sponsor.id || index}
+                    link={sponsor.link}
+                    title={sponsor.title}
+                    titleStyle={styles.sponsorName}
+                    width={92}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
+        {/* CTA - Interactive (Captures touches) */}
+        <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
+          {onValidate && onRefuse ? (
+            <View style={{
+              elevation: 999, flexDirection: 'row', gap: 10, zIndex: 999,
+            }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  console.log('Valider pressed for item:', item?.documentId);
+                  onValidate && onValidate(item);
+                }}
+                style={[styles.reservationButton, { backgroundColor: Colors.primary500, flex: 1 }]}
+              >
+                <Text style={styles.reservationButtonText}>Valider</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  console.log('Refuser pressed for item:', item?.documentId);
+                  onRefuse && onRefuse(item);
+                }}
+                style={[
+                  styles.reservationButton,
+                  {
+                    backgroundColor: 'transparent',
+                    borderColor: Colors.error500,
+                    borderWidth: 1,
+                    flex: 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.reservationButtonText, { color: Colors.error500 }]}>Refuser</Text>
+              </TouchableOpacity>
+            </View>
+          ) : isReservation ? (
+            alreadyJoined ? (
+              <View style={[Alignments.fullWidth]}>
+                <Tag
+                  text={t('eventList.info.alreadyJoined', 'Je participe !')}
+                  textStyle={Fonts.p1Bold}
+                />
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => onParticipate?.(item)}
+                style={styles.reservationButton}
+              >
+                <Text style={styles.reservationButtonText}>
+                  {actionLabel || t('reservation.actions.participate') || 'Réserver'}
+                </Text>
+              </Pressable>
+            )
+          ) : (
+            <EventAnswerButtons
+              event={item}
+              onAbout={() => onPress?.(item)}
+              onDecline={() => onDecline?.(item)}
+              onJoin={() => onJoin?.(item)}
+              onLogin={onLogin}
+              onParticipate={() => onParticipate?.(item)}
+            />
+          )}
+        </View>
+
+      </View>
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: '#173844',
-        borderColor: 'rgba(255,255,255,0.12)',
-        borderRadius: 24,
-        borderWidth: 1,
-        overflow: 'hidden',
-        minHeight: 200, // Flexible height
-    },
-    backgroundImage: {
-        opacity: 1,
-        borderRadius: 24,
-    },
-    contentContainer: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
-        // Add a dark overlay on top of the background image for better contrast
-        backgroundColor: 'rgba(0, 0, 0, 0.56)',
-        flex: 1,
-    },
-    headerContainer: {
-        width: '100%',
-        backgroundColor: 'rgba(1, 179, 244, 0.10)',
-        borderWidth: 2,
-        borderColor: '#01B3F4',
-        borderRadius: 8,
-        paddingVertical: 3,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 6,
-    },
-    headerText: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#01B3F4',
-        textTransform: 'uppercase',
-    },
-    clubInfoContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    clubLogoContainer: {
-        // Optional: Add specific styling for the logo container if needed
-    },
-    clubTextContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        marginRight: 6,
-    },
-    clubName: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 17,
-        fontWeight: '800', // Extra bold
-        color: '#FFFFFF',
-        lineHeight: 22,
-    },
-    category: {
-        fontFamily: 'Montserrat-Medium', // Medium weight
-        fontSize: 13,
-        marginTop: 2,
-        color: '#BFD5E2',
-    },
-    teamMetaInline: {
-        fontFamily: 'Montserrat-SemiBold',
-        fontSize: 12,
-        marginTop: 3,
-        color: '#D9F4FF',
-    },
-    invitedTeamsInline: {
-        fontFamily: 'Montserrat-Medium',
-        fontSize: 11,
-        marginTop: 2,
-        color: '#9ED9F0',
-    },
-    dateTimeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 10,
-        marginBottom: 6,
-        paddingBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.12)',
-    },
-    dateMetaGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: 6,
-        marginRight: 6,
-    },
-    dateMetaGroupRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: 6,
-        maxWidth: '45%',
-    },
-    dateMetaIcon: {
-        width: 14,
-        height: 14,
-        tintColor: '#CDE6F2',
-        resizeMode: 'contain',
-    },
-    dateText: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#EAF8FF',
-        flexShrink: 1,
-    },
-    timeText: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#EAF8FF',
-    },
-    detailsContainer: {
-        gap: 8,
-    },
-    statusBadgesRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 8,
-    },
-    statusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    sosBadge: {
-        backgroundColor: 'rgba(255, 107, 53, 0.9)',
-    },
-    sharedBadge: {
-        backgroundColor: 'rgba(255, 193, 7, 0.9)',
-    },
-    bookedBadge: {
-        backgroundColor: 'rgba(76, 175, 80, 0.9)',
-    },
-    statusBadgeText: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 11,
-        color: '#FFFFFF',
-    },
-    fillGaugeContainer: {
-        marginBottom: 8,
-    },
-    fillGaugeBackground: {
-        height: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 4,
-        overflow: 'hidden',
-        marginBottom: 4,
-    },
-    fillGaugeFill: {
-        height: '100%',
-        borderRadius: 4,
-    },
-    fillGaugeText: {
-        fontFamily: 'Montserrat-SemiBold',
-        fontSize: 12,
-        color: '#FFFFFF',
-    },
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        justifyContent: 'space-between',
-    },
-    detailLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        flex: 1,
-    },
-    detailRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    detailRightStandard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        justifyContent: 'flex-end',
-        marginLeft: 8,
-        maxWidth: '45%',
-    },
-    icon: {
-        width: 16,
-        height: 16,
-        tintColor: '#CDE6F2',
-        resizeMode: 'contain',
-    },
-    detailText: {
-        fontFamily: 'Montserrat-Medium',
-        fontSize: 13,
-        color: '#D6E7EE',
-        flex: 1,
-    },
-    sponsorsContainer: {
-        marginTop: 10,
-        borderTopWidth: 0,
-    },
-    sponsorsScroll: {
-        gap: 12,
-        alignItems: 'flex-start',
-    },
-    sponsorItem: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sponsorName: {
-        fontFamily: 'Montserrat-SemiBold',
-        fontSize: 10,
-        color: '#EAF8FF',
-        textAlign: 'center',
-    },
-    ctaContainer: {
-        marginTop: 8,
-        width: '100%',
-    },
-    reservationButton: {
-        width: '100%',
-        height: 38,
-        backgroundColor: '#01B3F4',
-        borderRadius: 19,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    reservationButtonText: {
-        fontFamily: 'Montserrat-Bold',
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
+  backgroundImage: {
+    borderRadius: 24,
+    opacity: 1,
+  },
+  bookedBadge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+  },
+  category: {
+    color: '#BFD5E2',
+    fontFamily: 'Montserrat-Medium', // Medium weight
+    fontSize: 13,
+    marginTop: 2,
+  },
+  clubInfoContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  clubLogoContainer: {
+    // Optional: Add specific styling for the logo container if needed
+  },
+  clubName: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 17,
+    fontWeight: '800', // Extra bold
+    lineHeight: 22,
+  },
+  clubTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  container: {
+    backgroundColor: '#173844',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 24,
+    borderWidth: 1,
+    minHeight: 200, // Flexible height
+    overflow: 'hidden',
+  },
+  contentContainer: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    // Add a dark overlay on top of the background image for better contrast
+    backgroundColor: 'rgba(0, 0, 0, 0.56)',
+    flex: 1,
+  },
+  ctaContainer: {
+    marginTop: 8,
+    width: '100%',
+  },
+  dateMetaGroup: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    marginRight: 6,
+  },
+  dateMetaGroupRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'flex-end',
+    maxWidth: '45%',
+  },
+  dateMetaIcon: {
+    height: 14,
+    resizeMode: 'contain',
+    tintColor: '#CDE6F2',
+    width: 14,
+  },
+  dateText: {
+    color: '#EAF8FF',
+    flexShrink: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  dateTimeContainer: {
+    alignItems: 'center',
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    marginTop: 10,
+    paddingBottom: 8,
+  },
+  detailLeft: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  detailRight: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+  },
+  detailRightStandard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+    marginLeft: 8,
+    maxWidth: '45%',
+  },
+  detailRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  detailsContainer: {
+    gap: 8,
+  },
+  detailText: {
+    color: '#D6E7EE',
+    flex: 1,
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 13,
+  },
+  fillGaugeBackground: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 4,
+    height: 8,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  fillGaugeContainer: {
+    marginBottom: 8,
+  },
+  fillGaugeFill: {
+    borderRadius: 4,
+    height: '100%',
+  },
+  fillGaugeText: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 12,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(1, 179, 244, 0.10)',
+    borderColor: '#01B3F4',
+    borderRadius: 8,
+    borderWidth: 2,
+    justifyContent: 'center',
+    marginBottom: 6,
+    paddingVertical: 3,
+    width: '100%',
+  },
+  headerText: {
+    color: '#01B3F4',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  icon: {
+    height: 16,
+    resizeMode: 'contain',
+    tintColor: '#CDE6F2',
+    width: 16,
+  },
+  invitedTeamsInline: {
+    color: '#9ED9F0',
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  reservationButton: {
+    alignItems: 'center',
+    backgroundColor: '#01B3F4',
+    borderRadius: 19,
+    height: 38,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  reservationButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  sharedBadge: {
+    backgroundColor: 'rgba(255, 193, 7, 0.9)',
+  },
+  sosBadge: {
+    backgroundColor: 'rgba(255, 107, 53, 0.9)',
+  },
+  sponsorItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sponsorName: {
+    color: '#EAF8FF',
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  sponsorsContainer: {
+    borderTopWidth: 0,
+    marginTop: 10,
+  },
+  sponsorsScroll: {
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  statusBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  statusBadgeText: {
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 11,
+  },
+  teamMetaInline: {
+    color: '#D9F4FF',
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 12,
+    marginTop: 3,
+  },
+  timeText: {
+    color: '#EAF8FF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 });
 
 export default EventCardNew;

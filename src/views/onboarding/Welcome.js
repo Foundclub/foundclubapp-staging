@@ -4,15 +4,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import useTheme from '@/theme/themeContext';
-import useAuth from '@/domains/auth/useAuth';
-
-import { storage, useAppContext } from '@/store/appContext';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
+import { storage, useAppContext } from '@/store/appContext';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
 
 /**
  * Welcome screen component shown after completing onboarding.

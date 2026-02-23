@@ -1,5 +1,7 @@
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -43,10 +45,12 @@ const getStatus = (count) => {
  * @param {(slot: any) => void} [props.onCheckIn]
  * @param {(slot: any) => void} [props.onSlotPress]
  * @param {() => void} [props.onAddSlot]
+ * @param {boolean} [props.actionsEnabled]
  * @param {string} [props.currentUserId]
  * @returns {import('react').ReactElement}
  */
 export default function TeamSlotList({
+  actionsEnabled = true,
   currentUserId,
   isCaptain = false,
   isMember = true,
@@ -66,10 +70,13 @@ export default function TeamSlotList({
         marginBottom: 12,
       }}
       >
-        <Text style={[Fonts.h3, { color: Colors.gold500, flex: 1, flexShrink: 1, paddingRight: 10 }]}>
+        <Text style={[Fonts.h3, {
+          color: Colors.gold500, flex: 1, flexShrink: 1, paddingRight: 10,
+        }]}
+        >
           Disponibilites (Creneaux)
         </Text>
-        {isCaptain ? (
+        {isCaptain && actionsEnabled ? (
           <TouchableOpacity
             onPress={onAddSlot}
             style={{
@@ -85,6 +92,22 @@ export default function TeamSlotList({
           >
             <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>+ Ajouter</Text>
           </TouchableOpacity>
+        ) : null}
+        {isCaptain && !actionsEnabled ? (
+          <View
+            style={{
+              backgroundColor: 'rgba(1, 179, 244, 0.12)',
+              borderColor: 'rgba(1, 179, 244, 0.32)',
+              borderRadius: 999,
+              borderWidth: 1,
+              flexShrink: 0,
+              marginLeft: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Bientot disponible</Text>
+          </View>
         ) : null}
       </View>
 
@@ -120,8 +143,8 @@ export default function TeamSlotList({
 
             return (
               <TouchableOpacity
-                key={slotKey}
                 activeOpacity={isCaptain ? 0.85 : 1}
+                key={slotKey}
                 onPress={() => {
                   if (isCaptain && onSlotPress) {
                     onSlotPress(slot);
@@ -163,12 +186,19 @@ export default function TeamSlotList({
                 </View>
 
                 <Text style={[Fonts.h3, { color: Colors.gold500, marginBottom: 10 }]}>
-                  {formatHour(slot?.start_hour)} - {formatHour(slot?.end_hour)}
+                  {formatHour(slot?.start_hour)}
+                  {' '}
+                  -
+                  {formatHour(slot?.end_hour)}
                 </Text>
 
                 <View style={{ marginBottom: 10 }}>
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
-                    Joueurs confirmes: {participantsCount}/{REQUIRED_PLAYERS}
+                    Joueurs confirmes:
+                    {' '}
+                    {participantsCount}
+                    /
+                    {REQUIRED_PLAYERS}
                   </Text>
                   <View style={{
                     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -188,7 +218,7 @@ export default function TeamSlotList({
                   </View>
                 </View>
 
-                {isMember ? (
+                {isMember && actionsEnabled ? (
                   <TouchableOpacity
                     onPress={() => onCheckIn?.(slot)}
                     style={{
@@ -206,8 +236,19 @@ export default function TeamSlotList({
                       {checkedIn ? 'Retirer ma presence' : 'Je suis present'}
                     </Text>
                   </TouchableOpacity>
+                ) : null}
+                {isMember && !actionsEnabled ? (
+                  <Text
+                    style={[Fonts.p3, {
+                      color: Colors.neutral300,
+                      paddingVertical: 8,
+                      textAlign: 'center',
+                    }]}
+                  >
+                    Check-in bientot disponible.
+                  </Text>
                 ) : (
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center', paddingVertical: 8 }]}>
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' }]}>
                     Rejoindre la squad pour participer.
                   </Text>
                 )}

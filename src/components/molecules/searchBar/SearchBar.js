@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Image, StyleSheet, TextInput, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
-const searchIcon = require('@/assets/icons/search.png');
 const calendarIcon = require('@/assets/icons/calendar-days.png');
 const filterIcon = require('@/assets/icons/filter.png');
+const searchIcon = require('@/assets/icons/search.png');
 
 /**
  * SearchBar component - themed version.
@@ -20,11 +22,11 @@ const filterIcon = require('@/assets/icons/filter.png');
  * @returns {import('react').ReactElement}
  */
 function SearchBar({
-  value,
-  onChangeText,
-  placeholder = 'Rechercher',
   onCalendarPress,
+  onChangeText,
   onFilterPress,
+  placeholder = 'Rechercher',
+  value,
   withCalendar = true,
   withFilter = true,
 }) {

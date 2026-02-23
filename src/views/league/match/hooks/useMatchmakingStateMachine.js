@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+
 import MatchmakingService from '@/services/league/MatchmakingService';
+
 import { getEntityDocumentId } from '@/utils/entityId';
 
-const POLLING_VIEWS = new Set(['radar', 'locker_room', 'match_found']);
+const POLLING_VIEWS = new Set(['locker_room', 'match_found', 'radar']);
 
 /**
  * @param {number} seconds
@@ -95,7 +97,7 @@ const extractSearchZone = (matchRequest, mySquad) => {
     requestLocation?.address,
     squadHomeBase?.city,
     squadHomeBase?.label,
-    squadHomeBase?.address
+    squadHomeBase?.address,
   );
 
   const radiusKm = Number(matchRequest?.radius || squadHomeBase?.radius || mySquad?.radius || 20);
@@ -116,11 +118,11 @@ const extractSearchZone = (matchRequest, mySquad) => {
  * @returns {string}
  */
 const buildSearchStatusLabel = ({
-  division,
-  searchInsights,
-  nextExpansionInSec,
   cityLabel,
+  division,
+  nextExpansionInSec,
   radiusKm,
+  searchInsights,
 }) => {
   const divisionLabel = division ? `Division ${division}` : 'votre niveau';
   const tier = Number(searchInsights?.tier || 0) || 1;
@@ -177,8 +179,8 @@ export const useMatchmakingStateMachine = ({
   onAutoSearchingDetected,
   onConnectionError,
   onMatched,
-  onSearchingStatus,
   onRecoverFromBackground,
+  onSearchingStatus,
   viewState,
 }) => {
   const appStateRef = useRef(AppState.currentState);
@@ -248,11 +250,11 @@ export const useMatchmakingStateMachine = ({
       const nextExpansionInSec = computeRemainingExpansionSec(searchInsights, searchInsightsUpdatedAt);
       const zone = extractSearchZone(matchRequest, mySquad);
       setSearchStatus(buildSearchStatusLabel({
-        division: mySquad?.division,
-        searchInsights,
-        nextExpansionInSec,
         cityLabel: zone.cityLabel,
+        division: mySquad?.division,
+        nextExpansionInSec,
         radiusKm: zone.radiusKm,
+        searchInsights,
       }));
     }, 1000);
 

@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetActivities } from '@/services/activity/activityQueries';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetActivities } from '@/services/activity/activityQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -16,7 +18,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
  */
 function TeamWizardActivity({ navigation }) {
   const { t } = useTranslation();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const [searchValue, setSearchValue] = useState('');
   const { data: activities } = useGetActivities();
 
@@ -37,15 +39,15 @@ function TeamWizardActivity({ navigation }) {
 
   return (
     <WizardStepLayout
-      title={t('teamWizard.steps.activity.title', 'Sport')}
-      subtitle={t('teamWizard.steps.activity.subtitle', 'Selectionne le sport principal de l equipe.')}
-      stepIndex={4}
-      stepCount={8}
+      isNextDisabled={!state.activities}
+      nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardSection)}
       onNext={() => navigation.navigate(RouteNames.TeamWizardCategory)}
       onSkip={() => {}}
-      nextLabel={t('common.next', 'Suivant')}
-      isNextDisabled={!state.activities}
+      stepCount={8}
+      stepIndex={4}
+      subtitle={t('teamWizard.steps.activity.subtitle', 'Selectionne le sport principal de l equipe.')}
+      title={t('teamWizard.steps.activity.title', 'Sport')}
     >
       <View>
         <AutocompleteSelect
@@ -55,7 +57,7 @@ function TeamWizardActivity({ navigation }) {
           placeholder={t('teamEdit.fields.activities.placeholder')}
           searchValue={searchValue}
           setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ type: 'SET_ACTIVITY', payload: option?.value || '' })}
+          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_ACTIVITY' })}
           value={selectedLabel}
         />
       </View>

@@ -1,19 +1,22 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import { AdWizardProvider } from '@/views/recruitment/wizard/AdWizardContext';
+import AdWizardDescription from '@/views/recruitment/wizard/AdWizardDescription';
+import AdWizardInfo from '@/views/recruitment/wizard/AdWizardInfo';
+import AdWizardPositions from '@/views/recruitment/wizard/AdWizardPositions';
+import AdWizardRecap from '@/views/recruitment/wizard/AdWizardRecap';
+import AdWizardTeam from '@/views/recruitment/wizard/AdWizardTeam';
+import AdWizardValidation from '@/views/recruitment/wizard/AdWizardValidation';
+
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { AdWizardProvider } from '@/views/recruitment/wizard/AdWizardContext';
-import AdWizardTeam from '@/views/recruitment/wizard/AdWizardTeam';
-import AdWizardInfo from '@/views/recruitment/wizard/AdWizardInfo';
-import AdWizardPositions from '@/views/recruitment/wizard/AdWizardPositions';
-import AdWizardValidation from '@/views/recruitment/wizard/AdWizardValidation';
-import AdWizardDescription from '@/views/recruitment/wizard/AdWizardDescription';
-import AdWizardRecap from '@/views/recruitment/wizard/AdWizardRecap';
-
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function AdWizardStack() {
   const { t } = useTranslation();
 

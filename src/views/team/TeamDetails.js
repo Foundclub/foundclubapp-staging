@@ -28,31 +28,31 @@ import Checkable from '@/components/atoms/checkable/Checkable';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import Input from '@/components/molecules/input/Input';
-import StatRow from '@/components/molecules/statRow/StatRow';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import EventListContent from '@/components/organisms/eventListContent/EventListContent';
-import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import StatRow from '@/components/molecules/statRow/StatRow';
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
+import EventListContent from '@/components/organisms/eventListContent/EventListContent';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
-import {
-  removePlayerFromTeam,
-  updateTeam,
-  leaveTeam,
-  previewExternalCompetition,
-  connectExternalCompetition,
-  refreshExternalCompetition,
-  createFFBBErrorReport
-} from '@/services/team/teamService';
-import { useGetTeam } from '@/services/team/teamQueries';
-import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 import { useGetTeamStats } from '@/services/stats/statsQueries';
 import { resetTeamStats } from '@/services/stats/statsService';
+import { useGetTeam } from '@/services/team/teamQueries';
+import {
+  connectExternalCompetition,
+  createFFBBErrorReport,
+  leaveTeam,
+  previewExternalCompetition,
+  refreshExternalCompetition,
+  removePlayerFromTeam,
+  updateTeam,
+} from '@/services/team/teamService';
+import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 /**
  * @typedef {{ externalTeamId?: string | null; externalTeamName: string }} ExternalTeamOption
@@ -66,10 +66,10 @@ import { resetTeamStats } from '@/services/stats/statsService';
  */
 function TeamDetails({ navigation, route }) {
   const {
-    teamId,
-    invite,
     assignmentTrainerId,
     assignmentTrainerName,
+    invite,
+    teamId,
   } = route?.params ?? {};
 
   // hooks
@@ -105,7 +105,7 @@ function TeamDetails({ navigation, route }) {
     {
       enabled: Boolean(teamId && isMyTeam),
       staleTime: 1000 * 60,
-    }
+    },
   );
 
   const [activeTab, setActiveTab] = useState('infos');
@@ -116,7 +116,7 @@ function TeamDetails({ navigation, route }) {
   const [selectedUpcomingMatchKey, setSelectedUpcomingMatchKey] = useState(/** @type {string | null} */ (null));
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
   const [trainerSearch, setTrainerSearch] = useState('');
-  
+
   // FFBB Modal states
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
   const [showFFBBTeamModal, setShowFFBBTeamModal] = useState(false);
@@ -171,7 +171,7 @@ function TeamDetails({ navigation, route }) {
     const trainerIds = new Set(
       trainers
         .map((trainer) => trainer?.documentId)
-        .filter(Boolean)
+        .filter(Boolean),
     );
 
     return players.filter((player) => {
@@ -213,8 +213,7 @@ function TeamDetails({ navigation, route }) {
   });
 
   const removePlayerMutation = useMutation({
-    mutationFn: (/** @type {{ teamId: string; playerId: string }} */ payload) =>
-      removePlayerFromTeam(payload.teamId, payload.playerId),
+    mutationFn: (/** @type {{ teamId: string; playerId: string }} */ payload) => removePlayerFromTeam(payload.teamId, payload.playerId),
     onSuccess: () => {
       refetch();
     },
@@ -222,29 +221,29 @@ function TeamDetails({ navigation, route }) {
 
   const addTrainerToTeamMutation = useMutation({
     mutationFn: (payload) => updateTeam(payload),
-    onSuccess: () => {
-      refetch();
-      refetchClubData();
-    },
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraineur'))
+        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraineur')),
       );
+    },
+    onSuccess: () => {
+      refetch();
+      refetchClubData();
     },
   });
 
   const saveTeamTrainersMutation = useMutation({
     mutationFn: (payload) => updateTeam(payload),
-    onSuccess: () => {
-      setIsTrainerPickerVisible(false);
-      refetch();
-    },
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre a jour les entraineurs'))
+        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre a jour les entraineurs')),
       );
+    },
+    onSuccess: () => {
+      setIsTrainerPickerVisible(false);
+      refetch();
     },
   });
 
@@ -255,28 +254,24 @@ function TeamDetails({ navigation, route }) {
       }
       return resetTeamStats(teamId, reason);
     },
+    onError: (mutationError) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de reinitialiser les statistiques')),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamStats', teamId] });
       refetchTeamStats();
       Alert.alert(
         t('common.success', 'Succes'),
-        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ete reinitialisees a partir de maintenant.')
-      );
-    },
-    onError: (mutationError) => {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de reinitialiser les statistiques'))
+        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ete reinitialisees a partir de maintenant.'),
       );
     },
   });
 
   const refreshScrapingMutation = useMutation({
     mutationFn: refreshExternalCompetition,
-    onSuccess: () => {
-      Alert.alert(t('common.success'), t('teamDetails.alerts.scrapingSuccess.description', 'Classement mis à jour avec succès.'));
-      refetch();
-    },
     onError: (/** @type {ApiError} */ err) => {
       const apiError = err;
       if (apiError?.response?.data?.code === 'RATE_LIMITED') {
@@ -285,6 +280,10 @@ function TeamDetails({ navigation, route }) {
       } else {
         Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise à jour : ${getErrorMessage(apiError)}`));
       }
+    },
+    onSuccess: () => {
+      Alert.alert(t('common.success'), t('teamDetails.alerts.scrapingSuccess.description', 'Classement mis à jour avec succès.'));
+      refetch();
     },
   });
 
@@ -308,7 +307,7 @@ function TeamDetails({ navigation, route }) {
         setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
-          t('teamDetails.ffbb.noCandidate', 'Aucune equipe detectee depuis cette source.')
+          t('teamDetails.ffbb.noCandidate', 'Aucune equipe detectee depuis cette source.'),
         );
         return;
       }
@@ -319,7 +318,7 @@ function TeamDetails({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('common.error'),
-        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(error)
+        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(error),
       );
     } finally {
       setFfbbLoading(false);
@@ -345,9 +344,9 @@ function TeamDetails({ navigation, route }) {
     setFfbbLoading(true);
     try {
       await createFFBBErrorReport({
-        teamId,
+        description: ffbbErrorDescription,
         problemType: ffbbErrorType,
-        description: ffbbErrorDescription
+        teamId,
       });
       setShowFFBBErrorModal(false);
       setFfbbErrorDescription('');
@@ -363,35 +362,40 @@ function TeamDetails({ navigation, route }) {
   const playersCount = useMemo(() => filteredPlayers.length || 0, [filteredPlayers]);
   const hasStandingData = useMemo(
     () => Array.isArray(team?.externalStandingData) && team.externalStandingData.length > 0,
-    [team?.externalStandingData]
+    [team?.externalStandingData],
   );
   const hasCalendarData = useMemo(
     () => Array.isArray(team?.externalCalendarData) && team.externalCalendarData.length > 0,
-    [team?.externalCalendarData]
+    [team?.externalCalendarData],
   );
   const canConfigureFFBB = useMemo(
     () => !!(canManageTeam && team?.club?.documentId && (isMyTeam || canEditClub(team.club.documentId))),
-    [canEditClub, canManageTeam, isMyTeam, team?.club?.documentId]
+    [canEditClub, canManageTeam, isMyTeam, team?.club?.documentId],
   );
   const showStandingsTab = useMemo(
     () => !!(isMyTeam || hasStandingData || canConfigureFFBB),
-    [isMyTeam, hasStandingData, canConfigureFFBB]
+    [isMyTeam, hasStandingData, canConfigureFFBB],
   );
   const showCalendarTab = useMemo(
     () => !!(isMyTeam || hasCalendarData || canConfigureFFBB),
-    [isMyTeam, hasCalendarData, canConfigureFFBB]
+    [isMyTeam, hasCalendarData, canConfigureFFBB],
   );
   const showPerformanceTabs = useMemo(
     () => showStandingsTab || showCalendarTab,
-    [showStandingsTab, showCalendarTab]
+    [showStandingsTab, showCalendarTab],
+  );
+  const areSlotActionsEnabled = String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
+  const showSlotFeatureComingSoon = () => Alert.alert(
+    'Bientot disponible',
+    'La gestion des creneaux sera activee prochainement.',
   );
   const showStatsTab = useMemo(
     () => !!isMyTeam,
-    [isMyTeam]
+    [isMyTeam],
   );
   const primaryActivityLabel = useMemo(
     () => String(team?.activities?.[0]?.name || '').trim(),
-    [team?.activities]
+    [team?.activities],
   );
   const teamDescription = useMemo(() => {
     const value = String(team?.description || '').trim();
@@ -399,20 +403,18 @@ function TeamDetails({ navigation, route }) {
   }, [team?.description]);
   const canAddTrainer = useMemo(
     () => !!(team?.club?.documentId && canEditClub(team.club.documentId)),
-    [team?.club?.documentId, canEditClub]
+    [team?.club?.documentId, canEditClub],
   );
   const trainerPickerOptions = useMemo(() => {
     const normalizedSearch = trainerSearch.trim().toLowerCase();
     return (clubData?.members || [])
-      .filter((member) =>
-        member?.documentId
+      .filter((member) => member?.documentId
         && (member.role?.name === USER_ROLES.coach || member.role?.name === USER_ROLES.president))
       .map((member) => ({
         label: `${member.firstname || ''} ${member.lastname || ''}`.trim() || member.phoneNumber || 'Utilisateur',
         value: member.documentId || '',
       }))
-      .filter((option) =>
-        !normalizedSearch || option.label.toLowerCase().includes(normalizedSearch))
+      .filter((option) => !normalizedSearch || option.label.toLowerCase().includes(normalizedSearch))
       .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   }, [clubData?.members, trainerSearch]);
 
@@ -437,9 +439,9 @@ function TeamDetails({ navigation, route }) {
       ? row.rank
       : index + 1;
     return {
-      rank,
       points: row.points,
-      total: team.externalStandingData.length
+      rank,
+      total: team.externalStandingData.length,
     };
   }, [team?.externalStandingData, team?.externalTeamId, team?.externalTeamName]);
 
@@ -450,7 +452,7 @@ function TeamDetails({ navigation, route }) {
       { key: 'lateCount', label: 'Ret.' },
       { key: 'lateMinutesTotal', label: 'Min ret.' },
     ]),
-    []
+    [],
   );
 
   const teamStatsRows = useMemo(() => {
@@ -465,13 +467,13 @@ function TeamDetails({ navigation, route }) {
   const statsSummary = useMemo(() => {
     const rowCount = teamStatsRows.length;
     const fallbackTotals = teamStatsRows.reduce((acc, row) => ({
-      attendanceCount: acc.attendanceCount + Number(row.attendanceCount || 0),
       absenceCount: acc.absenceCount + Number(row.absenceCount || 0),
+      attendanceCount: acc.attendanceCount + Number(row.attendanceCount || 0),
       lateCount: acc.lateCount + Number(row.lateCount || 0),
       lateMinutesTotal: acc.lateMinutesTotal + Number(row.lateMinutesTotal || 0),
     }), {
-      attendanceCount: 0,
       absenceCount: 0,
+      attendanceCount: 0,
       lateCount: 0,
       lateMinutesTotal: 0,
     });
@@ -483,12 +485,12 @@ function TeamDetails({ navigation, route }) {
         : 0);
 
     return {
+      baselineAt: teamStatsData?.baselineAt || null,
+      lateCount: Number(totals?.lateCount || 0),
+      lateMinutesAvg,
+      lateMinutesTotal: Number(totals?.lateMinutesTotal || 0),
       rowCount,
       totalEvents: Number(teamStatsData?.totalEvents || 0),
-      lateCount: Number(totals?.lateCount || 0),
-      lateMinutesTotal: Number(totals?.lateMinutesTotal || 0),
-      lateMinutesAvg,
-      baselineAt: teamStatsData?.baselineAt || null,
     };
   }, [teamStatsData?.baselineAt, teamStatsData?.totalEvents, teamStatsData?.totals, teamStatsRows]);
 
@@ -501,24 +503,23 @@ function TeamDetails({ navigation, route }) {
 
   const canResetTeamStats = useMemo(
     () => Boolean(canManageTeam && isMyTeam),
-    [canManageTeam, isMyTeam]
+    [canManageTeam, isMyTeam],
   );
 
   // handlers
   const handleEditTeam = useCallback(() => {
     if (currentUser) {
       navigation.navigate(RouteNames.TeamStack, {
-        screen: RouteNames.TeamEdit,
         params: { clubId: team?.club?.documentId, teamId },
+        screen: RouteNames.TeamEdit,
       });
     }
   }, [navigation, team?.club?.documentId, teamId, currentUser]);
 
   const handleToggleTrainerSelection = useCallback((trainerId) => {
-    setSelectedTrainerIds((current) =>
-      current.includes(trainerId)
-        ? current.filter((id) => id !== trainerId)
-        : [...current, trainerId]);
+    setSelectedTrainerIds((current) => (current.includes(trainerId)
+      ? current.filter((id) => id !== trainerId)
+      : [...current, trainerId]));
   }, []);
 
   const handleOpenTrainerPicker = useCallback(() => {
@@ -535,7 +536,7 @@ function TeamDetails({ navigation, route }) {
     if (!selectedTrainerIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('teamDetails.alerts.trainerRequired', 'Au moins un entraineur est requis')
+        t('teamDetails.alerts.trainerRequired', 'Au moins un entraineur est requis'),
       );
       return;
     }
@@ -592,7 +593,7 @@ function TeamDetails({ navigation, route }) {
     Alert.alert(
       'Preselection effectuee',
       `${assignmentTrainerName || 'L entraineur'} est preselectionne. Verifiez puis appuyez sur "Valider".`,
-      [{ text: t('common.actions.ok', 'OK') }]
+      [{ text: t('common.actions.ok', 'OK') }],
     );
 
     navigation.setParams({
@@ -617,10 +618,10 @@ function TeamDetails({ navigation, route }) {
 
   const pendingRequest = useMemo(() => {
     if (!currentUser?.teamMembershipRequests) {
-        return null;
+      return null;
     }
     return currentUser.teamMembershipRequests.find(
-      (r) => r.team?.documentId === teamId && r.state === 'pending'
+      (r) => r.team?.documentId === teamId && r.state === 'pending',
     );
   }, [currentUser, teamId]);
 
@@ -678,15 +679,15 @@ function TeamDetails({ navigation, route }) {
       t('teamDetails.stats.resetTitle', 'Reinitialiser les statistiques ?'),
       t('teamDetails.stats.resetDescription', 'Les compteurs repartiront de zero a partir de maintenant. L historique est conserve.'),
       [
-        { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          text: t('common.confirm', 'Confirmer'),
-          style: 'destructive',
           onPress: () => {
             resetTeamStatsMutation.mutate({
               reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon equipe'),
             });
           },
+          style: 'destructive',
+          text: t('common.confirm', 'Confirmer'),
         },
       ],
     );
@@ -698,8 +699,8 @@ function TeamDetails({ navigation, route }) {
         navigation.navigate(RouteNames.ProfileStack);
       } else {
         navigation.navigate(RouteNames.ProfileStack, {
-          screen: RouteNames.UserDetails,
           params: { userId: user.documentId },
+          screen: RouteNames.UserDetails,
         });
       }
     }
@@ -738,18 +739,18 @@ function TeamDetails({ navigation, route }) {
       t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'équipe ?'),
       [
         {
-          text: t('common.actions.cancel'),
           style: 'cancel',
+          text: t('common.actions.cancel'),
         },
         {
           onPress: () => {
             const currentTeamId = teamId;
             if (currentTeamId) {
-              removePlayerMutation.mutate({ teamId: currentTeamId, playerId });
+              removePlayerMutation.mutate({ playerId, teamId: currentTeamId });
             }
           },
-          text: t('common.actions.confirm'),
           style: 'destructive',
+          text: t('common.actions.confirm'),
         },
       ],
     );
@@ -764,10 +765,10 @@ function TeamDetails({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
-     if (invite && canJoinTeam(teamId) && !pendingRequest) {
+      if (invite && canJoinTeam(teamId) && !pendingRequest) {
         handleJoinTeam();
       }
-    }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam])
+    }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam]),
   );
 
   useEffect(() => {
@@ -838,10 +839,10 @@ function TeamDetails({ navigation, route }) {
         <Text
           numberOfLines={1}
           style={[
-          isActive ? Fonts.p3Bold : Fonts.p3,
-          isActive ? Fonts.neutral00 : Fonts.neutral100,
-          Fonts.textCenter,
-        ]}
+            isActive ? Fonts.p3Bold : Fonts.p3,
+            isActive ? Fonts.neutral00 : Fonts.neutral100,
+            Fonts.textCenter,
+          ]}
         >
           {label}
         </Text>
@@ -893,8 +894,8 @@ function TeamDetails({ navigation, route }) {
               borderColor: `${Colors.primary500}55`,
               borderRadius: 22,
               borderWidth: 1,
-              zIndex: 20,
               elevation: 20,
+              zIndex: 20,
             },
             Spaces.gap[4],
           ]}
@@ -913,7 +914,6 @@ function TeamDetails({ navigation, route }) {
       ) : null}
 
       <ScrollView
-        style={[Alignments.fill]}
         contentContainerStyle={[
           Spaces.gap[24],
           Spaces.paddingBottom[40],
@@ -925,19 +925,21 @@ function TeamDetails({ navigation, route }) {
           />
         )}
         showsVerticalScrollIndicator={false}
+        style={[Alignments.fill]}
       >
         <WithDataWrapper
           error={error?.message}
           isLoading={isLoading}
           wrapperStyle={[Alignments.fill]}
         >
-        
-        {/* TAB CONTENT: INFOS */}
-        {activeTab === 'infos' && (
+
+          {/* TAB CONTENT: INFOS */}
+          {activeTab === 'infos' && (
           <View style={[Spaces.marginTop[8]]}>
-            <View style={[Alignments.alignCenter, { marginBottom: -40, zIndex: 2, elevation: 2 }]}>
+            <View style={[Alignments.alignCenter, { elevation: 2, marginBottom: -40, zIndex: 2 }]}>
               {team?.club?.logo?.url ? (
                 <ProfileAvatar
+                  imageStyle={{ borderRadius: 90 }}
                   imageUrl={team.club.logo.url}
                   size={90}
                   style={[
@@ -945,7 +947,6 @@ function TeamDetails({ navigation, route }) {
                     ApplicationStyle.borderColor.neutral00,
                     { borderRadius: 90 },
                   ]}
-                  imageStyle={{ borderRadius: 90 }}
                 />
               ) : (
                 <TeamShield
@@ -964,116 +965,119 @@ function TeamDetails({ navigation, route }) {
                 Spaces.paddingTop[40],
               ]}
             >
-            <View style={[
-              Spaces.gap[8],
-              Alignments.alignCenter]}
-            >
-              <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
-                {team?.name}
-              </Text>
-              {primaryActivityLabel ? (
-                <View
-                  style={[
-                    Spaces.paddingVertical[4],
-                    Spaces.paddingHorizontal[12],
-                    ApplicationStyle.borderRadius24,
-                    { backgroundColor: `${Colors.primary500}22` },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    {primaryActivityLabel.toUpperCase()}
-                  </Text>
-                </View>
-              ) : null}
-              {showStandingsTab && myTeamRanking && (
+              <View style={[
+                Spaces.gap[8],
+                Alignments.alignCenter]}
+              >
+                <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+                  {team?.name}
+                </Text>
+                {primaryActivityLabel ? (
+                  <View
+                    style={[
+                      Spaces.paddingVertical[4],
+                      Spaces.paddingHorizontal[12],
+                      ApplicationStyle.borderRadius24,
+                      { backgroundColor: `${Colors.primary500}22` },
+                    ]}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                      {primaryActivityLabel.toUpperCase()}
+                    </Text>
+                  </View>
+                ) : null}
+                {showStandingsTab && myTeamRanking && (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                   <Text style={[Fonts.p1Bold, Fonts.primary500]}>
                     {myTeamRanking.rank === 1 ? '🥇' : myTeamRanking.rank === 2 ? '🥈' : myTeamRanking.rank === 3 ? '🥉' : `${myTeamRanking.rank}${myTeamRanking.rank === 1 ? 'er' : 'ème'}`}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral00]}>•</Text>
                   <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                    {myTeamRanking.points} pts
+                    {myTeamRanking.points}
+                    {' '}
+                    pts
                   </Text>
                 </View>
-              )}
-            </View>
-            {teamDescription ? (
-              <View style={[Alignments.alignCenter]}>
-                <Text style={[Fonts.p2, Fonts.primary100]}>
-                  {teamDescription}
+                )}
+              </View>
+              {teamDescription ? (
+                <View style={[Alignments.alignCenter]}>
+                  <Text style={[Fonts.p2, Fonts.primary100]}>
+                    {teamDescription}
+                  </Text>
+                </View>
+              ) : null}
+              {(team?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label || team?.club?.city) && (
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                <Text style={{ fontSize: 16 }}>📍</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {team?.address?.properties?.label || team?.city || team?.club?.address?.properties?.label || team?.club?.city}
                 </Text>
               </View>
-            ) : null}
-            {(team?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label || team?.club?.city) && (
-                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                    <Text style={{ fontSize: 16 }}>📍</Text>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {team?.address?.properties?.label || team?.city || team?.club?.address?.properties?.label || team?.club?.city}
-                    </Text>
-                 </View>
 
-            )}
-            
-                        {/* Team Availability Slots are only relevant for League squads */}
-            {team?.isLeague ? (
-              <TeamSlotList
-                slots={team?.slots || []}
-                isCaptain={canManageTeam}
-                onAddSlot={() => Alert.alert('TODO', 'Ouvrir modal création slot')}
-                onCheckIn={() => Alert.alert('TODO', 'Check-in logic')}
+              )}
+
+              {/* Team Availability Slots are only relevant for League squads */}
+              {team?.isLeague ? (
+                <TeamSlotList
+                  actionsEnabled={areSlotActionsEnabled}
+                  isCaptain={canManageTeam}
+                  onAddSlot={showSlotFeatureComingSoon}
+                  onCheckIn={showSlotFeatureComingSoon}
+                  slots={team?.slots || []}
+                />
+              ) : null}
+
+              <View style={[
+                Alignments.fullWidth,
+                ApplicationStyle.separator,
+                ApplicationStyle.backgroundColor.neutral00,
+              ]}
               />
-            ) : null}
-
-            <View style={[
-              Alignments.fullWidth,
-              ApplicationStyle.separator,
-              ApplicationStyle.backgroundColor.neutral00,
-            ]}
-            />
-            <View style={[
-              Spaces.gap[8],
-              Alignments.row,
-              Alignments.wrap,
-              Alignments.justifyCenter,
-            ]}
-            >
-              {team?.section ? (
-                <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                  {t('teamList.fields.section')}
-                  {' : '}
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {team?.section?.name}
+              <View style={[
+                Spaces.gap[8],
+                Alignments.row,
+                Alignments.wrap,
+                Alignments.justifyCenter,
+              ]}
+              >
+                {team?.section ? (
+                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
+                    {t('teamList.fields.section')}
+                    {' : '}
+                    <Text style={[Fonts.p2, Fonts.primary100]}>
+                      {team?.section?.name}
+                    </Text>
                   </Text>
-                </Text>
-              ) : null}
-              {team?.category ? (
-                <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                  {t('teamList.fields.category')}
-                  {' : '}
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {team?.category?.name}
+                ) : null}
+                {team?.category ? (
+                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
+                    {t('teamList.fields.category')}
+                    {' : '}
+                    <Text style={[Fonts.p2, Fonts.primary100]}>
+                      {team?.category?.name}
+                    </Text>
                   </Text>
-                </Text>
-              ) : null}
-              {team?.level ? (
-                <Text style={[Fonts.p2Bold, Fonts.primary100]}>
-                  {t('teamList.fields.level')}
-                  {' : '}
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {team?.level?.name}
+                ) : null}
+                {team?.level ? (
+                  <Text style={[Fonts.p2Bold, Fonts.primary100]}>
+                    {t('teamList.fields.level')}
+                    {' : '}
+                    <Text style={[Fonts.p2, Fonts.primary100]}>
+                      {team?.level?.name}
+                    </Text>
                   </Text>
-                </Text>
-              ) : null}
+                ) : null}
+              </View>
             </View>
-          </View>
-          <View
-            style={[
-              Spaces.gap[16],
-              Spaces.marginTop[12],
-              Spaces.paddingBottom[24],
-            ]}
-          >
-            {((team?.club?.sponsor?.length ?? 0) > 0) && (
+            <View
+              style={[
+                Spaces.gap[16],
+                Spaces.marginTop[12],
+                Spaces.paddingBottom[24],
+              ]}
+            >
+              {((team?.club?.sponsor?.length ?? 0) > 0) && (
               <ScrollView
                 contentContainerStyle={[Spaces.gap[16]]}
                 horizontal
@@ -1085,35 +1089,35 @@ function TeamDetails({ navigation, route }) {
                     style={[Alignments.relative, Spaces.marginTop[8]]}
                   >
                     <SponsorLogoTile
+                      height={55}
                       imageUrl={sponsor?.logo?.url}
                       link={sponsor.link}
                       title={sponsor.title}
-                      width={110}
-                      height={55}
                       titleStyle={[Fonts.p2Bold, Fonts.neutral00]}
+                      width={110}
                     />
                   </View>
                 ))}
               </ScrollView>
-            )}
-            {(trainersCount || canAddTrainer) ? (
-              <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-                >
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                    {t('teamDetails.sections.trainers', { count: trainersCount })}
-                  </Text>
-                  {canAddTrainer ? (
-                    <Button
-                      icon="plus"
-                      isOption
-                      onPress={handleAddTrainer}
-                      variant="Primary"
-                    />
-                  ) : null}
-                </View>
-                {
+              )}
+              {(trainersCount || canAddTrainer) ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                  >
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                      {t('teamDetails.sections.trainers', { count: trainersCount })}
+                    </Text>
+                    {canAddTrainer ? (
+                      <Button
+                        icon="plus"
+                        isOption
+                        onPress={handleAddTrainer}
+                        variant="Primary"
+                      />
+                    ) : null}
+                  </View>
+                  {
                   team?.trainers?.map((/** @type {User} */ trainer) => (
                     <TouchableOpacity
                       key={trainer.documentId}
@@ -1133,6 +1137,7 @@ function TeamDetails({ navigation, route }) {
                           Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                       >
                         <ProfileAvatar
+                          imageStyle={{ borderRadius: 40 }}
                           imageUrl={trainer?.avatar?.url}
                           size={40}
                           style={[
@@ -1140,7 +1145,6 @@ function TeamDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                             { borderRadius: 40 },
                           ]}
-                          imageStyle={{ borderRadius: 40 }}
                         />
                         <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${trainer.firstname} ${trainer.lastname}`}
@@ -1148,42 +1152,42 @@ function TeamDetails({ navigation, route }) {
                       </View>
                       {team?.club?.documentId && canEditClub(team?.club?.documentId)
                         && trainer?.role?.name === USER_ROLES.coach ? (
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
-                          <Button
-                            icon="trash"
-                            isOption
-                            onPress={() => handleDeleteTrainer(trainer.documentId || '')}
-                            variant="SecondaryLight"
-                          />
-                        </View>
-                      ) : null}
+                          <View style={[Alignments.row, Spaces.gap[8]]}>
+                            <Button
+                              icon="trash"
+                              isOption
+                              onPress={() => handleDeleteTrainer(trainer.documentId || '')}
+                              variant="SecondaryLight"
+                            />
+                          </View>
+                        ) : null}
                     </TouchableOpacity>
                   ))
                 }
-                {!trainersCount ? (
-                  <View
-                    style={[
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.backgroundColor.primary700,
-                      Spaces.padding[16],
-                    ]}
+                  {!trainersCount ? (
+                    <View
+                      style={[
+                        ApplicationStyle.borderRadius24,
+                        ApplicationStyle.backgroundColor.primary700,
+                        Spaces.padding[16],
+                      ]}
+                    >
+                      <Text style={[Fonts.p2, Fonts.primary100]}>
+                        {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+              {playersCount || canManageTeam ? (
+                <View style={[Spaces.gap[16]]}>
+                  <View style={[Alignments.row,
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
-                    <Text style={[Fonts.p2, Fonts.primary100]}>
-                      {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
+                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                      {t('teamDetails.sections.players', { count: playersCount })}
                     </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-            {playersCount || canManageTeam ? (
-              <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row,
-                Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-                >
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                    {t('teamDetails.sections.players', { count: playersCount })}
-                  </Text>
-                  {canManageTeam && (
+                    {canManageTeam && (
                     <Button
                       icon="share"
                       isOption
@@ -1193,9 +1197,9 @@ function TeamDetails({ navigation, route }) {
                       })}
                       variant="Primary"
                     />
-                  )}
-                </View>
-                {
+                    )}
+                  </View>
+                  {
                   filteredPlayers.map((/** @type {User} */ player) => (
                     <View
                       key={player.documentId}
@@ -1216,6 +1220,7 @@ function TeamDetails({ navigation, route }) {
                           Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
                       >
                         <ProfileAvatar
+                          imageStyle={{ borderRadius: 40 }}
                           imageUrl={player?.avatar?.url}
                           size={40}
                           style={[
@@ -1223,7 +1228,6 @@ function TeamDetails({ navigation, route }) {
                             ApplicationStyle.borderColor.neutral00,
                             { borderRadius: 40 },
                           ]}
-                          imageStyle={{ borderRadius: 40 }}
                         />
                         <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {`${player.firstname} ${player.lastname}`}
@@ -1242,553 +1246,561 @@ function TeamDetails({ navigation, route }) {
                     </View>
                   ))
                 }
+                </View>
+              ) : null}
+              <View style={[Spaces.gap[16]]}>
+                <View style={[Alignments.row,
+                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                >
+                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                    {t('teamDetails.sections.nextEvents')}
+                  </Text>
+                </View>
+                <EventListContent
+                  additionalFilters={{
+                    ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
+                    teamIds: [team?.documentId || ''],
+                  }}
+                  showFilters={false}
+                />
               </View>
-            ) : null}
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row,
-              Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-              >
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                  {t('teamDetails.sections.nextEvents')}
-                </Text>
-              </View>
-              <EventListContent
-                additionalFilters={{
-                  ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
-                  teamIds: [team?.documentId || ''],
-                }}
-                showFilters={false}
-              />
             </View>
           </View>
+          )}
+
+          {/* TAB CONTENT: STANDINGS */}
+          {showStandingsTab && activeTab === 'standings' && (
+          <View style={[Spaces.padding[16], Alignments.alignCenter]}>
+            {team?.externalStandingData && team.externalStandingData.length > 0 ? (
+              <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Alignments.fullWidth]}>
+                <View style={[Alignments.row, Spaces.paddingBottom[8], { borderBottomColor: '#FFFFFF33', borderBottomWidth: 1 }]}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25 }]}>#</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>Équipe</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>Pts</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>J</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>M</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>E</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 30 }]}>D</Text>
+                </View>
+                {team.externalStandingData
+                  .slice()
+                  .sort((a, b) => {
+                    const aRank = Number(a?.rank ?? Number.MAX_SAFE_INTEGER);
+                    const bRank = Number(b?.rank ?? Number.MAX_SAFE_INTEGER);
+                    return aRank - bRank;
+                  })
+                  .map((row, index) => {
+                    const isMyTeam = isExternalRowMyTeam(row);
+                    const rowRank = row?.rank ?? index + 1;
+                    return (
+                      <View
+                        key={`${row.teamName}-${index}`}
+                        style={[
+                          Alignments.row,
+                          Spaces.paddingVertical[8],
+                          { borderBottomColor: '#FFFFFF11', borderBottomWidth: 1 },
+                          isMyTeam && {
+                            backgroundColor: `${Colors.primary500}33`, borderRadius: 8, marginHorizontal: -8, paddingHorizontal: 8,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25 }]}>{rowRank}</Text>
+                        <Text numberOfLines={1} style={[Fonts.p2Bold, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
+                          {isMyTeam && '★ '}
+                          {row.teamName}
+                        </Text>
+                        <Text style={[Fonts.p2Bold, Fonts.primary500, { textAlign: 'center', width: 25 }]}>{row.points}</Text>
+                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { textAlign: 'center', width: 25 }]}>{row.played}</Text>
+                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 25 }]}>{row.goalFor || '-'}</Text>
+                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 25 }]}>{row.goalAgainst || '-'}</Text>
+                        <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { fontSize: 10, textAlign: 'center', width: 30 }]}>{row.goalDiff || '-'}</Text>
+                      </View>
+                    );
+                  })}
+              </View>
+            ) : (
+              <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
+                <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
+                  {t('teamDetails.ffbb.noData', 'Aucun classement externe configure')}
+                </Text>
+                {canConfigureFFBB && (
+                <Button
+                  onPress={() => setShowFFBBUrlModal(true)}
+                  title={t('teamDetails.ffbb.configure', 'Configurer le classement externe')}
+                  variant="Primary"
+                />
+                )}
+              </View>
+            )}
+            {/* Refresh Button for Staff */}
+            {canManageTeam && (
+            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
+              <Button
+                onPress={() => setShowFFBBUrlModal(true)}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.source', 'Source')}
+                variant="SecondaryLight"
+              />
+              <Button
+                isLoading={refreshScrapingMutation.isPending}
+                onPress={() => {
+                  if (teamId) refreshScrapingMutation.mutate(teamId);
+                }}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.sync', 'Sync')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => setShowFFBBErrorModal(true)}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.report', 'Bug')}
+                variant="SecondaryLight"
+              />
+            </View>
+            )}
           </View>
-        )}
+          )}
 
-      {/* TAB CONTENT: STANDINGS */}
-        {showStandingsTab && activeTab === 'standings' && (
-             <View style={[Spaces.padding[16], Alignments.alignCenter]}>
-                 {team?.externalStandingData && team.externalStandingData.length > 0 ? (
-                    <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Alignments.fullWidth]}>
-                        <View style={[Alignments.row, Spaces.paddingBottom[8], { borderBottomWidth: 1, borderBottomColor: '#FFFFFF33' }]}>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25 }]}>#</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>Équipe</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25, textAlign: 'center' }]}>Pts</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25, textAlign: 'center' }]}>J</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25, textAlign: 'center' }]}>M</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25, textAlign: 'center' }]}>E</Text>
-                             <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 30, textAlign: 'center' }]}>D</Text>
-                        </View>
-                        {team.externalStandingData
-                            .slice()
-                            .sort((a, b) => {
-                              const aRank = Number(a?.rank ?? Number.MAX_SAFE_INTEGER);
-                              const bRank = Number(b?.rank ?? Number.MAX_SAFE_INTEGER);
-                              return aRank - bRank;
-                            })
-                            .map((row, index) => {
-                            const isMyTeam = isExternalRowMyTeam(row);
-                            const rowRank = row?.rank ?? index + 1;
-                            return (
-                            <View key={`${row.teamName}-${index}`} style={[
-                                Alignments.row, 
-                                Spaces.paddingVertical[8], 
-                                { borderBottomWidth: 1, borderBottomColor: '#FFFFFF11' },
-                                isMyTeam && { backgroundColor: Colors.primary500 + '33', borderRadius: 8, marginHorizontal: -8, paddingHorizontal: 8 }
-                            ]}>
-                                <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25 }]}>{rowRank}</Text>
-                                <Text style={[Fonts.p2Bold, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]} numberOfLines={1}>
-                                    {isMyTeam && '★ '}{row.teamName}
-                                </Text>
-                                <Text style={[Fonts.p2Bold, Fonts.primary500, { width: 25, textAlign: 'center' }]}>{row.points}</Text>
-                                <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25, textAlign: 'center' }]}>{row.played}</Text>
-                                <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25, textAlign: 'center', fontSize: 10 }]}>{row.goalFor || '-'}</Text>
-                                <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25, textAlign: 'center', fontSize: 10 }]}>{row.goalAgainst || '-'}</Text>
-                                <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 30, textAlign: 'center', fontSize: 10 }]}>{row.goalDiff || '-'}</Text>
-                            </View>
-                            );
-                        })}
-                    </View>
-                 ) : (
-                    <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
-                       <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
-                         {t('teamDetails.ffbb.noData', 'Aucun classement externe configure')}
-                       </Text>
-                       {canConfigureFFBB && (
-                         <Button
-                           title={t('teamDetails.ffbb.configure', 'Configurer le classement externe')}
-                           variant="Primary"
-                           onPress={() => setShowFFBBUrlModal(true)}
-                         />
-                       )}
-                    </View>
-                 )}
-                 {/* Refresh Button for Staff */}
-                 {canManageTeam && (
-                    <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
-                      <Button
-                         title={t('teamDetails.external.actions.source', 'Source')}
-                         variant="SecondaryLight"
-                         style={{ flex: 1 }}
-                         onPress={() => setShowFFBBUrlModal(true)}
-                      />
-                      <Button 
-                         title={t('teamDetails.external.actions.sync', 'Sync')}
-                         variant="Secondary"
-                         style={{ flex: 1 }}
-                         onPress={() => {
-                             if (teamId) refreshScrapingMutation.mutate(teamId);
-                         }}
-                         isLoading={refreshScrapingMutation.isPending}
-                      />
-                      <Button 
-                         title={t('teamDetails.external.actions.report', 'Bug')}
-                         variant="SecondaryLight"
-                         style={{ flex: 1 }}
-                         onPress={() => setShowFFBBErrorModal(true)}
-                      />
-                    </View>
-                 )}
-             </View>
-        )}
+          {/* TAB CONTENT: CALENDAR */}
+          {showCalendarTab && activeTab === 'calendar' && (
+          <View style={[Spaces.padding[16]]}>
+            {team?.externalCalendarData && team.externalCalendarData.length > 0 ? (
+              <View>
+                {/* Calendar filters + list */}
+                {(() => {
+                  const modeOptions = [
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.upcoming', 'Prochaine rencontre') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.results', 'Resultats') },
+                    { key: 'all', label: t('teamDetails.calendar.filters.all', 'Tous') },
+                  ];
 
-      {/* TAB CONTENT: CALENDAR */}
-        {showCalendarTab && activeTab === 'calendar' && (
-             <View style={[Spaces.padding[16]]}>
-                 {team?.externalCalendarData && team.externalCalendarData.length > 0 ? (
-                    <View>
-                        {/* Calendar filters + list */}
-                        {(() => {
-                            const modeOptions = [
-                                { key: 'upcoming', label: t('teamDetails.calendar.filters.upcoming', 'Prochaine rencontre') },
-                                { key: 'results', label: t('teamDetails.calendar.filters.results', 'Resultats') },
-                                { key: 'all', label: t('teamDetails.calendar.filters.all', 'Tous') },
-                            ];
+                  const nowTs = Date.now();
 
-                            const nowTs = Date.now();
-
-                            const normalizedMatches = team.externalCalendarData.map((match, index) => {
-                                const matchDate = match?.date ? new Date(match.date) : null;
-                                const dateTs = matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate.getTime() : null;
-                                const hasScore = (
-                                    match?.homeScore !== null && match?.homeScore !== undefined
+                  const normalizedMatches = team.externalCalendarData.map((match, index) => {
+                    const matchDate = match?.date ? new Date(match.date) : null;
+                    const dateTs = matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate.getTime() : null;
+                    const hasScore = (
+                      match?.homeScore !== null && match?.homeScore !== undefined
                                     && match?.awayScore !== null && match?.awayScore !== undefined
-                                );
-                                const isPlayed = Boolean(match?.played) || hasScore;
-                                const isUpcoming = !isPlayed || (dateTs !== null && dateTs >= nowTs);
-                                const roundLabel = (
-                                    match?.round !== null && match?.round !== undefined && match?.round !== ''
-                                ) ? String(match.round) : null;
-                                const monthKey = matchDate && !Number.isNaN(matchDate.getTime())
-                                    ? `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}`
-                                    : 'unknown';
-                                const monthLabel = matchDate && !Number.isNaN(matchDate.getTime())
-                                    ? matchDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-                                    : t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
+                    );
+                    const isPlayed = Boolean(match?.played) || hasScore;
+                    const isUpcoming = !isPlayed || (dateTs !== null && dateTs >= nowTs);
+                    const roundLabel = (
+                      match?.round !== null && match?.round !== undefined && match?.round !== ''
+                    ) ? String(match.round) : null;
+                    const monthKey = matchDate && !Number.isNaN(matchDate.getTime())
+                      ? `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}`
+                      : 'unknown';
+                    const monthLabel = matchDate && !Number.isNaN(matchDate.getTime())
+                      ? matchDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                      : t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
 
-                                return {
-                                    ...match,
-                                    _dateObj: matchDate,
-                                    _dateTs: dateTs,
-                                    _isPlayed: isPlayed,
-                                    _isUpcoming: isUpcoming,
-                                    _roundLabel: roundLabel,
-                                    _monthKey: monthKey,
-                                    _monthLabel: monthLabel,
-                                    _key: match?.matchId
-                                      ? `match-${match.matchId}`
-                                      : `${match?.homeTeam || 'home'}-${match?.awayTeam || 'away'}-${match?.date || 'no-date'}-${index}`,
-                                };
-                            });
+                    return {
+                      ...match,
+                      _dateObj: matchDate,
+                      _dateTs: dateTs,
+                      _isPlayed: isPlayed,
+                      _isUpcoming: isUpcoming,
+                      _key: match?.matchId
+                        ? `match-${match.matchId}`
+                        : `${match?.homeTeam || 'home'}-${match?.awayTeam || 'away'}-${match?.date || 'no-date'}-${index}`,
+                      _monthKey: monthKey,
+                      _monthLabel: monthLabel,
+                      _roundLabel: roundLabel,
+                    };
+                  });
 
-                            const isUpcomingMode = calendarDisplayMode === 'upcoming';
-                            const isMonthFilterMode = !isUpcomingMode;
+                  const isUpcomingMode = calendarDisplayMode === 'upcoming';
+                  const isMonthFilterMode = !isUpcomingMode;
 
-                            const modeScopedMatches = normalizedMatches.filter((match) => {
-                                if (calendarDisplayMode === 'upcoming') return match._isUpcoming;
-                                if (calendarDisplayMode === 'results') return match._isPlayed;
-                                return true;
-                            });
+                  const modeScopedMatches = normalizedMatches.filter((match) => {
+                    if (calendarDisplayMode === 'upcoming') return match._isUpcoming;
+                    if (calendarDisplayMode === 'results') return match._isPlayed;
+                    return true;
+                  });
 
-                            const upcomingMatches = normalizedMatches
-                              .filter((match) => match._isUpcoming)
-                              .slice()
-                              .sort((a, b) => {
-                                const aTs = a._dateTs;
-                                const bTs = b._dateTs;
-                                if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
-                                if (aTs === null) return 1;
-                                if (bTs === null) return -1;
-                                return aTs - bTs;
-                              });
+                  const upcomingMatches = normalizedMatches
+                    .filter((match) => match._isUpcoming)
+                    .slice()
+                    .sort((a, b) => {
+                      const aTs = a._dateTs;
+                      const bTs = b._dateTs;
+                      if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
+                      if (aTs === null) return 1;
+                      if (bTs === null) return -1;
+                      return aTs - bTs;
+                    });
 
-                            const activeUpcomingIndex = (() => {
-                                if (!upcomingMatches.length) return -1;
-                                if (selectedUpcomingMatchKey) {
-                                    const index = upcomingMatches.findIndex((match) => match._key === selectedUpcomingMatchKey);
-                                    if (index >= 0) return index;
-                                }
-                                return 0;
-                            })();
-                            const activeUpcomingMatch = activeUpcomingIndex >= 0
-                                ? upcomingMatches[activeUpcomingIndex]
-                                : null;
-                            const canBrowseUpcoming = upcomingMatches.length > 1;
-                            const activeUpcomingDateLabel = activeUpcomingMatch?._dateObj
-                                ? activeUpcomingMatch._dateObj.toLocaleDateString('fr-FR', {
-                                    weekday: 'short',
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
-                            const activeUpcomingTimeLabel = activeUpcomingMatch?._dateObj
-                                ? activeUpcomingMatch._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                                : '--:--';
+                  const activeUpcomingIndex = (() => {
+                    if (!upcomingMatches.length) return -1;
+                    if (selectedUpcomingMatchKey) {
+                      const index = upcomingMatches.findIndex((match) => match._key === selectedUpcomingMatchKey);
+                      if (index >= 0) return index;
+                    }
+                    return 0;
+                  })();
+                  const activeUpcomingMatch = activeUpcomingIndex >= 0
+                    ? upcomingMatches[activeUpcomingIndex]
+                    : null;
+                  const canBrowseUpcoming = upcomingMatches.length > 1;
+                  const activeUpcomingDateLabel = activeUpcomingMatch?._dateObj
+                    ? activeUpcomingMatch._dateObj.toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      weekday: 'short',
+                      year: 'numeric',
+                    })
+                    : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
+                  const activeUpcomingTimeLabel = activeUpcomingMatch?._dateObj
+                    ? activeUpcomingMatch._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                    : '--:--';
 
-                            const monthMetaByKey = modeScopedMatches.reduce((acc, match) => {
-                                const key = match._monthKey || 'unknown';
-                                const current = acc[key] || {
-                                    count: 0,
-                                    label: match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer'),
-                                };
-                                current.count += 1;
-                                acc[key] = current;
-                                return acc;
-                            }, /** @type {Record<string, { count: number; label: string }>} */ ({}));
+                  const monthMetaByKey = modeScopedMatches.reduce((acc, match) => {
+                    const key = match._monthKey || 'unknown';
+                    const current = acc[key] || {
+                      count: 0,
+                      label: match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer'),
+                    };
+                    current.count += 1;
+                    acc[key] = current;
+                    return acc;
+                  }, /** @type {Record<string, { count: number; label: string }>} */ ({}));
 
-                            const monthKeys = Object.keys(monthMetaByKey).sort((a, b) => {
-                                if (a === 'unknown') return 1;
-                                if (b === 'unknown') return -1;
-                                return a.localeCompare(b);
-                            });
+                  const monthKeys = Object.keys(monthMetaByKey).sort((a, b) => {
+                    if (a === 'unknown') return 1;
+                    if (b === 'unknown') return -1;
+                    return a.localeCompare(b);
+                  });
 
-                            const activeMonthKey = (
-                                isMonthFilterMode
+                  const activeMonthKey = (
+                    isMonthFilterMode
                                 && selectedMonthKey
                                 && monthMetaByKey[selectedMonthKey]
-                            )
-                                ? selectedMonthKey
-                                : null;
+                  )
+                    ? selectedMonthKey
+                    : null;
 
-                            const monthFilteredMatches = (isMonthFilterMode && activeMonthKey)
-                                ? modeScopedMatches.filter((match) => String(match._monthKey) === String(activeMonthKey))
-                                : modeScopedMatches;
+                  const monthFilteredMatches = (isMonthFilterMode && activeMonthKey)
+                    ? modeScopedMatches.filter((match) => String(match._monthKey) === String(activeMonthKey))
+                    : modeScopedMatches;
 
-                            const displayMatches = isUpcomingMode
-                                ? (activeUpcomingMatch ? [activeUpcomingMatch] : [])
-                                : monthFilteredMatches;
+                  const displayMatches = isUpcomingMode
+                    ? (activeUpcomingMatch ? [activeUpcomingMatch] : [])
+                    : monthFilteredMatches;
 
-                            const sortedMatches = displayMatches
-                              .slice()
-                              .sort((a, b) => {
-                                  const aTs = a._dateTs;
-                                  const bTs = b._dateTs;
-                                  if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
-                                  if (aTs === null) return 1;
-                                  if (bTs === null) return -1;
-                                  if (calendarDisplayMode === 'results') return bTs - aTs;
-                                  return aTs - bTs;
-                              });
+                  const sortedMatches = displayMatches
+                    .slice()
+                    .sort((a, b) => {
+                      const aTs = a._dateTs;
+                      const bTs = b._dateTs;
+                      if (aTs === null && bTs === null) return String(a._key).localeCompare(String(b._key), 'fr');
+                      if (aTs === null) return 1;
+                      if (bTs === null) return -1;
+                      if (calendarDisplayMode === 'results') return bTs - aTs;
+                      return aTs - bTs;
+                    });
 
-                            const groupedMatches = sortedMatches.reduce((groups, match) => {
-                                const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
-                                const existingGroup = groups.find((group) => group.label === monthLabel);
-                                if (existingGroup) {
-                                    existingGroup.matches.push(match);
-                                    return groups;
-                                }
-                                return [...groups, { label: monthLabel, matches: [match] }];
-                            }, []);
+                  const groupedMatches = sortedMatches.reduce((groups, match) => {
+                    const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
+                    const existingGroup = groups.find((group) => group.label === monthLabel);
+                    if (existingGroup) {
+                      existingGroup.matches.push(match);
+                      return groups;
+                    }
+                    return [...groups, { label: monthLabel, matches: [match] }];
+                  }, []);
 
-                            const emptyLabel = calendarDisplayMode === 'upcoming'
-                                ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir.')
-                                : calendarDisplayMode === 'results'
-                                    ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
-                                    : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
-                            const matchCountText = `${sortedMatches.length} match${sortedMatches.length > 1 ? 's' : ''}`;
+                  const emptyLabel = calendarDisplayMode === 'upcoming'
+                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir.')
+                    : calendarDisplayMode === 'results'
+                      ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
+                      : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
+                  const matchCountText = `${sortedMatches.length} match${sortedMatches.length > 1 ? 's' : ''}`;
 
+                  return (
+                    <>
+                      <ScrollView
+                        contentContainerStyle={[Spaces.gap[8]]}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={[Spaces.marginBottom[12]]}
+                      >
+                        {modeOptions.map((option) => {
+                          const isActive = calendarDisplayMode === option.key;
+                          return (
+                            <TouchableOpacity
+                              key={option.key}
+                              onPress={() => setCalendarDisplayMode(option.key)}
+                              style={[
+                                Spaces.paddingVertical[8],
+                                Spaces.paddingHorizontal[16],
+                                ApplicationStyle.borderRadius24,
+                                isActive
+                                  ? ApplicationStyle.backgroundColor.primary500
+                                  : ApplicationStyle.backgroundColor.primary700,
+                              ]}
+                            >
+                              <Text style={[Fonts.p2Bold, isActive ? Fonts.neutral900 : Fonts.neutral00]}>
+                                {option.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+
+                      {isUpcomingMode ? (
+                        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginBottom[16]]}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (!upcomingMatches.length) return;
+                              const previousIndex = activeUpcomingIndex <= 0
+                                ? upcomingMatches.length - 1
+                                : activeUpcomingIndex - 1;
+                              const previousMatch = upcomingMatches[previousIndex];
+                              if (previousMatch?._key) setSelectedUpcomingMatchKey(previousMatch._key);
+                            }}
+                            style={[
+                              Spaces.paddingVertical[8],
+                              Spaces.paddingHorizontal[16],
+                              ApplicationStyle.borderRadius24,
+                              ApplicationStyle.backgroundColor.primary500,
+                              { opacity: canBrowseUpcoming ? 1 : 0.75 },
+                            ]}
+                          >
+                            <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
+                              {'<'}
+                            </Text>
+                          </TouchableOpacity>
+
+                          <View style={[
+                            Spaces.paddingVertical[8],
+                            Spaces.paddingHorizontal[16],
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                          ]}
+                          >
+                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                              {`${activeUpcomingDateLabel} - ${activeUpcomingTimeLabel}`}
+                            </Text>
+                          </View>
+
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (!upcomingMatches.length) return;
+                              const nextIndex = activeUpcomingIndex >= upcomingMatches.length - 1
+                                ? 0
+                                : activeUpcomingIndex + 1;
+                              const nextMatch = upcomingMatches[nextIndex];
+                              if (nextMatch?._key) setSelectedUpcomingMatchKey(nextMatch._key);
+                            }}
+                            style={[
+                              Spaces.paddingVertical[8],
+                              Spaces.paddingHorizontal[16],
+                              ApplicationStyle.borderRadius24,
+                              ApplicationStyle.backgroundColor.primary500,
+                              { opacity: canBrowseUpcoming ? 1 : 0.75 },
+                            ]}
+                          >
+                            <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
+                              {'>'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <ScrollView
+                          contentContainerStyle={[Spaces.gap[8]]}
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          style={[Spaces.marginBottom[16]]}
+                        >
+                          <TouchableOpacity
+                            onPress={() => setSelectedMonthKey(null)}
+                            style={[
+                              Spaces.paddingVertical[8],
+                              Spaces.paddingHorizontal[16],
+                              ApplicationStyle.borderRadius24,
+                              activeMonthKey === null
+                                ? ApplicationStyle.backgroundColor.primary500
+                                : ApplicationStyle.backgroundColor.primary700,
+                            ]}
+                          >
+                            <Text style={[Fonts.p2Bold, activeMonthKey === null ? Fonts.neutral900 : Fonts.neutral00]}>
+                              {t('teamDetails.calendar.months.all', 'Tous les mois')}
+                            </Text>
+                          </TouchableOpacity>
+                          {monthKeys.map((monthKey) => {
+                            const monthMeta = monthMetaByKey[monthKey];
+                            if (!monthMeta) return null;
+                            const isActive = String(activeMonthKey) === String(monthKey);
                             return (
-                                <>
-                                    <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={[Spaces.marginBottom[12]]}
-                                        contentContainerStyle={[Spaces.gap[8]]}
-                                    >
-                                        {modeOptions.map((option) => {
-                                            const isActive = calendarDisplayMode === option.key;
-                                            return (
-                                                <TouchableOpacity
-                                                    key={option.key}
-                                                    onPress={() => setCalendarDisplayMode(option.key)}
-                                                    style={[
-                                                        Spaces.paddingVertical[8],
-                                                        Spaces.paddingHorizontal[16],
-                                                        ApplicationStyle.borderRadius24,
-                                                        isActive
-                                                            ? ApplicationStyle.backgroundColor.primary500
-                                                            : ApplicationStyle.backgroundColor.primary700,
-                                                    ]}
-                                                >
-                                                    <Text style={[Fonts.p2Bold, isActive ? Fonts.neutral900 : Fonts.neutral00]}>
-                                                        {option.label}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </ScrollView>
-
-                                    {isUpcomingMode ? (
-                                        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginBottom[16]]}>
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    if (!upcomingMatches.length) return;
-                                                    const previousIndex = activeUpcomingIndex <= 0
-                                                        ? upcomingMatches.length - 1
-                                                        : activeUpcomingIndex - 1;
-                                                    const previousMatch = upcomingMatches[previousIndex];
-                                                    if (previousMatch?._key) setSelectedUpcomingMatchKey(previousMatch._key);
-                                                }}
-                                                style={[
-                                                    Spaces.paddingVertical[8],
-                                                    Spaces.paddingHorizontal[16],
-                                                    ApplicationStyle.borderRadius24,
-                                                    ApplicationStyle.backgroundColor.primary500,
-                                                    { opacity: canBrowseUpcoming ? 1 : 0.75 },
-                                                ]}
-                                            >
-                                                <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
-                                                    {'<'}
-                                                </Text>
-                                            </TouchableOpacity>
-
-                                            <View style={[
-                                                Spaces.paddingVertical[8],
-                                                Spaces.paddingHorizontal[16],
-                                                ApplicationStyle.borderRadius24,
-                                                ApplicationStyle.backgroundColor.primary700,
-                                            ]}
-                                            >
-                                                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                                                    {`${activeUpcomingDateLabel} - ${activeUpcomingTimeLabel}`}
-                                                </Text>
-                                            </View>
-
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    if (!upcomingMatches.length) return;
-                                                    const nextIndex = activeUpcomingIndex >= upcomingMatches.length - 1
-                                                        ? 0
-                                                        : activeUpcomingIndex + 1;
-                                                    const nextMatch = upcomingMatches[nextIndex];
-                                                    if (nextMatch?._key) setSelectedUpcomingMatchKey(nextMatch._key);
-                                                }}
-                                                style={[
-                                                    Spaces.paddingVertical[8],
-                                                    Spaces.paddingHorizontal[16],
-                                                    ApplicationStyle.borderRadius24,
-                                                    ApplicationStyle.backgroundColor.primary500,
-                                                    { opacity: canBrowseUpcoming ? 1 : 0.75 },
-                                                ]}
-                                            >
-                                                <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
-                                                    {'>'}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    ) : (
-                                        <ScrollView
-                                            horizontal
-                                            showsHorizontalScrollIndicator={false}
-                                            style={[Spaces.marginBottom[16]]}
-                                            contentContainerStyle={[Spaces.gap[8]]}
-                                        >
-                                            <TouchableOpacity
-                                                onPress={() => setSelectedMonthKey(null)}
-                                                style={[
-                                                    Spaces.paddingVertical[8],
-                                                    Spaces.paddingHorizontal[16],
-                                                    ApplicationStyle.borderRadius24,
-                                                    activeMonthKey === null
-                                                        ? ApplicationStyle.backgroundColor.primary500
-                                                        : ApplicationStyle.backgroundColor.primary700,
-                                                ]}
-                                            >
-                                                <Text style={[Fonts.p2Bold, activeMonthKey === null ? Fonts.neutral900 : Fonts.neutral00]}>
-                                                    {t('teamDetails.calendar.months.all', 'Tous les mois')}
-                                                </Text>
-                                            </TouchableOpacity>
-                                            {monthKeys.map((monthKey) => {
-                                                const monthMeta = monthMetaByKey[monthKey];
-                                                if (!monthMeta) return null;
-                                                const isActive = String(activeMonthKey) === String(monthKey);
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={monthKey}
-                                                        onPress={() => setSelectedMonthKey(monthKey)}
-                                                        style={[
-                                                            Spaces.paddingVertical[8],
-                                                            Spaces.paddingHorizontal[16],
-                                                            ApplicationStyle.borderRadius24,
-                                                            isActive
-                                                                ? ApplicationStyle.backgroundColor.primary500
-                                                                : ApplicationStyle.backgroundColor.primary700,
-                                                        ]}
-                                                    >
-                                                        <Text style={[Fonts.p2Bold, isActive ? Fonts.neutral900 : Fonts.neutral00]}>
-                                                            {`${monthMeta.label} (${monthMeta.count})`}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                        </ScrollView>
-                                    )}
-
-                                    <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16]]}>
-                                        <Text style={[Fonts.p3, Fonts.primary100, Spaces.marginBottom[12]]}>
-                                            {matchCountText}
-                                        </Text>
-                                        {groupedMatches.length > 0 ? groupedMatches.map((group, groupIndex) => (
-                                            <View key={`${group.label}-${groupIndex}`} style={[groupIndex > 0 && Spaces.marginTop[16]]}>
-                                                <Text style={[
-                                                    Fonts.p3Bold,
-                                                    Fonts.primary100,
-                                                    Spaces.marginBottom[8],
-                                                    { textTransform: 'capitalize' },
-                                                ]}
-                                                >
-                                                    {group.label}
-                                                </Text>
-                                                {group.matches.map((match) => {
-                                                    const isMyHomeTeam = team?.externalTeamName
-                                                        ? normalizeTeamName(match.homeTeam) === normalizeTeamName(team.externalTeamName)
-                                                        : false;
-                                                    const isMyAwayTeam = team?.externalTeamName
-                                                        ? normalizeTeamName(match.awayTeam) === normalizeTeamName(team.externalTeamName)
-                                                        : false;
-                                                    const statusLabel = match._isPlayed
-                                                        ? t('teamDetails.calendar.status.played', 'Termine')
-                                                        : t('teamDetails.calendar.status.upcoming', 'A venir');
-                                                    const dateLabel = match._dateObj
-                                                        ? match._dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })
-                                                        : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
-                                                    const timeLabel = match._dateObj
-                                                        ? match._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                                                        : '--:--';
-
-                                                    return (
-                                                        <View
-                                                            key={match._key}
-                                                            style={[
-                                                                Spaces.padding[12],
-                                                                Spaces.marginBottom[10],
-                                                                { backgroundColor: '#FFFFFF08', borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF14' },
-                                                            ]}
-                                                        >
-                                                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[8]]}>
-                                                                <Text style={[Fonts.p3, Fonts.primary100]}>
-                                                                    {`${dateLabel} - ${timeLabel}`}
-                                                                </Text>
-                                                                <View
-                                                                    style={[
-                                                                        Spaces.paddingVertical[4],
-                                                                        Spaces.paddingHorizontal[10],
-                                                                        ApplicationStyle.borderRadius24,
-                                                                        { backgroundColor: match._isPlayed ? '#FFFFFF22' : `${Colors.primary500}22` },
-                                                                    ]}
-                                                                >
-                                                                    <Text style={[Fonts.p3Bold, match._isPlayed ? Fonts.neutral00 : Fonts.primary500]}>
-                                                                        {statusLabel}
-                                                                    </Text>
-                                                                </View>
-                                                            </View>
-
-                                                            <View style={[Alignments.row, Alignments.alignCenter]}>
-                                                                <View style={{ flex: 1, paddingRight: 8 }}>
-                                                                    <Text style={[Fonts.p2Bold, isMyHomeTeam ? Fonts.primary500 : Fonts.neutral00]} numberOfLines={2}>
-                                                                        {match.homeTeam}
-                                                                    </Text>
-                                                                    {isMyHomeTeam ? (
-                                                                        <Text style={[Fonts.p3, Fonts.primary100]}>
-                                                                            {t('teamDetails.calendar.you', 'Vous')}
-                                                                        </Text>
-                                                                    ) : null}
-                                                                </View>
-
-                                                                <View style={[Alignments.alignCenter, { width: 90 }]}>
-                                                                    {match._isPlayed ? (
-                                                                        <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                                                                            {`${match.homeScore} - ${match.awayScore}`}
-                                                                        </Text>
-                                                                    ) : (
-                                                                        <Text style={[Fonts.p2Bold, Fonts.primary100]}>VS</Text>
-                                                                    )}
-                                                                    {!isUpcomingMode && match._roundLabel ? (
-                                                                        <Text style={[Fonts.p3, Fonts.primary100]}>
-                                                                            {`J${match._roundLabel}`}
-                                                                        </Text>
-                                                                    ) : null}
-                                                                </View>
-
-                                                                <View style={{ flex: 1, paddingLeft: 8, alignItems: 'flex-end' }}>
-                                                                    <Text style={[Fonts.p2Bold, isMyAwayTeam ? Fonts.primary500 : Fonts.neutral00]} numberOfLines={2}>
-                                                                        {match.awayTeam}
-                                                                    </Text>
-                                                                    {isMyAwayTeam ? (
-                                                                        <Text style={[Fonts.p3, Fonts.primary100]}>
-                                                                            {t('teamDetails.calendar.you', 'Vous')}
-                                                                        </Text>
-                                                                    ) : null}
-                                                                </View>
-                                                            </View>
-                                                        </View>
-                                                    );
-                                                })}
-                                            </View>
-                                        )) : (
-                                            <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                                                {emptyLabel}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </>
+                              <TouchableOpacity
+                                key={monthKey}
+                                onPress={() => setSelectedMonthKey(monthKey)}
+                                style={[
+                                  Spaces.paddingVertical[8],
+                                  Spaces.paddingHorizontal[16],
+                                  ApplicationStyle.borderRadius24,
+                                  isActive
+                                    ? ApplicationStyle.backgroundColor.primary500
+                                    : ApplicationStyle.backgroundColor.primary700,
+                                ]}
+                              >
+                                <Text style={[Fonts.p2Bold, isActive ? Fonts.neutral900 : Fonts.neutral00]}>
+                                  {`${monthMeta.label} (${monthMeta.count})`}
+                                </Text>
+                              </TouchableOpacity>
                             );
-                        })()}
-                    </View>
-                 ) : (
-                    <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Aucun calendrier disponible.</Text>
-                 )}
-                 
-                 {/* Refresh Button for Staff (Duplicate from Standings) */}
-                 {canManageTeam && (
-                    <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
-                      <Button
-                         title={t('teamDetails.external.actions.source', 'Source')}
-                         variant="SecondaryLight"
-                         style={{ flex: 1 }}
-                         onPress={() => setShowFFBBUrlModal(true)}
-                      />
-                      <Button 
-                         title={t('teamDetails.external.actions.sync', 'Sync')}
-                         variant="Secondary"
-                         style={{ flex: 1 }}
-                         onPress={() => {
-                             if (teamId) refreshScrapingMutation.mutate(teamId);
-                         }}
-                         isLoading={refreshScrapingMutation.isPending}
-                      />
-                      <Button 
-                         title={t('teamDetails.external.actions.report', 'Bug')}
-                         variant="SecondaryLight"
-                         style={{ flex: 1 }}
-                         onPress={() => setShowFFBBErrorModal(true)}
-                      />
-                    </View>
-                 )}
-             </View>
-        )}
+                          })}
+                        </ScrollView>
+                      )}
 
-        {showStatsTab && activeTab === 'stats' && (
+                      <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16]]}>
+                        <Text style={[Fonts.p3, Fonts.primary100, Spaces.marginBottom[12]]}>
+                          {matchCountText}
+                        </Text>
+                        {groupedMatches.length > 0 ? groupedMatches.map((group, groupIndex) => (
+                          <View key={`${group.label}-${groupIndex}`} style={[groupIndex > 0 && Spaces.marginTop[16]]}>
+                            <Text style={[
+                              Fonts.p3Bold,
+                              Fonts.primary100,
+                              Spaces.marginBottom[8],
+                              { textTransform: 'capitalize' },
+                            ]}
+                            >
+                              {group.label}
+                            </Text>
+                            {group.matches.map((match) => {
+                              const isMyHomeTeam = team?.externalTeamName
+                                ? normalizeTeamName(match.homeTeam) === normalizeTeamName(team.externalTeamName)
+                                : false;
+                              const isMyAwayTeam = team?.externalTeamName
+                                ? normalizeTeamName(match.awayTeam) === normalizeTeamName(team.externalTeamName)
+                                : false;
+                              const statusLabel = match._isPlayed
+                                ? t('teamDetails.calendar.status.played', 'Termine')
+                                : t('teamDetails.calendar.status.upcoming', 'A venir');
+                              const dateLabel = match._dateObj
+                                ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
+                                : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
+                              const timeLabel = match._dateObj
+                                ? match._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                : '--:--';
+
+                              return (
+                                <View
+                                  key={match._key}
+                                  style={[
+                                    Spaces.padding[12],
+                                    Spaces.marginBottom[10],
+                                    {
+                                      backgroundColor: '#FFFFFF08', borderColor: '#FFFFFF14', borderRadius: 12, borderWidth: 1,
+                                    },
+                                  ]}
+                                >
+                                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[8]]}>
+                                    <Text style={[Fonts.p3, Fonts.primary100]}>
+                                      {`${dateLabel} - ${timeLabel}`}
+                                    </Text>
+                                    <View
+                                      style={[
+                                        Spaces.paddingVertical[4],
+                                        Spaces.paddingHorizontal[10],
+                                        ApplicationStyle.borderRadius24,
+                                        { backgroundColor: match._isPlayed ? '#FFFFFF22' : `${Colors.primary500}22` },
+                                      ]}
+                                    >
+                                      <Text style={[Fonts.p3Bold, match._isPlayed ? Fonts.neutral00 : Fonts.primary500]}>
+                                        {statusLabel}
+                                      </Text>
+                                    </View>
+                                  </View>
+
+                                  <View style={[Alignments.row, Alignments.alignCenter]}>
+                                    <View style={{ flex: 1, paddingRight: 8 }}>
+                                      <Text numberOfLines={2} style={[Fonts.p2Bold, isMyHomeTeam ? Fonts.primary500 : Fonts.neutral00]}>
+                                        {match.homeTeam}
+                                      </Text>
+                                      {isMyHomeTeam ? (
+                                        <Text style={[Fonts.p3, Fonts.primary100]}>
+                                          {t('teamDetails.calendar.you', 'Vous')}
+                                        </Text>
+                                      ) : null}
+                                    </View>
+
+                                    <View style={[Alignments.alignCenter, { width: 90 }]}>
+                                      {match._isPlayed ? (
+                                        <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                                          {`${match.homeScore} - ${match.awayScore}`}
+                                        </Text>
+                                      ) : (
+                                        <Text style={[Fonts.p2Bold, Fonts.primary100]}>VS</Text>
+                                      )}
+                                      {!isUpcomingMode && match._roundLabel ? (
+                                        <Text style={[Fonts.p3, Fonts.primary100]}>
+                                          {`J${match._roundLabel}`}
+                                        </Text>
+                                      ) : null}
+                                    </View>
+
+                                    <View style={{ alignItems: 'flex-end', flex: 1, paddingLeft: 8 }}>
+                                      <Text numberOfLines={2} style={[Fonts.p2Bold, isMyAwayTeam ? Fonts.primary500 : Fonts.neutral00]}>
+                                        {match.awayTeam}
+                                      </Text>
+                                      {isMyAwayTeam ? (
+                                        <Text style={[Fonts.p3, Fonts.primary100]}>
+                                          {t('teamDetails.calendar.you', 'Vous')}
+                                        </Text>
+                                      ) : null}
+                                    </View>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        )) : (
+                          <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                            {emptyLabel}
+                          </Text>
+                        )}
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+            ) : (
+              <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Aucun calendrier disponible.</Text>
+            )}
+
+            {/* Refresh Button for Staff (Duplicate from Standings) */}
+            {canManageTeam && (
+            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
+              <Button
+                onPress={() => setShowFFBBUrlModal(true)}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.source', 'Source')}
+                variant="SecondaryLight"
+              />
+              <Button
+                isLoading={refreshScrapingMutation.isPending}
+                onPress={() => {
+                  if (teamId) refreshScrapingMutation.mutate(teamId);
+                }}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.sync', 'Sync')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => setShowFFBBErrorModal(true)}
+                style={{ flex: 1 }}
+                title={t('teamDetails.external.actions.report', 'Bug')}
+                variant="SecondaryLight"
+              />
+            </View>
+            )}
+          </View>
+          )}
+
+          {showStatsTab && activeTab === 'stats' && (
           <View style={[Spaces.padding[16], Spaces.gap[16]]}>
             <View
               style={[
@@ -1812,7 +1824,10 @@ function TeamDetails({ navigation, route }) {
                 <Text style={[Fonts.p3, Fonts.neutral00]}>Retards</Text>
               </View>
               <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateMinutesAvg}m</Text>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {statsSummary.lateMinutesAvg}
+                  m
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral00]}>Moyenne</Text>
               </View>
             </View>
@@ -1836,9 +1851,9 @@ function TeamDetails({ navigation, route }) {
               ) : teamStatsRows.length ? (
                 teamStatsRows.map((row, index) => (
                   <StatRow
-                    key={row?.user?.documentId || `stats-${index}`}
                     columns={statsColumns}
                     isEven={index % 2 === 0}
+                    key={row?.user?.documentId || `stats-${index}`}
                     player={row}
                   />
                 ))
@@ -1864,7 +1879,7 @@ function TeamDetails({ navigation, route }) {
               />
             ) : null}
           </View>
-        )}
+          )}
 
         </WithDataWrapper>
       </ScrollView>
@@ -1916,7 +1931,7 @@ function TeamDetails({ navigation, route }) {
         transparent
         visible={isTrainerPickerVisible}
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'flex-end' }}>
           <View
             style={[
               ApplicationStyle.backgroundColor.primary700,
@@ -1996,13 +2011,16 @@ function TeamDetails({ navigation, route }) {
 
       {/* FFBB URL Configuration Modal */}
       <Modal
-        visible={showFFBBUrlModal}
-        transparent
         animationType="slide"
         onRequestClose={() => setShowFFBBUrlModal(false)}
+        transparent
+        visible={showFFBBUrlModal}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { width: '90%', maxWidth: 400 }]}>
+        <View style={{
+          alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
+        }}
+        >
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.configureTitle', 'Configurer le classement externe')}
             </Text>
@@ -2010,33 +2028,33 @@ function TeamDetails({ navigation, route }) {
               {t('teamDetails.ffbb.configureDescription', "Collez l'URL de votre competition FFF ou FFBB")}
             </Text>
             <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={setFfbbUrl}
+              placeholder="https://epreuves.fff.fr/... ou https://competitions.ffbb.com/..."
+              placeholderTextColor="#888"
               style={[
                 Fonts.p1, Fonts.neutral00,
                 ApplicationStyle.backgroundColor.primary700,
                 ApplicationStyle.borderRadius12,
                 Spaces.padding[12],
-                Spaces.marginBottom[16]
+                Spaces.marginBottom[16],
               ]}
-              placeholder="https://epreuves.fff.fr/... ou https://competitions.ffbb.com/..."
-              placeholderTextColor="#888"
               value={ffbbUrl}
-              onChangeText={setFfbbUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
             />
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <Button
-                title={t('common.cancel', 'Annuler')}
-                variant="Secondary"
                 onPress={() => setShowFFBBUrlModal(false)}
                 style={{ flex: 1 }}
+                title={t('common.cancel', 'Annuler')}
+                variant="Secondary"
               />
               <Button
+                isLoading={ffbbLoading}
+                onPress={handleSetFFBBUrl}
+                style={{ flex: 1 }}
                 title={t('common.confirm', 'Valider')}
                 variant="Primary"
-                onPress={handleSetFFBBUrl}
-                isLoading={ffbbLoading}
-                style={{ flex: 1 }}
               />
             </View>
           </View>
@@ -2045,13 +2063,16 @@ function TeamDetails({ navigation, route }) {
 
       {/* FFBB Team Selection Modal */}
       <Modal
-        visible={showFFBBTeamModal}
-        transparent
         animationType="slide"
         onRequestClose={() => setShowFFBBTeamModal(false)}
+        transparent
+        visible={showFFBBTeamModal}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { width: '90%', maxWidth: 400, maxHeight: '70%' }]}>
+        <View style={{
+          alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
+        }}
+        >
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxHeight: '70%', maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.selectTeam', 'Sélectionnez votre équipe')}
             </Text>
@@ -2064,8 +2085,8 @@ function TeamDetails({ navigation, route }) {
                     Alignments.row, Alignments.alignCenter,
                     Spaces.padding[12],
                     ApplicationStyle.borderRadius12,
-                    { borderWidth: 1, borderColor: Colors.primary500 + '33' },
-                    Spaces.marginBottom[8]
+                    { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
+                    Spaces.marginBottom[8],
                   ]}
                 >
                   <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{ffbbTeam.externalTeamName}</Text>
@@ -2073,9 +2094,9 @@ function TeamDetails({ navigation, route }) {
               ))}
             </ScrollView>
             <Button
+              onPress={() => setShowFFBBTeamModal(false)}
               title={t('common.cancel', 'Annuler')}
               variant="Secondary"
-              onPress={() => setShowFFBBTeamModal(false)}
             />
           </View>
         </View>
@@ -2083,13 +2104,16 @@ function TeamDetails({ navigation, route }) {
 
       {/* FFBB Error Report Modal */}
       <Modal
-        visible={showFFBBErrorModal}
-        transparent
         animationType="slide"
         onRequestClose={() => setShowFFBBErrorModal(false)}
+        transparent
+        visible={showFFBBErrorModal}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { width: '90%', maxWidth: 400 }]}>
+        <View style={{
+          alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
+        }}
+        >
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.reportTitle', 'Signaler un problème')}
             </Text>
@@ -2104,23 +2128,27 @@ function TeamDetails({ navigation, route }) {
                 { key: 'missing_team', label: t('teamDetails.ffbb.problems.missingTeam', 'Équipe manquante') },
                 { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'Données obsolètes') },
                 { key: 'wrong_url', label: t('teamDetails.ffbb.problems.wrongUrl', 'Mauvaise URL') },
-                { key: 'other', label: t('teamDetails.ffbb.problems.other', 'Autre') }
-              ].map(option => (
+                { key: 'other', label: t('teamDetails.ffbb.problems.other', 'Autre') },
+              ].map((option) => (
                 <TouchableOpacity
                   key={option.key}
                   onPress={() => setFfbbErrorType(option.key)}
                   style={[
                     Alignments.row, Alignments.alignCenter, Spaces.gap[8],
                     Spaces.padding[12], ApplicationStyle.borderRadius12,
-                    { borderWidth: 1, borderColor: ffbbErrorType === option.key ? Colors.primary500 : '#FFFFFF33' },
-                    ffbbErrorType === option.key && { backgroundColor: Colors.primary500 + '22' }
+                    { borderColor: ffbbErrorType === option.key ? Colors.primary500 : '#FFFFFF33', borderWidth: 1 },
+                    ffbbErrorType === option.key && { backgroundColor: `${Colors.primary500}22` },
                   ]}
                 >
                   <View style={{
-                    width: 20, height: 20, borderRadius: 10,
-                    borderWidth: 2, borderColor: ffbbErrorType === option.key ? Colors.primary500 : '#FFFFFF66',
-                    backgroundColor: ffbbErrorType === option.key ? Colors.primary500 : 'transparent'
-                  }} />
+                    backgroundColor: ffbbErrorType === option.key ? Colors.primary500 : 'transparent',
+                    borderColor: ffbbErrorType === option.key ? Colors.primary500 : '#FFFFFF66',
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    height: 20,
+                    width: 20,
+                  }}
+                  />
                   <Text style={[Fonts.p2, ffbbErrorType === option.key ? Fonts.primary500 : Fonts.neutral00]}>
                     {option.label}
                   </Text>
@@ -2133,35 +2161,37 @@ function TeamDetails({ navigation, route }) {
               {t('teamDetails.ffbb.description', 'Description (optionnel)')}
             </Text>
             <TextInput
+              multiline
+              numberOfLines={3}
+              onChangeText={setFfbbErrorDescription}
+              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'Décrivez le problème...')}
+              placeholderTextColor="#888"
               style={[
                 Fonts.p2, Fonts.neutral00,
                 ApplicationStyle.backgroundColor.primary700,
                 ApplicationStyle.borderRadius12,
                 Spaces.padding[12],
                 Spaces.marginBottom[16],
-                { borderWidth: 1, borderColor: '#FFFFFF33', minHeight: 80, textAlignVertical: 'top' }
+                {
+                  borderColor: '#FFFFFF33', borderWidth: 1, minHeight: 80, textAlignVertical: 'top',
+                },
               ]}
-              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'Décrivez le problème...')}
-              placeholderTextColor="#888"
               value={ffbbErrorDescription}
-              onChangeText={setFfbbErrorDescription}
-              multiline
-              numberOfLines={3}
             />
 
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <Button
-                title={t('common.cancel', 'Annuler')}
-                variant="Secondary"
                 onPress={() => setShowFFBBErrorModal(false)}
                 style={{ flex: 1 }}
+                title={t('common.cancel', 'Annuler')}
+                variant="Secondary"
               />
               <Button
+                isLoading={ffbbLoading}
+                onPress={handleReportError}
+                style={{ flex: 1 }}
                 title={t('common.send', 'Envoyer')}
                 variant="Primary"
-                onPress={handleReportError}
-                isLoading={ffbbLoading}
-                style={{ flex: 1 }}
               />
             </View>
           </View>
@@ -2172,9 +2202,3 @@ function TeamDetails({ navigation, route }) {
 }
 
 export default TeamDetails;
-
-
-
-
-
-

@@ -1,4 +1,3 @@
-
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -7,12 +6,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Switch,
   Text,
   View,
-  Alert,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -21,11 +20,11 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import InputStepper from '@/components/molecules/inputStepper/InputStepper';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
+import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
-import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -34,9 +33,8 @@ import {
   useGetEvent,
   useGetEventTypes,
 } from '@/services/event/eventQueries';
-import { createEvent, updateEvent, getEvents } from '@/services/event/eventService';
+import { createEvent, getEvents, updateEvent } from '@/services/event/eventService';
 import { getTeams } from '@/services/team/teamService';
-
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -47,24 +45,24 @@ const defaultValues = {
   capacity: null,
   date: '',
   description: '',
+  endTime: '',
+  facility: null,
+  featuredRequestStatus: 'none',
+  invitedTeams: /** @type {string[]} */ ([]),
   isRecurrent: false,
   location: undefined,
-  facility: null,
   pricePerPerson: null,
   recurrenceDay: '',
+  recurrenceDays: /** @type {number[]} */ ([]),
   recurrenceEndDate: '',
   recurrenceFrequency: 'week',
   recurrenceInterval: 1,
-  recurrenceDays: /** @type {number[]} */ ([]),
   recurrenceStartDate: '',
-  featuredRequestStatus: 'none',
   requestFeatured: false,
   reservationMode: 'FULL_GROUP',
   sessionStatus: 'open',
   startTime: '',
-  endTime: '',
   team: undefined,
-  invitedTeams: /** @type {string[]} */ ([]),
   totalPlayers: null,
   type: undefined,
   validationMode: 'auto',
@@ -93,15 +91,18 @@ const eventSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   documentId: Joi.string().allow(null, '').optional(),
   endTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).allow('').optional(),
+  facility: Joi.string().allow(null, '').optional(),
+  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').optional(),
+  invitedTeams: Joi.array().items(Joi.string()).optional(),
   isRecurrent: Joi.boolean().required(),
   location: Joi.object().allow(null, '').optional(),
-  facility: Joi.string().allow(null, '').optional(),
   pricePerPerson: Joi.number().allow(null, '').optional(),
   recurrenceDay: Joi.when('isRecurrent', {
     is: true,
     otherwise: Joi.string().allow('').optional(),
     then: Joi.string().allow('').optional(),
   }),
+  recurrenceDays: Joi.array().items(Joi.number()).optional(),
   recurrenceEndDate: Joi.when('isRecurrent', {
     is: true,
     otherwise: Joi.string().allow('').optional(),
@@ -113,19 +114,16 @@ const eventSchema = Joi.object({
     then: Joi.string().valid('week', 'month').required(),
   }),
   recurrenceInterval: Joi.number().min(1).optional(),
-  recurrenceDays: Joi.array().items(Joi.number()).optional(),
   recurrenceStartDate: Joi.when('isRecurrent', {
     is: true,
     otherwise: Joi.string().allow('').optional(),
     then: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).required(),
   }),
-  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').optional(),
   requestFeatured: Joi.boolean().optional(),
   reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').optional(),
   sessionStatus: Joi.string().valid('open', 'closed').required(),
   startTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).required(),
   team: Joi.string().required(),
-  invitedTeams: Joi.array().items(Joi.string()).optional(),
   totalPlayers: Joi.number().allow(null, '').optional(),
   type: Joi.string().required(),
   validationMode: Joi.string().valid('auto', 'manual').required(),
@@ -139,7 +137,7 @@ const eventSchema = Joi.object({
 function EventEdit({ navigation, route }) {
   const { eventId } = route?.params || {};
   const {
-    Alignments, Colors, Fonts, Spaces, ApplicationStyle,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
@@ -172,21 +170,21 @@ function EventEdit({ navigation, route }) {
 
   const createEventMutation = useMutation({
     mutationFn: createEvent,
-    onSuccess: () => {
-      console.log('Event created successfully');
-    },
     onError: (error) => {
       console.error('Error creating event:', error);
+    },
+    onSuccess: () => {
+      console.log('Event created successfully');
     },
   });
 
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
-    onSuccess: () => {
-      console.log('Event updated successfully');
-    },
     onError: (error) => {
       console.error('Error updating event:', error);
+    },
+    onSuccess: () => {
+      console.log('Event updated successfully');
     },
   });
 
@@ -207,6 +205,9 @@ function EventEdit({ navigation, route }) {
         : (route.params?.date ? format(new Date(route.params.date), 'dd/MM/yyyy') : ''),
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
+      facility: event?.facility?.documentId || null,
+      featuredRequestStatus: event?.featuredRequestStatus || 'none',
+      invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
       location: {
         label: (() => {
           try {
@@ -219,17 +220,14 @@ function EventEdit({ navigation, route }) {
         })(),
         value: `${event?.location?.lat}|${event?.location?.lng}`,
       },
-      facility: event?.facility?.documentId || null,
       pricePerPerson: event?.pricePerPerson,
       reservationMode: event?.reservationMode || 'FULL_GROUP',
       sessionStatus: event?.sessionStatus || 'open',
       startTime: event?.startTime ? event.startTime.substring(0, 5) : '',
       team: event?.team?.documentId || '',
-      invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
       totalPlayers: event?.totalPlayers,
       type: event?.type?.documentId || '',
       validationMode: event?.validationMode || 'auto',
-      featuredRequestStatus: event?.featuredRequestStatus || 'none',
     },
     mode: 'onBlur',
     resolver: joiResolver(eventSchema),
@@ -291,23 +289,23 @@ function EventEdit({ navigation, route }) {
 
   // Construct invited team options with headers
   const invitedTeamOptions = useMemo(() => {
-    const myTeamsOptions = teamOptions.filter(t => t.value !== selectedTeamId);
+    const myTeamsOptions = teamOptions.filter((t) => t.value !== selectedTeamId);
 
     // Filter other teams (exclude my teams and selected team)
-    const myTeamIds = userData?.trainedTeams?.map(t => t.documentId) || [];
+    const myTeamIds = userData?.trainedTeams?.map((t) => t.documentId) || [];
     const otherTeamsOptions = clubTeams
-      .filter(t => !myTeamIds.includes(t.documentId) && t.documentId !== selectedTeamId)
-      .map(t => ({ label: t.name, value: t.documentId }));
+      .filter((t) => !myTeamIds.includes(t.documentId) && t.documentId !== selectedTeamId)
+      .map((t) => ({ label: t.name, value: t.documentId }));
 
     const finalOptions = [];
 
     if (myTeamsOptions.length > 0) {
-      finalOptions.push({ label: t('eventEdit.fields.invitedTeams.myTeams') || 'MES ÉQUIPES', value: 'header_my_teams', isHeader: true });
+      finalOptions.push({ isHeader: true, label: t('eventEdit.fields.invitedTeams.myTeams') || 'MES ÉQUIPES', value: 'header_my_teams' });
       finalOptions.push(...myTeamsOptions);
     }
 
     if (otherTeamsOptions.length > 0) {
-      finalOptions.push({ label: t('eventEdit.fields.invitedTeams.otherTeams') || 'AUTRES ÉQUIPES', value: 'header_other_teams', isHeader: true });
+      finalOptions.push({ isHeader: true, label: t('eventEdit.fields.invitedTeams.otherTeams') || 'AUTRES ÉQUIPES', value: 'header_other_teams' });
       finalOptions.push(...otherTeamsOptions);
     }
 
@@ -316,7 +314,7 @@ function EventEdit({ navigation, route }) {
 
   // Conflict Detection
   const { data: facilityEvents } = useQuery({
-    queryKey: ['facilityEvents', selectedFacilityId, selectedDate],
+    enabled: !!selectedFacilityId && !!selectedDate && selectedDate.length === 10,
     queryFn: async () => {
       if (!selectedFacilityId || !selectedDate) return [];
       const parts = selectedDate.split('/');
@@ -336,12 +334,12 @@ function EventEdit({ navigation, route }) {
       });
       return res.data;
     },
-    enabled: !!selectedFacilityId && !!selectedDate && selectedDate.length === 10,
+    queryKey: ['facilityEvents', selectedFacilityId, selectedDate],
   });
 
   // Get facility details to check maxSlots
   const { data: facilityData } = useQuery({
-    queryKey: ['facility', selectedFacilityId],
+    enabled: false, // Disable for now as we don't have the service imported here
     queryFn: async () => {
       if (!selectedFacilityId) return null;
       // Assuming we have a service to get facility by ID, or we can find it in the events if populated
@@ -354,7 +352,7 @@ function EventEdit({ navigation, route }) {
       // Wait, the user might have selected it from the selector.
       return null;
     },
-    enabled: false // Disable for now as we don't have the service imported here
+    queryKey: ['facility', selectedFacilityId],
   });
 
   // We need maxSlots. Let's look at how FacilitySelector works. It passes facilityId.
@@ -416,7 +414,6 @@ function EventEdit({ navigation, route }) {
     }
   }, [facilityEvents, selectedStartTime, selectedEndTime, eventId, setValue, watch]);
 
-
   // Déterminer si le type sélectionné est "Réservation"
   const isReservationType = useMemo(() => {
     const selectedTypeData = eventTypes?.find((t) => t.documentId === selectedType);
@@ -434,11 +431,11 @@ function EventEdit({ navigation, route }) {
         date: event?.date ? format(new Date(event?.date), 'dd/MM/yyyy') : '',
         description: event?.description || '',
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
+        facility: event?.facility?.documentId || null,
         location: {
           label: event?.locationDetails ? JSON.parse(event?.locationDetails)?.address : '',
           value: `${event?.location?.lat}|${event?.location?.lng}`,
         },
-        facility: event?.facility?.documentId || null,
         pricePerPerson: event?.pricePerPerson,
         reservationMode: event?.reservationMode || 'FULL_GROUP',
         sessionStatus: event?.sessionStatus || 'open',
@@ -450,8 +447,6 @@ function EventEdit({ navigation, route }) {
       });
     }
   }, [event, reset]);
-
-
 
   // Set navigation options to change the header title based on whether editing or creating
   useEffect(() => {
@@ -483,7 +478,7 @@ function EventEdit({ navigation, route }) {
 
       // If conflict, ensure validationMode is manual (should be set by effect, but double check)
       if (hasConflict) {
-        formattedEvents.forEach(e => e.validationMode = 'manual');
+        formattedEvents.forEach((e) => e.validationMode = 'manual');
       }
 
       if (eventId) {
@@ -505,22 +500,22 @@ function EventEdit({ navigation, route }) {
             t('eventEdit.modals.recurrenceUpdate.description', 'Cet événement fait partie d\'une série. Que voulez-vous modifier ?'),
             [
               {
-                text: t('eventEdit.modals.recurrenceUpdate.options.cancel', 'Annuler'),
                 style: 'cancel',
+                text: t('eventEdit.modals.recurrenceUpdate.options.cancel', 'Annuler'),
               },
               {
-                text: t('eventEdit.modals.recurrenceUpdate.options.this', 'Cet événement'),
                 onPress: () => updateEventWithMode(),
+                text: t('eventEdit.modals.recurrenceUpdate.options.this', 'Cet événement'),
               },
               {
-                text: t('eventEdit.modals.recurrenceUpdate.options.future', 'Cet événement et les suivants'),
                 onPress: () => updateEventWithMode('future'),
+                text: t('eventEdit.modals.recurrenceUpdate.options.future', 'Cet événement et les suivants'),
               },
               {
-                text: t('eventEdit.modals.recurrenceUpdate.options.all', 'Tous les événements'),
                 onPress: () => updateEventWithMode('all'),
+                text: t('eventEdit.modals.recurrenceUpdate.options.all', 'Tous les événements'),
               },
-            ]
+            ],
           );
         } else {
           await updateEventWithMode();
@@ -543,7 +538,6 @@ function EventEdit({ navigation, route }) {
           navigation.goBack();
         }
       }
-
     } catch (error) {
       console.error('Error in handleFormSubmit:', error);
       // L'erreur de création/mise à jour de l'événement est gérée par les mutations
@@ -627,15 +621,15 @@ function EventEdit({ navigation, route }) {
               }) => (
                 <AutocompleteSelect
                   error={getFieldError({ errors: formErrors, fieldName: name })}
+                  isMulti
                   label={t('eventEdit.fields.invitedTeams.label') || 'Inviter des équipes'}
                   onBlur={onBlur}
                   options={invitedTeamOptions}
                   placeholder={t('eventEdit.fields.invitedTeams.placeholder') || 'Sélectionner des équipes'}
-                  isMulti
                   setValue={(/** @type {Option[]} */options) => {
                     // Filter out headers from selection just in case
-                    const validOptions = options?.filter(o => !o.isHeader);
-                    onChange(validOptions?.map(o => o.value) || []);
+                    const validOptions = options?.filter((o) => !o.isHeader);
+                    onChange(validOptions?.map((o) => o.value) || []);
                   }}
                   value={value || []}
                 />
@@ -654,13 +648,13 @@ function EventEdit({ navigation, route }) {
                 <FacilitySelector
                   clubId={clubId || ''}
                   cmId={cmId || ''}
-                  location={value}
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
                   facilityId={watch('facility')}
-                  onChange={(/** @type {{ location: string; facilityId?: string }} */ { location: newLocation, facilityId: newFacilityId }) => {
+                  location={value}
+                  onChange={(/** @type {{ location: string; facilityId?: string }} */ { facilityId: newFacilityId, location: newLocation }) => {
                     onChange(newLocation);
                     setValue('facility', newFacilityId || '');
                   }}
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
                 />
               )}
             />
@@ -670,8 +664,9 @@ function EventEdit({ navigation, route }) {
               <View style={[
                 Spaces.padding[16],
                 ApplicationStyle.backgroundColor.warning100,
-                { borderRadius: 8, borderWidth: 1, borderColor: Colors.warning500 }
-              ]}>
+                { borderColor: Colors.warning500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
                   ⚠️ Un conflit a été détecté sur ce créneau. Votre demande sera soumise à validation.
                 </Text>
@@ -730,6 +725,7 @@ function EventEdit({ navigation, route }) {
                 },
               }) => (
                 <AutocompleteSelect
+                  disabled={hasConflict} // Disable if conflict exists (forced to manual)
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   label={t('eventEdit.fields.validationMode.label')}
                   onBlur={onBlur}
@@ -738,7 +734,6 @@ function EventEdit({ navigation, route }) {
                     onChange(option?.value || '');
                   }}
                   value={validationModeOptions.find((option) => option.value === value)?.label || ''}
-                  disabled={hasConflict} // Disable if conflict exists (forced to manual)
                 />
               )}
             />
@@ -877,9 +872,9 @@ function EventEdit({ navigation, route }) {
                 <DatePickerInput
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   label={t('eventEdit.fields.date.label')}
+                  minimumDate={new Date()}
                   onChange={onChange}
                   value={value}
-                  minimumDate={new Date()}
                 />
               )}
             />
@@ -1028,8 +1023,8 @@ function EventEdit({ navigation, route }) {
                               name="recurrenceDays"
                               render={({ field: { onChange, value } }) => (
                                 <DayPicker
-                                  selectedDays={value || []}
                                   onChange={onChange}
+                                  selectedDays={value || []}
                                 />
                               )}
                             />
@@ -1072,7 +1067,7 @@ function EventEdit({ navigation, route }) {
                 <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignCenter]}>
                   {event?.featuredRequestStatus === 'none' ? (
                     <Button
-                      title={t('reservation.actions.requestFeatured', 'Demander la mise à la une')}
+                      isLoading={updateEventMutation.isPending}
                       onPress={() => {
                         updateEventMutation.mutate({
                           documentId: eventId,
@@ -1080,25 +1075,26 @@ function EventEdit({ navigation, route }) {
                         }, {
                           onSuccess: () => {
                             // Optimistically update or refetch
-                          }
+                          },
                         });
                       }}
-                      isLoading={updateEventMutation.isPending}
+                      title={t('reservation.actions.requestFeatured', 'Demander la mise à la une')}
                       variant="Primary"
                     />
                   ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
                       <Text style={[Fonts.p2, Fonts.neutral00]}>Statut :</Text>
                       <View style={{
+                        backgroundColor: event?.featuredRequestStatus === 'approved' ? '#10B981'
+                          : event?.featuredRequestStatus === 'rejected' ? '#EF4444' : '#F59E0B',
+                        borderRadius: 4,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
-                        borderRadius: 4,
-                        backgroundColor: event?.featuredRequestStatus === 'approved' ? '#10B981' :
-                          event?.featuredRequestStatus === 'rejected' ? '#EF4444' : '#F59E0B'
-                      }}>
+                      }}
+                      >
                         <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>
-                          {event?.featuredRequestStatus === 'approved' ? 'Approuvé' :
-                            event?.featuredRequestStatus === 'rejected' ? 'Rejeté' : 'En attente'}
+                          {event?.featuredRequestStatus === 'approved' ? 'Approuvé'
+                            : event?.featuredRequestStatus === 'rejected' ? 'Rejeté' : 'En attente'}
                         </Text>
                       </View>
                     </View>
@@ -1115,9 +1111,9 @@ function EventEdit({ navigation, route }) {
                     name="requestFeatured"
                     render={({ field: { onChange, value } }) => (
                       <Switch
-                        value={value || false}
                         onValueChange={onChange}
                         trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
+                        value={value || false}
                       />
                     )}
                   />
@@ -1130,15 +1126,17 @@ function EventEdit({ navigation, route }) {
           {featuredRequestError && (
             <View style={[Spaces.paddingHorizontal[16]]}>
               <Text style={[Fonts.p2, { color: Colors.error500 }]}>
-                ⚠️ {featuredRequestError}
+                ⚠️
+                {' '}
+                {featuredRequestError}
               </Text>
             </View>
           )}
           <Button
             isLoading={
-              createEventMutation.isPending ||
-              updateEventMutation.isPending ||
-              isFeaturedRequestLoading
+              createEventMutation.isPending
+              || updateEventMutation.isPending
+              || isFeaturedRequestLoading
             }
             onPress={handleSubmit(handleFormSubmit, (errors) => {
               console.log('Form errors:', errors);
@@ -1148,8 +1146,8 @@ function EventEdit({ navigation, route }) {
             variant="Primary"
           />
         </View>
-      </KeyboardAvoidingView >
-    </ScreenContainer >
+      </KeyboardAvoidingView>
+    </ScreenContainer>
   );
 }
 

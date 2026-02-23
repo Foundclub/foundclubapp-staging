@@ -1,4 +1,5 @@
 import { RouteNames } from '@/navigation/routeNames';
+
 import { getEntityDocumentId } from '@/utils/entityId';
 
 const END_MATCH_ROUTE = 'EndMatchScreen';
@@ -49,18 +50,18 @@ export const navigateToLeagueMatchDetails = (navigation, matchOrMatchId) => {
   }
 
   if (safeNavigate(navigation, RouteNames.LeagueDashboard, {
-    screen: MATCH_DETAILS_ROUTE,
     params,
+    screen: MATCH_DETAILS_ROUTE,
   })) {
     return true;
   }
 
   if (safeNavigate(navigation, RouteNames.LeagueHomeTab, {
-    screen: RouteNames.LeagueDashboard,
     params: {
-      screen: MATCH_DETAILS_ROUTE,
       params,
+      screen: MATCH_DETAILS_ROUTE,
     },
+    screen: RouteNames.LeagueDashboard,
   })) {
     return true;
   }
@@ -85,18 +86,18 @@ export const navigateToEndMatchScreen = (navigation, matchOrMatchId) => {
   }
 
   if (safeNavigate(navigation, RouteNames.LeagueDashboard, {
-    screen: END_MATCH_ROUTE,
     params,
+    screen: END_MATCH_ROUTE,
   })) {
     return true;
   }
 
   if (safeNavigate(navigation, RouteNames.LeagueHomeTab, {
-    screen: RouteNames.LeagueDashboard,
     params: {
-      screen: END_MATCH_ROUTE,
       params,
+      screen: END_MATCH_ROUTE,
     },
+    screen: RouteNames.LeagueDashboard,
   })) {
     return true;
   }

@@ -1,27 +1,32 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { isAfter, isSameDay } from 'date-fns';
-import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { isAfter, isSameDay } from 'date-fns';
+import React, {
+  useCallback, useMemo, useRef, useState,
+} from 'react';
 import {
   FlatList, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
-import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
-import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
-import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
-import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
-import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
-import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import { useGetEvents } from '@/services/event/eventQueries';
-import useTheme from '@/theme/themeContext';
-import { RouteNames } from '@/navigation/routeNames';
 import useAuth from '@/domains/auth/useAuth';
+import useTheme from '@/theme/themeContext';
+
+import DateSlider from '@/components/molecules/dateSlider/DateSlider';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
+import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetEvents } from '@/services/event/eventQueries';
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 /**
  * Standard event list screen component for participants
@@ -36,9 +41,9 @@ function ParticipantEventList({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
-  const { userData, canManageEvents } = useAuth();
+  const { canManageEvents, userData } = useAuth();
   const insets = useSafeAreaInsets();
-  
+
   // State
   const [listStartDate, setListStartDate] = useState(new Date());
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
@@ -56,8 +61,8 @@ function ParticipantEventList({ navigation }) {
     refetch,
   } = useGetEvents({
     // @ts-ignore
-    sort: 'date:asc',
     myTeams: true,
+    sort: 'date:asc',
   });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
@@ -65,47 +70,47 @@ function ParticipantEventList({ navigation }) {
   // Get user's club and CM IDs for featured events membership filtering
   const userClubId = userData?.club?.documentId;
   const userCmId = userData?.club?.parentMultisport?.documentId;
-  
-  const trainedSectionIds = userData?.trainedTeams?.map(t => t.club?.documentId).filter(Boolean) || [];
-  const trainedCmIds = userData?.trainedTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
-  
-  const playerSectionIds = userData?.myTeams?.map(t => t.club?.documentId).filter(Boolean) || [];
-  const playerCmIds = userData?.myTeams?.map(t => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+
+  const trainedSectionIds = userData?.trainedTeams?.map((t) => t.club?.documentId).filter(Boolean) || [];
+  const trainedCmIds = userData?.trainedTeams?.map((t) => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+
+  const playerSectionIds = userData?.myTeams?.map((t) => t.club?.documentId).filter(Boolean) || [];
+  const playerCmIds = userData?.myTeams?.map((t) => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
 
   const allClubIds = [
-    userClubId, 
+    userClubId,
     userCmId,
-    ...trainedSectionIds, 
-    ...trainedCmIds, 
-    ...playerSectionIds, 
-    ...playerCmIds
+    ...trainedSectionIds,
+    ...trainedCmIds,
+    ...playerSectionIds,
+    ...playerCmIds,
   ].filter((value, index, self) => Boolean(value) && self.indexOf(value) === index);
 
   // Fetch SECTION/CM featured events for Mon Planning
   const { data: featuredData } = useGetEvents({
-    isFeatured: true,
     featuredScope: ['SECTION', 'CM'],
+    isFeatured: true,
     membershipClubIds: allClubIds.length ? allClubIds : undefined,
-    sessionStatus: 'open',
     pageSize: 5,
+    sessionStatus: 'open',
   }, { enabled: allClubIds.length > 0 });
 
-  const featuredEvents = useMemo(() => 
-    featuredData?.pages?.flatMap((page) => page.data) || [], 
-    [featuredData]
+  const featuredEvents = useMemo(
+    () => featuredData?.pages?.flatMap((page) => page.data) || [],
+    [featuredData],
   );
 
   // Filter events for the list (starting from listStartDate)
   const listEvents = useMemo(() => {
     const myTeamIds = [
-      ...(userData?.myTeams || []), 
-      ...(userData?.trainedTeams || [])
-    ].map(t => t.documentId);
+      ...(userData?.myTeams || []),
+      ...(userData?.trainedTeams || []),
+    ].map((t) => t.documentId);
 
     return events.filter((event) => {
       if (!event || !event.date) return false;
       const eventDate = new Date(event.date);
-      
+
       // Date Filter
       const isDateValid = isSameDay(eventDate, listStartDate) || isAfter(eventDate, listStartDate);
       if (!isDateValid) return false;
@@ -113,9 +118,9 @@ function ParticipantEventList({ navigation }) {
       // Filter out Featured Events (they appear in the carousel)
       // UNLESS they are events for my specific team.
       if (event.isFeatured) {
-        const isMyTeamEvent = event.teams?.some(team => myTeamIds.includes(team.documentId));
+        const isMyTeamEvent = event.teams?.some((team) => myTeamIds.includes(team.documentId));
         if (!isMyTeamEvent) {
-            return false;
+          return false;
         }
       }
 
@@ -155,7 +160,6 @@ function ParticipantEventList({ navigation }) {
     setSelectedEvent(undefined);
   }, []);
 
-
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -173,9 +177,9 @@ function ParticipantEventList({ navigation }) {
     }
     console.log('MyEventList: Navigating to', event.documentId);
     // @ts-ignore
-    navigation.navigate('EventStack', { 
-      screen: 'EventDetails', 
-      params: { eventId: event.documentId } 
+    navigation.navigate('EventStack', {
+      params: { eventId: event.documentId },
+      screen: 'EventDetails',
     });
   };
 
@@ -189,11 +193,11 @@ function ParticipantEventList({ navigation }) {
           <EventCardNew
             item={item.reservation}
             // @ts-ignore
-            onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
-            onJoin={() => handleJoinEvent(item.reservation)}
             onDecline={() => {}}
-            onParticipate={() => handleParticipateToEvent(item.reservation)}
+            onJoin={() => handleJoinEvent(item.reservation)}
             onLogin={() => {}}
+            onParticipate={() => handleParticipateToEvent(item.reservation)}
+            onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
           />
         </View>
       );
@@ -202,11 +206,11 @@ function ParticipantEventList({ navigation }) {
       <View style={[Spaces.marginBottom[16]]}>
         <EventCardNew
           item={item}
-          onPress={() => handleEventPress(item)}
-          onJoin={() => handleJoinEvent(item)}
           onDecline={() => {}}
-          onParticipate={() => handleParticipateToEvent(item)}
+          onJoin={() => handleJoinEvent(item)}
           onLogin={() => {}}
+          onParticipate={() => handleParticipateToEvent(item)}
+          onPress={() => handleEventPress(item)}
         />
       </View>
     );
@@ -219,22 +223,24 @@ function ParticipantEventList({ navigation }) {
     setListStartDate(date);
   };
 
-
   const handleSummaryPress = () => {
     // @ts-ignore
-    flatListRef.current?.scrollToOffset({ offset: 500, animated: true });
+    flatListRef.current?.scrollToOffset({ animated: true, offset: 500 });
   };
 
   const floatingCtaBottom = Math.max(insets.bottom + 12, 20);
   const listBottomPadding = canManageEvents ? insets.bottom + 140 : insets.bottom + 24;
 
-  const ListHeader = () => {
+  /**
+   *
+   */
+  function ListHeader() {
     return (
       <View style={[Spaces.gap[24], Spaces.marginBottom[16]]}>
         {/* Top Header */}
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <LeagueHeaderSwitch />
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <NotificationBadge />
             <ProfileButton />
           </View>
@@ -274,56 +280,57 @@ function ParticipantEventList({ navigation }) {
             Évènements à partir de
           </Text>
           <DateSlider
-            selectedDate={listStartDate}
             onDateSelected={handleDateConfirm}
+            selectedDate={listStartDate}
           />
         </View>
       </View>
     );
-  };
+  }
 
   return (
     <ScreenContainer bgImage="bg2">
       <FlatList
-        ref={flatListRef}
         data={listEvents}
+        ref={flatListRef}
         renderItem={renderItem}
         // @ts-ignore
+        contentContainerStyle={{ paddingBottom: listBottomPadding }}
+        extraData={userData}
         keyExtractor={(item) => item.documentId || Math.random().toString()}
         ListHeaderComponent={ListHeader}
-        contentContainerStyle={{ paddingBottom: listBottomPadding }}
-        showsVerticalScrollIndicator={false}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        extraData={userData}
+        showsVerticalScrollIndicator={false}
       />
 
       {canManageEvents && (
         <View style={{
-          position: 'absolute',
           bottom: floatingCtaBottom,
           left: 20,
+          position: 'absolute',
           right: 20,
-        }}>
+        }}
+        >
           <TouchableOpacity
             // @ts-ignore
             onPress={() => navigation.navigate('EventStack', { screen: 'EventWizardType' })}
             style={{
+              alignItems: 'center',
               backgroundColor: Colors.primary500,
               borderRadius: 25,
-              paddingVertical: 16,
-              alignItems: 'center',
+              elevation: 5,
               justifyContent: 'center',
-              shadowColor: "#000",
+              paddingVertical: 16,
+              shadowColor: '#000',
               shadowOffset: {
-                width: 0,
                 height: 2,
+                width: 0,
               },
               shadowOpacity: 0.25,
               shadowRadius: 3.84,
-              elevation: 5,
             }}
           >
             <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>+ Ajouter un évènement</Text>

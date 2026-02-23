@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetLevels } from '@/services/level/levelQueries';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetLevels } from '@/services/level/levelQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -16,7 +18,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
  */
 function TeamWizardLevel({ navigation }) {
   const { t } = useTranslation();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const [searchValue, setSearchValue] = useState('');
   const { data: levels } = useGetLevels();
 
@@ -37,15 +39,15 @@ function TeamWizardLevel({ navigation }) {
 
   return (
     <WizardStepLayout
-      title={t('teamWizard.steps.level.title', 'Niveau')}
-      subtitle={t('teamWizard.steps.level.subtitle', 'Selectionne le niveau sportif de l equipe.')}
-      stepIndex={6}
-      stepCount={8}
+      isNextDisabled={!state.level}
+      nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardCategory)}
       onNext={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
       onSkip={() => {}}
-      nextLabel={t('common.next', 'Suivant')}
-      isNextDisabled={!state.level}
+      stepCount={8}
+      stepIndex={6}
+      subtitle={t('teamWizard.steps.level.subtitle', 'Selectionne le niveau sportif de l equipe.')}
+      title={t('teamWizard.steps.level.title', 'Niveau')}
     >
       <View>
         <AutocompleteSelect
@@ -55,7 +57,7 @@ function TeamWizardLevel({ navigation }) {
           placeholder={t('teamEdit.fields.level.placeholder')}
           searchValue={searchValue}
           setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ type: 'SET_LEVEL', payload: option?.value || '' })}
+          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_LEVEL' })}
           value={selectedLabel}
         />
       </View>

@@ -67,11 +67,11 @@ const alignements = {
     justifyContent: positions.center,
   },
   // align-self
-  selfStart: {
-    alignSelf: positions.start,
-  },
   selfCenter: {
     alignSelf: positions.center,
+  },
+  selfStart: {
+    alignSelf: positions.start,
   },
   selfStretch: {
     alignSelf: positions.stretch,
@@ -89,23 +89,23 @@ const alignements = {
   justifySpaceBetween: {
     justifyContent: positions.between,
   },
-  spaceBetween: {
-    justifyContent: positions.between,
-  },
   justifyStart: {
     justifyContent: positions.start,
+  },
+  spaceBetween: {
+    justifyContent: positions.between,
   },
   // flex and flex-grow
   fill: {
     flex: 1,
   },
+  grow1: {
+    flexGrow: 1,
+  },
   mainCenter: {
     alignItems: positions.center,
     flex: 1,
     justifyContent: positions.center,
-  },
-  grow1: {
-    flexGrow: 1,
   },
   scrollSpaceAround: {
     flexGrow: 1,

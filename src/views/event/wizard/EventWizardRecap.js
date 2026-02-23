@@ -1,23 +1,27 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
-import useTheme from '@/theme/themeContext';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import Button from '@/components/atoms/button/Button';
-import { useEventWizard } from './EventWizardContext';
-import { RouteNames } from '@/navigation/routeNames';
-import { createEventsSequentially, rollbackEventsByCancel } from '@/services/event/eventService';
 import useEvent from '@/domains/event/useEvent';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { createEventsSequentially, rollbackEventsByCancel } from '@/services/event/eventService';
+
+import { useEventWizard } from './EventWizardContext';
 
 const getErrorCode = (error) => (
   error?.response?.data?.error?.details?.code
@@ -32,35 +36,40 @@ const buildWizardFormData = (wizardState) => {
   const end = wizardState.endTime ? new Date(wizardState.endTime) : new Date(start.getTime() + (90 * 60000));
 
   return {
-    type: wizardState.type?.documentId,
-    team: wizardState.team?.documentId,
-    invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
+    capacity: wizardState.capacity ?? null,
     date: format(eventDate, 'dd/MM/yyyy'),
-    startTime: format(start, 'HH:mm'),
+    description: wizardState.description || '',
     endTime: format(end, 'HH:mm'),
-    location: wizardState.location,
     facility: wizardState.facility,
+    invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
     isRecurrent: Boolean(wizardState.isRecurrent),
-    recurrenceFrequency: wizardState.recurrenceFrequency || 'week',
-    recurrenceInterval: wizardState.recurrenceInterval || 1,
+    location: wizardState.location,
+    pricePerPerson: wizardState.pricePerPerson ?? null,
     recurrenceDays: Array.isArray(wizardState.recurrenceDays) ? wizardState.recurrenceDays : [],
-    recurrenceStartDate: wizardState.recurrenceStartDate
-      ? format(new Date(wizardState.recurrenceStartDate), 'dd/MM/yyyy')
-      : '',
     recurrenceEndDate: wizardState.recurrenceEndDate
       ? format(new Date(wizardState.recurrenceEndDate), 'dd/MM/yyyy')
       : '',
-    validationMode: wizardState.validationMode || 'auto',
-    sessionStatus: wizardState.sessionStatus || 'open',
-    description: wizardState.description || '',
-    capacity: wizardState.capacity ?? null,
+    recurrenceFrequency: wizardState.recurrenceFrequency || 'week',
+    recurrenceInterval: wizardState.recurrenceInterval || 1,
+    recurrenceStartDate: wizardState.recurrenceStartDate
+      ? format(new Date(wizardState.recurrenceStartDate), 'dd/MM/yyyy')
+      : '',
     reservationMode: wizardState.reservationMode || 'FULL_GROUP',
-    pricePerPerson: wizardState.pricePerPerson ?? null,
+    sessionStatus: wizardState.sessionStatus || 'open',
+    startTime: format(start, 'HH:mm'),
+    team: wizardState.team?.documentId,
     totalPlayers: wizardState.totalPlayers ?? null,
+    type: wizardState.type?.documentId,
+    validationMode: wizardState.validationMode || 'auto',
   };
 };
 
-const EventWizardRecap = ({ navigation }) => {
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardRecap({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -69,7 +78,7 @@ const EventWizardRecap = ({ navigation }) => {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const { createReccurrentEventPayload } = useEvent();
   const queryClient = useQueryClient();
 
@@ -97,7 +106,7 @@ const EventWizardRecap = ({ navigation }) => {
   const recapNotSet = t('eventWizard.recap.notSet');
 
   const getLocationDisplayText = () => {
-    const location = state.location;
+    const { location } = state;
     if (!location) return t('eventWizard.recap.notSet');
     if (typeof location === 'string') return location;
     if (typeof location === 'object') {
@@ -216,12 +225,12 @@ const EventWizardRecap = ({ navigation }) => {
 
     const lines = Object.entries(grouped).map(([code, count]) => {
       switch (code) {
-        case 'EVENT_LOCATION_REQUIRED':
-          return `- ${count}x ${t('eventWizard.errors.locationRequired')}`;
-        case 'EVENT_INVALID_TIME_RANGE':
-          return `- ${count}x ${t('eventWizard.errors.invalidTimeRange')}`;
         case 'EVENT_DATE_PAST':
           return `- ${count}x ${t('eventWizard.errors.datePast')}`;
+        case 'EVENT_INVALID_TIME_RANGE':
+          return `- ${count}x ${t('eventWizard.errors.invalidTimeRange')}`;
+        case 'EVENT_LOCATION_REQUIRED':
+          return `- ${count}x ${t('eventWizard.errors.locationRequired')}`;
         case 'EVENT_SLOT_CONFLICT':
           return `- ${count}x ${t('eventWizard.errors.slotConflict')}`;
         default:
@@ -317,14 +326,14 @@ const EventWizardRecap = ({ navigation }) => {
   return (
     <>
       <WizardStepLayout
-        stepCount={10}
-        stepIndex={10}
-        title={t('eventWizard.steps.recap.title')}
-        subtitle={t('eventWizard.steps.recap.subtitle')}
+        isNextLoading={isSubmitting}
+        nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
-        nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
-        isNextLoading={isSubmitting}
+        stepCount={10}
+        stepIndex={10}
+        subtitle={t('eventWizard.steps.recap.subtitle')}
+        title={t('eventWizard.steps.recap.title')}
       >
         <View style={[Spaces.gap[16]]}>
           <View
@@ -550,28 +559,28 @@ const EventWizardRecap = ({ navigation }) => {
 
           <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
             <Button
-              title={t('eventWizard.partial.actions.keep')}
+              isLoading={isSubmitting}
               onPress={handleKeepCreated}
+              title={t('eventWizard.partial.actions.keep')}
               variant="Primary"
-              isLoading={isSubmitting}
             />
             <Button
-              title={t('eventWizard.partial.actions.retry')}
+              isLoading={isSubmitting}
               onPress={handleRetryFailed}
+              title={t('eventWizard.partial.actions.retry')}
               variant="Secondary"
-              isLoading={isSubmitting}
             />
             <Button
-              title={t('eventWizard.partial.actions.rollback')}
-              onPress={handleRollbackCreated}
-              variant="Secondary"
               isLoading={isSubmitting}
+              onPress={handleRollbackCreated}
+              title={t('eventWizard.partial.actions.rollback')}
+              variant="Secondary"
             />
           </View>
         </View>
       </BottomModal>
     </>
   );
-};
+}
 
 export default EventWizardRecap;

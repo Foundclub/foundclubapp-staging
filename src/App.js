@@ -1,27 +1,28 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import {
   MutationCache, QueryCache, QueryClient, QueryClientProvider,
 } from '@tanstack/react-query';
-import { isAxiosError } from 'axios';
+import { isAxiosError } from 'axios/dist/browser/axios.cjs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
-import { AppModeProvider } from '@/context/AppModeContext';
-import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
-import ErrorScreen from '@/views/Error';
-
-import AppNavigator from '@/navigation/appNavigator';
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
 import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
+import ErrorScreen from '@/views/Error';
+
+import AppNavigator from '@/navigation/appNavigator';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
+
+import { AppModeProvider } from '@/context/AppModeContext';
+import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
 const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,

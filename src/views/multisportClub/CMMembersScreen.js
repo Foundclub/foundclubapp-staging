@@ -1,21 +1,22 @@
-
+import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 
 import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import Button from '@/components/atoms/button/Button';
-
 import { getCMMembers } from '@/services/multisportClub/multisportClubService';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -24,27 +25,27 @@ import { getImageUrl } from '@/utils/imageUrl';
  * @param {object} props.navigation
  * @param {object} props.route
  */
-const CMMembersScreen = ({ navigation, route }) => {
+function CMMembersScreen({ navigation, route }) {
   const { cmId } = route.params || {};
   const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Fonts, Images, Spaces, Colors,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
 
   const [selectedTab, setSelectedTab] = useState('all');
 
   const {
     data: membersData,
-    isLoading,
     error,
+    isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['cm-members', cmId],
-    queryFn: () => getCMMembers(cmId),
     enabled: !!cmId,
+    queryFn: () => getCMMembers(cmId),
+    queryKey: ['cm-members', cmId],
   });
 
-  const { presidents, coaches, players } = membersData?.data || { presidents: [], coaches: [], players: [] };
+  const { coaches, players, presidents } = membersData?.data || { coaches: [], players: [], presidents: [] };
   const total = membersData?.data?.total || 0;
 
   React.useEffect(() => {
@@ -66,18 +67,18 @@ const CMMembersScreen = ({ navigation, route }) => {
   const displayedMembers = useMemo(() => {
     let list = [];
     switch (selectedTab) {
-      case 'presidents':
-        list = presidents;
-        break;
       case 'coaches':
         list = coaches;
         break;
       case 'players':
         list = players;
         break;
+      case 'presidents':
+        list = presidents;
+        break;
       case 'all':
       default:
-        // Filter out duplicates if a user is in multiple roles logic ? 
+        // Filter out duplicates if a user is in multiple roles logic ?
         // Backend returns separated lists. For "All", we just verify uniqueness by ID if needed.
         // But here we just concat. If a user is both coach and player, they appear twice?
         // Let's deduce uniqueness by ID if we want single entry per person.
@@ -95,8 +96,8 @@ const CMMembersScreen = ({ navigation, route }) => {
 
   const handleUserPress = (user) => {
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.UserDetails,
       params: { userId: user.documentId || user.id },
+      screen: RouteNames.UserDetails,
     });
   };
 
@@ -119,18 +120,20 @@ const CMMembersScreen = ({ navigation, route }) => {
       ]}
     >
       <ProfileAvatar
+        imageStyle={{ borderRadius: 25 }}
         imageUrl={item.avatarUrl}
         size={50}
         style={{ borderRadius: 25 }}
-        imageStyle={{ borderRadius: 25 }}
       />
       <View style={{ flex: 1 }}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-          {item.firstname} {item.lastname}
+          {item.firstname}
+          {' '}
+          {item.lastname}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary500]}>
-           {/* Section display if available */}
-           {item.sections?.join(', ')}
+          {/* Section display if available */}
+          {item.sections?.join(', ')}
         </Text>
       </View>
       <Image
@@ -154,9 +157,9 @@ const CMMembersScreen = ({ navigation, route }) => {
     >
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SegmentedControl
+          onChange={setSelectedTab}
           options={tabs}
           value={selectedTab}
-          onChange={setSelectedTab}
         />
       </View>
 
@@ -164,9 +167,9 @@ const CMMembersScreen = ({ navigation, route }) => {
       {allSections.length > 0 && (
         <View style={[Spaces.marginBottom[16]]}>
           <ScrollView
+            contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.gap[8]]}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.gap[8]]}
           >
             <TouchableOpacity
               onPress={() => setSelectedSection(null)}
@@ -176,8 +179,8 @@ const CMMembersScreen = ({ navigation, route }) => {
                 Spaces.paddingVertical[8],
                 {
                   backgroundColor: selectedSection === null ? Colors.primary500 : Colors.neutral700,
-                  borderWidth: 1,
                   borderColor: selectedSection === null ? Colors.primary500 : Colors.neutral500,
+                  borderWidth: 1,
                 },
               ]}
             >
@@ -195,8 +198,8 @@ const CMMembersScreen = ({ navigation, route }) => {
                   Spaces.paddingVertical[8],
                   {
                     backgroundColor: selectedSection === section ? Colors.primary500 : Colors.neutral700,
-                    borderWidth: 1,
                     borderColor: selectedSection === section ? Colors.primary500 : Colors.neutral500,
+                    borderWidth: 1,
                   },
                 ]}
               >
@@ -209,31 +212,28 @@ const CMMembersScreen = ({ navigation, route }) => {
         </View>
       )}
 
-
-
-
       <WithDataWrapper
-        isLoading={isLoading}
         error={error?.message}
+        isLoading={isLoading}
         wrapperStyle={[Alignments.fill]}
       >
         <FlatList
-          data={displayedMembers}
-          renderItem={renderItem}
-          keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
           contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[40]]}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-          }
-          ListEmptyComponent={
+          data={displayedMembers}
+          keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
+          ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
               <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouvé.</Text>
             </View>
+          )}
+          refreshControl={
+            <RefreshControl onRefresh={refetch} refreshing={isLoading} />
           }
+          renderItem={renderItem}
         />
       </WithDataWrapper>
     </ScreenContainer>
   );
-};
+}
 
 export default CMMembersScreen;

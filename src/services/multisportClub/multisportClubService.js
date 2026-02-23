@@ -41,12 +41,12 @@ export const getMultisportClubById = async (id) => {
   const result = await client.get(`/multisport-clubs/${id}`, {
     params: {
       populate: {
+        admins: {
+          populate: ['avatar', 'role'],
+        },
         logo: true,
         sections: {
           populate: ['logo', 'activites', 'teams'],
-        },
-        admins: {
-          populate: ['avatar', 'role'],
         },
         sponsor: {
           populate: ['logo'],
@@ -60,11 +60,13 @@ export const getMultisportClubById = async (id) => {
 /**
  * Get list of multisport clubs (for search)
  * @param {MultisportClubSearchParams} [params] - Search params (name, geohash, page, pageSize)
- * @returns {Promise<Object>} List of multisport clubs
+ * @returns {Promise<object>} List of multisport clubs
  */
 export const getMultisportClubs = async (params = {}) => {
-  const { name, geohash, page = 1, pageSize = 30 } = params;
-  
+  const {
+    geohash, name, page = 1, pageSize = 30,
+  } = params;
+
   /** @type {{ pagination: { page: number; pageSize: number }; populate: any; filters?: Record<string, any> }} */
   const filters = {
     pagination: { page, pageSize },
@@ -90,7 +92,7 @@ export const getMultisportClubs = async (params = {}) => {
   }
 
   const result = await client.get('/multisport-clubs', { params: filters });
-  
+
   // Add type indicator to differentiate from regular clubs
   const dataWithType = result.data?.data?.map((/** @type {any} */ cm) => ({
     ...cm,
@@ -108,7 +110,7 @@ export const getMultisportClubs = async (params = {}) => {
 /**
  * Get all club sections for a multisport club
  * @param {string} cmId - MultisportClub documentId
- * @returns {Promise<Object>} List of club sections with stats
+ * @returns {Promise<object>} List of club sections with stats
  */
 export const getCMClubs = async (cmId) => {
   const result = await client.get(`/cm/${cmId}/clubs`);
@@ -119,7 +121,7 @@ export const getCMClubs = async (cmId) => {
  * Get planning for a multisport club
  * @param {string} cmId - MultisportClub documentId
  * @param {CMPlanningFilters} [filters] - Optional filters (sectionId, installationId, from, to)
- * @returns {Promise<Object>} Planning slots
+ * @returns {Promise<object>} Planning slots
  */
 export const getCMPlanning = async (cmId, filters = {}) => {
   const params = new URLSearchParams();
@@ -127,7 +129,7 @@ export const getCMPlanning = async (cmId, filters = {}) => {
   if (filters.installationId) params.append('installationId', filters.installationId);
   if (filters.from) params.append('from', filters.from);
   if (filters.to) params.append('to', filters.to);
-  
+
   const result = await client.get(`/cm/${cmId}/planning?${params.toString()}`);
   return result.data;
 };
@@ -147,7 +149,7 @@ export const createCMSection = async (cmId, data) => {
  * Delete a section from a multisport club
  * @param {string} cmId - MultisportClub documentId
  * @param {string} sectionId - Section (Club) documentId
- * @returns {Promise<Object>} Success message
+ * @returns {Promise<object>} Success message
  */
 export const deleteCMSection = async (cmId, sectionId) => {
   const result = await client.delete(`/cm/${cmId}/clubs/${sectionId}`);
@@ -157,10 +159,10 @@ export const deleteCMSection = async (cmId, sectionId) => {
 /**
  * Get highlight requests for a multisport club (pending)
  * @param {string} cmId - MultisportClub documentId
- * @returns {Promise<Object>} List of pending requests
+ * @returns {Promise<object>} List of pending requests
  */
 export const getCMHighlightRequests = async (cmId) => {
-  const result = await client.get(`/event-highlight-requests`, {
+  const result = await client.get('/event-highlight-requests', {
     params: {
       filters: {
         multisportClub: { documentId: cmId },
@@ -175,8 +177,8 @@ export const getCMHighlightRequests = async (cmId) => {
 /**
  * Create a highlight request for an event
  * @param {string} eventId - Event documentId
- * @param {Object} data - Request data (kind, message)
- * @returns {Promise<Object>} Created request
+ * @param {object} data - Request data (kind, message)
+ * @returns {Promise<object>} Created request
  */
 export const createHighlightRequest = async (eventId, data = {}) => {
   const result = await client.post(`/events/${eventId}/highlight-requests`, data);
@@ -186,7 +188,7 @@ export const createHighlightRequest = async (eventId, data = {}) => {
 /**
  * Approve a highlight request
  * @param {string} requestId - Request documentId
- * @returns {Promise<Object>} Updated request
+ * @returns {Promise<object>} Updated request
  */
 export const approveHighlightRequest = async (requestId) => {
   const result = await client.post(`/highlight-requests/${requestId}/approve`);
@@ -197,7 +199,7 @@ export const approveHighlightRequest = async (requestId) => {
  * Reject a highlight request
  * @param {string} requestId - Request documentId
  * @param {string} reason - Optional rejection reason
- * @returns {Promise<Object>} Updated request
+ * @returns {Promise<object>} Updated request
  */
 export const rejectHighlightRequest = async (requestId, reason) => {
   const result = await client.post(`/highlight-requests/${requestId}/reject`, { reason });
@@ -207,7 +209,7 @@ export const rejectHighlightRequest = async (requestId, reason) => {
 /**
  * Get all members of a multisport club (aggregated)
  * @param {string} cmId - MultisportClub documentId
- * @returns {Promise<Object>} Aggregated members
+ * @returns {Promise<object>} Aggregated members
  */
 /**
  * Get all teams of a CM
@@ -232,7 +234,7 @@ export const getCMMembers = async (cmId) => {
  * Update a multisport club
  * @param {string} cmId - MultisportClub documentId
  * @param {MultisportClubUpdatePayload} data - Update data (name, email, phone, addressLabel, coordinates, logo)
- * @returns {Promise<Object>} Updated CM
+ * @returns {Promise<object>} Updated CM
  */
 export const updateMultisportClub = async (cmId, data) => {
   /** @type {MultisportClubUpdatePayload} */
@@ -246,8 +248,7 @@ export const updateMultisportClub = async (cmId, data) => {
   } else if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'id' in dataCopy.logo && dataCopy.logo.id) {
     // Keep existing logo if not changed
     logoId = dataCopy.logo.id;
-  }
-  else if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'documentId' in dataCopy.logo && dataCopy.logo.documentId) {
+  } else if (dataCopy.logo && typeof dataCopy.logo === 'object' && 'documentId' in dataCopy.logo && dataCopy.logo.documentId) {
     // Keep existing logo if using documentId
     logoId = dataCopy.logo.documentId;
   }
@@ -261,24 +262,24 @@ export const updateMultisportClub = async (cmId, data) => {
     const processedSponsors = [];
     for (const sponsor of dataCopy.sponsor) {
       const newSponsor = { ...sponsor };
-      
+
       // If logo is a new file (has path), upload it
       if (newSponsor.logo && typeof newSponsor.logo === 'object' && 'path' in newSponsor.logo && newSponsor.logo.path) {
         const uploadResult = /** @type {{ id?: number | string; documentId?: string }} */ (await uploadFile(newSponsor.logo));
         // For components media fields, we use the Integer ID
-        newSponsor.logo = uploadResult.id || uploadResult.documentId || newSponsor.logo; 
-      } 
+        newSponsor.logo = uploadResult.id || uploadResult.documentId || newSponsor.logo;
+      }
       // If existing logo (has documentId or id)
       else if (newSponsor.logo && typeof newSponsor.logo === 'object' && ('documentId' in newSponsor.logo || 'id' in newSponsor.logo)) {
         // For existing, we might need ID or DocumentId. Let's try ID if available, else DocumentId
-        // Actually, if we send the object or ID? 
+        // Actually, if we send the object or ID?
         // If we send just the ID (int), Strapi should handle it.
         // If we send documentId?
         // Let's safe bet on ID (int) if available, or just keeping what we have.
         // Usually existing returns object with id and documentId.
         newSponsor.logo = newSponsor.logo.id || newSponsor.logo.documentId || newSponsor.logo;
       }
-      
+
       processedSponsors.push(newSponsor);
     }
     dataCopy.sponsor = processedSponsors;
@@ -290,7 +291,7 @@ export const updateMultisportClub = async (cmId, data) => {
     ...dataCopy,
     ...(logoId && { logo: logoId }),
   };
-  
+
   // Clean payload of undefined/null values
   Object.keys(payload).forEach((key) => {
     if (payload[key] === undefined) {
@@ -303,13 +304,13 @@ export const updateMultisportClub = async (cmId, data) => {
 };
 
 export default {
-  getCMClubs,
-  getCMPlanning,
-  createCMSection,
-  getCMHighlightRequests,
-  createHighlightRequest,
   approveHighlightRequest,
-  rejectHighlightRequest,
+  createCMSection,
+  createHighlightRequest,
+  getCMClubs,
+  getCMHighlightRequests,
   getCMMembers,
+  getCMPlanning,
+  rejectHighlightRequest,
   updateMultisportClub,
 };

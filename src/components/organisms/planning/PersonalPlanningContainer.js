@@ -12,13 +12,14 @@ import {
 import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { getEvents } from '@/services/event/eventService';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import PlanningCalendarView from '@/components/organisms/planningCalendarView/PlanningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView/PlanningWeekTimelineViewV2';
+
+import { getEvents } from '@/services/event/eventService';
 
 /**
  * Personal planning content.

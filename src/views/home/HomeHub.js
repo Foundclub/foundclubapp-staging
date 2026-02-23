@@ -1,14 +1,13 @@
-﻿import {
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useIsFocused } from '@react-navigation/native';
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import { useIsFocused } from '@react-navigation/native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Alert,
   Image,
@@ -19,11 +18,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useOnboarding } from '@/context/OnboardingContext';
-import { useAppMode } from '@/context/AppModeContext';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
@@ -31,8 +30,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
@@ -41,7 +40,9 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
-import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+
+import { useAppMode } from '@/context/AppModeContext';
+import { useOnboarding } from '@/context/OnboardingContext';
 
 const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
 const tutorialDebugLog = (...args) => {
@@ -107,8 +108,8 @@ function HomeSection({
           const isFullCard = isCompactScreen || isSingleCardSection || card.layout === 'full';
           const cardContainerStyle = {
             flexBasis: isFullCard ? '100%' : '48.5%',
-            maxWidth: isFullCard ? '100%' : '48.5%',
             marginBottom: 12,
+            maxWidth: isFullCard ? '100%' : '48.5%',
             width: isFullCard ? '100%' : '48.5%',
           };
 
@@ -554,56 +555,17 @@ function HomeHubContent({ auth, navigation, route }) {
   const navigateToTutorial = useCallback((tutorialId) => {
     const tutorialParams = {
       startTutorial: true,
-      tutorialStartToken: Date.now(),
       tutorialId,
       tutorialSource: 'homeHub',
+      tutorialStartToken: Date.now(),
     };
 
     switch (tutorialId) {
-      case TutorialIds.SEARCH_EVENTS:
+      case TutorialIds.ACCOUNT_SWITCHER_MODAL:
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.SearchEvents, tutorialParams);
-        });
-        return;
-      case TutorialIds.SEARCH_CLUBS:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.SearchClubs, tutorialParams);
-        });
-        return;
-      case TutorialIds.SEARCH_RESERVATIONS:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.SearchReservations, tutorialParams);
-        });
-        return;
-      case TutorialIds.SEARCH_RECRUITMENT:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.SearchRecruitment, {
-            ...tutorialParams,
-            initialRecruitmentTab: 'annonces',
-          });
-        });
-        return;
-      case TutorialIds.EVENT_WIZARD_TYPE:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.EventStack, {
-            params: tutorialParams,
-            screen: RouteNames.EventWizardType,
-          });
-        });
-        return;
-      case TutorialIds.TEAM_MEMBERSHIP_REQUESTS:
-        if (!trainedTeamIds.length) {
-          Alert.alert(
-            t('homeHub.alerts.noTrainedTeams.title', 'Aucune equipe disponible'),
-            t('homeHub.alerts.noTrainedTeams.description', 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.'),
-          );
-          return;
-        }
-        navigateAfterClosingModals(() => {
-          navigateToRequestsHub(navigation, {
-            ...tutorialParams,
-            initialFilter: 'team',
-            source: 'home',
+          navigation.navigate(RouteNames.ProfileStack, {
+            params: { ...tutorialParams, openAccountModal: true },
+            screen: RouteNames.Profile,
           });
         });
         return;
@@ -620,6 +582,14 @@ function HomeHubContent({ auth, navigation, route }) {
             ...tutorialParams,
             initialFilter: 'club',
             source: 'home',
+          });
+        });
+        return;
+      case TutorialIds.EVENT_WIZARD_TYPE:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.EventStack, {
+            params: tutorialParams,
+            screen: RouteNames.EventWizardType,
           });
         });
         return;
@@ -644,6 +614,39 @@ function HomeHubContent({ auth, navigation, route }) {
           });
         }
         return;
+      case TutorialIds.HISTORY_WIZARD:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.ProfileStack, {
+            params: { ...tutorialParams, resetContext: true, returnRoute: RouteNames.HomeTab },
+            screen: RouteNames.HistoryWizardClub,
+          });
+        });
+        return;
+      case TutorialIds.MESSAGING:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.Chat });
+        });
+        return;
+      case TutorialIds.MY_TEAMS:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.MyTeamList });
+        });
+        return;
+      case TutorialIds.PLANNING:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.MyEventList });
+        });
+        return;
+      case TutorialIds.PROFILE_EDIT:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.ProfileStack, { params: tutorialParams, screen: RouteNames.ProfileEdit });
+        });
+        return;
+      case TutorialIds.PROFILE_MAIN:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.ProfileStack, { params: tutorialParams, screen: RouteNames.Profile });
+        });
+        return;
       case TutorialIds.REQUESTS_DASHBOARD:
         navigateAfterClosingModals(() => {
           navigateToRequestsHub(navigation, {
@@ -653,44 +656,42 @@ function HomeHubContent({ auth, navigation, route }) {
           });
         });
         return;
-      case TutorialIds.PROFILE_MAIN:
+      case TutorialIds.SEARCH_CLUBS:
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ProfileStack, { params: tutorialParams, screen: RouteNames.Profile });
+          navigation.navigate(RouteNames.SearchClubs, tutorialParams);
         });
         return;
-      case TutorialIds.PROFILE_EDIT:
+      case TutorialIds.SEARCH_EVENTS:
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ProfileStack, { params: tutorialParams, screen: RouteNames.ProfileEdit });
+          navigation.navigate(RouteNames.SearchEvents, tutorialParams);
         });
         return;
-      case TutorialIds.HISTORY_WIZARD:
+      case TutorialIds.SEARCH_RECRUITMENT:
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ProfileStack, {
-            params: { ...tutorialParams, resetContext: true, returnRoute: RouteNames.HomeTab },
-            screen: RouteNames.HistoryWizardClub,
+          navigation.navigate(RouteNames.SearchRecruitment, {
+            ...tutorialParams,
+            initialRecruitmentTab: 'annonces',
           });
         });
         return;
-      case TutorialIds.PLANNING:
+      case TutorialIds.SEARCH_RESERVATIONS:
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.MyEventList });
+          navigation.navigate(RouteNames.SearchReservations, tutorialParams);
         });
         return;
-      case TutorialIds.MY_TEAMS:
+      case TutorialIds.TEAM_MEMBERSHIP_REQUESTS:
+        if (!trainedTeamIds.length) {
+          Alert.alert(
+            t('homeHub.alerts.noTrainedTeams.title', 'Aucune equipe disponible'),
+            t('homeHub.alerts.noTrainedTeams.description', 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.'),
+          );
+          return;
+        }
         navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.MyTeamList });
-        });
-        return;
-      case TutorialIds.MESSAGING:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.Chat });
-        });
-        return;
-      case TutorialIds.ACCOUNT_SWITCHER_MODAL:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ProfileStack, {
-            params: { ...tutorialParams, openAccountModal: true },
-            screen: RouteNames.Profile,
+          navigateToRequestsHub(navigation, {
+            ...tutorialParams,
+            initialFilter: 'team',
+            source: 'home',
           });
         });
         return;
@@ -701,9 +702,8 @@ function HomeHubContent({ auth, navigation, route }) {
             screen: RouteNames.Profile,
           });
         });
-        return;
+
       default:
-        return;
     }
   }, [clubId, cmId, navigateAfterClosingModals, navigation, t, trainedTeamIds]);
 
@@ -1242,7 +1242,9 @@ function HomeHubContent({ auth, navigation, route }) {
           nextLabel={!hasManageSection ? scrollDownLabel : undefined}
           onNext={!hasManageSection ? scrollToSearchSection : undefined}
           order={1}
-          spotlight={{ borderRadius: 14, overlayOpacity: 0.42, paddingX: 6, paddingY: 4 }}
+          spotlight={{
+            borderRadius: 14, overlayOpacity: 0.42, paddingX: 6, paddingY: 4,
+          }}
           style={{ alignSelf: 'center' }}
           title={t('homeHubTutorial.steps.header.title', 'Accueil FoundClub')}
         >
@@ -1293,7 +1295,9 @@ function HomeHubContent({ auth, navigation, route }) {
                 <TouchableOpacity
                   key={option.id}
                   onPress={() => navigateToTutorial(option.id)}
-                  style={[ApplicationStyle.borderRadius12, ApplicationStyle.borderWidth1, { backgroundColor: 'rgba(23,56,68,0.94)', borderColor: `${Colors.primary500}66`, paddingHorizontal: 14, paddingVertical: 12 }]}
+                  style={[ApplicationStyle.borderRadius12, ApplicationStyle.borderWidth1, {
+                    backgroundColor: 'rgba(23,56,68,0.94)', borderColor: `${Colors.primary500}66`, paddingHorizontal: 14, paddingVertical: 12,
+                  }]}
                 >
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{option.label}</Text>
                 </TouchableOpacity>
@@ -1380,6 +1384,12 @@ function HomeHubContent({ auth, navigation, route }) {
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
+ */
 function HomeHub({ navigation, route }) {
   const auth = useAuth();
   const userId = auth?.userData?.documentId;

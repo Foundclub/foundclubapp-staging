@@ -9,6 +9,7 @@ const activitySchema = Joi.object({
 
 /**
  * Get all activities
+ * @param params
  * @returns {Promise<Activity[]>}
  */
 export const getActivities = async (params = {}) => {

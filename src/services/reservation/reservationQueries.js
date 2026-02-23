@@ -12,8 +12,8 @@ import {
  *   pageSize?: number;
  *   q?: string;
  *   type?: string;
-  *   reservationMode?: string;
-  *   club?: string;
+ *   reservationMode?: string;
+ *   club?: string;
  *   activity?: string;
  *   geohash?: string;
  *   maxPricePerPerson?: number;
@@ -21,6 +21,7 @@ import {
  *   startDateAfter?: string;
  *   startDateBefore?: string;
  * }} filters
+ * @param options
  * @returns {import('@tanstack/react-query').UseInfiniteQueryResult}
  */
 export const useGetReservations = (filters = {}, options = {}) => useInfiniteQuery({
@@ -40,14 +41,14 @@ export const useGetReservations = (filters = {}, options = {}) => useInfiniteQue
 /**
  * Hook to get featured reservations
  * Returns featured items if available, otherwise returns latest reservations chronologically
- * @param {number} [limit=10] - Maximum number of items to return
+ * @param {number} [limit] - Maximum number of items to return
  * @returns {import('@tanstack/react-query').UseQueryResult}
  */
 export const useGetFeaturedReservations = (limit = 10) => useQuery({
   queryFn: () => getFeaturedReservations(limit),
   queryKey: ['featured-reservations', limit],
-  retry: false,  // Pas de retry (le service gère déjà le fallback)
-  staleTime: 5 * 60 * 1000,  // Cache 5 minutes (réduire les appels)
-  refetchOnMount: false,  // Ne pas refetch à chaque mount
-  refetchOnWindowFocus: false,  // Éviter les refetch intempestifs
+  refetchOnMount: false, // Ne pas refetch à chaque mount
+  refetchOnWindowFocus: false, // Éviter les refetch intempestifs
+  retry: false, // Pas de retry (le service gère déjà le fallback)
+  staleTime: 5 * 60 * 1000, // Cache 5 minutes (réduire les appels)
 });

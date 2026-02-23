@@ -1,31 +1,32 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  StyleSheet,
   ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
+
 import { useGetLevels } from '@/services/level/levelQueries';
+import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 // Position options by sport
 const POSITIONS_BY_SPORT = {
-  Football: ['Gardien', 'Défenseur', 'Milieu', 'Attaquant'],
   Basketball: ['Meneur', 'Arrière', 'Ailier', 'Ailier fort', 'Pivot'],
+  Football: ['Gardien', 'Défenseur', 'Milieu', 'Attaquant'],
   Handball: ['Gardien', 'Arrière', 'Ailier', 'Demi-centre', 'Pivot'],
   Volleyball: ['Passeur', 'Central', 'Réceptionneur-Attaquant', 'Pointu', 'Libéro'],
 };
 
 // Validation mode options
 const VALIDATION_MODES = [
-  { value: 'auto', label: 'Automatique' },
-  { value: 'manual', label: 'Manuelle' },
+  { label: 'Automatique', value: 'auto' },
+  { label: 'Manuelle', value: 'manual' },
 ];
 
 /**
@@ -43,16 +44,20 @@ const VALIDATION_MODES = [
 
 /**
  * CreateAdModal - Modal for coaches to create recruitment ads
- * @param {Object} props
+ * @param {object} props
  * @param {boolean} props.visible
  * @param {Function} props.onClose
  * @param {Function} props.onSuccess
  * @param {TeamLite | null} props.team
  * @param {EventLite | null} [props.event]
  */
-const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
-  const { Colors, Fonts, Spaces, Alignments, Images } = useTheme();
-  
+function CreateAdModal({
+  event = null, onClose, onSuccess, team, visible,
+}) {
+  const {
+    Alignments, Colors, Fonts, Images, Spaces,
+  } = useTheme();
+
   // Form state
   const [selectedPosition, setSelectedPosition] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
@@ -66,8 +71,8 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
   const levelOptions = useMemo(() => {
     if (!Array.isArray(levelsData)) return [];
     return levelsData.map((/** @type {any} */ level) => ({
-      value: level.documentId || level.id?.toString(),
       label: level.name || `Level ${level.id}`,
+      value: level.documentId || level.id?.toString(),
     }));
   }, [levelsData]);
 
@@ -94,8 +99,8 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
     try {
       const teamId = team.documentId || '';
       await createRecruitmentAd({
-        team: teamId,
         position: selectedPosition,
+        team: teamId,
         ...(selectedLevel ? { minLevel: selectedLevel } : {}),
         quantity,
         validationMode,
@@ -107,7 +112,7 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
       setSelectedLevel('');
       setQuantity(1);
       setValidationMode('auto');
-      
+
       onSuccess?.();
     } catch (err) {
       const typedError = /** @type {any} */ (err);
@@ -133,10 +138,10 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
 
   return (
     <Modal
-      visible={visible}
       animationType="fade"
-      transparent={true}
       onRequestClose={handleClose}
+      transparent
+      visible={visible}
     >
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: Colors.neutral900 }]}>
@@ -150,9 +155,9 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
+          <ScrollView
             contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
             {/* No Team Warning */}
             {!team && (
@@ -160,7 +165,7 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                 <Text style={[Fonts.p2Bold, { color: '#F97316', textAlign: 'center' }]}>
                   ⚠️ Aucune équipe
                 </Text>
-                <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center', marginTop: 8 }]}>
+                <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
                   Vous devez être associé à une équipe pour créer une annonce de recrutement.
                 </Text>
               </View>
@@ -168,9 +173,11 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
 
             {/* Team Info */}
             {team && (
-              <View style={[styles.infoBox, { backgroundColor: Colors.primary500 + '20', borderColor: Colors.primary500 }]}>
+              <View style={[styles.infoBox, { backgroundColor: `${Colors.primary500}20`, borderColor: Colors.primary500 }]}>
                 <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                  📋 Équipe: {team.name || 'Non spécifié'}
+                  📋 Équipe:
+                  {' '}
+                  {team.name || 'Non spécifié'}
                 </Text>
               </View>
             )}
@@ -191,19 +198,20 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                 {positions.map((/** @type {string} */ pos) => (
                   <TouchableOpacity
                     key={pos}
+                    onPress={() => setSelectedPosition(pos)}
                     style={[
                       styles.optionButton,
-                      { 
+                      {
                         backgroundColor: selectedPosition === pos ? Colors.primary500 : Colors.neutral800,
                         borderColor: selectedPosition === pos ? Colors.primary500 : Colors.neutral700,
-                      }
+                      },
                     ]}
-                    onPress={() => setSelectedPosition(pos)}
                   >
                     <Text style={[
                       Fonts.p3,
-                      { color: selectedPosition === pos ? Colors.neutral900 : Colors.neutral00 }
-                    ]}>
+                      { color: selectedPosition === pos ? Colors.neutral900 : Colors.neutral00 },
+                    ]}
+                    >
                       {pos}
                     </Text>
                   </TouchableOpacity>
@@ -219,38 +227,40 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.optionsRow}>
                   <TouchableOpacity
+                    onPress={() => setSelectedLevel('')}
                     style={[
                       styles.optionButton,
-                      { 
+                      {
                         backgroundColor: !selectedLevel ? Colors.primary500 : Colors.neutral800,
                         borderColor: !selectedLevel ? Colors.primary500 : Colors.neutral700,
-                      }
+                      },
                     ]}
-                    onPress={() => setSelectedLevel('')}
                   >
                     <Text style={[
                       Fonts.p3,
-                      { color: !selectedLevel ? Colors.neutral900 : Colors.neutral00 }
-                    ]}>
+                      { color: !selectedLevel ? Colors.neutral900 : Colors.neutral00 },
+                    ]}
+                    >
                       Tous
                     </Text>
                   </TouchableOpacity>
                   {levelOptions.map((/** @type {{ value: string; label: string }} */ level) => (
                     <TouchableOpacity
                       key={level.value}
+                      onPress={() => setSelectedLevel(level.value)}
                       style={[
                         styles.optionButton,
-                        { 
+                        {
                           backgroundColor: selectedLevel === level.value ? Colors.primary500 : Colors.neutral800,
                           borderColor: selectedLevel === level.value ? Colors.primary500 : Colors.neutral700,
-                        }
+                        },
                       ]}
-                      onPress={() => setSelectedLevel(level.value)}
                     >
                       <Text style={[
                         Fonts.p3,
-                        { color: selectedLevel === level.value ? Colors.neutral900 : Colors.neutral00 }
-                      ]}>
+                        { color: selectedLevel === level.value ? Colors.neutral900 : Colors.neutral00 },
+                      ]}
+                      >
                         {level.label}
                       </Text>
                     </TouchableOpacity>
@@ -266,8 +276,8 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
               </Text>
               <View style={styles.quantityRow}>
                 <TouchableOpacity
-                  style={[styles.quantityButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
                   onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  style={[styles.quantityButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
                 >
                   <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>−</Text>
                 </TouchableOpacity>
@@ -275,8 +285,8 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                   {quantity}
                 </Text>
                 <TouchableOpacity
-                  style={[styles.quantityButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
                   onPress={() => setQuantity(Math.min(10, quantity + 1))}
+                  style={[styles.quantityButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
                 >
                   <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>+</Text>
                 </TouchableOpacity>
@@ -292,20 +302,21 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
                 {VALIDATION_MODES.map((mode) => (
                   <TouchableOpacity
                     key={mode.value}
+                    onPress={() => setValidationMode(mode.value)}
                     style={[
                       styles.optionButton,
                       styles.wideOption,
-                      { 
+                      {
                         backgroundColor: validationMode === mode.value ? Colors.primary500 : Colors.neutral800,
                         borderColor: validationMode === mode.value ? Colors.primary500 : Colors.neutral700,
-                      }
+                      },
                     ]}
-                    onPress={() => setValidationMode(mode.value)}
                   >
                     <Text style={[
                       Fonts.p3,
-                      { color: validationMode === mode.value ? Colors.neutral900 : Colors.neutral00 }
-                    ]}>
+                      { color: validationMode === mode.value ? Colors.neutral900 : Colors.neutral00 },
+                    ]}
+                    >
                       {mode.label}
                     </Text>
                   </TouchableOpacity>
@@ -317,23 +328,23 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
           {/* Footer Buttons */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
-              onPress={handleClose}
               disabled={loading}
+              onPress={handleClose}
+              style={[styles.button, styles.cancelButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
             >
               <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Annuler</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              disabled={loading || !team}
+              onPress={handleSubmit}
               style={[
-                styles.button, 
-                styles.submitButton, 
-                { 
+                styles.button,
+                styles.submitButton,
+                {
                   backgroundColor: team ? Colors.primary500 : Colors.neutral700,
                   opacity: loading ? 0.7 : 1,
-                }
+                },
               ]}
-              onPress={handleSubmit}
-              disabled={loading || !team}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.neutral900} size="small" />
@@ -346,58 +357,59 @@ const CreateAdModal = ({ visible, onClose, onSuccess, team, event = null }) => {
       </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
+  button: {
     alignItems: 'center',
-    padding: 20,
-  },
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
-    borderRadius: 24,
-    padding: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  warningBox: {
-    padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
+    flex: 1,
+    height: 50,
+    justifyContent: 'center',
   },
-  infoBox: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 16,
+  cancelButton: {},
+  closeButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  container: {
+    borderRadius: 24,
+    maxHeight: '90%',
+    maxWidth: 400,
+    padding: 24,
+    width: '100%',
   },
   errorBox: {
-    padding: 12,
     borderRadius: 10,
     borderWidth: 1,
     marginBottom: 16,
+    padding: 12,
   },
-  section: {
-    marginBottom: 24,
+  footer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  infoBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 12,
+  },
+  optionButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   optionsGrid: {
     flexDirection: 'row',
@@ -408,46 +420,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  wideOption: {
+  overlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     flex: 1,
-    alignItems: 'center',
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    padding: 20,
   },
   quantityButton: {
-    width: 48,
-    height: 48,
+    alignItems: 'center',
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
   },
-  footer: {
+  quantityRow: {
+    alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
-  },
-  button: {
-    flex: 1,
-    height: 50,
-    borderRadius: 12,
+    gap: 20,
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
   },
-  cancelButton: {},
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
   submitButton: {
     borderWidth: 0,
+  },
+  warningBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 16,
+  },
+  wideOption: {
+    alignItems: 'center',
+    flex: 1,
   },
 });
 

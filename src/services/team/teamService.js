@@ -90,11 +90,11 @@ export const getTeams = async (params = {}) => {
       club: {
         populate: {
           logo: true,
-        sponsor: {
-          populate: {
-            logo: true,
+          sponsor: {
+            populate: {
+              logo: true,
+            },
           },
-        },
         },
       },
       level: true,
@@ -160,13 +160,13 @@ export const getTeamById = async (teamId) => {
         section: {
           populate: '*',
         },
-        trainers: {
-          populate: '*',
-        },
         slots: {
           populate: {
             participants: true,
-          }
+          },
+        },
+        trainers: {
+          populate: '*',
         },
       },
     },
@@ -188,12 +188,12 @@ export const getTeamById = async (teamId) => {
 };
 
 /**
- * @typedef {Object} StrapiRelationConnect
+ * @typedef {object} StrapiRelationConnect
  * @property {{ documentId: string }[]} connect - Array of document IDs to connect
  */
 
 /**
- * @typedef {Object} TeamPayload
+ * @typedef {object} TeamPayload
  * @property {string} name - Team name (required)
  * @property {string[]|StrapiRelationConnect} [activities] - Activity document IDs (array or connect format)
  * @property {string|StrapiRelationConnect} [level] - Level document ID (string or connect format)
@@ -201,7 +201,7 @@ export const getTeamById = async (teamId) => {
  * @property {string|StrapiRelationConnect} [category] - Category document ID
  * @property {string} [club] - Club document ID
  * @property {string} [city] - City name
- * @property {Object} [address] - Address object
+ * @property {object} [address] - Address object
  * @property {boolean} [isLeague] - Whether this is a League team
  * @property {string[]|StrapiRelationConnect} [trainers] - Trainer IDs (array or connect format)
  * @property {string[]|StrapiRelationConnect} [players] - Player IDs (array or connect format)
@@ -214,31 +214,31 @@ export const getTeamById = async (teamId) => {
 /**
  * Create a new team
  * @param {TeamPayload} teamData - The team data to create
- * @returns {Promise<{data: Object}>} The created team data
+ * @returns {Promise<{data: object}>} The created team data
  */
 export const createTeam = async (teamData) => {
   // Check if we need to upload files (logo or cover)
   const hasFiles = teamData.logo || teamData.cover;
 
   let response;
-  
+
   if (hasFiles) {
     const formData = new FormData();
-    
+
     // Separate files from data
-    const { logo, cover, ...data } = teamData;
-    
+    const { cover, logo, ...data } = teamData;
+
     // Append data as JSON string
     formData.append('data', JSON.stringify(data));
-    
+
     // Append files if they exist
     if (logo) {
       const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
       // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.logo', {
-        uri: logoFile.uri || '',
         name: logoFile.filename || 'logo.jpg',
         type: logoFile.mime || 'image/jpeg',
+        uri: logoFile.uri || '',
       });
     }
 
@@ -246,12 +246,12 @@ export const createTeam = async (teamData) => {
       const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
       // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.cover', {
-        uri: coverFile.uri || '',
         name: coverFile.filename || 'cover.jpg',
         type: coverFile.mime || 'image/jpeg',
+        uri: coverFile.uri || '',
       });
     }
-    
+
     response = await client.post('/teams', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -289,29 +289,31 @@ export const createTeam = async (teamData) => {
  */
 export const updateTeam = async (teamData) => {
   const id = teamData.documentId;
-  
+
   // Check if we need to upload files (logo or cover)
   const hasFiles = teamData.logo || teamData.cover;
 
   let response;
-  
+
   if (hasFiles) {
     const formData = new FormData();
-    
+
     // Separate files and documentId from data
-    const { logo, cover, documentId, ...data } = teamData;
-    
+    const {
+      cover, documentId, logo, ...data
+    } = teamData;
+
     // Append data as JSON string
     formData.append('data', JSON.stringify(data));
-    
+
     // Append files if they exist
     if (logo) {
       const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
       // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.logo', {
-        uri: logoFile.uri || '',
         name: logoFile.filename || 'logo.jpg',
         type: logoFile.mime || 'image/jpeg',
+        uri: logoFile.uri || '',
       });
     }
 
@@ -319,12 +321,12 @@ export const updateTeam = async (teamData) => {
       const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
       // @ts-expect-error - React Native FormData accepts file descriptor objects.
       formData.append('files.cover', {
-        uri: coverFile.uri || '',
         name: coverFile.filename || 'cover.jpg',
         type: coverFile.mime || 'image/jpeg',
+        uri: coverFile.uri || '',
       });
     }
-    
+
     response = await client.put(`/teams/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -334,7 +336,7 @@ export const updateTeam = async (teamData) => {
     // Standard JSON request
     const dataToSend = { ...teamData };
     delete dataToSend.documentId;
-    
+
     response = await client.put(`/teams/${id}`, {
       data: dataToSend,
     });
@@ -441,9 +443,7 @@ export const previewScraping = async (url) => {
  * @param {string} teamId
  * @returns {Promise<object>}
  */
-export const refreshTeamScraping = async (teamId) => {
-  return refreshExternalCompetition(teamId);
-};
+export const refreshTeamScraping = async (teamId) => refreshExternalCompetition(teamId);
 
 /**
  * Set FFBB URL for a team and get list of teams in poule
@@ -476,13 +476,13 @@ export const selectTeamFFBBTeam = async (teamId, ffbbTeamId, ffbbTeamName) => {
  * @param {{teamId: string, problemType: string, description?: string}} data
  * @returns {Promise<{success: boolean}>}
  */
-export const createFFBBErrorReport = async ({ teamId, problemType, description }) => {
+export const createFFBBErrorReport = async ({ description, problemType, teamId }) => {
   const response = await client.post('/ffbb-error-reports', {
     data: {
-      team: teamId,
+      description: description || '',
       problemType,
-      description: description || ''
-    }
+      team: teamId,
+    },
   });
   return response.data;
 };

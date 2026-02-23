@@ -7,8 +7,8 @@ import {
   Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import useAuth from '@/domains/auth/useAuth';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
@@ -16,20 +16,21 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
-import { updateClub, claimClub } from '@/services/club/clubService';
+import { claimClub, updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ClubPlanning from './ClubPlanningScreen';
-import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 
 /**
  * Club details screen component
@@ -112,6 +113,9 @@ function ClubDetails({ navigation, route }) {
 
   const createClubMembershipRequestMutation = useMutation({
     mutationFn: createClubMembershipRequest,
+    onError: () => {
+      setJoinRequestPending(false);
+    },
     onSuccess: () => {
       setJoinRequestPending(true);
       if (fromOnboardingAffiliation) {
@@ -136,13 +140,17 @@ function ClubDetails({ navigation, route }) {
         ],
       );
     },
-    onError: () => {
-      setJoinRequestPending(false);
-    },
   });
 
   const claimClubMutation = useMutation({
     mutationFn: claimClub,
+    onError: (err) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        err.message || t('clubDetails.alerts.claimClub.error', 'Une erreur est survenue.'),
+        [{ text: 'OK' }],
+      );
+    },
     onSuccess: () => {
       if (fromOnboardingAffiliation) {
         refetch();
@@ -163,36 +171,29 @@ function ClubDetails({ navigation, route }) {
             },
             text: t('common.ok', 'OK'),
           },
-        ]
+        ],
       );
     },
-    onError: (err) => {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        err.message || t('clubDetails.alerts.claimClub.error', 'Une erreur est survenue.'),
-        [{ text: 'OK' }]
-      );
-    }
   });
 
   const handleClaimClub = () => {
     Alert.alert(
       t('clubDetails.alerts.claimClub.confirmTitle', "C'est votre club ?"),
-      t('clubDetails.alerts.claimClub.confirmDescription', "Voulez-vous revendiquer la gestion de ce club ? Une vérification sera effectuée."),
+      t('clubDetails.alerts.claimClub.confirmDescription', 'Voulez-vous revendiquer la gestion de ce club ? Une vérification sera effectuée.'),
       [
         {
-          text: t('common.cancel', 'Annuler'),
           style: 'cancel',
+          text: t('common.cancel', 'Annuler'),
         },
         {
-          text: t('common.confirm', 'Confirmer'),
           onPress: () => {
             if (clubId) {
               claimClubMutation.mutate(clubId);
             }
           },
+          text: t('common.confirm', 'Confirmer'),
         },
-      ]
+      ],
     );
   };
 
@@ -329,8 +330,8 @@ function ClubDetails({ navigation, route }) {
         navigation.navigate(RouteNames.ProfileStack);
       } else {
         navigation.navigate(RouteNames.ProfileStack, {
-          screen: RouteNames.UserDetails,
           params: { userId: user.documentId },
+          screen: RouteNames.UserDetails,
         });
       }
     }
@@ -343,8 +344,8 @@ function ClubDetails({ navigation, route }) {
   const handleTeamPress = (team) => {
     if (team?.documentId) {
       navigation.navigate(RouteNames.TeamStack, {
-        screen: RouteNames.TeamDetails,
         params: { teamId: team.documentId },
+        screen: RouteNames.TeamDetails,
       });
     }
   };
@@ -367,7 +368,7 @@ function ClubDetails({ navigation, route }) {
     if (userClubId === clubId) return true;
 
     // Check team membership
-    return userData.teams?.some(t => {
+    return userData.teams?.some((t) => {
       const teamClubId = t.club?.documentId || t.club?.id;
       return teamClubId === clubId;
     });
@@ -452,14 +453,14 @@ function ClubDetails({ navigation, route }) {
                   Alignments.row,
                   Alignments.alignCenter,
                   Spaces.gap[8],
-                  { right: 16, top: 16, zIndex: 10 }
+                  { right: 16, top: 16, zIndex: 10 },
                 ]}
               >
                 <Image
                   source={Images.edit}
                   style={[
                     ApplicationStyle.icon20,
-                    ApplicationStyle.tintColor.primary500
+                    ApplicationStyle.tintColor.primary500,
                   ]}
                 />
                 <Text style={[Fonts.p1Bold, Fonts.primary500]}>
@@ -470,6 +471,7 @@ function ClubDetails({ navigation, route }) {
             <View style={{ marginTop: -24, zIndex: 1 }}>
               {club?.logo?.url ? (
                 <ProfileAvatar
+                  imageStyle={{ borderRadius: 80 }}
                   imageUrl={club.logo.url}
                   size={80}
                   style={[
@@ -477,7 +479,6 @@ function ClubDetails({ navigation, route }) {
                     ApplicationStyle.borderColor.neutral00,
                     { borderRadius: 80 },
                   ]}
-                  imageStyle={{ borderRadius: 80 }}
                 />
               ) : (
                 <TeamShield
@@ -538,9 +539,9 @@ function ClubDetails({ navigation, route }) {
           {/* Tabs */}
           <View style={[Alignments.alignCenter]}>
             <SegmentedControl
+              onChange={setSelectedTab}
               options={tabs}
               value={selectedTab}
-              onChange={setSelectedTab}
             />
           </View>
 
@@ -552,13 +553,13 @@ function ClubDetails({ navigation, route }) {
               {canEdit ? (
                 <View style={[Spaces.gap[16]]}>
                   <Button
+                    icon="plus"
                     onPress={() => navigation.navigate(RouteNames.FacilityList, {
                       clubId,
                       cmId: club?.parentMultisport?.documentId,
                     })}
                     title="Gérer les installations"
                     variant="Secondary"
-                    icon="plus"
                   />
 
                 </View>
@@ -585,7 +586,7 @@ function ClubDetails({ navigation, route }) {
               {(club?.sponsor?.length || canEdit) && (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
                     {canEdit ? (
@@ -629,12 +630,12 @@ function ClubDetails({ navigation, route }) {
                           ) : null
                         }
                         <SponsorLogoTile
+                          height={55}
                           imageUrl={sponsor?.logo?.url}
                           link={sponsor.link}
                           title={sponsor.title}
-                          width={110}
-                          height={55}
                           titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
+                          width={110}
                         />
                       </View>
                     ))}
@@ -646,7 +647,7 @@ function ClubDetails({ navigation, route }) {
               {club?.teams?.length ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
                   </View>
@@ -689,7 +690,7 @@ function ClubDetails({ navigation, route }) {
               {coachs?.length || canEdit ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
                     {canEdit ? (
@@ -769,7 +770,7 @@ function ClubDetails({ navigation, route }) {
               {owners?.length ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
-                  Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
                   </View>
@@ -886,7 +887,7 @@ function ClubDetails({ navigation, route }) {
           })()
         ) : null
       }
-    </ScreenContainer >
+    </ScreenContainer>
   );
 }
 

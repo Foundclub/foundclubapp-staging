@@ -1,57 +1,67 @@
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
-import useTheme from '@/theme/themeContext';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import Button from '@/components/atoms/button/Button';
+import { Text, View } from 'react-native';
 
-const SquadLevelStep = ({ data, updateData, onNext, onPrev }) => {
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onNext
+ * @param root0.onPrev
+ * @param root0.updateData
+ */
+function SquadLevelStep({
+  data, onNext, onPrev, updateData,
+}) {
   const { Colors, Fonts } = useTheme();
 
   const levels = [
-      { label: 'Débutant (Amateur)', value: 'beginner' },
-      { label: 'Intermédiaire (Habitué)', value: 'intermediate' },
-      { label: 'Confirmé (Compétition)', value: 'advanced' },
-      { label: 'Expert (Semi-Pro)', value: 'expert' }
+    { label: 'Débutant (Amateur)', value: 'beginner' },
+    { label: 'Intermédiaire (Habitué)', value: 'intermediate' },
+    { label: 'Confirmé (Compétition)', value: 'advanced' },
+    { label: 'Expert (Semi-Pro)', value: 'expert' },
   ];
 
-  const isValid = useMemo(() => {
-    return !!data.level;
-  }, [data.level]);
+  const isValid = useMemo(() => !!data.level, [data.level]);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 16 }]}>
-             Quel est votre niveau ?
-          </Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center', marginBottom: 40 }]}>
-             Cela nous aidera à vous placer dans la bonne division intiale.
-          </Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
+        <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 16, textAlign: 'center' }]}>
+          Quel est votre niveau ?
+        </Text>
+        <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 40, textAlign: 'center' }]}>
+          Cela nous aidera à vous placer dans la bonne division intiale.
+        </Text>
 
-          <AutocompleteSelect
-            placeholder="Sélectionner un niveau"
-            options={levels}
-            value={data.level?.label}
-            setValue={(item) => updateData('level', item)}
-            isSearchable={false}
-          />
-       </View>
+        <AutocompleteSelect
+          isSearchable={false}
+          options={levels}
+          placeholder="Sélectionner un niveau"
+          setValue={(item) => updateData('level', item)}
+          value={data.level?.label}
+        />
+      </View>
 
-      <View style={{ marginBottom: 20, gap: 10 }}>
+      <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
-            title="Continuer"
-            onPress={onNext}
-            disabled={!isValid}
-            variant="Primary"
+          disabled={!isValid}
+          onPress={onNext}
+          title="Continuer"
+          variant="Primary"
         />
         <Button
-            title="Retour"
-            onPress={onPrev}
-            variant="Secondary"
+          onPress={onPrev}
+          title="Retour"
+          variant="Secondary"
         />
       </View>
     </View>
   );
-};
+}
 
 export default SquadLevelStep;

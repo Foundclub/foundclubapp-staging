@@ -21,13 +21,13 @@ export const getPendingAffiliationHelpRequests = async (params = {}) => {
   const response = await client.get('/club-requests', {
     params: {
       filters: {
-        requestKind: {
-          $in: ['club_not_found', 'team_not_found'],
-        },
         $or: [
           { state: 'En attente' },
           { state: 'pending' },
         ],
+        requestKind: {
+          $in: ['club_not_found', 'team_not_found'],
+        },
       },
       pagination: {
         page: 1,

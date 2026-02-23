@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -47,7 +49,9 @@ function UserCategory({ navigation }) {
   const [selectedCategories, setSelectedCategories] = useState(/** @type {string[]} */ ([]));
 
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
@@ -104,10 +108,10 @@ function UserCategory({ navigation }) {
           </Text>
         </View>
 
-        <ScrollView 
-          style={[Alignments.fill]} 
+        <ScrollView
           contentContainerStyle={[Spaces.gap[10]]}
           showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
         >
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {CATEGORIES.map((category) => {
@@ -119,12 +123,12 @@ function UserCategory({ navigation }) {
                   style={[
                     Spaces.padding[12],
                     {
+                      alignItems: 'center',
+                      backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                      borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
                       borderRadius: 12,
                       borderWidth: 2,
-                      borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                      backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
                       minWidth: 70,
-                      alignItems: 'center',
                     },
                   ]}
                 >
@@ -139,7 +143,7 @@ function UserCategory({ navigation }) {
       </View>
 
       <View style={[Spaces.gap[16], { paddingTop: 16 }]}>
-  <Button
+        <Button
           disabled={selectedCategories.length === 0}
           isLoading={updateUserMutation.isPending}
           onPress={handleNext}

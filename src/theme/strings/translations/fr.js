@@ -1,14 +1,10 @@
 export default {
   addCoach: {
     actions: {
-      save: 'Ajouter',
       invite: 'Inviter',
+      save: 'Ajouter',
     },
     alerts: {
-      success: {
-        title: 'Ajout réussi !',
-        description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à votre club.",
-      },
       alreadyExist: {
         actions: {
           addToClub: 'Ajouter au club',
@@ -20,6 +16,10 @@ export default {
       alreadyInClub: {
         description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
         title: "Impossible d'ajouter cet·te entraîneur·e à l'équipe",
+      },
+      success: {
+        description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à votre club.",
+        title: 'Ajout réussi !',
       },
     },
     fields: {
@@ -185,11 +185,10 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
     generic: 'Une erreur est survenue. Veuillez réessayer plus tard.',
-    error: 'Erreur',
-    unknown: 'Une erreur inconnue est survenue.',
     HAD_PENDING_MEMBERSHIP_REQUEST_POLICY_ERROR: "Vous avez déjà une demande d'adhésion en attente.",
     MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et dirigeant·e·s du club.',
     MANAGER_WITH_CLUB_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s avec club.',
@@ -204,18 +203,39 @@ export default {
     UNIQUE_CLUB_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions de club.',
     UNIQUE_TEAM_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions d\'équipe.',
     UNIQUE_WHISPER_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions privées.',
+    unknown: 'Une erreur inconnue est survenue.',
     USER_NOT_FOUND_POLICY_ERROR: 'Violation de la politique concernant les utilisateurs introuvables.',
+  },
+  club: {
+    fields: {
+      address: {
+        label: 'Adresse',
+        placeholder: 'Adresse du club',
+      },
+      email: {
+        label: 'Email',
+        placeholder: 'Email du club',
+      },
+      name: {
+        label: 'Nom',
+        placeholder: 'Nom du club',
+      },
+      phoneNumber: {
+        label: 'Téléphone',
+        placeholder: 'Téléphone du club',
+      },
+    },
   },
   clubDetails: {
     actions: {
+      claimClub: "C'est mon club",
       contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
       editInfo: 'Modifier',
       join: "C'est mon club !",
+      manageJoinRequests: 'Voir les demandes d\'affiliation',
       requestJoin: 'Demander à rejoindre ce club',
       requestPending: 'Demande en attente',
-      claimClub: "C'est mon club",
-      manageJoinRequests: 'Voir les demandes d\'affiliation',
     },
     alerts: {
       deleteSponsor: {
@@ -264,6 +284,9 @@ export default {
       sponsors: 'Nos partenaires',
       teams: 'Nos équipes',
     },
+  },
+  clubEdit: {
+    title: 'Modifier le club',
   },
   clubFilters: {
     actions: {
@@ -327,43 +350,16 @@ export default {
     },
     back: 'Retour',
     close: 'Fermer',
-    ignore: 'Ignorer',
-    next: 'Suivant',
-    previous: 'Precedent',
-    skip: 'Passer',
+    error: 'Erreur',
     finish: 'Terminer',
-    view: 'Voir',
+    ignore: 'Ignorer',
     messages: {
       noData: 'Aucune donnée disponible',
     },
-    error: 'Erreur',
-  },
-  event: {
-    shareInChat: 'Partager dans une conversation',
-    sharedEvent: 'Événement partagé',
-  },
-  club: {
-    fields: {
-      address: {
-        label: 'Adresse',
-        placeholder: 'Adresse du club',
-      },
-      email: {
-        label: 'Email',
-        placeholder: 'Email du club',
-      },
-      name: {
-        label: 'Nom',
-        placeholder: 'Nom du club',
-      },
-      phoneNumber: {
-        label: 'Téléphone',
-        placeholder: 'Téléphone du club',
-      },
-    },
-  },
-  clubEdit: {
-    title: 'Modifier le club',
+    next: 'Suivant',
+    previous: 'Precedent',
+    skip: 'Passer',
+    view: 'Voir',
   },
   conversation: {
     messagePlaceholder: 'Message',
@@ -412,6 +408,10 @@ export default {
     subtitle: 'Une erreur est survenue.',
     title: 'Oups !',
   },
+  event: {
+    sharedEvent: 'Événement partagé',
+    shareInChat: 'Partager dans une conversation',
+  },
   eventDetails: {
     actions: {
       accept: 'Accepter',
@@ -427,6 +427,12 @@ export default {
       description: 'À propos',
       participationRequests: 'Demandes de participation',
       participations: 'Participants',
+    },
+    invitedTeams: {
+      historicalPending: '{{count}} reponse(s) en attente',
+      historicalTitle: 'Historique equipe retiree',
+      homeTeamBadge: 'Equipe organisatrice',
+      invitedTeamBadge: 'Equipe invitee',
     },
     modals: {
       accept: {
@@ -486,12 +492,6 @@ export default {
       notAnswered: 'Sans r\u00e9ponse',
       participating: 'Pr\u00e9sent\u00b7e\u00b7s',
     },
-    invitedTeams: {
-      homeTeamBadge: 'Equipe organisatrice',
-      invitedTeamBadge: 'Equipe invitee',
-      historicalTitle: 'Historique equipe retiree',
-      historicalPending: '{{count}} reponse(s) en attente',
-    },
   },
   eventEdit: {
     actions: {
@@ -518,16 +518,22 @@ export default {
         label: 'Heure de fin',
         placeholder: 'HH:mm',
       },
+      invitedTeams: {
+        label: 'Inviter des équipes',
+        myTeams: 'MES ÉQUIPES',
+        otherTeams: 'AUTRES ÉQUIPES',
+        placeholder: 'Sélectionner des équipes',
+      },
       isRecurrent: {
         label: 'Évènement récurrent',
-      },
-      pricePerPerson: {
-        label: 'Prix par personne (€)',
-        placeholder: 'Ex: 10',
       },
       location: {
         label: 'Lieu',
         placeholder: '2 rue du stade, 69000 Lyon',
+      },
+      pricePerPerson: {
+        label: 'Prix par personne (€)',
+        placeholder: 'Ex: 10',
       },
       recurrenceDay: {
         label: 'Jour de la récurrence',
@@ -562,19 +568,13 @@ export default {
         label: 'Équipe',
         placeholder: 'Sélectionner une équipe',
       },
-      invitedTeams: {
-        label: 'Inviter des équipes',
-        placeholder: 'Sélectionner des équipes',
-        myTeams: 'MES ÉQUIPES',
-        otherTeams: 'AUTRES ÉQUIPES',
+      time: {
+        label: "Horaire de l'évènement",
+        placeholder: 'JJ/MM/AAAA',
       },
       totalPlayers: {
         label: 'Nombre total de joueurs',
         placeholder: 'Ex: 10',
-      },
-      time: {
-        label: "Horaire de l'évènement",
-        placeholder: 'JJ/MM/AAAA',
       },
       type: {
         label: 'Type d\'évènement',
@@ -592,163 +592,6 @@ export default {
     titleEdit: 'Modifier l\'évènement',
   },
 
-  eventWizard: {
-    common: {
-      stepCounter: 'Etape {{current}}/{{total}}',
-    },
-    steps: {
-      description: {
-        label: 'Description',
-        placeholder: "Ajoute des details utiles pour les participants.",
-        subtitle: 'Ajoute un contexte clair pour cet evenement.',
-        title: 'Description',
-      },
-      invites: {
-        myTeams: 'MES EQUIPES',
-        otherTeams: 'AUTRES EQUIPES',
-        subtitle: 'Invite des equipes, ou passe cette etape.',
-        title: 'Invitations',
-      },
-      location: {
-        addInstallation: 'Ajouter une installation',
-        addressMissing: 'Adresse non renseignee',
-        helper: 'Selectionne un lieu du club ou saisis une adresse externe.',
-        installationHelper: 'Choisis une installation existante de ton club.',
-        noInstallations: 'Aucune installation disponible pour ce club.',
-        subtitle: 'Le lieu est obligatoire pour continuer.',
-        title: 'Lieu',
-      },
-      logistics: {
-        isRecurrent: 'Evenement recurrent',
-        recurrenceDays: 'Jours de recurrence',
-        recurrenceInterval: 'Intervalle de recurrence',
-        recurrenceTitle: 'Configuration recurrence',
-        reservationMode: 'Mode de reservation',
-        reservationTitle: 'Parametres reservation',
-        subtitle: "Configure date, horaires et regles d'acces.",
-        title: 'Logistique',
-      },
-      participants: {
-        fixed: 'Capacite fixe',
-        hint: 'Tu pourras encore modifier ces valeurs avant la creation finale.',
-        modeHintFixed: 'Mode capacite fixe: nombre de places limite.',
-        modeHintUnlimited: 'Mode illimite: aucun plafond de participants.',
-        modeLabel: 'Mode de capacite',
-        playersUnit: 'joueurs max',
-        previewCapacity: 'Capacite: {{value}}',
-        previewMode: 'Mode: {{value}}',
-        previewTitle: 'Apercu',
-        previewTotalPlayers: 'Joueurs attendus: {{value}}',
-        quickPresets: 'Valeurs rapides',
-        subtitle: 'Choisis une capacite max, ou laisse l evenement en acces illimite.',
-        summaryTitle: 'Resume',
-        totalPlayersExceedsCapacity: 'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
-        title: 'Participants',
-        unlimited: 'Illimite',
-        unlimitedHint: 'Aucune limite de places',
-        unlimitedLabel: 'Illimite',
-      },
-      validation: {
-        autoDesc: 'Les participants peuvent confirmer automatiquement leur presence.',
-        autoRuleOne: 'Check-in simplifie pour les joueurs',
-        autoRuleTwo: 'Ideal pour les sessions ouvertes',
-        manualDesc: 'Le coach valide manuellement les participants.',
-        manualRuleOne: 'Controle total par le staff',
-        manualRuleTwo: 'Recommande pour groupes fermes',
-        optionLabel: 'Mode {{title}}',
-        previewTitle: 'Mode selectionne',
-        recommended: 'Recommande',
-        selectedHint: 'Mode actuellement selectionne.',
-        selectHint: 'Selectionne ce mode de validation.',
-        subtitle: "Definis comment valider les presences a l'evenement.",
-        title: 'Mode de validation',
-      },
-      recap: {
-        subtitle: 'Verifie les informations avant creation.',
-        title: 'Recapitulatif',
-      },
-      team: {
-        subtitle: "Selectionne l'equipe organisatrice.",
-        title: 'Equipe organisatrice',
-      },
-      type: {
-        subtitle: "Selectionne le type d'evenement.",
-        title: "Type d'evenement",
-      },
-      visibility: {
-        private: 'Prive',
-        privateDesc: "Visible uniquement pour les membres concernes.",
-        public: 'Public',
-        publicDesc: "Visible pour tous les profils qui y ont acces.",
-        subtitle: "Definis qui peut voir l'evenement.",
-        title: 'Visibilite',
-      },
-    },
-    recap: {
-      actions: {
-        create: 'Creer les evenements',
-        createShort: 'Creer',
-        edit: 'Modifier',
-      },
-      completedCount: '{{done}}/5 infos cles completees',
-      dateLabel: 'Date',
-      incomplete: 'A completer',
-      invitesCount: '{{count}} equipe(s) invitee(s)',
-      invitedTeamsTitle: 'Equipes invitees',
-      noDescription: 'Aucune description',
-      notSet: 'Non renseigne',
-      organizationTitle: 'Organisation',
-      participationTitle: 'Participation',
-      pricePerPerson: 'Prix par personne: {{value}}',
-      quickOverviewTitle: 'Vue d ensemble',
-      ready: 'Pret a creer',
-      recurrenceCount: '{{count}} occurrence(s) prevue(s)',
-      reservationMode: 'Mode de reservation: {{value}}',
-      timeLabel: 'Horaire',
-      totalPlayersTitle: 'Joueurs attendus',
-      whenWhereTitle: 'Quand et lieu',
-      capacity: 'Participants max: {{value}}',
-      sections: {
-        description: 'Description',
-        location: 'Lieu',
-        logistics: 'Logistique',
-        participants: 'Participants',
-        reservation: 'Reservation',
-        team: 'Equipe',
-        type: 'Type',
-        validation: 'Validation',
-        visibility: 'Visibilite',
-      },
-      totalPlayers: 'Joueurs attendus: {{value}}',
-      validationMode: 'Validation: {{value}}',
-    },
-    partial: {
-      actions: {
-        keep: 'Conserver les creations',
-        retry: 'Reessayer les echecs',
-        rollback: 'Annuler les creations',
-      },
-      noCreated: "Aucun evenement n'a ete cree.",
-      rollbackPartial: "{{count}} annulation(s) n'ont pas pu etre finalisees.",
-      rollbackSuccess: 'Les evenements crees ont ete annules.',
-      summary: '{{success}} succes / {{failed}} echec(s).',
-      title: 'Creation partielle detectee',
-    },
-    errors: {
-      datePast: "La date ou l'heure de debut doit etre dans le futur.",
-      genericCreate: "Erreur de creation d'evenement.",
-      invalidTimeRange: "L'heure de fin doit etre apres l'heure de debut.",
-      invitesFetch: "Impossible de charger les equipes a inviter.",
-      locationRequired: 'Un lieu est requis.',
-      noOtherTeams: 'Aucune autre equipe disponible a inviter.',
-      noTeams: "Aucune equipe organisatrice disponible.",
-      noTypes: "Aucun type d'evenement disponible.",
-      recurrenceDatesRequired: 'Les dates de recurrence sont obligatoires.',
-      recurrenceDaysRequired: 'Selectionne au moins un jour de recurrence.',
-      recurrenceInvalidRange: 'La date de fin de recurrence doit etre apres la date de debut.',
-      slotConflict: 'Conflit de creneau detecte pour le lieu selectionne.',
-    },
-  },
   eventFilters: {
     actions: {
       apply: 'Appliquer les filtres',
@@ -844,6 +687,163 @@ export default {
     noData: 'Aucun évènement trouvé.',
     title: 'Mes évènements',
   },
+  eventWizard: {
+    common: {
+      stepCounter: 'Etape {{current}}/{{total}}',
+    },
+    errors: {
+      datePast: "La date ou l'heure de debut doit etre dans le futur.",
+      genericCreate: "Erreur de creation d'evenement.",
+      invalidTimeRange: "L'heure de fin doit etre apres l'heure de debut.",
+      invitesFetch: 'Impossible de charger les equipes a inviter.',
+      locationRequired: 'Un lieu est requis.',
+      noOtherTeams: 'Aucune autre equipe disponible a inviter.',
+      noTeams: 'Aucune equipe organisatrice disponible.',
+      noTypes: "Aucun type d'evenement disponible.",
+      recurrenceDatesRequired: 'Les dates de recurrence sont obligatoires.',
+      recurrenceDaysRequired: 'Selectionne au moins un jour de recurrence.',
+      recurrenceInvalidRange: 'La date de fin de recurrence doit etre apres la date de debut.',
+      slotConflict: 'Conflit de creneau detecte pour le lieu selectionne.',
+    },
+    partial: {
+      actions: {
+        keep: 'Conserver les creations',
+        retry: 'Reessayer les echecs',
+        rollback: 'Annuler les creations',
+      },
+      noCreated: "Aucun evenement n'a ete cree.",
+      rollbackPartial: "{{count}} annulation(s) n'ont pas pu etre finalisees.",
+      rollbackSuccess: 'Les evenements crees ont ete annules.',
+      summary: '{{success}} succes / {{failed}} echec(s).',
+      title: 'Creation partielle detectee',
+    },
+    recap: {
+      actions: {
+        create: 'Creer les evenements',
+        createShort: 'Creer',
+        edit: 'Modifier',
+      },
+      capacity: 'Participants max: {{value}}',
+      completedCount: '{{done}}/5 infos cles completees',
+      dateLabel: 'Date',
+      incomplete: 'A completer',
+      invitedTeamsTitle: 'Equipes invitees',
+      invitesCount: '{{count}} equipe(s) invitee(s)',
+      noDescription: 'Aucune description',
+      notSet: 'Non renseigne',
+      organizationTitle: 'Organisation',
+      participationTitle: 'Participation',
+      pricePerPerson: 'Prix par personne: {{value}}',
+      quickOverviewTitle: 'Vue d ensemble',
+      ready: 'Pret a creer',
+      recurrenceCount: '{{count}} occurrence(s) prevue(s)',
+      reservationMode: 'Mode de reservation: {{value}}',
+      sections: {
+        description: 'Description',
+        location: 'Lieu',
+        logistics: 'Logistique',
+        participants: 'Participants',
+        reservation: 'Reservation',
+        team: 'Equipe',
+        type: 'Type',
+        validation: 'Validation',
+        visibility: 'Visibilite',
+      },
+      timeLabel: 'Horaire',
+      totalPlayers: 'Joueurs attendus: {{value}}',
+      totalPlayersTitle: 'Joueurs attendus',
+      validationMode: 'Validation: {{value}}',
+      whenWhereTitle: 'Quand et lieu',
+    },
+    steps: {
+      description: {
+        label: 'Description',
+        placeholder: 'Ajoute des details utiles pour les participants.',
+        subtitle: 'Ajoute un contexte clair pour cet evenement.',
+        title: 'Description',
+      },
+      invites: {
+        myTeams: 'MES EQUIPES',
+        otherTeams: 'AUTRES EQUIPES',
+        subtitle: 'Invite des equipes, ou passe cette etape.',
+        title: 'Invitations',
+      },
+      location: {
+        addInstallation: 'Ajouter une installation',
+        addressMissing: 'Adresse non renseignee',
+        helper: 'Selectionne un lieu du club ou saisis une adresse externe.',
+        installationHelper: 'Choisis une installation existante de ton club.',
+        noInstallations: 'Aucune installation disponible pour ce club.',
+        subtitle: 'Le lieu est obligatoire pour continuer.',
+        title: 'Lieu',
+      },
+      logistics: {
+        isRecurrent: 'Evenement recurrent',
+        recurrenceDays: 'Jours de recurrence',
+        recurrenceInterval: 'Intervalle de recurrence',
+        recurrenceTitle: 'Configuration recurrence',
+        reservationMode: 'Mode de reservation',
+        reservationTitle: 'Parametres reservation',
+        subtitle: "Configure date, horaires et regles d'acces.",
+        title: 'Logistique',
+      },
+      participants: {
+        fixed: 'Capacite fixe',
+        hint: 'Tu pourras encore modifier ces valeurs avant la creation finale.',
+        modeHintFixed: 'Mode capacite fixe: nombre de places limite.',
+        modeHintUnlimited: 'Mode illimite: aucun plafond de participants.',
+        modeLabel: 'Mode de capacite',
+        playersUnit: 'joueurs max',
+        previewCapacity: 'Capacite: {{value}}',
+        previewMode: 'Mode: {{value}}',
+        previewTitle: 'Apercu',
+        previewTotalPlayers: 'Joueurs attendus: {{value}}',
+        quickPresets: 'Valeurs rapides',
+        subtitle: 'Choisis une capacite max, ou laisse l evenement en acces illimite.',
+        summaryTitle: 'Resume',
+        title: 'Participants',
+        totalPlayersExceedsCapacity: 'Le nombre de joueurs attendus ne peut pas depasser la capacite max.',
+        unlimited: 'Illimite',
+        unlimitedHint: 'Aucune limite de places',
+        unlimitedLabel: 'Illimite',
+      },
+      recap: {
+        subtitle: 'Verifie les informations avant creation.',
+        title: 'Recapitulatif',
+      },
+      team: {
+        subtitle: "Selectionne l'equipe organisatrice.",
+        title: 'Equipe organisatrice',
+      },
+      type: {
+        subtitle: "Selectionne le type d'evenement.",
+        title: "Type d'evenement",
+      },
+      validation: {
+        autoDesc: 'Les participants peuvent confirmer automatiquement leur presence.',
+        autoRuleOne: 'Check-in simplifie pour les joueurs',
+        autoRuleTwo: 'Ideal pour les sessions ouvertes',
+        manualDesc: 'Le coach valide manuellement les participants.',
+        manualRuleOne: 'Controle total par le staff',
+        manualRuleTwo: 'Recommande pour groupes fermes',
+        optionLabel: 'Mode {{title}}',
+        previewTitle: 'Mode selectionne',
+        recommended: 'Recommande',
+        selectedHint: 'Mode actuellement selectionne.',
+        selectHint: 'Selectionne ce mode de validation.',
+        subtitle: "Definis comment valider les presences a l'evenement.",
+        title: 'Mode de validation',
+      },
+      visibility: {
+        private: 'Prive',
+        privateDesc: 'Visible uniquement pour les membres concernes.',
+        public: 'Public',
+        publicDesc: 'Visible pour tous les profils qui y ont acces.',
+        subtitle: "Definis qui peut voir l'evenement.",
+        title: 'Visibilite',
+      },
+    },
+  },
   home: {
     fields: {
       type: {
@@ -858,7 +858,124 @@ export default {
     },
   },
   homeHub: {
-    title: 'Accueil',
+    account: {
+      logoutDescription: 'Voulez-vous vous deconnecter de votre compte ?',
+      logoutTitle: 'Deconnexion',
+    },
+    alerts: {
+      featuredFallback: {
+        description: 'Aucun club omnisport detecte. Redirection vers les demandes du club.',
+        title: 'Information',
+      },
+      missingContext: {
+        description: 'Aucun club disponible pour gerer les demandes a la une.',
+        title: 'Contexte manquant',
+      },
+      noClub: {
+        description: 'Votre compte doit etre rattache a un club pour gerer ces demandes.',
+        title: 'Club introuvable',
+      },
+      noTrainedTeams: {
+        description: 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.',
+        title: 'Aucune equipe disponible',
+      },
+    },
+    cards: {
+      account: {
+        logout: {
+          subtitle: 'Fermer votre session sur cet appareil.',
+          title: 'Deconnexion',
+        },
+        switch: {
+          subtitle: 'Basculer vers un autre compte connecte.',
+          title: 'Changer de compte',
+        },
+        tutorial: {
+          subtitle: 'Relancer un tutoriel ou reinitialiser les guides.',
+          title: 'Tutoriels et aide',
+        },
+      },
+      league: {
+        subtitle: 'Acceder a FoundClub League et a ses fonctionnalites competitives.',
+        title: 'FoundClub League',
+      },
+      manage: {
+        addEvent: {
+          subtitle: 'Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d essai.',
+          title: 'Ajouter un \u00e9v\u00e9nement',
+        },
+        clubRequests: {
+          subtitle: 'Valider ou refuser les demandes d adh\u00e9sion au club.',
+          title: 'Demandes adh\u00e9sion club',
+        },
+        featuredRequests: {
+          subtitle: 'Traite les demandes d \u00e9v\u00e9nements \u00e0 la une du club.',
+          title: 'Demandes \u00e9v\u00e9nements \u00e0 la une',
+        },
+        manageClub: {
+          subtitle: 'Acc\u00e9dez \u00e0 votre espace club pour piloter votre organisation.',
+          title: 'G\u00e9rer mon club',
+        },
+        requests: {
+          subtitle: 'Traitez toutes les demandes de votre organisation depuis un seul ecran.',
+          title: 'Demandes',
+        },
+        teamRequests: {
+          subtitle: 'Traite les demandes d adh\u00e9sion des joueurs \u00e0 vos \u00e9quipes.',
+          title: 'Demandes adh\u00e9sion \u00e9quipes',
+        },
+      },
+      profile: {
+        alerts: {
+          subtitle: 'Creer des alertes pour recevoir des notifications personnalisees selon vos recherches.',
+          title: 'G\u00e9rer mes alertes',
+        },
+        edit: {
+          subtitle: 'Mettre a jour vos informations personnelles et sportives.',
+          title: 'Modifier mon profil',
+        },
+        history: {
+          subtitle: 'Ajouter ou ajuster votre historique sportif.',
+          title: 'Historique sportif',
+        },
+        view: {
+          subtitle: 'Consulter les informations de votre compte.',
+          title: 'Voir mon profil',
+        },
+      },
+      quick: {
+        chat: {
+          subtitle: 'Ouvrir rapidement votre messagerie.',
+          title: 'Messagerie',
+        },
+        planning: {
+          subtitle: 'Retrouver vos evenements a venir et votre planning personnel.',
+          title: 'Mon planning',
+        },
+        teams: {
+          subtitle: 'Acceder a vos equipes et a leurs informations.',
+          title: 'Mes equipes',
+        },
+      },
+      search: {
+        ads: {
+          subtitle: 'Postuler aux annonces de recherche des equipes.',
+          title: 'Annonces',
+        },
+        clubs: {
+          subtitle: 'Trouver votre page club pour voir toutes ses informations.',
+          title: 'Club',
+        },
+        events: {
+          subtitle: 'Trouve des d\u00e9tections, s\u00e9ances d essai, entra\u00eenements et matchs.',
+          title: '\u00c9v\u00e9nement',
+        },
+        reservations: {
+          subtitle: 'R\u00e9serve rapidement un terrain (foot \u00e0 5, padel, etc.).',
+          title: 'Reservations',
+        },
+      },
+    },
     roles: {
       coach: 'Entraineur',
       player: 'Joueur',
@@ -873,328 +990,127 @@ export default {
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
     },
-    cards: {
-      manage: {
-        manageClub: {
-          title: 'G\u00e9rer mon club',
-          subtitle: 'Acc\u00e9dez \u00e0 votre espace club pour piloter votre organisation.',
-        },
-        addEvent: {
-          title: 'Ajouter un \u00e9v\u00e9nement',
-          subtitle: 'Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d essai.',
-        },
-        requests: {
-          title: 'Demandes',
-          subtitle: 'Traitez toutes les demandes de votre organisation depuis un seul ecran.',
-        },
-        teamRequests: {
-          title: 'Demandes adh\u00e9sion \u00e9quipes',
-          subtitle: 'Traite les demandes d adh\u00e9sion des joueurs \u00e0 vos \u00e9quipes.',
-        },
-        clubRequests: {
-          title: 'Demandes adh\u00e9sion club',
-          subtitle: 'Valider ou refuser les demandes d adh\u00e9sion au club.',
-        },
-        featuredRequests: {
-          title: 'Demandes \u00e9v\u00e9nements \u00e0 la une',
-          subtitle: 'Traite les demandes d \u00e9v\u00e9nements \u00e0 la une du club.',
-        },
-      },
-      search: {
-        events: {
-          title: '\u00c9v\u00e9nement',
-          subtitle: 'Trouve des d\u00e9tections, s\u00e9ances d essai, entra\u00eenements et matchs.',
-        },
-        clubs: {
-          title: 'Club',
-          subtitle: 'Trouver votre page club pour voir toutes ses informations.',
-        },
-        reservations: {
-          title: 'Reservations',
-          subtitle: 'R\u00e9serve rapidement un terrain (foot \u00e0 5, padel, etc.).',
-        },
-        ads: {
-          title: 'Annonces',
-          subtitle: 'Postuler aux annonces de recherche des equipes.',
-        },
-      },
-      league: {
-        title: 'FoundClub League',
-        subtitle: 'Acceder a FoundClub League et a ses fonctionnalites competitives.',
-      },
-      profile: {
-        view: {
-          title: 'Voir mon profil',
-          subtitle: 'Consulter les informations de votre compte.',
-        },
-        edit: {
-          title: 'Modifier mon profil',
-          subtitle: 'Mettre a jour vos informations personnelles et sportives.',
-        },
-        history: {
-          title: 'Historique sportif',
-          subtitle: 'Ajouter ou ajuster votre historique sportif.',
-        },
-        alerts: {
-          title: 'G\u00e9rer mes alertes',
-          subtitle: 'Creer des alertes pour recevoir des notifications personnalisees selon vos recherches.',
-        },
-      },
-      quick: {
-        planning: {
-          title: 'Mon planning',
-          subtitle: 'Retrouver vos evenements a venir et votre planning personnel.',
-        },
-        teams: {
-          title: 'Mes equipes',
-          subtitle: 'Acceder a vos equipes et a leurs informations.',
-        },
-        chat: {
-          title: 'Messagerie',
-          subtitle: 'Ouvrir rapidement votre messagerie.',
-        },
-      },
-      account: {
-        switch: {
-          title: 'Changer de compte',
-          subtitle: 'Basculer vers un autre compte connecte.',
-        },
-        logout: {
-          title: 'Deconnexion',
-          subtitle: 'Fermer votre session sur cet appareil.',
-        },
-        tutorial: {
-          title: 'Tutoriels et aide',
-          subtitle: 'Relancer un tutoriel ou reinitialiser les guides.',
-        },
-      },
-    },
-    alerts: {
-      noTrainedTeams: {
-        title: 'Aucune equipe disponible',
-        description: 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.',
-      },
-      noClub: {
-        title: 'Club introuvable',
-        description: 'Votre compte doit etre rattache a un club pour gerer ces demandes.',
-      },
-      featuredFallback: {
-        title: 'Information',
-        description: 'Aucun club omnisport detecte. Redirection vers les demandes du club.',
-      },
-      missingContext: {
-        title: 'Contexte manquant',
-        description: 'Aucun club disponible pour gerer les demandes a la une.',
-      },
-    },
-    account: {
-      logoutTitle: 'Deconnexion',
-      logoutDescription: 'Voulez-vous vous deconnecter de votre compte ?',
-    },
+    title: 'Accueil',
   },
   homeHubTutorial: {
     actions: {
       scrollDown: 'Descendre',
     },
-    entry: {
-      title: 'Bienvenue sur FoundClub',
-      subtitle: 'FoundClub est un outil concu pour vous accompagner dans toute votre aventure sportive, peu importe votre sport.',
-      description: 'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l application par vous meme.',
-      actions: {
-        start: 'Lancer le tutoriel complet',
-        skip: 'Passer',
-      },
-    },
-    reset: {
-      title: 'Reinitialiser les tutoriels',
-      description: 'Tous les tutoriels seront remis a zero pour ce compte.',
-      confirm: 'Reinitialiser',
-    },
     center: {
-      title: 'Tutoriels et aide',
-      subtitle: 'Relancez un tutoriel ou reinitialisez tous les guides.',
       actions: {
-        relaunchHome: 'Relancer le tutoriel Accueil',
         pickFeature: 'Choisir un tutoriel de fonctionnalite',
+        relaunchHome: 'Relancer le tutoriel Accueil',
         resetAll: 'Reinitialiser tous les tutoriels',
       },
+      subtitle: 'Relancez un tutoriel ou reinitialisez tous les guides.',
+      title: 'Tutoriels et aide',
+    },
+    entry: {
+      actions: {
+        skip: 'Passer',
+        start: 'Lancer le tutoriel complet',
+      },
+      description: 'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l application par vous meme.',
+      subtitle: 'FoundClub est un outil concu pour vous accompagner dans toute votre aventure sportive, peu importe votre sport.',
+      title: 'Bienvenue sur FoundClub',
     },
     featurePicker: {
-      title: 'Choisir un tutoriel',
       subtitle: 'Selectionnez une fonctionnalite a decouvrir.',
+      title: 'Choisir un tutoriel',
+    },
+    reset: {
+      confirm: 'Reinitialiser',
+      description: 'Tous les tutoriels seront remis a zero pour ce compte.',
+      title: 'Reinitialiser les tutoriels',
     },
     steps: {
-      header: {
-        title: 'Accueil FoundClub',
-        description: 'Cette page vous donne un acces rapide a toutes les fonctionnalites principales.',
-      },
-      manageClub: {
-        title: 'Gerer mon club',
-        description: 'Accedez a votre espace club pour piloter votre organisation.',
-      },
-      manageAddEvent: {
-        title: 'Ajouter un evenement',
-        description: 'Creez un entrainement, match ou detection pour vos equipes.',
-      },
-      manageRequests: {
-        title: 'Demandes',
-        description: 'Regroupez et traitez toutes les demandes depuis un seul onglet.',
-      },
-      manageTeamRequests: {
-        title: 'Demandes adhesion equipes',
-        description: 'Validez ou refusez les demandes pour rejoindre vos equipes.',
-      },
-      manageClubRequests: {
-        title: 'Demandes adhesion club',
-        description: 'Traitez les demandes d adhesion recues par votre club.',
-      },
-      manageFeaturedRequests: {
-        title: 'Demandes evenements a la une',
-        description: 'Validez les demandes d evenements a la une de votre organisation.',
-      },
-      searchEvents: {
-        title: 'Rechercher un evenement',
-        description: 'Trouvez des evenements sportifs en utilisant les filtres de recherche.',
-      },
-      searchClubs: {
-        title: 'Rechercher un club',
-        description: 'Explorez les clubs et ouvrez leur fiche detaillee.',
-      },
-      searchReservations: {
-        title: 'Rechercher une reservation',
-        description: 'Accedez aux reservations et filtrez selon votre activite.',
-      },
-      searchAds: {
-        title: 'Rechercher des annonces',
-        description: 'Consultez les annonces de recrutement et les profils disponibles.',
-      },
-      league: {
-        title: 'FoundClub League',
-        description: 'Basculez vers FoundClub League pour les fonctionnalites competitives.',
-      },
-      profileView: {
-        title: 'Voir mon profil',
-        description: 'Consultez votre page profil complete.',
-      },
-      profileEdit: {
-        title: 'Modifier mon profil',
-        description: 'Modifiez vos informations personnelles et sportives.',
-      },
-      profileHistory: {
-        title: 'Historique sportif',
-        description: 'Ajoutez vos experiences via le wizard historique.',
-      },
-      profileAlerts: {
-        title: 'Gerer mes alertes',
-        description: 'Configurez des alertes personnalisees selon vos recherches.',
-      },
-      quickPlanning: {
-        title: 'Mon planning',
-        description: 'Accedez rapidement a votre planning personnel.',
-      },
-      quickTeams: {
-        title: 'Mes equipes',
-        description: 'Retrouvez toutes vos equipes et leurs pages.',
-      },
-      quickChat: {
-        title: 'Messagerie',
-        description: 'Ouvrez votre messagerie et suivez vos conversations.',
+      accountLogout: {
+        description: 'Deconnectez-vous proprement de l appareil actuel.',
+        title: 'Deconnexion',
       },
       accountSwitch: {
-        title: 'Changer de compte',
         description: 'Ouvrez la modal pour changer ou ajouter un compte.',
+        title: 'Changer de compte',
       },
-      accountLogout: {
-        title: 'Deconnexion',
-        description: 'Deconnectez-vous proprement de l appareil actuel.',
+      header: {
+        description: 'Cette page vous donne un acces rapide a toutes les fonctionnalites principales.',
+        title: 'Accueil FoundClub',
+      },
+      league: {
+        description: 'Basculez vers FoundClub League pour les fonctionnalites competitives.',
+        title: 'FoundClub League',
+      },
+      manageAddEvent: {
+        description: 'Creez un entrainement, match ou detection pour vos equipes.',
+        title: 'Ajouter un evenement',
+      },
+      manageClub: {
+        description: 'Accedez a votre espace club pour piloter votre organisation.',
+        title: 'Gerer mon club',
+      },
+      manageClubRequests: {
+        description: 'Traitez les demandes d adhesion recues par votre club.',
+        title: 'Demandes adhesion club',
+      },
+      manageFeaturedRequests: {
+        description: 'Validez les demandes d evenements a la une de votre organisation.',
+        title: 'Demandes evenements a la une',
+      },
+      manageRequests: {
+        description: 'Regroupez et traitez toutes les demandes depuis un seul onglet.',
+        title: 'Demandes',
+      },
+      manageTeamRequests: {
+        description: 'Validez ou refusez les demandes pour rejoindre vos equipes.',
+        title: 'Demandes adhesion equipes',
+      },
+      profileAlerts: {
+        description: 'Configurez des alertes personnalisees selon vos recherches.',
+        title: 'Gerer mes alertes',
+      },
+      profileEdit: {
+        description: 'Modifiez vos informations personnelles et sportives.',
+        title: 'Modifier mon profil',
+      },
+      profileHistory: {
+        description: 'Ajoutez vos experiences via le wizard historique.',
+        title: 'Historique sportif',
+      },
+      profileView: {
+        description: 'Consultez votre page profil complete.',
+        title: 'Voir mon profil',
+      },
+      quickChat: {
+        description: 'Ouvrez votre messagerie et suivez vos conversations.',
+        title: 'Messagerie',
+      },
+      quickPlanning: {
+        description: 'Accedez rapidement a votre planning personnel.',
+        title: 'Mon planning',
+      },
+      quickTeams: {
+        description: 'Retrouvez toutes vos equipes et leurs pages.',
+        title: 'Mes equipes',
+      },
+      searchAds: {
+        description: 'Consultez les annonces de recrutement et les profils disponibles.',
+        title: 'Rechercher des annonces',
+      },
+      searchClubs: {
+        description: 'Explorez les clubs et ouvrez leur fiche detaillee.',
+        title: 'Rechercher un club',
+      },
+      searchEvents: {
+        description: 'Trouvez des evenements sportifs en utilisant les filtres de recherche.',
+        title: 'Rechercher un evenement',
+      },
+      searchReservations: {
+        description: 'Accedez aux reservations et filtrez selon votre activite.',
+        title: 'Rechercher une reservation',
       },
       tutorialCenter: {
-        title: 'Tutoriels et aide',
         description: 'Relancez un tutoriel quand vous voulez, ou remettez tout a zero.',
-      },
-    },
-  },
-  requestsHub: {
-    title: 'Demandes',
-    forbidden: 'Cet onglet est reserve aux coachs et dirigeants.',
-    empty: 'Aucune demande en attente',
-    partialError: 'Source indisponible',
-    actionError: 'Impossible de traiter la demande.',
-    migratedBannerTitle: 'Ce flux est migre vers Demandes.',
-    migratedBannerAction: "Ouvrir l'onglet Demandes",
-    assignNow: 'Assigner maintenant',
-    clubAssignedTitle: 'Entraineur ajoute',
-    clubAssignedMessage: '{{name}} a ete ajoute au club. Voulez-vous l assigner a une equipe maintenant ?',
-    rejectEventTitle: 'Refuser la demande ?',
-    rejectEventMessage: 'L evenement sera annule.',
-    rejectFeaturedTitle: 'Refuser la demande ?',
-    rejectFeaturedMessage: 'Le demandeur sera notifie du refus.',
-    filters: {
-      all: 'Toutes',
-      team: 'Equipe',
-      club: 'Club',
-      event: 'Evenement',
-      featured: 'A la une',
-    },
-    types: {
-      team: 'Equipe',
-      club: 'Club',
-      event: 'Evenement',
-      featured: 'A la une',
-      unknown: 'Demande',
-    },
-  },
-  searchTypeSwitcher: {
-    recruitment: 'Recrutement',
-  },
-  reservation: {
-    actions: {
-      participate: 'Réserver',
-      requestFeatured: 'Demander la mise à la une',
-      cancelRequest: 'Annuler la demande',
-    },
-    card: {
-      missingPlayers: 'Il manque {{count}} joueur',
-      missingPlayers_plural: 'Il manque {{count}} joueurs',
-      pricePerPerson: '{{price}}€/pers',
-    },
-    featured: 'À la une :',
-    featuredRequest: {
-      title: 'Mise en avant',
-      pending: 'Demande en attente',
-      approved: 'Approuvée',
-      rejected: 'Refusée',
-      requestSuccess: 'Demande envoyée avec succès',
-      requestError: 'Erreur lors de l\'envoi de la demande',
-      cancelSuccess: 'Demande annulée',
-      cancelError: 'Erreur lors de l\'annulation',
-    },
-    filters: {
-      detections: 'Détections',
-      openTrainings: 'Entraînements ouverts',
-      tournaments: 'Tournois',
-    },
-    mode: {
-      fullGroup: 'J\'ai déjà mon groupe complet',
-      invalidPlayerCount: 'Veuillez entrer un nombre valide',
-      playerCount: 'Combien de joueurs avez-vous ?',
-      recruiting: 'Il me manque des joueurs',
-      selectMode: 'Veuillez sélectionner un mode',
-      title: 'Comment voulez-vous participer ?',
-      tooManyPlayers: 'Le nombre doit être inférieur au total',
-    },
-    noData: 'Aucune réservation trouvée.',
-    title: 'Évènements :',
-  },
-  reservationFilters: {
-    fields: {
-      maxPrice: {
-        label: 'Prix maximum par personne',
-        placeholder: 'Ex: 20',
-      },
-      startTime: {
-        label: 'À partir de',
-        placeholder: 'Heure de début',
+        title: 'Tutoriels et aide',
       },
     },
   },
@@ -1235,6 +1151,12 @@ export default {
       title: 'Sélectionner un pays',
     },
   },
+  multisport: {
+    deleteSectionConfirm: 'Êtes-vous sûr de vouloir supprimer la section "{{name}}" ?\nCette action est irréversible et supprimera toutes les équipes et membres associés.',
+    deleteSectionTitle: 'Supprimer la section',
+    sectionCreated: 'La section a été créée avec succès.',
+    sectionDeleted: 'La section a été supprimée avec succès.',
+  },
   myEventList: {
     actions: {
       closeTimeFilter: 'Valider',
@@ -1253,6 +1175,110 @@ export default {
   myTeamList: {
 
     title: 'Mes équipes',
+  },
+  onboardingAffiliation: {
+    a11y: {
+      backHint: 'Revient a l etape precedente de l onboarding.',
+      cardHintClub: 'Ouvre la fiche du club pour confirmer l affiliation.',
+      cardHintTeam: 'Ouvre la fiche de l equipe pour demander a rejoindre.',
+      cardLabelClub: 'Ouvrir la fiche du club {{name}}',
+      cardLabelTeam: 'Ouvrir la fiche de l equipe {{name}}',
+      continueLaterHint: 'Passe cette etape et continue l onboarding.',
+      filterHint: 'Ouvre les filtres de recherche de club.',
+      filterLabel: 'Ouvrir les filtres',
+      modalCancelHint: 'Ferme la fenetre de demande.',
+      modalCommentHint: 'Ajoute des informations utiles a la recherche.',
+      modalNameHintClub: 'Renseigne le nom du club que tu recherches.',
+      modalNameHintTeam: 'Renseigne le nom de l equipe que tu recherches.',
+      modalSendHint: 'Envoie ta demande aux superadmins.',
+      notFoundHintClub: 'Envoie une demande d aide si ton club est introuvable.',
+      notFoundHintTeam: 'Envoie une demande d aide si ton equipe est introuvable.',
+      retryHint: 'Relance la recherche de resultats.',
+      searchInputHintClub: 'Saisis le nom du club pour filtrer la liste.',
+      searchInputHintTeam: 'Saisis le nom de l equipe pour filtrer la liste.',
+      searchInputLabelClub: 'Champ nom du club',
+      searchInputLabelTeam: 'Champ nom de l equipe',
+      tooltipNextHint: 'Passe a l etape suivante du tutoriel.',
+      tooltipPreviousHint: 'Revient a l etape precedente du tutoriel.',
+      tooltipSkipHint: 'Quitte le tutoriel guide.',
+    },
+    actions: {
+      continueLater: 'Continuer plus tard',
+      notFoundClub: 'Je ne trouve pas mon club',
+      notFoundTeam: 'Je ne trouve pas mon equipe',
+    },
+    common: {
+      roleTargetClub: 'club',
+      roleTargetTeam: 'equipe',
+    },
+    feedback: {
+      missingInfoMessageClub: 'Renseigne le nom du club recherche.',
+      missingInfoMessageTeam: 'Renseigne le nom de l equipe recherchee.',
+      missingInfoTitle: 'Information manquante',
+      requestError: 'Impossible d envoyer votre demande.',
+      requestSentDescription: 'Votre demande a ete envoyee aux superadmins. Vous recevrez une notification.',
+      requestSentTitle: 'Demande envoyee',
+    },
+    filtersTutorial: {
+      activityDescription: 'Selectionne un sport pour filtrer uniquement les clubs correspondants.',
+      activityTitle: 'Sport',
+      applyDescription: 'Applique tes filtres pour revenir a la liste avec des resultats plus precis.',
+      applyTitle: 'Appliquer',
+      cityDescription: 'Choisis une ville ou une adresse pour centrer la recherche des clubs.',
+      cityTitle: 'Localisation',
+      radiusDescription: 'Ajuste le rayon en kilometres autour de ta localisation.',
+      radiusTitle: 'Rayon de recherche',
+    },
+    modal: {
+      commentLabel: 'Commentaire (optionnel)',
+      commentPlaceholder: 'Ex: ville, categorie, orthographe probable...',
+      description: 'Donnez un maximum de contexte pour aider les superadmins.',
+      nameLabelClub: 'Nom du club recherche *',
+      nameLabelTeam: 'Nom de l equipe recherchee *',
+      namePlaceholderClub: 'Ex: Olympique ...',
+      namePlaceholderTeam: 'Ex: U17 Nationaux ...',
+      send: 'Envoyer',
+      titleClub: 'Je ne trouve pas mon club',
+      titleTeam: 'Je ne trouve pas mon equipe',
+    },
+    results: {
+      openClubFallback: 'Voir fiche club',
+      openTeamFallback: 'Voir fiche equipe',
+    },
+    search: {
+      filtersActive_one: '{{count}} filtre actif',
+      filtersActive_other: '{{count}} filtres actifs',
+      placeholderClub: 'Nom du club',
+      placeholderTeam: 'Nom de l equipe',
+    },
+    states: {
+      emptyWithoutQueryClub: 'Aucun club a afficher pour le moment.',
+      emptyWithoutQueryTeam: 'Aucune equipe a afficher pour le moment.',
+      emptyWithQueryClub: 'Aucun club trouve pour "{{query}}".',
+      emptyWithQueryTeam: 'Aucune equipe trouvee pour "{{query}}".',
+      errorSubtitle: 'Verifie ta connexion puis reessaie.',
+      errorTitle: 'Impossible de charger les resultats',
+      loading: 'Recherche en cours...',
+      retry: 'Reessayer',
+    },
+    subtitleClub: 'Recherche ton club puis ouvre sa fiche pour valider C est mon club.',
+    subtitleTeam: 'Recherche ton equipe puis ouvre sa fiche pour envoyer ta demande.',
+    titleClub: 'Trouve ton club',
+    titleTeam: 'Trouve ton equipe',
+    tutorial: {
+      stepFiltersDescription: 'On va maintenant ouvrir les filtres pour affiner ta recherche.',
+      stepFiltersTitle: 'Ouvrir les filtres',
+      stepNotFoundDescriptionClub: 'Si tu ne trouves pas ton club, envoie une demande guidee aux superadmins.',
+      stepNotFoundDescriptionTeam: 'Si tu ne trouves pas ton equipe, envoie une demande guidee aux superadmins.',
+      stepNotFoundTitleClub: 'Je ne trouve pas mon club',
+      stepNotFoundTitleTeam: 'Je ne trouve pas mon equipe',
+      stepResultDescriptionClub: 'Ouvre la fiche du club pour utiliser le bouton C est mon club.',
+      stepResultDescriptionTeam: 'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
+      stepResultTitleClub: 'Selectionner un club',
+      stepResultTitleTeam: 'Selectionner une equipe',
+      stepSearchDescription: 'Tape le nom du {{roleTargetLabel}} pour filtrer la liste.',
+      stepSearchTitle: 'Recherche',
+    },
   },
   otp: {
     actions: {
@@ -1283,11 +1309,11 @@ export default {
       findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
       logout: 'D\u00e9connexion',
-      manageClub: 'G\u00e9rer mon club',
       manageAlerts: 'G\u00e9rer mes alertes',
-      manageRequests: 'Gerer mes demandes',
+      manageClub: 'G\u00e9rer mon club',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
       manageEvents: 'Gérer mes évènements',
+      manageRequests: 'Gerer mes demandes',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
       myTeams: 'Mes équipes',
@@ -1377,117 +1403,97 @@ export default {
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Crée ton compte',
   },
-  onboardingAffiliation: {
-    titleClub: 'Trouve ton club',
-    titleTeam: 'Trouve ton equipe',
-    subtitleClub: 'Recherche ton club puis ouvre sa fiche pour valider C est mon club.',
-    subtitleTeam: 'Recherche ton equipe puis ouvre sa fiche pour envoyer ta demande.',
-    common: {
-      roleTargetClub: 'club',
-      roleTargetTeam: 'equipe',
+  requestsHub: {
+    actionError: 'Impossible de traiter la demande.',
+    assignNow: 'Assigner maintenant',
+    clubAssignedMessage: '{{name}} a ete ajoute au club. Voulez-vous l assigner a une equipe maintenant ?',
+    clubAssignedTitle: 'Entraineur ajoute',
+    empty: 'Aucune demande en attente',
+    filters: {
+      all: 'Toutes',
+      club: 'Club',
+      event: 'Evenement',
+      featured: 'A la une',
+      team: 'Equipe',
     },
+    forbidden: 'Cet onglet est reserve aux coachs et dirigeants.',
+    migratedBannerAction: "Ouvrir l'onglet Demandes",
+    migratedBannerTitle: 'Ce flux est migre vers Demandes.',
+    partialError: 'Source indisponible',
+    rejectEventMessage: 'L evenement sera annule.',
+    rejectEventTitle: 'Refuser la demande ?',
+    rejectFeaturedMessage: 'Le demandeur sera notifie du refus.',
+    rejectFeaturedTitle: 'Refuser la demande ?',
+    title: 'Demandes',
+    types: {
+      club: 'Club',
+      event: 'Evenement',
+      featured: 'A la une',
+      team: 'Equipe',
+      unknown: 'Demande',
+    },
+  },
+  reservation: {
     actions: {
-      continueLater: 'Continuer plus tard',
-      notFoundClub: 'Je ne trouve pas mon club',
-      notFoundTeam: 'Je ne trouve pas mon equipe',
+      cancelRequest: 'Annuler la demande',
+      participate: 'Réserver',
+      requestFeatured: 'Demander la mise à la une',
     },
-    search: {
-      placeholderClub: 'Nom du club',
-      placeholderTeam: 'Nom de l equipe',
-      filtersActive_one: '{{count}} filtre actif',
-      filtersActive_other: '{{count}} filtres actifs',
+    card: {
+      missingPlayers: 'Il manque {{count}} joueur',
+      missingPlayers_plural: 'Il manque {{count}} joueurs',
+      pricePerPerson: '{{price}}€/pers',
     },
-    results: {
-      openClubFallback: 'Voir fiche club',
-      openTeamFallback: 'Voir fiche equipe',
+    featured: 'À la une :',
+    featuredRequest: {
+      approved: 'Approuvée',
+      cancelError: 'Erreur lors de l\'annulation',
+      cancelSuccess: 'Demande annulée',
+      pending: 'Demande en attente',
+      rejected: 'Refusée',
+      requestError: 'Erreur lors de l\'envoi de la demande',
+      requestSuccess: 'Demande envoyée avec succès',
+      title: 'Mise en avant',
     },
-    states: {
-      loading: 'Recherche en cours...',
-      errorTitle: 'Impossible de charger les resultats',
-      errorSubtitle: 'Verifie ta connexion puis reessaie.',
-      retry: 'Reessayer',
-      emptyWithQueryClub: 'Aucun club trouve pour "{{query}}".',
-      emptyWithQueryTeam: 'Aucune equipe trouvee pour "{{query}}".',
-      emptyWithoutQueryClub: 'Aucun club a afficher pour le moment.',
-      emptyWithoutQueryTeam: 'Aucune equipe a afficher pour le moment.',
+    filters: {
+      detections: 'Détections',
+      openTrainings: 'Entraînements ouverts',
+      tournaments: 'Tournois',
     },
-    feedback: {
-      requestError: 'Impossible d envoyer votre demande.',
-      requestSentTitle: 'Demande envoyee',
-      requestSentDescription: 'Votre demande a ete envoyee aux superadmins. Vous recevrez une notification.',
-      missingInfoTitle: 'Information manquante',
-      missingInfoMessageClub: 'Renseigne le nom du club recherche.',
-      missingInfoMessageTeam: 'Renseigne le nom de l equipe recherchee.',
+    mode: {
+      fullGroup: 'J\'ai déjà mon groupe complet',
+      invalidPlayerCount: 'Veuillez entrer un nombre valide',
+      playerCount: 'Combien de joueurs avez-vous ?',
+      recruiting: 'Il me manque des joueurs',
+      selectMode: 'Veuillez sélectionner un mode',
+      title: 'Comment voulez-vous participer ?',
+      tooManyPlayers: 'Le nombre doit être inférieur au total',
     },
-    tutorial: {
-      stepSearchTitle: 'Recherche',
-      stepSearchDescription: 'Tape le nom du {{roleTargetLabel}} pour filtrer la liste.',
-      stepResultTitleClub: 'Selectionner un club',
-      stepResultTitleTeam: 'Selectionner une equipe',
-      stepResultDescriptionClub: 'Ouvre la fiche du club pour utiliser le bouton C est mon club.',
-      stepResultDescriptionTeam: 'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
-      stepNotFoundTitleClub: 'Je ne trouve pas mon club',
-      stepNotFoundTitleTeam: 'Je ne trouve pas mon equipe',
-      stepNotFoundDescriptionClub: 'Si tu ne trouves pas ton club, envoie une demande guidee aux superadmins.',
-      stepNotFoundDescriptionTeam: 'Si tu ne trouves pas ton equipe, envoie une demande guidee aux superadmins.',
-      stepFiltersTitle: 'Ouvrir les filtres',
-      stepFiltersDescription: 'On va maintenant ouvrir les filtres pour affiner ta recherche.',
+    noData: 'Aucune réservation trouvée.',
+    title: 'Évènements :',
+  },
+  reservationFilters: {
+    fields: {
+      maxPrice: {
+        label: 'Prix maximum par personne',
+        placeholder: 'Ex: 20',
+      },
+      startTime: {
+        label: 'À partir de',
+        placeholder: 'Heure de début',
+      },
     },
-    filtersTutorial: {
-      cityTitle: 'Localisation',
-      cityDescription: 'Choisis une ville ou une adresse pour centrer la recherche des clubs.',
-      radiusTitle: 'Rayon de recherche',
-      radiusDescription: 'Ajuste le rayon en kilometres autour de ta localisation.',
-      activityTitle: 'Sport',
-      activityDescription: 'Selectionne un sport pour filtrer uniquement les clubs correspondants.',
-      applyTitle: 'Appliquer',
-      applyDescription: 'Applique tes filtres pour revenir a la liste avec des resultats plus precis.',
-    },
-    modal: {
-      titleClub: 'Je ne trouve pas mon club',
-      titleTeam: 'Je ne trouve pas mon equipe',
-      description: 'Donnez un maximum de contexte pour aider les superadmins.',
-      send: 'Envoyer',
-      nameLabelClub: 'Nom du club recherche *',
-      nameLabelTeam: 'Nom de l equipe recherchee *',
-      namePlaceholderClub: 'Ex: Olympique ...',
-      namePlaceholderTeam: 'Ex: U17 Nationaux ...',
-      commentLabel: 'Commentaire (optionnel)',
-      commentPlaceholder: 'Ex: ville, categorie, orthographe probable...',
-    },
-    a11y: {
-      backHint: 'Revient a l etape precedente de l onboarding.',
-      searchInputHintClub: 'Saisis le nom du club pour filtrer la liste.',
-      searchInputHintTeam: 'Saisis le nom de l equipe pour filtrer la liste.',
-      searchInputLabelClub: 'Champ nom du club',
-      searchInputLabelTeam: 'Champ nom de l equipe',
-      filterHint: 'Ouvre les filtres de recherche de club.',
-      filterLabel: 'Ouvrir les filtres',
-      cardHintClub: 'Ouvre la fiche du club pour confirmer l affiliation.',
-      cardHintTeam: 'Ouvre la fiche de l equipe pour demander a rejoindre.',
-      cardLabelClub: 'Ouvrir la fiche du club {{name}}',
-      cardLabelTeam: 'Ouvrir la fiche de l equipe {{name}}',
-      retryHint: 'Relance la recherche de resultats.',
-      notFoundHintClub: 'Envoie une demande d aide si ton club est introuvable.',
-      notFoundHintTeam: 'Envoie une demande d aide si ton equipe est introuvable.',
-      continueLaterHint: 'Passe cette etape et continue l onboarding.',
-      modalCancelHint: 'Ferme la fenetre de demande.',
-      modalSendHint: 'Envoie ta demande aux superadmins.',
-      modalNameHintClub: 'Renseigne le nom du club que tu recherches.',
-      modalNameHintTeam: 'Renseigne le nom de l equipe que tu recherches.',
-      modalCommentHint: 'Ajoute des informations utiles a la recherche.',
-      tooltipSkipHint: 'Quitte le tutoriel guide.',
-      tooltipPreviousHint: 'Revient a l etape precedente du tutoriel.',
-      tooltipNextHint: 'Passe a l etape suivante du tutoriel.',
-    },
+  },
+  searchTypeSwitcher: {
+    recruitment: 'Recrutement',
   },
   teamDetails: {
     actions: {
       contactTeam: 'Contacter',
       edit: 'Modifier',
-      stats: 'Statistiques',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
+      stats: 'Statistiques',
     },
     alerts: {
       deleteTrainer: {
@@ -1526,21 +1532,21 @@ export default {
       },
     },
     myTitle: 'Mon équipe',
-    tabs: {
-      infos: 'Infos',
-      standings: 'Classement',
-      calendar: 'Calendrier',
-      stats: 'Statistiques',
-    },
-    stats: {
-      summaryHint: 'Consulte les statistiques detaillees de ton equipe.',
-    },
     sections: {
       nextEvents: 'Prochains évènements',
       players_one: 'Joueur·se',
       players_other: 'Joueur·se·s',
       trainers_one: 'Entraîneur·e',
       trainers_other: 'Entraîneur·e·s',
+    },
+    stats: {
+      summaryHint: 'Consulte les statistiques detaillees de ton equipe.',
+    },
+    tabs: {
+      calendar: 'Calendrier',
+      infos: 'Infos',
+      standings: 'Classement',
+      stats: 'Statistiques',
     },
     title: 'Équipe',
   },
@@ -1625,6 +1631,7 @@ export default {
       section: 'Section',
     },
     noData: 'Aucune équipe trouvée.',
+    searchPlaceholder: 'Rechercher dans mes équipes...',
     title: 'Équipes de mon club',
   },
   teamMembershipRequestList: {
@@ -1642,17 +1649,46 @@ export default {
   },
   userDetails: {
     actions: {
+      contact: 'Contacter',
       sendMessage: 'Envoyer un message',
     },
+    badges: {
+      lookingForClub: 'En recherche de club',
+    },
+    empty: {
+      club: 'Aucun club renseigne',
+      coachTeams: 'Aucune equipe entrainee',
+      playerTeams: 'Aucune equipe joueur',
+    },
     fields: {
-      birthYear: 'Année de naissance',
+      address: 'Adresse',
+      age: 'Age',
+      bestLevel: 'Niveau',
+      birthdate: 'Date de naissance',
+      birthYear: 'Annee de naissance',
+      category: 'Categorie',
+      email: 'Email',
       height: 'Taille (m)',
+      history: 'Historique sportif',
+      phone: 'Telephone',
       position: 'Poste',
+      section: 'Section',
+      sport: 'Sport',
       weight: 'Poids (kg)',
+    },
+    notSet: 'Non renseigne',
+    private: 'Prive',
+    sections: {
+      personal: 'Infos personnelles',
+      sport: 'Profil sportif',
+    },
+    teamGroups: {
+      coach: 'Equipes entrainees',
+      player: 'Equipes joueur',
     },
     title: 'Infos profil',
     titles: {
-      teams: 'Équipes',
+      teams: 'Equipes',
     },
   },
   welcome: {
@@ -1679,11 +1715,5 @@ export default {
     },
     subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
     title: 'Bienvenu·e sur',
-  },
-  multisport: {
-    deleteSectionTitle: 'Supprimer la section',
-    deleteSectionConfirm: 'Êtes-vous sûr de vouloir supprimer la section "{{name}}" ?\nCette action est irréversible et supprimera toutes les équipes et membres associés.',
-    sectionDeleted: 'La section a été supprimée avec succès.',
-    sectionCreated: 'La section a été créée avec succès.',
   },
 };

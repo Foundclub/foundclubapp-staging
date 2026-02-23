@@ -1,16 +1,18 @@
-import React, { createContext, useContext, useMemo, useReducer } from 'react';
+import React, {
+  createContext, useContext, useMemo, useReducer,
+} from 'react';
 
 const TeamWizardContext = createContext(/** @type {any} */ (null));
 
 const createInitialState = () => ({
-  clubId: '',
-  preselectedTrainerId: '',
-  name: '',
-  description: '',
-  section: '',
   activities: '',
   category: '',
+  clubId: '',
+  description: '',
   level: '',
+  name: '',
+  preselectedTrainerId: '',
+  section: '',
   trainers: /** @type {string[]} */ ([]),
 });
 
@@ -37,22 +39,22 @@ function teamWizardReducer(state, action) {
         trainers: nextTrainers,
       };
     }
-    case 'SET_NAME':
-      return { ...state, name: String(action.payload || '') };
-    case 'SET_DESCRIPTION':
-      return { ...state, description: String(action.payload || '') };
-    case 'SET_SECTION':
-      return { ...state, section: String(action.payload || '') };
+    case 'RESET':
+      return createInitialState();
     case 'SET_ACTIVITY':
       return { ...state, activities: String(action.payload || '') };
     case 'SET_CATEGORY':
       return { ...state, category: String(action.payload || '') };
+    case 'SET_DESCRIPTION':
+      return { ...state, description: String(action.payload || '') };
     case 'SET_LEVEL':
       return { ...state, level: String(action.payload || '') };
+    case 'SET_NAME':
+      return { ...state, name: String(action.payload || '') };
+    case 'SET_SECTION':
+      return { ...state, section: String(action.payload || '') };
     case 'SET_TRAINERS':
       return { ...state, trainers: Array.isArray(action.payload) ? action.payload : [] };
-    case 'RESET':
-      return createInitialState();
     default:
       return state;
   }
@@ -64,7 +66,7 @@ function teamWizardReducer(state, action) {
  */
 export function TeamWizardProvider({ children }) {
   const [state, dispatch] = useReducer(teamWizardReducer, undefined, createInitialState);
-  const value = useMemo(() => ({ state, dispatch }), [state]);
+  const value = useMemo(() => ({ dispatch, state }), [state]);
 
   return (
     <TeamWizardContext.Provider value={value}>
@@ -73,6 +75,9 @@ export function TeamWizardProvider({ children }) {
   );
 }
 
+/**
+ *
+ */
 export function useTeamWizard() {
   const context = useContext(TeamWizardContext);
   if (!context) {

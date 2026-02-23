@@ -1,11 +1,24 @@
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+
 import { getSections } from '@/services/section/sectionService';
 
-const SquadSectionStep = ({ data, updateData, onNext, onPrev }) => {
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onNext
+ * @param root0.onPrev
+ * @param root0.updateData
+ */
+function SquadSectionStep({
+  data, onNext, onPrev, updateData,
+}) {
   const { Colors, Fonts } = useTheme();
 
   const [sections, setSections] = React.useState([]);
@@ -16,9 +29,9 @@ const SquadSectionStep = ({ data, updateData, onNext, onPrev }) => {
       try {
         const result = await getSections();
         // Map to format { label: name, value: documentId }
-        const options = result.map(s => ({
+        const options = result.map((s) => ({
           label: s.name,
-          value: s.documentId
+          value: s.documentId,
         }));
         setSections(options);
       } catch (error) {
@@ -31,42 +44,40 @@ const SquadSectionStep = ({ data, updateData, onNext, onPrev }) => {
     fetchSections();
   }, []);
 
-  const isValid = useMemo(() => {
-    return !!data.section;
-  }, [data.section]);
+  const isValid = useMemo(() => !!data.section, [data.section]);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 40 }]}>
-             Pour quelle section ?
-          </Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
+        <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
+          Pour quelle section ?
+        </Text>
 
-          <AutocompleteSelect
-            placeholder="Sélectionner une section"
-            options={sections}
-            value={data.section?.label}
-            setValue={(item) => updateData('section', item)}
-            isSearchable={false}
-            isLoading={loading}
-          />
-       </View>
+        <AutocompleteSelect
+          isLoading={loading}
+          isSearchable={false}
+          options={sections}
+          placeholder="Sélectionner une section"
+          setValue={(item) => updateData('section', item)}
+          value={data.section?.label}
+        />
+      </View>
 
-      <View style={{ marginBottom: 20, gap: 10 }}>
+      <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
-            title="Continuer"
-            onPress={onNext}
-            disabled={!isValid}
-            variant="Primary"
+          disabled={!isValid}
+          onPress={onNext}
+          title="Continuer"
+          variant="Primary"
         />
         <Button
-            title="Retour"
-            onPress={onPrev}
-            variant="Secondary"
+          onPress={onPrev}
+          title="Retour"
+          variant="Secondary"
         />
       </View>
     </View>
   );
-};
+}
 
 export default SquadSectionStep;

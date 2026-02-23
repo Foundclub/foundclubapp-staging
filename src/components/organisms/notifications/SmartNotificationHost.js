@@ -1,15 +1,25 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSmartNotifications } from '@/context/SmartNotificationContext';
-import { RouteNames } from '@/navigation/routeNames';
-import { navigate } from '@/navigation/navigationService';
+import {
+  Pressable, StyleSheet, Text, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
+
 import MatchFinalPosterModal from '@/components/organisms/league/MatchFinalPosterModal';
+
+import { navigate } from '@/navigation/navigationService';
+import { RouteNames } from '@/navigation/routeNames';
+
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
+
+import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
 const AUTO_HIDE_SNACKBAR_MS = 3200;
 
-const SmartNotificationHost = () => {
+/**
+ *
+ */
+function SmartNotificationHost() {
   const smartNotifEnabled = (() => {
     const raw = process.env.LEAGUE_SMART_NOTIF_V1;
     if (typeof raw === 'string' && raw.length > 0) {
@@ -60,10 +70,10 @@ const SmartNotificationHost = () => {
               },
             ]}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]} numberOfLines={1}>
+            <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
               {activeSnackbar.title || 'Notification League'}
             </Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral100 }]} numberOfLines={2}>
+            <Text numberOfLines={2} style={[Fonts.p3, { color: Colors.neutral100 }]}>
               {activeSnackbar.body || 'Nouvelle mise a jour.'}
             </Text>
           </Pressable>
@@ -85,7 +95,7 @@ const SmartNotificationHost = () => {
       />
     </>
   );
-};
+}
 
 const styles = StyleSheet.create({
   snackbar: {

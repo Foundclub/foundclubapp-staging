@@ -1,35 +1,48 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useHistoryWizard } from './HistoryWizardContext';
-import { useGetCategories } from '@/services/category/categoryQueries';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-const HistoryWizardCategory = ({ navigation }) => {
-  const { Colors, Fonts, Spaces, Alignments } = useTheme();
+import { useGetCategories } from '@/services/category/categoryQueries';
+
+import { useHistoryWizard } from './HistoryWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function HistoryWizardCategory({ navigation }) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useHistoryWizard();
+  const { dispatch, state } = useHistoryWizard();
   const { data: categories, isLoading } = useGetCategories();
 
   const handleSelectCategory = (category) => {
-    dispatch({ type: 'SET_CATEGORY', payload: category });
+    dispatch({ payload: category, type: 'SET_CATEGORY' });
   };
 
   return (
     <WizardStepLayout
-      title="Quelle catégorie ?"
-      subtitle="Sélectionne la catégorie d'âge"
+      isNextDisabled={!state.category}
       onBack={() => navigation.goBack()}
       onNext={() => navigation.navigate(RouteNames.HistoryWizardLevel)}
-      isNextDisabled={!state.category}
-      showSkip
       onSkip={() => navigation.navigate(RouteNames.HistoryWizardLevel)}
+      showSkip
+      subtitle="Sélectionne la catégorie d'âge"
+      title="Quelle catégorie ?"
     >
       {isLoading ? (
-        <ActivityIndicator size="large" color={Colors.primary500} />
+        <ActivityIndicator color={Colors.primary500} size="large" />
       ) : (
         <View style={[Spaces.gap[12]]}>
           {categories?.map((category) => {
@@ -39,14 +52,14 @@ const HistoryWizardCategory = ({ navigation }) => {
                 key={category.documentId}
                 onPress={() => handleSelectCategory(category)}
                 style={{
-                  backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
-                  borderRadius: 12,
-                  padding: 20,
-                  borderWidth: 2,
-                  borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                  flexDirection: 'row',
                   alignItems: 'center',
+                  backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                  borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  flexDirection: 'row',
                   justifyContent: 'space-between',
+                  padding: 20,
                 }}
               >
                 <Text style={[Fonts.p1Bold, { color: isSelected ? Colors.primary500 : Colors.neutral00 }]}>
@@ -62,6 +75,6 @@ const HistoryWizardCategory = ({ navigation }) => {
       )}
     </WizardStepLayout>
   );
-};
+}
 
 export default HistoryWizardCategory;

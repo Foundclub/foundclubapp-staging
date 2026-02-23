@@ -1,5 +1,5 @@
 {
-  "maxErrors": 2738,
-  "updatedAt": "2026-02-18",
+  "maxErrors": 1800,
+  "updatedAt": "2026-02-22",
   "source": "npm run type-check"
 }

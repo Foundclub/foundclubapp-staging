@@ -1,4 +1,7 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -7,14 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 
 import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+
 import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
 
 /**
@@ -28,15 +30,15 @@ import { getCMFacilities, getFacilities } from '@/services/facility/facilityServ
  * @param {string} props.error - Error message
  * @param {Function} [props.onAddFacility] - Optional callback when pressing "add facility"
  */
-const FacilitySelector = ({
+function FacilitySelector({
   clubId,
   cmId,
-  location,
-  facilityId,
-  onChange,
   error,
+  facilityId,
+  location,
   onAddFacility,
-}) => {
+  onChange,
+}) {
   const { t } = useTranslation();
   const {
     ApplicationStyle,
@@ -82,9 +84,9 @@ const FacilitySelector = ({
     isLoading: isLoadingClubFacilities,
     refetch: refetchClubFacilities,
   } = useQuery({
-    queryKey: ['facilities', clubId],
-    queryFn: () => getFacilities(clubId),
     enabled: !!clubId,
+    queryFn: () => getFacilities(clubId),
+    queryKey: ['facilities', clubId],
   });
 
   const {
@@ -93,9 +95,9 @@ const FacilitySelector = ({
     isLoading: isLoadingCmFacilities,
     refetch: refetchCmFacilities,
   } = useQuery({
-    queryKey: ['cm-facilities', cmId],
-    queryFn: () => getCMFacilities(cmId),
     enabled: !!cmId,
+    queryFn: () => getCMFacilities(cmId),
+    queryKey: ['cm-facilities', cmId],
   });
 
   const isLoadingFacilities = (
@@ -146,7 +148,7 @@ const FacilitySelector = ({
 
   const handleModeChange = (newMode) => {
     setMode(newMode);
-    onChange({ location: null, facilityId: null });
+    onChange({ facilityId: null, location: null });
   };
 
   const handleFacilityChange = (selectedId) => {
@@ -155,21 +157,21 @@ const FacilitySelector = ({
     );
 
     if (!selectedFacility) {
-      onChange({ location: null, facilityId: null });
+      onChange({ facilityId: null, location: null });
       return;
     }
 
     onChange({
+      facilityId: selectedId,
       location: {
         label: selectedFacility.address,
         value: '',
       },
-      facilityId: selectedId,
     });
   };
 
   const handleAddressChange = (newLocation) => {
-    onChange({ location: newLocation, facilityId: null });
+    onChange({ facilityId: null, location: newLocation });
   };
 
   return (
@@ -180,12 +182,12 @@ const FacilitySelector = ({
 
       <View style={{ alignItems: 'flex-start' }}>
         <SegmentedControl
+          onChange={handleModeChange}
           options={[
             { label: t('eventEdit.locationMode.club', 'Club'), value: 'club' },
             { label: t('eventEdit.locationMode.external', 'Exterieur'), value: 'external' },
           ]}
           value={mode}
-          onChange={handleModeChange}
         />
       </View>
 
@@ -223,18 +225,18 @@ const FacilitySelector = ({
 
             {!isLoadingFacilities && facilities.length > 0 ? (
               <ScrollView
-                style={{ maxHeight: 280 }}
                 contentContainerStyle={[Spaces.gap[12], { paddingBottom: 2, paddingRight: 2 }]}
-                showsVerticalScrollIndicator={facilities.length > 3}
                 nestedScrollEnabled
+                showsVerticalScrollIndicator={facilities.length > 3}
+                style={{ maxHeight: 280 }}
               >
                 {facilities.map((facility) => {
                   const id = facility.documentId || facility.id;
                   const isSelected = facilityId === id;
                   return (
                     <TouchableOpacity
-                      key={`wizard-facility-${id}`}
                       activeOpacity={0.86}
+                      key={`wizard-facility-${id}`}
                       onPress={() => handleFacilityChange(id)}
                       style={[
                         ApplicationStyle.card,
@@ -301,10 +303,10 @@ const FacilitySelector = ({
       ) : (
         <AutocompleteAddressInput
           address={location}
+          error={error}
           label={null}
           placeholder={t('eventEdit.fields.location.placeholder')}
           setAddress={handleAddressChange}
-          error={error}
           wrapperStyle={fieldSurfaceStyle}
         />
       )}
@@ -316,6 +318,6 @@ const FacilitySelector = ({
       ) : null}
     </View>
   );
-};
+}
 
 export default FacilitySelector;

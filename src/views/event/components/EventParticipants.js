@@ -1,12 +1,13 @@
 import React from 'react';
-import {
-  View, Text, TouchableOpacity, Image,
-} from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  Image, Text, TouchableOpacity, View,
+} from 'react-native';
+
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import useTheme from '@/theme/themeContext';
 
 const SHARE_ICON = require('@/assets/icons/share2.png');
 
@@ -73,26 +74,26 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
 /**
  * @param {EventParticipantsProps} props
  */
-const EventParticipants = ({
+function EventParticipants({
+  attendanceByUserId = {},
+  canEdit,
+  canApprovePendingRequests = canEdit,
   event,
+  eventStartAt,
+  handleExportParticipants,
+  handleRemindPlayers,
+  handleShare,
+  handleUpdateParticipation,
+  handleUserPress,
+  nowMs,
+  onCoachEditLate,
+  onCoachMarkArrival,
   participationsByStatus,
   pendingParticipations,
   teamParticipationSections = [],
-  canEdit,
-  canApprovePendingRequests = canEdit,
-  handleUserPress,
-  handleRemindPlayers,
-  handleShare,
-  handleExportParticipants,
-  handleUpdateParticipation,
-  attendanceByUserId = {},
-  eventStartAt,
-  nowMs,
-  onCoachMarkArrival,
-  onCoachEditLate,
-}) => {
+}) {
   const {
-    ApplicationStyle, Fonts, Spaces, Alignments, Colors,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
 
@@ -101,18 +102,18 @@ const EventParticipants = ({
     const attendance = userId ? attendanceByUserId[userId] : null;
     return (
       <ParticipantItem
-        key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
-        attendance={attendance}
         allowLiveLate={Boolean(options.allowLiveLate)}
+        attendance={attendance}
         canEdit={Boolean(options.showCoachActions)}
         eventStartAt={eventStartAt}
+        key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
         onMarkArrival={onCoachMarkArrival}
         onPress={handleUserPress}
         player={player}
         styles={{
-          ApplicationStyle, Alignments, Spaces, Fonts, Colors,
+          Alignments, ApplicationStyle, Colors, Fonts, Spaces,
         }}
       />
     );
@@ -133,10 +134,10 @@ const EventParticipants = ({
     >
       <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, Alignments.fill]}>
         <ProfileAvatar
+          imageStyle={{ borderRadius: 40 }}
           imageUrl={participation.user.avatar?.url}
           size={40}
           style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
-          imageStyle={{ borderRadius: 40 }}
         />
         <View style={{ flex: 1 }}>
           <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
@@ -231,7 +232,7 @@ const EventParticipants = ({
             allowLiveLate: true,
             keyPrefix: `${section.key}-present`,
             showCoachActions: section.allowCoachActions ?? canEdit,
-          }
+          },
         )}
 
         {renderStatusGroup(
@@ -240,7 +241,7 @@ const EventParticipants = ({
           {
             allowLiveLate: false,
             keyPrefix: `${section.key}-missing`,
-          }
+          },
         )}
 
         {section.notAnswered?.length ? (
@@ -307,7 +308,7 @@ const EventParticipants = ({
           </Text>
         </Text>
         <TouchableOpacity onPress={handleShare}>
-          <Image source={SHARE_ICON} style={{ height: 48, width: 48 }} resizeMode="contain" />
+          <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
         </TouchableOpacity>
       </View>
 
@@ -332,7 +333,7 @@ const EventParticipants = ({
               allowLiveLate: true,
               keyPrefix: 'legacy-present',
               showCoachActions: canEdit,
-            }
+            },
           )}
           {renderStatusGroup(
             t('eventDetails.participationStatus.missing'),
@@ -340,7 +341,7 @@ const EventParticipants = ({
             {
               allowLiveLate: false,
               keyPrefix: 'legacy-missing',
-            }
+            },
           )}
           {(participationsByStatus.notAnswered || []).length > 0 && (
             <>
@@ -361,14 +362,14 @@ const EventParticipants = ({
         </>
       ) : (
         (event?.participations || []).map((player) => renderParticipant(player, {
-          showCoachActions: canEdit,
           allowLiveLate: true,
           keyPrefix: 'fallback',
+          showCoachActions: canEdit,
         }))
       )}
     </View>
   );
-};
+}
 
 /**
  * @param {{
@@ -384,20 +385,20 @@ const EventParticipants = ({
  * styles: any
  * }} props
  */
-const ParticipantItem = ({
-  player,
-  attendance,
+function ParticipantItem({
   allowLiveLate = false,
+  attendance,
   canEdit = false,
   eventStartAt,
   nowMs,
-  onPress,
-  onMarkArrival,
   onEditLate,
+  onMarkArrival,
+  onPress,
+  player,
   styles,
-}) => {
+}) {
   const {
-    ApplicationStyle, Alignments, Spaces, Fonts,
+    Alignments, ApplicationStyle, Fonts, Spaces,
   } = styles;
 
   const hasArrived = Boolean(attendance?.arrivedAt);
@@ -435,10 +436,10 @@ const ParticipantItem = ({
       >
         <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 1 }]}>
           <ProfileAvatar
+            imageStyle={{ borderRadius: 40 }}
             imageUrl={player?.avatar?.url}
             size={40}
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
-            imageStyle={{ borderRadius: 40 }}
           />
           <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
             {`${player.firstname || ''} ${player.lastname || ''}`.trim()}
@@ -480,6 +481,6 @@ const ParticipantItem = ({
       )}
     </View>
   );
-};
+}
 
 export default EventParticipants;

@@ -21,7 +21,9 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { useGetCategories } from '@/services/category/categoryQueries';
+
 import { getFieldError } from '@/utils/form/formUtils';
 
 const DEFAULT_RADIUS_KM = 20;
@@ -39,12 +41,12 @@ const SECTION_OPTIONS = [
 ];
 
 const filtersSchema = Joi.object({
-  city: Joi.object().allow(''),
-  radius: Joi.number().allow(''),
-  sport: Joi.object().allow(null),
-  section: Joi.object().allow(null),
   category: Joi.object().allow(null),
+  city: Joi.object().allow(''),
   division: Joi.number().allow(null),
+  radius: Joi.number().allow(''),
+  section: Joi.object().allow(null),
+  sport: Joi.object().allow(null),
 });
 
 /**
@@ -120,9 +122,11 @@ const buildCleanFilters = (rawData) => {
 /**
  * @param {{ navigation: any }} props
  */
-const SquadFiltersScreen = ({ navigation }) => {
+function SquadFiltersScreen({ navigation }) {
   const { t } = useTranslation();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const [{ squadFilters }, appDispatch] = useAppContext();
   const insets = useSafeAreaInsets();
   const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategories();
@@ -147,12 +151,12 @@ const SquadFiltersScreen = ({ navigation }) => {
   }, [categoriesData, categorySearchValue]);
 
   const initialValues = useMemo(() => ({
-    city: normalizeCityFilter(squadFilters?.city),
-    radius: Number.parseInt(String(squadFilters?.radius || ''), 10) || DEFAULT_RADIUS_KM,
-    sport: normalizeObjectFilter(squadFilters?.sport),
-    section: normalizeObjectFilter(squadFilters?.section),
     category: normalizeObjectFilter(squadFilters?.category),
+    city: normalizeCityFilter(squadFilters?.city),
     division: toDivisionValue(squadFilters?.division),
+    radius: Number.parseInt(String(squadFilters?.radius || ''), 10) || DEFAULT_RADIUS_KM,
+    section: normalizeObjectFilter(squadFilters?.section),
+    sport: normalizeObjectFilter(squadFilters?.sport),
   }), [squadFilters]);
 
   const {
@@ -210,7 +214,13 @@ const SquadFiltersScreen = ({ navigation }) => {
             {t('squad.filters.title', 'Filtres Squad')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
-            {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
+            {activeFiltersCount}
+            {' '}
+            filtre
+            {activeFiltersCount > 1 ? 's' : ''}
+            {' '}
+            actif
+            {activeFiltersCount > 1 ? 's' : ''}
           </Text>
         </View>
         <TouchableOpacity
@@ -403,7 +413,9 @@ const SquadFiltersScreen = ({ navigation }) => {
                       }}
                     >
                       <Text style={[Fonts.p2Bold, { color: isActive ? Colors.gold500 : Colors.neutral200 }]}>
-                        DIV {divisionOption}
+                        DIV
+                        {' '}
+                        {divisionOption}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -434,6 +446,6 @@ const SquadFiltersScreen = ({ navigation }) => {
       </View>
     </ScreenContainer>
   );
-};
+}
 
 export default SquadFiltersScreen;

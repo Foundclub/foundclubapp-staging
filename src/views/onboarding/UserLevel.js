@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -16,8 +18,6 @@ import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
 
-
-
 /**
  * User best level selection screen
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -26,7 +26,9 @@ function UserLevel({ navigation }) {
   const [selectedLevel, setSelectedLevel] = useState(/** @type {string | null} */ (null));
 
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const { data: levels, isLoading: levelsLoading } = useGetLevels();
@@ -89,10 +91,10 @@ function UserLevel({ navigation }) {
               style={[
                 Spaces.padding[16],
                 {
+                  backgroundColor: selectedLevel === level.name ? `${Colors.primary500}20` : Colors.neutral800,
+                  borderColor: selectedLevel === level.name ? Colors.primary500 : Colors.neutral700,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: selectedLevel === level.name ? Colors.primary500 : Colors.neutral700,
-                  backgroundColor: selectedLevel === level.name ? Colors.primary500 + '20' : Colors.neutral800,
                 },
               ]}
             >

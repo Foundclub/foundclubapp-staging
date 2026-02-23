@@ -11,18 +11,18 @@ import { Swipeable } from 'react-native-gesture-handler';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -55,9 +55,9 @@ function Messaging({ navigation, route }) {
     currentUserTeamIds: allMyTeams?.map((team) => team.documentId || ''),
   });
 
-  const { 
-    getConversationName, getUnreadStatus, joinChat, 
-    pinChat, unpinChat, archiveChat 
+  const {
+    archiveChat, getConversationName, getUnreadStatus,
+    joinChat, pinChat, unpinChat,
   } = useMessaging();
 
   const allChats = useMemo(() => {
@@ -65,35 +65,35 @@ function Messaging({ navigation, route }) {
       (acc, page) => acc.concat(page.data || []),
       /** @type {Chat[]} */([]),
     ) : [];
-    
+
     // Sort: Multisport > Club > Team > Whisper
     // We want Multisport (m) at top, then Club (c)
     // Map types to priority
     /** @type {Record<'multisport' | 'club' | 'league_match' | 'team' | 'whisper', number>} */
     const priority = {
-        'multisport': 0,
-        'club': 1,
-        'league_match': 1.5, // High priority but after club/multisport? Or top? Let's put it high.
-        'team': 2,
-        'whisper': 3
+      club: 1,
+      league_match: 1.5, // High priority but after club/multisport? Or top? Let's put it high.
+      multisport: 0,
+      team: 2,
+      whisper: 3,
     };
-    
+
     return chats
       .filter((chat) => !chat.archivedBy?.some((u) => u.documentId === userData?.documentId))
       .sort((a, b) => {
         const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
         const isPinnedB = b.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-        
+
         if (isPinnedA && !isPinnedB) return -1;
         if (!isPinnedA && isPinnedB) return 1;
 
         const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (a.type)] ?? 99;
         const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (b.type)] ?? 99;
-        
+
         if (pA !== pB) return pA - pB;
-        
+
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
+      });
   }, [chatsData?.pages, userData]);
 
   /**
@@ -116,9 +116,9 @@ function Messaging({ navigation, route }) {
         if (chat?.club?.logo?.url) {
           return (
             <ProfileAvatar
+              enablePreview={false}
               imageUrl={chat.club.logo.url}
               size={48}
-              enablePreview={false}
             />
           );
         }
@@ -129,14 +129,47 @@ function Messaging({ navigation, route }) {
             isSmall
           />
         );
+      case 'league_match':
+        return (
+          <View style={{
+            alignItems: 'center',
+            backgroundColor: Colors.neutral900,
+            borderColor: Colors.gold500,
+            borderRadius: 24,
+            borderWidth: 2,
+            height: 48,
+            justifyContent: 'center',
+            width: 48,
+          }}
+          >
+            <Text style={{ fontSize: 20 }}>🏆</Text>
+          </View>
+        );
+      case 'multisport':
+        if (chat?.multisportClub?.logo?.url) {
+          return (
+            <ProfileAvatar
+              enablePreview={false}
+              imageUrl={chat.multisportClub.logo.url}
+              size={48}
+            />
+          );
+        }
+        return (
+          <TeamShield
+            initials={chat?.multisportClub?.name ? getClubInitials(chat?.multisportClub?.name) : ''}
+            isNeutral
+            isSmall
+          />
+        );
       case 'team':
         if (chat?.team?.logo?.url) {
           return (
-             <ProfileAvatar
+            <ProfileAvatar
+              enablePreview={false}
               imageUrl={chat.team.logo.url}
               size={48}
-              enablePreview={false}
-             />
+            />
           );
         }
         return (
@@ -151,6 +184,7 @@ function Messaging({ navigation, route }) {
         ) || chat.participants?.[0];
         return (
           <ProfileAvatar
+            imageStyle={{ borderRadius: 40 }}
             imageUrl={participant?.avatar?.url}
             size={40}
             style={[
@@ -158,38 +192,9 @@ function Messaging({ navigation, route }) {
               ApplicationStyle.borderColor.neutral00,
               { borderRadius: 40 },
             ]}
-            imageStyle={{ borderRadius: 40 }}
           />
         );
       }
-      case 'league_match':
-        return (
-            <View style={{
-                width: 48, height: 48, borderRadius: 24,
-                backgroundColor: Colors.neutral900,
-                borderWidth: 2, borderColor: Colors.gold500,
-                justifyContent: 'center', alignItems: 'center'
-            }}>
-                <Text style={{ fontSize: 20 }}>🏆</Text>
-            </View>
-        );
-      case 'multisport':
-        if (chat?.multisportClub?.logo?.url) {
-          return (
-            <ProfileAvatar
-              imageUrl={chat.multisportClub.logo.url}
-              size={48}
-              enablePreview={false}
-            />
-          );
-        }
-        return (
-          <TeamShield
-            initials={chat?.multisportClub?.name ? getClubInitials(chat?.multisportClub?.name) : ''}
-            isNeutral
-            isSmall
-          />
-        );
       default:
         return (
           <Image
@@ -208,18 +213,18 @@ function Messaging({ navigation, route }) {
   const filteredChats = useMemo(() => {
     if (!searchQuery) return allChats;
     const lowerQuery = searchQuery.toLowerCase();
-    
+
     return allChats.filter((chat) => {
-       const name = getConversationName({
-          chatClub: chat.club,
-          chatMultisportClub: chat.multisportClub,
-          chatParticipants: chat.participants,
-          chatTeam: chat.team,
-          chatType: chat.type,
-          chatLeagueMatch: chat.league_match,
-          meId: userData?.documentId,
-       });
-       return name?.toLowerCase()?.includes(lowerQuery);
+      const name = getConversationName({
+        chatClub: chat.club,
+        chatLeagueMatch: chat.league_match,
+        chatMultisportClub: chat.multisportClub,
+        chatParticipants: chat.participants,
+        chatTeam: chat.team,
+        chatType: chat.type,
+        meId: userData?.documentId,
+      });
+      return name?.toLowerCase()?.includes(lowerQuery);
     });
   }, [allChats, searchQuery, getConversationName, userData]);
 
@@ -232,19 +237,20 @@ function Messaging({ navigation, route }) {
         Alignments.alignCenter,
         Spaces.paddingHorizontal[16],
         Spaces.paddingVertical[8],
-        Spaces.gap[8]
-      ]}>
-         <Image 
-            source={Images.search} 
-            style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral300]} 
-         />
-         <TextInput
-            placeholder={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
-            placeholderTextColor={Colors.neutral300}
-            style={[Fonts.p2, { flex: 1, color: Colors.neutral00, padding: 0 }]}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-         />
+        Spaces.gap[8],
+      ]}
+      >
+        <Image
+          source={Images.search}
+          style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral300]}
+        />
+        <TextInput
+          onChangeText={setSearchQuery}
+          placeholder={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
+          placeholderTextColor={Colors.neutral300}
+          style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
+          value={searchQuery}
+        />
       </View>
     </View>
   );
@@ -253,45 +259,43 @@ function Messaging({ navigation, route }) {
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
     return (
       <TouchableOpacity
-        style={{
-          width: 80,
-          backgroundColor: Colors.primary500,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginBottom: 8,
-          borderRadius: 2
-        }}
         onPress={() => {
-            if (isPinned) unpinChat(chat.documentId);
-            else pinChat(chat.documentId);
+          if (isPinned) unpinChat(chat.documentId);
+          else pinChat(chat.documentId);
+        }}
+        style={{
+          alignItems: 'center',
+          backgroundColor: Colors.primary500,
+          borderRadius: 2,
+          justifyContent: 'center',
+          marginBottom: 8,
+          width: 80,
         }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-            {isPinned ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler')}
+          {isPinned ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler')}
         </Text>
       </TouchableOpacity>
     );
   };
 
-  const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => {
-    return (
-      <TouchableOpacity
-        style={{
-          width: 80,
-          backgroundColor: Colors.error500, // Or warning color
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginBottom: 8,
-          borderRadius: 2
-        }}
-        onPress={() => archiveChat(chat.documentId)}
-      >
-        <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-           {t('messaging.archive', 'Supprimer')}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+  const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
+    <TouchableOpacity
+      onPress={() => archiveChat(chat.documentId)}
+      style={{
+        alignItems: 'center',
+        backgroundColor: Colors.error500, // Or warning color
+        borderRadius: 2,
+        justifyContent: 'center',
+        marginBottom: 8,
+        width: 80,
+      }}
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+        {t('messaging.archive', 'Supprimer')}
+      </Text>
+    </TouchableOpacity>
+  );
 
   /**
    * Render a chat item
@@ -322,8 +326,8 @@ function Messaging({ navigation, route }) {
             hasUnread
               ? ApplicationStyle.backgroundColor.primary700
               : (chat.type === 'league_match' ? 'rgba(212, 175, 55, 0.1)' : ApplicationStyle.backgroundColor.transparent),
-            isPinned && { borderLeftWidth: 4, borderLeftColor: Colors.primary500 },
-            chat.type === 'league_match' && { borderLeftWidth: 4, borderLeftColor: Colors.gold500 }
+            isPinned && { borderLeftColor: Colors.primary500, borderLeftWidth: 4 },
+            chat.type === 'league_match' && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
           ]}
         >
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
@@ -337,37 +341,43 @@ function Messaging({ navigation, route }) {
               {renderConversationAvatar(chat)}
             </TouchableOpacity>
             <View style={[Alignments.fill, Alignments.column]}>
-                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text
-                    style={[
-                        Fonts.p2Bold,
-                        Fonts.neutral00,
-                        hasUnread && Fonts.neutral00,
-                        { flex: 1} 
-                    ]}
-                    numberOfLines={1}
-                    >
-                    {getConversationName({
-                        chatClub: chat.club,
-                        chatMultisportClub: chat.multisportClub,
-                        chatParticipants: chat.participants,
-                        chatTeam: chat.team,
-                        chatType: chat.type,
-                        chatLeagueMatch: chat.league_match,
-                        meId: userData?.documentId,
-                    })}
-                    </Text>
-                    {chat.type === 'league_match' && (
-                         <View style={{ backgroundColor: Colors.gold500, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
-                             <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
-                         </View>
-                    )}
-                    {isPinned && (
-                         <View style={{ backgroundColor: Colors.primary500, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
-                             <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÉ</Text>
-                         </View>
-                    )}
+              <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Fonts.p2Bold,
+                    Fonts.neutral00,
+                    hasUnread && Fonts.neutral00,
+                    { flex: 1 },
+                  ]}
+                >
+                  {getConversationName({
+                    chatClub: chat.club,
+                    chatLeagueMatch: chat.league_match,
+                    chatMultisportClub: chat.multisportClub,
+                    chatParticipants: chat.participants,
+                    chatTeam: chat.team,
+                    chatType: chat.type,
+                    meId: userData?.documentId,
+                  })}
+                </Text>
+                {chat.type === 'league_match' && (
+                <View style={{
+                  backgroundColor: Colors.gold500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
+                }}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
                 </View>
+                )}
+                {isPinned && (
+                <View style={{
+                  backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
+                }}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÉ</Text>
+                </View>
+                )}
+              </View>
 
               {lastMessage && (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
@@ -418,8 +428,8 @@ function Messaging({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -443,7 +453,7 @@ function Messaging({ navigation, route }) {
           Alignments.justifySpaceBetween]}
         >
           <LeagueHeaderSwitch />
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <NotificationBadge />
             <ProfileButton />
           </View>
@@ -491,35 +501,37 @@ function Messaging({ navigation, route }) {
             </WithDataWrapper>
           </View>
         </OnboardingWrapper>
-        
+
         {(userData?.role?.name === 'Entraineur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
           <View style={{
-            position: 'absolute',
             bottom: 20,
             left: 20,
+            position: 'absolute',
             right: 20,
           }}
           >
             <TouchableOpacity
               onPress={() => navigation.navigate('NewConversation')}
               style={{
+                alignItems: 'center',
                 backgroundColor: Colors.primary500,
                 borderRadius: 25,
-                paddingVertical: 16,
-                alignItems: 'center',
+                elevation: 5,
                 justifyContent: 'center',
-                shadowColor: "#000",
+                paddingVertical: 16,
+                shadowColor: '#000',
                 shadowOffset: {
-                  width: 0,
                   height: 2,
+                  width: 0,
                 },
                 shadowOpacity: 0.25,
                 shadowRadius: 3.84,
-                elevation: 5,
               }}
             >
               <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                + {t('messaging.newConversation', 'Nouvelle conversation')}
+                +
+                {' '}
+                {t('messaging.newConversation', 'Nouvelle conversation')}
               </Text>
             </TouchableOpacity>
           </View>

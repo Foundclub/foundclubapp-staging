@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
 
-import useTheme from '@/theme/themeContext';
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
+import useTheme from '@/theme/themeContext';
 
 /**
  * SegmentedControl component.
@@ -13,7 +15,9 @@ import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
  * @param {boolean} [props.centerContent]
  * @returns {import('react').ReactElement}
  */
-function SegmentedControl({ options, value, onChange, centerContent = false }) {
+function SegmentedControl({
+  centerContent = false, onChange, options, value,
+}) {
   const { Colors, Fonts } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -84,15 +88,15 @@ function SegmentedControl({ options, value, onChange, centerContent = false }) {
         bounces={!centerContent}
         contentContainerStyle={[styles.container, centerContent && styles.containerCentered]}
         horizontal
-        style={styles.scroll}
         showsHorizontalScrollIndicator={false}
+        style={styles.scroll}
       >
         {options.map((option) => {
           const isSelected = option.value === value;
           return (
             <TouchableOpacity
-              key={option.value}
               activeOpacity={0.8}
+              key={option.value}
               onPress={() => onChange(option.value)}
               style={[
                 styles.segment,

@@ -1,4 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,24 +16,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+
+import useAuth from '@/domains/auth/useAuth';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import useAuth from '@/domains/auth/useAuth';
-import {
-  cancelMatch,
-  confirmParticipation,
-  declineParticipation,
-  fetchMatch,
-  markVenueBooked,
-} from '@/services/league/leagueMatchService';
-import useTheme from '@/theme/themeContext';
+import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import {
   getMatchDerivedPhase,
   getMatchStatusBadgeConfig,
@@ -36,8 +33,16 @@ import {
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+
+import {
+  cancelMatch,
+  confirmParticipation,
+  declineParticipation,
+  fetchMatch,
+  markVenueBooked,
+} from '@/services/league/leagueMatchService';
+
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
-import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 
 /**
  * @typedef {{navigation: any, route: {params: {matchId: string}}}} LeagueMatchDetailsProps
@@ -104,7 +109,7 @@ function LeagueMatchDetails({ navigation, route }) {
   useFocusEffect(
     useCallback(() => {
       loadMatch();
-    }, [loadMatch])
+    }, [loadMatch]),
   );
 
   useEffect(() => {
@@ -151,19 +156,19 @@ function LeagueMatchDetails({ navigation, route }) {
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
   const canSubmitScore = useMemo(
-    () => isCaptain && ['waiting_score', 'pending_validation', 'disputed'].includes(matchPhase),
-    [isCaptain, matchPhase]
+    () => isCaptain && ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase),
+    [isCaptain, matchPhase],
   );
   const isScoreLockedByTime = useMemo(
     () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScore,
-    [canSubmitScore, isCaptain, isVenueBooked, normalizedStatus]
+    [canSubmitScore, isCaptain, isVenueBooked, normalizedStatus],
   );
 
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
   const addressLabel = useMemo(() => resolveAddressLabel(match), [match]);
   const showAddressLine = useMemo(
     () => Boolean(addressLabel && normalizeComparableText(addressLabel) !== normalizeComparableText(venueLabel)),
-    [addressLabel, venueLabel]
+    [addressLabel, venueLabel],
   );
 
   const formattedDate = useMemo(() => {
@@ -182,7 +187,7 @@ function LeagueMatchDetails({ navigation, route }) {
     const eloA = match.team_a.elo;
     const eloB = match.team_b.elo;
     const k = 32;
-    const expectedA = 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
+    const expectedA = 1 / (1 + 10 ** ((eloB - eloA) / 400));
     const winA = Math.round(k * (1 - expectedA));
     const lossA = Math.round(k * (0 - expectedA));
     return {
@@ -250,7 +255,7 @@ function LeagueMatchDetails({ navigation, route }) {
       'Annuler le match ?',
       'Action irreversible. Etes-vous sur ?',
       [
-        { text: 'Non', style: 'cancel' },
+        { style: 'cancel', text: 'Non' },
         {
           onPress: async () => {
             setActionLoading(true);
@@ -272,7 +277,7 @@ function LeagueMatchDetails({ navigation, route }) {
           style: 'destructive',
           text: 'Oui, annuler',
         },
-      ]
+      ],
     );
   };
 
@@ -290,7 +295,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute."
+        "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute.",
       );
       return;
     }
@@ -380,7 +385,10 @@ function LeagueMatchDetails({ navigation, route }) {
             <View style={styles.scoreColumn}>
               {match.score_a !== null && match.score_b !== null ? (
                 <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32 }]}>
-                  {match.score_a} - {match.score_b}
+                  {match.score_a}
+                  {' '}
+                  -
+                  {match.score_b}
                 </Text>
               ) : (
                 <Text style={[Fonts.h1, { color: Colors.gold500, fontSize: 24, fontStyle: 'italic' }]}>VS</Text>
@@ -405,7 +413,7 @@ function LeagueMatchDetails({ navigation, route }) {
               {isAnonymous ? (
                 <>
                   <View style={[styles.mysteryShield, { borderColor: Colors.gold500 }]}>
-                    <Text style={{ color: Colors.neutral200, fontSize: 30 }}>{'?'}</Text>
+                    <Text style={{ color: Colors.neutral200, fontSize: 30 }}>?</Text>
                   </View>
                   <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>
                     Mystère
@@ -452,7 +460,8 @@ function LeagueMatchDetails({ navigation, route }) {
                     <View style={styles.eloTeam}>
                       <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{match.team_a?.name}</Text>
                       <Text style={[Fonts.p1, { color: Colors.success500 }]}>
-                        +{eloPrediction.winA}
+                        +
+                        {eloPrediction.winA}
                         {' / '}
                         <Text style={{ color: Colors.error500 }}>{eloPrediction.lossA}</Text>
                       </Text>
@@ -461,7 +470,8 @@ function LeagueMatchDetails({ navigation, route }) {
                     <View style={styles.eloTeam}>
                       <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
                       <Text style={[Fonts.p1, { color: Colors.success500 }]}>
-                        +{eloPrediction.winB}
+                        +
+                        {eloPrediction.winB}
                         {' / '}
                         <Text style={{ color: Colors.error500 }}>{eloPrediction.lossB}</Text>
                       </Text>
@@ -473,7 +483,13 @@ function LeagueMatchDetails({ navigation, route }) {
           </LeagueCard>
 
           <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
-            Compositions ({match.participations_a?.length || 0} vs {match.participations_b?.length || 0})
+            Compositions (
+            {match.participations_a?.length || 0}
+            {' '}
+            vs
+            {' '}
+            {match.participations_b?.length || 0}
+            )
           </Text>
 
           <LeagueCard>
@@ -484,7 +500,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
                     <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
                     <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
-                    {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>{'C'}</Text> : null}
+                    {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
                   </View>
                 ))}
                 {(!match.participations_a || match.participations_a.length === 0) ? (
@@ -571,39 +587,39 @@ function LeagueMatchDetails({ navigation, route }) {
         {teamSide && normalizedStatus === 'scheduled' ? (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarContent}>
-            {hasConfirmed ? (
-              <View style={styles.confirmedRow}>
-                <Text style={[Fonts.p1, { color: Colors.success500 }]}>{'Presence confirmee'}</Text>
-                <Button
-                  disabled={actionLoading}
-                  onPress={handleDeclineParticipation}
-                  size="small"
-                  style={{ backgroundColor: 'transparent', borderColor: Colors.error500, minWidth: 132 }}
-                  textStyle={{ color: Colors.error500 }}
-                  title="Passer absent"
-                  variant="Secondary"
-                />
-              </View>
-            ) : (
-              <View style={styles.presenceActionsRow}>
-                <Button
-                  disabled={actionLoading}
-                  onPress={handleDeclineParticipation}
-                  style={{ backgroundColor: 'transparent', borderColor: Colors.error500, flex: 1 }}
-                  textStyle={{ color: Colors.error500 }}
-                  title="Absent"
-                  variant="Secondary"
-                />
-                <Button
-                  disabled={actionLoading || participationCount >= requiredPlayers}
-                  onPress={handleConfirmParticipation}
-                  style={{ backgroundColor: Colors.gold500, flex: 1.35 }}
-                  textStyle={{ color: Colors.primary900 }}
-                  title={`Present (${participationCount}/${requiredPlayers})`}
-                  variant="Primary"
-                />
-              </View>
-            )}
+              {hasConfirmed ? (
+                <View style={styles.confirmedRow}>
+                  <Text style={[Fonts.p1, { color: Colors.success500 }]}>Presence confirmee</Text>
+                  <Button
+                    disabled={actionLoading}
+                    onPress={handleDeclineParticipation}
+                    size="small"
+                    style={{ backgroundColor: 'transparent', borderColor: Colors.error500, minWidth: 132 }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Passer absent"
+                    variant="Secondary"
+                  />
+                </View>
+              ) : (
+                <View style={styles.presenceActionsRow}>
+                  <Button
+                    disabled={actionLoading}
+                    onPress={handleDeclineParticipation}
+                    style={{ backgroundColor: 'transparent', borderColor: Colors.error500, flex: 1 }}
+                    textStyle={{ color: Colors.error500 }}
+                    title="Absent"
+                    variant="Secondary"
+                  />
+                  <Button
+                    disabled={actionLoading || participationCount >= requiredPlayers}
+                    onPress={handleConfirmParticipation}
+                    style={{ backgroundColor: Colors.gold500, flex: 1.35 }}
+                    textStyle={{ color: Colors.primary900 }}
+                    title={`Present (${participationCount}/${requiredPlayers})`}
+                    variant="Primary"
+                  />
+                </View>
+              )}
             </View>
           </View>
         ) : null}
@@ -619,9 +635,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     bottom: 0,
     left: 0,
+    paddingBottom: 30,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 30,
     position: 'absolute',
     right: 0,
   },

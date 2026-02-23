@@ -47,7 +47,7 @@ export const getTeamMembershipRequests = async (teamIds, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user', 'team'],
+    populate: ['user', 'user.avatar', 'team'],
   };
 
   const response = await client.get('/team-membership-requests', { params: filters });

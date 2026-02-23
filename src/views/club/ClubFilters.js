@@ -6,12 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  OnboardingProvider,
-  useOnboarding,
-} from '@/context/OnboardingContext';
-import usePlaces from '@/domains/places/usePlaces';
 import useAuth from '@/domains/auth/useAuth';
+import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -27,6 +23,11 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import {
+  OnboardingProvider,
+  useOnboarding,
+} from '@/context/OnboardingContext';
+
 const filtersSchema = Joi.object({
   activity: Joi.string().allow(''),
   city: Joi.object().allow(''),
@@ -39,6 +40,23 @@ const AFFILIATION_TUTORIAL_FLOW_PREFIX = 'onboarding-affiliation-v2';
  * ClubFilters component for filtering clubs by location and activity
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} ClubFilters component
+ */
+function ClubFilters(props) {
+  const { userData } = useAuth();
+  const flowId = `${AFFILIATION_TUTORIAL_FLOW_PREFIX}:${userData?.documentId || 'anonymous'}`;
+
+  return (
+    <OnboardingProvider flowId={flowId}>
+      <ClubFiltersContent {...props} />
+    </OnboardingProvider>
+  );
+}
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
  */
 function ClubFiltersContent({ navigation, route }) {
   // local states
@@ -327,17 +345,6 @@ function ClubFiltersContent({ navigation, route }) {
       </View>
       <OnboardingOverlay />
     </ScreenContainer>
-  );
-}
-
-function ClubFilters(props) {
-  const { userData } = useAuth();
-  const flowId = `${AFFILIATION_TUTORIAL_FLOW_PREFIX}:${userData?.documentId || 'anonymous'}`;
-
-  return (
-    <OnboardingProvider flowId={flowId}>
-      <ClubFiltersContent {...props} />
-    </OnboardingProvider>
   );
 }
 

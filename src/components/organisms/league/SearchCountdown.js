@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import LeagueCard from '@/components/atoms/league/LeagueCard';
 import useTheme from '@/theme/themeContext';
+
+import LeagueCard from '@/components/atoms/league/LeagueCard';
 
 /**
  * SearchCountdown component.
  * @param {{createdAt?: string | number | Date, serverNow?: string | number | Date | null, onExpired?: () => void}} props
  * @returns {import('react').ReactElement}
  */
-const SearchCountdown = ({ createdAt, serverNow = null }) => {
+function SearchCountdown({ createdAt, serverNow = null }) {
   const { Colors, Fonts } = useTheme();
   const [elapsed, setElapsed] = useState(null);
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
@@ -100,7 +101,7 @@ const SearchCountdown = ({ createdAt, serverNow = null }) => {
       </View>
     </LeagueCard>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

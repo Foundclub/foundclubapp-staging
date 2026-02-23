@@ -2,14 +2,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { Image, View } from 'react-native';
 
+import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Home from '@/views/Home';
 
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
-
-import { useAppContext } from '@/store/appContext';
 
 import AuthStackNavigator from './AuthStackNavigator';
 

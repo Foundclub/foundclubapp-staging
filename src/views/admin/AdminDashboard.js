@@ -1,14 +1,18 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-import { RouteNames } from '@/navigation/routeNames';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetAdminStats, useGetLeagueDisputes, useGetPendingClubClaims } from '@/services/admin/adminQueries';
 import { useGetEvents } from '@/services/event/eventQueries';
-import { useGetAdminStats, useGetPendingClubClaims, useGetLeagueDisputes } from '@/services/admin/adminQueries';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -18,163 +22,173 @@ import { useGetAdminStats, useGetPendingClubClaims, useGetLeagueDisputes } from 
  * @returns {import('react').ReactElement} Admin Dashboard screen component
  */
 function AdminDashboard() {
-    const {
-        Alignments,
-        ApplicationStyle,
-        Colors,
-        Fonts,
-        Spaces,
-    } = useTheme();
-    const navigation = useNavigation();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
+  const navigation = useNavigation();
 
-    // 1. Featured Requests Count
-    const {
-        data: featuredRequestsData,
-        isLoading: isFeaturedLoading,
-        refetch: refetchFeatured,
-    } = useGetEvents({
-        featuredRequestStatus: 'pending',
-        pageSize: 1, // We only need the count
-    });
+  // 1. Featured Requests Count
+  const {
+    data: featuredRequestsData,
+    isLoading: isFeaturedLoading,
+    refetch: refetchFeatured,
+  } = useGetEvents({
+    featuredRequestStatus: 'pending',
+    pageSize: 1, // We only need the count
+  });
 
-    const {
-        data: stats,
-        isLoading: isStatsLoading,
-        refetch: refetchStats,
-    } = useGetAdminStats();
+  const {
+    data: stats,
+    isLoading: isStatsLoading,
+    refetch: refetchStats,
+  } = useGetAdminStats();
 
-    const featuredCount = featuredRequestsData?.pages?.[0]?.meta?.pagination?.total || 0;
-    const eventsTodayCount = stats?.eventsToday || 0;
-    const caGenerated = stats?.revenue || 0;
-    const reportsCount = stats?.reportsCount || 0;
+  const featuredCount = featuredRequestsData?.pages?.[0]?.meta?.pagination?.total || 0;
+  const eventsTodayCount = stats?.eventsToday || 0;
+  const caGenerated = stats?.revenue || 0;
+  const reportsCount = stats?.reportsCount || 0;
 
-    const {
-        data: claimsData,
-        isLoading: isClaimsLoading,
-        refetch: refetchClaims,
-    } = useGetPendingClubClaims();
+  const {
+    data: claimsData,
+    isLoading: isClaimsLoading,
+    refetch: refetchClaims,
+  } = useGetPendingClubClaims();
 
-    const claimsCount = claimsData?.meta?.pagination?.total || 0;
-    const disputeCountParams = useMemo(() => ({
-        pagination: { page: 1, pageSize: 1 },
-    }), []);
+  const claimsCount = claimsData?.meta?.pagination?.total || 0;
+  const disputeCountParams = useMemo(() => ({
+    pagination: { page: 1, pageSize: 1 },
+  }), []);
 
-    const {
-        data: leagueDisputesData,
-        refetch: refetchLeagueDisputes,
-    } = useGetLeagueDisputes(disputeCountParams);
+  const {
+    data: leagueDisputesData,
+    refetch: refetchLeagueDisputes,
+  } = useGetLeagueDisputes(disputeCountParams);
 
-    const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
+  const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
 
-    useFocusEffect(
-        useCallback(() => {
-            refetchFeatured();
-            refetchStats();
-            refetchClaims();
-            refetchLeagueDisputes();
-        }, [refetchFeatured, refetchStats, refetchClaims, refetchLeagueDisputes])
-    );
+  useFocusEffect(
+    useCallback(() => {
+      refetchFeatured();
+      refetchStats();
+      refetchClaims();
+      refetchLeagueDisputes();
+    }, [refetchFeatured, refetchStats, refetchClaims, refetchLeagueDisputes]),
+  );
 
-    const DashboardCard = ({ title, value, onPress, color = Colors.primary500 }) => (
-        <TouchableOpacity
-            onPress={onPress}
-            disabled={!onPress}
-            style={[
-                ApplicationStyle.backgroundColor.neutral800,
-                ApplicationStyle.borderRadius16,
-                Spaces.padding[24],
-                { width: '48%', marginBottom: 16 }
-            ]}
-        >
-            <Text style={[Fonts.h2, { color, marginBottom: 8 }]}>{value}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral00]}>{title}</Text>
-        </TouchableOpacity>
-    );
-
+  /**
+   *
+   * @param root0
+   * @param root0.color
+   * @param root0.onPress
+   * @param root0.title
+   * @param root0.value
+   */
+  function DashboardCard({
+    color = Colors.primary500, onPress, title, value,
+  }) {
     return (
-        <ScreenContainer
-            bgImage="bg2"
-            contentContainerStyle={[
-                Spaces.paddingVertical[24],
-                Alignments.fill,
-            ]}
-        >
-            <View style={[Spaces.marginBottom[32], Spaces.paddingHorizontal[24]]}>
-                <Text style={[Fonts.h1, Fonts.neutral00]}>Dashboard Admin</Text>
-            </View>
-
-            <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24]]}>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-
-                    {/* CA Généré */}
-                    <DashboardCard
-                        title="CA Généré"
-                        value={`${caGenerated}€`}
-                        color={Colors.success500}
-                        onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
-                    />
-
-                    {/* Événements du jour */}
-                    <DashboardCard
-                        title="Events du jour"
-                        value={eventsTodayCount}
-                        color={Colors.primary500}
-                        onPress={() => navigation.navigate(RouteNames.AdminEvents)}
-                    />
-
-                    {/* Signalements */}
-                    <DashboardCard
-                        title="Signalements"
-                        value={reportsCount}
-                        color={Colors.error500}
-                        onPress={() => navigation.navigate(RouteNames.AdminReports)}
-                    />
-
-                    {/* Demandes à la une */}
-                    <DashboardCard
-                        title="Demandes à la une"
-                        value={featuredCount}
-                        color={Colors.primary200}
-                        onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
-                    />
-
-
-
-                    {/* Revendications Cards */}
-                    <DashboardCard
-                        title="Revendications"
-                        value={claimsCount}
-                        color={Colors.warning500 || '#f59e0b'} // Orange for pending
-                        onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
-                    />
-
-                    <DashboardCard
-                        title="Litiges League"
-                        value={leagueDisputesCount}
-                        color={Colors.error500}
-                        onPress={() => navigation.navigate(RouteNames.AdminLeagueDisputes)}
-                    />
-
-                    {/* Gestion Utilisateurs */}
-                    <DashboardCard
-                        title="Utilisateurs"
-                        value="👤"
-                        color={Colors.neutral100}
-                        onPress={() => navigation.navigate(RouteNames.AdminUserList)}
-                    />
-
-                    {/* Gestion Clubs */}
-                    <DashboardCard
-                        title="Clubs"
-                        value="🏟️"
-                        color={Colors.neutral100}
-                        onPress={() => navigation.navigate(RouteNames.AdminClubList)}
-                    />
-
-                </View>
-            </ScrollView>
-        </ScreenContainer>
+      <TouchableOpacity
+        disabled={!onPress}
+        onPress={onPress}
+        style={[
+          ApplicationStyle.backgroundColor.neutral800,
+          ApplicationStyle.borderRadius16,
+          Spaces.padding[24],
+          { marginBottom: 16, width: '48%' },
+        ]}
+      >
+        <Text style={[Fonts.h2, { color, marginBottom: 8 }]}>{value}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral00]}>{title}</Text>
+      </TouchableOpacity>
     );
+  }
+
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[
+        Spaces.paddingVertical[24],
+        Alignments.fill,
+      ]}
+    >
+      <View style={[Spaces.marginBottom[32], Spaces.paddingHorizontal[24]]}>
+        <Text style={[Fonts.h1, Fonts.neutral00]}>Dashboard Admin</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24]]}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+
+          {/* CA Généré */}
+          <DashboardCard
+            color={Colors.success500}
+            onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
+            title="CA Généré"
+            value={`${caGenerated}€`}
+          />
+
+          {/* Événements du jour */}
+          <DashboardCard
+            color={Colors.primary500}
+            onPress={() => navigation.navigate(RouteNames.AdminEvents)}
+            title="Events du jour"
+            value={eventsTodayCount}
+          />
+
+          {/* Signalements */}
+          <DashboardCard
+            color={Colors.error500}
+            onPress={() => navigation.navigate(RouteNames.AdminReports)}
+            title="Signalements"
+            value={reportsCount}
+          />
+
+          {/* Demandes à la une */}
+          <DashboardCard
+            color={Colors.primary200}
+            onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
+            title="Demandes à la une"
+            value={featuredCount}
+          />
+
+          {/* Revendications Cards */}
+          <DashboardCard
+            color={Colors.warning500 || '#f59e0b'} // Orange for pending
+            onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
+            title="Revendications"
+            value={claimsCount}
+          />
+
+          <DashboardCard
+            color={Colors.error500}
+            onPress={() => navigation.navigate(RouteNames.AdminLeagueDisputes)}
+            title="Litiges League"
+            value={leagueDisputesCount}
+          />
+
+          {/* Gestion Utilisateurs */}
+          <DashboardCard
+            color={Colors.neutral100}
+            onPress={() => navigation.navigate(RouteNames.AdminUserList)}
+            title="Utilisateurs"
+            value="👤"
+          />
+
+          {/* Gestion Clubs */}
+          <DashboardCard
+            color={Colors.neutral100}
+            onPress={() => navigation.navigate(RouteNames.AdminClubList)}
+            title="Clubs"
+            value="🏟️"
+          />
+
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
 }
 
 export default AdminDashboard;

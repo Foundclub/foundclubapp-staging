@@ -16,9 +16,8 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
-import ScreenContainer from '@/components/templates/ScreenContainer';
-
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { createTrainer, linkTrainerToClub } from '@/services/auth/authService';
 
@@ -120,8 +119,8 @@ function AddCoach({ navigation, route }) {
       } else {
         // Fallback generic error
         Alert.alert(
-           t('APIerrors.error'), // Or a generic title
-           error?.response?.data?.error?.message || error.message || t('APIerrors.unknown')
+          t('APIerrors.error'), // Or a generic title
+          error?.response?.data?.error?.message || error.message || t('APIerrors.unknown'),
         );
       }
     },

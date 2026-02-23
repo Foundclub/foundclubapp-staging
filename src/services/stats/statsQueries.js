@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+
 import { getTeamStats } from './statsService';
 
 /**
@@ -7,12 +8,10 @@ import { getTeamStats } from './statsService';
  * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
  * @returns {import('@tanstack/react-query').UseQueryResult}
  */
-export const useGetTeamStats = (teamId, options = {}) => {
-  return useQuery({
-    queryKey: ['teamStats', teamId],
-    queryFn: () => getTeamStats(teamId),
-    enabled: !!teamId,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    ...options,
-  });
-};
+export const useGetTeamStats = (teamId, options = {}) => useQuery({
+  enabled: !!teamId,
+  queryFn: () => getTeamStats(teamId),
+  queryKey: ['teamStats', teamId],
+  staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  ...options,
+});

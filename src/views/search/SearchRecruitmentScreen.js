@@ -1,8 +1,9 @@
+import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
-import useAuth from '@/domains/auth/useAuth';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import SearchScreenShell from './components/SearchScreenShell';
 import { normalizeRecruitmentTab } from './searchRouteHelpers';
@@ -24,8 +25,8 @@ function SearchRecruitmentScreen({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}

@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -16,7 +18,7 @@ import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
 // Import positions from centralized constants
-import { SPORTS_WITH_POSITIONS, getPositionsForSport } from '@/constants/positions';
+import { getPositionsForSport, SPORTS_WITH_POSITIONS } from '@/constants/positions';
 
 /**
  * User position selection screen
@@ -26,7 +28,9 @@ function UserPosition({ navigation, route }) {
   const [selectedPositions, setSelectedPositions] = useState(/** @type {string[]} */ ([]));
 
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const insets = useSafeAreaInsets();
@@ -64,9 +68,9 @@ function UserPosition({ navigation, route }) {
 
   // Toggle position selection
   const togglePosition = (positionValue) => {
-    setSelectedPositions(prev => {
+    setSelectedPositions((prev) => {
       if (prev.includes(positionValue)) {
-        return prev.filter(p => p !== positionValue);
+        return prev.filter((p) => p !== positionValue);
       }
       return [...prev, positionValue];
     });
@@ -87,11 +91,11 @@ function UserPosition({ navigation, route }) {
   const sportName = useMemo(() => {
     const sport = userSport?.toLowerCase();
     const sportNames = {
-      football: 'Football',
       basketball: 'Basketball',
+      football: 'Football',
       handball: 'Handball',
-      volleyball: 'Volleyball',
       rugby: 'Rugby',
+      volleyball: 'Volleyball',
     };
     return sportNames[sport] || sport;
   }, [userSport]);
@@ -113,17 +117,16 @@ function UserPosition({ navigation, route }) {
             {t('onboarding.position.title', 'Quel(s) poste(s) ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {sportName 
+            {sportName
               ? `Postes en ${sportName} (plusieurs choix possibles)`
-              : t('onboarding.position.subtitle', 'Sélectionne tes postes de prédilection')
-            }
+              : t('onboarding.position.subtitle', 'Sélectionne tes postes de prédilection')}
           </Text>
         </View>
 
-        <ScrollView 
-          style={[Alignments.fill]} 
+        <ScrollView
           contentContainerStyle={[Spaces.gap[12]]}
           showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
         >
           {positions.map((position) => {
             const isSelected = selectedPositions.includes(position.value);
@@ -136,10 +139,10 @@ function UserPosition({ navigation, route }) {
                   Alignments.row,
                   Alignments.alignCenter,
                   {
+                    backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
+                    borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
                     borderRadius: 12,
                     borderWidth: 2,
-                    borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                    backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
                   },
                 ]}
               >
@@ -157,10 +160,9 @@ function UserPosition({ navigation, route }) {
           disabled={selectedPositions.length === 0}
           isLoading={updateUserMutation.isPending}
           onPress={handleNext}
-          title={selectedPositions.length > 1 
+          title={selectedPositions.length > 1
             ? t('common.actions.nextCount', `Suivant (${selectedPositions.length} postes)`)
-            : t('common.actions.next', 'Suivant')
-          }
+            : t('common.actions.next', 'Suivant')}
           variant="Primary"
         />
         <Button

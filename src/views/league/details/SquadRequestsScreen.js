@@ -1,24 +1,29 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { Text, View } from 'react-native';
+
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Tag from '@/components/atoms/tag/Tag';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { respondToJoinRequest } from '@/services/leagueTeam/leagueTeamService';
-import useTheme from '@/theme/themeContext';
+
 import { getEntityDocumentId } from '@/utils/entityId';
 
 /**
  * @param {{ navigation: any, route: { params?: { teamId?: string } } }} props
  */
-const SquadRequestsScreen = ({ navigation, route }) => {
+function SquadRequestsScreen({ navigation, route }) {
   const teamId = route?.params?.teamId ? String(route.params.teamId) : '';
   const {
     Alignments,
@@ -50,7 +55,7 @@ const SquadRequestsScreen = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const requests = useMemo(() => (Array.isArray(team?.join_requests) ? team.join_requests : []), [team?.join_requests]);
@@ -79,14 +84,14 @@ const SquadRequestsScreen = ({ navigation, route }) => {
       await respondToJoinRequest(teamId, userId, accept);
       await refetch();
       setFeedback({
-        type: 'success',
         message: accept ? 'Demande acceptee.' : 'Demande refusee.',
+        type: 'success',
       });
     } catch (requestError) {
       console.error('[SquadRequests] respond error:', requestError);
       setFeedback({
-        type: 'error',
         message: 'Impossible de traiter cette demande.',
+        type: 'error',
       });
     } finally {
       setIsProcessing(false);
@@ -118,6 +123,7 @@ const SquadRequestsScreen = ({ navigation, route }) => {
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], Spaces.marginBottom[16]]}>
           <ProfileAvatar
+            imageStyle={{ borderRadius: 44 }}
             imageUrl={item?.avatar?.url}
             size={44}
             style={[
@@ -125,14 +131,13 @@ const SquadRequestsScreen = ({ navigation, route }) => {
               ApplicationStyle.borderColor.neutral00,
               { borderRadius: 44 },
             ]}
-            imageStyle={{ borderRadius: 44 }}
           />
 
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.h4Black, { color: Colors.neutral00 }]} numberOfLines={1}>
+            <Text numberOfLines={1} style={[Fonts.h4Black, { color: Colors.neutral00 }]}>
               {requesterName}
             </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral200 }]} numberOfLines={2}>
+            <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral200 }]}>
               Souhaite rejoindre votre squad.
             </Text>
           </View>
@@ -291,6 +296,7 @@ const SquadRequestsScreen = ({ navigation, route }) => {
         wrapperStyle={[Alignments.fill]}
       >
         <FlashList
+          contentContainerStyle={{ paddingBottom: 32, paddingTop: 4 }}
           data={requests}
           estimatedItemSize={200}
           keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}
@@ -299,11 +305,10 @@ const SquadRequestsScreen = ({ navigation, route }) => {
           refreshing={Boolean(isLoading && requests.length > 0)}
           renderItem={renderRequestCard}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32, paddingTop: 4 }}
         />
       </WithDataWrapper>
     </ScreenContainer>
   );
-};
+}
 
 export default SquadRequestsScreen;

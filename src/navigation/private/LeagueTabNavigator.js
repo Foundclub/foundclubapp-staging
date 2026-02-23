@@ -1,23 +1,23 @@
-
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { Image, View, Text } from 'react-native';
+import { Image, Text, View } from 'react-native';
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 // screens
-import LeagueNavigator from '@/navigation/LeagueNavigator';
 import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
-import MyTeamList from '@/views/team/MyTeamList';
 import Messaging from '@/views/Messaging';
+import MyTeamList from '@/views/team/MyTeamList';
+
+import LeagueNavigator from '@/navigation/LeagueNavigator';
 
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import useTheme from '../../theme/themeContext';
 import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
-
 
 const Tab = createBottomTabNavigator();
 
@@ -38,10 +38,18 @@ export default function LeagueTabNavigator() {
       <Image source={source} style={{ height: 20, tintColor: color, width: 20 }} />
       {badge > 0 ? (
         <View style={{
-            position: 'absolute', right: -6, top: -4, backgroundColor: Colors.error500,
-            borderRadius: 10, height: 16, minWidth: 16, alignItems: 'center', justifyContent: 'center'
-        }}>
-          <Text style={{ color: Colors.neutral00, fontSize: 10, fontFamily: 'Montserrat-Bold' }}>{badge}</Text>
+          alignItems: 'center',
+          backgroundColor: Colors.error500,
+          borderRadius: 10,
+          height: 16,
+          justifyContent: 'center',
+          minWidth: 16,
+          position: 'absolute',
+          right: -6,
+          top: -4,
+        }}
+        >
+          <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>{badge}</Text>
         </View>
       ) : null}
     </View>
@@ -85,7 +93,7 @@ export default function LeagueTabNavigator() {
 
       {/* 2. My Squad (Reusing MyTeamList) */}
       <Tab.Screen
-        component={MyTeamList} 
+        component={MyTeamList}
         // Note: We'll filter for League teams via params later
         initialParams={{ isLeagueMode: true, playerId: userData?.documentId }}
         name={RouteNames.LeagueSquadTab}
@@ -117,16 +125,16 @@ export default function LeagueTabNavigator() {
         }}
       />
 
-       {/* 4. Messaging (Replaces Standings) */}
-       <Tab.Screen
+      {/* 4. Messaging (Replaces Standings) */}
+      <Tab.Screen
         component={Messaging}
         name={RouteNames.Chat}
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
             activeColor: Colors.gold500,
-            bottomInset: insets.bottom,
             badge: unreadCount,
+            bottomInset: insets.bottom,
             icon: Images.envelope,
             label: t('menu.chat'), // "Messagerie"
             renderTabBarIcon,

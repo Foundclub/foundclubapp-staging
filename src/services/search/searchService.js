@@ -48,7 +48,7 @@ const sanitizeBaseParams = (params = {}) => {
 
   const page = Number(params.page) || 1;
   const pageSize = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(params.pageSize) || DEFAULT_PAGE_SIZE));
-  const sort = ['relevance', 'date', 'distance'].includes(params.sort) ? params.sort : 'relevance';
+  const sort = ['date', 'distance', 'relevance'].includes(params.sort) ? params.sort : 'relevance';
 
   /** @type {Record<string, any>} */
   const requestParams = {
@@ -114,6 +114,7 @@ const emptyResponse = (q = '', page = 1, pageSize = DEFAULT_PAGE_SIZE) => ({
  *  startDateAfter?: string;
  *  startDateBefore?: string;
  * }} params
+ * @param options
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchEvents = async (params = {}, options = {}) => {
@@ -146,6 +147,7 @@ export const searchEvents = async (params = {}, options = {}) => {
  *  radius?: number;
  *  activity?: string | string[];
  * }} params
+ * @param options
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchClubs = async (params = {}, options = {}) => {
@@ -176,6 +178,7 @@ export const searchClubs = async (params = {}, options = {}) => {
  *  startDateAfter?: string;
  *  startDateBefore?: string;
  * }} params
+ * @param options
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchReservations = async (params = {}, options = {}) => {
@@ -212,6 +215,7 @@ export const searchReservations = async (params = {}, options = {}) => {
  *  includeInactive?: boolean;
  *  authorDocumentId?: string;
  * }} params
+ * @param options
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchRecruitment = async (params = {}, options = {}) => {
@@ -234,41 +238,39 @@ export const searchRecruitment = async (params = {}, options = {}) => {
  * @param {import('@/domains/search/types').SearchResponse | undefined} searchResponse
  * @returns {any[]}
  */
-export const mapSearchPayload = (searchResponse) => {
-  return (searchResponse?.data || []).map((entry) => ({
-    ...entry.payload,
-    __search: {
-      distanceKm: entry.distanceKm,
-      highlights: entry.highlights,
-      matchReasons: entry.matchReasons || [],
-      score: entry.score,
-    },
-  }));
-};
+export const mapSearchPayload = (searchResponse) => (searchResponse?.data || []).map((entry) => ({
+  ...entry.payload,
+  __search: {
+    distanceKm: entry.distanceKm,
+    highlights: entry.highlights,
+    matchReasons: entry.matchReasons || [],
+    score: entry.score,
+  },
+}));
 
 /**
  * @param {import('@/domains/search/types').SearchMatchReason | undefined} reason
  */
 export const getMatchReasonLabel = (reason) => {
   switch (reason) {
+    case 'ACTIVITY_MATCH':
+      return 'Correspond a l activite';
+    case 'CITY_MATCH':
+      return 'Correspond a la ville';
+    case 'CLUB_MATCH':
+      return 'Correspond au club';
+    case 'DESCRIPTION_MATCH':
+      return 'Correspond a la description';
+    case 'GEO_NEARBY':
+      return 'A proximite';
+    case 'LOCATION_MATCH':
+      return 'Correspond au lieu';
     case 'NAME_EXACT':
       return 'Correspondance exacte du nom';
     case 'NAME_PREFIX':
       return 'Correspondance du nom';
     case 'TEAM_MATCH':
       return 'Correspond a l equipe';
-    case 'CLUB_MATCH':
-      return 'Correspond au club';
-    case 'CITY_MATCH':
-      return 'Correspond a la ville';
-    case 'LOCATION_MATCH':
-      return 'Correspond au lieu';
-    case 'DESCRIPTION_MATCH':
-      return 'Correspond a la description';
-    case 'ACTIVITY_MATCH':
-      return 'Correspond a l activite';
-    case 'GEO_NEARBY':
-      return 'A proximite';
     default:
       return '';
   }

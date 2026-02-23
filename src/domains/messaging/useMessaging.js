@@ -1,24 +1,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 
+import useAuth from '@/domains/auth/useAuth';
 import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
 import { storage } from '@/store/appContext';
 
 import {
+  archiveChat,
   createClubChat,
   createTeamChat,
   createWhisperChat,
-  getChats,
   deleteMessage,
+  getChats,
   pinChat,
-  unpinChat,
-  archiveChat,
   unarchiveChat,
+  unpinChat,
   updateMessage,
 } from '@/services/chat/chatService';
 
 import useSocket, { EVENTS } from '@/hooks/useSocket';
-import useAuth from '@/domains/auth/useAuth';
 
 /**
  * Custom hook to handle messaging functionality
@@ -50,17 +50,17 @@ const useMessaging = (currentChatId) => {
       ['chat-messages', message.chat?.documentId],
       (/** @type {any} */ oldData) => {
         const formattedMessage = {
+          attachments: message.attachments, // Handle attachments
           chat: message.chat,
+          composition: message.composition, // Handle composition
           createdAt: message.createdAt,
           documentId: message.documentId,
+          event: message.event,
           id: message.id,
           message: message.message,
-          sender: message.sender,
-          event: message.event,
-          composition: message.composition, // Handle composition
-          attachments: message.attachments, // Handle attachments
-          replyTo: message.replyTo, // Handle reply
           readBy: message.readBy, // Handle readBy
+          replyTo: message.replyTo, // Handle reply
+          sender: message.sender,
         };
 
         // Safety check: if oldData is missing or malformed, initialize it
@@ -75,28 +75,28 @@ const useMessaging = (currentChatId) => {
         }
 
         // Deep clone pages to avoid mutating unexpected references, or map safely
-        const cleanPages = oldData.pages.map(page => {
-           // Ensure page.data is an array
-           const data = Array.isArray(page?.data) ? page.data : [];
-           // Filter out pending messages that look identical to the confirmed one
-           const filteredData = data.filter(msg => {
-              if (msg.pending && msg.message === formattedMessage.message) return false;
-              // Add more duplicate checks if needed (e.g. by tempId if available)
-              return true;
-           });
-           return { ...page, data: filteredData };
+        const cleanPages = oldData.pages.map((page) => {
+          // Ensure page.data is an array
+          const data = Array.isArray(page?.data) ? page.data : [];
+          // Filter out pending messages that look identical to the confirmed one
+          const filteredData = data.filter((msg) => {
+            if (msg.pending && msg.message === formattedMessage.message) return false;
+            // Add more duplicate checks if needed (e.g. by tempId if available)
+            return true;
+          });
+          return { ...page, data: filteredData };
         });
 
         // Check if message already exists in the first page (dedup)
         const firstPage = cleanPages[0];
         const firstPageData = firstPage?.data || [];
-        
+
         const messageExists = firstPageData.some(
           (/** @type {{ id: string }} */ msg) => msg.id === formattedMessage.id,
         );
 
         if (messageExists) {
-           return { ...oldData, pages: cleanPages };
+          return { ...oldData, pages: cleanPages };
         }
 
         // Add new message to start of first page
@@ -125,8 +125,8 @@ const useMessaging = (currentChatId) => {
               if (chat.documentId === message.chat?.documentId) {
                 return {
                   ...chat,
-                  messages: [message],
                   archivedBy: [], // Force unarchive locally
+                  messages: [message],
                 };
               }
               return chat;
@@ -204,10 +204,10 @@ const useMessaging = (currentChatId) => {
   const deleteMessageMutation = useMutation({
     mutationFn: deleteMessage,
     onSuccess: (_, messageId) => {
-       // Optimistic or Real update? The socket will handle real update for others.
-       // For me, I can remove it immediately if socket delay is high.
-       // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
-    }
+      // Optimistic or Real update? The socket will handle real update for others.
+      // For me, I can remove it immediately if socket delay is high.
+      // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
+    },
   });
 
   const pinChatMutation = useMutation({
@@ -246,13 +246,13 @@ const useMessaging = (currentChatId) => {
     // Optimistic Update
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
-      id: tempId,
-      documentId: tempId,
-      message,
       createdAt: new Date().toISOString(),
-      sender: { documentId: 'me', ...extraData.sender }, // We need current user info here
+      documentId: tempId,
       event: extraData.event,
+      id: tempId,
+      message,
       pending: true,
+      sender: { documentId: 'me', ...extraData.sender }, // We need current user info here
       ...extraData,
     };
 
@@ -262,15 +262,15 @@ const useMessaging = (currentChatId) => {
       (/** @type {any} */ oldData) => {
         // Safe check for valid pages structure, init if absolutely missing
         if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
-           return { 
-               pageParams: [null], 
-               pages: [{ 
-                   data: [optimisticMessage], 
-                   meta: { pagination: { page: 1, pageCount: 1, total: 1 } } 
-               }] 
-           };
+          return {
+            pageParams: [null],
+            pages: [{
+              data: [optimisticMessage],
+              meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+            }],
+          };
         }
-        
+
         // Safe access to first page data
         const firstPage = oldData.pages[0];
         const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
@@ -282,7 +282,7 @@ const useMessaging = (currentChatId) => {
             data: [optimisticMessage, ...firstPageData],
           }, ...oldData.pages.slice(1)],
         };
-      }
+      },
     );
 
     socket.emit(EVENTS.SEND_MESSAGE, {
@@ -304,8 +304,8 @@ const useMessaging = (currentChatId) => {
               if (chat.documentId === chatId) {
                 return {
                   ...chat,
-                  messages: [optimisticMessage],
                   archivedBy: [], // Force unarchive
+                  messages: [optimisticMessage],
                   updatedAt: optimisticMessage.createdAt,
                 };
               }
@@ -343,14 +343,14 @@ const useMessaging = (currentChatId) => {
   /* UPDATE MESSAGE MUTATION */
   const updateMessageMutation = useMutation({
     mutationFn: (/** @type {{ messageId: string; data: any }} */ payload) => updateMessage(payload.messageId, payload.data),
+    onError: (error) => {
+      // eslint-disable-next-line no-console
+      console.error('Error updating message:', error);
+    },
     onSuccess: (data) => {
       // Optimistically we might have already updated, but let's confirm
-       queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId || data.chat?.documentId] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId || data.chat?.documentId] });
     },
-    onError: (error) => {
-        // eslint-disable-next-line no-console
-       console.error('Error updating message:', error);
-    }
   });
 
   /**
@@ -372,8 +372,8 @@ const useMessaging = (currentChatId) => {
   const startWhisperChat = async (participants) => {
     // Check inputs
     if (!participants || !Array.isArray(participants)) {
-       console.error("startWhisperChat called with invalid participants", participants);
-       return undefined;
+      console.error('startWhisperChat called with invalid participants', participants);
+      return undefined;
     }
 
     // Sort participants to ensure consistent comparison
@@ -389,11 +389,11 @@ const useMessaging = (currentChatId) => {
       if (chatsData?.data) {
         const existingChat = chatsData.data.find((/** @type {any} */ chat) => {
           if (!chat?.participants || !Array.isArray(chat.participants)) return false;
-          
+
           const chatParticipants = chat.participants
-             .filter((p) => p && (p.documentId || p)) // Filter out nulls
-             .map((/** @type {any} */ p) => (p.documentId || p))
-             .sort();
+            .filter((p) => p && (p.documentId || p)) // Filter out nulls
+            .map((/** @type {any} */ p) => (p.documentId || p))
+            .sort();
 
           return (
             chatParticipants.length === sortedParticipants.length
@@ -405,34 +405,34 @@ const useMessaging = (currentChatId) => {
         });
 
         if (existingChat) {
-             // Automatic Unarchive Check
-             const isArchived = existingChat.archivedBy?.some(u => u.documentId === userData?.documentId);
-             if (isArchived) {
-                  // 1. Optimistic Update (Force Visible)
-                  queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
-                      if (!oldData?.pages) return oldData;
-                      return {
-                          ...oldData,
-                          pages: oldData.pages.map(page => ({
-                              ...page,
-                              data: Array.isArray(page.data) ? page.data.map(chat => {
-                                  if (chat.documentId === existingChat.documentId) {
-                                      return { ...chat, archivedBy: [] };
-                                  }
-                                  return chat;
-                              }) : []
-                          }))
-                      };
-                  });
+          // Automatic Unarchive Check
+          const isArchived = existingChat.archivedBy?.some((u) => u.documentId === userData?.documentId);
+          if (isArchived) {
+            // 1. Optimistic Update (Force Visible)
+            queryClient.setQueriesData({ queryKey: ['chats'] }, (oldData) => {
+              if (!oldData?.pages) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page) => ({
+                  ...page,
+                  data: Array.isArray(page.data) ? page.data.map((chat) => {
+                    if (chat.documentId === existingChat.documentId) {
+                      return { ...chat, archivedBy: [] };
+                    }
+                    return chat;
+                  }) : [],
+                })),
+              };
+            });
 
-                  // 2. Call API to unarchive
-                  try {
-                    await unarchiveChatMutation.mutateAsync(existingChat.documentId);
-                  } catch (e) {
-                     console.error("Failed to unarchive chat on open", e);
-                  }
-             }
-             return existingChat;
+            // 2. Call API to unarchive
+            try {
+              await unarchiveChatMutation.mutateAsync(existingChat.documentId);
+            } catch (e) {
+              console.error('Failed to unarchive chat on open', e);
+            }
+          }
+          return existingChat;
         }
       }
     } catch (error) {
@@ -516,23 +516,23 @@ const useMessaging = (currentChatId) => {
   }, [currentChatId, socket, updateLastReadMessage]);
 
   return {
+    archiveChat: archiveChatMutation.mutate,
+    deleteMessage: deleteMessageMutation.mutate,
     getConversationName,
     getUnreadStatus,
     joinChat,
     leaveChat,
+    pinChat: pinChatMutation.mutate,
     sendMessage,
+    sendReadReceipt,
+    sendTypingStart,
+    sendTypingStop,
     startClubChat,
     startTeamChat,
     startWhisperChat,
-    updateLastReadMessage,
-    sendTypingStart,
-    sendTypingStop,
-    sendReadReceipt,
-    deleteMessage: deleteMessageMutation.mutate,
-    pinChat: pinChatMutation.mutate,
-    unpinChat: unpinChatMutation.mutate,
-    archiveChat: archiveChatMutation.mutate,
     unarchiveChat: unarchiveChatMutation.mutate,
+    unpinChat: unpinChatMutation.mutate,
+    updateLastReadMessage,
     updateMessage: updateMessageMutation.mutateAsync,
   };
 };

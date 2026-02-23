@@ -2,18 +2,21 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity,
+  View,
 } from 'react-native';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
+import useClub from '@/domains/club/useClub';
+import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import useClub from '@/domains/club/useClub';
-import useTheme from '@/theme/themeContext';
+
+import { formatDateWithDayPrefix } from '@/utils/date';
 
 /**
  * @typedef {{
@@ -51,7 +54,7 @@ const getShortAddress = (input) => {
  * @returns {import('react').ReactElement}
  */
 function FeaturedReservationCard({
-  actionLabel, item, onPress, onParticipate, style,
+  actionLabel, item, onParticipate, onPress, style,
 }) {
   const { t } = useTranslation();
   const {
@@ -63,14 +66,12 @@ function FeaturedReservationCard({
   const sponsors = item?.team?.club?.sponsor || item?.club?.sponsor || [];
 
   // Parse location
-  const getLocation = () => {
-    return getShortAddress(
-      item.locationDetails ||
-      item.club?.addressDetails ||
-      item.team?.club?.addressDetails ||
-      item.location
-    );
-  };
+  const getLocation = () => getShortAddress(
+    item.locationDetails
+      || item.club?.addressDetails
+      || item.team?.club?.addressDetails
+      || item.location,
+  );
 
   return (
     <TouchableOpacity
@@ -91,20 +92,22 @@ function FeaturedReservationCard({
           <View style={[Alignments.fullWidth, Alignments.alignEnd]}>
             {item?.type ? (
               <View style={{
-                paddingVertical: 4,
-                paddingHorizontal: 16,
-                height: 22,
+                alignItems: 'center',
+                borderColor: '#01B3F4',
                 borderRadius: 7.33,
                 borderWidth: 0.43,
-                borderColor: '#01B3F4',
+                height: 22,
                 justifyContent: 'center',
-                alignItems: 'center',
-              }}>
+                paddingHorizontal: 16,
+                paddingVertical: 4,
+              }}
+              >
                 <Text style={[Fonts.p3, {
-                  fontSize: 12,
                   color: '#01B3F4',
+                  fontSize: 12,
                   lineHeight: 18,
-                }]}>
+                }]}
+                >
                   {item?.type?.name || ''}
                 </Text>
               </View>
@@ -119,10 +122,10 @@ function FeaturedReservationCard({
           >
             {(item?.team?.club?.logo?.url || item?.club?.logo?.url) ? (
               <ProfileAvatar
+                imageStyle={{ borderRadius: moderateScale(20) }}
                 imageUrl={item?.team?.club?.logo?.url || item?.club?.logo?.url}
                 size={moderateScale(40)}
                 style={{ borderRadius: moderateScale(20) }}
-                imageStyle={{ borderRadius: moderateScale(20) }}
               />
             ) : (
               <TeamShield
@@ -147,19 +150,19 @@ function FeaturedReservationCard({
         {sponsors.length > 0 && (
           <View style={[Alignments.fullWidth, { marginTop: verticalScale(8) }]}>
             <ScrollView
+              contentContainerStyle={[{ gap: horizontalScale(12) }]}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[{ gap: horizontalScale(12) }]}
             >
               {sponsors.map((/** @type {Sponsor} */ sponsor, idx) => (
                 <SponsorLogoTile
-                  key={sponsor.link || idx}
+                  height={46}
                   imageUrl={sponsor.logo?.url}
+                  key={sponsor.link || idx}
                   link={sponsor.link}
                   title={sponsor.title}
-                  width={92}
-                  height={46}
                   titleStyle={styles.sponsorTitle}
+                  width={92}
                 />
               ))}
             </ScrollView>
@@ -179,9 +182,9 @@ function FeaturedReservationCard({
             <View style={[Alignments.row, { gap: horizontalScale(8) }, { marginRight: horizontalScale(16) }]}>
               <Image
                 source={Images.euroCircle}
-                style={[{ width: moderateScale(22), height: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
+                style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
               />
-              <Text style={[Fonts.p2, { fontSize: moderateScale(12), lineHeight: moderateScale(14), color: '#FFFFFF' }]}>
+              <Text style={[Fonts.p2, { color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14) }]}>
                 {item.pricePerPerson === 0 ? 'Gratuit' : `${item.pricePerPerson}€`}
               </Text>
             </View>
@@ -191,9 +194,9 @@ function FeaturedReservationCard({
           <View style={[Alignments.row, { gap: horizontalScale(8) }, { marginRight: horizontalScale(16) }]}>
             <Image
               source={Images.running}
-              style={[{ width: moderateScale(22), height: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
+              style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
             />
-            <Text style={[Fonts.p2, { fontSize: moderateScale(12), lineHeight: moderateScale(14), color: '#FFFFFF' }]}>
+            <Text style={[Fonts.p2, { color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14) }]}>
               {item?.type?.name || 'Sport'}
             </Text>
           </View>
@@ -203,10 +206,13 @@ function FeaturedReservationCard({
             <View style={[Alignments.row, { gap: horizontalScale(8) }, { marginRight: horizontalScale(16) }]}>
               <Image
                 source={Images.clock}
-                style={[{ width: moderateScale(22), height: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
+                style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
               />
-              <Text style={[Fonts.p2, { fontSize: moderateScale(12), lineHeight: moderateScale(14), color: '#FFFFFF' }]}>
-                {item.startTime.substring(0, 5)} - {item.endTime.substring(0, 5)}
+              <Text style={[Fonts.p2, { color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14) }]}>
+                {item.startTime.substring(0, 5)}
+                {' '}
+                -
+                {item.endTime.substring(0, 5)}
               </Text>
             </View>
           )}
@@ -216,9 +222,9 @@ function FeaturedReservationCard({
             <View style={[Alignments.row, { gap: horizontalScale(8) }, { marginRight: horizontalScale(16) }]}>
               <Image
                 source={Images.calendar}
-                style={[{ width: moderateScale(22), height: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
+                style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
               />
-              <Text style={[Fonts.p2, { fontSize: moderateScale(12), lineHeight: moderateScale(14), color: '#FFFFFF' }]}>
+              <Text style={[Fonts.p2, { color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14) }]}>
                 {formatDateWithDayPrefix(item.date)}
               </Text>
             </View>
@@ -228,11 +234,13 @@ function FeaturedReservationCard({
           <View style={[Alignments.row, { gap: horizontalScale(8) }, { marginRight: horizontalScale(16) }]}>
             <Image
               source={Images.pin}
-              style={[{ width: moderateScale(22), height: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
+              style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
             />
             <Text
               numberOfLines={1}
-              style={[Fonts.p2, { fontSize: moderateScale(12), lineHeight: moderateScale(14), color: '#FFFFFF', maxWidth: horizontalScale(150) }]}
+              style={[Fonts.p2, {
+                color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14), maxWidth: horizontalScale(150),
+              }]}
             >
               {getLocation() || 'Lieu non défini'}
             </Text>
@@ -249,13 +257,13 @@ function FeaturedReservationCard({
             Alignments.alignCenter,
             Alignments.justifyCenter,
             {
-              height: verticalScale(43),
               backgroundColor: '#01B3F4',
               borderRadius: moderateScale(20),
+              height: verticalScale(43),
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, { fontSize: moderateScale(13), color: '#001218' }]}>
+          <Text style={[Fonts.p3Bold, { color: '#001218', fontSize: moderateScale(13) }]}>
             {actionLabel || t('reservation.actions.participate') || 'Réserver'}
           </Text>
         </TouchableOpacity>
@@ -264,17 +272,14 @@ function FeaturedReservationCard({
   );
 }
 
-import { Dimensions } from 'react-native';
-import { horizontalScale, verticalScale, moderateScale } from '@/theme/scaling';
-
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
-    width: horizontalScale(335),
     minHeight: verticalScale(280), // Increased from 262
-    paddingVertical: verticalScale(6),
     paddingHorizontal: horizontalScale(16),
+    paddingVertical: verticalScale(6),
+    width: horizontalScale(335),
   },
   sponsorTitle: {
     color: '#EAF8FF',

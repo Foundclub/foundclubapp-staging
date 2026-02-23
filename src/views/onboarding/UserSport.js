@@ -1,9 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getOnboardingViews } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -12,10 +15,9 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { getOnboardingViews } from '@/domains/auth/authUseCases';
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import { useGetActivities } from '@/services/activity/activityQueries';
 
 const searchIcon = require('@/assets/icons/search.png');
 
@@ -28,7 +30,9 @@ function UserSport({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
-  const { Alignments, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { data: userData } = useGetMe();
   const { data: activities, isLoading: activitiesLoading } = useGetActivities();
@@ -47,15 +51,15 @@ function UserSport({ navigation }) {
       // Calculate next route based on the NEW sport, not the old userData
       const tempUserData = { ...userData, preferredSport: selectedSport.trim() };
       const views = getOnboardingViews(tempUserData);
-      
+
       // Find current view index
-      const currentView = views.views.find(v => v.route === RouteNames.UserSport);
+      const currentView = views.views.find((v) => v.route === RouteNames.UserSport);
       const currentIndex = currentView?.index || 0;
-      
+
       // Get next view that canShow
       // We look for the first view with index > currentIndex that has canShow !== false
       // Note: getOnboardingViews returns views with canShow property
-      const nextView = views.views.find(v => v.index > currentIndex && v.canShow !== false);
+      const nextView = views.views.find((v) => v.index > currentIndex && v.canShow !== false);
       const nextRoute = nextView?.route || getPostOnboardingHomeRoute();
 
       navigation.navigate(nextRoute, { selectedSport: selectedSport.trim() });
@@ -67,9 +71,7 @@ function UserSport({ navigation }) {
     if (!activities) return [];
     if (!searchQuery.trim()) return activities;
     const query = searchQuery.toLowerCase().trim();
-    return activities.filter(activity => 
-      activity.name?.toLowerCase().includes(query)
-    );
+    return activities.filter((activity) => activity.name?.toLowerCase().includes(query));
   }, [activities, searchQuery]);
 
   const handleNext = () => {
@@ -111,39 +113,40 @@ function UserSport({ navigation }) {
 
         {/* Search Bar - Same style as main app */}
         <View style={{
-          height: 48,
-          borderBottomWidth: 1.5,
+          alignItems: 'center',
           borderBottomColor: '#FFFFFF',
+          borderBottomWidth: 1.5,
           borderRadius: 2,
           flexDirection: 'row',
-          alignItems: 'center',
-        }}>
+          height: 48,
+        }}
+        >
           <Image
             source={searchIcon}
             style={{
-              width: 24,
               height: 24,
-              tintColor: '#FFFFFF',
               marginLeft: 8,
               marginRight: 12,
+              tintColor: '#FFFFFF',
+              width: 24,
             }}
           />
           <TextInput
-            value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder={t('common.search', 'Rechercher un sport...')}
             placeholderTextColor="rgba(255, 255, 255, 0.5)"
             style={{
+              color: '#FFFFFF',
               flex: 1,
               fontFamily: 'Montserrat-Regular',
               fontSize: 16,
               lineHeight: 23,
-              color: '#FFFFFF',
               paddingVertical: 12,
             }}
+            value={searchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setSearchQuery('')}
               style={{ padding: 8 }}
             >
@@ -157,14 +160,14 @@ function UserSport({ navigation }) {
             <ActivityIndicator color={Colors.primary500} size="large" />
           </View>
         ) : (
-          <ScrollView 
-            style={[Alignments.fill]} 
+          <ScrollView
             contentContainerStyle={[Spaces.gap[12]]}
-            showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={[Alignments.fill]}
           >
             {filteredActivities.length === 0 ? (
-              <Text style={[Fonts.p1, Fonts.neutral300, { textAlign: 'center', marginTop: 24 }]}>
+              <Text style={[Fonts.p1, Fonts.neutral300, { marginTop: 24, textAlign: 'center' }]}>
                 {t('common.noResults', 'Aucun résultat')}
               </Text>
             ) : (
@@ -175,10 +178,10 @@ function UserSport({ navigation }) {
                   style={[
                     Spaces.padding[16],
                     {
+                      backgroundColor: selectedSport === activity.name ? `${Colors.primary500}20` : Colors.neutral800,
+                      borderColor: selectedSport === activity.name ? Colors.primary500 : Colors.neutral700,
                       borderRadius: 12,
                       borderWidth: 2,
-                      borderColor: selectedSport === activity.name ? Colors.primary500 : Colors.neutral700,
-                      backgroundColor: selectedSport === activity.name ? Colors.primary500 + '20' : Colors.neutral800,
                     },
                   ]}
                 >

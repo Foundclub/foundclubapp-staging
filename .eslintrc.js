@@ -15,6 +15,22 @@ module.exports = {
   rules: {
     'import/no-extraneous-dependencies': 'off',
     'import/prefer-default-export': 'off',
+    'linebreak-style': ['warn', 'unix'],
+    'max-len': ['warn', {
+      code: 100,
+      ignoreComments: false,
+      ignorePattern: '',
+      ignoreStrings: false,
+      ignoreTemplateLiterals: false,
+      ignoreUrls: true,
+      ignoreRegExpLiterals: true,
+      ignoreTrailingComments: false,
+    }],
+    'no-use-before-define': ['warn', {
+      classes: false,
+      functions: false,
+      variables: false,
+    }],
     'react-native/no-inline-styles': 'off',
     'react/jsx-filename-extension': [1, { extensions: ['.js', '.jsx'] }],
     'react/jsx-uses-react': 'off',

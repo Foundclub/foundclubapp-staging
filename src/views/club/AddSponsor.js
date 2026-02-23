@@ -37,11 +37,11 @@ const addSponsorSchema = Joi.object({
  */
 function AddSponsor({ navigation, route }) {
   const { clubId, cmId } = route?.params ?? {};
-  
+
   const { data: clubData } = useQuery({
-    queryKey: clubId ? ['club', clubId] : ['multisport-club', cmId],
-    queryFn: () => (clubId ? getClubById(clubId) : getMultisportClubById(cmId)),
     enabled: !!(clubId || cmId),
+    queryFn: () => (clubId ? getClubById(clubId) : getMultisportClubById(cmId)),
+    queryKey: clubId ? ['club', clubId] : ['multisport-club', cmId],
   });
 
   // local state
@@ -81,7 +81,7 @@ function AddSponsor({ navigation, route }) {
     if (clubData && logo) {
       // Logic is same for both: sponsor is an array of objects
       const newClub = { ...clubData };
-      
+
       // Sanitize payload to avoid sending populated objects that updateClub doesn't handle correctly
       // (It would stringify them, causing "Document not found" errors in Strapi)
       delete newClub.parentMultisport;
@@ -129,8 +129,8 @@ function AddSponsor({ navigation, route }) {
                   width: '100%',
                 }}
                 currentAvatar={logo}
-                imageStyle={{ height: '100%', width: '100%' }}
                 imageResizeMode="contain"
+                imageStyle={{ height: '100%', width: '100%' }}
                 onAvatarSelected={setLogo}
                 size={80}
               />

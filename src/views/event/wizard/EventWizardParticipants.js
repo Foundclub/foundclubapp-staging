@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import useTheme from '@/theme/themeContext';
+
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useEventWizard } from './EventWizardContext';
 
 const MIN_PARTICIPANTS = 1;
@@ -29,7 +32,12 @@ const isReservationTypeName = (typeName = '') => {
   return normalized.includes('reservation');
 };
 
-const EventWizardParticipants = ({ navigation }) => {
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardParticipants({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -122,16 +130,16 @@ const EventWizardParticipants = ({ navigation }) => {
 
   return (
     <WizardStepLayout
+      isNextDisabled={hasInvalidPlayersConfig}
+      onBack={() => navigation.goBack()}
+      onNext={handleNext}
       stepCount={10}
       stepIndex={5}
-      title={t('eventWizard.steps.participants.title', 'Participants')}
       subtitle={t(
         'eventWizard.steps.participants.subtitle',
         'Choisis une capacite max, ou laisse l evenement en acces illimite.',
       )}
-      onBack={() => navigation.goBack()}
-      onNext={handleNext}
-      isNextDisabled={hasInvalidPlayersConfig}
+      title={t('eventWizard.steps.participants.title', 'Participants')}
     >
       <View style={[Spaces.gap[16]]}>
         <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
@@ -140,6 +148,7 @@ const EventWizardParticipants = ({ navigation }) => {
           </Text>
           <SegmentedControl
             centerContent
+            onChange={setCapacityMode}
             options={[
               {
                 label: t('eventWizard.steps.participants.unlimited', 'Illimite'),
@@ -151,7 +160,6 @@ const EventWizardParticipants = ({ navigation }) => {
               },
             ]}
             value={capacityMode}
-            onChange={setCapacityMode}
           />
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {capacityMode === 'unlimited'
@@ -317,6 +325,6 @@ const EventWizardParticipants = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardParticipants;

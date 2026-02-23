@@ -182,24 +182,26 @@ const formatTimeForStrapi = (timeString) => {
  * @returns {FCEventForm}
  */
 export const createEventPayload = (event) => {
+  const effectiveStartTime = event.startTime || event.time;
+
   // Safely handle location data
   const splittedLocation = event.location?.value?.split('|');
   const formattedData = {
     ...event,
-    date: formatDateTimeToSend(event.date, event.startTime),
+    date: formatDateTimeToSend(event.date, effectiveStartTime),
     location: splittedLocation?.length === 2 ? {
       lat: parseFloat(splittedLocation[1]) || 0,
       lng: parseFloat(splittedLocation[0]) || 0,
     } : (event.location?.label ? {
+      label: event.location.label, // Use label if available, fallback to 0,0
       lat: 0,
       lng: 0,
-      label: event.location.label, // Use label if available, fallback to 0,0
     } : undefined),
     locationDetails: event.location?.label ? JSON.stringify({ address: event.location.label }) : null,
     // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
-    startTime: formatTimeForStrapi(event.startTime),
     endTime: formatTimeForStrapi(event.endTime),
     featuredRequestStatus: event.requestFeatured ? 'pending' : 'none',
+    startTime: formatTimeForStrapi(effectiveStartTime),
   };
 
   delete formattedData.time;
@@ -253,7 +255,7 @@ export const createReccurrentEventPayload = (event) => {
       // Let's assume Monday is start of week for simplicity in calculation, or just use date-fns if available.
       // Since we don't have date-fns startOfWeek imported, let's do it manually or rely on the current date being the anchor.
 
-      // Better approach: 
+      // Better approach:
       // 1. Iterate by weeks (interval).
       // 2. For each week, iterate through recurrenceDays.
       // 3. Construct the date for that day in that week.
@@ -281,15 +283,15 @@ export const createReccurrentEventPayload = (event) => {
       // This ensures our week blocks are aligned with the calendar week
       const day = currentDate.getDay();
       const diff = currentDate.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-      let weekStart = new Date(currentDate);
+      const weekStart = new Date(currentDate);
       weekStart.setDate(diff);
 
       // Loop until weekStart exceeds endDate
       while (weekStart <= endDate) {
         // For this week, create events for selected days
-        recurrenceDays.forEach(dayIndex => {
+        recurrenceDays.forEach((dayIndex) => {
           // Calculate date for this day in the current week
-          // Monday is base. 
+          // Monday is base.
           // dayIndex: 0 (Sun) -> +6 days
           // dayIndex: 1 (Mon) -> +0 days
           // ...

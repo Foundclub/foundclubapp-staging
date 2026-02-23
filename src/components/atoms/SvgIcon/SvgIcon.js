@@ -3,12 +3,12 @@ import { Image } from 'react-native';
 
 // Import des icônes PNG
 const icons = {
-  users: require('@/assets/icons/users.png'),
-  'clock-two-thirty': require('@/assets/icons/clock-two-thirty.png'),
   'calendar-days': require('@/assets/icons/calendar-days.png'),
-  Player: require('@/assets/icons/Player.png'),
-  money_bag: require('@/assets/icons/money_bag.png'),
+  'clock-two-thirty': require('@/assets/icons/clock-two-thirty.png'),
   'location-pin-alt-1': require('@/assets/icons/location.png'),
+  money_bag: require('@/assets/icons/money_bag.png'),
+  Player: require('@/assets/icons/Player.png'),
+  users: require('@/assets/icons/users.png'),
 };
 
 /**
@@ -18,7 +18,9 @@ const icons = {
  * @param {number} height - Hauteur de l'icône (par défaut: 18)
  * @param {string} color - Couleur de l'icône via tintColor (par défaut: #FFFFFF)
  */
-export const SvgIcon = ({ name, width = 18, height = 18, color = '#FFFFFF', style }) => {
+export function SvgIcon({
+  color = '#FFFFFF', height = 18, name, style, width = 18,
+}) {
   const iconSource = icons[name];
 
   if (!iconSource) {
@@ -31,14 +33,14 @@ export const SvgIcon = ({ name, width = 18, height = 18, color = '#FFFFFF', styl
       source={iconSource}
       style={[
         {
-          width,
           height,
           tintColor: color,
+          width,
         },
         style,
       ]}
     />
   );
-};
+}
 
 export default SvgIcon;

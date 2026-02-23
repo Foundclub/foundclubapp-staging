@@ -1,48 +1,58 @@
-import React, { useMemo } from 'react';
-import { View, Text, Alert, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert, ScrollView, Text, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useAdWizard } from './AdWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
+
 import { getShortAddress } from '@/utils/location';
 
-const AdWizardRecap = ({ navigation }) => {
+import { useAdWizard } from './AdWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function AdWizardRecap({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useAdWizard();
+  const { dispatch, state } = useAdWizard();
   const queryClient = useQueryClient();
 
   // Calculate total players
-  const totalPlayers = useMemo(() => {
-    return state.positions.reduce((sum, p) => sum + p.quantity, 0);
-  }, [state.positions]);
+  const totalPlayers = useMemo(() => state.positions.reduce((sum, p) => sum + p.quantity, 0), [state.positions]);
 
   // Mutation
   const createAdMutation = useMutation({
     mutationFn: createRecruitmentAd,
+    onError: (error) => {
+      console.error('[AdWizardRecap] Creation error:', error);
+      Alert.alert('Erreur', 'Impossible de créer l\'annonce. Veuillez réessayer.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] });
-      
+
       // Android Fabric issue: Alert.alert fails if not attached to Activity.
       // We navigate immediately instead of showing an alert.
-      
+
       // Reset wizard state
       dispatch({ type: 'RESET' });
-      
+
       // Navigate to dedicated recruitment search -> ads with timestamp to force refresh
       navigation.navigate(RouteNames.SearchRecruitment, {
         initialRecruitmentTab: 'annonces',
         timestamp: Date.now(), // Unique value to force useEffect in RecrutementListContent
       });
-    },
-    onError: (error) => {
-      console.error('[AdWizardRecap] Creation error:', error);
-      Alert.alert('Erreur', 'Impossible de créer l\'annonce. Veuillez réessayer.');
     },
   });
 
@@ -52,30 +62,30 @@ const AdWizardRecap = ({ navigation }) => {
       return;
     }
 
-    const promises = state.positions.map(pos => {
+    const promises = state.positions.map((pos) => {
       // Use numeric IDs for relations if available, fallback to documentId or undefined
       const adData = {
         // Required fields
-        team: state.team?.documentId || state.team?.id, 
         position: pos.name,
         quantity: pos.quantity,
+        team: state.team?.documentId || state.team?.id,
         type: state.event ? 'ponctuel' : 'saison',
-        
+
         // Optional fields
+        address: state.address || undefined,
         description: state.description || undefined,
         validationMode: state.event ? state.validationMode : 'auto',
-        address: state.address || undefined,
-        
+
         // Relations
-        event: state.event?.documentId || state.event?.id,
-        section: state.section?.documentId || state.section?.id,
         category: state.category?.documentId || state.category?.id,
+        event: state.event?.documentId || state.event?.id,
         level: state.minLevel?.documentId || state.minLevel?.id,
+        section: state.section?.documentId || state.section?.id,
       };
-      
+
       // Fallback log if IDs are missing (should not happen if flow works)
       if (!adData.team) console.warn('[AdWizardRecap] Missing team ID', state.team);
-      
+
       return createAdMutation.mutateAsync(adData);
     });
 
@@ -88,47 +98,57 @@ const AdWizardRecap = ({ navigation }) => {
   };
 
   // Render grid item for info
-  const GridItem = ({ label, value, icon }) => (
-    <View style={{ width: '50%', marginBottom: 24, paddingRight: 8 }}>
-      <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-        {label}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {icon && (
+  /**
+   *
+   * @param root0
+   * @param root0.icon
+   * @param root0.label
+   * @param root0.value
+   */
+  function GridItem({ icon, label, value }) {
+    return (
+      <View style={{ marginBottom: 24, paddingRight: 8, width: '50%' }}>
+        <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
+          {label}
+        </Text>
+        <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+          {icon && (
           <View style={{
-            width: 24,
-            height: 24,
-            borderRadius: 8,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)', // Subtle background for icon
             alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)', // Subtle background for icon
+            borderRadius: 8,
+            height: 24,
             justifyContent: 'center',
-            marginRight: 10
-          }}>
+            marginRight: 10,
+            width: 24,
+          }}
+          >
             <Text style={{ fontSize: 13 }}>{icon}</Text>
           </View>
-        )}
-        <Text style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, fontSize: 15 }]} numberOfLines={1}>
-          {value || 'Non défini'}
-        </Text>
+          )}
+          <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, fontSize: 15 }]}>
+            {value || 'Non défini'}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  }
 
   const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
-  
+
   // Display address logic: Manual address > Team address > Club address
-  const displayAddress = state.address 
+  const displayAddress = state.address
     ? (state.address.label || getShortAddress(state.address))
     : getShortAddress(state.team?.club?.address || state.team?.club?.addressDetails);
 
   return (
     <WizardStepLayout
-      title="Tout est bon ?"
-      subtitle="Vérifiez les détails avant de publier"
+      isNextLoading={createAdMutation.isPending}
+      nextLabel="Créer l'annonce"
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
-      nextLabel="Créer l'annonce"
-      isNextLoading={createAdMutation.isPending}
+      subtitle="Vérifiez les détails avant de publier"
+      title="Tout est bon ?"
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {/* Main recap card */}
@@ -136,11 +156,12 @@ const AdWizardRecap = ({ navigation }) => {
           Spaces.padding[24],
           {
             backgroundColor: '#1A1A1A',
+            borderColor: Colors.neutral700,
             borderRadius: 24,
             borderWidth: 1,
-            borderColor: Colors.neutral700,
-          }
-        ]}>
+          },
+        ]}
+        >
           {/* Team Header */}
           <View style={{ marginBottom: 24 }}>
             <Text style={[Fonts.p3, { color: Colors.primary500, marginBottom: 4 }]}>
@@ -157,69 +178,76 @@ const AdWizardRecap = ({ navigation }) => {
           </View>
 
           {/* Key Info Grid Separator */}
-          <View style={{ height: 1, backgroundColor: Colors.neutral700, marginBottom: 24 }} />
+          <View style={{ backgroundColor: Colors.neutral700, height: 1, marginBottom: 24 }} />
 
           {/* Key Info Grid */}
-          <View style={{ 
-            flexDirection: 'row', 
-            flexWrap: 'wrap', 
+          <View style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
             marginBottom: 8,
-          }}>
-            <GridItem 
-              label="Sport" 
-              value={sportName}
+          }}
+          >
+            <GridItem
               icon="⚽"
+              label="Sport"
+              value={sportName}
             />
-            <GridItem 
-              label="Section" 
-              value={state.section?.name}
+            <GridItem
               icon="👥"
+              label="Section"
+              value={state.section?.name}
             />
-            <GridItem 
-              label="Catégorie" 
-              value={state.category?.name}
+            <GridItem
               icon="🏷️"
+              label="Catégorie"
+              value={state.category?.name}
             />
-            <GridItem 
-              label="Niveau" 
-              value={state.minLevel?.name} 
+            <GridItem
               icon="📊"
+              label="Niveau"
+              value={state.minLevel?.name}
             />
-            <GridItem 
-              label="Lieu" 
-              value={displayAddress}
+            <GridItem
               icon="📍"
+              label="Lieu"
+              value={displayAddress}
             />
           </View>
 
           {/* Positions Section */}
-          <View style={{ 
+          <View style={{
             backgroundColor: '#252525', // Slightly lighter inner card
             borderRadius: 16,
-            padding: 16,
             marginTop: 8,
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            padding: 16,
+          }}
+          >
+            <View style={{
+              alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16,
+            }}
+            >
               <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
                 Postes recherchés
               </Text>
               <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                Total : {totalPlayers}
+                Total :
+                {' '}
+                {totalPlayers}
               </Text>
             </View>
 
             <View style={[Spaces.gap[10]]}>
               {state.positions.map((pos, index) => (
-                <View 
+                <View
                   key={index}
                   style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
                     backgroundColor: '#333333',
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
                     paddingHorizontal: 16,
                     paddingVertical: 14,
-                    borderRadius: 12,
                   }}
                 >
                   <Text style={[Fonts.p1Bold, { color: Colors.neutral00, fontSize: 15 }]}>
@@ -227,12 +255,14 @@ const AdWizardRecap = ({ navigation }) => {
                   </Text>
                   <View style={{
                     backgroundColor: Colors.primary500,
+                    borderRadius: 8,
                     paddingHorizontal: 10,
                     paddingVertical: 5,
-                    borderRadius: 8,
-                  }}>
+                  }}
+                  >
                     <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-                      x{pos.quantity}
+                      x
+                      {pos.quantity}
                     </Text>
                   </View>
                 </View>
@@ -242,8 +272,11 @@ const AdWizardRecap = ({ navigation }) => {
 
           {/* Event Linked (Optional) */}
           {state.event && (
-            <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.neutral700 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{
+              borderTopColor: Colors.neutral700, borderTopWidth: 1, marginTop: 24, paddingTop: 20,
+            }}
+            >
+              <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 12 }}>
                 <Text style={{ fontSize: 18, marginRight: 8 }}>📅</Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
                   Lié à l'événement
@@ -257,7 +290,10 @@ const AdWizardRecap = ({ navigation }) => {
 
           {/* Description (Optional) */}
           {state.description && (
-            <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.neutral700 }}>
+            <View style={{
+              borderTopColor: Colors.neutral700, borderTopWidth: 1, marginTop: 24, paddingTop: 20,
+            }}
+            >
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
                 Description
               </Text>
@@ -270,20 +306,27 @@ const AdWizardRecap = ({ navigation }) => {
 
         {/* Info Notification */}
         <View style={{
+          alignItems: 'center',
+          backgroundColor: '#0F292E',
+          borderColor: Colors.primary900,
+          borderRadius: 16,
+          borderWidth: 1,
+          flexDirection: 'row',
           marginTop: 20,
           padding: 16,
-          backgroundColor: '#0F292E',
-          borderRadius: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: Colors.primary900
-        }}>
-          <View style={{ 
-            width: 24, height: 24, backgroundColor: Colors.neutral400, borderRadius: 4, 
-            alignItems: 'center', justifyContent: 'center', marginRight: 12 
-          }}>
-             <Text style={{ fontSize: 14, color: Colors.neutral900, fontWeight: 'bold' }}>i</Text>
+        }}
+        >
+          <View style={{
+            alignItems: 'center',
+            backgroundColor: Colors.neutral400,
+            borderRadius: 4,
+            height: 24,
+            justifyContent: 'center',
+            marginRight: 12,
+            width: 24,
+          }}
+          >
+            <Text style={{ color: Colors.neutral900, fontSize: 14, fontWeight: 'bold' }}>i</Text>
           </View>
           <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1, lineHeight: 18 }]}>
             L'annonce sera visible par tous les joueurs correspondant à ce profil.
@@ -292,6 +335,6 @@ const AdWizardRecap = ({ navigation }) => {
       </ScrollView>
     </WizardStepLayout>
   );
-};
+}
 
 export default AdWizardRecap;

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -15,7 +16,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 
 /**
  * User avatar selection screen component
@@ -42,7 +42,12 @@ function UserAvatar({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+      const rawMessage = typeof error?.message === 'string' ? error.message : '';
+      const isNetworkFailure = rawMessage.toLowerCase().includes('network request failed');
+      const message = isNetworkFailure
+        ? 'Connexion impossible au serveur pour le moment. Reessaie dans quelques secondes.'
+        : (rawMessage || 'Impossible de mettre a jour votre profil.');
+      Alert.alert('Erreur', message);
     },
     onSuccess: () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
@@ -56,6 +61,8 @@ function UserAvatar({ navigation }) {
   });
 
   const handleNext = () => {
+    if (updateUserMutation.isPending) return;
+
     if (avatar && userData) {
       updateUserMutation.mutate({ avatar });
     }
@@ -70,6 +77,8 @@ function UserAvatar({ navigation }) {
       navigation.navigate(nextRoute);
     }
   };
+
+  const hasSelectedAvatar = Boolean(avatar?.path || avatar?.uri);
 
   return (
     <ScreenContainer
@@ -103,7 +112,8 @@ function UserAvatar({ navigation }) {
 
       <View style={[Spaces.gap[16]]}>
         <Button
-          disabled={!avatar?.path}
+          disabled={!hasSelectedAvatar || updateUserMutation.isPending}
+          isLoading={updateUserMutation.isPending}
           onPress={handleNext}
           title={t('profile.actions.save')}
           variant="Primary"

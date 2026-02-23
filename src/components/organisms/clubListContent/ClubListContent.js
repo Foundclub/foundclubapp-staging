@@ -8,11 +8,12 @@ import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -23,7 +24,6 @@ import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchS
 import { getShortAddress } from '@/utils/location';
 
 import SearchComponent from '../searchComponent/searchComponent';
-import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 /**
  * Club list element to inject on home page or a dedicate one
@@ -119,8 +119,8 @@ function ClubListContent() {
     if (documentId) {
       // @ts-expect-error because of react navigation type definitions
       navigation.navigate(RouteNames.ClubStack, {
-        screen: RouteNames.Club,
         params: { clubId: documentId },
+        screen: RouteNames.Club,
       });
     }
   }, [navigation]);
@@ -172,7 +172,7 @@ function ClubListContent() {
   const renderItem = ({ item }) => {
     const isMultisport = item._type === 'multisport';
     const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
-    
+
     return (
       <View style={[Spaces.gap[8]]}>
         {primaryReasonLabel ? (
@@ -182,10 +182,9 @@ function ClubListContent() {
         ) : null}
         <TouchableOpacity
           key={item.id}
-          onPress={() => isMultisport
+          onPress={() => (isMultisport
             ? handleMultisportSelection(item.documentId)
-            : handleClubSelection(item.documentId)
-          }
+            : handleClubSelection(item.documentId))}
           style={[
             Alignments.row,
             Alignments.alignCenter,
@@ -203,10 +202,10 @@ function ClubListContent() {
         >
           {item.logo?.url ? (
             <ProfileAvatar
+              imageStyle={{ borderRadius: 30 }}
               imageUrl={item.logo.url}
               size={60}
               style={{ borderRadius: 30 }}
-              imageStyle={{ borderRadius: 30 }}
             />
           ) : (
             <TeamShield
@@ -215,7 +214,7 @@ function ClubListContent() {
               size={60}
             />
           )}
-          <View style={[Spaces.gap[4], { maxWidth: '70%', flex: 1 }]}>
+          <View style={[Spaces.gap[4], { flex: 1, maxWidth: '70%' }]}>
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
               <Text
                 ellipsizeMode="tail"
@@ -227,10 +226,11 @@ function ClubListContent() {
               {isMultisport && (
                 <View style={{
                   backgroundColor: '#00BCD4',
+                  borderRadius: 4,
                   paddingHorizontal: 8,
                   paddingVertical: 2,
-                  borderRadius: 4,
-                }}>
+                }}
+                >
                   <Text style={[Fonts.p3, { color: '#FFFFFF', fontSize: 10 }]}>
                     OMNISPORT
                   </Text>
@@ -244,25 +244,28 @@ function ClubListContent() {
             ) : null}
             {isMultisport && item.sectionsCount > 0 && (
               <Text style={[Fonts.p2, Fonts.primary500]}>
-                {item.sectionsCount} section{item.sectionsCount > 1 ? 's' : ''}
+                {item.sectionsCount}
+                {' '}
+                section
+                {item.sectionsCount > 1 ? 's' : ''}
               </Text>
             )}
             {!isMultisport && item.sponsor?.length > 0 && (
               <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
                 {item.sponsor.slice(0, 5).map((sponsor, idx) => (
                   <SponsorLogoTile
-                    key={sponsor.id || idx}
+                    borderRadius={20}
+                    height={40}
                     imageUrl={sponsor.logo?.url}
+                    key={sponsor.id || idx}
                     link={sponsor.link}
                     title={sponsor.title || sponsor.name || 'Sponsor'}
-                    width={40}
-                    height={40}
-                    borderRadius={20}
                     titleStyle={[
                       Fonts.p4Bold,
                       Fonts.neutral00,
                       { fontSize: 10, textAlign: 'center' },
                     ]}
+                    width={40}
                   />
                 ))}
               </View>
@@ -275,9 +278,9 @@ function ClubListContent() {
 
   const renderEmptyList = () => (
     <EmptyState
-      title={t('clubList.noData')}
       actionLabel={t('clubList.actions.createClub')}
       onAction={handleCreateClub}
+      title={t('clubList.noData')}
     />
   );
 
@@ -315,17 +318,17 @@ function ClubListContent() {
                 data={displayedClubs}
                 keyExtractor={(item) => item?.documentId || 'unknown'}
                 ListEmptyComponent={renderEmptyList}
+                ListHeaderComponent={isSmartSearchEnabled ? (
+                  <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[8]]}>
+                    Trie par pertinence
+                  </Text>
+                ) : null}
                 onEndReached={handleEndReached}
                 onEndReachedThreshold={0.5}
                 onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
                 refreshing={activeIsLoading && !activeIsFetchingNext}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
-                ListHeaderComponent={isSmartSearchEnabled ? (
-                  <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[8]]}>
-                    Trie par pertinence
-                  </Text>
-                ) : null}
               />
             </View>
           </WithDataWrapper>

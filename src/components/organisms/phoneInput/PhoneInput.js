@@ -14,9 +14,7 @@ import { getDeviceLocaleCountry } from '@/utils/device/deviceInfo';
 import { DIAL_CODES } from '@/utils/dial_codes';
 
 // Default to France (+33) for all users
-const getDeviceDialCode = () => {
-  return DIAL_CODES.find(({ value }) => value === '+33');
-};
+const getDeviceDialCode = () => DIAL_CODES.find(({ value }) => value === '+33');
 
 const DIALCODE_WIDTH = 72;
 
@@ -37,7 +35,7 @@ const PhoneInput = forwardRef(
    * @returns {React.ReactElement} Phone input component.
    */
   ({
-    error, onBlur, onChange, value, label,
+    error, label, onBlur, onChange, value,
   }, ref) => {
     const {
       Alignments, ApplicationStyle, Spaces,

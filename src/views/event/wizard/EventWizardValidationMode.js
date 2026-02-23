@@ -1,13 +1,21 @@
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-const EventWizardValidationMode = ({ navigation }) => {
+import { useEventWizard } from './EventWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardValidationMode({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -16,7 +24,7 @@ const EventWizardValidationMode = ({ navigation }) => {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const [validationMode, setValidationMode] = useState(state.validationMode || 'auto');
 
   const selectedAccentBg = `${Colors.primary500}2A`;
@@ -31,12 +39,6 @@ const EventWizardValidationMode = ({ navigation }) => {
 
   const options = [
     {
-      key: 'auto',
-      title: t('eventEdit.fields.validationMode.options.auto'),
-      subtitle: t(
-        'eventWizard.steps.validation.autoDesc',
-        'Les participants peuvent confirmer automatiquement leur presence.',
-      ),
       detailOne: t(
         'eventWizard.steps.validation.autoRuleOne',
         'Check-in simplifie pour les joueurs',
@@ -47,14 +49,14 @@ const EventWizardValidationMode = ({ navigation }) => {
       ),
       icon: 'A',
       isRecommended: true,
+      key: 'auto',
+      subtitle: t(
+        'eventWizard.steps.validation.autoDesc',
+        'Les participants peuvent confirmer automatiquement leur presence.',
+      ),
+      title: t('eventEdit.fields.validationMode.options.auto'),
     },
     {
-      key: 'manual',
-      title: t('eventEdit.fields.validationMode.options.manual'),
-      subtitle: t(
-        'eventWizard.steps.validation.manualDesc',
-        'Le coach valide manuellement les participants.',
-      ),
       detailOne: t(
         'eventWizard.steps.validation.manualRuleOne',
         'Controle total par le staff',
@@ -65,25 +67,31 @@ const EventWizardValidationMode = ({ navigation }) => {
       ),
       icon: 'M',
       isRecommended: false,
+      key: 'manual',
+      subtitle: t(
+        'eventWizard.steps.validation.manualDesc',
+        'Le coach valide manuellement les participants.',
+      ),
+      title: t('eventEdit.fields.validationMode.options.manual'),
     },
   ];
 
   const handleNext = () => {
     dispatch({
-      type: 'SET_VALIDATION_MODE',
       payload: validationMode,
+      type: 'SET_VALIDATION_MODE',
     });
     navigation.navigate(RouteNames.EventWizardDescription);
   };
 
   return (
     <WizardStepLayout
-      stepCount={10}
-      stepIndex={6}
-      title={t('eventWizard.steps.validation.title', 'Mode de validation')}
-      subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences a l'evenement.")}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
+      stepCount={10}
+      stepIndex={6}
+      subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences a l'evenement.")}
+      title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >
       <View style={[Spaces.marginTop[8], Spaces.gap[16]]}>
         <View style={[Spaces.gap[16]]}>
@@ -222,6 +230,6 @@ const EventWizardValidationMode = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardValidationMode;

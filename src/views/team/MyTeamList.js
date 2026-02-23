@@ -2,16 +2,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
-import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 /**
  * Team list screen component
@@ -19,7 +19,7 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
  * @returns {import('react').ReactElement} Team list screen component
  */
 function MyTeamList({ navigation, route }) {
-  const { playerId, isLeagueMode } = route?.params ?? {};
+  const { isLeagueMode, playerId } = route?.params ?? {};
   const { refetchUserData, userData } = useAuth();
   // Effects
   useFocusEffect(() => {
@@ -38,8 +38,8 @@ function MyTeamList({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -63,7 +63,7 @@ function MyTeamList({ navigation, route }) {
           Alignments.justifySpaceBetween]}
         >
           <LeagueHeaderSwitch />
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <NotificationBadge />
             <ProfileButton />
           </View>

@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetSections } from '@/services/section/sectionQueries';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetSections } from '@/services/section/sectionQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -16,7 +18,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
  */
 function TeamWizardSection({ navigation }) {
   const { t } = useTranslation();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const [searchValue, setSearchValue] = useState('');
   const { data: sections } = useGetSections();
 
@@ -37,15 +39,15 @@ function TeamWizardSection({ navigation }) {
 
   return (
     <WizardStepLayout
-      title={t('teamWizard.steps.section.title', 'Section')}
-      subtitle={t('teamWizard.steps.section.subtitle', 'Selectionne la section de l equipe.')}
-      stepIndex={3}
-      stepCount={8}
+      isNextDisabled={!state.section}
+      nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardDescription)}
       onNext={() => navigation.navigate(RouteNames.TeamWizardActivity)}
       onSkip={() => {}}
-      nextLabel={t('common.next', 'Suivant')}
-      isNextDisabled={!state.section}
+      stepCount={8}
+      stepIndex={3}
+      subtitle={t('teamWizard.steps.section.subtitle', 'Selectionne la section de l equipe.')}
+      title={t('teamWizard.steps.section.title', 'Section')}
     >
       <View>
         <AutocompleteSelect
@@ -55,7 +57,7 @@ function TeamWizardSection({ navigation }) {
           placeholder={t('teamEdit.fields.section.placeholder')}
           searchValue={searchValue}
           setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ type: 'SET_SECTION', payload: option?.value || '' })}
+          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_SECTION' })}
           value={selectedLabel}
         />
       </View>

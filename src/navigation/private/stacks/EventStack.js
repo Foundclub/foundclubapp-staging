@@ -1,30 +1,32 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
-import { commonOptions } from '@/navigation/commonOptions';
-import { RouteNames } from '@/navigation/routeNames';
-
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
-import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
-import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
-
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
-import EventWizardType from '@/views/event/wizard/EventWizardType';
-import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
+import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
+import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
 import EventWizardParticipants from '@/views/event/wizard/EventWizardParticipants';
-import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
-import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
-import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
-import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
+import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
+import EventWizardType from '@/views/event/wizard/EventWizardType';
+import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
+import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
+import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
+import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
+
+import { commonOptions } from '@/navigation/commonOptions';
+import { RouteNames } from '@/navigation/routeNames';
 
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function EventStack() {
   const { t } = useTranslation();
 
@@ -66,7 +68,7 @@ function EventStack() {
             headerShown: false,
           }}
         />
-        
+
         {/* Tactical V2 Screens */}
         <Stack.Screen
           component={TacticalSelectionV2}
@@ -136,4 +138,3 @@ function EventStack() {
 }
 
 export default EventStack;
-

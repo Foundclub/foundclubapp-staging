@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, TouchableOpacity, View, PermissionsAndroid, Platform,
+  Alert, Image, PermissionsAndroid, Platform, TouchableOpacity, View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import useTheme from '@/theme/themeContext';
-import { getImageUrl } from '@/utils/imageUrl';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * SelectAvatar component for selecting/updating user avatar
@@ -48,13 +49,13 @@ function SelectAvatar({
       t('profile.actions.confirmDeleteAvatar'),
       [
         {
-          text: t('common.actions.cancel'),
           style: 'cancel',
+          text: t('common.actions.cancel'),
         },
         {
-          text: t('common.actions.delete'),
           onPress: onDelete,
           style: 'destructive',
+          text: t('common.actions.delete'),
         },
       ],
     );
@@ -74,14 +75,14 @@ function SelectAvatar({
       const asset = response.assets[0];
       // Map to format expected by Upload Service (path, mime, filename)
       const mappedImage = {
-        path: asset.uri,
-        uri: asset.uri,
-        mime: asset.type,
         filename: asset.fileName,
-        width: asset.width,
         height: asset.height,
+        mime: asset.type,
+        path: asset.uri,
         size: asset.fileSize,
+        uri: asset.uri,
         url: '', // Clear url to indicate new file
+        width: asset.width,
       };
       onAvatarSelected(mappedImage);
       setIsModalVisible(false);
@@ -94,11 +95,11 @@ function SelectAvatar({
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
-            title: t('permissions.camera.title', 'Permission Caméra'),
-            message: t('permissions.camera.message', 'L\'application a besoin d\'accéder à votre caméra pour prendre une photo.'),
-            buttonNeutral: t('common.actions.askLater', 'Plus tard'),
             buttonNegative: t('common.actions.cancel', 'Annuler'),
+            buttonNeutral: t('common.actions.askLater', 'Plus tard'),
             buttonPositive: t('common.actions.ok', 'OK'),
+            message: t('permissions.camera.message', 'L\'application a besoin d\'accéder à votre caméra pour prendre une photo.'),
+            title: t('permissions.camera.title', 'Permission Caméra'),
           },
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
@@ -108,14 +109,14 @@ function SelectAvatar({
       }
 
       const result = await launchCamera({
-        mediaType: 'photo',
+        cameraType: 'back',
         includeBase64: false,
         includeExtra: true,
-        maxWidth: cropWidth || 1000,
         maxHeight: cropHeight || 1000,
+        maxWidth: cropWidth || 1000,
+        mediaType: 'photo',
         quality: 0.8,
         saveToPhotos: false,
-        cameraType: 'back',
       });
       handleResponse(result);
     } catch (error) {
@@ -127,11 +128,11 @@ function SelectAvatar({
   const selectFromGallery = async () => {
     try {
       const result = await launchImageLibrary({
-        mediaType: 'photo',
         includeBase64: false,
         includeExtra: true,
-        maxWidth: cropWidth || 1000,
         maxHeight: cropHeight || 1000,
+        maxWidth: cropWidth || 1000,
+        mediaType: 'photo',
         quality: 0.8,
       });
       handleResponse(result);
@@ -157,8 +158,8 @@ function SelectAvatar({
           ? (
             <>
               <Image
-                source={{ uri: currentAvatar.path || getImageUrl(currentAvatar.url) }}
                 resizeMode={imageResizeMode}
+                source={{ uri: currentAvatar.path || getImageUrl(currentAvatar.url) }}
                 style={[
                   ApplicationStyle.borderRadius24,
                   { height: size, width: size },

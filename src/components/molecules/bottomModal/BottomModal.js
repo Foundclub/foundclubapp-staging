@@ -3,11 +3,12 @@ import {
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@react-native-community/blur';
 import {
-  useCallback, useEffect, useRef,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
   Dimensions,
   Image,
+  Keyboard,
   Platform,
   TouchableOpacity,
   View,
@@ -42,22 +43,23 @@ function BottomModal({
   close,
   closeIconTintColor = 'primary200',
   contentContainerStyle,
-  headerComponent,
   footerComponent,
+  headerComponent,
   hideCloseButton = false,
   isVisible,
   keyboardBehavior = 'interactive',
   scrollable = true,
   scrollViewProps,
   scrollViewRef,
-  style,
   snapPoints,
+  style,
 }) {
   /**
    * @type {React.MutableRefObject<import('@gorhom/bottom-sheet').BottomSheetModal | null>}
    */
   const modalRef = useRef(null);
   const visibilityRef = useRef(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
@@ -80,6 +82,37 @@ function BottomModal({
     visibilityRef.current = false;
     modalRef.current?.dismiss();
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
+      const nextHeight = event?.endCoordinates?.height || 0;
+      setKeyboardHeight(Math.max(0, nextHeight - insets.bottom));
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, [insets.bottom]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    if (Platform.OS !== 'android') return;
+    const keyboardMetrics = Keyboard.metrics?.();
+    const visibleKeyboardHeight = keyboardMetrics?.height || 0;
+    if (visibleKeyboardHeight > 0) {
+      setKeyboardHeight(Math.max(0, visibleKeyboardHeight - insets.bottom));
+    }
+  }, [insets.bottom, isVisible]);
 
   const handleDismiss = useCallback(() => {
     if (!visibilityRef.current) return;
@@ -122,17 +155,22 @@ function BottomModal({
     [close, Colors, Alignments.fill],
   );
 
+  const contentBottomPadding = useMemo(
+    () => (footerComponent ? 16 : 40) + keyboardHeight,
+    [footerComponent, keyboardHeight],
+  );
+
   return (
     <BottomSheetModal
-      backdropComponent={renderBackdrop}
       android_keyboardInputMode={androidKeyboardInputMode}
+      backdropComponent={renderBackdrop}
       backgroundStyle={[
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
         style]}
+      bottomInset={insets.bottom + keyboardHeight}
       enableContentPanningGesture={Platform.OS === 'ios'}
       enableDynamicSizing={!snapPoints}
-      snapPoints={snapPoints}
       enablePanDownToClose
       handleComponent={null}
       index={0}
@@ -140,6 +178,7 @@ function BottomModal({
       keyboardBlurBehavior="restore"
       onDismiss={handleDismiss}
       ref={modalRef}
+      snapPoints={snapPoints}
       topInset={insets.top + 20}
     >
       {!hideCloseButton && (
@@ -172,19 +211,20 @@ function BottomModal({
         {/* Content */}
         {scrollable ? (
           <BottomSheetScrollView
-            ref={scrollViewRef}
             contentContainerStyle={[
               Spaces.paddingHorizontal[24],
               !headerComponent ? Spaces.paddingTop[12] : null,
-              // If there's no footer, add some bottom padding for scroll
-              footerComponent ? Spaces.paddingBottom[16] : Spaces.paddingBottom[40],
+              // Keep actions and last fields visible above keyboard.
+              { paddingBottom: contentBottomPadding },
               { minHeight: 100 },
               contentContainerStyle,
             ]}
+            keyboardShouldPersistTaps="handled"
+            ref={scrollViewRef}
             style={[
               snapPoints ? Alignments.fill : { maxHeight: Dimensions.get('screen').height * 0.7 },
             ]}
-            keyboardShouldPersistTaps="handled"
+            // eslint-disable-next-line react/jsx-props-no-spreading
             {...scrollViewProps}
           >
             {children}
@@ -205,9 +245,10 @@ function BottomModal({
           <View style={[
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
-            { paddingBottom: insets.bottom + 40 },
-            { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' } // Optional separator
-          ]}>
+            { paddingBottom: insets.bottom + 40 + keyboardHeight },
+            { borderTopColor: 'rgba(255,255,255,0.1)', borderTopWidth: 1 }, // Optional separator
+          ]}
+          >
             {footerComponent}
           </View>
         )}

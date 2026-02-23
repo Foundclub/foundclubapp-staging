@@ -1,21 +1,29 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
-import useTheme from '@/theme/themeContext';
 import useAuth from '@/domains/auth/useAuth';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
-import { RouteNames } from '@/navigation/routeNames';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import useClub from '@/domains/club/useClub';
+import useTheme from '@/theme/themeContext';
 
-const EventWizardTeam = ({ navigation }) => {
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useEventWizard } from './EventWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardTeam({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -35,17 +43,17 @@ const EventWizardTeam = ({ navigation }) => {
   const myTeams = Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [];
 
   const handleSelectTeam = (team) => {
-    dispatch({ type: 'SET_TEAM', payload: team });
+    dispatch({ payload: team, type: 'SET_TEAM' });
     navigation.navigate(RouteNames.EventWizardInvites);
   };
 
   return (
     <WizardStepLayout
+      onBack={() => navigation.goBack()}
       stepCount={10}
       stepIndex={2}
-      title={t('eventWizard.steps.team.title')}
       subtitle={t('eventWizard.steps.team.subtitle')}
-      onBack={() => navigation.goBack()}
+      title={t('eventWizard.steps.team.title')}
     >
       <View style={[Spaces.gap[16]]}>
         {myTeams.length === 0 ? (
@@ -94,6 +102,6 @@ const EventWizardTeam = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardTeam;

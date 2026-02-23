@@ -1,7 +1,7 @@
+import Alignments from '@/theme/alignements';
+import generateApplicationStyle from '@/theme/applicationStyle';
 import getThemeColors from '@/theme/colors';
 import generateFonts from '@/theme/fonts';
-import generateApplicationStyle from '@/theme/applicationStyle';
-import Alignments from '@/theme/alignements';
 
 describe('theme contract', () => {
   const Colors = getThemeColors();

@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, TouchableOpacity, View, Text } from 'react-native';
+import {
+  ActivityIndicator, Text, TouchableOpacity, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
-import Input from '@/components/molecules/input/Input';
+
 import Button from '@/components/atoms/button/Button';
+import Input from '@/components/molecules/input/Input';
+
 import { checkTeamNameUnique } from '@/services/leagueTeam/leagueTeamService';
 
 const NAME_MIN_LENGTH = 3;
@@ -24,7 +29,14 @@ const buildSuggestionCandidates = (baseName) => {
   ];
 };
 
-const SquadNameStep = ({ data, updateData, onNext }) => {
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onNext
+ * @param root0.updateData
+ */
+function SquadNameStep({ data, onNext, updateData }) {
   const { Colors, Fonts } = useTheme();
   const [nameCheckState, setNameCheckState] = useState('idle'); // idle | checking | available | taken | error
   const [nameMessage, setNameMessage] = useState('');
@@ -97,77 +109,83 @@ const SquadNameStep = ({ data, updateData, onNext }) => {
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, textAlign: 'center', marginBottom: 40 }]}>
-             Quel est le nom de votre squad ?
-          </Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
+        <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
+          Quel est le nom de votre squad ?
+        </Text>
 
-          <Input
-            placeholder="Ex: FC Les Champions"
-            value={data.name}
-            onChangeText={(text) => updateData('name', text)}
-            style={{ textAlign: 'center' }} 
-            placeholderTextColor={Colors.neutral500}
-            error={nameCheckState === 'taken' || nameCheckState === 'error' ? nameMessage : ''}
-            autoFocus
-          />
+        <Input
+          autoFocus
+          error={nameCheckState === 'taken' || nameCheckState === 'error' ? nameMessage : ''}
+          onChangeText={(text) => updateData('name', text)}
+          placeholder="Ex: FC Les Champions"
+          placeholderTextColor={Colors.neutral500}
+          style={{ textAlign: 'center' }}
+          value={data.name}
+        />
 
-          {nameCheckState === 'checking' ? (
-            <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
-              <ActivityIndicator color={Colors.primary500} size="small" />
-              <Text style={[Fonts.p3, { color: Colors.neutral200, marginLeft: 8 }]}>
-                {nameMessage}
-              </Text>
-            </View>
-          ) : null}
-
-          {nameCheckState === 'available' ? (
-            <Text style={[Fonts.p3, { color: Colors.success500, marginTop: 12, textAlign: 'center' }]}>
+        {nameCheckState === 'checking' ? (
+          <View style={{
+            alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 12,
+          }}
+          >
+            <ActivityIndicator color={Colors.primary500} size="small" />
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginLeft: 8 }]}>
               {nameMessage}
             </Text>
-          ) : null}
+          </View>
+        ) : null}
 
-          {nameSuggestions.length > 0 ? (
-            <View style={{ marginTop: 14 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8, textAlign: 'center' }]}>
-                Suggestions disponibles
-              </Text>
-              <View style={{ alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {nameSuggestions.map((suggestion) => (
-                  <TouchableOpacity
-                    key={suggestion}
-                    onPress={() => updateData('name', suggestion)}
-                    style={{
-                      backgroundColor: 'rgba(1, 179, 244, 0.12)',
-                      borderColor: 'rgba(1, 179, 244, 0.45)',
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      marginHorizontal: 4,
-                      marginVertical: 4,
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
-                    }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{suggestion}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        {nameCheckState === 'available' ? (
+          <Text style={[Fonts.p3, { color: Colors.success500, marginTop: 12, textAlign: 'center' }]}>
+            {nameMessage}
+          </Text>
+        ) : null}
+
+        {nameSuggestions.length > 0 ? (
+          <View style={{ marginTop: 14 }}>
+            <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8, textAlign: 'center' }]}>
+              Suggestions disponibles
+            </Text>
+            <View style={{
+              alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+            }}
+            >
+              {nameSuggestions.map((suggestion) => (
+                <TouchableOpacity
+                  key={suggestion}
+                  onPress={() => updateData('name', suggestion)}
+                  style={{
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: 'rgba(1, 179, 244, 0.45)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    marginHorizontal: 4,
+                    marginVertical: 4,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          ) : null}
-       </View>
+          </View>
+        ) : null}
+      </View>
 
       <Button
-        title="Continuer"
+        disabled={!canContinue}
         onPress={() => {
           updateData('name', normalizedName);
           onNext();
         }}
-        disabled={!canContinue}
-        variant="Primary"
         style={{ marginBottom: 20 }}
+        title="Continuer"
+        variant="Primary"
       />
     </View>
   );
-};
+}
 
 export default SquadNameStep;

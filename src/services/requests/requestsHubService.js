@@ -1,6 +1,3 @@
-import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
-import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 import {
   buildRequestHubCounts,
   mapClubMembershipRequestToHubItem,
@@ -9,6 +6,10 @@ import {
   mapTeamMembershipRequestToHubItem,
   sortRequestHubItems,
 } from '@/domains/requests/requestMappers';
+
+import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
+import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
+import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 const toUniqueIds = (values = []) => (
   [...new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))]
@@ -161,7 +162,7 @@ export const getRequestsHubData = async (rawContext = {}) => {
       items.push(
         ...entries
           .filter((request) => request?.state === 'pending')
-          .map(mapTeamMembershipRequestToHubItem)
+          .map(mapTeamMembershipRequestToHubItem),
       );
     }
 
@@ -169,7 +170,7 @@ export const getRequestsHubData = async (rawContext = {}) => {
       items.push(
         ...entries
           .filter((request) => request?.state === 'pending')
-          .map(mapClubMembershipRequestToHubItem)
+          .map(mapClubMembershipRequestToHubItem),
       );
     }
 
@@ -177,7 +178,7 @@ export const getRequestsHubData = async (rawContext = {}) => {
       items.push(
         ...entries
           .filter((event) => event?.validationMode === 'manual')
-          .map(mapEventValidationRequestToHubItem)
+          .map(mapEventValidationRequestToHubItem),
       );
     }
 
@@ -194,4 +195,3 @@ export const getRequestsHubData = async (rawContext = {}) => {
     items: sortedItems,
   };
 };
-

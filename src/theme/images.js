@@ -13,21 +13,22 @@ export const images = {
   // icon
   arrowLeft: require('../assets/icons/arrowLeft.png'),
   arrowRight: require('../assets/icons/arrowRight.png'),
-  calendar: require('../assets/icons/calendar.png'),
   bell: require('../assets/icons/bell.png'),
+  calendar: require('../assets/icons/calendar.png'),
   camera: require('../assets/icons/camera.png'),
   check: require('../assets/icons/check.png'),
   chevronDown: require('../assets/icons/chevron-down.png'),
   clock: require('../assets/icons/clock.png'),
   close: require('../assets/icons/close.png'),
   edit: require('../assets/icons/edit.png'),
-  euroCircle: require('../assets/icons/euro-circle.png'),
   envelope: require('../assets/icons/envelope.png'),
+  euroCircle: require('../assets/icons/euro-circle.png'),
   filter: require('../assets/icons/filter.png'),
   flag: require('../assets/icons/flag.png'),
   phone: require('../assets/icons/phone.png'),
   pin: require('../assets/icons/pin.png'),
   plus: require('../assets/icons/plus.png'),
+  redTrash: require('../assets/icons/redtrash.png'),
   running: require('../assets/icons/running.png'),
   search: require('../assets/icons/search.png'),
   send: require('../assets/icons/send.png'),
@@ -38,7 +39,6 @@ export const images = {
   strokeShield: require('../assets/icons/stroke-shield.png'),
   trash: require('../assets/icons/trash.png'),
   trashAlt: require('../assets/icons/trash-alt.png'),
-  redTrash: require('../assets/icons/redtrash.png'),
   users: require('../assets/icons/users.png'),
   // League Division Badges (provisional static pack)
   division01: require('../assets/league/divisions/Div-1.png'),
@@ -53,9 +53,9 @@ export const images = {
   division09: require('../assets/league/divisions/Div-5.png'),
   division10: require('../assets/league/divisions/Div-5.png'),
   // League Icons (Mapped to existing until assets are added)
+  chart: require('../assets/icons/filter.png'), // Temp mapping
   trophy: require('../assets/icons/flag.png'), // Temp mapping
   whistle: require('../assets/icons/stadium.png'), // Temp mapping
-  chart: require('../assets/icons/filter.png'), // Temp mapping
 };
 
 /**

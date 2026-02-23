@@ -1,34 +1,46 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useAdWizard } from './AdWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useAdWizard } from './AdWizardContext';
+
 const VALIDATION_MODES = [
-  { 
-    value: 'auto', 
-    label: 'Automatique', 
+  {
     description: 'Les joueurs sont automatiquement acceptés',
     icon: '⚡',
+    label: 'Automatique',
+    value: 'auto',
   },
-  { 
-    value: 'manual', 
-    label: 'Manuelle', 
+  {
     description: 'Vous validez chaque inscription manuellement',
     icon: '✋',
+    label: 'Manuelle',
+    value: 'manual',
   },
 ];
 
-const AdWizardValidation = ({ navigation }) => {
-  const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function AdWizardValidation({ navigation }) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useAdWizard();
+  const { dispatch, state } = useAdWizard();
 
   const handleSelectMode = (mode) => {
-    dispatch({ type: 'SET_VALIDATION_MODE', payload: mode });
+    dispatch({ payload: mode, type: 'SET_VALIDATION_MODE' });
   };
 
   const handleNext = () => {
@@ -37,16 +49,16 @@ const AdWizardValidation = ({ navigation }) => {
 
   return (
     <WizardStepLayout
-      title="Mode de validation"
-      subtitle="Comment valider les inscriptions à l'événement ?"
+      nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      nextLabel="Suivant"
+      subtitle="Comment valider les inscriptions à l'événement ?"
+      title="Mode de validation"
     >
       <View style={[Spaces.gap[16]]}>
         {VALIDATION_MODES.map((mode) => {
           const isSelected = state.validationMode === mode.value;
-          
+
           return (
             <TouchableOpacity
               key={mode.value}
@@ -54,22 +66,23 @@ const AdWizardValidation = ({ navigation }) => {
               style={[
                 ApplicationStyle.card,
                 Spaces.padding[24],
-                { 
-                  backgroundColor: isSelected ? Colors.primary500 + '20' : Colors.neutral800,
-                  borderWidth: isSelected ? 2 : 1,
+                {
+                  backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
                   borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                }
+                  borderWidth: isSelected ? 2 : 1,
+                },
               ]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
                 {/* Icon */}
                 <View style={[
                   styles.iconContainer,
-                  { backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700 }
-                ]}>
+                  { backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700 },
+                ]}
+                >
                   <Text style={{ fontSize: 24 }}>{mode.icon}</Text>
                 </View>
-                
+
                 {/* Text */}
                 <View style={[Alignments.fill]}>
                   <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{mode.label}</Text>
@@ -77,7 +90,7 @@ const AdWizardValidation = ({ navigation }) => {
                     {mode.description}
                   </Text>
                 </View>
-                
+
                 {/* Checkmark */}
                 {isSelected && (
                   <View style={[styles.checkmark, { backgroundColor: Colors.primary500 }]}>
@@ -103,22 +116,22 @@ const AdWizardValidation = ({ navigation }) => {
       )}
     </WizardStepLayout>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   checkmark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    borderRadius: 28,
+    height: 56,
+    justifyContent: 'center',
+    width: 56,
   },
 });
 

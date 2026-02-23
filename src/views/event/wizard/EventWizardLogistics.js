@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Switch,
@@ -7,14 +8,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import useTheme from '@/theme/themeContext';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
-import { RouteNames } from '@/navigation/routeNames';
+
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useEventWizard } from './EventWizardContext';
 
 const parseInteger = (rawValue) => {
   if (!rawValue || String(rawValue).trim() === '') return null;
@@ -41,7 +44,12 @@ const isReservationTypeName = (typeName = '') => {
   return normalized.includes('reservation');
 };
 
-const EventWizardLogistics = ({ navigation }) => {
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardLogistics({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -50,7 +58,7 @@ const EventWizardLogistics = ({ navigation }) => {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const cardSurface = 'rgba(4, 31, 44, 0.82)';
   const cardBorder = 'rgba(1, 179, 244, 0.24)';
   const fieldSurface = 'rgba(1, 179, 244, 0.08)';
@@ -119,6 +127,7 @@ const EventWizardLogistics = ({ navigation }) => {
       date: fullStartDate,
       endTime: fullEndDate,
       isRecurrent,
+      pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
       recurrenceDays: isRecurrent && recurrenceFrequency === 'week' ? recurrenceDays : [],
       recurrenceEndDate: isRecurrent ? recurrenceEndDate : null,
       recurrenceFrequency,
@@ -126,12 +135,11 @@ const EventWizardLogistics = ({ navigation }) => {
       recurrenceStartDate: isRecurrent ? recurrenceStartDate : null,
       reservationMode,
       startTime: fullStartDate,
-      pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
     };
 
     dispatch({
-      type: 'SET_LOGISTICS',
       payload,
+      type: 'SET_LOGISTICS',
     });
 
     navigation.navigate(RouteNames.EventWizardParticipants);
@@ -139,39 +147,39 @@ const EventWizardLogistics = ({ navigation }) => {
 
   return (
     <WizardStepLayout
-      stepCount={10}
-      stepIndex={4}
-      title={t('eventWizard.steps.logistics.title')}
-      subtitle={t('eventWizard.steps.logistics.subtitle')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
+      stepCount={10}
+      stepIndex={4}
+      subtitle={t('eventWizard.steps.logistics.subtitle')}
+      title={t('eventWizard.steps.logistics.title')}
     >
       <View style={[Spaces.gap[20]]}>
         <DateTimeSelector
+          display="inline"
           label={t('eventEdit.fields.date.label')}
           mode="date"
-          value={date}
           onChange={setDate}
-          display="inline"
+          value={date}
         />
 
         <View style={[Alignments.row, Spaces.gap[16]]}>
           <View style={{ flex: 1 }}>
             <DateTimeSelector
+              display="inline"
               label={t('eventEdit.fields.startTime.label')}
               mode="time"
-              value={startTime}
               onChange={setStartTime}
-              display="inline"
+              value={startTime}
             />
           </View>
           <View style={{ flex: 1 }}>
             <DateTimeSelector
+              display="inline"
               label={t('eventEdit.fields.endTime.label')}
               mode="time"
-              value={endTime}
               onChange={setEndTime}
-              display="inline"
+              value={endTime}
             />
           </View>
         </View>
@@ -190,10 +198,10 @@ const EventWizardLogistics = ({ navigation }) => {
             {t('eventWizard.steps.logistics.isRecurrent')}
           </Text>
           <Switch
-            value={isRecurrent}
             onValueChange={setIsRecurrent}
-            trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
             thumbColor={Colors.neutral00}
+            trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
+            value={isRecurrent}
           />
         </View>
 
@@ -240,17 +248,17 @@ const EventWizardLogistics = ({ navigation }) => {
                 {t('eventWizard.steps.logistics.recurrenceInterval')}
               </Text>
               <TextInput
+                keyboardType="numeric"
+                onChangeText={setRecurrenceIntervalText}
+                placeholder="1"
+                placeholderTextColor={Colors.neutral500}
                 style={[
                   ApplicationStyle.card,
                   Spaces.padding[12],
                   Fonts.p1,
                   { backgroundColor: fieldSurface, borderColor: fieldBorder, color: Colors.neutral00 },
                 ]}
-                keyboardType="numeric"
                 value={recurrenceIntervalText}
-                onChangeText={setRecurrenceIntervalText}
-                placeholder="1"
-                placeholderTextColor={Colors.neutral500}
               />
             </View>
 
@@ -260,8 +268,8 @@ const EventWizardLogistics = ({ navigation }) => {
                   {t('eventWizard.steps.logistics.recurrenceDays')}
                 </Text>
                 <DayPicker
-                  selectedDays={recurrenceDays}
                   onChange={setRecurrenceDays}
+                  selectedDays={recurrenceDays}
                 />
               </View>
             ) : null}
@@ -269,14 +277,14 @@ const EventWizardLogistics = ({ navigation }) => {
             <DateTimeSelector
               label={t('eventEdit.fields.recurrenceStartDate.label')}
               mode="date"
-              value={recurrenceStartDate || new Date()}
               onChange={setRecurrenceStartDate}
+              value={recurrenceStartDate || new Date()}
             />
             <DateTimeSelector
               label={t('eventEdit.fields.recurrenceEndDate.label')}
               mode="date"
-              value={recurrenceEndDate || new Date()}
               onChange={setRecurrenceEndDate}
+              value={recurrenceEndDate || new Date()}
             />
           </View>
         ) : null}
@@ -292,17 +300,17 @@ const EventWizardLogistics = ({ navigation }) => {
                 {t('eventEdit.fields.pricePerPerson.label')}
               </Text>
               <TextInput
+                keyboardType="decimal-pad"
+                onChangeText={setPricePerPersonText}
+                placeholder={t('eventEdit.fields.pricePerPerson.placeholder')}
+                placeholderTextColor={Colors.neutral500}
                 style={[
                   ApplicationStyle.card,
                   Spaces.padding[12],
                   Fonts.p1,
                   { backgroundColor: fieldSurface, borderColor: fieldBorder, color: Colors.neutral00 },
                 ]}
-                keyboardType="decimal-pad"
                 value={pricePerPersonText}
-                onChangeText={setPricePerPersonText}
-                placeholder={t('eventEdit.fields.pricePerPerson.placeholder')}
-                placeholderTextColor={Colors.neutral500}
               />
             </View>
 
@@ -343,6 +351,6 @@ const EventWizardLogistics = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardLogistics;

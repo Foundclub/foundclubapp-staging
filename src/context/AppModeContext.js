@@ -1,8 +1,8 @@
-
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { MMKV } from 'react-native-mmkv';
+
 import useTheme from '@/theme/themeContext';
 
 // Initialize MMKV
@@ -39,7 +39,7 @@ export function AppModeProvider({ children }) {
   // Sync theme with mode
   useEffect(() => {
     if (mode === 'gold') {
-      changeTheme('dark'); 
+      changeTheme('dark');
     } else {
       changeTheme('dark');
     }
@@ -54,8 +54,8 @@ export function AppModeProvider({ children }) {
   }, []);
 
   const contextValue = useMemo(() => ({
-    mode,
     isGold: mode === 'gold',
+    mode,
     toggleMode,
   }), [mode, toggleMode]);
 

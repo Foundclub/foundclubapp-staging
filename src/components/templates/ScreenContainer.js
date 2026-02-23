@@ -13,6 +13,8 @@ import useTheme from '@/theme/themeContext';
  * @param {Array<import('react-native').ViewStyle>} [props.style]
  * @param {Array<import('react-native').ViewStyle>} [props.contentContainerStyle]
  * @param {boolean} [props.responsiveHorizontalPadding]
+ * @param props.gradient
+ * @param props.withHeaderPadding
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
@@ -43,22 +45,23 @@ function ScreenContainer({
   }, [headerHeightNative, insets.top, withHeaderPadding]);
 
   if (gradient) {
-    var LinearGradient = require('react-native-linear-gradient').default;
+    const LinearGradient = require('react-native-linear-gradient').default;
     return (
       <View style={[Alignments.fill, ...style]}>
 
         <LinearGradient
-            colors={gradient}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={[
-                Alignments.fill,
-                { paddingHorizontal: horizontalPadding },
-                containerSpaces,
-            ]}
+          colors={gradient}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={[
+            Alignments.fill,
+            { paddingHorizontal: horizontalPadding },
+            containerSpaces,
+          ]}
         >
-            <View style={[Alignments.grow1, ...contentContainerStyle]}>
-                {children}
-            </View>
+          <View style={[Alignments.grow1, ...contentContainerStyle]}>
+            {children}
+          </View>
         </LinearGradient>
       </View>
     );

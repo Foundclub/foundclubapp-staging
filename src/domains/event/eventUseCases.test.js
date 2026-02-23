@@ -162,34 +162,58 @@ describe('Event Use Cases', () => {
   });
 
   describe('createEventPayload', () => {
-    test('should format event data correctly', () => {
+    test('should format canonical startTime/endTime fields correctly', () => {
       const mockEvent = {
         capacity: 10,
         date: '15/05/2025',
         description: 'Test event',
+        endTime: '15:45',
         location: { label: 'Paris', value: '2.3522|48.8566' },
+        requestFeatured: true,
         sessionStatus: 'open',
+        startTime: '14:30',
         team: 'team-123',
-        time: '14:30',
         type: 'type-123',
         validationMode: 'auto',
       };
 
       const result = createEventPayload(mockEvent);
 
-      expect(result).toEqual({
+      expect(result).toEqual(expect.objectContaining({
         capacity: 10,
         date: expect.stringMatching(/^2025-05-15T.*:30:00/),
         description: 'Test event',
+        endTime: '15:45:00.000',
+        featuredRequestStatus: 'pending',
         location: {
           lat: 48.8566,
           lng: 2.3522,
         },
+        locationDetails: '{"address":"Paris"}',
         sessionStatus: 'open',
+        startTime: '14:30:00.000',
         team: 'team-123',
         type: 'type-123',
         validationMode: 'auto',
-      });
+      }));
+      expect(result.time).toBeUndefined();
+    });
+
+    test('should fallback to legacy time when startTime is missing', () => {
+      const mockEvent = {
+        date: '15/05/2025',
+        location: { label: 'Paris', value: '2.3522|48.8566' },
+        sessionStatus: 'open',
+        time: '16:15',
+        type: 'type-123',
+        validationMode: 'auto',
+      };
+
+      const result = createEventPayload(mockEvent);
+
+      expect(result.date).toMatch(/^2025-05-15T.*:15:00/);
+      expect(result.startTime).toBe('16:15:00.000');
+      expect(result.time).toBeUndefined();
     });
 
     test('should handle missing location data', () => {
@@ -197,8 +221,8 @@ describe('Event Use Cases', () => {
         capacity: 10,
         date: '15/05/2025',
         sessionStatus: 'open',
+        startTime: '14:30',
         team: 'team-123',
-        time: '14:30',
         type: 'type-123',
         validationMode: 'auto',
       };

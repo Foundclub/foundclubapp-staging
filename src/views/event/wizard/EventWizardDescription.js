@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Text, TextInput, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-const EventWizardDescription = ({ navigation }) => {
+import { useEventWizard } from './EventWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardDescription({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -16,7 +24,7 @@ const EventWizardDescription = ({ navigation }) => {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const [description, setDescription] = useState(state.description || '');
   const fieldSurfaceStyle = {
     backgroundColor: 'rgba(1, 179, 244, 0.08)',
@@ -25,22 +33,22 @@ const EventWizardDescription = ({ navigation }) => {
 
   const handleNext = () => {
     dispatch({
-      type: 'SET_META',
       payload: { description },
+      type: 'SET_META',
     });
     navigation.navigate(RouteNames.EventWizardVisibility);
   };
 
   return (
     <WizardStepLayout
-      stepCount={10}
-      stepIndex={7}
-      title={t('eventWizard.steps.description.title')}
-      subtitle={t('eventWizard.steps.description.subtitle')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       onSkip={handleNext}
       showSkip
+      stepCount={10}
+      stepIndex={7}
+      subtitle={t('eventWizard.steps.description.subtitle')}
+      title={t('eventWizard.steps.description.title')}
     >
       <View style={[Spaces.gap[16], Alignments.fill]}>
         <View style={[Alignments.fill]}>
@@ -48,6 +56,11 @@ const EventWizardDescription = ({ navigation }) => {
             {t('eventWizard.steps.description.label')}
           </Text>
           <TextInput
+            multiline
+            numberOfLines={6}
+            onChangeText={setDescription}
+            placeholder={t('eventWizard.steps.description.placeholder')}
+            placeholderTextColor={Colors.neutral500}
             style={[
               ApplicationStyle.card,
               Spaces.padding[16],
@@ -59,17 +72,12 @@ const EventWizardDescription = ({ navigation }) => {
                 textAlignVertical: 'top',
               },
             ]}
-            placeholder={t('eventWizard.steps.description.placeholder')}
-            placeholderTextColor={Colors.neutral500}
-            multiline
-            numberOfLines={6}
             value={description}
-            onChangeText={setDescription}
           />
         </View>
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardDescription;

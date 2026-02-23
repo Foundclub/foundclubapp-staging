@@ -5,8 +5,8 @@ import client from '../client';
 export const eventParticipationSchema = Joi.object({
   documentId: Joi.string().required(),
   event: Joi.object().required(),
-  participationStatus: Joi.string().valid('pending', 'accepted', 'declined', 'missing').required(),
   isActive: Joi.boolean().allow(null).optional(),
+  participationStatus: Joi.string().valid('pending', 'accepted', 'declined', 'missing').required(),
   reason: Joi.string().allow('', null),
   sourceTeam: Joi.object({
     documentId: Joi.string().allow(null).optional(),
@@ -46,16 +46,16 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
 
   const filters = {
     filters: {
+      $or: [
+        { isActive: true },
+        { isActive: { $null: true } },
+      ],
       event: {
         documentId: eventId,
       },
       user: userId ? {
         documentId: { $eq: userId },
       } : undefined,
-      $or: [
-        { isActive: true },
-        { isActive: { $null: true } },
-      ],
     },
     pagination: {
       page: page || 1,

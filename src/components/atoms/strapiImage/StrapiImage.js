@@ -16,4 +16,3 @@ function StrapiImage({ source, ...props }) {
 }
 
 export default StrapiImage;
-

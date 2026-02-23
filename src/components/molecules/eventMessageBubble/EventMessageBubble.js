@@ -1,11 +1,13 @@
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+
+import useTheme from '@/theme/themeContext';
+
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 
 import { RouteNames } from '@/navigation/routeNames';
-import useTheme from '@/theme/themeContext';
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 
 /**
  * Bubble to display an event in a chat
@@ -24,13 +26,13 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
  * @param {() => void} [props.onDecline] - Handler for decline action
  * @returns {import('react').ReactElement}
  */
-const EventMessageBubble = ({ 
-  event, 
-  isMe, 
-  onJoin = () => {}, 
-  onParticipate = () => {}, 
-  onDecline = () => {} 
-}) => {
+function EventMessageBubble({
+  event,
+  isMe,
+  onDecline = () => {},
+  onJoin = () => {},
+  onParticipate = () => {},
+}) {
   const { Spaces } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -40,25 +42,25 @@ const EventMessageBubble = ({
   const handlePress = () => {
     // @ts-ignore
     navigation.navigate(RouteNames.EventStack, {
-      screen: RouteNames.EventDetails,
       params: { eventId: event.documentId },
+      screen: RouteNames.EventDetails,
     });
   };
 
   return (
     <View style={[{ width: 300 }, Spaces.marginTop[4]]}>
-        <EventCardNew 
-            item={event}
-            onPress={handlePress}
-            onJoin={onJoin}
-            onDecline={onDecline}
-            onParticipate={onParticipate}
-            onLogin={() => {}}
+      <EventCardNew
+        item={event}
+        onDecline={onDecline}
+        onJoin={onJoin}
+        onLogin={() => {}}
+        onParticipate={onParticipate}
+        onPress={handlePress}
             // @ts-ignore
-            showClubHeader={false}
-        />
+        showClubHeader={false}
+      />
     </View>
   );
-};
+}
 
 export default EventMessageBubble;

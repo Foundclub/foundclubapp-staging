@@ -3,7 +3,7 @@
  * ==================
  * Source de vérité unique pour les postes par sport.
  * Utilisé dans: UserPosition (onboarding), AdWizardPositions (création annonce)
- * 
+ *
  * IMPORTANT: Ces données doivent correspondre aux sports de la collection
  * Activity dans Strapi (Football, Basketball, Handball, Volleyball, Rugby)
  */
@@ -16,6 +16,13 @@ export const SPORTS_WITH_POSITIONS = ['football', 'basketball', 'handball', 'vol
  * Permet la sélection multiple
  */
 export const POSITIONS_BY_SPORT = {
+  basketball: [
+    { label: 'Meneur', value: 'Meneur' },
+    { label: 'Arrière', value: 'Arrière' },
+    { label: 'Ailier', value: 'Ailier' },
+    { label: 'Ailier fort', value: 'Ailier fort' },
+    { label: 'Pivot', value: 'Pivot' },
+  ],
   football: [
     { label: 'Gardien', value: 'Gardien' },
     { label: 'Défenseur central', value: 'Défenseur central' },
@@ -29,13 +36,6 @@ export const POSITIONS_BY_SPORT = {
     { label: 'Attaquant', value: 'Attaquant' },
     { label: 'Avant-centre', value: 'Avant-centre' },
   ],
-  basketball: [
-    { label: 'Meneur', value: 'Meneur' },
-    { label: 'Arrière', value: 'Arrière' },
-    { label: 'Ailier', value: 'Ailier' },
-    { label: 'Ailier fort', value: 'Ailier fort' },
-    { label: 'Pivot', value: 'Pivot' },
-  ],
   handball: [
     { label: 'Gardien', value: 'Gardien' },
     { label: 'Arrière gauche', value: 'Arrière gauche' },
@@ -44,13 +44,6 @@ export const POSITIONS_BY_SPORT = {
     { label: 'Ailier gauche', value: 'Ailier gauche' },
     { label: 'Ailier droit', value: 'Ailier droit' },
     { label: 'Pivot', value: 'Pivot' },
-  ],
-  volleyball: [
-    { label: 'Pointu (Opposite)', value: 'Pointu' },
-    { label: 'Réceptionneur-attaquant', value: 'Réceptionneur-attaquant' },
-    { label: 'Central', value: 'Central' },
-    { label: 'Passeur (Setter)', value: 'Passeur' },
-    { label: 'Libéro', value: 'Libéro' },
   ],
   rugby: [
     { label: 'Pilier', value: 'Pilier' },
@@ -63,6 +56,13 @@ export const POSITIONS_BY_SPORT = {
     { label: 'Centre', value: 'Centre' },
     { label: 'Ailier', value: 'Ailier' },
     { label: 'Arrière', value: 'Arrière' },
+  ],
+  volleyball: [
+    { label: 'Pointu (Opposite)', value: 'Pointu' },
+    { label: 'Réceptionneur-attaquant', value: 'Réceptionneur-attaquant' },
+    { label: 'Central', value: 'Central' },
+    { label: 'Passeur (Setter)', value: 'Passeur' },
+    { label: 'Libéro', value: 'Libéro' },
   ],
 };
 
@@ -93,5 +93,5 @@ export function sportHasPositions(sportName) {
  * @returns {string[]} Liste des noms de postes
  */
 export function getPositionValuesForSport(sportName) {
-  return getPositionsForSport(sportName).map(p => p.value);
+  return getPositionsForSport(sportName).map((p) => p.value);
 }

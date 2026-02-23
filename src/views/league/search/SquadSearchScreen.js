@@ -1,4 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,16 +12,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
+
+import { useAppContext } from '@/store/appContext';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { searchSquads } from '@/services/leagueTeam/leagueTeamService';
-import { useAppContext } from '@/store/appContext';
-import useTheme from '@/theme/themeContext';
+
 import { normalizeLocationInput } from '@/utils/location';
 
 /**
@@ -46,6 +52,9 @@ const getSectionLabel = (value) => {
   return String(value || '');
 };
 
+/**
+ *
+ */
 function SquadSearchScreen() {
   const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
@@ -142,7 +151,9 @@ function SquadSearchScreen() {
         <View style={{ alignItems: 'center', flexDirection: 'row', marginTop: 8 }}>
           <Image
             source={Images.pin}
-            style={{ height: 13, marginRight: 6, tintColor: Colors.primary500, width: 13 }}
+            style={{
+              height: 13, marginRight: 6, tintColor: Colors.primary500, width: 13,
+            }}
           />
           <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}>
             {cityLabel}
@@ -241,7 +252,9 @@ function SquadSearchScreen() {
           >
             <Image
               source={Images.filter}
-              style={{ height: 14, marginRight: 6, tintColor: Colors.primary500, width: 14 }}
+              style={{
+                height: 14, marginRight: 6, tintColor: Colors.primary500, width: 14,
+              }}
             />
             <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Filtres</Text>
           </TouchableOpacity>
@@ -266,7 +279,9 @@ function SquadSearchScreen() {
             onChangeText={setQuery}
             placeholder="Nom de squad ou ville"
             placeholderTextColor={Colors.neutral500}
-            style={[Fonts.p2, { color: Colors.neutral00, flex: 1, marginLeft: 10, minHeight: 46 }]}
+            style={[Fonts.p2, {
+              color: Colors.neutral00, flex: 1, marginLeft: 10, minHeight: 46,
+            }]}
             value={query}
           />
         </View>
@@ -283,7 +298,9 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              Filtres actifs: {activeFiltersLabel}
+              Filtres actifs:
+              {' '}
+              {activeFiltersLabel}
             </Text>
           </View>
         ) : null}
@@ -321,8 +338,8 @@ function SquadSearchScreen() {
           <FlatList
             contentContainerStyle={{ paddingBottom: 28, paddingTop: 16 }}
             data={squads}
-            keyExtractor={(item, index) => String(item?.documentId || item?.id || `squad-${index}`)}
             keyboardShouldPersistTaps="handled"
+            keyExtractor={(item, index) => String(item?.documentId || item?.id || `squad-${index}`)}
             ListEmptyComponent={(
               <View style={{
                 alignItems: 'center',

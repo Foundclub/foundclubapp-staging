@@ -1,6 +1,9 @@
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Image, Linking, Pressable, StyleSheet, Text, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -76,8 +79,8 @@ function SponsorLogoTile({
           {
             backgroundColor: effectiveBackgroundColor,
             borderColor: effectiveBorderColor,
-            borderWidth: effectiveBorderWidth,
             borderRadius,
+            borderWidth: effectiveBorderWidth,
             height,
             width,
           },
@@ -86,9 +89,9 @@ function SponsorLogoTile({
       >
         {hasImage ? (
           <Image
+            resizeMode="contain"
             source={{ uri }}
             style={[styles.image, imageStyle]}
-            resizeMode="contain"
           />
         ) : (
           <Text style={styles.fallbackText}>{fallbackLabel}</Text>

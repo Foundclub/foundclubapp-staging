@@ -1,19 +1,21 @@
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import Button from '@/components/atoms/button/Button';
 import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 const getTypeLabel = (type, t) => {
   switch (type) {
-    case 'team':
-      return t('requestsHub.types.team', 'Equipe');
     case 'club':
       return t('requestsHub.types.club', 'Club');
     case 'event':
       return t('requestsHub.types.event', 'Evenement');
     case 'featured':
       return t('requestsHub.types.featured', 'A la une');
+    case 'team':
+      return t('requestsHub.types.team', 'Equipe');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }
@@ -41,8 +43,8 @@ const getActionLabel = (action, t) => {
  * }} props
  */
 function RequestFeedItem({
-  item,
   isBusy = false,
+  item,
   onPrimaryPress,
   onSecondaryPress,
 }) {
@@ -54,6 +56,8 @@ function RequestFeedItem({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const requesterAvatarUrl = item?.meta?.requesterAvatarUrl || '';
+  const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
 
   return (
     <View
@@ -69,7 +73,7 @@ function RequestFeedItem({
       ]}
     >
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
-        <Text style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]} numberOfLines={2}>
+        <Text numberOfLines={2} style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]}>
           {item?.title}
         </Text>
         <View
@@ -90,9 +94,22 @@ function RequestFeedItem({
         </View>
       </View>
 
-      <Text style={[Fonts.p2, Fonts.neutral100]} numberOfLines={3}>
-        {item?.subtitle}
-      </Text>
+      {isMembershipRequest ? (
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+          <ProfileAvatar
+            enablePreview={false}
+            imageUrl={requesterAvatarUrl}
+            size={40}
+          />
+          <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+            {item?.subtitle}
+          </Text>
+        </View>
+      ) : (
+        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+          {item?.subtitle}
+        </Text>
+      )}
 
       <View style={[Alignments.row, Spaces.gap[12]]}>
         {item?.actions?.secondary ? (
@@ -123,4 +140,3 @@ function RequestFeedItem({
 }
 
 export default RequestFeedItem;
-

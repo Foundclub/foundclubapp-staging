@@ -6,23 +6,23 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert, Linking, Platform, Share,
 } from 'react-native';
-import { useAppMode } from '@/context/AppModeContext';
-import { RouteNames } from '@/navigation/routeNames';
 
 import { storage, useAppContext } from '@/store/appContext';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import {
   deleteDeviceToken,
   getMe, login, logout, signInWithPhoneNumber, subscribeToAuthState,
 } from '@/services/auth/authService';
 
-import { SPORTS_WITH_POSITIONS } from '@/constants/positions';
-
 import {
   formatBirthdateToDisplay,
   formatBirthdateToSend,
   getAuthTokens, getOnboardingViews, profileFieldToDisplay, sanitizeUser, USER_ROLES,
 } from './authUseCases';
+import { SPORTS_WITH_POSITIONS } from '@/constants/positions';
+import { useAppMode } from '@/context/AppModeContext';
 
 /**
  * Custom hook to manage authentication
@@ -71,8 +71,6 @@ const useAuth = () => {
     },
   });
 
-
-
   const logoutMutation = useMutation({
     mutationFn: async (/** @type {string} */token) => {
       try {
@@ -109,8 +107,8 @@ const useAuth = () => {
 
     // Switch app session immediately so UI reacts on first tap.
     appDispatch({
+      payload: session,
       type: 'SWITCH_ACCOUNT',
-      payload: session
     });
 
     // Re-authenticate with Firebase in background for push/SDK sync.
@@ -134,7 +132,7 @@ const useAuth = () => {
 
     queryClient.clear();
     appDispatch({
-      type: 'PREPARE_ADD_ACCOUNT'
+      type: 'PREPARE_ADD_ACCOUNT',
     });
   }, [appDispatch, queryClient]);
 
@@ -160,14 +158,12 @@ const useAuth = () => {
       // Prevent infinite loops by comparing keys logic same as reducer
       const sanitizedUserData = sanitizeUser(userData);
       // NOTE: currentContextUserData is ALREADY sanitized by reducer
-      
+
       // Simple deep equal helper to avoid JSON.stringify order issues
-      const isDeepEqual = (ObjA, ObjB) => {
-        return JSON.stringify(ObjA) === JSON.stringify(ObjB);
-      };
+      const isDeepEqual = (ObjA, ObjB) => JSON.stringify(ObjA) === JSON.stringify(ObjB);
 
       const hasChanged = !isDeepEqual(sanitizedUserData, currentContextUserData);
-      
+
       if (hasChanged) {
         console.log('[useAuth] User data changed. Dispatching update.');
         console.log('[useAuth DEBUG] sanitizedUserData keys:', Object.keys(sanitizedUserData || {}));
@@ -180,10 +176,10 @@ const useAuth = () => {
         console.log('[useAuth DEBUG] New (first 500):', newStr?.substring(0, 500));
         console.log('[useAuth DEBUG] Old (first 500):', oldStr?.substring(0, 500));
         console.log('[useAuth DEBUG] Lengths - New:', newStr?.length, 'Old:', oldStr?.length);
-        
+
         appDispatch({
-          type: 'UPDATE_USER_DATA',
           payload: userData,
+          type: 'UPDATE_USER_DATA',
         });
       }
     }
@@ -226,17 +222,17 @@ const useAuth = () => {
     // We need to add clubId to the function signature or get it from context if possible.
     // The previous code in AddCoach.js call: inviteTrainer({ clubName: ..., firstname: ..., phoneNumber: ... })
     // It seems we should update the signature. But first let's see where we get the clubId.
-    // In AddCoach.js: const { clubName } = route?.params || {}; 
-    // It seems route params usually have IDs too? 
+    // In AddCoach.js: const { clubName } = route?.params || {};
+    // It seems route params usually have IDs too?
     // Checking AddCoach.js again... it receives route parameters.
-    
+
     // For now, I will update the invitation generation to use a placeholder or best effort
     // BUT I must update the function signature too.
-    
+
     const installUrl = `${baseUrl}/install.html?type=club&id=${encodeURIComponent(clubName || '')}`; // Ideally ID, but name is what we have passed often.
-    // actually, deep linking usually requires ID. 
+    // actually, deep linking usually requires ID.
     // I should check if I can pass clubId.
-    
+
     // Let's look at how inviteTrainer is called in AddCoach.js
     // It's called with { clubName, firstname, phoneNumber }.
     // I will update the signature to accept clubId and pass it from the caller.
@@ -272,10 +268,9 @@ const useAuth = () => {
     const baseUrl = process.env.API_URL ? process.env.API_URL.replace('/api', '') : 'https://foundclub.com';
     // We need teamId here! The function signature is ({ clubName, teamName }).
     // I must update it to ({ clubName, teamName, teamId }).
-    const installUrl = `${baseUrl}/install.html?type=team&id=${encodeURIComponent(teamName || '')}`; 
+    const installUrl = `${baseUrl}/install.html?type=team&id=${encodeURIComponent(teamName || '')}`;
     // Again, name is unstable for deep linking. I will likely need to update the caller to pass ID.
 
-    
     // Construct the message
     const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
       clubName,
@@ -394,19 +389,22 @@ const useAuth = () => {
     const previousSession = authSessions?.[0];
     if (previousSession) {
       console.log('[useAuth] Restoring previous session:', previousSession?.user?.email);
-      appDispatch({ type: 'SWITCH_ACCOUNT', payload: previousSession });
+      appDispatch({ payload: previousSession, type: 'SWITCH_ACCOUNT' });
     }
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
   }, [appDispatch, authSessions, queryClient]);
 
   return {
+    addAccount,
     allMyTeams,
+    authSessions,
+    cancelAddAccount,
     canContactAdmin,
     canEditClub,
     canEditEvent,
-    canManageEvent,
     canJoinClub,
     canJoinTeam,
+    canManageEvent,
     canManageEvents,
     canManageTeam,
     canSendMessageToUser,
@@ -419,6 +417,7 @@ const useAuth = () => {
     getPostOnboardingHomeRoute,
     inviteTeamPlayers,
     inviteTrainer,
+    isAddingAccount,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     loginMutation,
     logoutMutation,
@@ -427,15 +426,11 @@ const useAuth = () => {
     profileFields,
     refetchUserData,
     setConfirm,
+    switchAccount,
     USER_ROLES,
     userData,
     userDataError,
     userDataLoading,
-    authSessions,
-    switchAccount,
-    addAccount,
-    cancelAddAccount,
-    isAddingAccount,
   };
 };
 

@@ -1,6 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,60 +9,73 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
+import usePlaces from '@/domains/places/usePlaces';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import Input from '@/components/molecules/input/Input';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
-import Input from '@/components/molecules/input/Input';
-import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-
-import usePlaces from '@/domains/places/usePlaces';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
+import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
+
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const defaultValues = {
   address: null,
+  bestLevel: '',
   birthdate: '',
+  category: '',
   firstname: '',
   height: '',
+  isLookingForClub: false,
   lastname: '',
   phoneNumber: '',
   position: '',
+  preferredSport: '',
   section: '',
   weight: '',
-  isLookingForClub: false,
-  preferredSport: '',
-  bestLevel: '',
-  category: '',
 };
+
+const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
+  ...defaultValues,
+  ...userData,
+  address: userData?.address || null,
+  bestLevel: userData?.bestLevel || '',
+  birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
+  category: userData?.category || '',
+  height: userData?.height ? String(userData.height) : '',
+  preferredSport: userData?.preferredSport || '',
+  section: userData?.section?.documentId || '',
+  weight: userData?.weight ? String(userData.weight) : '',
+});
 
 const profileSchema = Joi.object({
   address: Joi.object().allow(null).optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
   birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
+  category: Joi.string().allow(null, '').optional(),
   documentId: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().required(),
   height: Joi.string().allow(null, '').optional(),
+  isLookingForClub: Joi.boolean().optional(),
   lastname: Joi.string().required(),
   phoneNumber: Joi.string(),
   position: Joi.string().allow(null, '').optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
   section: Joi.string().allow(null, '').optional(),
   weight: Joi.string().allow(null, '').optional(),
-  isLookingForClub: Joi.boolean().optional(),
-  preferredSport: Joi.string().allow(null, '').optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  category: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
 /**
@@ -73,22 +86,25 @@ const profileSchema = Joi.object({
 function ProfileEdit({ navigation, route }) {
   // hooks
   const {
-    Alignments, Spaces, Fonts,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const { data: fetchedUserData } = useGetMe();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
   const {
-    formatBirthdateToDisplay, formatBirthdateToSend, profileFields,
+    formatBirthdateToDisplay, formatBirthdateToSend, profileFields, userData: authUserData,
   } = useAuth();
+  const userData = fetchedUserData || authUserData;
   const { getGeohashForPointAndRadius } = usePlaces();
 
   // local state
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
-    (userData?.avatar?.url ? { url: userData.avatar.url } : undefined),
+    (undefined),
   );
+  const hydratedUserKeyRef = useRef(null);
+  const hydratedSignatureRef = useRef('');
 
   const sectionOptions = sections?.map((section) => ({
     label: section.name,
@@ -109,28 +125,41 @@ function ProfileEdit({ navigation, route }) {
 
   const {
     control,
-    formState: { errors: formErrors },
+    formState: { errors: formErrors, isDirty },
     handleSubmit,
+    reset,
     setFocus,
-    watch,
     setValue,
+    watch,
   } = useForm({
-    defaultValues: {
-      ...defaultValues,
-      ...userData,
-      address: userData?.address || null,
-      birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
-      section: userData?.section?.documentId || '',
-      preferredSport: userData?.preferredSport || '',
-      bestLevel: userData?.bestLevel || '',
-      category: userData?.category || '',
-      height: userData?.height ? String(userData.height) : '',
-      weight: userData?.weight ? String(userData.weight) : '',
-    },
+    defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
     shouldFocusError: false,
   });
+
+  useEffect(() => {
+    const nextUserKey = userData?.documentId || userData?.id;
+    if (!nextUserKey) {
+      return;
+    }
+
+    const switchedUser = hydratedUserKeyRef.current !== nextUserKey;
+    if (!switchedUser && isDirty) {
+      return;
+    }
+
+    const nextValues = buildProfileFormValues(userData, formatBirthdateToDisplay);
+    const nextSignature = JSON.stringify(nextValues);
+    if (!switchedUser && hydratedSignatureRef.current === nextSignature) {
+      return;
+    }
+
+    reset(nextValues);
+    setAvatar(userData?.avatar?.url ? { url: userData.avatar.url } : undefined);
+    hydratedUserKeyRef.current = nextUserKey;
+    hydratedSignatureRef.current = nextSignature;
+  }, [formatBirthdateToDisplay, isDirty, reset, userData]);
 
   const preferredSport = watch('preferredSport');
 
@@ -145,30 +174,30 @@ function ProfileEdit({ navigation, route }) {
       if (data.address && data.address.value) {
         const coords = data.address.value.split('|');
         if (coords.length === 2) {
-           // Value is "lon|lat" based on MercatoFilters usage
-           geohash = getGeohashForPointAndRadius(
-             parseFloat(coords[1]), // lat
-             parseFloat(coords[0]), // lon
-             0.001 // High precision (point)
-           );
+          // Value is "lon|lat" based on MercatoFilters usage
+          geohash = getGeohashForPointAndRadius(
+            parseFloat(coords[1]), // lat
+            parseFloat(coords[0]), // lon
+            0.001, // High precision (point)
+          );
         }
       }
 
       updateUserMutation.mutate({
-        firstname: data.firstname,
-        lastname: data.lastname,
-        height: data.height,
-        weight: data.weight,
-        position: data.position,
-        isLookingForClub: data.isLookingForClub,
-        preferredSport: data.preferredSport,
-        avatar,
-        birthdate: formatBirthdateToSend(data.birthdate || ''),
-        section: data.section,
-        bestLevel: data.bestLevel,
-        category: data.category,
         address: data.address,
+        avatar,
+        bestLevel: data.bestLevel,
+        birthdate: formatBirthdateToSend(data.birthdate || ''),
+        category: data.category,
+        firstname: data.firstname,
         geohash,
+        height: data.height,
+        isLookingForClub: data.isLookingForClub,
+        lastname: data.lastname,
+        position: data.position,
+        preferredSport: data.preferredSport,
+        section: data.section,
+        weight: data.weight,
       });
     }
   };
@@ -181,14 +210,14 @@ function ProfileEdit({ navigation, route }) {
       { label: 'Volleyball', value: 'volleyball' },
       { label: 'Autre', value: 'other' },
     ];
-    
+
     // Add current user sport if not in list
-    if (userData?.preferredSport && !defaultSports.find(s => s.value === userData.preferredSport)) {
+    if (userData?.preferredSport && !defaultSports.find((s) => s.value === userData.preferredSport)) {
       // Format label (capitalize first letter)
       const label = userData.preferredSport.charAt(0).toUpperCase() + userData.preferredSport.slice(1);
       defaultSports.unshift({ label, value: userData.preferredSport });
     }
-    
+
     return defaultSports;
   };
 
@@ -198,8 +227,8 @@ function ProfileEdit({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -215,397 +244,397 @@ function ProfileEdit({ navigation, route }) {
           keyboardVerticalOffset={100}
           style={[Alignments.justifySpaceBetween, Alignments.fill]}
         >
-        <ScrollView
-          contentContainerStyle={[
-            Spaces.gap[24],
-            Spaces.paddingBottom[40],
-          ]}
-          style={[Alignments.fill]}
-        >
-          <OnboardingWrapper
-            description="Mettez a jour vos informations personnelles, sportives et votre visibilite."
-            id="profile-edit-form"
-            order={1}
-            spotlight={{
-              borderRadius: 16,
-              maxHeight: 280,
-              overlayOpacity: 0.4,
-              paddingX: 2,
-              paddingY: 2,
-            }}
-            title="Edition du profil"
+          <ScrollView
+            contentContainerStyle={[
+              Spaces.gap[24],
+              Spaces.paddingBottom[40],
+            ]}
+            style={[Alignments.fill]}
           >
-            <View style={[Alignments.fill, Spaces.gap[24]]}>
-            <View style={[Alignments.row, Spaces.marginVertical[24]]}>
-              <SelectAvatar
-                currentAvatar={avatar}
-                onAvatarSelected={setAvatar}
-                onDelete={() => setAvatar(undefined)}
-                size={110}
-              />
-            </View>
+            <OnboardingWrapper
+              description="Mettez a jour vos informations personnelles, sportives et votre visibilite."
+              id="profile-edit-form"
+              order={1}
+              spotlight={{
+                borderRadius: 16,
+                maxHeight: 280,
+                overlayOpacity: 0.4,
+                paddingX: 2,
+                paddingY: 2,
+              }}
+              title="Edition du profil"
+            >
+              <View style={[Alignments.fill, Spaces.gap[24]]}>
+                <View style={[Alignments.row, Spaces.marginVertical[24]]}>
+                  <SelectAvatar
+                    currentAvatar={avatar}
+                    onAvatarSelected={setAvatar}
+                    onDelete={() => setAvatar(undefined)}
+                    size={110}
+                  />
+                </View>
 
-            <Controller
-              control={control}
-              name="phoneNumber"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <Input
-                  editable={false}
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.phoneNumber.label')}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  placeholder={t('profile.fields.phoneNumber.placeholder')}
-                  readOnly
-                  ref={ref}
-                  value={value}
+                <Controller
+                  control={control}
+                  name="phoneNumber"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <Input
+                      editable={false}
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      label={t('profile.fields.phoneNumber.label')}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      placeholder={t('profile.fields.phoneNumber.placeholder')}
+                      readOnly
+                      ref={ref}
+                      value={value}
+                    />
+                  )}
                 />
-              )}
-            />
 
-            {profileFields?.includes('firstname') ? (
-              <Controller
-                control={control}
-                name="firstname"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('profile.fields.firstname.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('lastname')}
-                    placeholder={t('profile.fields.firstname.placeholder')}
-                    ref={ref}
-                    value={value}
+                {profileFields?.includes('firstname') ? (
+                  <Controller
+                    control={control}
+                    name="firstname"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.firstname.label')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('lastname')}
+                        placeholder={t('profile.fields.firstname.placeholder')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
-            {profileFields?.includes('lastname') ? (
-              <Controller
-                control={control}
-                name="lastname"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('profile.fields.lastname.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('birthdate')}
-                    placeholder={t('profile.fields.lastname.placeholder')}
-                    ref={ref}
-                    value={value}
+                ) : null}
+                {profileFields?.includes('lastname') ? (
+                  <Controller
+                    control={control}
+                    name="lastname"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.lastname.label')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('birthdate')}
+                        placeholder={t('profile.fields.lastname.placeholder')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
-            {profileFields?.includes('birthdate') ? (
-              <Controller
-                control={control}
-                name="birthdate"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="done"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="numeric"
-                    keyboardType="number-pad"
-                    label={t('profile.fields.birthdate.label')}
-                    maxLength={10}
-                    onBlur={onBlur}
-                    onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
-                    placeholder="JJ/MM/AAAA"
-                    ref={ref}
-                    value={value}
+                ) : null}
+                {profileFields?.includes('birthdate') ? (
+                  <Controller
+                    control={control}
+                    name="birthdate"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="done"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="numeric"
+                        keyboardType="number-pad"
+                        label={t('profile.fields.birthdate.label')}
+                        maxLength={10}
+                        onBlur={onBlur}
+                        onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
+                        placeholder="JJ/MM/AAAA"
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
-            {profileFields?.includes('section') ? (
-              <Controller
-                control={control}
-                name="section"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <AutocompleteSelect
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('profile.fields.section.label')}
-                    onBlur={onBlur}
-                    options={sectionOptions}
-                    placeholder={t('profile.fields.section.placeholder')}
-                    ref={ref}
-                    setValue={
+                ) : null}
+                {profileFields?.includes('section') ? (
+                  <Controller
+                    control={control}
+                    name="section"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <AutocompleteSelect
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.section.label')}
+                        onBlur={onBlur}
+                        options={sectionOptions}
+                        placeholder={t('profile.fields.section.placeholder')}
+                        ref={ref}
+                        setValue={
                       (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
                     }
-                    value={sectionOptions.find((option) => option.value === value)?.label || ''}
+                        value={sectionOptions.find((option) => option.value === value)?.label || ''}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
+                ) : null}
 
-            {profileFields?.includes('weight') ? (
-              <Controller
-                control={control}
-                name="weight"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="decimal"
-                    keyboardType="number-pad"
-                    label={t('profile.fields.weight.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('height')}
-                    placeholder={t('profile.fields.weight.placeholder')}
-                    ref={ref}
-                    value={value}
+                {profileFields?.includes('weight') ? (
+                  <Controller
+                    control={control}
+                    name="weight"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="decimal"
+                        keyboardType="number-pad"
+                        label={t('profile.fields.weight.label')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('height')}
+                        placeholder={t('profile.fields.weight.placeholder')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
-            
-            {profileFields?.includes('bestLevel') ? (
-              <Controller
-                control={control}
-                name="bestLevel"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <AutocompleteSelect
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('profile.fields.bestLevel.label', 'Meilleur niveau')}
-                    onBlur={onBlur}
-                    options={levelOptions}
-                    placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
-                    ref={ref}
-                    setValue={
+                ) : null}
+
+                {profileFields?.includes('bestLevel') ? (
+                  <Controller
+                    control={control}
+                    name="bestLevel"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <AutocompleteSelect
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('profile.fields.bestLevel.label', 'Meilleur niveau')}
+                        onBlur={onBlur}
+                        options={levelOptions}
+                        placeholder={t('profile.fields.bestLevel.placeholder', 'Sélectionner un niveau')}
+                        ref={ref}
+                        setValue={
                       (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
                     }
-                    value={value}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
+                ) : null}
 
-            {/* Category Selector */}
-            <Controller
-              control={control}
-              name="category"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  isMulti
-                  label={t('profile.fields.category.label', 'Catégorie')}
-                  onBlur={onBlur}
-                  options={[
-                    { label: 'U7', value: 'U7' },
-                    { label: 'U8', value: 'U8' },
-                    { label: 'U9', value: 'U9' },
-                    { label: 'U10', value: 'U10' },
-                    { label: 'U11', value: 'U11' },
-                    { label: 'U12', value: 'U12' },
-                    { label: 'U13', value: 'U13' },
-                    { label: 'U14', value: 'U14' },
-                    { label: 'U15', value: 'U15' },
-                    { label: 'U16', value: 'U16' },
-                    { label: 'U17', value: 'U17' },
-                    { label: 'U18', value: 'U18' },
-                    { label: 'U19', value: 'U19' },
-                    { label: 'U20', value: 'U20' },
-                    { label: 'U21', value: 'U21' },
-                    { label: 'U23', value: 'U23' },
-                    { label: 'Senior', value: 'Senior' },
-                    { label: 'Vétéran', value: 'Veteran' },
-                  ]}
-                  placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
-                  ref={ref}
-                  setValue={
-                    (/** @type {{value: string, label: string}[]} */options) => { 
-                      onChange(options?.map(o => o.value).join(', ') || ''); 
+                {/* Category Selector */}
+                <Controller
+                  control={control}
+                  name="category"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <AutocompleteSelect
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      isMulti
+                      label={t('profile.fields.category.label', 'Catégorie')}
+                      onBlur={onBlur}
+                      options={[
+                        { label: 'U7', value: 'U7' },
+                        { label: 'U8', value: 'U8' },
+                        { label: 'U9', value: 'U9' },
+                        { label: 'U10', value: 'U10' },
+                        { label: 'U11', value: 'U11' },
+                        { label: 'U12', value: 'U12' },
+                        { label: 'U13', value: 'U13' },
+                        { label: 'U14', value: 'U14' },
+                        { label: 'U15', value: 'U15' },
+                        { label: 'U16', value: 'U16' },
+                        { label: 'U17', value: 'U17' },
+                        { label: 'U18', value: 'U18' },
+                        { label: 'U19', value: 'U19' },
+                        { label: 'U20', value: 'U20' },
+                        { label: 'U21', value: 'U21' },
+                        { label: 'U23', value: 'U23' },
+                        { label: 'Senior', value: 'Senior' },
+                        { label: 'Vétéran', value: 'Veteran' },
+                      ]}
+                      placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                      ref={ref}
+                      setValue={
+                    (/** @type {{value: string, label: string}[]} */options) => {
+                      onChange(options?.map((o) => o.value).join(', ') || '');
                     }
                   }
-                  value={value ? value.split(', ') : []}
+                      value={value ? value.split(', ') : []}
+                    />
+                  )}
                 />
-              )}
-            />
 
-            {profileFields?.includes('height') ? (
-              <Controller
-                control={control}
-                name="height"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="decimal"
-                    keyboardType="number-pad"
-                    label={t('profile.fields.height.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('preferredSport')}
-                    placeholder={t('profile.fields.height.placeholder')}
-                    ref={ref}
-                    value={value}
+                {profileFields?.includes('height') ? (
+                  <Controller
+                    control={control}
+                    name="height"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="decimal"
+                        keyboardType="number-pad"
+                        label={t('profile.fields.height.label')}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('preferredSport')}
+                        placeholder={t('profile.fields.height.placeholder')}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
                   />
-                )}
-              />
-            ) : null}
+                ) : null}
 
-            <Controller
-              control={control}
-              name="preferredSport"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
-                  onBlur={onBlur}
-                  options={getSportOptions()}
-                  placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
-                  ref={ref}
-                  setValue={
+                <Controller
+                  control={control}
+                  name="preferredSport"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <AutocompleteSelect
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
+                      onBlur={onBlur}
+                      options={getSportOptions()}
+                      placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+                      ref={ref}
+                      setValue={
                     (/** @type {{value: string, label: string}} */option) => {
                       onChange(option?.value || '');
                       setValue('position', '');
                     }
                   }
-                  value={value}
-                />
-              )}
-            />
-
-            {profileFields?.includes('position') ? (
-              <Controller
-                control={control}
-                name="position"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => {
-                  const sportKey = Object.keys(SPORTS_POSITIONS).find((k) => k.toLowerCase() === preferredSport);
-                  const positions = sportKey ? SPORTS_POSITIONS[sportKey] : [];
-
-                  if (positions.length > 0) {
-                    return (
-                      <AutocompleteSelect
-                        error={getFieldError({ errors: formErrors, fieldName: name })}
-                        label={t('profile.fields.position.label')}
-                        onBlur={onBlur}
-                        options={positions.map((p) => ({ label: p, value: p }))}
-                        placeholder={t('profile.fields.position.placeholder')}
-                        ref={ref}
-                        setValue={
-                          (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
-                        }
-                        value={value}
-                      />
-                    );
-                  }
-
-                  return (
-                    <Input
-                      enterKeyHint="done"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      label={t('profile.fields.position.label')}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      placeholder={t('profile.fields.position.placeholder')}
-                      ref={ref}
                       value={value}
                     />
-                  );
-                }}
-              />
-            ) : null}
-
-
-
-            <Controller
-              control={control}
-              name="address"
-              render={({
-                field: {
-                  onChange, value,
-                },
-              }) => (
-                <AutocompleteAddressInput
-                  address={value}
-                  error={getFieldError({ errors: formErrors, fieldName: 'address' })}
-                  label={t('profile.fields.city.label', 'Ville')}
-                  placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
-                  setAddress={onChange}
+                  )}
                 />
-              )}
-            />
 
-            <Controller
-              control={control}
-              name="isLookingForClub"
-              render={({
-                field: {
-                  onChange, value,
-                },
-              }) => (
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                    {t('profile.fields.isLookingForClub.label', 'Profil visible')}
-                  </Text>
-                  <Switch
-                    onValueChange={onChange}
-                    trackColor={{ false: '#767577', true: '#81b0ff' }} // TODO: Use theme colors
-                    value={value}
+                {profileFields?.includes('position') ? (
+                  <Controller
+                    control={control}
+                    name="position"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => {
+                      const sportKey = Object.keys(SPORTS_POSITIONS).find((k) => k.toLowerCase() === preferredSport);
+                      const positions = sportKey ? SPORTS_POSITIONS[sportKey] : [];
+
+                      if (positions.length > 0) {
+                        return (
+                          <AutocompleteSelect
+                            error={getFieldError({ errors: formErrors, fieldName: name })}
+                            label={t('profile.fields.position.label')}
+                            onBlur={onBlur}
+                            options={positions.map((p) => ({ label: p, value: p }))}
+                            placeholder={t('profile.fields.position.placeholder')}
+                            ref={ref}
+                            setValue={
+                          (/** @type {{value: string, label: string}} */option) => { onChange(option?.value || ''); }
+                        }
+                            value={value}
+                          />
+                        );
+                      }
+
+                      return (
+                        <Input
+                          enterKeyHint="done"
+                          error={getFieldError({ errors: formErrors, fieldName: name })}
+                          label={t('profile.fields.position.label')}
+                          onBlur={onBlur}
+                          onChangeText={onChange}
+                          placeholder={t('profile.fields.position.placeholder')}
+                          ref={ref}
+                          value={value}
+                        />
+                      );
+                    }}
                   />
-                </View>
-              )}
-            />
-            </View>
-          </OnboardingWrapper>
-        </ScrollView>
+                ) : null}
+
+                <Controller
+                  control={control}
+                  name="address"
+                  render={({
+                    field: {
+                      onChange, value,
+                    },
+                  }) => (
+                    <AutocompleteAddressInput
+                      address={value}
+                      error={getFieldError({ errors: formErrors, fieldName: 'address' })}
+                      label={t('profile.fields.city.label', 'Ville')}
+                      placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
+                      setAddress={onChange}
+                    />
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="isLookingForClub"
+                  render={({
+                    field: {
+                      onChange, value,
+                    },
+                  }) => (
+                    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
+                      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        {t('profile.fields.isLookingForClub.label', 'Profil visible')}
+                      </Text>
+                      <Switch
+                        onValueChange={onChange}
+                        trackColor={{ false: '#767577', true: '#81b0ff' }} // TODO: Use theme colors
+                        value={value}
+                      />
+                    </View>
+                  )}
+                />
+              </View>
+            </OnboardingWrapper>
+          </ScrollView>
 
           <OnboardingWrapper
             description="Enregistrez vos modifications pour mettre a jour votre profil."
             id="profile-edit-save"
             order={2}
-            spotlight={{ borderRadius: 30, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+            spotlight={{
+              borderRadius: 30, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+            }}
             title="Enregistrer"
           >
             <Button

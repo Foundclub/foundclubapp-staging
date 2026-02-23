@@ -1,7 +1,9 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
@@ -12,6 +14,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
+import { useAppContext } from '@/store/appContext';
+import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -19,13 +26,10 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
-import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
-import { useAppContext } from '@/store/appContext';
-import useTheme from '@/theme/themeContext';
 
 /** @typedef {any} Team */
 /** @typedef {any} User */
@@ -42,11 +46,11 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} Team list content component
  */
 function TeamListContent({
-  clubId = undefined,
-  playerId = undefined,
-  isLeagueMode = false,
   assignmentTrainerId = undefined,
   assignmentTrainerName = undefined,
+  clubId = undefined,
+  isLeagueMode = false,
+  playerId = undefined,
 }) {
   const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState('');
@@ -121,11 +125,11 @@ function TeamListContent({
   const {
     data: classicData,
     error: classicError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading: isLoadingClassic,
     refetch: refetchClassic,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
   } = useGetTeams(classicTeamQueryParams, {
     enabled: !isLeagueMode,
   });
@@ -204,27 +208,27 @@ function TeamListContent({
   const handleTeamSelect = useCallback((/** @type {Team} */ team) => {
     if (team.type === 'club') {
       /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
-        screen: RouteNames.Club,
         params: { clubId: team.documentId },
+        screen: RouteNames.Club,
       });
       return;
     }
 
     if (isLeagueMode) {
       /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
-        screen: RouteNames.SquadDetails,
         params: { teamId: team.documentId },
+        screen: RouteNames.SquadDetails,
       });
       return;
     }
 
     /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
-      screen: RouteNames.TeamDetails,
       params: {
-        teamId: team.documentId,
         assignmentTrainerId,
         assignmentTrainerName,
+        teamId: team.documentId,
       },
+      screen: RouteNames.TeamDetails,
     });
   }, [assignmentTrainerId, assignmentTrainerName, isLeagueMode, navigation]);
 
@@ -239,7 +243,16 @@ function TeamListContent({
       /** @type {any} */ (navigation).navigate(RouteNames.SquadFilters);
       return;
     }
-    /** @type {any} */ (navigation).navigate(RouteNames.TeamFilters);
+
+    const localRouteNames = navigation.getState?.()?.routeNames || [];
+    if (localRouteNames.includes(RouteNames.TeamFilters)) {
+      /** @type {any} */ (navigation).navigate(RouteNames.TeamFilters);
+      return;
+    }
+
+    /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+      screen: RouteNames.TeamFilters,
+    });
   }, [isLeagueMode, navigation]);
 
   const listBottomPadding = useMemo(
@@ -338,7 +351,10 @@ function TeamListContent({
 
     const renderLeagueContent = () => (
       <View style={[Alignments.fullWidth, { flex: 1, position: 'relative' }]}>
-        <View style={{ position: 'absolute', right: 0, top: 0, zIndex: 2 }}>
+        <View style={{
+          position: 'absolute', right: 0, top: 0, zIndex: 2,
+        }}
+        >
           {activityTag}
         </View>
 
@@ -372,7 +388,7 @@ function TeamListContent({
     if (isLeagueCard) {
       return (
         <View style={[{ height: 250, marginVertical: 12, position: 'relative' }]}>
-          <TouchableOpacity onPress={() => handleTeamSelect(item)} activeOpacity={0.9} style={{ flex: 1 }}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => handleTeamSelect(item)} style={{ flex: 1 }}>
             <LinearGradient
               colors={[`${Colors.primary200}33`, `${Colors.primary200}0A`, `${Colors.primary200}00`]}
               end={{ x: 1, y: 1 }}
@@ -399,7 +415,9 @@ function TeamListContent({
                   }}
                 />
               )}
-              style={{ height: '100%', left: 0, position: 'absolute', top: 0, width: '100%' }}
+              style={{
+                height: '100%', left: 0, position: 'absolute', top: 0, width: '100%',
+              }}
             >
               <LinearGradient
                 colors={[Colors.primary500, Colors.gold500]}
@@ -462,10 +480,10 @@ function TeamListContent({
       {isLeagueMode ? (
         <View style={[Spaces.marginBottom[16], { flexDirection: 'row', gap: 10 }]}>
           <Button
-            title="RECHERCHER UNE SQUAD"
-            variant="Secondary"
             onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
             style={{ flex: 1 }}
+            title="RECHERCHER UNE SQUAD"
+            variant="Secondary"
           />
         </View>
       ) : null}
@@ -475,7 +493,7 @@ function TeamListContent({
           filterNumber={filterNumber}
           handleSearchField={setSearchValue}
           openFilters={handleOpenFilters}
-          placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe...')}
+          placeholder={t('teamList.searchPlaceholder', 'Rechercher dans mes équipes...')}
           searchDefaultValue={searchValue || teamFilters?.name || ''}
         />
       </View>
@@ -544,10 +562,10 @@ function TeamListContent({
       </Text>
       {isLeagueMode ? (
         <Button
-          title="RECHERCHER UNE SQUAD"
-          variant="Secondary"
           onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
           style={{ minWidth: 220 }}
+          title="RECHERCHER UNE SQUAD"
+          variant="Secondary"
         />
       ) : null}
     </View>
@@ -562,39 +580,42 @@ function TeamListContent({
       >
         <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
           <FlashList
+            contentContainerStyle={{ paddingBottom: listBottomPadding }}
             data={otherTeams}
             estimatedItemSize={200}
             keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListHeaderComponent={headerComponent}
             ListEmptyComponent={myTeams.length === 0 ? renderEmptyList : null}
+            ListHeaderComponent={headerComponent}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refetchTeams}
             refreshing={isLoadingTeams && !isFetchingNextPage}
             renderItem={({ item }) => renderTeamCard(item, false)}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: listBottomPadding }}
           />
         </View>
 
         {isLeagueMode ? (
-          <View style={{ position: 'absolute', bottom: 20, width: '100%', alignItems: 'center', zIndex: 100 }}>
+          <View style={{
+            alignItems: 'center', bottom: 20, position: 'absolute', width: '100%', zIndex: 100,
+          }}
+          >
             <Button
-              title="CREER UNE SQUAD"
-              variant="Primary"
               icon="plus"
               onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, { screen: RouteNames.CreateSquad })}
               style={{
                 backgroundColor: Colors.gold500,
                 borderRadius: 30,
-                width: '90%',
+                elevation: 5,
                 shadowColor: Colors.gold500,
-                shadowOffset: { width: 0, height: 4 },
+                shadowOffset: { height: 4, width: 0 },
                 shadowOpacity: 0.3,
                 shadowRadius: 5,
-                elevation: 5,
+                width: '90%',
               }}
               textStyle={{ color: Colors.neutral900 }}
+              title="CREER UNE SQUAD"
+              variant="Primary"
             />
           </View>
         ) : null}

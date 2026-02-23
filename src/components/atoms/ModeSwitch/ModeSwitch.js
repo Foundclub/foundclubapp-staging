@@ -1,9 +1,15 @@
-
 import React from 'react';
-import { Switch, View, Text, StyleSheet } from 'react-native';
-import { useAppMode } from '@/context/AppModeContext';
+import {
+  StyleSheet, Switch, Text, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
+import { useAppMode } from '@/context/AppModeContext';
+
+/**
+ *
+ */
 export default function ModeSwitch() {
   const { isGold, toggleMode } = useAppMode();
   const { Colors, Fonts } = useTheme();
@@ -14,10 +20,10 @@ export default function ModeSwitch() {
         {isGold ? 'GOLD' : 'CLASSIC'}
       </Text>
       <Switch
-        value={isGold}
         onValueChange={toggleMode}
-        trackColor={{ false: '#767577', true: Colors.warning500 }}
         thumbColor={isGold ? '#FFFFFF' : '#f4f3f4'}
+        trackColor={{ false: '#767577', true: Colors.warning500 }}
+        value={isGold}
       />
     </View>
   );
@@ -25,8 +31,8 @@ export default function ModeSwitch() {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     marginRight: 15,
   },
 });

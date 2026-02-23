@@ -1,18 +1,23 @@
-import { useMemo } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Alert, Text, TouchableOpacity, View,
+} from 'react-native';
+
+import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetClub } from '@/services/club/clubQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { createTeam } from '@/services/team/teamService';
-import useTheme from '@/theme/themeContext';
-import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -21,7 +26,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 function TeamWizardRecap({ navigation }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const {
     Alignments,
     ApplicationStyle,
@@ -49,6 +54,12 @@ function TeamWizardRecap({ navigation }) {
 
   const createTeamMutation = useMutation({
     mutationFn: createTeam,
+    onError: (error) => {
+      const message = error && typeof error === 'object' && 'message' in error
+        ? String(error.message)
+        : t('APIerrors.unknown');
+      Alert.alert(t('common.error', 'Erreur'), message);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       const targetClubId = selectedOverview.clubId;
@@ -60,12 +71,6 @@ function TeamWizardRecap({ navigation }) {
           params: targetClubId ? { clubId: targetClubId } : undefined,
         }],
       });
-    },
-    onError: (error) => {
-      const message = error && typeof error === 'object' && 'message' in error
-        ? String(error.message)
-        : t('APIerrors.unknown');
-      Alert.alert(t('common.error', 'Erreur'), message);
     },
   });
 
@@ -88,14 +93,14 @@ function TeamWizardRecap({ navigation }) {
     }
 
     createTeamMutation.mutate(/** @type {any} */ ({
-      name: selectedOverview.name,
-      description: selectedOverview.description,
       activities: selectedOverview.activity ? [selectedOverview.activity] : [],
       category: selectedOverview.category || undefined,
+      club: selectedOverview.clubId,
+      description: selectedOverview.description,
       level: selectedOverview.level || undefined,
+      name: selectedOverview.name,
       section: selectedOverview.section || undefined,
       trainers: selectedOverview.trainers,
-      club: selectedOverview.clubId,
     }));
   };
 
@@ -121,16 +126,16 @@ function TeamWizardRecap({ navigation }) {
 
   return (
     <WizardStepLayout
-      title={t('teamWizard.steps.recap.title', 'Recapitulatif')}
-      subtitle={t('teamWizard.steps.recap.subtitle', 'Verifie les informations avant de creer l equipe.')}
-      stepIndex={8}
-      stepCount={8}
+      isNextDisabled={!isRecapReady}
+      isNextLoading={createTeamMutation.isPending}
+      nextLabel={t('teamWizard.actions.create', 'Creer l equipe')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
       onNext={handleSubmit}
       onSkip={() => {}}
-      nextLabel={t('teamWizard.actions.create', 'Creer l equipe')}
-      isNextLoading={createTeamMutation.isPending}
-      isNextDisabled={!isRecapReady}
+      stepCount={8}
+      stepIndex={8}
+      subtitle={t('teamWizard.steps.recap.subtitle', 'Verifie les informations avant de creer l equipe.')}
+      title={t('teamWizard.steps.recap.title', 'Recapitulatif')}
     >
       <View style={[Spaces.gap[16]]}>
         <View
@@ -156,8 +161,8 @@ function TeamWizardRecap({ navigation }) {
                 {
                   backgroundColor: isRecapReady ? 'rgba(1, 179, 244, 0.18)' : 'rgba(255, 191, 71, 0.18)',
                   borderColor: isRecapReady ? Colors.primary500 : Colors.gold500,
-                  borderWidth: 1,
                   borderRadius: 999,
+                  borderWidth: 1,
                 },
               ]}
             >
@@ -201,16 +206,24 @@ function TeamWizardRecap({ navigation }) {
           </View>
           <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.section.label')}: {sectionLabel}
+              {t('teamEdit.fields.section.label')}
+              :
+              {sectionLabel}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.activities.label')}: {activityLabel}
+              {t('teamEdit.fields.activities.label')}
+              :
+              {activityLabel}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.category.label')}: {categoryLabel}
+              {t('teamEdit.fields.category.label')}
+              :
+              {categoryLabel}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('teamEdit.fields.level.label')}: {levelLabel}
+              {t('teamEdit.fields.level.label')}
+              :
+              {levelLabel}
             </Text>
           </View>
         </View>

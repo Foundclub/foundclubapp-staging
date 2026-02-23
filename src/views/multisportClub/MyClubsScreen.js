@@ -16,12 +16,15 @@ import {
   View,
 } from 'react-native';
 
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import useTheme from '@/theme/themeContext';
+
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetMe } from '@/services/auth/authQueries';
 import { useGetCMClubs, useGetCMHighlightRequests } from '@/services/multisportClub/multisportClubQueries';
-import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * @typedef {object} ClubSectionItem
@@ -42,7 +45,9 @@ import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
  *  Fonts: any;
  * }} props
  */
-function ClubSectionCard({ club, onPress, Colors, Fonts }) {
+function ClubSectionCard({
+  club, Colors, Fonts, onPress,
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -60,11 +65,14 @@ function ClubSectionCard({ club, onPress, Colors, Fonts }) {
 
         {/* Info */}
         <View style={styles.info}>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]} numberOfLines={1}>
+          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
             {club.name}
           </Text>
-          <Text style={[Fonts.p2, Fonts.neutral300]} numberOfLines={1}>
-            {club.sport || 'Sport'} • {club.city || 'Ville'}
+          <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>
+            {club.sport || 'Sport'}
+            {' '}
+            •
+            {club.city || 'Ville'}
           </Text>
         </View>
 
@@ -94,21 +102,23 @@ function ClubSectionCard({ club, onPress, Colors, Fonts }) {
  */
 function MyClubsScreen({ navigation }) {
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
 
   // Get current user
   const { data: userData } = useGetMe();
-  
+
   // Get the first multisport club the user manages
   const cmId = userData?.multisportClubs?.[0]?.documentId;
   const cmName = userData?.multisportClubs?.[0]?.name || 'Club Multisport';
 
   // Fetch clubs and highlight requests
-  const { 
-    data: clubsData, 
+  const {
+    data: clubsData,
     isLoading: isLoadingClubs,
-    refetch: refetchClubs,
     isRefetching,
+    refetch: refetchClubs,
   } = useGetCMClubs(cmId || '');
 
   const { data: requestsData } = useGetCMHighlightRequests(cmId || '');
@@ -135,7 +145,7 @@ function MyClubsScreen({ navigation }) {
 
   // Navigation handlers
   const handleClubPress = useCallback((/** @type {ClubSectionItem} */ club) => {
-    navigation.navigate(RouteNames.Club, { 
+    navigation.navigate(RouteNames.Club, {
       clubId: club.documentId,
     });
   }, [navigation]);
@@ -159,9 +169,9 @@ function MyClubsScreen({ navigation }) {
   const renderClubCard = useCallback((/** @type {{ item: ClubSectionItem }} */ { item }) => (
     <ClubSectionCard
       club={item}
-      onPress={() => handleClubPress(item)}
       Colors={Colors}
       Fonts={Fonts}
+      onPress={() => handleClubPress(item)}
     />
   ), [handleClubPress, Colors, Fonts]);
 
@@ -170,7 +180,7 @@ function MyClubsScreen({ navigation }) {
     return (
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.center]}>
-          <ActivityIndicator size="large" color={Colors.primary500} />
+          <ActivityIndicator color={Colors.primary500} size="large" />
         </View>
       </ScreenContainer>
     );
@@ -185,7 +195,10 @@ function MyClubsScreen({ navigation }) {
             {cmName}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral300]}>
-            {clubs.length} section{clubs.length > 1 ? 's' : ''}
+            {clubs.length}
+            {' '}
+            section
+            {clubs.length > 1 ? 's' : ''}
           </Text>
         </View>
 
@@ -250,24 +263,24 @@ function MyClubsScreen({ navigation }) {
 
         {/* Club List */}
         <FlatList
-          data={clubs}
-          renderItem={renderClubCard}
-          keyExtractor={(item) => item.documentId || item.name || Math.random().toString()}
           contentContainerStyle={[Spaces.padding[16], Spaces.gap[12]]}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetchClubs}
-              tintColor={Colors.primary500}
-            />
-          }
-          ListEmptyComponent={
+          data={clubs}
+          keyExtractor={(item) => item.documentId || item.name || Math.random().toString()}
+          ListEmptyComponent={(
             <View style={[Alignments.center, Spaces.paddingVertical[40]]}>
               <Text style={[Fonts.p1, Fonts.neutral400]}>
                 Aucune section trouvée
               </Text>
             </View>
-          }
+          )}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={refetchClubs}
+              refreshing={isRefetching}
+              tintColor={Colors.primary500}
+            />
+          )}
+          renderItem={renderClubCard}
         />
       </View>
     </ScreenContainer>
@@ -275,81 +288,81 @@ function MyClubsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 4,
-  },
-  actions: {
-    flexDirection: 'row',
-  },
   actionBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
     borderRadius: 20,
+    flexDirection: 'row',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   actionIcon: {
     fontSize: 16,
   },
+  actions: {
+    flexDirection: 'row',
+  },
   badge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
     alignItems: 'center',
+    borderRadius: 9,
+    height: 18,
     justifyContent: 'center',
     marginLeft: 4,
+    minWidth: 18,
   },
   badgeText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: 'bold',
   },
-  filters: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
   card: {
     borderRadius: 12,
     overflow: 'hidden',
   },
   cardContent: {
+    alignItems: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
     gap: 12,
+    padding: 12,
   },
-  logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  filterChip: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  logo: {
-    width: 48,
-    height: 48,
+  filters: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  logoPlaceholder: {
-    fontSize: 24,
+  header: {
+    gap: 4,
   },
   info: {
     flex: 1,
     gap: 2,
   },
-  stats: {
-    flexDirection: 'row',
-    gap: 16,
+  logo: {
+    height: 48,
+    width: 48,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 48,
+  },
+  logoPlaceholder: {
+    fontSize: 24,
   },
   statItem: {
     alignItems: 'center',
+  },
+  stats: {
+    flexDirection: 'row',
+    gap: 16,
   },
 });
 

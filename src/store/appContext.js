@@ -1,24 +1,24 @@
 import React, { useContext, useEffect, useReducer } from 'react';
+import { Platform } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
+
 import appReducer from '@/store/appReducer';
 
 const AppStateContext = React.createContext(/** @type {Store} */({}));
 const AppDispatchContext = React
   .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */({}));
 
-import { Platform } from 'react-native';
-
 let storageInstance = null;
 
 export const getStorage = () => {
   if (Platform.OS === 'web') {
     return {
-      getString: () => null,
-      set: () => { },
+      clearAll: () => { },
       delete: () => { },
       getBoolean: () => false,
       getNumber: () => 0,
-      clearAll: () => { },
+      getString: () => null,
+      set: () => { },
     };
   }
 
@@ -29,15 +29,15 @@ export const getStorage = () => {
 };
 
 export const storage = {
-  getString: (key) => getStorage().getString(key),
-  set: (key, value) => getStorage().set(key, value),
-  delete: (key) => getStorage().delete(key),
-  getBoolean: (key) => getStorage().getBoolean(key),
-  getNumber: (key) => getStorage().getNumber(key),
+  addOnValueChangedListener: (listener) => getStorage().addOnValueChangedListener(listener),
   clearAll: () => getStorage().clearAll(),
   contains: (key) => getStorage().contains(key),
+  delete: (key) => getStorage().delete(key),
   getAllKeys: () => getStorage().getAllKeys(),
-  addOnValueChangedListener: (listener) => getStorage().addOnValueChangedListener(listener),
+  getBoolean: (key) => getStorage().getBoolean(key),
+  getNumber: (key) => getStorage().getNumber(key),
+  getString: (key) => getStorage().getString(key),
+  set: (key, value) => getStorage().set(key, value),
 };
 
 /**
@@ -55,16 +55,16 @@ const initStore = {
     return storedSessions;
   })(),
   clubFilters: undefined,
-  teamFilters: undefined,
   eventFilters: undefined,
+  fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
+  isAddingAccount: false,
   mercatoFilters: undefined,
+  onboardingViews: undefined,
+  pendingNotification: null,
   reservationFilters: undefined,
   squadFilters: undefined,
-  fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
-  onboardingViews: undefined,
+  teamFilters: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
-  isAddingAccount: false,
-  pendingNotification: null,
 };
 
 /**

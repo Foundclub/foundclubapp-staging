@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -12,8 +13,10 @@ import { getImageUrl } from '@/utils/imageUrl';
  * @param {boolean} [props.isEven] - For zebra striping
  * @returns {React.ReactElement}
  */
-const StatRow = ({ player, columns, isEven = false }) => {
-  const { Alignments, Colors, Fonts, Images, Spaces } = useTheme();
+function StatRow({ columns, isEven = false, player }) {
+  const {
+    Alignments, Colors, Fonts, Images, Spaces,
+  } = useTheme();
 
   const avatarSource = player.user?.avatar?.url
     ? { uri: getImageUrl(player.user.avatar.url) }
@@ -28,9 +31,9 @@ const StatRow = ({ player, columns, isEven = false }) => {
         Spaces.gap[12],
         {
           backgroundColor: isEven ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+          borderColor: isEven ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: isEven ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
         },
       ]}
     >
@@ -39,23 +42,23 @@ const StatRow = ({ player, columns, isEven = false }) => {
         <Image
           source={avatarSource}
           style={{
-            width: 50,
-            height: 50,
-            borderRadius: 25,
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderWidth: 1,
             borderColor: Colors.neutral600,
+            borderRadius: 25,
+            borderWidth: 1,
+            height: 50,
+            width: 50,
           }}
         />
         <View style={{ flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]} numberOfLines={1}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
             {player.user?.firstname}
           </Text>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]} numberOfLines={1}>
-             {player.user?.lastname}
+          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+            {player.user?.lastname}
           </Text>
           {player.user?.position && (
-            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]} numberOfLines={1}>
+            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]}>
               {player.user.position}
             </Text>
           )}
@@ -71,24 +74,24 @@ const StatRow = ({ player, columns, isEven = false }) => {
               Alignments.alignCenter,
               Alignments.justifyCenter,
               {
-                width: 44,
-                paddingVertical: 6,
-                backgroundColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.15)' : 'transparent', 
+                backgroundColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.15)' : 'transparent',
+                borderColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.3)' : 'transparent',
                 borderRadius: 8,
                 borderWidth: col.key === 'attendanceCount' ? 1 : 0,
-                borderColor: col.key === 'attendanceCount' ? 'rgba(22, 163, 74, 0.3)' : 'transparent',
+                paddingVertical: 6,
+                width: 44,
               },
             ]}
           >
             <Text
               style={[
                 Fonts.p3Bold,
-                { 
-                  color: col.key === 'attendanceCount' ? '#4ade80' : 
-                         col.key === 'absenceCount' ? '#f87171' : // Red for Absence
-                         col.key === 'retardCount' || col.key === 'lateCount' ? '#fbbf24' : // Amber for Retard 
-                         Colors.neutral100, 
-                  textAlign: 'center' 
+                {
+                  color: col.key === 'attendanceCount' ? '#4ade80'
+                    : col.key === 'absenceCount' ? '#f87171' // Red for Absence
+                      : col.key === 'retardCount' || col.key === 'lateCount' ? '#fbbf24' // Amber for Retard
+                        : Colors.neutral100,
+                  textAlign: 'center',
                 },
               ]}
             >
@@ -99,6 +102,6 @@ const StatRow = ({ player, columns, isEven = false }) => {
       </View>
     </View>
   );
-};
+}
 
 export default StatRow;

@@ -83,7 +83,13 @@ const isSameSpotlight = (left, right) => (
   && (left?.overlayOpacity ?? undefined) === (right?.overlayOpacity ?? undefined)
 );
 
-export const OnboardingProvider = ({ children, flowId = 'default' }) => {
+/**
+ *
+ * @param root0
+ * @param root0.children
+ * @param root0.flowId
+ */
+export function OnboardingProvider({ children, flowId = 'default' }) {
   const [steps, setSteps] = useState({});
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -167,17 +173,17 @@ export const OnboardingProvider = ({ children, flowId = 'default' }) => {
     setSteps((prev) => {
       const previousStep = prev[id];
       const nextStep = {
+        description,
         id,
         layout,
         measure,
+        nextAction: navigationMeta?.nextAction,
+        nextLabel: navigationMeta?.nextLabel,
         onNext,
         order,
         registrationIndex: previousStep?.registrationIndex ?? (registrationCounterRef.current += 1),
-        title,
-        description,
         spotlight,
-        nextAction: navigationMeta?.nextAction,
-        nextLabel: navigationMeta?.nextLabel,
+        title,
       };
       if (
         previousStep
@@ -354,6 +360,6 @@ export const OnboardingProvider = ({ children, flowId = 'default' }) => {
       {children}
     </OnboardingContext.Provider>
   );
-};
+}
 
 export const useOnboarding = () => useContext(OnboardingContext) || defaultOnboardingContextValue;

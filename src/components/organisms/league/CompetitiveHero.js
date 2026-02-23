@@ -1,8 +1,12 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import {
+  Image, StyleSheet, Text, View,
+} from 'react-native';
 
-import LeagueCard from '@/components/atoms/league/LeagueCard';
-import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import useTheme from '@/theme/themeContext';
+
+import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+import LeagueCard from '@/components/atoms/league/LeagueCard';
+
 import { clampLeagueDivision, getNextDivisionTargetElo, isMaxDivision } from '@/utils/league/division';
 
 /**
@@ -15,13 +19,13 @@ import { clampLeagueDivision, getNextDivisionTargetElo, isMaxDivision } from '@/
  * @param {number | null} [props.nextDivisionElo]
  * @returns {import('react').ReactElement}
  */
-const CompetitiveHero = ({
-  elo = 1200,
+function CompetitiveHero({
   division = 5,
+  elo = 1200,
+  nextDivisionElo = null,
   rank = '-',
   teamName,
-  nextDivisionElo = null,
-}) => {
+}) {
   const { Colors, Fonts, Images } = useTheme();
   const heroSurfaceColor = 'rgba(1, 36, 52, 0.92)';
   const heroBorderColor = 'rgba(255, 215, 0, 0.78)';
@@ -77,34 +81,38 @@ const CompetitiveHero = ({
           </Text>
         </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.rowBetween}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
-              {maxDivisionReached ? (
-                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Division max</Text>
-              ) : (
-                <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                  {targetElo} PTS{' '}
-                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                    (PROMOTION)
-                  </Text>
+        <View style={styles.progressContainer}>
+          <View style={styles.rowBetween}>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
+            {maxDivisionReached ? (
+              <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Division max</Text>
+            ) : (
+              <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+                {targetElo}
+                {' '}
+                PTS
+                {' '}
+                <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                  (PROMOTION)
                 </Text>
-              )}
-            </View>
-            <View style={[styles.track, { backgroundColor: progressTrackColor }]}>
-              <View style={[styles.bar, { width: `${progress}%`, backgroundColor: Colors.gold500 }]} />
-            </View>
-            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
-              {maxDivisionReached ? (
-                <Text style={{ color: Colors.gold500 }}>Tu es deja au plus haut niveau.</Text>
-              ) : (
-                <>
-                  <Text style={{ color: Colors.gold500 }}>{Math.max((targetElo || elo) - elo, 0)}</Text>{' '}
-                  points pour la promotion
-                </>
-              )}
-            </Text>
+              </Text>
+            )}
           </View>
+          <View style={[styles.track, { backgroundColor: progressTrackColor }]}>
+            <View style={[styles.bar, { backgroundColor: Colors.gold500, width: `${progress}%` }]} />
+          </View>
+          <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
+            {maxDivisionReached ? (
+              <Text style={{ color: Colors.gold500 }}>Tu es deja au plus haut niveau.</Text>
+            ) : (
+              <>
+                <Text style={{ color: Colors.gold500 }}>{Math.max((targetElo || elo) - elo, 0)}</Text>
+                {' '}
+                points pour la promotion
+              </>
+            )}
+          </Text>
+        </View>
 
         <View style={[styles.rowBetween, { marginTop: 16 }]}>
           <View>
@@ -113,13 +121,16 @@ const CompetitiveHero = ({
           </View>
           <View style={styles.alignEnd}>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>RANK</Text>
-            <Text style={[Fonts.h4, { color: Colors.gold500 }]}>#{rank}</Text>
+            <Text style={[Fonts.h4, { color: Colors.gold500 }]}>
+              #
+              {rank}
+            </Text>
           </View>
         </View>
       </View>
     </LeagueCard>
   );
-};
+}
 
 const styles = StyleSheet.create({
   alignEnd: {
@@ -134,8 +145,8 @@ const styles = StyleSheet.create({
   },
   brandLeague: {
     fontSize: 18,
-    lineHeight: 22,
     letterSpacing: 1.1,
+    lineHeight: 22,
     textTransform: 'uppercase',
   },
   brandLogo: {

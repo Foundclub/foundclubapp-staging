@@ -5,13 +5,14 @@ import client from '../client';
 const chatMessageSchema = Joi.object({
   createdAt: Joi.date().required(),
   documentId: Joi.string().required(),
+  event: Joi.object().optional().allow(null),
   message: Joi.string().required(),
   sender: Joi.object().required(),
   updatedAt: Joi.date().required(),
-  event: Joi.object().optional().allow(null),
 }).required();
 
 const chatSchema = Joi.object({
+  archivedBy: Joi.array().items(Joi.object()).optional(),
   createdAt: Joi.date().required(),
   documentId: Joi.string().required(),
   messages: Joi.alternatives().try(
@@ -19,10 +20,9 @@ const chatSchema = Joi.object({
     Joi.array().length(0),
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),
+  pinnedBy: Joi.array().items(Joi.object()).optional(),
   type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match').required(),
   updatedAt: Joi.date().required(),
-  pinnedBy: Joi.array().items(Joi.object()).optional(),
-  archivedBy: Joi.array().items(Joi.object()).optional(),
 }).required();
 
 /**
@@ -84,39 +84,39 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         pageSize,
       },
       populate: {
+        archivedBy: {
+          populate: ['avatar'],
+        },
         club: {
           populate: {
             logo: true,
+          },
+        },
+        league_match: {
+          populate: {
+            team_a: { populate: ['captain'] },
+            team_b: { populate: ['captain'] },
+            winner: true,
           },
         },
         messages: {
           populate: ['sender', 'sender.avatar'],
           sort: ['createdAt:desc'],
         },
+        multisportClub: {
+          populate: {
+            admins: true,
+            logo: true,
+          },
+        },
         participants: {
           populate: ['avatar'],
         },
-        multisportClub: {
-          populate: {
-             logo: true,
-             admins: true,
-          },
+        pinnedBy: {
+          populate: ['avatar'],
         },
         team: {
-          populate: true, 
-        },
-        league_match: {
-            populate: {
-                team_a: { populate: ['captain'] },
-                team_b: { populate: ['captain'] },
-                winner: true
-            }
-        },
-        pinnedBy: {
-            populate: ['avatar']
-        },
-        archivedBy: {
-            populate: ['avatar']
+          populate: true,
         },
       },
       sort: [
@@ -153,73 +153,72 @@ export const getChatById = async (chatId) => {
     params: {
       chat: chatId,
       populate: {
+        archivedBy: {
+          populate: ['avatar'],
+        },
         club: {
           populate: {
             logo: true,
+          },
+        },
+        league_match: {
+          populate: {
+            team_a: { populate: ['captain'] },
+            team_b: { populate: ['captain'] },
+            winner: true,
           },
         },
         messages: {
           populate: ['sender', 'sender.avatar'],
           sort: ['createdAt:desc'],
         },
+        multisportClub: {
+          populate: {
+            admins: true,
+            logo: true,
+          },
+        },
         participants: {
           populate: ['avatar'],
         },
-        multisportClub: {
-          populate: {
-            logo: true,
-            admins: true,
-          },
+        pinnedBy: {
+          populate: ['avatar'],
         },
         team: {
           populate: true,
-        },
-        league_match: {
-            populate: {
-                team_a: { populate: ['captain'] },
-                team_b: { populate: ['captain'] },
-                winner: true
-            }
-        },
-        pinnedBy: {
-            populate: ['avatar']
-        },
-        archivedBy: {
-            populate: ['avatar']
         },
       },
     },
   });
 
-
-  let chatData = response.data.data;
+  const chatData = response.data.data;
 
   // Fallback for league_match if relation is missing in one direction (legacy data)
   if (chatData?.type === 'league_match' && !chatData?.league_match) {
-      try {
-          // Attempt to find the match that links to this chat
-          const matchResponse = await client.get('/league-matches', {
-              params: {
-                  filters: {
-                      chat: {
-                          documentId: chatId
-                      }
-                  },
-                  populate: {
-                      team_a: { populate: ['captain'] },
-                      team_b: { populate: ['captain'] },
-                      winner: true
-                  }
-              }
-          });
-          
-          if (matchResponse.data?.data?.length > 0) {
-              console.log('[getChatById] Recovered missing league_match relation');
-              chatData.league_match = matchResponse.data.data[0];
-          }
-      } catch (err) {
-          console.warn('[getChatById] Failed to fetch fallback league_match', err);
+    try {
+      // Attempt to find the match that links to this chat
+      const matchResponse = await client.get('/league-matches', {
+        params: {
+          filters: {
+            chat: {
+              documentId: chatId,
+            },
+          },
+          populate: {
+            team_a: { populate: ['captain'] },
+            team_b: { populate: ['captain'] },
+            winner: true,
+          },
+        },
+      });
+
+      if (matchResponse.data?.data?.length > 0) {
+        console.log('[getChatById] Recovered missing league_match relation');
+        chatData.league_match = matchResponse.data.data[0];
       }
+    } catch (err) {
+      console.warn('[getChatById] Failed to fetch fallback league_match', err);
+    }
   }
 
   try {
@@ -265,11 +264,11 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
         chat: {
           populate: ['participants'],
         },
+        event: {
+          populate: ['facility', 'league_match', 'league_match.team_a', 'league_match.team_b'],
+        },
         sender: {
           populate: ['avatar'],
-        },
-        event: {
-            populate: ['facility', 'league_match', 'league_match.team_a', 'league_match.team_b']
         },
       },
       sort: ['createdAt:desc'],
@@ -308,13 +307,15 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
  * @param {object} [params.composition] - The composition object (optional)
  * @returns {Promise<ChatMessage>}
  */
-export const createChatMessage = async ({ chatId, message, event, composition }) => {
+export const createChatMessage = async ({
+  chatId, composition, event, message,
+}) => {
   const response = await client.post('/chat-messages', {
     data: {
       chat: chatId,
-      message,
-      event,
       composition,
+      event,
+      message,
     },
   });
 

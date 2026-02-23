@@ -1,9 +1,13 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { Controller, useForm } from 'react-hook-form';
 import { useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useAppContext } from '@/store/appContext';
+import { Joi } from '@/theme/strings';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
@@ -15,9 +19,6 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
-import { useAppContext } from '@/store/appContext';
-import { Joi } from '@/theme/strings';
-import useTheme from '@/theme/themeContext';
 import { getFieldError } from '@/utils/form/formUtils';
 
 /** @typedef {{ label: string; value: string }} Option */
@@ -133,22 +134,22 @@ function TeamFilters({ navigation }) {
    */
   const handleApplyFilters = (data) => {
     appDispatch({
-      type: 'SET_TEAM_FILTERS',
       payload: {
-        name: data.name?.trim() || '',
         activities: data.activities || '',
-        section: data.section || '',
         category: data.category ? [data.category] : [],
         level: data.level ? [data.level] : [],
+        name: data.name?.trim() || '',
+        section: data.section || '',
       },
+      type: 'SET_TEAM_FILTERS',
     });
     navigation.goBack();
   };
 
   const handleClearFilters = () => {
     appDispatch({
-      type: 'SET_TEAM_FILTERS',
       payload: {},
+      type: 'SET_TEAM_FILTERS',
     });
     navigation.goBack();
   };
@@ -170,7 +171,11 @@ function TeamFilters({ navigation }) {
         <Controller
           control={control}
           name="name"
-          render={({ field: { name, onBlur, onChange, ref, value } }) => (
+          render={({
+            field: {
+              name, onBlur, onChange, ref, value,
+            },
+          }) => (
             <Input
               error={getFieldError({ errors: formErrors, fieldName: name })}
               label={t('teamFilters.fields.name.label', 'Nom de l equipe')}
@@ -186,7 +191,11 @@ function TeamFilters({ navigation }) {
         <Controller
           control={control}
           name="activities"
-          render={({ field: { name, onBlur, onChange, ref, value } }) => (
+          render={({
+            field: {
+              name, onBlur, onChange, ref, value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -206,7 +215,11 @@ function TeamFilters({ navigation }) {
         <Controller
           control={control}
           name="section"
-          render={({ field: { name, onBlur, onChange, ref, value } }) => (
+          render={({
+            field: {
+              name, onBlur, onChange, ref, value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -226,7 +239,11 @@ function TeamFilters({ navigation }) {
         <Controller
           control={control}
           name="category"
-          render={({ field: { name, onBlur, onChange, ref, value } }) => (
+          render={({
+            field: {
+              name, onBlur, onChange, ref, value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -246,7 +263,11 @@ function TeamFilters({ navigation }) {
         <Controller
           control={control}
           name="level"
-          render={({ field: { name, onBlur, onChange, ref, value } }) => (
+          render={({
+            field: {
+              name, onBlur, onChange, ref, value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable

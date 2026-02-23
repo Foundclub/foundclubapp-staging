@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
+
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -7,7 +8,7 @@ import useTheme from '@/theme/themeContext';
  * Displays a compatibility score with a visual gauge
  * @param {number} score - Compatibility score (0-100)
  */
-const MatchIndicator = ({ score }) => {
+function MatchIndicator({ score }) {
   const { Colors, Fonts } = useTheme();
 
   // Determine color based on score
@@ -20,24 +21,26 @@ const MatchIndicator = ({ score }) => {
   const color = getColor();
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <View style={{ alignItems: 'center', flexDirection: 'row' }}>
       {/* Circular Gauge or simple Badge */}
       <View style={{
+        alignItems: 'center',
+        backgroundColor: `${color}20`, // 20% opacity background
+        borderColor: color,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: 'center',
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 8,
-        backgroundColor: color + '20', // 20% opacity background
-        borderWidth: 1,
-        borderColor: color,
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <Text style={[Fonts.p3Bold, { color: color }]}>
-          {Math.round(score)}% Match
+      }}
+      >
+        <Text style={[Fonts.p3Bold, { color }]}>
+          {Math.round(score)}
+          % Match
         </Text>
       </View>
     </View>
   );
-};
+}
 
 export default MatchIndicator;

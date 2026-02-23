@@ -2,10 +2,10 @@ export const MIN_LEAGUE_DIVISION = 1;
 export const MAX_LEAGUE_DIVISION = 5;
 
 const DIVISION_PROMOTION_TARGETS = {
-  5: 1300,
-  4: 1500,
-  3: 1700,
   2: 1900,
+  3: 1700,
+  4: 1500,
+  5: 1300,
 };
 
 export const clampLeagueDivision = (value, fallback = MAX_LEAGUE_DIVISION) => {
@@ -20,4 +20,3 @@ export const getNextDivisionTargetElo = (division) => {
 };
 
 export const isMaxDivision = (division) => clampLeagueDivision(division) === MIN_LEAGUE_DIVISION;
-

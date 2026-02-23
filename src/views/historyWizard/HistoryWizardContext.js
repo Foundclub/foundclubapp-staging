@@ -57,17 +57,17 @@ import React, { createContext, useContext, useReducer } from 'react';
 
 /** @type {HistoryWizardState} */
 const initialState = {
-  club: null,
-  multisportClub: null,
-  customClubName: '',
-  useCustomClub: false,
   category: null,
-  level: null,
-  startYear: new Date().getFullYear(),
+  club: null,
+  customClubName: '',
+  editingEntry: null,
   endYear: new Date().getFullYear(),
   isCurrentlyActive: false,
-  editingEntry: null,
+  level: null,
+  multisportClub: null,
   returnRoute: null,
+  startYear: new Date().getFullYear(),
+  useCustomClub: false,
 };
 
 /**
@@ -77,44 +77,50 @@ const initialState = {
  */
 function historyWizardReducer(state, action) {
   switch (action.type) {
-    case 'SET_RETURN_ROUTE':
-      return { ...state, returnRoute: action.payload };
-    case 'SET_CLUB':
-      return { ...state, club: action.payload, multisportClub: null, useCustomClub: false, customClubName: '' };
-    case 'SET_MULTISPORT_CLUB':
-      return { ...state, multisportClub: action.payload, club: null, useCustomClub: false, customClubName: '' };
-    case 'SET_CUSTOM_CLUB':
-      return { ...state, customClubName: action.payload, useCustomClub: true, club: null, multisportClub: null };
+    case 'RESET':
+      return initialState;
     case 'SET_CATEGORY':
       return { ...state, category: action.payload };
-    case 'SET_LEVEL':
-      return { ...state, level: action.payload };
-    case 'SET_START_YEAR':
-      return { ...state, startYear: action.payload };
-    case 'SET_END_YEAR':
-      return { ...state, endYear: action.payload };
+    case 'SET_CLUB':
+      return {
+        ...state, club: action.payload, customClubName: '', multisportClub: null, useCustomClub: false,
+      };
     case 'SET_CURRENTLY_ACTIVE':
       return { ...state, isCurrentlyActive: action.payload };
+    case 'SET_CUSTOM_CLUB':
+      return {
+        ...state, club: null, customClubName: action.payload, multisportClub: null, useCustomClub: true,
+      };
     case 'SET_EDITING_ENTRY':
       if (action.payload) {
         return {
           ...state,
-          editingEntry: action.payload,
-          club: action.payload.club || null,
-          multisportClub: action.payload.multisport_club || null,
-          customClubName: action.payload.customClubName || '',
-          useCustomClub: !action.payload.club && !!action.payload.customClubName,
           category: action.payload.category || null,
-          level: action.payload.level || null,
-          startYear: action.payload.startYear || new Date().getFullYear(),
+          club: action.payload.club || null,
+          customClubName: action.payload.customClubName || '',
+          editingEntry: action.payload,
           endYear: action.payload.endYear || new Date().getFullYear(),
           isCurrentlyActive: action.payload.isCurrentlyActive || false,
+          level: action.payload.level || null,
+          multisportClub: action.payload.multisport_club || null,
           returnRoute: null, // Reset return route when editing
+          startYear: action.payload.startYear || new Date().getFullYear(),
+          useCustomClub: !action.payload.club && !!action.payload.customClubName,
         };
       }
       return initialState;
-    case 'RESET':
-      return initialState;
+    case 'SET_END_YEAR':
+      return { ...state, endYear: action.payload };
+    case 'SET_LEVEL':
+      return { ...state, level: action.payload };
+    case 'SET_MULTISPORT_CLUB':
+      return {
+        ...state, club: null, customClubName: '', multisportClub: action.payload, useCustomClub: false,
+      };
+    case 'SET_RETURN_ROUTE':
+      return { ...state, returnRoute: action.payload };
+    case 'SET_START_YEAR':
+      return { ...state, startYear: action.payload };
     default:
       return state;
   }
@@ -129,7 +135,7 @@ export function HistoryWizardProvider({ children }) {
   const [state, dispatch] = useReducer(historyWizardReducer, initialState);
 
   return (
-    <HistoryWizardContext.Provider value={{ state, dispatch }}>
+    <HistoryWizardContext.Provider value={{ dispatch, state }}>
       {children}
     </HistoryWizardContext.Provider>
   );

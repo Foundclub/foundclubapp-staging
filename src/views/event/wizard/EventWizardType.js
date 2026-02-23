@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
@@ -6,19 +7,28 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
-import useTheme from '@/theme/themeContext';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { useEventWizard } from './EventWizardContext';
-import { useGetEventTypes } from '@/services/event/eventQueries';
+import useTheme from '@/theme/themeContext';
+
+import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-const EventWizardType = ({ navigation, route }) => {
+import { useGetEventTypes } from '@/services/event/eventQueries';
+
+import { useEventWizard } from './EventWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
+ */
+function EventWizardType({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -37,7 +47,7 @@ const EventWizardType = ({ navigation, route }) => {
   };
 
   const handleSelectType = (type) => {
-    dispatch({ type: 'SET_TYPE', payload: type });
+    dispatch({ payload: type, type: 'SET_TYPE' });
     navigation.navigate(RouteNames.EventWizardTeam);
   };
 
@@ -49,8 +59,8 @@ const EventWizardType = ({ navigation, route }) => {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -58,14 +68,14 @@ const EventWizardType = ({ navigation, route }) => {
       userId={userData?.documentId}
     >
       <WizardStepLayout
+        onBack={() => navigation.goBack()}
         stepCount={10}
         stepIndex={1}
-        title={t('eventWizard.steps.type.title')}
         subtitle={t('eventWizard.steps.type.subtitle')}
-        onBack={() => navigation.goBack()}
+        title={t('eventWizard.steps.type.title')}
       >
         {isLoading ? (
-          <ActivityIndicator size="large" color={Colors.primary500} />
+          <ActivityIndicator color={Colors.primary500} size="large" />
         ) : null}
 
         {!isLoading && !hasTypes ? (
@@ -124,6 +134,6 @@ const EventWizardType = ({ navigation, route }) => {
       </WizardStepLayout>
     </TutorialFlowBoundary>
   );
-};
+}
 
 export default EventWizardType;

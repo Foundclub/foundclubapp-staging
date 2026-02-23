@@ -1,9 +1,10 @@
 import notifee from '@notifee/react-native';
 import { MMKV } from 'react-native-mmkv';
 
-import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
 import client from '@/services/client';
+
 import { normalizeNotificationPayload } from '@/utils/notifications/notificationNavigation';
+import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import {
   EVENT_RSVP_ACTION_ABSENT,
@@ -32,12 +33,19 @@ const getNotificationStorage = () => ({
   delete: (key) => getStorage().delete(key),
   /** @param {string} key */
   getString: (key) => getStorage().getString(key),
-  /** @param {string} key @param {string} value */
+  /**
+   * @param {string} key @param {string} value
+   * @param value
+   */
   set: (key, value) => getStorage().set(key, value),
 });
 
 const notificationStorage = getNotificationStorage();
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 const toSafeString = (value) => {
   if (value === undefined || value === null) return '';
   return String(value);
@@ -55,23 +63,36 @@ export const isEventRsvpActionablePayload = (rawData) => {
   return hasEventId && isReminder && (hasContext || !data.actionContext);
 };
 
+/**
+ * @param {string | undefined} pressActionId
+ * @returns {'present' | 'absent' | null}
+ */
 const resolveAnswerFromAction = (pressActionId) => {
   if (pressActionId === EVENT_RSVP_ACTION_PRESENT) return 'present';
   if (pressActionId === EVENT_RSVP_ACTION_ABSENT) return 'absent';
   return null;
 };
 
-const getFeedbackCopy = (answer) =>
-  answer === 'present'
-    ? {
-      body: 'Votre presence est enregistree.',
-      title: 'Presence confirmee',
-    }
-    : {
-      body: 'Votre absence est enregistree.',
-      title: 'Absence confirmee',
-    };
+/**
+ * @param {'present' | 'absent'} answer
+ * @returns {{ title: string, body: string }}
+ */
+const getFeedbackCopy = (answer) => (answer === 'present'
+  ? {
+    body: 'Votre presence est enregistree.',
+    title: 'Presence confirmee',
+  }
+  : {
+    body: 'Votre absence est enregistree.',
+    title: 'Absence confirmee',
+  });
 
+/**
+ * @param {string | number} eventId
+ * @param {'present' | 'absent'} answer
+ * @param {string | number | undefined} notificationId
+ * @returns {Promise<any>}
+ */
 const sendRsvpAnswer = async (eventId, answer, notificationId) => {
   const response = await client.post(`/events/${eventId}/rsvp`, {
     answer,
@@ -98,29 +119,31 @@ const displayLocalNotification = async ({
   isActionable = false,
   title,
 }) => {
-  await notifee.displayNotification({
-    android: {
-      actions: isActionable
-        ? [
-          {
-            pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
-            title: 'Present',
-          },
-          {
-            pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
-            title: 'Absent',
-          },
-        ]
-        : undefined,
-      channelId,
-      importance: channelId === NOTIFICATION_SILENT_CHANNEL_ID ? 2 : 4,
-      pressAction: {
-        id: 'default',
-      },
-      smallIcon: 'ic_notification',
-      sound: channelId === NOTIFICATION_SILENT_CHANNEL_ID ? undefined : 'default',
-      vibration: channelId !== NOTIFICATION_SILENT_CHANNEL_ID,
+  const androidConfig = /** @type {any} */ ({
+    actions: isActionable
+      ? [
+        {
+          pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
+          title: 'Present',
+        },
+        {
+          pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
+          title: 'Absent',
+        },
+      ]
+      : undefined,
+    channelId,
+    importance: channelId === NOTIFICATION_SILENT_CHANNEL_ID ? 2 : 4,
+    pressAction: {
+      id: 'default',
     },
+    smallIcon: 'ic_notification',
+    sound: channelId === NOTIFICATION_SILENT_CHANNEL_ID ? undefined : 'default',
+    vibration: channelId !== NOTIFICATION_SILENT_CHANNEL_ID,
+  });
+
+  await notifee.displayNotification({
+    android: androidConfig,
     body: toSafeString(body),
     data,
     ios: {
@@ -213,8 +236,17 @@ export const handleEventRsvpActionPress = async ({
     return { handled: false };
   }
 
+  const eventId = normalizedData?.eventId;
+  if (eventId === undefined || eventId === null) {
+    return { handled: false };
+  }
+  const notificationId = (typeof normalizedData?.notificationId === 'string'
+    || typeof normalizedData?.notificationId === 'number')
+    ? normalizedData.notificationId
+    : undefined;
+
   try {
-    await sendRsvpAnswer(normalizedData.eventId, answer, normalizedData.notificationId);
+    await sendRsvpAnswer(eventId, answer, notificationId);
 
     const feedback = getFeedbackCopy(answer);
     await displayLocalNotification({
@@ -225,6 +257,9 @@ export const handleEventRsvpActionPress = async ({
     return { handled: true, success: true };
   } catch (error) {
     console.warn('[RSVP_ACTION] Failed to apply RSVP action:', error);
+    console.warn(
+      `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} eventId=${normalizedData?.eventId || 'unknown'}`,
+    );
     await displayLocalNotification({
       body: "Ouvrez l'application pour finaliser votre reponse.",
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
@@ -242,7 +277,7 @@ export const storePendingOpenNotification = (data) => {
   try {
     notificationStorage.set(
       NOTIFICATION_PENDING_OPEN_KEY,
-      JSON.stringify(data || {})
+      JSON.stringify(data || {}),
     );
   } catch (error) {
     console.warn('[NotificationAction] Failed to persist pending notification:', error);

@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetCategories } from '@/services/category/categoryQueries';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetCategories } from '@/services/category/categoryQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -16,7 +18,7 @@ import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
  */
 function TeamWizardCategory({ navigation }) {
   const { t } = useTranslation();
-  const { state, dispatch } = useTeamWizard();
+  const { dispatch, state } = useTeamWizard();
   const [searchValue, setSearchValue] = useState('');
   const { data: categories } = useGetCategories();
 
@@ -37,15 +39,15 @@ function TeamWizardCategory({ navigation }) {
 
   return (
     <WizardStepLayout
-      title={t('teamWizard.steps.category.title', 'Categorie')}
-      subtitle={t('teamWizard.steps.category.subtitle', 'Selectionne la categorie de ton equipe.')}
-      stepIndex={5}
-      stepCount={8}
+      isNextDisabled={!state.category}
+      nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardActivity)}
       onNext={() => navigation.navigate(RouteNames.TeamWizardLevel)}
       onSkip={() => {}}
-      nextLabel={t('common.next', 'Suivant')}
-      isNextDisabled={!state.category}
+      stepCount={8}
+      stepIndex={5}
+      subtitle={t('teamWizard.steps.category.subtitle', 'Selectionne la categorie de ton equipe.')}
+      title={t('teamWizard.steps.category.title', 'Categorie')}
     >
       <View>
         <AutocompleteSelect
@@ -55,7 +57,7 @@ function TeamWizardCategory({ navigation }) {
           placeholder={t('teamEdit.fields.category.placeholder')}
           searchValue={searchValue}
           setSearchValue={setSearchValue}
-          setValue={(/** @type {Option} */ option) => dispatch({ type: 'SET_CATEGORY', payload: option?.value || '' })}
+          setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_CATEGORY' })}
           value={selectedLabel}
         />
       </View>

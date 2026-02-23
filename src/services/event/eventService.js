@@ -1,8 +1,9 @@
 import Joi from 'joi';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Platform } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import client from '../client';
 
 /**
@@ -15,11 +16,19 @@ export const eventSchema = Joi.object({
   date: Joi.date().iso().required(),
   description: Joi.string().allow('', null),
   documentId: Joi.string(),
+  facility: Joi.object({
+    documentId: Joi.string().allow(null).optional(),
+    name: Joi.string().allow(null).optional(),
+  }).allow(null).optional(),
+  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').allow(null).optional(),
   geohash: Joi.string().allow('', null).optional(),
+  invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
+  isFeatured: Joi.boolean().allow(null).optional(),
   location: Joi.object({
     lat: Joi.number().allow(null).optional(),
     lng: Joi.number().allow(null).optional(),
   }).allow(null).optional(),
+  recurrenceGroupId: Joi.string().allow(null).optional(),
   sessionStatus: Joi.string().valid('open', 'closed').allow(null).optional(),
   team: Joi.object({
     documentId: Joi.string().allow(null).optional(),
@@ -30,14 +39,6 @@ export const eventSchema = Joi.object({
     name: Joi.string().allow(null).optional(),
   }).allow(null).optional(),
   validationMode: Joi.string().valid('auto', 'manual').allow(null).optional(),
-  isFeatured: Joi.boolean().allow(null).optional(),
-  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').allow(null).optional(),
-  facility: Joi.object({
-    documentId: Joi.string().allow(null).optional(),
-    name: Joi.string().allow(null).optional(),
-  }).allow(null).optional(),
-  invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
-  recurrenceGroupId: Joi.string().allow(null).optional(),
 }).unknown(true);
 
 /**
@@ -99,9 +100,9 @@ export const createEventsSequentially = async (payloads = []) => {
     try {
       const response = await createEvent(payload);
       const documentId = response?.data?.documentId || response?.documentId || null;
-      created.push({ payload, response, documentId });
+      created.push({ documentId, payload, response });
     } catch (error) {
-      failed.push({ payload, error });
+      failed.push({ error, payload });
     }
   }
 
@@ -254,27 +255,27 @@ export const getEvents = async (params = {}) => {
     activity,
     category,
     club,
+    excludeType,
+    featuredRequestStatus,
+    featuredScope,
     geohash,
+    isFeatured,
     lat,
-    lon,
-    radius,
     level,
+    lon,
+    membershipClubIds,
     page,
     pageSize,
     participantId,
     playerEventsFilter = false,
     q,
+    radius,
     sessionStatus,
     startDateAfter,
     startDateBefore,
     teamIds,
     trainerEventsFilter = false,
     type,
-    excludeType,
-    isFeatured,
-    featuredRequestStatus,
-    featuredScope,
-    membershipClubIds,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -287,14 +288,14 @@ export const getEvents = async (params = {}) => {
     filtersObj.date = {};
     if (startDateAfter) {
       // Handle both Date objects and ISO string values
-      filtersObj.date.$gte = startDateAfter instanceof Date 
-        ? startDateAfter.toISOString() 
+      filtersObj.date.$gte = startDateAfter instanceof Date
+        ? startDateAfter.toISOString()
         : startDateAfter;
     }
     if (startDateBefore) {
       // Handle both Date objects and ISO string values
-      filtersObj.date.$lte = startDateBefore instanceof Date 
-        ? startDateBefore.toISOString() 
+      filtersObj.date.$lte = startDateBefore instanceof Date
+        ? startDateBefore.toISOString()
         : startDateBefore;
     }
   } else {
@@ -504,6 +505,7 @@ export const getEvents = async (params = {}) => {
   const filters = {
     _q: q,
     filters: filtersObj,
+    myTeams: params.myTeams, // Pass myTeams filter to backend
     pagination: {
       page: page || 1,
       pageSize: pageSize || 10,
@@ -533,7 +535,6 @@ export const getEvents = async (params = {}) => {
       'league_match',
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
-    myTeams: params.myTeams, // Pass myTeams filter to backend
     // Location-based filtering (Haversine)
     ...(lat && lon && radius && { lat, lon, radius }),
   };
@@ -619,23 +620,19 @@ export const remindUnansweredPlayers = async (eventId) => {
  * @param {string} clubId
  * @returns {Promise<any>}
  */
-export const getClubEvents = async (clubId) => {
-  return getEvents({
-    club: { value: clubId, label: '' },
-    // validationMode: 'auto' // REMOVED: We want to see ALL events (manual & auto) for the club planning
-  });
-};
+export const getClubEvents = async (clubId) => getEvents({
+  club: { label: '', value: clubId },
+  // validationMode: 'auto' // REMOVED: We want to see ALL events (manual & auto) for the club planning
+});
 
 /**
  * Get events for the connected user (My Planning)
  * @param {string[]} [teamIds] - Optional team IDs to filter
  * @returns {Promise<any>}
  */
-export const getMyEvents = async (teamIds = []) => {
-  return getEvents({
-    myTeams: teamIds,
-  });
-};
+export const getMyEvents = async (teamIds = []) => getEvents({
+  myTeams: teamIds,
+});
 
 /**
  * Request to feature an event for the entire multisport club
@@ -739,10 +736,10 @@ export const exportEventParticipants = async (eventId, eventName) => {
 
   const { dirs } = ReactNativeBlobUtil.fs;
   const fileName = `participants_${eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event'}.xlsx`;
-  
+
   const path = Platform.select({
-    ios: `${dirs.DocumentDir}/${fileName}`,
     android: `${dirs.DownloadDir}/${fileName}`,
+    ios: `${dirs.DocumentDir}/${fileName}`,
   });
 
   const config = {
@@ -754,15 +751,15 @@ export const exportEventParticipants = async (eventId, eventName) => {
     const res = await ReactNativeBlobUtil.config(config).fetch('GET', url, {
       Authorization: `Bearer ${token}`,
     });
-    
+
     // On Android, explicitly trying to show the file or notify
     if (Platform.OS === 'android') {
-        try {
-            // Try to add to media scanner so it shows up
-            await ReactNativeBlobUtil.fs.scanFile([{ path: res.path(), mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }]);
-        } catch (ignored) {}
+      try {
+        // Try to add to media scanner so it shows up
+        await ReactNativeBlobUtil.fs.scanFile([{ mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', path: res.path() }]);
+      } catch (ignored) {}
     }
-    
+
     return res.path();
   } catch (error) {
     console.error('[EventService] Export error:', error);

@@ -2,23 +2,26 @@ import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, Text, TouchableOpacity, View,
+} from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import useAuth from '@/domains/auth/useAuth';
-import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestQueries';
 import { acceptClubMembershipRequest, rejectClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { RouteNames } from '@/navigation/routeNames';
 
 const looksLikePhoneNumber = (value) => {
   if (!value) return false;
@@ -35,7 +38,7 @@ const resolveRequesterDisplay = (item, t) => {
     || item?.requester?.firstName
     || item?.user?.firstname
     || item?.user?.firstName
-    || ''
+    || '',
   ).trim();
   const lastName = String(
     item?.requesterLastname
@@ -43,18 +46,18 @@ const resolveRequesterDisplay = (item, t) => {
     || item?.requester?.lastName
     || item?.user?.lastname
     || item?.user?.lastName
-    || ''
+    || '',
   ).trim();
   const username = String(
     item?.requester?.username
     || item?.user?.username
-    || ''
+    || '',
   ).trim();
   const safeUsername = looksLikePhoneNumber(username) ? '' : username;
   const requesterDisplayName = String(
     item?.requesterDisplayName
     || item?.requester?.displayName
-    || ''
+    || '',
   ).trim();
   const safeRequesterDisplayName = looksLikePhoneNumber(requesterDisplayName) ? '' : requesterDisplayName;
 
@@ -120,9 +123,26 @@ function ClubMembershipRequestList({ navigation, route }) {
 
   const acceptRequestMutation = useMutation({
     mutationFn: acceptClubMembershipRequest,
+    onError: (error) => {
+      const rawMessage = extractApiErrorMessage(error);
+      const isMissingRelation = rawMessage.includes('Membership request is missing user or club relation')
+        || rawMessage.includes('utilisateur introuvable');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        isMissingRelation
+          ? t(
+            'clubMembershipRequestList.errors.missingRequester',
+            'Impossible de traiter cette demande. Demandez au joueur de renvoyer sa demande.',
+          )
+          : t(
+            'clubMembershipRequestList.errors.accept',
+            'Impossible de valider la demande pour le moment.',
+          ),
+      );
+    },
     onSuccess: (_data, requestId) => {
       const acceptedRequest = requests.find((item) => item?.documentId === requestId);
-      const { title, pendingName } = resolveRequesterDisplay(acceptedRequest || {}, t);
+      const { pendingName, title } = resolveRequesterDisplay(acceptedRequest || {}, t);
       const trainerLabel = pendingName || title || t('common.user', 'Utilisateur');
       const trainerId = acceptedRequest?.requester?.documentId
         || acceptedRequest?.user?.documentId
@@ -148,41 +168,24 @@ function ClubMembershipRequestList({ navigation, route }) {
             },
             text: 'Assigner maintenant',
           },
-        ]
-      );
-    },
-    onError: (error) => {
-      const rawMessage = extractApiErrorMessage(error);
-      const isMissingRelation = rawMessage.includes('Membership request is missing user or club relation')
-        || rawMessage.includes('utilisateur introuvable');
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        isMissingRelation
-          ? t(
-            'clubMembershipRequestList.errors.missingRequester',
-            'Impossible de traiter cette demande. Demandez au joueur de renvoyer sa demande.'
-          )
-          : t(
-            'clubMembershipRequestList.errors.accept',
-            'Impossible de valider la demande pour le moment.'
-          )
+        ],
       );
     },
   });
 
   const rejectRequestMutation = useMutation({
     mutationFn: rejectClubMembershipRequest,
-    onSuccess: () => {
-      refetch();
-    },
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
         t(
           'clubMembershipRequestList.errors.reject',
-          'Impossible de refuser la demande pour le moment.'
-        )
+          'Impossible de refuser la demande pour le moment.',
+        ),
       );
+    },
+    onSuccess: () => {
+      refetch();
     },
   });
 
@@ -229,116 +232,116 @@ function ClubMembershipRequestList({ navigation, route }) {
    */
   const renderItem = ({ item }) => (
     (() => {
-      const { title, pendingName } = resolveRequesterDisplay(item, t);
+      const { pendingName, title } = resolveRequesterDisplay(item, t);
       return (
-    <View
-      style={[
-        Alignments.alignStart,
-        Alignments.justifySpaceBetween,
-        Spaces.gap[16],
-        Spaces.padding[24],
-        ApplicationStyle.backgroundColor.primary700,
-        ApplicationStyle.borderWidth1,
-        { borderColor: `${Colors.primary500}33` },
-        ApplicationStyle.borderRadius24,
-        Spaces.marginHorizontal[16],
-        Spaces.marginVertical[8],
-        ApplicationStyle.shadow100,
-      ]}
-    >
-      <View
-        style={[
-          Alignments.row,
-          Alignments.fullWidth,
-          Alignments.alignStart,
-          Spaces.gap[16],
-        ]}
-      >
-        <ProfileAvatar
-          imageUrl={item?.user?.avatar?.url || item?.requester?.avatar?.url}
-          size={44}
+        <View
           style={[
+            Alignments.alignStart,
+            Alignments.justifySpaceBetween,
+            Spaces.gap[16],
+            Spaces.padding[24],
+            ApplicationStyle.backgroundColor.primary700,
             ApplicationStyle.borderWidth1,
-            ApplicationStyle.borderColor.neutral00,
-            { borderRadius: 44 },
+            { borderColor: `${Colors.primary500}33` },
+            ApplicationStyle.borderRadius24,
+            Spaces.marginHorizontal[16],
+            Spaces.marginVertical[8],
+            ApplicationStyle.shadow100,
           ]}
-          imageStyle={{ borderRadius: 44 }}
-        />
-        <View style={[
-          Alignments.fill,
-          Alignments.justifyStart,
-          Alignments.alignStart,
-          Spaces.gap[6],
-        ]}
         >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-            <Text
-              numberOfLines={1}
+          <View
+            style={[
+              Alignments.row,
+              Alignments.fullWidth,
+              Alignments.alignStart,
+              Spaces.gap[16],
+            ]}
+          >
+            <ProfileAvatar
+              imageStyle={{ borderRadius: 44 }}
+              imageUrl={item?.user?.avatar?.url || item?.requester?.avatar?.url}
+              size={44}
               style={[
-                Fonts.textLeft,
-                Fonts.h4Bold,
-                Fonts.neutral00,
-                { flexShrink: 1 },
-              ]}
-            >
-              {title}
-            </Text>
-            <View
-              style={[
-                ApplicationStyle.backgroundColor.gold900,
-                ApplicationStyle.borderRadius12,
                 ApplicationStyle.borderWidth1,
-                { borderColor: `${Colors.gold500}66` },
-                Spaces.paddingHorizontal[8],
-                Spaces.paddingVertical[4],
+                ApplicationStyle.borderColor.neutral00,
+                { borderRadius: 44 },
               ]}
+            />
+            <View style={[
+              Alignments.fill,
+              Alignments.justifyStart,
+              Alignments.alignStart,
+              Spaces.gap[6],
+            ]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.gold500, Fonts.uppercase]}>
-                En attente
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Fonts.textLeft,
+                    Fonts.h4Bold,
+                    Fonts.neutral00,
+                    { flexShrink: 1 },
+                  ]}
+                >
+                  {title}
+                </Text>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.gold900,
+                    ApplicationStyle.borderRadius12,
+                    ApplicationStyle.borderWidth1,
+                    { borderColor: `${Colors.gold500}66` },
+                    Spaces.paddingHorizontal[8],
+                    Spaces.paddingVertical[4],
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, Fonts.gold500, Fonts.uppercase]}>
+                    En attente
+                  </Text>
+                </View>
+              </View>
+              <Text
+                style={[
+                  Fonts.textLeft,
+                  Fonts.p2,
+                  Fonts.neutral100]}
+              >
+                {t('clubMembershipRequestList.fields.pending', {
+                  firstname: pendingName,
+                })}
               </Text>
             </View>
           </View>
-          <Text
+          <View
             style={[
-              Fonts.textLeft,
-              Fonts.p2,
-              Fonts.neutral100]}
-          >
-            {t('clubMembershipRequestList.fields.pending', {
-              firstname: pendingName,
-            })}
-          </Text>
+              ApplicationStyle.separator,
+              {
+                backgroundColor: `${Colors.primary500}33`,
+                width: '100%',
+              },
+            ]}
+          />
+          <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
+            <Button
+              icon="check"
+              isOption
+              onPress={() => handleAcceptRequest(item.documentId)}
+              style={[Alignments.fill, { minHeight: 42 }]}
+              title={t('clubMembershipRequestList.actions.accept')}
+              variant="Primary"
+            />
+            <Button
+              icon="close"
+              isOption
+              onPress={() => handleRejectRequest(item.documentId)}
+              style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
+              textStyle={[Fonts.error500]}
+              title={t('clubMembershipRequestList.actions.reject')}
+              variant="Secondary"
+            />
+          </View>
         </View>
-      </View>
-      <View
-        style={[
-          ApplicationStyle.separator,
-          {
-            backgroundColor: `${Colors.primary500}33`,
-            width: '100%',
-          },
-        ]}
-      />
-      <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
-        <Button
-          icon="check"
-          isOption
-          onPress={() => handleAcceptRequest(item.documentId)}
-          title={t('clubMembershipRequestList.actions.accept')}
-          variant="Primary"
-          style={[Alignments.fill, { minHeight: 42 }]}
-        />
-        <Button
-          icon="close"
-          isOption
-          onPress={() => handleRejectRequest(item.documentId)}
-          title={t('clubMembershipRequestList.actions.reject')}
-          variant="Secondary"
-          style={[Alignments.fill, { minHeight: 42, borderColor: Colors.error500 }]}
-          textStyle={[Fonts.error500]}
-        />
-      </View>
-    </View>
       );
     })()
   );
@@ -365,8 +368,8 @@ function ClubMembershipRequestList({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}

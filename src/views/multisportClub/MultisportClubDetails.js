@@ -1,25 +1,27 @@
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
 
-import useClub from '@/domains/club/useClub';
 import useAuth from '@/domains/auth/useAuth';
+import useClub from '@/domains/club/useClub';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import Button from '@/components/atoms/button/Button';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
+
 import { getMultisportClubById } from '@/services/multisportClub/multisportClubService';
+
 import { getImageUrl } from '@/utils/imageUrl';
-import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * @typedef {{ url?: string }} ImageAsset
@@ -65,12 +67,12 @@ function MultisportClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['multisport-club', cmId],
+    enabled: !!cmId,
     queryFn: () => {
       if (!cmId) return Promise.resolve(null);
       return getMultisportClubById(cmId);
     },
-    enabled: !!cmId,
+    queryKey: ['multisport-club', cmId],
   });
 
   const cm = /** @type {MultisportClub | null | undefined} */ (cmData);
@@ -89,8 +91,8 @@ function MultisportClubDetails({ navigation, route }) {
   const handleSectionPress = useCallback((/** @type {CMSection} */ section) => {
     if (section?.documentId) {
       navigation.navigate(RouteNames.ClubStack, {
-        screen: RouteNames.Club,
         params: { clubId: section.documentId },
+        screen: RouteNames.Club,
       });
     }
   }, [navigation]);
@@ -102,8 +104,8 @@ function MultisportClubDetails({ navigation, route }) {
   const handleAdminPress = useCallback((/** @type {CMAdmin} */ admin) => {
     if (admin?.documentId) {
       navigation.navigate(RouteNames.ProfileStack, {
-        screen: RouteNames.UserDetails,
         params: { userId: admin.documentId },
+        screen: RouteNames.UserDetails,
       });
     }
   }, [navigation]);
@@ -157,64 +159,66 @@ function MultisportClubDetails({ navigation, route }) {
             Spaces.paddingBottom[40],
             Spaces.marginTop[24],
             { overflow: 'visible' },
-          ]}>
+          ]}
+          >
             {/* Omnisport Badge */}
             <View style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
               backgroundColor: '#00BCD4',
+              borderRadius: 8,
+              left: 16,
               paddingHorizontal: 12,
               paddingVertical: 4,
-              borderRadius: 8,
+              position: 'absolute',
+              top: 16,
               zIndex: 1,
-            }}>
+            }}
+            >
               <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>
                 OMNISPORT
               </Text>
             </View>
 
-              {/* Edit Action - Visible only to CM admins */}
-              {cm?.admins?.some((admin) => admin.documentId === userData?.documentId) ? (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate(RouteNames.MultisportClubEdit, { cmId })}
+            {/* Edit Action - Visible only to CM admins */}
+            {cm?.admins?.some((admin) => admin.documentId === userData?.documentId) ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate(RouteNames.MultisportClubEdit, { cmId })}
+                style={[
+                  Alignments.absolute,
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.gap[8],
+                  { right: 16, top: 16, zIndex: 10 },
+                ]}
+              >
+                <Image
+                  source={Images.edit}
                   style={[
-                    Alignments.absolute,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Spaces.gap[8],
-                    { right: 16, top: 16, zIndex: 10 }
+                    ApplicationStyle.icon20,
+                    ApplicationStyle.tintColor.primary500,
                   ]}
-                >
-                  <Image
-                     source={Images.edit}
-                     style={[
-                       ApplicationStyle.icon20,
-                       ApplicationStyle.tintColor.primary500
-                     ]}
-                  />
-                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                    Modifier
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
+                />
+                <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                  Modifier
+                </Text>
+              </TouchableOpacity>
+            ) : null}
 
-              <View style={{ marginTop: -32, zIndex: 1 }}>
-                {cm?.logo?.url ? (
-                  <ProfileAvatar
-                    imageUrl={cm.logo.url}
-                    size={80}
-                    style={[
-                      { borderRadius: 80 },
-                    ]}
-                    imageStyle={{ borderRadius: 80 }}
-                  />
-                ) : (
-                  <TeamShield
-                    initials={cm?.name ? getClubInitials(cm?.name) : ''}
-                  />
-                )}
-              </View>
+            <View style={{ marginTop: -32, zIndex: 1 }}>
+              {cm?.logo?.url ? (
+                <ProfileAvatar
+                  imageStyle={{ borderRadius: 80 }}
+                  imageUrl={cm.logo.url}
+                  size={80}
+                  style={[
+                    { borderRadius: 80 },
+                  ]}
+                />
+              ) : (
+                <TeamShield
+                  initials={cm?.name ? getClubInitials(cm?.name) : ''}
+                />
+              )}
+            </View>
 
             <View style={[Spaces.gap[4], Alignments.alignCenter]}>
               <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
@@ -247,7 +251,7 @@ function MultisportClubDetails({ navigation, route }) {
                   </TouchableOpacity>
                 </View>
               )}
-          </View>
+            </View>
           </View>
 
           {/* Sponsors */}
@@ -267,19 +271,19 @@ function MultisportClubDetails({ navigation, route }) {
                 )}
               </View>
               <ScrollView
+                contentContainerStyle={[Spaces.gap[16]]}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[Spaces.gap[16]]}
               >
                 {sponsors.map((sponsor, idx) => (
                   <SponsorLogoTile
-                    key={sponsor.link || idx}
+                    height={55}
                     imageUrl={sponsor.logo?.url}
+                    key={sponsor.link || idx}
                     link={sponsor.link}
                     title={sponsor.title}
-                    width={110}
-                    height={55}
                     titleStyle={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 4, textAlign: 'center' }]}
+                    width={110}
                   />
                 ))}
               </ScrollView>
@@ -310,7 +314,9 @@ function MultisportClubDetails({ navigation, route }) {
           {sections.length > 0 && (
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                Sections ({sections.length})
+                Sections (
+                {sections.length}
+                )
               </Text>
               <View style={[Spaces.gap[12]]}>
                 {sections.map((section) => (
@@ -328,10 +334,10 @@ function MultisportClubDetails({ navigation, route }) {
                   >
                     {section.logo?.url ? (
                       <ProfileAvatar
+                        imageStyle={{ borderRadius: 25 }}
                         imageUrl={section.logo.url}
                         size={50}
                         style={{ borderRadius: 25 }}
-                        imageStyle={{ borderRadius: 25 }}
                       />
                     ) : (
                       <TeamShield
@@ -350,7 +356,10 @@ function MultisportClubDetails({ navigation, route }) {
                       )}
                       {section.teams && (
                         <Text style={[Fonts.p3, Fonts.neutral00]}>
-                          {section.teams.length} équipe{section.teams.length > 1 ? 's' : ''}
+                          {section.teams.length}
+                          {' '}
+                          équipe
+                          {section.teams.length > 1 ? 's' : ''}
                         </Text>
                       )}
                     </View>
@@ -396,7 +405,6 @@ function MultisportClubDetails({ navigation, route }) {
               </View>
             </View>
           )}
-
 
         </WithDataWrapper>
       </ScrollView>

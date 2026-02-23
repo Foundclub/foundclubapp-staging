@@ -32,4 +32,3 @@ export const requireDocumentId = (entityOrId, label = 'entity') => {
   }
   return resolvedId;
 };
-

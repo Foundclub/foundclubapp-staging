@@ -1,26 +1,29 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isBefore, startOfDay } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { startOfDay, isBefore } from 'date-fns';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 
-import useTheme from '@/theme/themeContext';
-
-import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import DateSlider from '@/components/molecules/dateSlider/DateSlider';
-import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
-
-import { useAppContext } from '@/store/appContext';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetReservations, useGetFeaturedReservations } from '@/services/reservation/reservationQueries';
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-import { horizontalScale } from '@/theme/scaling';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { useAppContext } from '@/store/appContext';
+import { horizontalScale } from '@/theme/scaling';
+import useTheme from '@/theme/themeContext';
+
+import DateSlider from '@/components/molecules/dateSlider/DateSlider';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
+import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
+import { useGetFeaturedReservations, useGetReservations } from '@/services/reservation/reservationQueries';
 import { useSearchReservations } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
@@ -44,11 +47,11 @@ function ReservationListContent({ showFilters = false }) {
 
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
-  
+
   // State for JoinEventModal - SAME as EventListContent
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
-  
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedActivity, setSelectedActivity] = useState(/** @type {string | null} */ (null)); // Activity quick filter
   const [{ reservationFilters }, appDispatch] = useAppContext();
@@ -60,11 +63,21 @@ function ReservationListContent({ showFilters = false }) {
 
   // Activity options for quick filters
   const activityOptions = [
-    { id: 'all', label: 'Tous', emoji: '🎯', slug: null },
-    { id: 'padel', label: 'Padel', emoji: '🎾', slug: 'padel' },
-    { id: 'foot', label: 'Foot 5', emoji: '⚽', slug: 'foot' },
-    { id: 'tennis', label: 'Tennis', emoji: '🎾', slug: 'tennis' },
-    { id: 'basket', label: 'Basket', emoji: '🏀', slug: 'basket' },
+    {
+      emoji: '🎯', id: 'all', label: 'Tous', slug: null,
+    },
+    {
+      emoji: '🎾', id: 'padel', label: 'Padel', slug: 'padel',
+    },
+    {
+      emoji: '⚽', id: 'foot', label: 'Foot 5', slug: 'foot',
+    },
+    {
+      emoji: '🎾', id: 'tennis', label: 'Tennis', slug: 'tennis',
+    },
+    {
+      emoji: '🏀', id: 'basket', label: 'Basket', slug: 'basket',
+    },
   ];
 
   // SAME mutation as EventListContent
@@ -86,7 +99,7 @@ function ReservationListContent({ showFilters = false }) {
   // Handlers - SAME as EventListContent
   const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
-      navigation.navigate('EventStack', { screen: 'EventDetails', params: { eventId: item.documentId } });
+      navigation.navigate('EventStack', { params: { eventId: item.documentId }, screen: 'EventDetails' });
     }
   }, [navigation]);
 
@@ -162,8 +175,8 @@ function ReservationListContent({ showFilters = false }) {
 
   const {
     data: featuredData,
-    isLoading: isFeaturedLoading,
     error: featuredError,
+    isLoading: isFeaturedLoading,
     refetch: refetchFeatured,
   } = useGetFeaturedReservations();
 
@@ -181,9 +194,7 @@ function ReservationListContent({ showFilters = false }) {
         events = items;
       }
 
-      const validEvents = events.filter((/** @type {FCEvent} */ event) => {
-        return event && typeof event === 'object' && (event.documentId || event.id);
-      });
+      const validEvents = events.filter((/** @type {FCEvent} */ event) => event && typeof event === 'object' && (event.documentId || event.id));
 
       const futureEvents = validEvents.filter((/** @type {FCEvent} */ event) => {
         if (!event.date) return false;
@@ -280,7 +291,7 @@ function ReservationListContent({ showFilters = false }) {
   const renderItem = useCallback(({ item }) => {
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
     const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
-    
+
     return (
       <View style={[Spaces.gap[8]]}>
         {primaryReasonLabel ? (
@@ -347,8 +358,8 @@ function ReservationListContent({ showFilters = false }) {
             {t('reservation.featured')}
           </Text>
           <ScrollView
-            horizontal
             contentContainerStyle={[{ paddingVertical: 10 }, Spaces.gap[16]]}
+            horizontal
             showsHorizontalScrollIndicator={false}
           >
             {featuredReservations.map((item) => {
@@ -356,15 +367,15 @@ function ReservationListContent({ showFilters = false }) {
               const cardWidth = Dimensions.get('window').width - horizontalScale(48);
               return (
                 <View key={item?.documentId || Math.random()} style={{ width: cardWidth }}>
-      <EventCardNew
-        actionLabel={isManager ? t('eventList.actions.about') : undefined}
-        item={item}
-        onDecline={() => {}}
-        onJoin={() => {}}
-        onLogin={() => {}}
-        onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
-        onPress={handleCardPress}
-      />
+                  <EventCardNew
+                    actionLabel={isManager ? t('eventList.actions.about') : undefined}
+                    item={item}
+                    onDecline={() => {}}
+                    onJoin={() => {}}
+                    onLogin={() => {}}
+                    onParticipate={isManager ? handleCardPress : () => handleJoinEvent(item)}
+                    onPress={handleCardPress}
+                  />
                 </View>
               );
             })}
@@ -378,8 +389,8 @@ function ReservationListContent({ showFilters = false }) {
           Réservation à partir de
         </Text>
         <DateSlider
-          selectedDate={selectedDate}
           onDateSelected={handleDateSelected}
+          selectedDate={selectedDate}
         />
       </View>
 
@@ -389,13 +400,13 @@ function ReservationListContent({ showFilters = false }) {
           Filtrer par activité
         </Text>
         <ScrollView
+          contentContainerStyle={{ gap: 8 }}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
         >
           {activityOptions.map((activity) => {
-            const isSelected = selectedActivity === activity.slug || 
-              (activity.slug === null && selectedActivity === null);
+            const isSelected = selectedActivity === activity.slug
+              || (activity.slug === null && selectedActivity === null);
             return (
               <Pressable
                 key={activity.id}
@@ -408,8 +419,11 @@ function ReservationListContent({ showFilters = false }) {
                 <Text style={[
                   localStyles.activityChipText,
                   isSelected && { color: Colors.neutral900 },
-                ]}>
-                  {activity.emoji} {activity.label}
+                ]}
+                >
+                  {activity.emoji}
+                  {' '}
+                  {activity.label}
                 </Text>
               </Pressable>
             );
@@ -443,11 +457,12 @@ function ReservationListContent({ showFilters = false }) {
       >
         <View style={[Alignments.fill]}>
           <FlashList
+            contentContainerStyle={{ paddingBottom: 100 }}
             data={displayedReservations}
             estimatedItemSize={200}
+            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
             keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
             ListEmptyComponent={renderEmptyList}
-            ListHeaderComponent={renderHeader}
             ListFooterComponent={activeFetchingNext ? (
               <ActivityIndicator
                 color={Colors.primary500}
@@ -455,14 +470,13 @@ function ReservationListContent({ showFilters = false }) {
                 style={Spaces.marginVertical[16]}
               />
             ) : null}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+            ListHeaderComponent={renderHeader}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={handleRefresh}
             refreshing={activeLoading && !activeFetchingNext}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
           />
         </View>
       </WithDataWrapper>
@@ -481,17 +495,17 @@ function ReservationListContent({ showFilters = false }) {
 
 const localStyles = StyleSheet.create({
   activityChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   activityChipText: {
+    color: '#FFFFFF',
     fontFamily: 'Montserrat-SemiBold',
     fontSize: 13,
-    color: '#FFFFFF',
   },
 });
 

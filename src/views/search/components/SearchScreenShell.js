@@ -155,7 +155,9 @@ function SearchScreenShell({
             description={tutorialSteps.header.description}
             id={tutorialSteps.header.id}
             order={tutorialSteps.header.order}
-            spotlight={{ borderRadius: 14, overlayOpacity: 0.4, paddingX: 4, paddingY: 2 }}
+            spotlight={{
+              borderRadius: 14, overlayOpacity: 0.4, paddingX: 4, paddingY: 2,
+            }}
             style={[Alignments.grow1, Alignments.alignCenter]}
             title={tutorialSteps.header.title}
           >
@@ -217,7 +219,9 @@ function SearchScreenShell({
           description={tutorialSteps.switcher.description}
           id={tutorialSteps.switcher.id}
           order={tutorialSteps.switcher.order}
-          spotlight={{ borderRadius: 14, overlayOpacity: 0.4, paddingX: 2, paddingY: 2 }}
+          spotlight={{
+            borderRadius: 14, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+          }}
           title={tutorialSteps.switcher.title}
         >
           <View

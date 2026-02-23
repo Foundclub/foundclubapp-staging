@@ -1,5 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -11,14 +13,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import {
   markOnboardingComplete,
   USER_ROLES,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
-import { RouteNames } from '@/navigation/routeNames';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -31,9 +31,13 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetClubs } from '@/services/club/clubQueries';
 import { createClubRequest } from '@/services/clubRequest/clubRequestService';
 import { useGetTeams } from '@/services/team/teamQueries';
+
+import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 
 const DEBOUNCE_MS = 300;
 const RESULT_CARD_MIN_HEIGHT = 96;
@@ -377,13 +381,13 @@ function UserAffiliationGuideContent({ navigation }) {
           )}
         id={wrapperId}
         order={2}
-        style={Spaces.marginBottom[12]}
         spotlight={{
           borderRadius: 18,
           overlayOpacity: 0.42,
           paddingX: 2,
           paddingY: 3,
         }}
+        style={Spaces.marginBottom[12]}
         title={isClubFlow
           ? t('onboardingAffiliation.tutorial.stepResultTitleClub', 'Selectionner un club')
           : t('onboardingAffiliation.tutorial.stepResultTitleTeam', 'Selectionner une equipe')}

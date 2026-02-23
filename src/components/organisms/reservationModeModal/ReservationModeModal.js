@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import {
+  Modal, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -17,12 +19,14 @@ import Button from '@/components/atoms/button/Button';
  */
 function ReservationModeModal({
   isVisible,
-  reservation,
   onClose,
   onConfirm,
+  reservation,
 }) {
   const { t } = useTranslation();
-  const { Alignments, ApplicationStyle, Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
 
   const [selectedMode, setSelectedMode] = useState(null);
   const [error, setError] = useState('');
@@ -33,10 +37,10 @@ function ReservationModeModal({
       return;
     }
 
-    const playerCount = selectedMode === 'FULL_GROUP' 
+    const playerCount = selectedMode === 'FULL_GROUP'
       ? (reservation?.totalPlayers || 10)
       : 1;
-    
+
     onConfirm(selectedMode, playerCount);
 
     // Reset state
@@ -63,22 +67,25 @@ function ReservationModeModal({
     >
       <View
         style={{
-          flex: 1,
           alignItems: 'center',
-          justifyContent: 'center',
           backgroundColor: 'rgba(0,0,0,0.7)',
+          flex: 1,
+          justifyContent: 'center',
         }}
       >
         <View
           style={{
             backgroundColor: '#173844',
             borderRadius: 24,
-            padding: 32,
             gap: 24,
+            padding: 32,
             width: '85%',
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff', textAlign: 'center' }}>
+          <Text style={{
+            color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign: 'center',
+          }}
+          >
             Comment souhaitez-vous participer ?
           </Text>
 
@@ -89,16 +96,16 @@ function ReservationModeModal({
               setError('');
             }}
             style={{
-              padding: 16,
+              borderColor: selectedMode === 'FULL_GROUP' ? '#00D1FF' : '#555',
               borderRadius: 16,
               borderWidth: 2,
-              borderColor: selectedMode === 'FULL_GROUP' ? '#00D1FF' : '#555',
+              padding: 16,
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
               Je viens avec mon groupe complet
             </Text>
-            <Text style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+            <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
               Tous les joueurs sont déjà trouvés
             </Text>
           </TouchableOpacity>
@@ -110,23 +117,23 @@ function ReservationModeModal({
               setError('');
             }}
             style={{
-              padding: 16,
+              borderColor: selectedMode === 'RECRUITING' ? '#00D1FF' : '#555',
               borderRadius: 16,
               borderWidth: 2,
-              borderColor: selectedMode === 'RECRUITING' ? '#00D1FF' : '#555',
+              padding: 16,
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
               Je cherche des joueurs
             </Text>
-            <Text style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+            <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
               D'autres joueurs peuvent rejoindre
             </Text>
           </TouchableOpacity>
 
           {/* Message d'erreur */}
           {error ? (
-            <Text style={{ fontSize: 14, color: '#ff4444', textAlign: 'center' }}>
+            <Text style={{ color: '#ff4444', fontSize: 14, textAlign: 'center' }}>
               {error}
             </Text>
           ) : null}
@@ -136,26 +143,26 @@ function ReservationModeModal({
             <TouchableOpacity
               onPress={handleClose}
               style={{
+                alignItems: 'center',
+                backgroundColor: 'transparent',
+                borderColor: '#00D1FF',
+                borderRadius: 12,
+                borderWidth: 1,
                 flex: 1,
                 padding: 16,
-                borderRadius: 12,
-                backgroundColor: 'transparent',
-                borderWidth: 1,
-                borderColor: '#00D1FF',
-                alignItems: 'center',
               }}
             >
               <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>Annuler</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={handleConfirm}
               disabled={!selectedMode}
+              onPress={handleConfirm}
               style={{
+                alignItems: 'center',
+                backgroundColor: selectedMode ? '#00D1FF' : '#555',
+                borderRadius: 12,
                 flex: 1,
                 padding: 16,
-                borderRadius: 12,
-                backgroundColor: selectedMode ? '#00D1FF' : '#555',
-                alignItems: 'center',
               }}
             >
               <Text style={{ color: '#000', fontWeight: 'bold' }}>Confirmer</Text>

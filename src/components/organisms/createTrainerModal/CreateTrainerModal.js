@@ -78,7 +78,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
       onClose();
       Alert.alert(
         t('common.success', 'Succes'),
-        t('addCoach.alerts.success.title', 'Entraineur ajoute avec succes')
+        t('addCoach.alerts.success.title', 'Entraineur ajoute avec succes'),
       );
     },
   });
@@ -87,7 +87,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
     (data) => {
       createTrainerMutation.mutate(data);
     },
-    [createTrainerMutation]
+    [createTrainerMutation],
   );
 
   const handleClose = useCallback(() => {
@@ -103,7 +103,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
       transparent
       visible={isVisible}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'flex-end' }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ justifyContent: 'flex-end', width: '100%' }}

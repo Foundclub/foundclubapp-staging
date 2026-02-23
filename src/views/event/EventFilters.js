@@ -16,8 +16,6 @@ import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
-
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -25,17 +23,20 @@ import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetClubs } from '@/services/club/clubQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
+import {
+  createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert,
+} from '@/services/searchAlert/searchAlertService';
 import { useGetTeams } from '@/services/team/teamQueries';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getFieldError } from '@/utils/form/formUtils';
-
-import { createSearchAlert, getPreviewCount, getSearchAlerts, updateSearchAlert } from '@/services/searchAlert/searchAlertService';
-import { RouteNames } from '@/navigation/routeNames';
 
 /** @typedef {{ label: string; value: string }} Option */
 /**
@@ -91,8 +92,8 @@ function EventFilters({ navigation }) {
   const createAlertMode = routeParams.createAlertMode || false;
   const editAlertMode = routeParams.editAlertMode || false;
   const initialAlertLabel = routeParams.alertLabel || '';
-  const alertDocumentId = routeParams.alertDocumentId;
-  const savedFilters = routeParams.savedFilters;
+  const { alertDocumentId } = routeParams;
+  const { savedFilters } = routeParams;
 
   const isAlertMode = createAlertMode || editAlertMode;
 
@@ -106,7 +107,7 @@ function EventFilters({ navigation }) {
   const [selectedClub, setSelectedClub] = useState('');
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
-  const [infoModalContent, setInfoModalContent] = useState({ title: '', content: '' });
+  const [infoModalContent, setInfoModalContent] = useState({ content: '', title: '' });
 
   // Alert State
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
@@ -153,10 +154,10 @@ function EventFilters({ navigation }) {
   const {
     control,
     formState: { errors: formErrors },
+    getValues,
     handleSubmit,
     setValue,
     watch,
-    getValues,
   } = useForm({
     defaultValues,
     mode: 'onBlur',
@@ -181,8 +182,8 @@ function EventFilters({ navigation }) {
   useEffect(() => {
     if (isAlertMode) {
       navigation.setOptions({
-        headerTitle: editAlertMode ? 'Modifier l\'alerte' : 'Créer une alerte',
         headerRight: () => null,
+        headerTitle: editAlertMode ? 'Modifier l\'alerte' : 'Créer une alerte',
       });
     }
   }, [isAlertMode, editAlertMode, navigation]);
@@ -191,7 +192,7 @@ function EventFilters({ navigation }) {
     if (!isAlertMode) {
       navigation.setOptions({
         headerRight: () => (
-          <View style={{ marginRight: 16, alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', marginRight: 16 }}>
             <TouchableOpacity
               onPress={handleOpenSaveModal}
               style={{
@@ -210,14 +211,14 @@ function EventFilters({ navigation }) {
 
   const handleCreateAlert = async () => {
     if (!alertLabel.trim()) return;
-    
+
     // Validate city and radius
     const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
     if (!currentFilters.city?.value || !currentFilters.radius) {
       Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
       return;
     }
-    
+
     setIsCreatingAlert(true);
     try {
       // Generate geohash for location filtering
@@ -234,17 +235,17 @@ function EventFilters({ navigation }) {
 
       if (editAlertMode && alertDocumentId) {
         await updateSearchAlert(alertDocumentId, {
-          label: alertLabel,
           filters: filtersToSave,
           isActive: true,
+          label: alertLabel,
         });
         Alert.alert('Succès', 'Alerte modifiée avec succès !');
       } else {
         await createSearchAlert({
-          label: alertLabel,
           filters: filtersToSave,
-          type: 'event', // Add type field
           isActive: true,
+          label: alertLabel,
+          type: 'event', // Add type field
         });
         Alert.alert('Succès', 'Alerte créée avec succès !');
       }
@@ -433,7 +434,7 @@ function EventFilters({ navigation }) {
   // Direct alert creation for createAlertMode (without modal, uses screen as alert name input)
   const handleSaveAlert = async () => {
     const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
-    
+
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
       Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
@@ -447,20 +448,20 @@ function EventFilters({ navigation }) {
       // Auto-generate alert name based on type + city
       const cityName = currentFilters.city?.label || 'Recherche';
       const baseLabel = `Événement · ${cityName}`;
-      
+
       // Check for duplicates and add suffix if needed
       try {
         const existingAlerts = await getSearchAlerts();
         const alerts = existingAlerts.data || [];
         let duplicateCount = 0;
-        
+
         alerts.forEach((/** @type {{ label?: string }} */ alert) => {
           const label = alert.label || '';
-          if (label === baseLabel || label.startsWith(baseLabel + ' (')) {
+          if (label === baseLabel || label.startsWith(`${baseLabel} (`)) {
             duplicateCount++;
           }
         });
-        
+
         const finalLabel = duplicateCount > 0 ? `${baseLabel} (${duplicateCount + 1})` : baseLabel;
         setAlertLabel(finalLabel);
       } catch (error) {
@@ -468,7 +469,7 @@ function EventFilters({ navigation }) {
         setAlertLabel(baseLabel);
       }
     }
-    
+
     // Show modal to confirm/edit alert name
     setIsSaveModalVisible(true);
     // Fetch preview count
@@ -482,7 +483,7 @@ function EventFilters({ navigation }) {
   };
 
   const openInfoModal = (/** @type {string} */ title, /** @type {string} */ content) => {
-    setInfoModalContent({ title, content });
+    setInfoModalContent({ content, title });
     setInfoModalVisible(true);
   };
 
@@ -490,18 +491,20 @@ function EventFilters({ navigation }) {
     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], Spaces.marginBottom[8]]}>
       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
       <TouchableOpacity
+        hitSlop={{
+          bottom: 10, left: 10, right: 10, top: 10,
+        }}
         onPress={() => openInfoModal(label, t(`eventFilters.infos.${infoKey}`))}
         style={{
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          backgroundColor: Colors.primary500 + '20',
-          borderWidth: 1.5,
-          borderColor: Colors.primary500,
           alignItems: 'center',
+          backgroundColor: `${Colors.primary500}20`,
+          borderColor: Colors.primary500,
+          borderRadius: 11,
+          borderWidth: 1.5,
+          height: 22,
           justifyContent: 'center',
+          width: 22,
         }}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Text style={{ color: Colors.primary500, fontSize: 13, fontWeight: '700' }}>i</Text>
       </TouchableOpacity>
@@ -548,7 +551,15 @@ function EventFilters({ navigation }) {
           />
           {previewCount !== null && (
             <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-              Pour le moment, {previewCount} événement{previewCount > 1 ? 's' : ''} correspond{previewCount > 1 ? 'ent' : ''}
+              Pour le moment,
+              {' '}
+              {previewCount}
+              {' '}
+              événement
+              {previewCount > 1 ? 's' : ''}
+              {' '}
+              correspond
+              {previewCount > 1 ? 'ent' : ''}
             </Text>
           )}
           <Button
@@ -619,8 +630,8 @@ function EventFilters({ navigation }) {
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: 'category' })}
               isMulti
-              label={t('eventFilters.fields.category.label')}
               isSearchable
+              label={t('eventFilters.fields.category.label')}
               options={categories}
               placeholder={t('eventFilters.fields.category.placeholder')}
               searchValue={categorySearchValue}
@@ -691,8 +702,8 @@ function EventFilters({ navigation }) {
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: 'level' })}
               isMulti
-              label={t('eventFilters.fields.level.label')}
               isSearchable
+              label={t('eventFilters.fields.level.label')}
               options={levels}
               placeholder={t('eventFilters.fields.level.placeholder')}
               searchValue={levelSearchValue}
@@ -739,8 +750,8 @@ function EventFilters({ navigation }) {
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: 'type' })}
               isMulti
-              label={t('eventFilters.fields.type.label')}
               isSearchable
+              label={t('eventFilters.fields.type.label')}
               options={types}
               placeholder={t('eventFilters.fields.type.placeholder')}
               searchValue={typeSearchValue}
@@ -804,7 +815,7 @@ function EventFilters({ navigation }) {
             />
             <Button
               onPress={handleSaveAlert}
-              title={editAlertMode ? "Enregistrer les modifications" : "Créer l'alerte ★"}
+              title={editAlertMode ? 'Enregistrer les modifications' : "Créer l'alerte ★"}
               variant="Primary"
             />
           </>

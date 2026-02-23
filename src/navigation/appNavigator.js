@@ -4,8 +4,8 @@ import { StatusBar } from 'react-native';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
-import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 import { navigationRef } from '@/navigation/navigationService';
+import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 
 import PublicNavigator from './public/PublicMainNavigator';
 import { RouteNames } from './routeNames';
@@ -31,14 +31,14 @@ function AppNavigator({ navigationIntegration }) {
   const linking = {
     config: {
       screens: {
-        [RouteNames.TeamDetails]: 'team/:teamId',
-        [RouteNames.SquadDetails]: 'squad/:teamId',
         [RouteNames.Club]: 'club/:clubId',
         [RouteNames.EventStack]: {
           screens: {
             [RouteNames.EventDetails]: 'event/:eventId',
           },
         },
+        [RouteNames.SquadDetails]: 'squad/:teamId',
+        [RouteNames.TeamDetails]: 'team/:teamId',
       },
     },
     prefixes: [

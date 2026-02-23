@@ -124,15 +124,23 @@ function SectionCard({
     <View
       style={[
         ApplicationStyle.card,
-        Spaces.padding[18],
-        Spaces.gap[14],
+        Spaces.padding[16],
+        Spaces.gap[12],
         {
-          backgroundColor: Colors.primary900,
-          borderColor: Colors.primary700,
+          backgroundColor: `${Colors.primary700}73`,
+          borderColor: `${Colors.primary500}80`,
         },
       ]}
     >
-      <Text style={[Fonts.h5Bold, Fonts.neutral00]}>{title}</Text>
+      <View style={[Spaces.gap[8]]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{title}</Text>
+        <View
+          style={[
+            ApplicationStyle.separator,
+            { backgroundColor: `${Colors.primary500}3D` },
+          ]}
+        />
+      </View>
       {children}
     </View>
   );
@@ -163,7 +171,13 @@ function InfoItem({
   Spaces,
   value,
 }) {
-  const isPlaceholder = value === '-';
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  const isPlaceholder = (
+    !normalizedValue
+    || normalizedValue === '-'
+    || normalizedValue === 'non renseigne'
+    || normalizedValue === 'non renseigné'
+  );
   const valueLines = fullWidth || compact ? 2 : 1;
 
   return (
@@ -171,11 +185,11 @@ function InfoItem({
       style={[
         Alignments.row,
         Alignments.alignStart,
-        Spaces.gap[10],
+        Spaces.gap[12],
         {
-          marginBottom: compact ? 12 : 16,
-          minHeight: compact ? 46 : 52,
-          paddingRight: 4,
+          marginBottom: compact ? 16 : 20,
+          minHeight: compact ? 54 : 60,
+          paddingRight: 6,
           width: fullWidth ? '100%' : '48%',
         },
       ]}
@@ -185,28 +199,30 @@ function InfoItem({
           Alignments.justifyCenter,
           Alignments.alignCenter,
           {
-            backgroundColor: Colors.primary700,
-            borderRadius: compact ? 16 : 18,
-            height: compact ? 32 : 36,
-            width: compact ? 32 : 36,
+            backgroundColor: `${Colors.primary700}BF`,
+            borderColor: `${Colors.primary500}80`,
+            borderRadius: compact ? 18 : 20,
+            borderWidth: 1,
+            height: compact ? 36 : 40,
+            width: compact ? 36 : 40,
           },
         ]}
       >
         <Image
           source={icon}
           style={{
-            height: compact ? 14 : 16,
+            height: compact ? 16 : 18,
             tintColor: Colors.primary500,
-            width: compact ? 14 : 16,
+            width: compact ? 16 : 18,
           }}
         />
       </View>
-      <View style={[Spaces.gap[2], { flex: 1 }]}>
-        <Text style={[Fonts.p2, Fonts.neutral300]}>{label}</Text>
+      <View style={[Spaces.gap[4], { flex: 1 }]}>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>{label}</Text>
         <Text
           numberOfLines={valueLines}
           style={[
-            isPlaceholder ? Fonts.p1 : Fonts.p1Bold,
+            isPlaceholder ? Fonts.p2 : Fonts.p1Bold,
             isPlaceholder ? Fonts.neutral300 : Fonts.neutral00,
           ]}
         >
@@ -285,7 +301,7 @@ function UserDetails({ navigation, route }) {
   const age = birthdate ? differenceInYears(new Date(), birthdate) : null;
   const roleLabel = formatRoleLabel(user?.role?.name);
   const sectionLabel = formatSectionLabel(user?.section?.name || user?.category);
-  const fallbackValue = '-';
+  const fallbackValue = t('userDetails.notSet', 'Non renseigne');
 
   const addressLabel = useMemo(() => parseAddressLabel(user?.address), [user?.address]);
 
@@ -379,7 +395,7 @@ function UserDetails({ navigation, route }) {
         Alignments.row,
         Alignments.alignCenter,
         Alignments.justifySpaceBetween,
-        Spaces.padding[10],
+        Spaces.padding[12],
         Spaces.gap[12],
       ]}
     >
@@ -435,7 +451,7 @@ function UserDetails({ navigation, route }) {
 
       <ScrollView
         contentContainerStyle={[
-          Spaces.gap[22],
+          Spaces.gap[24],
           { paddingBottom: scrollBottomPadding },
         ]}
         refreshControl={(
@@ -450,20 +466,20 @@ function UserDetails({ navigation, route }) {
         <WithDataWrapper
           error={profileError}
           isLoading={isProfileLoading}
-          wrapperStyle={[Spaces.gap[22]]}
+          wrapperStyle={[Spaces.gap[24]]}
         >
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[18],
+              Spaces.padding[16],
               Spaces.gap[16],
               {
-                backgroundColor: Colors.primary900,
-                borderColor: Colors.primary700,
+                backgroundColor: `${Colors.primary700}73`,
+                borderColor: `${Colors.primary500}80`,
               },
             ]}
           >
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[18]]}>
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
               <ProfileAvatar
                 enablePreview
                 imageStyle={{ borderRadius: 72 }}
@@ -522,7 +538,7 @@ function UserDetails({ navigation, route }) {
             Colors={Colors}
             Fonts={Fonts}
             Spaces={Spaces}
-            title={t('userDetails.sections.sport', 'Profil Sportif')}
+            title={t('userDetails.sections.sport', 'Profil sportif')}
           >
             <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
               <InfoItem
@@ -595,7 +611,7 @@ function UserDetails({ navigation, route }) {
             Colors={Colors}
             Fonts={Fonts}
             Spaces={Spaces}
-            title={t('userDetails.sections.personal', 'Infos Personnelles')}
+            title={t('userDetails.sections.personal', 'Infos personnelles')}
           >
             <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
               <InfoItem
@@ -614,7 +630,7 @@ function UserDetails({ navigation, route }) {
                 compact={isCompactScreen}
                 Fonts={Fonts}
                 icon={Images.calendar}
-                label={t('userDetails.fields.birthdate', 'Ne le')}
+                label={t('userDetails.fields.birthdate', 'Date de naissance')}
                 Spaces={Spaces}
                 value={birthdate ? format(birthdate, 'dd/MM/yyyy') : fallbackValue}
               />
@@ -701,7 +717,7 @@ function UserDetails({ navigation, route }) {
             Spaces={Spaces}
             title={t('userDetails.titles.teams', 'Equipes')}
           >
-            <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
                 {t('userDetails.teamGroups.player', 'Equipes joueur')}
               </Text>
@@ -713,7 +729,7 @@ function UserDetails({ navigation, route }) {
                   </Text>
                 )}
             </View>
-            <View style={[Spaces.gap[10], Spaces.marginTop[12]]}>
+            <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
                 {t('userDetails.teamGroups.coach', 'Equipes entrainees')}
               </Text>

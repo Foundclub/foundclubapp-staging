@@ -1,4 +1,5 @@
 import client from '@/services/client';
+
 import { areSameEntityId, getEntityDocumentId, requireDocumentId } from '@/utils/entityId';
 
 /**
@@ -69,8 +70,8 @@ export const cancelMatch = async (matchId, teamId, reason = 'captain_request') =
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const normalizedTeamId = requireDocumentId(teamId, 'team');
   const response = await client.post(`/league-matches/${normalizedMatchId}/cancel`, {
-    teamId: normalizedTeamId,
     reason,
+    teamId: normalizedTeamId,
   });
   return response.data;
 };
@@ -96,23 +97,22 @@ export const claimNoShow = async (matchId, teamId) => {
 export const getCancellationPenalty = (hoursUntilMatch) => {
   if (hoursUntilMatch < 24) {
     return {
-      penalty: 200,
-      message: 'ATTENTION: Forfait. Penalite de -200 ELO et defaite attribuee.',
       isSevere: true,
+      message: 'ATTENTION: Forfait. Penalite de -200 ELO et defaite attribuee.',
+      penalty: 200,
     };
-  } else if (hoursUntilMatch < 48) {
+  } if (hoursUntilMatch < 48) {
     return {
-      penalty: 50,
+      isSevere: false,
       message: 'Penalite de -50 ELO applicable.',
-      isSevere: false,
-    };
-  } else {
-    return {
-      penalty: 0,
-      message: 'Aucune penalite (annulation > 48h avant le match).',
-      isSevere: false,
+      penalty: 50,
     };
   }
+  return {
+    isSevere: false,
+    message: 'Aucune penalite (annulation > 48h avant le match).',
+    penalty: 0,
+  };
 };
 
 /**
@@ -125,19 +125,19 @@ export const fetchMatch = async (matchId) => {
   const response = await client.get(`/league-matches/${normalizedMatchId}`, {
     params: {
       populate: {
-        team_a: {
-          populate: ['captain', 'crest', 'roster']
-        },
-        team_b: {
-          populate: ['captain', 'crest', 'roster']
-        },
+        cancelled_by: true,
+        chat: true,
         participations_a: true,
         participations_b: true,
-        chat: true,
+        team_a: {
+          populate: ['captain', 'crest', 'roster'],
+        },
+        team_b: {
+          populate: ['captain', 'crest', 'roster'],
+        },
         winner: true,
-        cancelled_by: true,
-      }
-    }
+      },
+    },
   });
   return response.data?.data || response.data;
 };
@@ -169,10 +169,10 @@ export const getMatchHistory = async (teamId, limit = 10) => {
           { status: { $in: ['valid', 'cancelled', 'forfeit', 'no_show'] } },
         ],
       },
+      pagination: { limit },
       populate: ['team_a', 'team_a.crest', 'team_b', 'team_b.crest', 'winner'],
       sort: 'date:desc',
-      pagination: { limit }
-    }
+    },
   });
 
   const matches = response.data?.data || [];
@@ -185,7 +185,7 @@ export const getMatchHistory = async (teamId, limit = 10) => {
     const myScoreValue = Number.isFinite(Number(myScore)) ? Number(myScore) : 0;
     const opponentScoreValue = Number.isFinite(Number(opponentScore)) ? Number(opponentScore) : 0;
     const opponent = isTeamA ? match.team_b : match.team_a;
-    
+
     let result = 'pending';
     if (match.status === 'valid') {
       if (myScoreValue > opponentScoreValue) result = 'win';
@@ -199,14 +199,14 @@ export const getMatchHistory = async (teamId, limit = 10) => {
     }
 
     return {
-      id: getEntityDocumentId(match),
       date: match.date,
-      score_a: myScore,
-      score_b: opponentScore,
+      eloChange: result === 'win' ? 25 : result === 'loss' ? -25 : 0, // Approximation, real value in lifecycle
+      id: getEntityDocumentId(match),
       opponent,
       result,
+      score_a: myScore,
+      score_b: opponentScore,
       status: match.status,
-      eloChange: result === 'win' ? 25 : result === 'loss' ? -25 : 0 // Approximation, real value in lifecycle
     };
   });
 };
@@ -220,8 +220,8 @@ export const getMatch = async (matchId) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.get(`/league-matches/${normalizedMatchId}`, {
     params: {
-      populate: ['team_a', 'team_a.captain', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.crest', 'winner', 'chat']
-    }
+      populate: ['team_a', 'team_a.captain', 'team_a.crest', 'team_b', 'team_b.captain', 'team_b.crest', 'winner', 'chat'],
+    },
   });
   return response.data?.data || response.data;
 };
@@ -229,7 +229,7 @@ export const getMatch = async (matchId) => {
 /**
  * Request a rematch against a specific opponent
  * @param {string} teamId - Your team documentId
- * @param {string} opponentTeamId - Opponent team documentId  
+ * @param {string} opponentTeamId - Opponent team documentId
  * @param {string} [matchId] - Original match documentId (optional)
  */
 export const requestRematch = async (teamId, opponentTeamId, matchId = '') => {
@@ -237,9 +237,9 @@ export const requestRematch = async (teamId, opponentTeamId, matchId = '') => {
   const normalizedOpponentTeamId = requireDocumentId(opponentTeamId, 'opponentTeam');
   const normalizedMatchId = matchId ? requireDocumentId(matchId, 'match') : null;
   const response = await client.post('/matchmaking-request/rematch', {
-    teamId: normalizedTeamId,
     opponentTeamId: normalizedOpponentTeamId,
-    ...(normalizedMatchId ? { matchId: normalizedMatchId } : {})
+    teamId: normalizedTeamId,
+    ...(normalizedMatchId ? { matchId: normalizedMatchId } : {}),
   });
   return response.data;
 };
@@ -247,14 +247,14 @@ export const requestRematch = async (teamId, opponentTeamId, matchId = '') => {
 /**
  * Submit player goals for a match
  * @param {string} matchId - The match documentId
- * @param {Object} goals - Object mapping player documentIds to goal counts
+ * @param {object} goals - Object mapping player documentIds to goal counts
  */
 export const submitPlayerGoals = async (matchId, goals) => {
   const normalizedMatchId = requireDocumentId(matchId, 'match');
   const response = await client.put(`/league-matches/${normalizedMatchId}`, {
     data: {
-      player_goals: goals
-    }
+      player_goals: goals,
+    },
   });
   return response.data;
 };
@@ -273,9 +273,9 @@ export const submitMatchProof = async (matchId, proof) => {
 
   const formData = new FormData();
   formData.append('proof', /** @type {any} */ ({
-    uri: proof.uri,
     name: proof.name || 'proof.jpg',
     type: proof.type || 'image/jpeg',
+    uri: proof.uri,
   }));
   if (proof?.source) {
     formData.append('source', proof.source);
@@ -320,9 +320,9 @@ export const submitMatchScore = async (
   }
 
   const payload = /** @type {Record<string, any>} */ ({
+    dispute: Boolean(dispute),
     score_a: normalizedScoreA,
     score_b: normalizedScoreB,
-    dispute: Boolean(dispute),
   });
 
   if (extras?.disputeType) {
@@ -337,4 +337,3 @@ export const submitMatchScore = async (
 
   return response.data;
 };
-

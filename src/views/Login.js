@@ -29,7 +29,7 @@ function Login({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const {
-    canShowCodeButton, confirm, isLoading, loginMutation, otpMutation, isAddingAccount, cancelAddAccount,
+    cancelAddAccount, canShowCodeButton, confirm, isAddingAccount, isLoading, loginMutation, otpMutation,
   } = useAuth();
 
   /**

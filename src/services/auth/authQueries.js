@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import { getAllRoles, getMe, getUserById } from './authService';
 
 /**
@@ -8,8 +10,9 @@ import { getAllRoles, getMe, getUserById } from './authService';
  * @returns {import('@tanstack/react-query').UseQueryResult<User, Error>} The query result.
  */
 export const useGetMe = (options) => useQuery({
+  enabled: Boolean(getAuthTokens()?.token),
   queryFn: () => getMe(),
-  queryKey: ['get-me'],
+  queryKey: ['get-me', getAuthTokens()?.token || 'no-token'],
   ...options,
 });
 

@@ -1,23 +1,27 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ImageBackground, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
+import React from 'react';
+import {
+  Dimensions, ImageBackground, StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
 import 'dayjs/locale/fr';
 
 import useTheme from '@/theme/themeContext';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 // Field images (same as TacticalBoard)
 const FIELD_IMAGES = {
-  football: require('@/assets/fields/field_generic.png'),
-  rugby: require('@/assets/fields/field_rugby.png'),
   basket: require('@/assets/fields/field_basket.png'),
   basketball: require('@/assets/fields/field_basket.png'),
+  football: require('@/assets/fields/field_generic.png'),
+  generic: require('@/assets/fields/field_generic.png'),
   handball: require('@/assets/fields/field_handball.png'),
+  rugby: require('@/assets/fields/field_rugby.png'),
   volley: require('@/assets/fields/field_volley.png'),
   volleyball: require('@/assets/fields/field_volley.png'),
-  generic: require('@/assets/fields/field_generic.png'),
 };
 
 // Mini field dimensions
@@ -47,20 +51,20 @@ const MINI_TOKEN_SIZE = 24;
  * @param {boolean} [props.isMe] - Whether sent by current user
  * @returns {import('react').ReactElement | null}
  */
-const CompositionMessageBubble = ({ composition, isMe = false }) => {
+function CompositionMessageBubble({ composition, isMe = false }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const navigation = useNavigation();
 
   if (!composition) return null;
 
   const {
-    eventId,
     eventDate,
+    eventId,
     eventName,
+    manualPlayers = [],
+    placements = [],
     sport = 'football',
     sportContext,
-    placements = [],
-    manualPlayers = [],
     teamPlayers = [], // Team players for reconstruction
   } = composition;
 
@@ -75,68 +79,66 @@ const CompositionMessageBubble = ({ composition, isMe = false }) => {
   const handlePress = () => {
     // @ts-ignore - navigation types
     navigation.navigate(RouteNames.EventStack, {
-      screen: RouteNames.TacticalBoardV2,
       params: {
-        eventId,
-        sport,
-        readOnly: true,
         canEdit: false,
+        eventId,
         existingComposition: {
-          sportContext,
-          placements,
           manualPlayers,
+          placements,
+          sportContext,
         },
+        readOnly: true,
+        sport,
         // Pass ALL players (team + manual) for lookup
         players: allPlayers,
       },
+      screen: RouteNames.TacticalBoardV2,
     });
   };
 
   // Render mini tokens on the field
-  const renderMiniTokens = () => {
-    return placements.map((/** @type {CompositionPlacement} */ placement, /** @type {number} */ index) => {
-      const { playerId, positionX, positionY } = placement;
-      
-      // Find player data from all players (team + manual)
-      const player = allPlayers.find((/** @type {CompositionPlayer} */ p) => p.id === playerId || p.documentId === playerId);
-      const initials = player 
-        ? `${player.firstname?.charAt(0) || ''}${player.lastname?.charAt(0) || ''}`.toUpperCase()
-        : '?';
-      
-      // Convert percentage to actual position
-      const left = ((positionX || 0) / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
-      const top = ((positionY || 0) / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
+  const renderMiniTokens = () => placements.map((/** @type {CompositionPlacement} */ placement, /** @type {number} */ index) => {
+    const { playerId, positionX, positionY } = placement;
 
-      return (
-        <View
-          key={`${playerId}-${index}`}
-          style={[
-            styles.miniToken,
-            {
-              left,
-              top,
-              backgroundColor: Colors.primary500,
-            },
-          ]}
-        >
-          <Text style={[styles.miniTokenText, { color: '#FFF' }]}>
-            {initials}
-          </Text>
-        </View>
-      );
-    });
-  };
+    // Find player data from all players (team + manual)
+    const player = allPlayers.find((/** @type {CompositionPlayer} */ p) => p.id === playerId || p.documentId === playerId);
+    const initials = player
+      ? `${player.firstname?.charAt(0) || ''}${player.lastname?.charAt(0) || ''}`.toUpperCase()
+      : '?';
+
+    // Convert percentage to actual position
+    const left = ((positionX || 0) / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
+    const top = ((positionY || 0) / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
+
+    return (
+      <View
+        key={`${playerId}-${index}`}
+        style={[
+          styles.miniToken,
+          {
+            backgroundColor: Colors.primary500,
+            left,
+            top,
+          },
+        ]}
+      >
+        <Text style={[styles.miniTokenText, { color: '#FFF' }]}>
+          {initials}
+        </Text>
+      </View>
+    );
+  });
 
   return (
-    <TouchableOpacity 
-      onPress={handlePress}
+    <TouchableOpacity
       activeOpacity={0.85}
+      onPress={handlePress}
       style={[
         styles.container,
         {
+          alignSelf: isMe ? 'flex-end' : 'flex-start',
           backgroundColor: Colors.neutral800,
           borderColor: Colors.neutral700,
-          alignSelf: isMe ? 'flex-end' : 'flex-start',
         },
       ]}
     >
@@ -154,17 +156,20 @@ const CompositionMessageBubble = ({ composition, isMe = false }) => {
 
       {/* Mini Field */}
       <ImageBackground
-        source={fieldImage}
-        style={styles.miniField}
         imageStyle={styles.fieldImage}
         resizeMode="cover"
+        source={fieldImage}
+        style={styles.miniField}
       >
         {renderMiniTokens()}
-        
+
         {/* Player count badge */}
         <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
           <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-            {placements.length} joueur{placements.length > 1 ? 's' : ''}
+            {placements.length}
+            {' '}
+            joueur
+            {placements.length > 1 ? 's' : ''}
           </Text>
         </View>
       </ImageBackground>
@@ -177,60 +182,60 @@ const CompositionMessageBubble = ({ composition, isMe = false }) => {
       </View>
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    width: 250,
     borderRadius: 12,
-    overflow: 'hidden',
     borderWidth: 1,
     marginVertical: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  miniField: {
-    width: MINI_FIELD_WIDTH,
-    height: MINI_FIELD_HEIGHT,
-    alignSelf: 'center',
-    margin: 8,
-    borderRadius: 8,
     overflow: 'hidden',
+    width: 250,
+  },
+  countBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    position: 'absolute',
+    right: 6,
+    top: 6,
   },
   fieldImage: {
     borderRadius: 8,
   },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  miniField: {
+    alignSelf: 'center',
+    borderRadius: 8,
+    height: MINI_FIELD_HEIGHT,
+    margin: 8,
+    overflow: 'hidden',
+    width: MINI_FIELD_WIDTH,
+  },
   miniToken: {
+    alignItems: 'center',
+    borderColor: '#FFF',
+    borderRadius: MINI_TOKEN_SIZE / 2,
+    borderWidth: 2,
+    height: MINI_TOKEN_SIZE,
+    justifyContent: 'center',
     position: 'absolute',
     width: MINI_TOKEN_SIZE,
-    height: MINI_TOKEN_SIZE,
-    borderRadius: MINI_TOKEN_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
   },
   miniTokenText: {
     fontSize: 8,
     fontWeight: '700',
-  },
-  countBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 8,
   },
 });
 

@@ -15,11 +15,19 @@ import {
 
 let handlersRegistered = false;
 
-const resolvePushTitle = (remoteMessage, data) =>
-  remoteMessage?.notification?.title || data?.title || 'Rappel evenement';
+/**
+ * @param {any} remoteMessage
+ * @param {Record<string, any>} data
+ * @returns {string}
+ */
+const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel evenement';
 
-const resolvePushBody = (remoteMessage, data) =>
-  remoteMessage?.notification?.body
+/**
+ * @param {any} remoteMessage
+ * @param {Record<string, any>} data
+ * @returns {string}
+ */
+const resolvePushBody = (remoteMessage, data) => remoteMessage?.notification?.body
   || data?.body
   || 'Repondez rapidement: present ou absent.';
 
@@ -34,7 +42,7 @@ export const registerBackgroundHandler = () => {
 
   const messagingInstance = getMessaging(getApp());
 
-  setBackgroundMessageHandler(messagingInstance, async (remoteMessage) => {
+  setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
     try {
       const normalizedData = normalizeNotificationPayload(remoteMessage?.data || {});
       if (
@@ -68,6 +76,9 @@ export const registerBackgroundHandler = () => {
 
       if (type === EventType.PRESS && detail.notification?.data) {
         const normalizedData = normalizeNotificationPayload(detail.notification.data);
+        if (normalizedData?.type) {
+          console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_notifee_press`);
+        }
         storePendingOpenNotification(normalizedData);
       }
     } catch (error) {

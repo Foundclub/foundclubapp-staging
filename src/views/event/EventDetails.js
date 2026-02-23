@@ -20,10 +20,6 @@ import {
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
-import { RouteNames } from '@/navigation/routeNames';
-import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
-import { exportEventParticipants } from '@/services/event/eventService';
-import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -36,6 +32,12 @@ import RefuseParticipationModal from '@/components/organisms/refuseParticipation
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
+import { exportEventParticipants } from '@/services/event/eventService';
+import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
@@ -119,7 +121,9 @@ function EventDetails({ navigation, route }) {
   const { canEditEvent, canManageEvent, userData } = useAuth();
   const { sendMessage } = useMessaging();
 
-  const { data: event, error, isLoading, refetch } = useGetEvent(eventId);
+  const {
+    data: event, error, isLoading, refetch,
+  } = useGetEvent(eventId);
   const canEdit = Boolean(canManageEvent(event));
   const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
 
@@ -135,7 +139,7 @@ function EventDetails({ navigation, route }) {
 
   const { data: attendancePayload, refetch: refetchAttendance } = useGetEventAttendance(
     eventId || '',
-    { enabled: Boolean(eventId && isTeamMember) }
+    { enabled: Boolean(eventId && isTeamMember) },
   );
 
   const eventStartAt = useMemo(() => {
@@ -173,7 +177,7 @@ function EventDetails({ navigation, route }) {
   const { data: eventParticipations, refetch: refetchParticipations } = useGetEventParticipations(
     eventId || '',
     undefined,
-    { pageSize: 100 }
+    { pageSize: 100 },
   );
 
   const mutations = useEventMutations(eventId, refetch, refetchParticipations);
@@ -188,8 +192,8 @@ function EventDetails({ navigation, route }) {
       map[userDocId] = {
         arrivedAt: item?.attendance?.arrivedAt || null,
         lateMinutes: item?.attendance?.lateMinutes || 0,
-        source: item?.attendance?.source || null,
         manualOverride: Boolean(item?.attendance?.manualOverride),
+        source: item?.attendance?.source || null,
       };
     });
     return map;
@@ -205,12 +209,12 @@ function EventDetails({ navigation, route }) {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return false;
     return (event?.participations || []).some(
-      (participant) => participant?.documentId === currentUserId
+      (participant) => participant?.documentId === currentUserId,
     );
   }, [event?.participations, userData?.documentId]);
 
   const canSelfMarkArrival = Boolean(
-    isTeamMember && !canEdit && isCurrentUserParticipating
+    isTeamMember && !canEdit && isCurrentUserParticipating,
   );
   const hasSelfArrived = Boolean(myAttendance?.arrivedAt || selfArrivalMarkedLocal);
 
@@ -274,25 +278,24 @@ function EventDetails({ navigation, route }) {
 
   const allEventParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (eventParticipations?.pages?.[0]?.data || []),
-    [eventParticipations]
+    [eventParticipations],
   );
 
   const activeEventParticipations = useMemo(
     () => allEventParticipations.filter((participation) => participation?.isActive !== false),
-    [allEventParticipations]
+    [allEventParticipations],
   );
 
   const hasPendingRequest = useMemo(() => activeEventParticipations.some(
-    (participation) =>
-      participation.participationStatus === 'pending'
-      && participation.user.documentId === userData?.documentId
+    (participation) => participation.participationStatus === 'pending'
+      && participation.user.documentId === userData?.documentId,
   ), [activeEventParticipations, userData?.documentId]);
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
       activeEventParticipations.filter((participation) => participation.participationStatus === 'pending')
     ),
-    [activeEventParticipations]
+    [activeEventParticipations],
   );
 
   const teamParticipationSections = useMemo(() => {
@@ -332,10 +335,10 @@ function EventDetails({ navigation, route }) {
         const teamName = participation?.sourceTeam?.name || 'Equipe retiree';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
-          teamName,
           missing: [],
           participating: [],
           pending: [],
+          teamName,
         };
         if (participation.participationStatus === 'missing') {
           current.missing.push(participation.user);
@@ -449,8 +452,8 @@ function EventDetails({ navigation, route }) {
 
   const handleEditEvent = useCallback(() => {
     navigation.navigate(RouteNames.EventStack, {
-      screen: RouteNames.EventEdit,
       params: { eventId },
+      screen: RouteNames.EventEdit,
     });
   }, [eventId, navigation]);
 
@@ -478,8 +481,8 @@ function EventDetails({ navigation, route }) {
   const handleUserPress = (user) => {
     if (!user?.documentId) return;
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.UserDetails,
       params: { userId: user.documentId },
+      screen: RouteNames.UserDetails,
     });
   };
 
@@ -489,13 +492,13 @@ function EventDetails({ navigation, route }) {
 
     if (status === 'accepted') {
       Alert.alert(t('eventDetails.modals.accept.title'), '', [
-        { text: t('common.cancel'), onPress: () => setSelectedParticipationId(''), style: 'cancel' },
+        { onPress: () => setSelectedParticipationId(''), style: 'cancel', text: t('common.cancel') },
         {
-          text: t('common.confirm'),
           onPress: () => {
             mutations.acceptParticipationMutation.mutate(participationId);
             setSelectedParticipationId('');
           },
+          text: t('common.confirm'),
         },
       ]);
       return;
@@ -518,7 +521,7 @@ function EventDetails({ navigation, route }) {
 
   const handleDeleteParticipation = useCallback(() => {
     const myParticipation = activeEventParticipations.find(
-      (participation) => participation.user.documentId === userData?.documentId
+      (participation) => participation.user.documentId === userData?.documentId,
     );
 
     if (myParticipation?.documentId) {
@@ -526,13 +529,13 @@ function EventDetails({ navigation, route }) {
         t('eventDetails.modals.deleteParticipation.title'),
         t('eventDetails.modals.deleteParticipation.description'),
         [
-          { text: t('eventDetails.modals.deleteParticipation.actions.cancel'), style: 'cancel' },
+          { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
           {
-            text: t('eventDetails.modals.deleteParticipation.actions.confirm'),
             onPress: () => mutations.deleteParticipationMutation.mutate(myParticipation.documentId),
             style: 'destructive',
+            text: t('eventDetails.modals.deleteParticipation.actions.confirm'),
           },
-        ]
+        ],
       );
       return;
     }
@@ -542,9 +545,9 @@ function EventDetails({ navigation, route }) {
         t('eventDetails.modals.editResponse.title'),
         t('eventDetails.modals.editResponse.description'),
         [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('common.confirm'), onPress: () => handleParticipateToEvent(event) },
-        ]
+          { style: 'cancel', text: t('common.cancel') },
+          { onPress: () => handleParticipateToEvent(event), text: t('common.confirm') },
+        ],
       );
     }
   }, [activeEventParticipations, event, mutations, t, userData?.documentId]);
@@ -571,17 +574,17 @@ function EventDetails({ navigation, route }) {
     if (!eventId) return;
     if (event?.recurrenceGroupId) {
       Alert.alert(t('eventDetails.modals.recurrenceCancel.title'), t('eventDetails.modals.recurrenceCancel.description'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('this'), onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive' },
-        { text: t('future'), onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'future' }), style: 'destructive' },
-        { text: t('all'), onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'all' }), style: 'destructive' },
+        { style: 'cancel', text: t('common.cancel') },
+        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive', text: t('this') },
+        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'future' }), style: 'destructive', text: t('future') },
+        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'all' }), style: 'destructive', text: t('all') },
       ]);
       return;
     }
 
     Alert.alert(t('title'), t('desc'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('confirm'), onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive' },
+      { style: 'cancel', text: t('cancel') },
+      { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive', text: t('confirm') },
     ]);
   };
 
@@ -634,15 +637,15 @@ function EventDetails({ navigation, route }) {
 
     if (lateModalMode === 'mark') {
       mutations.coachArrivalMutation.mutate(
-        { eventId, userId: lateModalUser.documentId, payload },
-        { onSuccess: () => closeLateModal() }
+        { eventId, payload, userId: lateModalUser.documentId },
+        { onSuccess: () => closeLateModal() },
       );
       return;
     }
 
     mutations.updateLateMinutesMutation.mutate(
-      { eventId, userId: lateModalUser.documentId, payload },
-      { onSuccess: () => closeLateModal() }
+      { eventId, payload, userId: lateModalUser.documentId },
+      { onSuccess: () => closeLateModal() },
     );
   }, [
     closeLateModal,
@@ -672,6 +675,9 @@ function EventDetails({ navigation, route }) {
         payload: {},
       },
       {
+        onError: () => {
+          setSelfArrivalMarkedLocal(false);
+        },
         onSuccess: (response) => {
           const lateMinutesFromResponse = Math.max(0, Number(response?.data?.lateMinutes || 0));
           const arrivedAtRaw = response?.data?.arrivedAt || null;
@@ -680,7 +686,7 @@ function EventDetails({ navigation, route }) {
           const hasValidTimestamps = Boolean(
             eventStartMs
             && !Number.isNaN(eventStartMs)
-            && !Number.isNaN(arrivedAtMs)
+            && !Number.isNaN(arrivedAtMs),
           );
 
           let message = t('eventDetails.late.selfOnTime', 'Arrivee enregistree a l heure.');
@@ -700,10 +706,7 @@ function EventDetails({ navigation, route }) {
 
           Alert.alert(t('common.success'), message);
         },
-        onError: () => {
-          setSelfArrivalMarkedLocal(false);
-        },
-      }
+      },
     );
   }, [eventId, eventStartAt, hasSelfArrived, mutations.selfArrivalMutation, t]);
 
@@ -768,7 +771,7 @@ function EventDetails({ navigation, route }) {
       if (isTeamMember) {
         refetchAttendance();
       }
-    }, [isTeamMember, refetch, refetchAttendance, refetchParticipations])
+    }, [isTeamMember, refetch, refetchAttendance, refetchParticipations]),
   );
 
   useLayoutEffect(() => {
@@ -862,8 +865,8 @@ function EventDetails({ navigation, route }) {
         ) : null}
         {canSelfMarkArrival && (
           <Button
-            icon="check"
             disabled={mutations.selfArrivalMutation.isPending}
+            icon="check"
             isLoading={mutations.selfArrivalMutation.isPending}
             onPress={handleSelfArrival}
             title={hasSelfArrived
@@ -878,7 +881,7 @@ function EventDetails({ navigation, route }) {
               <Button
                 icon="check"
                 isOption
-                onPress={() => mutations.updateEventMutation.mutate({ documentId: eventId, eventData: { isFeatured: true, featuredRequestStatus: 'approved' } })}
+                onPress={() => mutations.updateEventMutation.mutate({ documentId: eventId, eventData: { featuredRequestStatus: 'approved', isFeatured: true } })}
                 style={{ flex: 1 }}
                 title="Valider"
                 variant="Primary"
@@ -908,7 +911,7 @@ function EventDetails({ navigation, route }) {
         isVisible={isRefuseModalVisible}
         onClose={() => setIsRefuseModalVisible(false)}
         onSubmit={(reason) => {
-          mutations.declineParticipationMutation.mutate({ requestId: selectedParticipationId, reason });
+          mutations.declineParticipationMutation.mutate({ reason, requestId: selectedParticipationId });
           setIsRefuseModalVisible(false);
         }}
       />
@@ -925,13 +928,13 @@ function EventDetails({ navigation, route }) {
       />
 
       <Modal
+        onRequestClose={() => setIsFeaturedModalVisible(false)}
         transparent
         visible={isFeaturedModalVisible}
-        onRequestClose={() => setIsFeaturedModalVisible(false)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
           onPress={() => setIsFeaturedModalVisible(false)}
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)', flex: 1, justifyContent: 'flex-end' }}
         >
           <View style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
             <Button
@@ -947,11 +950,11 @@ function EventDetails({ navigation, route }) {
       </Modal>
 
       <Modal
-        transparent
         animationType="fade"
-        statusBarTranslucent
-        visible={isLateModalVisible}
         onRequestClose={closeLateModal}
+        statusBarTranslucent
+        transparent
+        visible={isLateModalVisible}
       >
         <View style={[Alignments.fill, { backgroundColor: 'rgba(0,0,0,0.65)' }]}>
           <TouchableOpacity

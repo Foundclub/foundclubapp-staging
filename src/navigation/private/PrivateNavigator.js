@@ -3,32 +3,34 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import useAuth from '@/domains/auth/useAuth';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
-import { useAppMode } from '@/context/AppModeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
-import MercatoFilters from '@/views/mercato/MercatoFilters';
-import ReservationFilters from '@/views/reservation/ReservationFilters';
-import MissingPlayersView from '@/views/reservation/MissingPlayersView';
 import BookingCalendar from '@/views/booking/BookingCalendar';
-import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
-import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
-import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScreen';
+import AddSponsor from '@/views/club/AddSponsor';
+import Conversation from '@/views/Conversation';
+import EventFilters from '@/views/event/EventFilters';
+import FacilityForm from '@/views/facility/FacilityForm';
+import FacilityList from '@/views/facility/FacilityList';
+import MercatoFilters from '@/views/mercato/MercatoFilters';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
-import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
 import CMMembersScreen from '@/views/multisportClub/CMMembersScreen';
+import CMPlanningScreen from '@/views/multisportClub/CMPlanningScreen';
 import CMTeamsScreen from '@/views/multisportClub/CMTeamsScreen';
 import CreateSectionScreen from '@/views/multisportClub/CreateSectionScreen';
-import EventFilters from '@/views/event/EventFilters';
-import SearchAlerts from '@/views/search/SearchAlerts';
+import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScreen';
+import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
+import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
+import NewConversation from '@/views/NewConversation';
+import NotificationList from '@/views/notification/NotificationList';
 import UserAddress from '@/views/onboarding/UserAddress';
+import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
 import UserAvatar from '@/views/onboarding/UserAvatar';
 import UserBirthdate from '@/views/onboarding/UserBirthdate';
-import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
-import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserCategory from '@/views/onboarding/UserCategory';
+import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserLevel from '@/views/onboarding/UserLevel';
 import UserName from '@/views/onboarding/UserName';
 import UserPhysique from '@/views/onboarding/UserPhysique';
@@ -38,34 +40,38 @@ import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
-import Conversation from '@/views/Conversation';
-import NotificationList from '@/views/notification/NotificationList';
-import FacilityList from '@/views/facility/FacilityList';
-import FacilityForm from '@/views/facility/FacilityForm';
-import NewConversation from '@/views/NewConversation';
-import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
-import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
-import AdWizardStack from './stacks/AdWizardStack';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
-import AddSponsor from '@/views/club/AddSponsor';
+import RequestsHub from '@/views/requests/RequestsHub';
+import MissingPlayersView from '@/views/reservation/MissingPlayersView';
+import ReservationFilters from '@/views/reservation/ReservationFilters';
+import SearchAlerts from '@/views/search/SearchAlerts';
+import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
+import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
+import LeagueTabNavigator from './LeagueTabNavigator';
 import PrivateTabNavigator from './PrivateTabNavigator';
 import AdminStack from './stacks/AdminStack';
+import AdWizardStack from './stacks/AdWizardStack';
 import ClubStack from './stacks/ClubStack';
 import EventStack from './stacks/EventStack';
 import ProfileStack from './stacks/ProfileStack';
 import TeamStack from './stacks/TeamStack';
-import LeagueTabNavigator from './LeagueTabNavigator';
+import { useAppMode } from '@/context/AppModeContext';
 
 const Stack = createStackNavigator();
 
+/**
+ *
+ */
 function PrivateNavigator() {
-  const { Fonts, Spaces, Colors } = useTheme();
-  const { onboardingViews, userData, userDataLoading, userDataError } = useAuth();
+  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    onboardingViews, userData, userDataError, userDataLoading,
+  } = useAuth();
   const { isGold } = useAppMode();
   const { t } = useTranslation();
 
@@ -74,7 +80,11 @@ function PrivateNavigator() {
   const renderStepper = (routeName) => <Stepper currentStep={getStepNumber(routeName)} steps={getTotalSteps()} />;
   const renderStepperIndicator = (routeName) => (
     <View style={[Spaces.marginHorizontal[12]]}>
-      <Text style={[Fonts.p2, Fonts.neutral300]}>{getStepNumber(routeName)}/{getTotalSteps()}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral300]}>
+        {getStepNumber(routeName)}
+        /
+        {getTotalSteps()}
+      </Text>
     </View>
   );
 
@@ -83,7 +93,7 @@ function PrivateNavigator() {
       if (view.index < acc.index && view.canShow) { return view; }
       return acc;
     }, { index: 100, route: '' })?.route;
-    
+
     if (route) return route;
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
@@ -96,7 +106,10 @@ function PrivateNavigator() {
 
   if (userDataLoading) {
     return (
-      <View style={{ alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center' }}>
+      <View style={{
+        alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center',
+      }}
+      >
         <ActivityIndicator color={Colors.primary500 || '#000'} size="large" />
       </View>
     );
@@ -104,7 +117,10 @@ function PrivateNavigator() {
 
   if (userDataError) {
     return (
-      <View style={{ alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center', padding: 20 }}>
+      <View style={{
+        alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center', padding: 20,
+      }}
+      >
         <Text style={{ color: 'red' }}>Erreur de connexion</Text>
       </View>
     );
@@ -148,34 +164,33 @@ function PrivateNavigator() {
         options={{ headerShown: false }}
       />
 
-
       {/* Domain Stacks - These contain the refactored screens */}
       {/* Note: We use headerShown: false because the stacks manage their own headers */}
-      
+
       <Stack.Screen
         component={ProfileStack}
         name="ProfileStack"
         options={{ headerShown: false }}
       />
-      
+
       <Stack.Screen
         component={ClubStack}
         name="ClubStack"
         options={{ headerShown: false }}
       />
-      
+
       <Stack.Screen
         component={TeamStack}
         name="TeamStack"
         options={{ headerShown: false }}
       />
-      
+
       <Stack.Screen
         component={EventStack}
         name="EventStack"
         options={{ headerShown: false }}
       />
-      
+
       {userData?.role?.name === USER_ROLES.superAdmin ? (
         <Stack.Screen
           component={AdminStack}
@@ -333,6 +348,13 @@ function PrivateNavigator() {
           headerTitle: 'Notifications',
         }}
       />
+      <Stack.Screen
+        component={RequestsHub}
+        name={RouteNames.RequestsHub}
+        options={{
+          headerShown: false,
+        }}
+      />
 
       <Stack.Screen
         component={FacilityList}
@@ -347,9 +369,9 @@ function PrivateNavigator() {
         name={RouteNames.RecruitmentAdDetails}
         options={{
           ...commonOptions,
+          headerTintColor: '#fff',
           headerTitle: '',
           headerTransparent: true,
-          headerTintColor: '#fff',
         }}
       />
       <Stack.Screen

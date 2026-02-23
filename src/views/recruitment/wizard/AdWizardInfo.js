@@ -1,55 +1,62 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert, ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
-import { useAdWizard } from './AdWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
-import { useGetLevels } from '@/services/level/levelQueries';
+
 import { useGetCategories } from '@/services/category/categoryQueries';
+import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
-const AdWizardInfo = ({ navigation }) => {
-  const { Colors, Fonts, Spaces, Alignments, ApplicationStyle } = useTheme();
+import { useAdWizard } from './AdWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function AdWizardInfo({ navigation }) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
-  const { state, dispatch } = useAdWizard();
-  
+  const { dispatch, state } = useAdWizard();
+
   // Fetch options from API using queries (same pattern as EventFilters)
   const { data: allLevels } = useGetLevels();
   const { data: allCategories } = useGetCategories();
   const { data: allSections } = useGetSections();
 
   // Format options for AutocompleteSelect (same format as EventFilters)
-  const levels = useMemo(() => {
-    return allLevels?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-  }, [allLevels]);
+  const levels = useMemo(() => allLevels?.map(({ documentId, name }) => ({
+    label: name,
+    value: documentId || '',
+  })) || [], [allLevels]);
 
-  const categories = useMemo(() => {
-    return allCategories?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-  }, [allCategories]);
+  const categories = useMemo(() => allCategories?.map(({ documentId, name }) => ({
+    label: name,
+    value: documentId || '',
+  })) || [], [allCategories]);
 
-  const sections = useMemo(() => {
-    return allSections?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-  }, [allSections]);
+  const sections = useMemo(() => allSections?.map(({ documentId, name }) => ({
+    label: name,
+    value: documentId || '',
+  })) || [], [allSections]);
 
   const handleNext = () => {
     if (!state.address) {
       Alert.alert(
         t('common.errors.title', 'Erreur'),
-        t('adWizard.errors.missingAddress', 'Veuillez renseigner un lieu pour l\'annonce.')
+        t('adWizard.errors.missingAddress', 'Veuillez renseigner un lieu pour l\'annonce.'),
       );
       return;
     }
@@ -65,42 +72,43 @@ const AdWizardInfo = ({ navigation }) => {
   // Handle selection changes
   const handleSectionChange = useCallback((option) => {
     if (option && !Array.isArray(option)) {
-      const section = allSections?.find(s => s.documentId === option.value);
-      dispatch({ type: 'SET_SECTION', payload: section || null });
+      const section = allSections?.find((s) => s.documentId === option.value);
+      dispatch({ payload: section || null, type: 'SET_SECTION' });
     }
   }, [dispatch, allSections]);
 
   const handleCategoryChange = useCallback((option) => {
     if (option && !Array.isArray(option)) {
-      const category = allCategories?.find(c => c.documentId === option.value);
-      dispatch({ type: 'SET_CATEGORY', payload: category || null });
+      const category = allCategories?.find((c) => c.documentId === option.value);
+      dispatch({ payload: category || null, type: 'SET_CATEGORY' });
     }
   }, [dispatch, allCategories]);
 
   const handleLevelChange = useCallback((option) => {
     if (option && !Array.isArray(option)) {
-      const level = allLevels?.find(l => l.documentId === option.value);
-      dispatch({ type: 'SET_MIN_LEVEL', payload: level || null });
+      const level = allLevels?.find((l) => l.documentId === option.value);
+      dispatch({ payload: level || null, type: 'SET_MIN_LEVEL' });
     }
   }, [dispatch, allLevels]);
 
   return (
     <WizardStepLayout
-      title="Informations de l'annonce"
-      subtitle="Vérifiez et complétez les détails"
+      nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      nextLabel="Suivant"
+      subtitle="Vérifiez et complétez les détails"
+      title="Informations de l'annonce"
     >
       {/* Team info header */}
       <View style={{
-        backgroundColor: Colors.primary500 + '15',
+        backgroundColor: `${Colors.primary500}15`,
+        borderColor: Colors.primary500,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: Colors.primary500,
-        padding: 16,
         marginBottom: 24,
-      }}>
+        padding: 16,
+      }}
+      >
         <Text style={[Fonts.p3, { color: Colors.primary500, marginBottom: 2 }]}>
           Équipe sélectionnée
         </Text>
@@ -121,8 +129,9 @@ const AdWizardInfo = ({ navigation }) => {
           ApplicationStyle.input,
           Alignments.row,
           Alignments.alignCenter,
-          { opacity: 0.7 }
-        ]}>
+          { opacity: 0.7 },
+        ]}
+        >
           <Text style={[Fonts.p1, { color: Colors.primary500 }]}>{sportName}</Text>
         </View>
       </View>
@@ -133,8 +142,8 @@ const AdWizardInfo = ({ navigation }) => {
           label="Section"
           options={sections}
           placeholder="Sélectionner une section"
-          value={currentSectionValue}
           setValue={handleSectionChange}
+          value={currentSectionValue}
         />
       </View>
 
@@ -144,8 +153,8 @@ const AdWizardInfo = ({ navigation }) => {
           label="Catégorie"
           options={categories}
           placeholder="Sélectionner une catégorie"
-          value={currentCategoryValue}
           setValue={handleCategoryChange}
+          value={currentCategoryValue}
         />
       </View>
 
@@ -155,33 +164,36 @@ const AdWizardInfo = ({ navigation }) => {
           label="Niveau minimum recherché"
           options={levels}
           placeholder="Sélectionner un niveau"
-          value={currentLevelValue}
           setValue={handleLevelChange}
+          value={currentLevelValue}
         />
       </View>
 
       {/* Address - Using AutocompleteAddressInput */}
       <View style={[Spaces.marginBottom[24]]}>
         <AutocompleteAddressInput
-          label={
-            <Text>
-              Lieu (Stade, Ville...) <Text style={{ color: Colors.error500 }}>*</Text>
-            </Text>
-          }
-          placeholder="Rechercher une adresse"
           address={state.address}
-          setAddress={(addr) => dispatch({ type: 'SET_ADDRESS', payload: addr })}
+          label={(
+            <Text>
+              Lieu (Stade, Ville...)
+              {' '}
+              <Text style={{ color: Colors.error500 }}>*</Text>
+            </Text>
+          )}
+          placeholder="Rechercher une adresse"
+          setAddress={(addr) => dispatch({ payload: addr, type: 'SET_ADDRESS' })}
         />
       </View>
 
       {/* Info note */}
       <View style={{
-        padding: 14,
+        alignItems: 'center',
         backgroundColor: Colors.neutral800,
         borderRadius: 12,
         flexDirection: 'row',
-        alignItems: 'center',
-      }}>
+        padding: 14,
+      }}
+      >
         <Text style={{ fontSize: 16, marginRight: 10 }}>💡</Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
           Ces informations aident les joueurs à trouver votre annonce.
@@ -189,6 +201,6 @@ const AdWizardInfo = ({ navigation }) => {
       </View>
     </WizardStepLayout>
   );
-};
+}
 
 export default AdWizardInfo;

@@ -1,20 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
-import useTheme from '@/theme/themeContext';
 import useAuth from '@/domains/auth/useAuth';
+import useTheme from '@/theme/themeContext';
+
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
-import { useEventWizard } from './EventWizardContext';
+
 import { RouteNames } from '@/navigation/routeNames';
+
 import { getTeams } from '@/services/team/teamService';
 
-const EventWizardInvites = ({ navigation }) => {
+import { useEventWizard } from './EventWizardContext';
+
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ */
+function EventWizardInvites({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -24,7 +33,7 @@ const EventWizardInvites = ({ navigation }) => {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { state, dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -98,12 +107,12 @@ const EventWizardInvites = ({ navigation }) => {
   };
 
   const handleNext = () => {
-    dispatch({ type: 'SET_INVITES', payload: selectedTeams });
+    dispatch({ payload: selectedTeams, type: 'SET_INVITES' });
     navigation.navigate(RouteNames.EventWizardLogistics);
   };
 
   const handleSkip = () => {
-    dispatch({ type: 'SET_INVITES', payload: [] });
+    dispatch({ payload: [], type: 'SET_INVITES' });
     navigation.navigate(RouteNames.EventWizardLogistics);
   };
 
@@ -154,17 +163,17 @@ const EventWizardInvites = ({ navigation }) => {
 
   return (
     <WizardStepLayout
-      stepCount={10}
-      stepIndex={3}
-      title={t('eventWizard.steps.invites.title')}
-      subtitle={t('eventWizard.steps.invites.subtitle')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      showSkip
       onSkip={handleSkip}
+      showSkip
+      stepCount={10}
+      stepIndex={3}
+      subtitle={t('eventWizard.steps.invites.subtitle')}
+      title={t('eventWizard.steps.invites.title')}
     >
       {isLoading ? (
-        <ActivityIndicator size="large" color={Colors.primary500} />
+        <ActivityIndicator color={Colors.primary500} size="large" />
       ) : null}
 
       {!isLoading && hasFetchError ? (
@@ -210,6 +219,6 @@ const EventWizardInvites = ({ navigation }) => {
       ) : null}
     </WizardStepLayout>
   );
-};
+}
 
 export default EventWizardInvites;

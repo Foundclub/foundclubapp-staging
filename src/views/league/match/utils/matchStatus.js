@@ -1,10 +1,10 @@
 const FALLBACK_COLORS = {
-  primary: '#01B3F4',
-  warning: '#F59E0B',
-  success: '#22C55E',
   error: '#EF4444',
-  neutral: '#6B7280',
   gold: '#D4AF37',
+  neutral: '#6B7280',
+  primary: '#01B3F4',
+  success: '#22C55E',
+  warning: '#F59E0B',
 };
 const SCORE_UNLOCK_DELAY_MINUTES = 1;
 
@@ -88,9 +88,7 @@ export const isVenueBookedForMatch = (match, event = null) => {
  * @param {Record<string, any> | null} [event]
  * @returns {Date | null}
  */
-export const getMatchStartDate = (match, event = null) => {
-  return parseDate(event?.date || match?.date);
-};
+export const getMatchStartDate = (match, event = null) => parseDate(event?.date || match?.date);
 
 /**
  * @param {LeagueMatch | null} match
@@ -196,7 +194,7 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
 export const shouldMaskOpponentIdentity = (match, event = null) => {
   const phase = getMatchDerivedPhase(match, event);
   // Keep anonymity during all pre-result phases to reduce targeted cancellations.
-  return !['valid', 'cancelled', 'forfeit', 'no_show'].includes(phase);
+  return !['cancelled', 'forfeit', 'no_show', 'valid'].includes(phase);
 };
 
 /**
@@ -204,9 +202,9 @@ export const shouldMaskOpponentIdentity = (match, event = null) => {
  * @returns {boolean}
  */
 export const canCaptainSubmitScore = ({
-  match,
   event = null,
   isCaptain = false,
+  match,
   now = new Date(),
 }) => {
   if (!isCaptain || !match) return false;
@@ -222,11 +220,11 @@ export const canCaptainSubmitScore = ({
 export const shouldShowNextMatchCard = (match, event = null) => {
   const phase = getMatchDerivedPhase(match, event);
   return [
-    'waiting_venue',
     'confirmed_upcoming',
-    'waiting_score',
-    'pending_validation',
     'disputed',
+    'pending_validation',
+    'waiting_score',
+    'waiting_venue',
   ].includes(phase);
 };
 
@@ -240,28 +238,28 @@ export const shouldShowNextMatchCard = (match, event = null) => {
 export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now = new Date()) => {
   const phase = getMatchDerivedPhase(match, event, now);
   const palette = {
-    primary: colors.primary500 || FALLBACK_COLORS.primary,
-    warning: colors.warning500 || FALLBACK_COLORS.warning,
-    success: colors.success500 || FALLBACK_COLORS.success,
     error: colors.error500 || FALLBACK_COLORS.error,
-    neutral: colors.neutral500 || FALLBACK_COLORS.neutral,
     gold: colors.gold500 || FALLBACK_COLORS.gold,
+    neutral: colors.neutral500 || FALLBACK_COLORS.neutral,
+    primary: colors.primary500 || FALLBACK_COLORS.primary,
+    success: colors.success500 || FALLBACK_COLORS.success,
+    warning: colors.warning500 || FALLBACK_COLORS.warning,
   };
 
   /** @type {Record<string, {label: string, color: string, bg: string}>} */
   const map = {
-    waiting_proposal: { label: 'En attente accord', color: palette.warning, bg: withAlpha(palette.warning) },
-    waiting_venue: { label: 'En attente terrain', color: palette.warning, bg: withAlpha(palette.warning) },
-    confirmed_upcoming: { label: 'A venir', color: palette.primary, bg: withAlpha(palette.primary) },
-    waiting_score: { label: 'Score a saisir', color: palette.gold, bg: withAlpha(palette.gold) },
-    pending_validation: { label: 'Validation score', color: palette.warning, bg: withAlpha(palette.warning) },
-    disputed: { label: 'Litige', color: palette.error, bg: withAlpha(palette.error) },
-    valid: { label: 'Valide', color: palette.success, bg: withAlpha(palette.success) },
-    cancelled: { label: 'Annule', color: palette.error, bg: withAlpha(palette.error) },
-    forfeit: { label: 'Forfait', color: palette.error, bg: withAlpha(palette.error) },
-    no_show: { label: 'No-show', color: palette.error, bg: withAlpha(palette.error) },
+    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annule' },
+    confirmed_upcoming: { bg: withAlpha(palette.primary), color: palette.primary, label: 'A venir' },
+    disputed: { bg: withAlpha(palette.error), color: palette.error, label: 'Litige' },
+    forfeit: { bg: withAlpha(palette.error), color: palette.error, label: 'Forfait' },
+    no_show: { bg: withAlpha(palette.error), color: palette.error, label: 'No-show' },
+    pending_validation: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Validation score' },
+    valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Valide' },
+    waiting_proposal: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente accord' },
+    waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score a saisir' },
+    waiting_venue: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente terrain' },
   };
 
   if (map[phase]) return map[phase];
-  return { label: normalizeMatchStatus(match?.status) || 'inconnu', color: palette.neutral, bg: withAlpha(palette.neutral) };
+  return { bg: withAlpha(palette.neutral), color: palette.neutral, label: normalizeMatchStatus(match?.status) || 'inconnu' };
 };

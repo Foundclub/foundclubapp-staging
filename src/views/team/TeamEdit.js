@@ -1,10 +1,12 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, View
+  KeyboardAvoidingView, Platform, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -16,9 +18,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
-import ScreenContainer from '@/components/templates/ScreenContainer';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -34,28 +36,28 @@ import { getFieldError } from '@/utils/form/formUtils';
 
 const defaultValues = {
   activities: '',
+  address: null,
   category: '',
+  city: '',
   description: '',
+  geohash: '',
   level: '',
   name: '',
   section: '',
   trainers: /** @type {string[]} */ ([]),
-  address: null,
-  city: '',
-  geohash: '',
 };
 
 const teamSchema = Joi.object({
   activities: Joi.string().allow('', null).optional(),
+  address: Joi.object().allow(null).optional(),
   category: Joi.string().required(),
+  city: Joi.string().allow('', null).optional(),
   description: Joi.string().allow('', null).optional(),
+  geohash: Joi.string().allow('', null).optional(),
   level: Joi.string().required(),
   name: Joi.string().required(),
   section: Joi.string().required(),
   trainers: Joi.array().items(Joi.string()).optional(),
-  address: Joi.object().allow(null).optional(),
-  city: Joi.string().allow('', null).optional(),
-  geohash: Joi.string().allow('', null).optional(),
 }).unknown(true);
 
 /**
@@ -88,7 +90,7 @@ function TeamEdit({ navigation, route }) {
   const { data: categories } = useGetCategories();
   const { data: levels } = useGetLevels();
   const { data: sections } = useGetSections();
-  
+
   const {
     Alignments, Spaces,
   } = useTheme();
@@ -105,11 +107,11 @@ function TeamEdit({ navigation, route }) {
   const {
     control,
     formState: { errors: formErrors },
+    getValues,
     handleSubmit,
-    setValue,
     reset,
     setFocus,
-    getValues
+    setValue,
   } = useForm({
     defaultValues,
     mode: 'onBlur',
@@ -119,78 +121,77 @@ function TeamEdit({ navigation, route }) {
 
   // Helper to normalize address structure (GeoJSON vs Flat)
   const formatAddress = (addr) => {
-      if (!addr) return null;
-      if (addr.label && !addr.properties) return addr;
-      if (addr.properties?.label) {
-          return {
-              label: addr.properties.label,
-              value: addr.geometry?.coordinates ? addr.geometry.coordinates.join('|') : '',
-              ...addr,
-          };
-      }
-      return null;
+    if (!addr) return null;
+    if (addr.label && !addr.properties) return addr;
+    if (addr.properties?.label) {
+      return {
+        label: addr.properties.label,
+        value: addr.geometry?.coordinates ? addr.geometry.coordinates.join('|') : '',
+        ...addr,
+      };
+    }
+    return null;
   };
 
   const getClubAddress = (club) => {
-      if (!club) return null;
-      const formatted = formatAddress(club.address);
-      if (formatted) return formatted;
-      if (club.addressDetails) {
-          try {
-              const details = typeof club.addressDetails === 'string' 
-                ? JSON.parse(club.addressDetails) 
-                : club.addressDetails;
-              
-              if (details?.address) {
-                  return {
-                      label: details.address,
-                      city: details.city,
-                      postcode: details.postcode,
-                      value: club.address?.lat && club.address?.lng 
-                        ? `${club.address.lng}|${club.address.lat}`
-                        : '',
-                      ...club.address
-                  };
-              }
-          } catch (e) {
-              console.warn('Failed to parse club addressDetails', e);
-          }
+    if (!club) return null;
+    const formatted = formatAddress(club.address);
+    if (formatted) return formatted;
+    if (club.addressDetails) {
+      try {
+        const details = typeof club.addressDetails === 'string'
+          ? JSON.parse(club.addressDetails)
+          : club.addressDetails;
+
+        if (details?.address) {
+          return {
+            city: details.city,
+            label: details.address,
+            postcode: details.postcode,
+            value: club.address?.lat && club.address?.lng
+              ? `${club.address.lng}|${club.address.lat}`
+              : '',
+            ...club.address,
+          };
+        }
+      } catch (e) {
+        console.warn('Failed to parse club addressDetails', e);
       }
-      return null;
+    }
+    return null;
   };
 
   // Populate form with team data when editing OR pre-fill when creating
   useEffect(() => {
     if (teamId && teamData) {
-      const teamAddress = formatAddress(teamData.address) 
-                       || getClubAddress(teamData.club) 
+      const teamAddress = formatAddress(teamData.address)
+                       || getClubAddress(teamData.club)
                        || getClubAddress(clubData);
 
       reset({
         activities: teamData.activities?.[0]?.documentId || '',
+        address: teamAddress || null,
         category: teamData.category?.documentId || '',
+        city: teamData.city || teamData.club?.city || clubData?.city || '',
         description: teamData.description || '',
+        geohash: teamData.geohash || teamData.club?.geohash || clubData?.geohash || '',
         level: teamData.level?.documentId || '',
         name: teamData.name || '',
         section: teamData.section?.documentId || '',
         trainers: teamData.trainers?.map((trainer) => trainer.documentId) || [],
-        address: teamAddress || null,
-        city: teamData.city || teamData.club?.city || clubData?.city || '',
-        geohash: teamData.geohash || teamData.club?.geohash || clubData?.geohash || '',
       });
       isInitialized.current = true;
-    } 
-    else if (!teamId && clubData && !isInitialized.current) {
-        const clubAddress = getClubAddress(clubData);
-        if (clubAddress) {
-            reset({
-                ...defaultValues,
-                address: clubAddress,
-                city: clubData.city || '',
-                geohash: clubData.geohash || '',
-            });
-            isInitialized.current = true;
-        }
+    } else if (!teamId && clubData && !isInitialized.current) {
+      const clubAddress = getClubAddress(clubData);
+      if (clubAddress) {
+        reset({
+          ...defaultValues,
+          address: clubAddress,
+          city: clubData.city || '',
+          geohash: clubData.geohash || '',
+        });
+        isInitialized.current = true;
+      }
     }
   }, [teamData, clubData, reset, teamId]);
 
@@ -283,7 +284,7 @@ function TeamEdit({ navigation, route }) {
       setValue(
         'trainers',
         [...currentTrainers, createdTrainer.documentId],
-        { shouldDirty: true, shouldValidate: true }
+        { shouldDirty: true, shouldValidate: true },
       );
     }
 
@@ -301,14 +302,14 @@ function TeamEdit({ navigation, route }) {
     const formattedActivities = data.activities ? [data.activities] : [];
 
     const finalData = {
-        ...data,
-        activities: formattedActivities,
-        category: data.category || undefined,
-        level: data.level || undefined,
-        section: data.section || undefined,
-        trainers: formattedTrainers,
-        city: data.address?.city || data.city,
-        geohash: data.address?.geohash || data.geohash,
+      ...data,
+      activities: formattedActivities,
+      category: data.category || undefined,
+      city: data.address?.city || data.city,
+      geohash: data.address?.geohash || data.geohash,
+      level: data.level || undefined,
+      section: data.section || undefined,
+      trainers: formattedTrainers,
     };
 
     if (teamId) {
@@ -376,14 +377,14 @@ function TeamEdit({ navigation, route }) {
               control={control}
               name="address"
               render={({ field: { onChange, value } }) => (
-                  <AutocompleteAddressInput
-                    label={t('teamEdit.fields.address.label', 'Adresse de l\'équipe')}
-                    placeholder={t('teamEdit.fields.address.placeholder', 'Rechercher une adresse')}
-                    address={value}
-                    setAddress={(newAddress) => {
-                         onChange(newAddress);
-                    }}
-                  />
+                <AutocompleteAddressInput
+                  address={value}
+                  label={t('teamEdit.fields.address.label', 'Adresse de l\'équipe')}
+                  placeholder={t('teamEdit.fields.address.placeholder', 'Rechercher une adresse')}
+                  setAddress={(newAddress) => {
+                    onChange(newAddress);
+                  }}
+                />
               )}
             />
 
@@ -518,10 +519,10 @@ function TeamEdit({ navigation, route }) {
               }) => (
                 <AutocompleteSelect
                   actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
-                  onActionPress={() => setIsCreateTrainerModalVisible(true)}
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   isMulti
                   label={t('teamEdit.fields.trainers.label')}
+                  onActionPress={() => setIsCreateTrainerModalVisible(true)}
                   onBlur={onBlur}
                   options={trainerOptions}
                   placeholder={t('teamEdit.fields.trainers.placeholder')}
@@ -553,4 +554,3 @@ function TeamEdit({ navigation, route }) {
 }
 
 export default TeamEdit;
-

@@ -16,100 +16,99 @@ import client from '../client';
  * @returns {Promise<any>}
  */
 export const searchUsers = async (params = {}) => {
-    const {
-        isLookingForClub,
-        role,
-        q,
-        activity,
-        activityNames,
-        category,
-        position,
-        geohash,
-        page = 1,
-        pageSize = 25,
-    } = params;
+  const {
+    activity,
+    activityNames,
+    category,
+    geohash,
+    isLookingForClub,
+    page = 1,
+    pageSize = 25,
+    position,
+    q,
+    role,
+  } = params;
 
-    const filters = {
-        filters: {},
-        pagination: {
-            page,
-            pageSize,
-        },
-        populate: ['avatar', 'role', 'section'],
+  const filters = {
+    filters: {},
+    pagination: {
+      page,
+      pageSize,
+    },
+    populate: ['avatar', 'role', 'section'],
+  };
+
+  // Core filter: only show users looking for a club
+  if (typeof isLookingForClub === 'boolean') {
+    filters.filters.isLookingForClub = isLookingForClub;
+  }
+
+  // Role filter
+  if (role) {
+    filters.filters.role = {
+      name: {
+        $containsi: role,
+      },
     };
+  }
 
-    // Core filter: only show users looking for a club
-    if (typeof isLookingForClub === 'boolean') {
-        filters.filters.isLookingForClub = isLookingForClub;
+  // Text search (name)
+  if (q) {
+    filters.filters.$or = [
+      { firstname: { $containsi: q } },
+      { lastname: { $containsi: q } },
+      { username: { $containsi: q } },
+    ];
+  }
+
+  // Sport/Activity filter (preferredSport field)
+  const canonicalActivityNames = Array.isArray(activityNames)
+    ? activityNames
+    : (activityNames ? [activityNames] : []);
+
+  if (canonicalActivityNames.length > 0) {
+    filters.filters.$and = [
+      ...(filters.filters.$and || []),
+      {
+        $or: canonicalActivityNames
+          .map((name) => String(name || '').trim())
+          .filter(Boolean)
+          .map((name) => ({ preferredSport: { $eqi: name } })),
+      },
+    ];
+  } else if (activity) {
+    // Legacy fallback
+    const activityValues = Array.isArray(activity) ? activity : [activity];
+    if (activityValues.length > 0) {
+      filters.filters.preferredSport = { $in: activityValues };
     }
+  }
 
-    // Role filter
-    if (role) {
-        filters.filters.role = {
-            name: {
-                $containsi: role,
-            },
-        };
+  // Section/Category filter
+  if (category) {
+    const categoryValues = Array.isArray(category) ? category : [category];
+    if (categoryValues.length > 0) {
+      filters.filters.section = {
+        documentId: { $in: categoryValues },
+      };
     }
+  }
 
-    // Text search (name)
-    if (q) {
-        filters.filters.$or = [
-            { firstname: { $containsi: q } },
-            { lastname: { $containsi: q } },
-            { username: { $containsi: q } },
-        ];
+  // Position filter
+  if (position) {
+    const positionValues = Array.isArray(position) ? position : [position];
+    if (positionValues.length > 0) {
+      filters.filters.position = { $in: positionValues };
     }
+  }
 
-    // Sport/Activity filter (preferredSport field)
-    const canonicalActivityNames = Array.isArray(activityNames)
-        ? activityNames
-        : (activityNames ? [activityNames] : []);
+  // Geohash/location filter (requires backend support)
+  // Note: This may need custom backend implementation
+  // For now, we pass it but Strapi standard API may not support it
+  if (geohash) {
+    filters.filters.geohash = { $startsWith: geohash };
+  }
 
-    if (canonicalActivityNames.length > 0) {
-        filters.filters.$and = [
-            ...(filters.filters.$and || []),
-            {
-                $or: canonicalActivityNames
-                    .map((name) => String(name || '').trim())
-                    .filter(Boolean)
-                    .map((name) => ({ preferredSport: { $eqi: name } })),
-            },
-        ];
-    } else if (activity) {
-        // Legacy fallback
-        const activityValues = Array.isArray(activity) ? activity : [activity];
-        if (activityValues.length > 0) {
-            filters.filters.preferredSport = { $in: activityValues };
-        }
-    }
-
-    // Section/Category filter
-    if (category) {
-        const categoryValues = Array.isArray(category) ? category : [category];
-        if (categoryValues.length > 0) {
-            filters.filters.section = {
-                documentId: { $in: categoryValues },
-            };
-        }
-    }
-
-    // Position filter
-    if (position) {
-        const positionValues = Array.isArray(position) ? position : [position];
-        if (positionValues.length > 0) {
-            filters.filters.position = { $in: positionValues };
-        }
-    }
-
-    // Geohash/location filter (requires backend support)
-    // Note: This may need custom backend implementation
-    // For now, we pass it but Strapi standard API may not support it
-    if (geohash) {
-        filters.filters.geohash = { $startsWith: geohash };
-    }
-
-    const response = await client.get('/users', { params: filters });
-    return response.data;
+  const response = await client.get('/users', { params: filters });
+  return response.data;
 };
-

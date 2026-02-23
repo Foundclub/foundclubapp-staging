@@ -13,8 +13,8 @@ import client from '../client';
  * @returns {Promise<any>}
  */
 export const getSearchAlerts = async () => {
-    const response = await client.get('/search-alerts');
-    return response.data;
+  const response = await client.get('/search-alerts');
+  return response.data;
 };
 
 /**
@@ -23,8 +23,8 @@ export const getSearchAlerts = async () => {
  * @returns {Promise<any>}
  */
 export const createSearchAlert = async (data) => {
-    const response = await client.post('/search-alerts', { data });
-    return response.data;
+  const response = await client.post('/search-alerts', { data });
+  return response.data;
 };
 
 /**
@@ -33,8 +33,8 @@ export const createSearchAlert = async (data) => {
  * @returns {Promise<any>}
  */
 export const deleteSearchAlert = async (id) => {
-    const response = await client.delete(`/search-alerts/${id}`);
-    return response.data;
+  const response = await client.delete(`/search-alerts/${id}`);
+  return response.data;
 };
 
 /**
@@ -44,8 +44,8 @@ export const deleteSearchAlert = async (id) => {
  * @returns {Promise<any>}
  */
 export const updateSearchAlert = async (id, data) => {
-    const response = await client.put(`/search-alerts/${id}`, { data });
-    return response.data;
+  const response = await client.put(`/search-alerts/${id}`, { data });
+  return response.data;
 };
 
 /**
@@ -55,6 +55,6 @@ export const updateSearchAlert = async (id, data) => {
  * @returns {Promise<{count: number}>}
  */
 export const getPreviewCount = async (filters, type) => {
-    const response = await client.post('/search-alerts/preview-count', { filters, type });
-    return response.data;
+  const response = await client.post('/search-alerts/preview-count', { filters, type });
+  return response.data;
 };

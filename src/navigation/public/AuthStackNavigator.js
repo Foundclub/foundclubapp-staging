@@ -3,9 +3,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import Login from '@/views/Login';
 import Register from '@/views/Register';
 
+import ClubStack from '@/navigation/private/stacks/ClubStack';
+
 import { commonOptions } from '../commonOptions';
 import { RouteNames } from '../routeNames';
-import ClubStack from '@/navigation/private/stacks/ClubStack';
 
 const Stack = createStackNavigator();
 

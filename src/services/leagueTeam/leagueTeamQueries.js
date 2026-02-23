@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+
 import { getLeagueTeamById, getMyLeagueTeam } from './leagueTeamService';
 
 /**
@@ -21,8 +22,8 @@ export const useGetLeagueTeam = (teamId, options) => useQuery({
  * @returns {import('@tanstack/react-query').UseQueryResult<any[]>}
  */
 export const useGetMyLeagueTeam = (userId, options) => useQuery({
-    enabled: !!userId,
-    queryFn: () => getMyLeagueTeam(userId),
-    queryKey: ['myLeagueTeam', userId],
-    ...options,
+  enabled: !!userId,
+  queryFn: () => getMyLeagueTeam(userId),
+  queryKey: ['myLeagueTeam', userId],
+  ...options,
 });

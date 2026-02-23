@@ -2,14 +2,15 @@
  * MultisportClub React Query hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import {
-  getCMClubs,
-  getCMPlanning,
-  createCMSection,
-  getCMHighlightRequests,
-  createHighlightRequest,
   approveHighlightRequest,
+  createCMSection,
+  createHighlightRequest,
+  getCMClubs,
+  getCMHighlightRequests,
+  getCMPlanning,
   rejectHighlightRequest,
 } from './multisportClubService';
 
@@ -33,24 +34,29 @@ import {
 
 export const CM_QUERY_KEYS = {
   clubs: (/** @type {string} */ cmId) => ['cm', cmId, 'clubs'],
-  planning: (/** @type {string} */ cmId, /** @type {Record<string, any>} */ filters) => ['cm', cmId, 'planning', filters],
   highlightRequests: (/** @type {string} */ cmId) => ['cm', cmId, 'highlight-requests'],
+  planning: (/** @type {string} */ cmId, /** @type {Record<string, any>} */ filters) => ['cm', cmId, 'planning', filters],
 };
 
 /**
  * Get all club sections for a multisport club
+ * @param cmId
+ * @param options
  */
 export function useGetCMClubs(/** @type {string} */ cmId, options = {}) {
   return useQuery({
-    queryKey: CM_QUERY_KEYS.clubs(cmId),
-    queryFn: () => getCMClubs(cmId),
     enabled: !!cmId,
+    queryFn: () => getCMClubs(cmId),
+    queryKey: CM_QUERY_KEYS.clubs(cmId),
     ...options,
   });
 }
 
 /**
  * Get planning for a multisport club
+ * @param cmId
+ * @param filters
+ * @param options
  */
 export function useGetCMPlanning(
   /** @type {string} */ cmId,
@@ -58,21 +64,23 @@ export function useGetCMPlanning(
   options = {},
 ) {
   return useQuery({
-    queryKey: CM_QUERY_KEYS.planning(cmId, filters),
-    queryFn: () => getCMPlanning(cmId, filters),
     enabled: !!cmId,
+    queryFn: () => getCMPlanning(cmId, filters),
+    queryKey: CM_QUERY_KEYS.planning(cmId, filters),
     ...options,
   });
 }
 
 /**
  * Get pending highlight requests for a multisport club
+ * @param cmId
+ * @param options
  */
 export function useGetCMHighlightRequests(/** @type {string} */ cmId, options = {}) {
   return useQuery({
-    queryKey: CM_QUERY_KEYS.highlightRequests(cmId),
-    queryFn: () => getCMHighlightRequests(cmId),
     enabled: !!cmId,
+    queryFn: () => getCMHighlightRequests(cmId),
+    queryKey: CM_QUERY_KEYS.highlightRequests(cmId),
     ...options,
   });
 }
@@ -82,7 +90,7 @@ export function useGetCMHighlightRequests(/** @type {string} */ cmId, options = 
  */
 export function useCreateCMSection() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (/** @type {CreateSectionVariables} */ { cmId, data }) => createCMSection(cmId, data),
     onSuccess: (_, /** @type {CreateSectionVariables} */ variables) => {
@@ -98,9 +106,9 @@ export function useCreateCMSection() {
  */
 export function useCreateHighlightRequest() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (/** @type {HighlightRequestVariables} */ { eventId, data }) => createHighlightRequest(eventId, data),
+    mutationFn: (/** @type {HighlightRequestVariables} */ { data, eventId }) => createHighlightRequest(eventId, data),
     onSuccess: () => {
       // Invalidate all CM highlight requests
       queryClient.invalidateQueries({
@@ -115,7 +123,7 @@ export function useCreateHighlightRequest() {
  */
 export function useApproveHighlightRequest() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (/** @type {string} */ requestId) => approveHighlightRequest(requestId),
     onSuccess: () => {
@@ -132,9 +140,9 @@ export function useApproveHighlightRequest() {
  */
 export function useRejectHighlightRequest() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (/** @type {RejectHighlightRequestVariables} */ { requestId, reason }) => rejectHighlightRequest(requestId, reason),
+    mutationFn: (/** @type {RejectHighlightRequestVariables} */ { reason, requestId }) => rejectHighlightRequest(requestId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[2] === 'highlight-requests',

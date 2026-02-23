@@ -1,3 +1,5 @@
+import { addMinutes, format, parse } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,12 +10,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import { addMinutes, format, parse } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import useTheme from '@/theme/themeContext';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+
 import { useCreateBooking } from '@/services/facility/facilityQueries';
 
 /**
@@ -42,16 +44,18 @@ import { useCreateBooking } from '@/services/facility/facilityQueries';
  * @param {BookingConfigModalProps} props
  */
 function BookingConfigModal({
+  availability,
+  date,
+  facility,
   isVisible,
   onClose,
   onSuccess,
-  facility,
-  date,
   selectedSlot,
-  availability,
 }) {
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces, Alignments } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
 
   // State
   const [step, setStep] = useState(1);
@@ -66,26 +70,26 @@ function BookingConfigModal({
   // Calculate available durations based on maxDuration
   const durationOptions = useMemo(() => {
     if (!selectedSlot || !facility) return [];
-    
+
     const slotDuration = facility.slotDuration || 30;
     const maxDuration = selectedSlot.maxDuration || slotDuration;
     const options = /** @type {BookingDurationOption[]} */ ([]);
-    
+
     let duration = slotDuration;
     while (duration <= maxDuration && duration <= 180) { // Max 3 hours
       const slots = duration / slotDuration;
       const price = slots * (facility.pricePerSlot || 0);
       options.push({
         duration,
-        slots,
-        price,
-        label: duration >= 60 
+        label: duration >= 60
           ? `${Math.floor(duration / 60)}h${duration % 60 > 0 ? duration % 60 : ''}`
           : `${duration}min`,
+        price,
+        slots,
       });
       duration += slotDuration;
     }
-    
+
     return options;
   }, [selectedSlot, facility]);
 
@@ -125,15 +129,15 @@ function BookingConfigModal({
 
     try {
       await createBookingMutation.mutateAsync({
-        facilityId: facility.documentId || '',
-        date,
-        startTime: selectedSlot.time,
-        endTime,
-        mode,
-        targetPlayers: mode === 'shared' ? targetPlayers : undefined,
         currentPlayers: mode === 'shared' ? currentPlayers : undefined,
+        date,
+        endTime,
+        facilityId: facility.documentId || '',
+        mode,
+        startTime: selectedSlot.time,
+        targetPlayers: mode === 'shared' ? targetPlayers : undefined,
       });
-      
+
       handleClose();
       onSuccess?.();
     } catch (error) {
@@ -168,18 +172,24 @@ function BookingConfigModal({
 
   return (
     <BottomModal
-      isVisible={isVisible}
       close={handleClose}
+      isVisible={isVisible}
     >
-      <ScrollView 
-        style={styles.content}
+      <ScrollView
         contentContainerStyle={[Spaces.padding[16], { paddingBottom: 32 }]}
+        style={styles.content}
       >
         {/* Step 1: Duration Selection */}
         {step === 1 && (
           <View style={styles.stepContent}>
             <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginBottom[16]]}>
-              Créneau sélectionné : {selectedSlot.time} - {format(new Date(date), 'dd MMMM', { locale: fr })}
+              Créneau sélectionné :
+              {' '}
+              {selectedSlot.time}
+              {' '}
+              -
+              {' '}
+              {format(new Date(date), 'dd MMMM', { locale: fr })}
             </Text>
 
             {durationOptions.map((option) => {
@@ -190,7 +200,7 @@ function BookingConfigModal({
                   onPress={() => setSelectedDuration(option)}
                   style={[
                     styles.optionCard,
-                    isSelected && { borderColor: Colors.primary500, backgroundColor: 'rgba(240, 85, 45, 0.15)' },
+                    isSelected && { backgroundColor: 'rgba(240, 85, 45, 0.15)', borderColor: Colors.primary500 },
                   ]}
                 >
                   <View style={styles.optionLeft}>
@@ -201,22 +211,28 @@ function BookingConfigModal({
                       {option.label}
                     </Text>
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      ({option.slots} créneau{option.slots > 1 ? 'x' : ''})
+                      (
+                      {option.slots}
+                      {' '}
+                      créneau
+                      {option.slots > 1 ? 'x' : ''}
+                      )
                     </Text>
                   </View>
                   <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                    {option.price}€
+                    {option.price}
+                    €
                   </Text>
                 </Pressable>
               );
             })}
 
             <Button
+              disabled={!selectedDuration}
+              onPress={handleNext}
+              style={Spaces.marginTop[24]}
               title="Suivant"
               variant="Primary"
-              onPress={handleNext}
-              disabled={!selectedDuration}
-              style={Spaces.marginTop[24]}
             />
           </View>
         )}
@@ -231,7 +247,17 @@ function BookingConfigModal({
             </Pressable>
 
             <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginBottom[16]]}>
-              {selectedSlot.time} - {endTime} • {selectedDuration?.label} • {selectedDuration?.price}€
+              {selectedSlot.time}
+              {' '}
+              -
+              {endTime}
+              {' '}
+              •
+              {selectedDuration?.label}
+              {' '}
+              •
+              {selectedDuration?.price}
+              €
             </Text>
 
             {/* Private Option */}
@@ -239,7 +265,7 @@ function BookingConfigModal({
               onPress={() => setMode('private')}
               style={[
                 styles.modeCard,
-                mode === 'private' && { borderColor: Colors.primary500, backgroundColor: 'rgba(240, 85, 45, 0.15)' },
+                mode === 'private' && { backgroundColor: 'rgba(240, 85, 45, 0.15)', borderColor: Colors.primary500 },
               ]}
             >
               <View style={styles.modeHeader}>
@@ -254,7 +280,10 @@ function BookingConfigModal({
                 Je réserve le terrain pour mon groupe
               </Text>
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
-                Prix total: {selectedDuration?.price}€
+                Prix total:
+                {' '}
+                {selectedDuration?.price}
+                €
               </Text>
             </Pressable>
 
@@ -263,7 +292,7 @@ function BookingConfigModal({
               onPress={() => setMode('shared')}
               style={[
                 styles.modeCard,
-                mode === 'shared' && { borderColor: Colors.success500, backgroundColor: 'rgba(46, 204, 113, 0.15)' },
+                mode === 'shared' && { backgroundColor: 'rgba(46, 204, 113, 0.15)', borderColor: Colors.success500 },
               ]}
             >
               <View style={styles.modeHeader}>
@@ -312,10 +341,16 @@ function BookingConfigModal({
 
                   <View style={[styles.priceInfo, { backgroundColor: 'rgba(46, 204, 113, 0.1)' }]}>
                     <Text style={[Fonts.p2, Fonts.neutral00]}>
-                      Il manque {targetPlayers - currentPlayers} joueur{targetPlayers - currentPlayers > 1 ? 's' : ''}
+                      Il manque
+                      {' '}
+                      {targetPlayers - currentPlayers}
+                      {' '}
+                      joueur
+                      {targetPlayers - currentPlayers > 1 ? 's' : ''}
                     </Text>
                     <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>
-                      {pricePerPerson}€/joueur
+                      {pricePerPerson}
+                      €/joueur
                     </Text>
                   </View>
                 </View>
@@ -323,11 +358,11 @@ function BookingConfigModal({
             </Pressable>
 
             <Button
+              disabled={createBookingMutation.isPending}
+              onPress={handleConfirm}
+              style={Spaces.marginTop[24]}
               title={createBookingMutation.isPending ? 'Réservation...' : 'Confirmer la réservation'}
               variant="Primary"
-              onPress={handleConfirm}
-              disabled={createBookingMutation.isPending}
-              style={Spaces.marginTop[24]}
             />
           </View>
         )}
@@ -343,117 +378,117 @@ function BookingConfigModal({
 }
 
 const styles = StyleSheet.create({
+  checkBadge: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 24,
+    justifyContent: 'center',
+    width: 24,
+  },
+  checkText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   content: {
     maxHeight: 500,
+  },
+  loadingOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  modeCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 16,
+  },
+  modeHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  optionCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  optionLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  priceInfo: {
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    padding: 12,
+  },
+  radio: {
+    alignItems: 'center',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  radioInner: {
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  sharedConfig: {
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopWidth: 1,
+    gap: 12,
+    paddingTop: 12,
   },
   stepContent: {
     gap: 12,
   },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  optionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  modeCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    marginBottom: 12,
-  },
-  modeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  checkBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  sharedConfig: {
-    gap: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   stepper: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     gap: 8,
   },
   stepperBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    height: 32,
     justifyContent: 'center',
+    width: 32,
   },
   stepperBtnText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
+  stepperRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   stepperValue: {
     minWidth: 32,
     textAlign: 'center',
-  },
-  priceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 

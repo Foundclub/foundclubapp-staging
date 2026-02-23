@@ -1,30 +1,32 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet, Platform, Vibration } from 'react-native';
+import {
+  Image, Platform, StyleSheet, Text, Vibration, View,
+} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import useTheme from '@/theme/themeContext';
 
 // Spring configs
 const SPRING_CONFIG = {
   damping: 15,
-  stiffness: 180,
   mass: 0.8,
+  stiffness: 180,
 };
 
 const FAST_SPRING = {
   damping: 20,
-  stiffness: 300,
   mass: 0.5,
+  stiffness: 300,
 };
 
 /**
- * @typedef {Object} Player
+ * @typedef {object} Player
  * @property {string} [id]
  * @property {string} [documentId]
  * @property {string} [firstname]
@@ -48,7 +50,7 @@ const triggerHaptic = () => {
 
 /**
  * High-Performance Draggable Player Token with Haptics
- * @param {Object} props
+ * @param {object} props
  * @param {Player} props.player
  * @param {number} props.index
  * @param {Function} [props.onDragStart]
@@ -56,14 +58,14 @@ const triggerHaptic = () => {
  * @param {Function} [props.onDrop]
  * @param {boolean} [props.isOnField]
  */
-const PlayerToken = ({
-  player,
+function PlayerToken({
   index,
-  onDragStart,
-  onDragEnd,
-  onDrop,
   isOnField = false,
-}) => {
+  onDragEnd,
+  onDragStart,
+  onDrop,
+  player,
+}) {
   const { Colors } = useTheme();
 
   // Shared values for UI thread
@@ -86,24 +88,29 @@ const PlayerToken = ({
   // Callbacks for runOnJS
   const notifyDragStart = (/** @type {number} */ absX, /** @type {number} */ absY) => {
     triggerHaptic(); // Haptic feedback on grab
-    onDragStart?.({ player, absoluteX: absX, absoluteY: absY, index });
+    onDragStart?.({
+      absoluteX: absX, absoluteY: absY, index, player,
+    });
   };
 
   const notifyDragEnd = () => {
-    onDragEnd?.({ player, index });
+    onDragEnd?.({ index, player });
   };
 
   const notifyDrop = (/** @type {number} */ absX, /** @type {number} */ absY) => {
-    onDrop?.({ player, absoluteX: absX, absoluteY: absY, index });
+    onDrop?.({
+      absoluteX: absX, absoluteY: absY, index, player,
+    });
   };
 
   // Pan Gesture with enhanced feedback
-  const panGesture = useMemo(() => 
-    Gesture.Pan()
+  const panGesture = useMemo(
+    () => Gesture.Pan()
       .activateAfterLongPress(80) // Small delay to avoid scroll conflict
       .minDistance(5)
       .onStart((e) => {
         'worklet';
+
         isActive.value = 1;
         // Juicy lift effect
         scale.value = withSpring(1.25, FAST_SPRING);
@@ -115,11 +122,13 @@ const PlayerToken = ({
       })
       .onUpdate((e) => {
         'worklet';
+
         translateX.value = startX.value + e.translationX;
         translateY.value = startY.value + e.translationY;
       })
       .onEnd((e) => {
         'worklet';
+
         isActive.value = 0;
         scale.value = withSpring(1, SPRING_CONFIG);
         elevation.value = withSpring(isOnField ? 12 : 6, SPRING_CONFIG);
@@ -131,29 +140,31 @@ const PlayerToken = ({
       })
       .onFinalize(() => {
         'worklet';
+
         isActive.value = 0;
         scale.value = withSpring(1, SPRING_CONFIG);
         elevation.value = withSpring(isOnField ? 12 : 6, SPRING_CONFIG);
         opacity.value = 1;
         runOnJS(notifyDragEnd)();
       }),
-    [player, index, isOnField]
+    [player, index, isOnField],
   );
 
   // Animated style with dynamic shadow
   const animatedStyle = useAnimatedStyle(() => {
     'worklet';
+
     return {
+      elevation: elevation.value,
+      opacity: opacity.value,
+      shadowOpacity: isActive.value === 1 ? 0.6 : 0.3,
+      shadowRadius: isActive.value === 1 ? 20 : 8,
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { scale: scale.value },
       ],
-      opacity: opacity.value,
       zIndex: isActive.value === 1 ? 1000 : 1,
-      elevation: elevation.value,
-      shadowOpacity: isActive.value === 1 ? 0.6 : 0.3,
-      shadowRadius: isActive.value === 1 ? 20 : 8,
     };
   });
 
@@ -185,17 +196,17 @@ const PlayerToken = ({
               </View>
             )}
           </View>
-          
+
           {/* Jersey Number Badge */}
           {jerseyNumber && (
             <View style={[styles.jerseyBadge, { backgroundColor: Colors.neutral900 }]}>
               <Text style={styles.jerseyNumber}>{jerseyNumber}</Text>
             </View>
           )}
-          
+
           {/* Name label */}
           <View style={[styles.fieldNameBadge, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-            <Text style={styles.fieldName} numberOfLines={1}>
+            <Text numberOfLines={1} style={styles.fieldName}>
               {player?.firstname || ''}
             </Text>
           </View>
@@ -226,87 +237,54 @@ const PlayerToken = ({
             <Text style={[styles.benchInitials, { color: Colors.neutral00 }]}>{initials}</Text>
           )}
         </View>
-        
+
         {/* Jersey Number Badge on bench too */}
         {jerseyNumber && (
           <View style={[styles.benchJerseyBadge, { backgroundColor: Colors.primary500 }]}>
             <Text style={styles.benchJerseyNumber}>{jerseyNumber}</Text>
           </View>
         )}
-        
+
         {/* Name */}
         <View style={styles.benchNameContainer}>
-          <Text style={[styles.benchFirstName, { color: Colors.neutral00 }]} numberOfLines={1}>
+          <Text numberOfLines={1} style={[styles.benchFirstName, { color: Colors.neutral00 }]}>
             {player?.firstname || ''}
           </Text>
-          <Text style={[styles.benchLastName, { color: Colors.neutral300 }]} numberOfLines={1}>
+          <Text numberOfLines={1} style={[styles.benchLastName, { color: Colors.neutral300 }]}>
             {player?.lastname || ''}
           </Text>
         </View>
       </Animated.View>
     </GestureDetector>
   );
-};
+}
 
 const styles = StyleSheet.create({
   // === FIELD TOKEN (Floating head style) ===
-  fieldToken: {
-    width: 60,
-    height: 74,
-    borderRadius: 30,
-    borderWidth: 3,
-    alignItems: 'center',
-    paddingTop: 3,
-    shadowOffset: { width: 0, height: 6 },
+  fieldAvatar: {
+    borderRadius: 22,
+    height: 44,
+    width: 44,
   },
   fieldAvatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 2,
     borderColor: '#FFF',
-  },
-  fieldAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  fieldInitialsContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 24,
+    borderWidth: 2,
+    height: 48,
+    overflow: 'hidden',
+    width: 48,
   },
   fieldInitials: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '800',
   },
-  jerseyBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  fieldInitialsContainer: {
     alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  jerseyNumber: {
-    color: '#FFF',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  fieldNameBadge: {
-    marginTop: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    maxWidth: 70,
+    width: 44,
   },
   fieldName: {
     color: '#FFF',
@@ -314,49 +292,82 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  fieldNameBadge: {
+    borderRadius: 8,
+    marginTop: 2,
+    maxWidth: 70,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  fieldToken: {
+    alignItems: 'center',
+    borderRadius: 30,
+    borderWidth: 3,
+    height: 74,
+    paddingTop: 3,
+    shadowOffset: { height: 6, width: 0 },
+    width: 60,
+  },
+  jerseyBadge: {
+    alignItems: 'center',
+    borderColor: '#FFF',
+    borderRadius: 11,
+    borderWidth: 2,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    top: -4,
+    width: 22,
+  },
+  jerseyNumber: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
 
   // === BENCH TOKEN ===
-  benchToken: {
-    width: 66,
-    height: 82,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    paddingTop: 8,
-    marginHorizontal: 4,
-    shadowOffset: { width: 0, height: 4 },
+  benchAvatar: {
+    borderRadius: 22,
+    height: 44,
+    width: 44,
   },
   benchAvatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  benchAvatar: {
     width: 44,
-    height: 44,
-    borderRadius: 22,
+  },
+  benchFirstName: {
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   benchInitials: {
     fontSize: 14,
     fontWeight: '700',
   },
   benchJerseyBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
     alignItems: 'center',
+    borderRadius: 9,
+    height: 18,
     justifyContent: 'center',
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    width: 18,
   },
   benchJerseyNumber: {
     color: '#FFF',
     fontSize: 9,
     fontWeight: '700',
+  },
+  benchLastName: {
+    fontSize: 8,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   benchNameContainer: {
     alignItems: 'center',
@@ -364,15 +375,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
     width: '100%',
   },
-  benchFirstName: {
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  benchLastName: {
-    fontSize: 8,
-    fontWeight: '500',
-    textAlign: 'center',
+  benchToken: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    height: 82,
+    marginHorizontal: 4,
+    paddingTop: 8,
+    shadowOffset: { height: 4, width: 0 },
+    width: 66,
   },
 });
 

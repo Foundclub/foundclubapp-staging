@@ -1,12 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, Alert, Image, Text, TouchableOpacity, View,
+} from 'react-native';
 
-import { getImageUrl } from '@/utils/imageUrl';
-import useTheme from '@/theme/themeContext';
 import useClub from '@/domains/club/useClub';
+import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/services/userHistory/userHistoryQueries';
+
+import { useDeleteHistory, useGetMyHistories, useGetUserHistories } from '@/services/userHistory/userHistoryQueries';
+
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {{
@@ -32,16 +36,20 @@ import { useGetMyHistories, useGetUserHistories, useDeleteHistory } from '@/serv
  * @param {string} [props.bestLevel] - User best level display
  * @param {string} [props.preferredSport] - Preferred sport display
  */
-function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPress, bestLevel, preferredSport }) {
-  const { Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces } = useTheme();
+function UserHistorySection({
+  bestLevel, isOwnProfile = false, onAddPress, onEditPress, preferredSport, userId,
+}) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+  } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
-  
-  const { data: historiesData, isLoading } = userId 
-    ? useGetUserHistories(userId) 
+
+  const { data: historiesData, isLoading } = userId
+    ? useGetUserHistories(userId)
     : useGetMyHistories();
   const histories = Array.isArray(historiesData) ? historiesData : [];
-  
+
   const deleteHistoryMutation = useDeleteHistory();
 
   const handleDelete = (/** @type {string | number | undefined} */ historyId) => {
@@ -51,15 +59,15 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
       t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
       [
         {
-          text: t('common.actions.cancel', 'Annuler'),
           style: 'cancel',
+          text: t('common.actions.cancel', 'Annuler'),
         },
         {
-          text: t('common.actions.delete', 'Supprimer'),
           onPress: () => deleteHistoryMutation.mutate(historyId),
           style: 'destructive',
+          text: t('common.actions.delete', 'Supprimer'),
         },
-      ]
+      ],
     );
   };
 
@@ -89,19 +97,19 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
   const renderClubLogo = (/** @type {UserHistoryItem} */ item) => {
     // If club has a logo, show it
     const logoUrl = item.club?.logo?.url || item.multisport_club?.logo?.url;
-    
+
     if (logoUrl) {
       return (
         <Image
+          resizeMode="contain"
           source={{ uri: getImageUrl(logoUrl) }}
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-            marginRight: 12,
             backgroundColor: Colors.neutral700,
+            borderRadius: 8,
+            height: 48,
+            marginRight: 12,
+            width: 48,
           }}
-          resizeMode="contain"
         />
       );
     }
@@ -136,18 +144,18 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           <TouchableOpacity
             onPress={() => onAddPress?.()}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: Colors.primary500,
               alignItems: 'center',
+              backgroundColor: Colors.primary500,
+              borderRadius: 16,
+              height: 32,
               justifyContent: 'center',
+              width: 32,
             }}
           >
-            <Image 
-              source={/** @type {any} */ (require('@/assets/icons/plus.png'))} 
-              style={{ width: 14, height: 14, tintColor: '#FFF' }}
+            <Image
               resizeMode="contain"
+              source={/** @type {any} */ (require('@/assets/icons/plus.png'))}
+              style={{ height: 14, tintColor: '#FFF', width: 14 }}
             />
           </TouchableOpacity>
         )}
@@ -161,12 +169,13 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           ApplicationStyle.borderRadius8,
           Alignments.row,
           Alignments.alignCenter,
-          Spaces.gap[12]
-        ]}>
+          Spaces.gap[12],
+        ]}
+        >
           <Image
-            source={/** @type {any} */ (require('@/assets/icons/flag.png'))}
-            style={{ width: 20, height: 20, tintColor: Colors.primary500 }}
             resizeMode="contain"
+            source={/** @type {any} */ (require('@/assets/icons/flag.png'))}
+            style={{ height: 20, tintColor: Colors.primary500, width: 20 }}
           />
           <View>
             {preferredSport && (
@@ -176,7 +185,10 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
             )}
             {bestLevel && (
               <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {t('profile.history.bestLevel', 'Meilleur niveau')} : {bestLevel}
+                {t('profile.history.bestLevel', 'Meilleur niveau')}
+                {' '}
+                :
+                {bestLevel}
               </Text>
             )}
           </View>
@@ -190,17 +202,17 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
           Alignments.alignCenter,
           {
             backgroundColor: Colors.neutral800,
-            borderRadius: 12,
-            borderWidth: 1,
             borderColor: Colors.neutral700,
+            borderRadius: 12,
             borderStyle: 'dashed',
-          }
-        ]}>
+            borderWidth: 1,
+          },
+        ]}
+        >
           <Text style={[Fonts.p1, { color: Colors.neutral00, textAlign: 'center' }]}>
-            {isOwnProfile 
+            {isOwnProfile
               ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
-              : t('profile.history.emptyOther', 'Aucun historique renseigné')
-            }
+              : t('profile.history.emptyOther', 'Aucun historique renseigné')}
           </Text>
           {isOwnProfile && (
             <TouchableOpacity
@@ -220,20 +232,20 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
         <View style={[Spaces.gap[12]]}>
           {histories.map((/** @type {UserHistoryItem} */ item) => (
             <TouchableOpacity
+              disabled={!isOwnProfile}
               key={item.documentId || item.id}
               onPress={() => {
                 if (isOwnProfile) onEditPress?.(item);
               }}
-              disabled={!isOwnProfile}
               style={[
                 Spaces.padding[16],
                 Alignments.row,
                 Alignments.alignCenter,
                 {
                   backgroundColor: Colors.neutral800,
+                  borderColor: Colors.neutral700,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: Colors.neutral700,
                 },
               ]}
             >
@@ -268,11 +280,12 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
               {/* Active badge */}
               {item.isCurrentlyActive && (
                 <View style={{
-                  backgroundColor: Colors.primary500 + '20',
+                  backgroundColor: `${Colors.primary500}20`,
+                  borderRadius: 4,
                   paddingHorizontal: 8,
                   paddingVertical: 4,
-                  borderRadius: 4,
-                }}>
+                }}
+                >
                   <Text style={[Fonts.p3, { color: Colors.primary500 }]}>Actif</Text>
                 </View>
               )}
@@ -283,17 +296,17 @@ function UserHistorySection({ userId, isOwnProfile = false, onAddPress, onEditPr
                   onPress={() => handleDelete(item.documentId || item.id)}
                   style={[
                     Spaces.padding[8],
-                    { marginRight: -8 }
+                    { marginRight: -8 },
                   ]}
                 >
                   <Image
+                    resizeMode="contain"
                     source={Images.trash}
                     style={{
-                      width: 20,
                       height: 20,
                       tintColor: '#FF4D4D',
+                      width: 20,
                     }}
-                    resizeMode="contain"
                   />
                 </TouchableOpacity>
               )}

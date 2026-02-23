@@ -1,10 +1,13 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import useAuth from '@/domains/auth/useAuth';
+import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -14,14 +17,16 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
-import { getPendingFeaturedRequests, approveFeatured, rejectFeatured } from '@/services/event/eventService';
+
+import { approveFeatured, getPendingFeaturedRequests, rejectFeatured } from '@/services/event/eventService';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
-import useAuth from '@/domains/auth/useAuth';
-import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { REQUESTS_HUB_LEGACY_REDIRECT, navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 
 /**
  * Screen for multisport club admins to manage featured event requests
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
  */
 function FeaturedRequestsScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};
@@ -47,9 +52,9 @@ function FeaturedRequestsScreen({ navigation, route }) {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['pending-featured-requests', cmId],
-    queryFn: () => getPendingFeaturedRequests(cmId),
     enabled: !!cmId,
+    queryFn: () => getPendingFeaturedRequests(cmId),
+    queryKey: ['pending-featured-requests', cmId],
   });
 
   const approveMutation = useMutation({
@@ -83,10 +88,10 @@ function FeaturedRequestsScreen({ navigation, route }) {
       t('featuredRequests.confirm.approve.title', 'Accepter la demande ?'),
       t('featuredRequests.confirm.approve.message', 'Cet evenement sera visible dans le planning de tous les adherents du club.'),
       [
-        { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          text: t('common.confirm', 'Accepter'),
           onPress: () => approveMutation.mutate(eventId),
+          text: t('common.confirm', 'Accepter'),
         },
       ],
     );
@@ -97,11 +102,11 @@ function FeaturedRequestsScreen({ navigation, route }) {
       t('featuredRequests.confirm.reject.title', 'Refuser la demande ?'),
       t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifie du refus.'),
       [
-        { text: t('common.cancel', 'Annuler'), style: 'cancel' },
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          text: t('common.confirm', 'Refuser'),
-          style: 'destructive',
           onPress: () => rejectMutation.mutate({ eventId }),
+          style: 'destructive',
+          text: t('common.confirm', 'Refuser'),
         },
       ],
     );
@@ -110,8 +115,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const handleEventPress = useCallback((event) => {
     if (event?.documentId) {
       navigation.navigate(RouteNames.EventStack, {
-        screen: RouteNames.EventDetails,
         params: { eventId: event.documentId },
+        screen: RouteNames.EventDetails,
       });
     }
   }, [navigation]);
@@ -124,8 +129,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
         navigation.setParams({
           startTutorial: undefined,
           tutorialId: undefined,
-          tutorialStartToken: undefined,
           tutorialSource: undefined,
+          tutorialStartToken: undefined,
         });
       }}
       routeParams={route?.params}
@@ -197,11 +202,14 @@ function FeaturedRequestsScreen({ navigation, route }) {
                     <View style={[Spaces.gap[4]]}>
                       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{event.name || event.type?.name || 'Evenement'}</Text>
                       <Text style={[Fonts.p2, Fonts.primary100]}>{event.team?.club?.name}</Text>
-                      <Text style={[Fonts.p2, Fonts.primary100]}>Date: {event.date ? formatDateWithDayPrefix(event.date) : '-'}</Text>
+                      <Text style={[Fonts.p2, Fonts.primary100]}>
+                        Date:
+                        {event.date ? formatDateWithDayPrefix(event.date) : '-'}
+                      </Text>
                     </View>
                     <View style={[Alignments.row, Spaces.gap[12]]}>
-                      <Button icon="check" isOption isLoading={approveMutation.isPending} onPress={() => handleApprove(event.documentId)} style={{ flex: 1 }} title={t('common.accept', 'Accepter')} variant="Primary" />
-                      <Button icon="close" isOption isLoading={rejectMutation.isPending} onPress={() => handleReject(event.documentId)} style={{ flex: 1 }} title={t('common.refuse', 'Refuser')} variant="Secondary" />
+                      <Button icon="check" isLoading={approveMutation.isPending} isOption onPress={() => handleApprove(event.documentId)} style={{ flex: 1 }} title={t('common.accept', 'Accepter')} variant="Primary" />
+                      <Button icon="close" isLoading={rejectMutation.isPending} isOption onPress={() => handleReject(event.documentId)} style={{ flex: 1 }} title={t('common.refuse', 'Refuser')} variant="Secondary" />
                     </View>
                   </TouchableOpacity>
                 ))

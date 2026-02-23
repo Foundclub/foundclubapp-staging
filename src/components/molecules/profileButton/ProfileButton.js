@@ -1,11 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import { TouchableOpacity } from 'react-native';
 
-import { useAppContext } from '@/store/appContext';
-import { RouteNames } from '@/navigation/routeNames';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import useAuth from '@/domains/auth/useAuth';
+import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
+
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 /**
  * ProfileButton component displays user avatar and navigates to profile screen.
@@ -35,9 +37,9 @@ function ProfileButton() {
       ]}
     >
       <ProfileAvatar
+        enablePreview={false}
         imageUrl={!isAddingAccount ? userData?.avatar?.url : undefined}
         size={40}
-        enablePreview={false}
       />
     </TouchableOpacity>
   );

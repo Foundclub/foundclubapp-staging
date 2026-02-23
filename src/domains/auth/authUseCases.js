@@ -1,6 +1,7 @@
 import { storage } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
+
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
 const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
@@ -30,9 +31,9 @@ export const getAuthTokens = () => {
  * @returns {{totalViews: number, views: {index: number, route: string, canShow: boolean}[]}}
  */
 export const getOnboardingViews = ({
-  avatar, birthdate, firstname, lastname, role, section, documentId,
-  preferredSport, position, height, weight, bestLevel, category, sportsHistory,
-  address, club, myTeams, trainedTeams,
+  address, avatar, bestLevel, birthdate, category, club, documentId,
+  firstname, height, lastname, myTeams, position, preferredSport, role,
+  section, sportsHistory, trainedTeams, weight,
 }) => {
   // Check if user has already completed onboarding once
   const hasCompletedOnboarding = (() => {
@@ -200,7 +201,6 @@ export const markOnboardingComplete = (documentId) => {
   }
 };
 
-
 /**
  * Get the fields to display in the profile based on user role
  * @param {Role} role - The user role
@@ -305,10 +305,10 @@ export const NOTIFICATION_TYPES = {
   ADD_TO_TEAM: 'addToTeam',
 
   // Clubs
-  CLUB_MEMBERSHIP_REQUEST: 'clubMembershipRequest',
-  CLUB_REQUEST: 'clubRequest',
   AFFILIATION_HELP_REQUEST: 'affiliationHelpRequest',
   AFFILIATION_HELP_STATUS: 'affiliationHelpStatus',
+  CLUB_MEMBERSHIP_REQUEST: 'clubMembershipRequest',
+  CLUB_REQUEST: 'clubRequest',
 
   // Teams
   NEW_TEAM: 'newTeam',
@@ -319,15 +319,15 @@ export const NOTIFICATION_TYPES = {
   EVENT_CANCELLATION: 'eventCancellation',
   EVENT_REMINDER: 'eventReminder',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
-  NEW_PARTICIPATION: 'newParticipation',
-  PARTICIPATION_REQUEST: 'participationRequest',
-  FEATURED_REQUEST: 'featuredRequest',
   FEATURED_APPROVED: 'featuredApproved',
   FEATURED_REJECTED: 'featuredRejected',
+  FEATURED_REQUEST: 'featuredRequest',
+  NEW_PARTICIPATION: 'newParticipation',
   OVERBOOKING_REQUEST: 'overbookingRequest',
+  PARTICIPATION_REQUEST: 'participationRequest',
+  RESERVATION_COMPLETE: 'reservationComplete',
   RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
   RESERVATION_SOS_ALERT: 'reservationSosAlert',
-  RESERVATION_COMPLETE: 'reservationComplete',
   SEARCH_ALERT_MATCH: 'searchAlertMatch',
 
   // Messages
@@ -336,28 +336,28 @@ export const NOTIFICATION_TYPES = {
   NEW_WHISPER: 'newWhisper',
 
   // Matchmaking
+  LEAGUE_AUTOMATION: 'LEAGUE_AUTOMATION',
+  LEAGUE_MATCH_DISPUTED: 'leagueMatchDisputed',
+  LEAGUE_MATCH_FINALIZED: 'leagueMatchFinalized',
   LEAGUE_MATCH_FOUND: 'leagueMatchFound',
-  LEAGUE_PROPOSAL_RECEIVED: 'leagueProposalReceived',
+  LEAGUE_MATCH_VALIDATED: 'leagueMatchValidated',
   LEAGUE_PROPOSAL_ACCEPTED: 'leagueProposalAccepted',
-  LEAGUE_VENUE_BOOKED: 'leagueVenueBooked',
+  LEAGUE_PROPOSAL_RECEIVED: 'leagueProposalReceived',
+  LEAGUE_SCORE_ADMIN_ESCALATED: 'leagueScoreAdminEscalated',
+  LEAGUE_SCORE_DEADLINE_WARNING: 'leagueScoreDeadlineWarning',
+  LEAGUE_SCORE_DISPUTED_BY_OPPONENT: 'leagueScoreDisputedByOpponent',
   LEAGUE_SCORE_DUE: 'leagueScoreDue',
-  LEAGUE_SCORE_START_INFO: 'leagueScoreStartInfo',
   LEAGUE_SCORE_END_DUE: 'leagueScoreEndDue',
   LEAGUE_SCORE_REMINDER_2H: 'leagueScoreReminder2h',
-  LEAGUE_SCORE_DEADLINE_WARNING: 'leagueScoreDeadlineWarning',
+  LEAGUE_SCORE_START_INFO: 'leagueScoreStartInfo',
   LEAGUE_SCORE_SUBMITTED_BY_OPPONENT: 'leagueScoreSubmittedByOpponent',
-  LEAGUE_SCORE_DISPUTED_BY_OPPONENT: 'leagueScoreDisputedByOpponent',
-  LEAGUE_SCORE_ADMIN_ESCALATED: 'leagueScoreAdminEscalated',
-  LEAGUE_MATCH_VALIDATED: 'leagueMatchValidated',
-  LEAGUE_MATCH_FINALIZED: 'leagueMatchFinalized',
-  LEAGUE_MATCH_DISPUTED: 'leagueMatchDisputed',
   LEAGUE_SEARCH_RELAUNCH_PROMPT: 'leagueSearchRelaunchPrompt',
   LEAGUE_SQUAD_JOIN_REQUEST: 'leagueSquadJoinRequest',
-  LEAGUE_AUTOMATION: 'LEAGUE_AUTOMATION',
-  REMATCH_REQUEST: 'REMATCH_REQUEST',
-  RSVP_ALERT: 'RSVP_ALERT',
+  LEAGUE_VENUE_BOOKED: 'leagueVenueBooked',
   RECRUITMENT_APPLICATION: 'recruitment_application',
   RECRUITMENT_APPLICATION_AUTO: 'recruitment_application_auto',
+  REMATCH_REQUEST: 'REMATCH_REQUEST',
+  RSVP_ALERT: 'RSVP_ALERT',
   // Legacy alias kept for backward compatibility
   MATCH_FOUND: 'MATCH_FOUND',
 };
@@ -371,55 +371,56 @@ export const sanitizeUser = (user) => {
   if (!user) return undefined;
 
   const {
-    documentId, id, email, firstname, lastname, phoneNumber, role, avatar, // basic
-    club, // object
-    myTeams, trainedTeams, // arrays of teams
-    multisportClubs, // array of CMs
-    teamMembershipRequests, // array of requests
+    address, avatar, bestLevel, birthdate, category, club, // object
+    documentId, email, // basic
+    firstname,
+    geohash, height,
+    id,
     isLookingForClub,
-    preferredSport,
-    birthdate,
-    section,
-    height,
-    weight,
+    lastname,
+    multisportClubs, // array of CMs
+    myTeams,
+    phoneNumber,
     position,
-    bestLevel,
-    category,
-    address,
-    geohash,
+    preferredSport,
+    role,
+    section,
+    teamMembershipRequests, // array of requests
+    trainedTeams, // arrays of teams
+    weight,
   } = user;
 
   const sanitizedRole = role ? {
-    id: role.id,
     documentId: role.documentId,
+    id: role.id,
     name: role.name,
     type: role.type,
   } : role;
 
   return {
+    address,
+    avatar,
+    bestLevel,
+    birthdate,
+    category,
+    club,
     documentId,
-    id,
     email,
     firstname,
-    lastname,
-    phoneNumber,
-    role: sanitizedRole,
-    avatar,
-    club,
-    myTeams,
-    trainedTeams,
-    multisportClubs,
-    teamMembershipRequests,
-    isLookingForClub,
-    preferredSport,
-    birthdate,
-    section,
-    height,
-    weight,
-    position,
-    bestLevel,
-    category,
-    address,
     geohash,
+    height,
+    id,
+    isLookingForClub,
+    lastname,
+    multisportClubs,
+    myTeams,
+    phoneNumber,
+    position,
+    preferredSport,
+    role: sanitizedRole,
+    section,
+    teamMembershipRequests,
+    trainedTeams,
+    weight,
   };
 };

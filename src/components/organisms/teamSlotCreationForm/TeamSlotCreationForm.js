@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+  LayoutAnimation, Platform, Text, UIManager, View,
+} from 'react-native';
+
 import useTheme from '@/theme/themeContext';
+
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import { WheelPicker } from '@/components/molecules/dateTimeSelector/DateTimeSelector';
@@ -29,24 +33,26 @@ const DAYS = [
  * @param {() => void} [props.onDelete]
  * @param {(draft: { isValid: boolean, slot: { day: string, startTime: string, endTime: string } | null }) => void} [props.onDraftChange]
  */
-const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraftChange }) => {
+function TeamSlotCreationForm({
+  initialValues, onAdd, onCancel, onDelete, onDraftChange,
+}) {
   const { Colors, Fonts } = useTheme();
-  
+
   const [selectedDay, setSelectedDay] = useState(() => {
     if (initialValues?.day) {
-        return DAYS.find(d => d.value === initialValues.day) || null;
+      return DAYS.find((d) => d.value === initialValues.day) || null;
     }
     return null;
   });
-  
+
   // Initialize times with Date objects
   const [startTimeDate, setStartTimeDate] = useState(() => {
     const d = new Date();
     if (initialValues?.startTime) {
-        const [h, m] = initialValues.startTime.split(':');
-        d.setHours(parseInt(h), parseInt(m), 0, 0);
+      const [h, m] = initialValues.startTime.split(':');
+      d.setHours(parseInt(h), parseInt(m), 0, 0);
     } else {
-        d.setHours(20, 0, 0, 0);
+      d.setHours(20, 0, 0, 0);
     }
     return d;
   });
@@ -54,10 +60,10 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
   const [endTimeDate, setEndTimeDate] = useState(() => {
     const d = new Date();
     if (initialValues?.endTime) {
-        const [h, m] = initialValues.endTime.split(':');
-        d.setHours(parseInt(h), parseInt(m), 0, 0);
+      const [h, m] = initialValues.endTime.split(':');
+      d.setHours(parseInt(h), parseInt(m), 0, 0);
     } else {
-        d.setHours(22, 0, 0, 0);
+      d.setHours(22, 0, 0, 0);
     }
     return d;
   });
@@ -70,9 +76,7 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
    * @param {Date} date
    * @returns {string}
    */
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  };
+  const formatTime = (date) => date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   /**
    * @param {'hour' | 'minute'} type
@@ -89,7 +93,7 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
     minEnd.setHours(minEnd.getHours() + 1);
 
     if (endTimeDate <= newStart) {
-        setEndTimeDate(minEnd);
+      setEndTimeDate(minEnd);
     }
   };
 
@@ -98,24 +102,22 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
    * @param {number} value
    */
   const handleEndTimeChange = (type, value) => {
-      const newEnd = new Date(endTimeDate);
-      if (type === 'hour') newEnd.setHours(value);
-      if (type === 'minute') newEnd.setMinutes(value);
-      setEndTimeDate(newEnd);
+    const newEnd = new Date(endTimeDate);
+    if (type === 'hour') newEnd.setHours(value);
+    if (type === 'minute') newEnd.setMinutes(value);
+    setEndTimeDate(newEnd);
   };
 
   const handleAdd = () => {
     if (!selectedDay) return;
     onAdd({
-        day: selectedDay.value,
-        startTime: formatTime(startTimeDate),
-        endTime: formatTime(endTimeDate),
+      day: selectedDay.value,
+      endTime: formatTime(endTimeDate),
+      startTime: formatTime(startTimeDate),
     });
   };
 
-  const isFormValid = useMemo(() => {
-     return selectedDay && startTimeDate && endTimeDate && endTimeDate > startTimeDate; 
-  }, [selectedDay, startTimeDate, endTimeDate]);
+  const isFormValid = useMemo(() => selectedDay && startTimeDate && endTimeDate && endTimeDate > startTimeDate, [selectedDay, startTimeDate, endTimeDate]);
 
   useEffect(() => {
     if (!onDraftChange) return;
@@ -124,112 +126,113 @@ const TeamSlotCreationForm = ({ onAdd, onCancel, initialValues, onDelete, onDraf
       isValid: Boolean(isFormValid),
       slot: isFormValid && selectedDayValue
         ? {
-            day: selectedDayValue,
-            endTime: formatTime(endTimeDate),
-            startTime: formatTime(startTimeDate),
-          }
+          day: selectedDayValue,
+          endTime: formatTime(endTimeDate),
+          startTime: formatTime(startTimeDate),
+        }
         : null,
     });
   }, [onDraftChange, isFormValid, selectedDay, startTimeDate, endTimeDate]);
 
   return (
-    <View style={{ 
-        backgroundColor: Colors.neutral800, 
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        paddingTop: 40, // Increased padding top for modal header
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: Colors.neutral700
-    }}>
-        <View style={{ marginBottom: 16 }}>
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Jour</Text>
-            <AutocompleteSelect
-                placeholder="Sélectionner un jour"
-                options={DAYS}
-                value={selectedDay?.label || ''}
-                setValue={setSelectedDay}
-                isSearchable={false}
+    <View style={{
+      backgroundColor: Colors.neutral800,
+      borderColor: Colors.neutral700,
+      borderRadius: 16,
+      borderWidth: 1,
+      paddingHorizontal: 16,
+      paddingTop: 40, // Increased padding top for modal header
+      paddingVertical: 16,
+    }}
+    >
+      <View style={{ marginBottom: 16 }}>
+        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Jour</Text>
+        <AutocompleteSelect
+          isSearchable={false}
+          options={DAYS}
+          placeholder="Sélectionner un jour"
+          setValue={setSelectedDay}
+          value={selectedDay?.label || ''}
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
+        <View style={{ alignItems: 'center', flex: 1 }}>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Début</Text>
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+            <WheelPicker
+              data={hours}
+              isOpen
+              onValueChange={(h) => handleStartTimeChange('hour', h)}
+              selectedValue={startTimeDate.getHours()}
+              visibleItems={3}
+              width={40}
             />
+            <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>:</Text>
+            <WheelPicker
+              data={minutes}
+              isOpen
+              onValueChange={(m) => handleStartTimeChange('minute', m)}
+              selectedValue={startTimeDate.getMinutes()}
+              visibleItems={3}
+              width={40}
+            />
+          </View>
+        </View>
+        <View style={{ alignItems: 'center', flex: 1 }}>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Fin</Text>
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+            <WheelPicker
+              data={hours}
+              isOpen
+              onValueChange={(h) => handleEndTimeChange('hour', h)}
+              selectedValue={endTimeDate.getHours()}
+              visibleItems={3}
+              width={40}
+            />
+            <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>:</Text>
+            <WheelPicker
+              data={minutes}
+              isOpen
+              onValueChange={(m) => handleEndTimeChange('minute', m)}
+              selectedValue={endTimeDate.getMinutes()}
+              visibleItems={3}
+              width={40}
+            />
+          </View>
+
+        </View>
+      </View>
+
+      <View style={{ gap: 12, marginTop: 24 }}>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Button
+            onPress={onCancel}
+            style={{ flex: 1 }}
+            title="Annuler"
+            variant="Secondary"
+          />
+          <Button
+            disabled={!isFormValid}
+            onPress={handleAdd}
+            style={{ flex: 1 }}
+            title={initialValues ? 'Modifier' : 'Ajouter'}
+            variant="Primary"
+          />
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Début</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <WheelPicker
-                        data={hours}
-                        selectedValue={startTimeDate.getHours()}
-                        onValueChange={(h) => handleStartTimeChange('hour', h)}
-                        width={40}
-                        isOpen={true}
-                        visibleItems={3}
-                    />
-                    <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>:</Text>
-                    <WheelPicker
-                        data={minutes}
-                        selectedValue={startTimeDate.getMinutes()}
-                        onValueChange={(m) => handleStartTimeChange('minute', m)}
-                        width={40}
-                        isOpen={true}
-                        visibleItems={3}
-                    />
-                </View>
-            </View>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Fin</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <WheelPicker
-                        data={hours}
-                        selectedValue={endTimeDate.getHours()}
-                        onValueChange={(h) => handleEndTimeChange('hour', h)}
-                        width={40}
-                        isOpen={true}
-                        visibleItems={3}
-                    />
-                    <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>:</Text>
-                    <WheelPicker
-                        data={minutes}
-                        selectedValue={endTimeDate.getMinutes()}
-                        onValueChange={(m) => handleEndTimeChange('minute', m)}
-                        width={40}
-                        isOpen={true}
-                        visibleItems={3}
-                    />
-                </View>
-
-            </View>
-        </View>
-
-        <View style={{ gap: 12, marginTop: 24 }}>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-                 <Button
-                    title="Annuler"
-                    onPress={onCancel}
-                    variant="Secondary"
-                    style={{ flex: 1 }}
-                />
-                <Button
-                    title={initialValues ? "Modifier" : "Ajouter"}
-                    onPress={handleAdd}
-                    variant="Primary"
-                    disabled={!isFormValid}
-                    style={{ flex: 1 }}
-                />
-            </View>
-
-            {initialValues && onDelete && (
-                 <Button
-                    title="Supprimer ce créneau"
-                    onPress={onDelete}
-                    variant="Secondary"
-                    style={{ borderColor: Colors.error500, borderWidth: 1 }}
-                    textStyle={{ color: Colors.error500 }}
-                />
-            )}
-        </View>
+        {initialValues && onDelete && (
+          <Button
+            onPress={onDelete}
+            style={{ borderColor: Colors.error500, borderWidth: 1 }}
+            textStyle={{ color: Colors.error500 }}
+            title="Supprimer ce créneau"
+            variant="Secondary"
+          />
+        )}
+      </View>
     </View>
   );
-};
+}
 
 export default TeamSlotCreationForm;

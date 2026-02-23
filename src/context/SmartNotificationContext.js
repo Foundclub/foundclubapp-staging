@@ -1,5 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
+import React, {
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+} from 'react';
+
+import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const DEFAULT_DEDUPE_TTL_MS = 15000;
 
@@ -47,7 +50,12 @@ const getDedupeKey = (/** @type {SmartNotificationPayload} */ payload = {}) => {
   return `${payload.type || 'unknown'}:${payload.matchId || ''}:${payload.phase || ''}`;
 };
 
-export const SmartNotificationProvider = (/** @type {{ children?: import('react').ReactNode }} */ { children }) => {
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
+export function SmartNotificationProvider({ children }) {
   const [queue, setQueue] = useState(/** @type {SmartNotificationPayload[]} */ ([]));
   const [activeSnackbar, setActiveSnackbar] = useState(/** @type {SmartNotificationPayload | null} */ (null));
   const [activeRecap, setActiveRecap] = useState(/** @type {SmartNotificationPayload | null} */ (null));
@@ -124,6 +132,6 @@ export const SmartNotificationProvider = (/** @type {{ children?: import('react'
       {children}
     </SmartNotificationContext.Provider>
   );
-};
+}
 
 export const useSmartNotifications = () => useContext(SmartNotificationContext);
