@@ -29,6 +29,15 @@ import { useAppContext } from '../store/appContext';
 const notificationsLogger = createLogger('notifications');
 let notificationDepsCache = null;
 
+const getSafeProperty = (target, propertyName) => {
+  if (!target) return undefined;
+  try {
+    return target[propertyName];
+  } catch (_error) {
+    return undefined;
+  }
+};
+
 /**
  * Lazy-load notification native deps so app startup can continue even if a
  * native notification module is unavailable in a given build flavor.
@@ -52,26 +61,30 @@ const getNotificationDeps = () => {
     // eslint-disable-next-line global-require
     const firebaseMessagingModule = require('@react-native-firebase/messaging');
 
-    const notifeeExport = notifeeModule?.default || notifeeModule;
-    const firebaseAppExport = firebaseAppModule?.default || firebaseAppModule;
-    const firebaseMessagingExport = firebaseMessagingModule?.default || firebaseMessagingModule;
+    const notifeeExport = getSafeProperty(notifeeModule, 'default') || notifeeModule;
+    const firebaseAppExport = getSafeProperty(firebaseAppModule, 'default') || firebaseAppModule;
+    const firebaseMessagingExport = getSafeProperty(firebaseMessagingModule, 'default') || firebaseMessagingModule;
 
     const resolveDefaultApp = () => {
-      if (typeof firebaseAppModule?.getApp === 'function') return firebaseAppModule.getApp();
-      if (typeof firebaseAppExport?.getApp === 'function') return firebaseAppExport.getApp();
-      if (typeof firebaseAppExport?.app === 'function') return firebaseAppExport.app();
+      const getAppFromModule = getSafeProperty(firebaseAppModule, 'getApp');
+      const getAppFromExport = getSafeProperty(firebaseAppExport, 'getApp');
+      const namespacedAppGetter = getSafeProperty(firebaseAppExport, 'app');
+
+      if (typeof getAppFromModule === 'function') return getAppFromModule();
+      if (typeof getAppFromExport === 'function') return getAppFromExport();
+      if (typeof namespacedAppGetter === 'function') return namespacedAppGetter();
       return undefined;
     };
 
     const getMessagingInstance = () => {
       const defaultApp = resolveDefaultApp();
-      if (typeof firebaseMessagingModule?.getMessaging === 'function') {
-        return firebaseMessagingModule.getMessaging(defaultApp);
-      }
-      if (typeof firebaseMessagingExport?.getMessaging === 'function') {
-        return firebaseMessagingExport.getMessaging(defaultApp);
-      }
-      if (typeof firebaseMessagingModule?.default === 'function') return firebaseMessagingModule.default();
+      const getMessagingFromModule = getSafeProperty(firebaseMessagingModule, 'getMessaging');
+      const getMessagingFromExport = getSafeProperty(firebaseMessagingExport, 'getMessaging');
+      const moduleFactory = getSafeProperty(firebaseMessagingModule, 'default');
+
+      if (typeof getMessagingFromModule === 'function') return getMessagingFromModule(defaultApp);
+      if (typeof getMessagingFromExport === 'function') return getMessagingFromExport(defaultApp);
+      if (typeof moduleFactory === 'function') return moduleFactory();
       if (typeof firebaseMessagingExport === 'function') return firebaseMessagingExport();
       return null;
     };
@@ -85,16 +98,21 @@ const getNotificationDeps = () => {
     };
 
     notificationDepsCache = {
-      EventType: notifeeModule?.EventType || safeNotifee?.EventType || {},
+      EventType: getSafeProperty(notifeeModule, 'EventType') || getSafeProperty(safeNotifee, 'EventType') || {},
       getMessagingInstance,
       getToken: async (messagingInstance) => {
         if (messagingInstance && typeof messagingInstance.getToken === 'function') {
           return messagingInstance.getToken();
         }
-        const modularGetToken = firebaseMessagingExport?.getToken || firebaseMessagingModule?.getToken;
+        const modularGetToken = getSafeProperty(firebaseMessagingExport, 'getToken')
+          || getSafeProperty(firebaseMessagingModule, 'getToken');
         if (typeof modularGetToken === 'function') {
-          if (messagingInstance) return modularGetToken(messagingInstance);
-          return modularGetToken();
+          try {
+            if (messagingInstance) return modularGetToken(messagingInstance);
+            return modularGetToken();
+          } catch (_error) {
+            return '';
+          }
         }
         return '';
       },
@@ -103,10 +121,15 @@ const getNotificationDeps = () => {
         if (messagingInstance && typeof messagingInstance.onMessage === 'function') {
           return messagingInstance.onMessage(listener);
         }
-        const modularOnMessage = firebaseMessagingExport?.onMessage || firebaseMessagingModule?.onMessage;
+        const modularOnMessage = getSafeProperty(firebaseMessagingExport, 'onMessage')
+          || getSafeProperty(firebaseMessagingModule, 'onMessage');
         if (typeof modularOnMessage === 'function') {
-          if (messagingInstance) return modularOnMessage(messagingInstance, listener);
-          return modularOnMessage(listener);
+          try {
+            if (messagingInstance) return modularOnMessage(messagingInstance, listener);
+            return modularOnMessage(listener);
+          } catch (_error) {
+            return () => {};
+          }
         }
         return () => {};
       },
@@ -114,11 +137,15 @@ const getNotificationDeps = () => {
         if (messagingInstance && typeof messagingInstance.onNotificationOpenedApp === 'function') {
           return messagingInstance.onNotificationOpenedApp(listener);
         }
-        const modularOnOpened = firebaseMessagingExport?.onNotificationOpenedApp
-          || firebaseMessagingModule?.onNotificationOpenedApp;
+        const modularOnOpened = getSafeProperty(firebaseMessagingExport, 'onNotificationOpenedApp')
+          || getSafeProperty(firebaseMessagingModule, 'onNotificationOpenedApp');
         if (typeof modularOnOpened === 'function') {
-          if (messagingInstance) return modularOnOpened(messagingInstance, listener);
-          return modularOnOpened(listener);
+          try {
+            if (messagingInstance) return modularOnOpened(messagingInstance, listener);
+            return modularOnOpened(listener);
+          } catch (_error) {
+            return () => {};
+          }
         }
         return () => {};
       },
@@ -126,11 +153,15 @@ const getNotificationDeps = () => {
         if (messagingInstance && typeof messagingInstance.requestPermission === 'function') {
           return messagingInstance.requestPermission();
         }
-        const modularRequestPermission = firebaseMessagingExport?.requestPermission
-          || firebaseMessagingModule?.requestPermission;
+        const modularRequestPermission = getSafeProperty(firebaseMessagingExport, 'requestPermission')
+          || getSafeProperty(firebaseMessagingModule, 'requestPermission');
         if (typeof modularRequestPermission === 'function') {
-          if (messagingInstance) return modularRequestPermission(messagingInstance);
-          return modularRequestPermission();
+          try {
+            if (messagingInstance) return modularRequestPermission(messagingInstance);
+            return modularRequestPermission();
+          } catch (_error) {
+            return null;
+          }
         }
         return null;
       },
@@ -583,9 +614,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           notificationsLogger.debug('iOS permission result', { permResult });
 
           // Double check registration
-          const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
+          const rawRegistered = messagingInstance?.isDeviceRegisteredForRemoteMessages;
+          const registered = typeof rawRegistered === 'function'
+            ? await rawRegistered.call(messagingInstance)
+            : Boolean(rawRegistered);
           notificationsLogger.debug('Device registered for remote messages', { registered });
-          if (!registered) {
+          if (!registered && typeof messagingInstance?.registerDeviceForRemoteMessages === 'function') {
             notificationsLogger.debug('Registering device for remote messages');
             await messagingInstance.registerDeviceForRemoteMessages();
             notificationsLogger.debug('Device registered successfully');
@@ -655,13 +689,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     // Check for initial notification (Cold Start) - Firebase remote push
-    messagingInstance.getInitialNotification().then((remoteMessage) => {
-      if (remoteMessage) {
-        notificationsLogger.debug('App opened from quit state by notification');
-        const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-        queuePendingNotification(normalizedData, 'fcm');
-      }
-    });
+    if (typeof messagingInstance.getInitialNotification === 'function') {
+      messagingInstance.getInitialNotification().then((remoteMessage) => {
+        if (remoteMessage) {
+          notificationsLogger.debug('App opened from quit state by notification');
+          const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+          queuePendingNotification(normalizedData, 'fcm');
+        }
+      });
+    }
 
     // Handle app opened from BACKGROUND state by Firebase remote push.
     const unsubscribeNotificationOpened = notificationDeps.onNotificationOpenedApp(messagingInstance, (remoteMessage) => {

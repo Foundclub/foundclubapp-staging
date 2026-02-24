@@ -13,6 +13,15 @@ import {
 let handlersRegistered = false;
 let notificationDepsCache = null;
 
+const getSafeProperty = (target, propertyName) => {
+  if (!target) return undefined;
+  try {
+    return target[propertyName];
+  } catch (_error) {
+    return undefined;
+  }
+};
+
 /**
  * Lazy-load notification native deps so startup never crashes when a native
  * notification module is unavailable in a given build.
@@ -33,26 +42,30 @@ const getNotificationDeps = () => {
     // eslint-disable-next-line global-require
     const firebaseMessagingModule = require('@react-native-firebase/messaging');
 
-    const notifeeExport = notifeeModule?.default || notifeeModule;
-    const firebaseAppExport = firebaseAppModule?.default || firebaseAppModule;
-    const firebaseMessagingExport = firebaseMessagingModule?.default || firebaseMessagingModule;
+    const notifeeExport = getSafeProperty(notifeeModule, 'default') || notifeeModule;
+    const firebaseAppExport = getSafeProperty(firebaseAppModule, 'default') || firebaseAppModule;
+    const firebaseMessagingExport = getSafeProperty(firebaseMessagingModule, 'default') || firebaseMessagingModule;
 
     const resolveDefaultApp = () => {
-      if (typeof firebaseAppModule?.getApp === 'function') return firebaseAppModule.getApp();
-      if (typeof firebaseAppExport?.getApp === 'function') return firebaseAppExport.getApp();
-      if (typeof firebaseAppExport?.app === 'function') return firebaseAppExport.app();
+      const getAppFromModule = getSafeProperty(firebaseAppModule, 'getApp');
+      const getAppFromExport = getSafeProperty(firebaseAppExport, 'getApp');
+      const namespacedAppGetter = getSafeProperty(firebaseAppExport, 'app');
+
+      if (typeof getAppFromModule === 'function') return getAppFromModule();
+      if (typeof getAppFromExport === 'function') return getAppFromExport();
+      if (typeof namespacedAppGetter === 'function') return namespacedAppGetter();
       return undefined;
     };
 
     const getMessagingInstance = () => {
       const defaultApp = resolveDefaultApp();
-      if (typeof firebaseMessagingModule?.getMessaging === 'function') {
-        return firebaseMessagingModule.getMessaging(defaultApp);
-      }
-      if (typeof firebaseMessagingExport?.getMessaging === 'function') {
-        return firebaseMessagingExport.getMessaging(defaultApp);
-      }
-      if (typeof firebaseMessagingModule?.default === 'function') return firebaseMessagingModule.default();
+      const getMessagingFromModule = getSafeProperty(firebaseMessagingModule, 'getMessaging');
+      const getMessagingFromExport = getSafeProperty(firebaseMessagingExport, 'getMessaging');
+      const moduleFactory = getSafeProperty(firebaseMessagingModule, 'default');
+
+      if (typeof getMessagingFromModule === 'function') return getMessagingFromModule(defaultApp);
+      if (typeof getMessagingFromExport === 'function') return getMessagingFromExport(defaultApp);
+      if (typeof moduleFactory === 'function') return moduleFactory();
       if (typeof firebaseMessagingExport === 'function') return firebaseMessagingExport();
       return null;
     };
@@ -64,7 +77,7 @@ const getNotificationDeps = () => {
     };
 
     notificationDepsCache = {
-      EventType: notifeeModule?.EventType || safeNotifee?.EventType || {},
+      EventType: getSafeProperty(notifeeModule, 'EventType') || getSafeProperty(safeNotifee, 'EventType') || {},
       getMessagingInstance,
       notifee: safeNotifee,
       setBackgroundMessageHandler: (messagingInstance, handler) => {
@@ -76,8 +89,8 @@ const getNotificationDeps = () => {
           return;
         }
 
-        const modularSetBackgroundHandler = firebaseMessagingExport?.setBackgroundMessageHandler
-          || firebaseMessagingModule?.setBackgroundMessageHandler;
+        const modularSetBackgroundHandler = getSafeProperty(firebaseMessagingExport, 'setBackgroundMessageHandler')
+          || getSafeProperty(firebaseMessagingModule, 'setBackgroundMessageHandler');
         if (typeof modularSetBackgroundHandler === 'function') {
           if (messagingInstance) {
             try {
