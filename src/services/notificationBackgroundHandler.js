@@ -16,6 +16,20 @@ import {
 let handlersRegistered = false;
 
 /**
+ * Safely resolve messaging instance without crashing app startup when
+ * Firebase default app is not initialized yet.
+ * @returns {import('@react-native-firebase/messaging').FirebaseMessagingTypes.Module | null}
+ */
+const getMessagingInstanceSafely = () => {
+  try {
+    return getMessaging(getApp());
+  } catch (error) {
+    console.warn('[NotificationBackground] Firebase app unavailable, background handler disabled:', error);
+    return null;
+  }
+};
+
+/**
  * @param {any} remoteMessage
  * @param {Record<string, any>} data
  * @returns {string}
@@ -40,26 +54,27 @@ export const registerBackgroundHandler = () => {
     console.warn('[NotificationBackground] Failed to setup action categories:', error);
   });
 
-  const messagingInstance = getMessaging(getApp());
-
-  setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
-    try {
-      const normalizedData = normalizeNotificationPayload(remoteMessage?.data || {});
-      if (
-        Platform.OS === 'android'
-        && isEventRsvpActionablePayload(normalizedData)
-      ) {
-        await displayEventRsvpActionableNotification({
-          body: resolvePushBody(remoteMessage, normalizedData),
-          data: normalizedData,
-          title: resolvePushTitle(remoteMessage, normalizedData),
-        });
+  const messagingInstance = getMessagingInstanceSafely();
+  if (messagingInstance) {
+    setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
+      try {
+        const normalizedData = normalizeNotificationPayload(remoteMessage?.data || {});
+        if (
+          Platform.OS === 'android'
+          && isEventRsvpActionablePayload(normalizedData)
+        ) {
+          await displayEventRsvpActionableNotification({
+            body: resolvePushBody(remoteMessage, normalizedData),
+            data: normalizedData,
+            title: resolvePushTitle(remoteMessage, normalizedData),
+          });
+        }
+      } catch (error) {
+        console.warn('[NotificationBackground] Failed to process FCM message:', error);
       }
-    } catch (error) {
-      console.warn('[NotificationBackground] Failed to process FCM message:', error);
-    }
-    return Promise.resolve();
-  });
+      return Promise.resolve();
+    });
+  }
 
   notifee.onBackgroundEvent(async ({ detail, type }) => {
     try {

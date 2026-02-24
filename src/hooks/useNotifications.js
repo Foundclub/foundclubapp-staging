@@ -90,8 +90,11 @@ const formatDateForGoogleCalendar = (dateInput) => {
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
 
-const requestUserPermission = async () => {
-  const messagingInstance = getMessaging(getApp());
+/**
+ * @param {import('@react-native-firebase/messaging').FirebaseMessagingTypes.Module | null} messagingInstance
+ */
+const requestUserPermission = async (messagingInstance) => {
+  if (!messagingInstance) return;
 
   if (Platform.OS === 'ios') {
     try {
@@ -165,6 +168,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // hooks
   const [{ pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
+
+  const resolveMessagingInstance = useCallback(() => {
+    try {
+      return getMessaging(getApp());
+    } catch (error) {
+      notificationsLogger.warn('Firebase app unavailable, notifications setup skipped', error);
+      return null;
+    }
+  }, []);
 
   const { mutate: saveTokenMutation } = useMutation({
     meta: {
@@ -335,7 +347,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // listeners
   // Handle foreground notif display
   useEffect(() => {
-    const messagingInstance = getMessaging(getApp());
+    const messagingInstance = resolveMessagingInstance();
+    if (!messagingInstance) return undefined;
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       // Skip notification display for message types that shouldn't show in foreground
@@ -385,7 +398,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       });
     });
     return unsubscribe;
-  }, [onSmartNotification, maybePromptAddToCalendar]);
+  }, [onSmartNotification, maybePromptAddToCalendar, resolveMessagingInstance]);
 
   // open notification when app is in foreground
   useEffect(() => notifee.onForegroundEvent(async ({ detail, type }) => {
@@ -416,12 +429,16 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const retreiveFCMToken = async () => {
       try {
         notificationsLogger.debug('Starting token retrieval');
-        const messagingInstance = getMessaging(getApp());
+        const messagingInstance = resolveMessagingInstance();
+        if (!messagingInstance) {
+          notificationsLogger.warn('Skipping FCM token retrieval: Firebase app unavailable');
+          return;
+        }
 
         if (Platform.OS === 'ios') {
           notificationsLogger.debug('iOS detected - requesting permissions');
           // Ensure device is registered and has permissions
-          const permResult = await requestUserPermission();
+          const permResult = await requestUserPermission(messagingInstance);
           notificationsLogger.debug('iOS permission result', { permResult });
 
           // Double check registration
@@ -439,7 +456,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           );
           notificationsLogger.debug('Android permission status', { permissionGranted });
           if (!permissionGranted) {
-            await requestUserPermission();
+            await requestUserPermission(messagingInstance);
           }
         }
 
@@ -488,7 +505,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
     };
 
-    const messagingInstance = getMessaging(getApp());
+    const messagingInstance = resolveMessagingInstance();
+    if (!messagingInstance) {
+      return () => {};
+    }
 
     // Check for initial notification (Cold Start) - Firebase remote push
     messagingInstance.getInitialNotification().then((remoteMessage) => {
@@ -524,7 +544,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     return () => {
       unsubscribeNotificationOpened();
     };
-  }, [saveToken, userData, dispatch]);
+  }, [saveToken, userData, dispatch, resolveMessagingInstance]);
 
   useEffect(() => {
     if (!pendingNotification?.type) return undefined;
