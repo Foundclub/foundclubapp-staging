@@ -9,6 +9,7 @@ const AppDispatchContext = React
   .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */({}));
 
 let storageInstance = null;
+let storageBackend = 'mmkv';
 const inMemoryStorageMap = new Map();
 const fallbackStorage = {
   addOnValueChangedListener: () => ({ remove: () => {} }),
@@ -37,15 +38,18 @@ const fallbackStorage = {
 
 export const getStorage = () => {
   if (Platform.OS === 'web') {
+    storageBackend = 'memory-fallback-web';
     return fallbackStorage;
   }
 
   if (!storageInstance) {
     try {
       storageInstance = new MMKV();
+      storageBackend = 'mmkv';
     } catch (error) {
       console.warn('[AppContext] MMKV unavailable, using in-memory fallback storage.', error);
       storageInstance = fallbackStorage;
+      storageBackend = 'memory-fallback-mmkv-error';
     }
   }
   return storageInstance;
@@ -64,18 +68,51 @@ export const storage = {
 };
 
 /**
+ * Safely parse persisted JSON values during startup.
+ * Never throws to keep app bootstrap crash-free.
+ * @template T
+ * @param {string | undefined} rawValue
+ * @param {T} fallbackValue
+ * @param {string} key
+ * @returns {T}
+ */
+const safeJsonParse = (rawValue, fallbackValue, key) => {
+  if (typeof rawValue !== 'string' || rawValue.trim().length === 0) {
+    return fallbackValue;
+  }
+
+  try {
+    return JSON.parse(rawValue);
+  } catch (error) {
+    console.warn('[BOOT] APP_CONTEXT_PARSE_FAILED', {
+      error: error?.message || 'unknown',
+      key,
+      rawValuePreview: rawValue.slice(0, 120),
+    });
+    return fallbackValue;
+  }
+};
+
+const getStoredJson = (key, fallbackValue) => {
+  if (!storage.contains(key)) return fallbackValue;
+  return safeJsonParse(storage.getString(key), fallbackValue, key);
+};
+
+const storedAuth = getStoredJson('auth', undefined);
+const storedAuthSessionsRaw = getStoredJson('authSessions', []);
+const storedAuthSessions = Array.isArray(storedAuthSessionsRaw) ? storedAuthSessionsRaw : [];
+
+/**
  * Initial state for the global application context.
  * @type {Store}
  */
 const initStore = {
-  auth: storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined,
+  auth: storedAuth,
   authSessions: (() => {
-    const storedSessions = storage.contains('authSessions') ? JSON.parse(storage.getString('authSessions') || '[]') : [];
-    const storedAuth = storage.contains('auth') ? JSON.parse(storage.getString('auth') || '') : undefined;
-    if (storedSessions.length === 0 && storedAuth) {
+    if (storedAuthSessions.length === 0 && storedAuth) {
       return [storedAuth];
     }
-    return storedSessions;
+    return storedAuthSessions;
   })(),
   clubFilters: undefined,
   eventFilters: undefined,
@@ -113,6 +150,16 @@ const setPersistantState = (key, newValue) => {
  */
 function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initStore);
+
+  useEffect(() => {
+    console.info('[BOOT] BOOT_STORE_READY', {
+      hasAuth: Boolean(state.auth),
+      sessionCount: Array.isArray(state.authSessions) ? state.authSessions.length : 0,
+      storageBackend,
+    });
+    // We only need this marker once at bootstrap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setPersistantState('auth', JSON.stringify(state.auth));

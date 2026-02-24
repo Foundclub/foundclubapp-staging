@@ -7,7 +7,6 @@ import {
   Alert, ImageBackground, Linking, StatusBar, Text, TouchableOpacity, View,
 } from 'react-native';
 import 'dayjs/locale/fr';
-import DocumentPicker from 'react-native-document-picker';
 import {
   Actions,
   Bubble,
@@ -50,6 +49,30 @@ import { createLogger } from '@/utils/logger/logger';
 import { EVENTS } from '@/hooks/useSocket';
 
 const conversationLogger = createLogger('conversation');
+const isFlagEnabled = (rawValue) => {
+  const normalized = String(rawValue || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+};
+
+const isDocumentPickerDisabled = isFlagEnabled(process.env.FC_DISABLE_DOCUMENT_PICKER);
+
+/** @type {any | null | undefined} */
+let cachedDocumentPickerModule;
+
+const getDocumentPickerModule = () => {
+  if (cachedDocumentPickerModule !== undefined) return cachedDocumentPickerModule;
+  try {
+    // Lazy import to avoid eager native resolution during app bootstrap.
+    // eslint-disable-next-line global-require
+    const maybeModule = require('react-native-document-picker');
+    cachedDocumentPickerModule = maybeModule?.default || maybeModule;
+    return cachedDocumentPickerModule;
+  } catch (error) {
+    conversationLogger.warn('DocumentPicker module unavailable', error);
+    cachedDocumentPickerModule = null;
+    return null;
+  }
+};
 
 /**
  * Chat conversation screen component
@@ -399,10 +422,21 @@ function Conversation({ navigation, route }) {
   };
 
   const handlePickFile = async () => {
+    if (isDocumentPickerDisabled) {
+      Alert.alert('Fichier indisponible', 'Le selecteur de fichier est temporairement desactive sur cette build.');
+      return;
+    }
+
+    const documentPicker = getDocumentPickerModule();
+    if (!documentPicker?.pickSingle || !documentPicker?.types?.allFiles) {
+      Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
+      return;
+    }
+
     try {
-      const selectedFile = await DocumentPicker.pickSingle({
+      const selectedFile = await documentPicker.pickSingle({
         copyTo: 'cachesDirectory',
-        type: [DocumentPicker.types.allFiles],
+        type: [documentPicker.types.allFiles],
       });
 
       const selectedUri = selectedFile.fileCopyUri || selectedFile.uri;
@@ -417,7 +451,7 @@ function Conversation({ navigation, route }) {
         uri: selectedUri,
       });
     } catch (error) {
-      if (DocumentPicker.isCancel(error)) return;
+      if (typeof documentPicker.isCancel === 'function' && documentPicker.isCancel(error)) return;
       conversationLogger.warn('Document picker failed', error);
       Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
     }
