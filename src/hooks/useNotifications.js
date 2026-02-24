@@ -1,12 +1,3 @@
-import notifee, { EventType } from '@notifee/react-native';
-import { getApp } from '@react-native-firebase/app';
-import {
-  getMessaging,
-  getToken,
-  onMessage,
-  onNotificationOpenedApp,
-  requestPermission,
-} from '@react-native-firebase/messaging';
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import {
@@ -36,17 +27,145 @@ import { RouteNames } from '../navigation/routeNames';
 import { useAppContext } from '../store/appContext';
 
 const notificationsLogger = createLogger('notifications');
+let notificationDepsCache = null;
+
+/**
+ * Lazy-load notification native deps so app startup can continue even if a
+ * native notification module is unavailable in a given build flavor.
+ * @returns {{
+ *  notifee: any,
+ *  EventType: Record<string, any>,
+ *  getMessagingInstance: () => any,
+ *  getToken: (messaging: any) => Promise<string>,
+ *  onMessage: (messaging: any, listener: (message: any) => void | Promise<void>) => () => void,
+ *  onNotificationOpenedApp: (messaging: any, listener: (message: any) => void) => () => void,
+ *  requestPermission: (messaging: any) => Promise<any>,
+ * } | null}
+ */
+const getNotificationDeps = () => {
+  if (notificationDepsCache) return notificationDepsCache;
+  try {
+    // eslint-disable-next-line global-require
+    const notifeeModule = require('@notifee/react-native');
+    // eslint-disable-next-line global-require
+    const firebaseAppModule = require('@react-native-firebase/app');
+    // eslint-disable-next-line global-require
+    const firebaseMessagingModule = require('@react-native-firebase/messaging');
+
+    const notifeeExport = notifeeModule?.default || notifeeModule;
+    const firebaseAppExport = firebaseAppModule?.default || firebaseAppModule;
+    const firebaseMessagingExport = firebaseMessagingModule?.default || firebaseMessagingModule;
+
+    const resolveDefaultApp = () => {
+      if (typeof firebaseAppModule?.getApp === 'function') return firebaseAppModule.getApp();
+      if (typeof firebaseAppExport?.getApp === 'function') return firebaseAppExport.getApp();
+      if (typeof firebaseAppExport?.app === 'function') return firebaseAppExport.app();
+      return undefined;
+    };
+
+    const getMessagingInstance = () => {
+      const defaultApp = resolveDefaultApp();
+      if (typeof firebaseMessagingModule?.getMessaging === 'function') {
+        return firebaseMessagingModule.getMessaging(defaultApp);
+      }
+      if (typeof firebaseMessagingExport?.getMessaging === 'function') {
+        return firebaseMessagingExport.getMessaging(defaultApp);
+      }
+      if (typeof firebaseMessagingModule?.default === 'function') return firebaseMessagingModule.default();
+      if (typeof firebaseMessagingExport === 'function') return firebaseMessagingExport();
+      return null;
+    };
+
+    const safeNotifee = {
+      cancelNotification: async () => {},
+      displayNotification: async () => {},
+      getInitialNotification: async () => null,
+      onForegroundEvent: () => () => {},
+      ...(notifeeExport && typeof notifeeExport === 'object' ? notifeeExport : {}),
+    };
+
+    notificationDepsCache = {
+      EventType: notifeeModule?.EventType || safeNotifee?.EventType || {},
+      getMessagingInstance,
+      getToken: async (messagingInstance) => {
+        if (messagingInstance && typeof messagingInstance.getToken === 'function') {
+          return messagingInstance.getToken();
+        }
+        const modularGetToken = firebaseMessagingExport?.getToken || firebaseMessagingModule?.getToken;
+        if (typeof modularGetToken === 'function') {
+          if (messagingInstance) return modularGetToken(messagingInstance);
+          return modularGetToken();
+        }
+        return '';
+      },
+      notifee: safeNotifee,
+      onMessage: (messagingInstance, listener) => {
+        if (messagingInstance && typeof messagingInstance.onMessage === 'function') {
+          return messagingInstance.onMessage(listener);
+        }
+        const modularOnMessage = firebaseMessagingExport?.onMessage || firebaseMessagingModule?.onMessage;
+        if (typeof modularOnMessage === 'function') {
+          if (messagingInstance) return modularOnMessage(messagingInstance, listener);
+          return modularOnMessage(listener);
+        }
+        return () => {};
+      },
+      onNotificationOpenedApp: (messagingInstance, listener) => {
+        if (messagingInstance && typeof messagingInstance.onNotificationOpenedApp === 'function') {
+          return messagingInstance.onNotificationOpenedApp(listener);
+        }
+        const modularOnOpened = firebaseMessagingExport?.onNotificationOpenedApp
+          || firebaseMessagingModule?.onNotificationOpenedApp;
+        if (typeof modularOnOpened === 'function') {
+          if (messagingInstance) return modularOnOpened(messagingInstance, listener);
+          return modularOnOpened(listener);
+        }
+        return () => {};
+      },
+      requestPermission: async (messagingInstance) => {
+        if (messagingInstance && typeof messagingInstance.requestPermission === 'function') {
+          return messagingInstance.requestPermission();
+        }
+        const modularRequestPermission = firebaseMessagingExport?.requestPermission
+          || firebaseMessagingModule?.requestPermission;
+        if (typeof modularRequestPermission === 'function') {
+          if (messagingInstance) return modularRequestPermission(messagingInstance);
+          return modularRequestPermission();
+        }
+        return null;
+      },
+    };
+    return notificationDepsCache;
+  } catch (error) {
+    notificationsLogger.warn('Native notification deps unavailable', error);
+    return null;
+  }
+};
 
 // Create a storage instance for notifications
 /** @type {MMKV | null} */
 let notificationStorageInstance = null;
+const notificationMemoryStorage = new Map();
+const notificationFallbackStorage = {
+  contains: (key) => notificationMemoryStorage.has(key),
+  getString: (key) => {
+    const value = notificationMemoryStorage.get(key);
+    return typeof value === 'string' ? value : undefined;
+  },
+  set: (key, value) => notificationMemoryStorage.set(key, value),
+};
 
 /** @returns {MMKV} */
 const getNotificationStorage = () => {
   if (!notificationStorageInstance) {
-    notificationStorageInstance = new MMKV({
-      id: 'notifications-storage',
-    });
+    try {
+      notificationStorageInstance = new MMKV({
+        id: 'notifications-storage',
+      });
+    } catch (error) {
+      notificationsLogger.warn('MMKV unavailable in notifications, using in-memory fallback', error);
+      notificationStorageInstance = /** @type {any} */ (notificationFallbackStorage);
+    }
   }
   return notificationStorageInstance;
 };
@@ -91,15 +210,16 @@ const formatDateForGoogleCalendar = (dateInput) => {
 };
 
 /**
- * @param {import('@react-native-firebase/messaging').FirebaseMessagingTypes.Module | null} messagingInstance
+ * @param {any} messagingInstance
+ * @param {ReturnType<typeof getNotificationDeps>} notificationDeps
  */
-const requestUserPermission = async (messagingInstance) => {
-  if (!messagingInstance) return;
+const requestUserPermission = async (messagingInstance, notificationDeps) => {
+  if (!messagingInstance || !notificationDeps) return;
 
   if (Platform.OS === 'ios') {
     try {
       // Then request permission
-      await requestPermission(messagingInstance);
+      await notificationDeps.requestPermission(messagingInstance);
     } catch (error) {
       throw new Error(`Failed to request permission: ${error}`);
     }
@@ -112,10 +232,18 @@ const requestUserPermission = async (messagingInstance) => {
 
 /**
  * Display notification when app is open
- * @param {{title: string, body: string, data: any}} param - Notification data
+ * @param {{
+ *  title: string,
+ *  body: string,
+ *  data: any,
+ *  notificationDeps?: ReturnType<typeof getNotificationDeps>,
+ * }} param - Notification data
  * @returns {Promise<void>}
  */
-const onDisplayNotification = async ({ body, data, title }) => {
+const onDisplayNotification = async ({
+  body, data, notificationDeps, title,
+}) => {
+  if (!notificationDeps) return;
   const normalizedData = normalizeNotificationPayload(data || {});
   await ensureNotificationActionSetup();
 
@@ -130,7 +258,7 @@ const onDisplayNotification = async ({ body, data, title }) => {
 
   if (title || body) {
     // Display a notification
-    await notifee.displayNotification({
+    await notificationDeps.notifee.displayNotification({
       android: {
         channelId: 'default',
         importance: 4,
@@ -170,8 +298,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const { userData } = useAuth();
 
   const resolveMessagingInstance = useCallback(() => {
+    const deps = getNotificationDeps();
+    if (!deps) return null;
     try {
-      return getMessaging(getApp());
+      return deps.getMessagingInstance();
     } catch (error) {
       notificationsLogger.warn('Firebase app unavailable, notifications setup skipped', error);
       return null;
@@ -347,9 +477,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // listeners
   // Handle foreground notif display
   useEffect(() => {
+    const notificationDeps = getNotificationDeps();
     const messagingInstance = resolveMessagingInstance();
-    if (!messagingInstance) return undefined;
-    const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
+    if (!notificationDeps || !messagingInstance) return undefined;
+    const unsubscribe = notificationDeps.onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       // Skip notification display for message types that shouldn't show in foreground
       const skipTypes = [
@@ -394,6 +525,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       onDisplayNotification({
         body: remoteMessage.notification?.body || fallbackBody,
         data: remoteMessage.data || {},
+        notificationDeps,
         title: remoteMessage.notification?.title || fallbackTitle,
       });
     });
@@ -401,26 +533,30 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   }, [onSmartNotification, maybePromptAddToCalendar, resolveMessagingInstance]);
 
   // open notification when app is in foreground
-  useEffect(() => notifee.onForegroundEvent(async ({ detail, type }) => {
-    if (type === EventType.ACTION_PRESS) {
-      const result = await handleEventRsvpActionPress({
-        notificationData: detail.notification?.data || {},
-        pressActionId: detail?.pressAction?.id,
-      });
-      if (result?.handled && detail.notification?.id) {
-        await notifee.cancelNotification(detail.notification.id);
+  useEffect(() => {
+    const notificationDeps = getNotificationDeps();
+    if (!notificationDeps) return undefined;
+    return notificationDeps.notifee.onForegroundEvent(async ({ detail, type }) => {
+      if (type === notificationDeps.EventType.ACTION_PRESS) {
+        const result = await handleEventRsvpActionPress({
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (result?.handled && detail.notification?.id) {
+          await notificationDeps.notifee.cancelNotification(detail.notification.id);
+        }
+        return;
       }
-      return;
-    }
 
-    if (type === EventType.PRESS) {
-      if (detail.notification?.data?.type) {
-        handleNavigateOnOpen(
-          normalizeNotificationPayload(detail.notification.data),
-        );
+      if (type === notificationDeps.EventType.PRESS) {
+        if (detail.notification?.data?.type) {
+          handleNavigateOnOpen(
+            normalizeNotificationPayload(detail.notification.data),
+          );
+        }
       }
-    }
-  }), [handleNavigateOnOpen]);
+    });
+  }, [handleNavigateOnOpen]);
 
   const hasSynced = useRef(false);
 
@@ -429,6 +565,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const retreiveFCMToken = async () => {
       try {
         notificationsLogger.debug('Starting token retrieval');
+        const notificationDeps = getNotificationDeps();
+        if (!notificationDeps) {
+          notificationsLogger.warn('Skipping FCM token retrieval: native deps unavailable');
+          return;
+        }
         const messagingInstance = resolveMessagingInstance();
         if (!messagingInstance) {
           notificationsLogger.warn('Skipping FCM token retrieval: Firebase app unavailable');
@@ -438,7 +579,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         if (Platform.OS === 'ios') {
           notificationsLogger.debug('iOS detected - requesting permissions');
           // Ensure device is registered and has permissions
-          const permResult = await requestUserPermission(messagingInstance);
+          const permResult = await requestUserPermission(messagingInstance, notificationDeps);
           notificationsLogger.debug('iOS permission result', { permResult });
 
           // Double check registration
@@ -456,13 +597,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           );
           notificationsLogger.debug('Android permission status', { permissionGranted });
           if (!permissionGranted) {
-            await requestUserPermission(messagingInstance);
+            await requestUserPermission(messagingInstance, notificationDeps);
           }
         }
 
         // Finally get FCM token
         notificationsLogger.debug('Getting FCM token');
-        const token = await getToken(messagingInstance);
+        const token = await notificationDeps.getToken(messagingInstance);
         notificationsLogger.debug('FCM token retrieval completed', { hasToken: Boolean(token) });
         if (token) {
           notificationsLogger.debug('Saving token to backend');
@@ -505,8 +646,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
     };
 
+    const notificationDeps = getNotificationDeps();
     const messagingInstance = resolveMessagingInstance();
-    if (!messagingInstance) {
+    if (!notificationDeps || !messagingInstance) {
+      const storedPending = consumePendingOpenNotification();
+      queuePendingNotification(storedPending, 'storage');
       return () => {};
     }
 
@@ -520,7 +664,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     });
 
     // Handle app opened from BACKGROUND state by Firebase remote push.
-    const unsubscribeNotificationOpened = onNotificationOpenedApp(messagingInstance, (remoteMessage) => {
+    const unsubscribeNotificationOpened = notificationDeps.onNotificationOpenedApp(messagingInstance, (remoteMessage) => {
       if (!remoteMessage) return;
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       if (normalizedData?.type) {
@@ -530,7 +674,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     });
 
     // Check Notifee initial notification (local/actionable notifications)
-    notifee.getInitialNotification().then((initialNotification) => {
+    notificationDeps.notifee.getInitialNotification().then((initialNotification) => {
       const normalizedData = normalizeNotificationPayload(
         initialNotification?.notification?.data || {},
       );

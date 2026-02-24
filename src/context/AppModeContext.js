@@ -5,8 +5,31 @@ import { MMKV } from 'react-native-mmkv';
 
 import useTheme from '@/theme/themeContext';
 
-// Initialize MMKV
-export const storage = new MMKV();
+const inMemoryStorageMap = new Map();
+const fallbackStorage = {
+  getString: (key) => {
+    const value = inMemoryStorageMap.get(key);
+    return typeof value === 'string' ? value : undefined;
+  },
+  set: (key, value) => inMemoryStorageMap.set(key, value),
+};
+
+let storageInstance = null;
+const getModeStorage = () => {
+  if (storageInstance) return storageInstance;
+  try {
+    storageInstance = new MMKV();
+  } catch (error) {
+    console.warn('[AppModeContext] MMKV unavailable, using in-memory fallback storage.', error);
+    storageInstance = fallbackStorage;
+  }
+  return storageInstance;
+};
+
+export const storage = {
+  getString: (key) => getModeStorage().getString(key),
+  set: (key, value) => getModeStorage().set(key, value),
+};
 
 const STORAGE_KEY = 'user.app_mode';
 

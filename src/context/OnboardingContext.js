@@ -27,7 +27,31 @@ const defaultOnboardingContextValue = {
 };
 
 const OnboardingContext = createContext(defaultOnboardingContextValue);
-const storage = new MMKV();
+const inMemoryStorageMap = new Map();
+const fallbackStorage = {
+  getString: (key) => {
+    const value = inMemoryStorageMap.get(key);
+    return typeof value === 'string' ? value : undefined;
+  },
+  set: (key, value) => inMemoryStorageMap.set(key, value),
+};
+
+let storageInstance = null;
+const getOnboardingStorage = () => {
+  if (storageInstance) return storageInstance;
+  try {
+    storageInstance = new MMKV();
+  } catch (error) {
+    console.warn('[OnboardingContext] MMKV unavailable, using in-memory fallback storage.', error);
+    storageInstance = fallbackStorage;
+  }
+  return storageInstance;
+};
+
+const storage = {
+  getString: (key) => getOnboardingStorage().getString(key),
+  set: (key, value) => getOnboardingStorage().set(key, value),
+};
 const ONBOARDING_PROGRESS_PREFIX = 'onboarding-progress-v1';
 
 const getCompletedStepsKey = (flowId) => `${ONBOARDING_PROGRESS_PREFIX}:${flowId}:completed`;

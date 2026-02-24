@@ -9,21 +9,44 @@ const AppDispatchContext = React
   .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */({}));
 
 let storageInstance = null;
+const inMemoryStorageMap = new Map();
+const fallbackStorage = {
+  addOnValueChangedListener: () => ({ remove: () => {} }),
+  clearAll: () => inMemoryStorageMap.clear(),
+  contains: (key) => inMemoryStorageMap.has(key),
+  delete: (key) => inMemoryStorageMap.delete(key),
+  getAllKeys: () => Array.from(inMemoryStorageMap.keys()),
+  getBoolean: (key) => {
+    const value = inMemoryStorageMap.get(key);
+    return typeof value === 'boolean' ? value : false;
+  },
+  getNumber: (key) => {
+    const value = inMemoryStorageMap.get(key);
+    return typeof value === 'number' ? value : 0;
+  },
+  getString: (key) => {
+    const value = inMemoryStorageMap.get(key);
+    if (typeof value === 'string') return value;
+    if (value === undefined || value === null) return undefined;
+    return String(value);
+  },
+  set: (key, value) => {
+    inMemoryStorageMap.set(key, value);
+  },
+};
 
 export const getStorage = () => {
   if (Platform.OS === 'web') {
-    return {
-      clearAll: () => { },
-      delete: () => { },
-      getBoolean: () => false,
-      getNumber: () => 0,
-      getString: () => null,
-      set: () => { },
-    };
+    return fallbackStorage;
   }
 
   if (!storageInstance) {
-    storageInstance = new MMKV();
+    try {
+      storageInstance = new MMKV();
+    } catch (error) {
+      console.warn('[AppContext] MMKV unavailable, using in-memory fallback storage.', error);
+      storageInstance = fallbackStorage;
+    }
   }
   return storageInstance;
 };

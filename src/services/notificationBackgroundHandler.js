@@ -1,6 +1,3 @@
-import notifee, { EventType } from '@notifee/react-native';
-import { getApp } from '@react-native-firebase/app';
-import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 
 import { normalizeNotificationPayload } from '@/utils/notifications/notificationNavigation';
@@ -14,6 +11,92 @@ import {
 } from './notificationActions/rsvpActions';
 
 let handlersRegistered = false;
+let notificationDepsCache = null;
+
+/**
+ * Lazy-load notification native deps so startup never crashes when a native
+ * notification module is unavailable in a given build.
+ * @returns {{
+ *  notifee: any,
+ *  EventType: Record<string, any>,
+ *  getMessagingInstance: () => any,
+ *  setBackgroundMessageHandler: (messaging: any, handler: any) => void
+ * } | null}
+ */
+const getNotificationDeps = () => {
+  if (notificationDepsCache) return notificationDepsCache;
+  try {
+    // eslint-disable-next-line global-require
+    const notifeeModule = require('@notifee/react-native');
+    // eslint-disable-next-line global-require
+    const firebaseAppModule = require('@react-native-firebase/app');
+    // eslint-disable-next-line global-require
+    const firebaseMessagingModule = require('@react-native-firebase/messaging');
+
+    const notifeeExport = notifeeModule?.default || notifeeModule;
+    const firebaseAppExport = firebaseAppModule?.default || firebaseAppModule;
+    const firebaseMessagingExport = firebaseMessagingModule?.default || firebaseMessagingModule;
+
+    const resolveDefaultApp = () => {
+      if (typeof firebaseAppModule?.getApp === 'function') return firebaseAppModule.getApp();
+      if (typeof firebaseAppExport?.getApp === 'function') return firebaseAppExport.getApp();
+      if (typeof firebaseAppExport?.app === 'function') return firebaseAppExport.app();
+      return undefined;
+    };
+
+    const getMessagingInstance = () => {
+      const defaultApp = resolveDefaultApp();
+      if (typeof firebaseMessagingModule?.getMessaging === 'function') {
+        return firebaseMessagingModule.getMessaging(defaultApp);
+      }
+      if (typeof firebaseMessagingExport?.getMessaging === 'function') {
+        return firebaseMessagingExport.getMessaging(defaultApp);
+      }
+      if (typeof firebaseMessagingModule?.default === 'function') return firebaseMessagingModule.default();
+      if (typeof firebaseMessagingExport === 'function') return firebaseMessagingExport();
+      return null;
+    };
+
+    const safeNotifee = {
+      cancelNotification: async () => {},
+      onBackgroundEvent: () => {},
+      ...(notifeeExport && typeof notifeeExport === 'object' ? notifeeExport : {}),
+    };
+
+    notificationDepsCache = {
+      EventType: notifeeModule?.EventType || safeNotifee?.EventType || {},
+      getMessagingInstance,
+      notifee: safeNotifee,
+      setBackgroundMessageHandler: (messagingInstance, handler) => {
+        if (
+          messagingInstance
+          && typeof messagingInstance.setBackgroundMessageHandler === 'function'
+        ) {
+          messagingInstance.setBackgroundMessageHandler(handler);
+          return;
+        }
+
+        const modularSetBackgroundHandler = firebaseMessagingExport?.setBackgroundMessageHandler
+          || firebaseMessagingModule?.setBackgroundMessageHandler;
+        if (typeof modularSetBackgroundHandler === 'function') {
+          if (messagingInstance) {
+            try {
+              modularSetBackgroundHandler(messagingInstance, handler);
+              return;
+            } catch (_error) {
+              // fallback below for signatures expecting only handler
+            }
+          }
+          modularSetBackgroundHandler(handler);
+        }
+      },
+    };
+    return notificationDepsCache;
+  } catch (error) {
+    console.warn('[NotificationBackground] Native notification deps unavailable:', error);
+    return null;
+  }
+};
 
 /**
  * Safely resolve messaging instance without crashing app startup when
@@ -21,8 +104,10 @@ let handlersRegistered = false;
  * @returns {import('@react-native-firebase/messaging').FirebaseMessagingTypes.Module | null}
  */
 const getMessagingInstanceSafely = () => {
+  const deps = getNotificationDeps();
+  if (!deps) return null;
   try {
-    return getMessaging(getApp());
+    return deps.getMessagingInstance();
   } catch (error) {
     console.warn('[NotificationBackground] Firebase app unavailable, background handler disabled:', error);
     return null;
@@ -50,13 +135,16 @@ export const registerBackgroundHandler = () => {
   if (handlersRegistered) return;
   handlersRegistered = true;
 
+  const deps = getNotificationDeps();
+  if (!deps) return;
+
   ensureNotificationActionSetup().catch((error) => {
     console.warn('[NotificationBackground] Failed to setup action categories:', error);
   });
 
   const messagingInstance = getMessagingInstanceSafely();
   if (messagingInstance) {
-    setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
+    deps.setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
       try {
         const normalizedData = normalizeNotificationPayload(remoteMessage?.data || {});
         if (
@@ -76,20 +164,20 @@ export const registerBackgroundHandler = () => {
     });
   }
 
-  notifee.onBackgroundEvent(async ({ detail, type }) => {
+  deps.notifee.onBackgroundEvent(async ({ detail, type }) => {
     try {
-      if (type === EventType.ACTION_PRESS) {
+      if (type === deps.EventType.ACTION_PRESS) {
         await handleEventRsvpActionPress({
           notificationData: detail.notification?.data || {},
           pressActionId: detail?.pressAction?.id,
         });
         if (detail.notification?.id) {
-          await notifee.cancelNotification(detail.notification.id);
+          await deps.notifee.cancelNotification(detail.notification.id);
         }
         return;
       }
 
-      if (type === EventType.PRESS && detail.notification?.data) {
+      if (type === deps.EventType.PRESS && detail.notification?.data) {
         const normalizedData = normalizeNotificationPayload(detail.notification.data);
         if (normalizedData?.type) {
           console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_notifee_press`);
