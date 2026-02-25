@@ -1,3 +1,4 @@
+import notifee from '@notifee/react-native';
 import { MMKV } from 'react-native-mmkv';
 
 import client from '@/services/client';
@@ -17,43 +18,12 @@ import {
 
 /** @type {MMKV | null} */
 let storageInstance = null;
-let notifeeCache = null;
-const inMemoryStorageMap = new Map();
-const fallbackStorage = {
-  delete: (key) => inMemoryStorageMap.delete(key),
-  getString: (key) => {
-    const value = inMemoryStorageMap.get(key);
-    return typeof value === 'string' ? value : undefined;
-  },
-  set: (key, value) => inMemoryStorageMap.set(key, value),
-};
-
-/**
- * @returns {any | null}
- */
-const getNotifeeSafely = () => {
-  if (notifeeCache) return notifeeCache;
-  try {
-    // eslint-disable-next-line global-require
-    const notifeeModule = require('@notifee/react-native');
-    notifeeCache = notifeeModule.default || notifeeModule;
-    return notifeeCache;
-  } catch (error) {
-    console.warn('[RSVP_ACTION] Notifee module unavailable:', error);
-    return null;
-  }
-};
 
 const getStorage = () => {
   if (!storageInstance) {
-    try {
-      storageInstance = new MMKV({
-        id: 'notifications-storage',
-      });
-    } catch (error) {
-      console.warn('[RSVP_ACTION] MMKV unavailable, using in-memory fallback storage.', error);
-      storageInstance = fallbackStorage;
-    }
+    storageInstance = new MMKV({
+      id: 'notifications-storage',
+    });
   }
   return storageInstance;
 };
@@ -149,9 +119,6 @@ const displayLocalNotification = async ({
   isActionable = false,
   title,
 }) => {
-  const notifee = getNotifeeSafely();
-  if (!notifee) return;
-
   const androidConfig = /** @type {any} */ ({
     actions: isActionable
       ? [
@@ -199,9 +166,6 @@ const displayLocalNotification = async ({
  * @returns {Promise<void>}
  */
 export const ensureNotificationActionSetup = async () => {
-  const notifee = getNotifeeSafely();
-  if (!notifee) return;
-
   await notifee.createChannel({
     id: NOTIFICATION_DEFAULT_CHANNEL_ID,
     importance: 4,
