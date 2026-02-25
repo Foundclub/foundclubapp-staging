@@ -24,7 +24,8 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
-const isStaging = process.env.ENV === 'staging';
+const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase();
+const isStaging = appEnv === 'staging';
 const sentryDsn = process.env.SENTRY_DSN;
 const isSentryEnabled = Boolean(sentryDsn);
 const navigationIntegration = isSentryEnabled
@@ -33,13 +34,15 @@ const navigationIntegration = isSentryEnabled
   })
   : { registerNavigationContainer: () => {} };
 
+console.info('[BOOT] APP_ENV_RESOLVED', { appEnv, isSentryEnabled, isStaging });
+
 // Désactiver Sentry en staging ou utiliser un projet Sentry séparé
 if (isSentryEnabled) {
   Sentry.init({
     attachStacktrace: true,
     beforeSend: (event) => {
-      // Don't send events in development mode or staging if desired
-      if (__DEV__ || isStaging) {
+      // Keep crash signals in staging to debug launch issues.
+      if (__DEV__) {
         return null;
       }
       return event;

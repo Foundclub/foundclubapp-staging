@@ -87,10 +87,52 @@ const formatDateForGoogleCalendar = (dateInput) => {
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
 
+const isFirebaseMessagingApiAvailable = () => (
+  typeof getApp === 'function'
+  && typeof getMessaging === 'function'
+  && typeof getToken === 'function'
+  && typeof onMessage === 'function'
+  && typeof onNotificationOpenedApp === 'function'
+);
+
+const isNotifeeApiAvailable = () => {
+  try {
+    return Boolean(
+      notifee
+      && typeof notifee.displayNotification === 'function'
+      && typeof notifee.onForegroundEvent === 'function'
+      && typeof notifee.getInitialNotification === 'function',
+    );
+  } catch (error) {
+    return false;
+  }
+};
+
+const getMessagingInstanceSafe = () => {
+  if (!isFirebaseMessagingApiAvailable()) {
+    console.warn('[BOOT] FCM_API_UNAVAILABLE');
+    return null;
+  }
+
+  try {
+    return getMessaging(getApp());
+  } catch (error) {
+    console.warn('[BOOT] FCM_INSTANCE_UNAVAILABLE', {
+      error: error?.message || 'unknown',
+    });
+    return null;
+  }
+};
+
 const requestUserPermission = async () => {
-  const messagingInstance = getMessaging(getApp());
+  const messagingInstance = getMessagingInstanceSafe();
+  if (!messagingInstance) return;
 
   if (Platform.OS === 'ios') {
+    if (typeof requestPermission !== 'function') {
+      console.warn('[FCM] requestPermission API unavailable on this runtime.');
+      return;
+    }
     try {
       // Then request permission
       await requestPermission(messagingInstance);
@@ -110,43 +152,52 @@ const requestUserPermission = async () => {
  * @returns {Promise<void>}
  */
 const onDisplayNotification = async ({ body, data, title }) => {
-  const normalizedData = normalizeNotificationPayload(data || {});
-  await ensureNotificationActionSetup();
-
-  if (isEventRsvpActionablePayload(normalizedData)) {
-    await displayEventRsvpActionableNotification({
-      body,
-      data: normalizedData,
-      title,
-    });
+  if (!isNotifeeApiAvailable()) {
+    console.warn('[Notifications] Notifee unavailable. Foreground display skipped.');
     return;
   }
 
-  if (title || body) {
-    // Display a notification
-    await notifee.displayNotification({
-      android: {
-        channelId: 'default',
-        importance: 4,
-        pressAction: {
-          id: 'default',
+  try {
+    const normalizedData = normalizeNotificationPayload(data || {});
+    await ensureNotificationActionSetup();
+
+    if (isEventRsvpActionablePayload(normalizedData)) {
+      await displayEventRsvpActionableNotification({
+        body,
+        data: normalizedData,
+        title,
+      });
+      return;
+    }
+
+    if (title || body) {
+      // Display a notification
+      await notifee.displayNotification({
+        android: {
+          channelId: 'default',
+          importance: 4,
+          pressAction: {
+            id: 'default',
+          },
+          smallIcon: 'ic_notification',
+          sound: 'default',
         },
-        smallIcon: 'ic_notification',
-        sound: 'default',
-      },
-      body,
-      data: /** @type {any} */ (normalizedData),
-      ios: {
-        critical: true,
-        foregroundPresentationOptions: {
-          alert: true,
-          badge: true,
-          sound: true,
+        body,
+        data: /** @type {any} */ (normalizedData),
+        ios: {
+          critical: true,
+          foregroundPresentationOptions: {
+            alert: true,
+            badge: true,
+            sound: true,
+          },
+          sound: 'default',
         },
-        sound: 'default',
-      },
-      title,
-    });
+        title,
+      });
+    }
+  } catch (error) {
+    console.warn('[Notifications] Failed to display foreground notification:', error);
   }
 };
 
@@ -321,7 +372,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // listeners
   // Handle foreground notif display
   useEffect(() => {
-    const messagingInstance = getMessaging(getApp());
+    const messagingInstance = getMessagingInstanceSafe();
+    if (!messagingInstance) {
+      console.warn('[Notifications] Foreground FCM listener disabled: messaging unavailable.');
+      return undefined;
+    }
+
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
       // Skip notification display for message types that shouldn't show in foreground
@@ -370,30 +426,37 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         title: remoteMessage.notification?.title || fallbackTitle,
       });
     });
-    return unsubscribe;
+    return typeof unsubscribe === 'function' ? unsubscribe : undefined;
   }, [onSmartNotification, maybePromptAddToCalendar]);
 
   // open notification when app is in foreground
-  useEffect(() => notifee.onForegroundEvent(async ({ detail, type }) => {
-    if (type === EventType.ACTION_PRESS) {
-      const result = await handleEventRsvpActionPress({
-        notificationData: detail.notification?.data || {},
-        pressActionId: detail?.pressAction?.id,
-      });
-      if (result?.handled && detail.notification?.id) {
-        await notifee.cancelNotification(detail.notification.id);
-      }
-      return;
+  useEffect(() => {
+    if (!isNotifeeApiAvailable()) {
+      console.warn('[Notifications] Foreground Notifee listener disabled: notifee unavailable.');
+      return undefined;
     }
 
-    if (type === EventType.PRESS) {
-      if (detail.notification?.data?.type) {
-        handleNavigateOnOpen(
-          normalizeNotificationPayload(detail.notification.data),
-        );
+    return notifee.onForegroundEvent(async ({ detail, type }) => {
+      if (type === EventType.ACTION_PRESS) {
+        const result = await handleEventRsvpActionPress({
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (result?.handled && detail.notification?.id) {
+          await notifee.cancelNotification(detail.notification.id);
+        }
+        return;
       }
-    }
-  }), [handleNavigateOnOpen]);
+
+      if (type === EventType.PRESS) {
+        if (detail.notification?.data?.type) {
+          handleNavigateOnOpen(
+            normalizeNotificationPayload(detail.notification.data),
+          );
+        }
+      }
+    });
+  }, [handleNavigateOnOpen]);
 
   const hasSynced = useRef(false);
 
@@ -402,7 +465,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const retreiveFCMToken = async () => {
       try {
         console.log('[FCM] Starting token retrieval...');
-        const messagingInstance = getMessaging(getApp());
+        const messagingInstance = getMessagingInstanceSafe();
+        if (!messagingInstance) {
+          console.warn('[FCM] Token retrieval skipped: messaging unavailable.');
+          return;
+        }
 
         if (Platform.OS === 'ios') {
           console.log('[FCM] iOS detected - requesting permissions...');
@@ -471,34 +538,49 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
     };
 
-    const messagingInstance = getMessaging(getApp());
+    const messagingInstance = getMessagingInstanceSafe();
+    if (!messagingInstance) {
+      console.warn('[Notifications] Messaging unavailable. Boot listeners skipped.');
+      return undefined;
+    }
 
     // Check for initial notification (Cold Start) - Firebase remote push
-    messagingInstance.getInitialNotification().then((remoteMessage) => {
-      if (remoteMessage) {
-        console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
-        const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-        queuePendingNotification(normalizedData, 'fcm');
-      }
-    });
+    if (typeof messagingInstance.getInitialNotification === 'function') {
+      messagingInstance.getInitialNotification().then((remoteMessage) => {
+        if (remoteMessage) {
+          console.log('[FCM] App opened from QUIT state by notification:', remoteMessage);
+          const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+          queuePendingNotification(normalizedData, 'fcm');
+        }
+      }).catch((error) => {
+        console.warn('[FCM] getInitialNotification failed:', error);
+      });
+    }
 
     // Handle app opened from BACKGROUND state by Firebase remote push.
-    const unsubscribeNotificationOpened = onNotificationOpenedApp(messagingInstance, (remoteMessage) => {
-      if (!remoteMessage) return;
-      const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-      if (normalizedData?.type) {
-        console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
-      }
-      queuePendingNotification(normalizedData, 'fcm-background');
-    });
+    const unsubscribeNotificationOpened = onNotificationOpenedApp(
+      messagingInstance,
+      (remoteMessage) => {
+        if (!remoteMessage) return;
+        const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+        if (normalizedData?.type) {
+          console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
+        }
+        queuePendingNotification(normalizedData, 'fcm-background');
+      },
+    );
 
     // Check Notifee initial notification (local/actionable notifications)
-    notifee.getInitialNotification().then((initialNotification) => {
-      const normalizedData = normalizeNotificationPayload(
-        initialNotification?.notification?.data || {},
-      );
-      queuePendingNotification(normalizedData, 'notifee');
-    });
+    if (isNotifeeApiAvailable()) {
+      notifee.getInitialNotification().then((initialNotification) => {
+        const normalizedData = normalizeNotificationPayload(
+          initialNotification?.notification?.data || {},
+        );
+        queuePendingNotification(normalizedData, 'notifee');
+      }).catch((error) => {
+        console.warn('[Notifications] notifee.getInitialNotification failed:', error);
+      });
+    }
 
     // Consume pending open intent captured by background headless handler
     const storedPending = consumePendingOpenNotification();
