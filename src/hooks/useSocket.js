@@ -1,13 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 
 import { useAppContext } from '@/store/appContext';
-
-import {
-  connectSharedSocket,
-  disconnectSharedSocket,
-  getSharedSocket,
-  subscribeSocketConnection,
-} from '@/services/socket/socketManager';
 
 export const EVENTS = {
   ERROR: 'error',
@@ -32,33 +26,63 @@ export const EVENTS = {
  * }} Socket instance and connection status
  */
 const useSocket = () => {
-  const [socket, setSocket] = useState(() => getSharedSocket());
-  const [isConnected, setIsConnected] = useState(() => Boolean(getSharedSocket()?.connected));
+  const socketRef = useRef(/** @type {import('socket.io-client').Socket | null} */(null));
+  const [isConnected, setIsConnected] = useState(false);
   const [{ auth }] = useAppContext();
 
   useEffect(() => {
     if (!auth?.token) {
-      disconnectSharedSocket();
-      setSocket(null);
       setIsConnected(false);
       return undefined;
     }
 
-    const nextSocket = connectSharedSocket(auth.token);
-    setSocket(nextSocket);
-    setIsConnected(Boolean(nextSocket?.connected));
+    // Create socket connection if it doesn't exist
+    if (!socketRef.current) {
+      // Derive socket URL from API_URL (remove /api suffix)
+      const socketUrl = process.env.SOCKET_URL || process.env.API_URL?.replace('/api', '') || 'http://10.0.2.2:1337';
+      console.log('DEBUG: Socket URL:', socketUrl);
 
-    const unsubscribe = subscribeSocketConnection((connected) => {
-      setIsConnected(connected);
-      setSocket(getSharedSocket());
-    });
+      const socket = io(socketUrl, {
+        auth: { token: auth.token },
+        extraHeaders: {
+          'User-Agent': 'react-native',
+        },
+        reconnection: true,
+        reconnectionAttempts: 5, // Limit reconnection attempts
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        secure: false, // Set to false for local development (http)
+        timeout: 20000, // Increase timeout to 20 seconds
+        transports: ['websocket'],
+      });
+
+      socket.on('connect', () => {
+        setIsConnected(true);
+      });
+
+      socket.on('disconnect', () => {
+        setIsConnected(false);
+      });
+
+      socket.on('connect_error', (error) => {
+        // eslint-disable-next-line no-console
+        console.error('Socket connection error:', error.message);
+        setIsConnected(false);
+      });
+
+      socketRef.current = socket;
+    }
 
     return () => {
-      unsubscribe();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsConnected(false);
+      }
     };
   }, [auth?.token]);
 
-  return { isConnected, socket };
+  return { isConnected, socket: socketRef.current };
 };
 
 export default useSocket;

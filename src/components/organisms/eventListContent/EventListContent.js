@@ -18,7 +18,6 @@ import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
-import { createLogger } from '@/utils/logger/logger';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -44,8 +43,6 @@ import { useSearchEvents } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
-
-const eventListLogger = createLogger('event-list');
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 
@@ -331,10 +328,10 @@ function EventListContent({
 
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) {
-      eventListLogger.warn('Navigation blocked: missing event documentId');
+      console.warn('Navigation blocked: missing event documentId', event);
       return;
     }
-    eventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
+    console.log('Navigating to event:', event.documentId);
     /** @type {any} */ (navigation).navigate('EventStack', { params: { eventId: event.documentId }, screen: 'EventDetails' });
   }, [navigation]);
 

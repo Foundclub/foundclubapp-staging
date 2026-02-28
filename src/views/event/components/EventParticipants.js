@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -38,7 +39,6 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
  *   key: string;
  *   teamName: string;
  *   isHome?: boolean;
- *   isExternal?: boolean;
  *   allowCoachActions?: boolean;
  *   participating: User[];
  *   missing: User[];
@@ -57,8 +57,6 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
  * @property {ParticipationsByStatus | undefined} participationsByStatus
  * @property {PendingParticipation[]} pendingParticipations
  * @property {TeamParticipationSection[]} [teamParticipationSections]
- * @property {TeamParticipationSection | null} [externalParticipationSection]
- * @property {{ participatingCount?: number; capacity?: number }} [participantsSummary]
  * @property {boolean} canEdit
  * @property {boolean} [canApprovePendingRequests]
  * @property {(user?: User) => void} handleUserPress
@@ -82,7 +80,6 @@ function EventParticipants({
   canApprovePendingRequests = canEdit,
   event,
   eventStartAt,
-  externalParticipationSection = null,
   handleExportParticipants,
   handleRemindPlayers,
   handleShare,
@@ -91,7 +88,6 @@ function EventParticipants({
   nowMs,
   onCoachEditLate,
   onCoachMarkArrival,
-  participantsSummary,
   participationsByStatus,
   pendingParticipations,
   teamParticipationSections = [],
@@ -185,25 +181,6 @@ function EventParticipants({
     );
   };
 
-  const getSectionBadgeMeta = (section) => {
-    if (section.isExternal) {
-      return {
-        text: t('eventDetails.invitedTeams.externalBadge', 'Ouvert a tous'),
-        textStyle: [Fonts.p4, Fonts.primary100],
-      };
-    }
-    if (section.isHome) {
-      return {
-        text: t('eventDetails.invitedTeams.homeTeamBadge', 'Equipe organisatrice'),
-        textStyle: [Fonts.p4, Fonts.primary500],
-      };
-    }
-    return {
-      text: t('eventDetails.invitedTeams.invitedTeamBadge', 'Equipe invitee'),
-      textStyle: [Fonts.p4, Fonts.primary100],
-    };
-  };
-
   const renderTeamSection = (section) => {
     const pending = section.pending || [];
     const historical = section.historical || {};
@@ -213,8 +190,6 @@ function EventParticipants({
     const hasHistorical = historicalPending.length
       || historicalParticipating.length
       || historicalMissing.length;
-
-    const sectionBadge = getSectionBadgeMeta(section);
 
     return (
       <View
@@ -230,9 +205,15 @@ function EventParticipants({
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
             {section.teamName}
           </Text>
-          <Text style={sectionBadge.textStyle}>
-            {sectionBadge.text}
-          </Text>
+          {section.isHome ? (
+            <Text style={[Fonts.p4, Fonts.primary500]}>
+              {t('eventDetails.invitedTeams.homeTeamBadge', 'Equipe organisatrice')}
+            </Text>
+          ) : (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('eventDetails.invitedTeams.invitedTeamBadge', 'Equipe invitee')}
+            </Text>
+          )}
         </View>
 
         {canApprovePendingRequests && pending.length > 0 ? (
@@ -283,9 +264,7 @@ function EventParticipants({
         {hasHistorical ? (
           <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
             <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
-              {section.isExternal
-                ? t('eventDetails.invitedTeams.externalHistoricalTitle', 'Historique participants externes')
-                : t('eventDetails.invitedTeams.historicalTitle', 'Historique equipe retiree')}
+              {t('eventDetails.invitedTeams.historicalTitle', 'Historique equipe retiree')}
             </Text>
             {historicalPending.length > 0 ? (
               <Text style={[Fonts.p4, Fonts.neutral300]}>
@@ -308,27 +287,44 @@ function EventParticipants({
     );
   };
 
-  const sectionsToRender = [
-    ...(teamParticipationSections || []),
-    ...(externalParticipationSection ? [externalParticipationSection] : []),
-  ];
-  const hasTeamSections = sectionsToRender.length > 0;
-  const participatingCount = Number(
-    participantsSummary?.participatingCount ?? event?.participations?.length ?? 0,
-  );
-  const capacity = Number(participantsSummary?.capacity ?? event?.capacity ?? 0);
+  const hasTeamSections = teamParticipationSections.length > 0;
 
-  const renderParticipationsContent = () => {
-    if (hasTeamSections) {
-      return (
-        <View style={[Spaces.gap[12]]}>
-          {sectionsToRender.map(renderTeamSection)}
+  return (
+    <View style={[Spaces.gap[16], Alignments.fill]}>
+      {!hasTeamSections && canApprovePendingRequests && pendingParticipations?.length > 0 && (
+        <View style={[Spaces.gap[16], Alignments.fill]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('eventDetails.fields.participationRequests')}
+          </Text>
+          {pendingParticipations.map(renderPendingCard)}
         </View>
-      );
-    }
+      )}
 
-    if (participationsByStatus) {
-      return (
+      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+          {t('eventDetails.fields.participations')}
+          <Text>
+            {` :  ${event?.participations?.length || 0} ${event?.capacity ? ' / ' : ''} ${event?.capacity || ''}`}
+          </Text>
+        </Text>
+        <TouchableOpacity onPress={handleShare}>
+          <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
+        </TouchableOpacity>
+      </View>
+
+      {canEdit && (
+        <TouchableOpacity onPress={handleExportParticipants} style={[{ alignSelf: 'flex-start' }, Spaces.marginTop[4]]}>
+          <Text style={[Fonts.p2, Fonts.primary500, { textDecorationLine: 'underline' }]}>
+            Exporter la liste (Excel/CSV)
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {hasTeamSections ? (
+        <View style={[Spaces.gap[12]]}>
+          {teamParticipationSections.map(renderTeamSection)}
+        </View>
+      ) : participationsByStatus ? (
         <>
           {renderStatusGroup(
             t('eventDetails.participationStatus.participating'),
@@ -364,48 +360,13 @@ function EventParticipants({
             </>
           )}
         </>
-      );
-    }
-
-    return (event?.participations || []).map((player) => renderParticipant(player, {
-      allowLiveLate: true,
-      keyPrefix: 'fallback',
-      showCoachActions: canEdit,
-    }));
-  };
-
-  return (
-    <View style={[Spaces.gap[16], Alignments.fill]}>
-      {!hasTeamSections && canApprovePendingRequests && pendingParticipations?.length > 0 && (
-        <View style={[Spaces.gap[16], Alignments.fill]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {t('eventDetails.fields.participationRequests')}
-          </Text>
-          {pendingParticipations.map(renderPendingCard)}
-        </View>
+      ) : (
+        (event?.participations || []).map((player) => renderParticipant(player, {
+          allowLiveLate: true,
+          keyPrefix: 'fallback',
+          showCoachActions: canEdit,
+        }))
       )}
-
-      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('eventDetails.fields.participations')}
-          <Text>
-            {` :  ${participatingCount} ${capacity ? ' / ' : ''} ${capacity || ''}`}
-          </Text>
-        </Text>
-        <TouchableOpacity onPress={handleShare}>
-          <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
-        </TouchableOpacity>
-      </View>
-
-      {canEdit && (
-        <TouchableOpacity onPress={handleExportParticipants} style={[{ alignSelf: 'flex-start' }, Spaces.marginTop[4]]}>
-          <Text style={[Fonts.p2, Fonts.primary500, { textDecorationLine: 'underline' }]}>
-            Exporter la liste (Excel/CSV)
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {renderParticipationsContent()}
     </View>
   );
 }

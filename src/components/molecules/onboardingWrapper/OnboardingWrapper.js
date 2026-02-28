@@ -1,4 +1,4 @@
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -6,8 +6,14 @@ import {
 } from 'react';
 import { View } from 'react-native';
 
-import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { useOnboarding } from '@/context/OnboardingContext';
+
+const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
+const tutorialDebugLog = (...args) => {
+  if (!isTutorialDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.log('[tutorial-debug]', ...args);
+};
 
 /**
  * @param {{

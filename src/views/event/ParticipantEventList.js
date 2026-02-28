@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
-import { createLogger } from '@/utils/logger/logger';
 
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
@@ -28,8 +27,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-
-const participantEventListLogger = createLogger('participant-event-list');
 
 /**
  * Standard event list screen component for participants
@@ -55,12 +52,6 @@ function ParticipantEventList({ navigation }) {
 
   // Hooks
 
-  const myEventsQueryConfig = useMemo(() => ({
-    // @ts-ignore
-    myTeams: true,
-    sort: 'date:asc',
-  }), []);
-
   // @ts-ignore
   const {
     data: eventsData,
@@ -68,7 +59,11 @@ function ParticipantEventList({ navigation }) {
     hasNextPage,
     isFetchingNextPage,
     refetch,
-  } = useGetEvents(myEventsQueryConfig);
+  } = useGetEvents({
+    // @ts-ignore
+    myTeams: true,
+    sort: 'date:asc',
+  });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
 
@@ -92,15 +87,13 @@ function ParticipantEventList({ navigation }) {
   ].filter((value, index, self) => Boolean(value) && self.indexOf(value) === index);
 
   // Fetch SECTION/CM featured events for Mon Planning
-  const featuredEventsQueryConfig = useMemo(() => ({
+  const { data: featuredData } = useGetEvents({
     featuredScope: ['SECTION', 'CM'],
     isFeatured: true,
     membershipClubIds: allClubIds.length ? allClubIds : undefined,
     pageSize: 5,
     sessionStatus: 'open',
-  }), [allClubIds]);
-
-  const { data: featuredData } = useGetEvents(featuredEventsQueryConfig, { enabled: allClubIds.length > 0 });
+  }, { enabled: allClubIds.length > 0 });
 
   const featuredEvents = useMemo(
     () => featuredData?.pages?.flatMap((page) => page.data) || [],
@@ -179,10 +172,10 @@ function ParticipantEventList({ navigation }) {
    */
   const handleEventPress = (event) => {
     if (!event?.documentId) {
-      participantEventListLogger.warn('Navigation blocked: missing event documentId');
+      console.warn('MyEventList: missing eventId', event);
       return;
     }
-    participantEventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
+    console.log('MyEventList: Navigating to', event.documentId);
     // @ts-ignore
     navigation.navigate('EventStack', {
       params: { eventId: event.documentId },

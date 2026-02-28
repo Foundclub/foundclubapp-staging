@@ -27,14 +27,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetUserById } from '@/services/auth/authQueries';
-import {
-  useGetMyHistories,
-  useGetUserHistories,
-} from '@/services/userHistory/userHistoryQueries';
 
-const toComparableId = (value) => (
-  value === undefined || value === null ? '' : String(value).trim()
-);
+const toComparableId = (value) => (value === undefined || value === null ? '' : String(value).trim());
 
 const parseDate = (value) => {
   if (!value) return null;
@@ -106,13 +100,6 @@ const normalizeWeight = (value, fallback) => {
   if (normalized === fallback) return fallback;
   return String(normalized).includes('kg') ? normalized : `${normalized} kg`;
 };
-
-const getHistoryClubName = (history) => (
-  history?.club?.name
-  || history?.multisport_club?.name
-  || history?.customClubName
-  || ''
-);
 
 /**
  * Render a themed section card for profile blocks.
@@ -288,20 +275,6 @@ function UserDetails({ navigation, route }) {
 
   const user = isSelfProfile ? currentUser : fetchedUser;
 
-  const {
-    data: ownHistoriesData,
-    refetch: refetchOwnHistories,
-  } = useGetMyHistories({
-    enabled: isSelfProfile,
-  });
-
-  const {
-    data: targetHistoriesData,
-    refetch: refetchTargetHistories,
-  } = useGetUserHistories(targetUserId, {
-    enabled: Boolean(targetUserId) && !isSelfProfile,
-  });
-
   const profileError = isSelfProfile ? undefined : fetchedUserError?.message;
   const isProfileLoading = isSelfProfile ? !currentUser : fetchedUserLoading;
 
@@ -327,40 +300,22 @@ function UserDetails({ navigation, route }) {
   const birthdate = parseDate(user?.birthdate);
   const age = birthdate ? differenceInYears(new Date(), birthdate) : null;
   const roleLabel = formatRoleLabel(user?.role?.name);
-  const sectionLabel = formatSectionLabel(user?.section?.name);
+  const sectionLabel = formatSectionLabel(user?.section?.name || user?.category);
   const fallbackValue = t('userDetails.notSet', 'Non renseigne');
-  const histories = isSelfProfile ? ownHistoriesData : targetHistoriesData;
-
-  const historySummary = useMemo(() => {
-    const manualHistory = String(user?.sportsHistory || '').trim();
-    if (manualHistory) {
-      return manualHistory;
-    }
-
-    const historyList = Array.isArray(histories) ? histories : [];
-    if (!historyList.length) {
-      return fallbackValue;
-    }
-
-    const names = historyList
-      .map((item) => getHistoryClubName(item))
-      .map((name) => String(name || '').trim())
-      .filter(Boolean);
-
-    if (!names.length) {
-      return t('userDetails.historySummary.count', '{{count}} experience(s)', {
-        count: historyList.length,
-      });
-    }
-
-    const uniqueNames = [...new Set(names)];
-    if (uniqueNames.length === 1) {
-      return uniqueNames[0];
-    }
-    return `${uniqueNames[0]} +${uniqueNames.length - 1}`;
-  }, [fallbackValue, histories, t, user?.sportsHistory]);
 
   const addressLabel = useMemo(() => parseAddressLabel(user?.address), [user?.address]);
+
+  const playerTeams = useMemo(() => {
+    const teams = Array.isArray(user?.myTeams) ? user.myTeams : [];
+    const seen = new Set();
+    return teams.filter((team) => {
+      const key = toComparableId(team?.documentId || team?.id || team?.name);
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [user?.myTeams]);
 
   const coachedTeams = useMemo(() => {
     const teams = Array.isArray(user?.trainedTeams) ? user.trainedTeams : [];
@@ -374,45 +329,13 @@ function UserDetails({ navigation, route }) {
     });
   }, [user?.trainedTeams]);
 
-  const coachedTeamIds = useMemo(
-    () => new Set(
-      coachedTeams
-        .map((team) => toComparableId(team?.documentId || team?.id || team?.name))
-        .filter(Boolean),
-    ),
-    [coachedTeams],
-  );
-
-  const playerTeams = useMemo(() => {
-    const teams = Array.isArray(user?.myTeams) ? user.myTeams : [];
-    const seen = new Set();
-    return teams.filter((team) => {
-      const key = toComparableId(team?.documentId || team?.id || team?.name);
-      if (!key) return true;
-      if (seen.has(key)) return false;
-      seen.add(key);
-
-      // Avoid showing the same team as both player and coach on profile.
-      return !coachedTeamIds.has(key);
-    });
-  }, [coachedTeamIds, user?.myTeams]);
-  const shouldShowTeamsSection = isSelfProfile || playerTeams.length > 0 || coachedTeams.length > 0;
-
   const handleRefresh = useCallback(() => {
     if (isSelfProfile) {
       refetchUserData?.();
-      refetchOwnHistories?.();
       return;
     }
     refetchFetchedUser();
-    refetchTargetHistories?.();
-  }, [
-    isSelfProfile,
-    refetchFetchedUser,
-    refetchOwnHistories,
-    refetchTargetHistories,
-    refetchUserData,
-  ]);
+  }, [isSelfProfile, refetchFetchedUser, refetchUserData]);
 
   const handleContactUser = async () => {
     if (!user || !currentUser) return;
@@ -451,19 +374,15 @@ function UserDetails({ navigation, route }) {
 
   const handleOpenClub = () => {
     if (!user?.club?.documentId) return;
-    navigation.navigate(RouteNames.ClubStack, {
-      params: { clubId: user.club.documentId },
-      screen: RouteNames.Club,
+    navigation.navigate(RouteNames.Club, {
+      clubId: user.club.documentId,
     });
   };
 
   const handleTeamPress = (team) => {
     const teamId = team?.documentId || team?.id;
     if (!teamId) return;
-    navigation.navigate(RouteNames.TeamStack, {
-      params: { teamId },
-      screen: RouteNames.TeamDetails,
-    });
+    navigation.navigate(RouteNames.TeamDetails, { teamId });
   };
 
   const renderTeamCard = (team, index, prefix = 'team') => (
@@ -682,7 +601,7 @@ function UserDetails({ navigation, route }) {
                 icon={Images.edit}
                 label={t('userDetails.fields.history', 'Historique sportif')}
                 Spaces={Spaces}
-                value={historySummary}
+                value={formatNullableValue(user?.sportsHistory, fallbackValue)}
               />
             </View>
           </SectionCard>
@@ -791,40 +710,38 @@ function UserDetails({ navigation, route }) {
             </View>
           </SectionCard>
 
-          {shouldShowTeamsSection ? (
-            <SectionCard
-              ApplicationStyle={ApplicationStyle}
-              Colors={Colors}
-              Fonts={Fonts}
-              Spaces={Spaces}
-              title={t('userDetails.titles.teams', 'Equipes')}
-            >
-              <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
-                  {t('userDetails.teamGroups.player', 'Equipes joueur')}
-                </Text>
-                {playerTeams.length
-                  ? playerTeams.map((team, index) => renderTeamCard(team, index, 'player'))
-                  : (
-                    <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      {t('userDetails.empty.playerTeams', 'Aucune equipe joueur')}
-                    </Text>
-                  )}
-              </View>
-              <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
-                  {t('userDetails.teamGroups.coach', 'Equipes entrainees')}
-                </Text>
-                {coachedTeams.length
-                  ? coachedTeams.map((team, index) => renderTeamCard(team, index, 'coach'))
-                  : (
-                    <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      {t('userDetails.empty.coachTeams', 'Aucune equipe entrainee')}
-                    </Text>
-                  )}
-              </View>
-            </SectionCard>
-          ) : null}
+          <SectionCard
+            ApplicationStyle={ApplicationStyle}
+            Colors={Colors}
+            Fonts={Fonts}
+            Spaces={Spaces}
+            title={t('userDetails.titles.teams', 'Equipes')}
+          >
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
+                {t('userDetails.teamGroups.player', 'Equipes joueur')}
+              </Text>
+              {playerTeams.length
+                ? playerTeams.map((team, index) => renderTeamCard(team, index, 'player'))
+                : (
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    {t('userDetails.empty.playerTeams', 'Aucune equipe joueur')}
+                  </Text>
+                )}
+            </View>
+            <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
+                {t('userDetails.teamGroups.coach', 'Equipes entrainees')}
+              </Text>
+              {coachedTeams.length
+                ? coachedTeams.map((team, index) => renderTeamCard(team, index, 'coach'))
+                : (
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    {t('userDetails.empty.coachTeams', 'Aucune equipe entrainee')}
+                  </Text>
+                )}
+            </View>
+          </SectionCard>
         </WithDataWrapper>
       </ScrollView>
 
@@ -842,8 +759,6 @@ function UserDetails({ navigation, route }) {
           ]}
         >
           <Button
-            icon="envelope"
-            iconPosition="before"
             onPress={handleContactUser}
             title={t('userDetails.actions.contact', 'Contacter')}
             variant="Primary"

@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
@@ -27,40 +27,10 @@ import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { useGetFacilities } from '@/services/facility/facilityQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ClubPlanning from './ClubPlanningScreen';
-
-const getFacilityAddressLabel = (address) => {
-  if (!address) return '';
-  if (typeof address === 'string') return address;
-  if (typeof address === 'object') {
-    return String(address?.description || address?.label || '').trim();
-  }
-  return '';
-};
-
-const getFacilityCapacityChipLabel = (maxSlots, t) => {
-  const teams = Number(maxSlots || 1);
-  const unit = teams > 1
-    ? t('facilityList.capacity.teamPlural', 'equipes simultanees')
-    : t('facilityList.capacity.teamSingular', 'equipe simultanee');
-  return `${teams} ${unit}`;
-};
-
-const getFacilityCoordinates = (address) => {
-  if (!address || typeof address !== 'object') return null;
-  const coordinates = address?.geometry?.coordinates;
-  if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-
-  const lng = Number(coordinates[0]);
-  const lat = Number(coordinates[1]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  return { lat, lng };
-};
 
 /**
  * Club details screen component
@@ -72,7 +42,7 @@ function ClubDetails({ navigation, route }) {
 
   // hooks
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const {
     canContactAdmin,
@@ -121,11 +91,6 @@ function ClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetClub(clubId ?? '');
-  const {
-    data: facilitiesResponse,
-    isLoading: facilitiesLoading,
-    refetch: refetchFacilities,
-  } = useGetFacilities(clubId ?? '');
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
@@ -247,10 +212,6 @@ function ClubDetails({ navigation, route }) {
   );
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
-  const facilities = useMemo(
-    () => (Array.isArray(facilitiesResponse?.data) ? facilitiesResponse.data : []),
-    [facilitiesResponse?.data],
-  );
 
   // handlers
   const handleStartChat = async () => {
@@ -273,51 +234,6 @@ function ClubDetails({ navigation, route }) {
       navigation.navigate(RouteNames.AddSponsor, { clubId });
     }
   };
-
-  const handleEditClub = useCallback(() => {
-    try {
-      navigation.navigate(RouteNames.ClubEdit, { clubId });
-    } catch (e) {
-      navigation.getParent()?.navigate(RouteNames.ClubEdit, { clubId });
-    }
-  }, [clubId, navigation]);
-
-  const handleOpenFacilityMap = useCallback((facility) => {
-    const addressLabel = getFacilityAddressLabel(facility?.address) || facility?.name || '';
-    if (!addressLabel) return;
-
-    const coordinates = getFacilityCoordinates(facility?.address);
-    const encodedAddress = encodeURIComponent(addressLabel);
-    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-
-    const nativeUrl = coordinates
-      ? Platform.select({
-        android: `geo:${coordinates.lat},${coordinates.lng}?q=${coordinates.lat},${coordinates.lng}(${encodedAddress})`,
-        default: fallbackUrl,
-        ios: `maps:${coordinates.lat},${coordinates.lng}?q=${encodedAddress}`,
-      })
-      : Platform.select({
-        android: `geo:0,0?q=${encodedAddress}`,
-        default: fallbackUrl,
-        ios: `maps:0,0?q=${encodedAddress}`,
-      });
-
-    if (!nativeUrl) {
-      Linking.openURL(fallbackUrl).catch(() => {});
-      return;
-    }
-
-    Linking.canOpenURL(nativeUrl)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(nativeUrl);
-        }
-        return Linking.openURL(fallbackUrl);
-      })
-      .catch(() => {
-        Linking.openURL(fallbackUrl).catch(() => {});
-      });
-  }, []);
 
   /**
    * Handle delete sponsor action
@@ -438,8 +354,7 @@ function ClubDetails({ navigation, route }) {
     useCallback(() => {
       setJoinRequestPending(false);
       refetch();
-      refetchFacilities();
-    }, [refetch, refetchFacilities]),
+    }, [refetch]),
   );
 
   const isMember = useMemo(() => {
@@ -453,8 +368,8 @@ function ClubDetails({ navigation, route }) {
     if (userClubId === clubId) return true;
 
     // Check team membership
-    return userData.teams?.some((team) => {
-      const teamClubId = team.club?.documentId || team.club?.id;
+    return userData.teams?.some((t) => {
+      const teamClubId = t.club?.documentId || t.club?.id;
       return teamClubId === clubId;
     });
   }, [userData, clubId]);
@@ -524,7 +439,15 @@ function ClubDetails({ navigation, route }) {
           >
             {canEdit ? (
               <TouchableOpacity
-                onPress={handleEditClub}
+                onPress={() => {
+                  // Try direct navigation first, then parent
+                  try {
+                    navigation.navigate(RouteNames.ClubEdit, { clubId });
+                  } catch (e) {
+                    console.warn('Direct navigation failed, trying parent', e);
+                    navigation.getParent()?.navigate(RouteNames.ClubEdit, { clubId });
+                  }
+                }}
                 style={[
                   Alignments.absolute,
                   Alignments.row,
@@ -626,172 +549,27 @@ function ClubDetails({ navigation, route }) {
             <ClubPlanning clubId={clubId} />
           ) : (
             <>
-              {/* Facilities */}
-              <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                    {t('facilityList.title', 'Installations')}
-                  </Text>
-                  {canEdit ? (
-                    <Button
-                      icon="plus"
-                      isOption
-                      onPress={() => navigation.navigate(RouteNames.FacilityList, {
-                        clubId,
-                        cmId: club?.parentMultisport?.documentId,
-                      })}
-                      variant="Primary"
-                    />
-                  ) : null}
+              {/* Admin Actions */}
+              {canEdit ? (
+                <View style={[Spaces.gap[16]]}>
+                  <Button
+                    icon="plus"
+                    onPress={() => navigation.navigate(RouteNames.FacilityList, {
+                      clubId,
+                      cmId: club?.parentMultisport?.documentId,
+                    })}
+                    title="Gérer les installations"
+                    variant="Secondary"
+                  />
+
                 </View>
-
-                {facilitiesLoading ? (
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {t('common.loading', 'Chargement...')}
-                  </Text>
-                ) : null}
-
-                {!facilitiesLoading && facilities.length === 0 ? (
-                  <Text style={[Fonts.p2, Fonts.primary100]}>
-                    {t('common.messages.noData', 'Aucune donnée disponible')}
-                  </Text>
-                ) : null}
-
-                {facilities.map((/** @type {any} */ facility) => {
-                  const facilityId = facility?.documentId || facility?.id;
-                  const capacityChipLabel = getFacilityCapacityChipLabel(facility?.maxSlots, t);
-                  const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
-                  const addressLabel = getFacilityAddressLabel(facility?.address);
-                  return (
-                    <View
-                      key={String(facilityId || facility?.name)}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
-                        { paddingHorizontal: 18, paddingVertical: 18 },
-                        Spaces.gap[12],
-                        { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
-                      ]}
-                    >
-                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {facility?.name || 'Installation'}
-                      </Text>
-                      <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                        <View
-                          style={[
-                            ApplicationStyle.borderRadius12,
-                            Spaces.paddingHorizontal[8],
-                            Spaces.paddingVertical[4],
-                            {
-                              alignSelf: 'flex-start',
-                              backgroundColor: `${Colors.primary500}1F`,
-                              borderColor: Colors.primary500,
-                              borderWidth: 1,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                            {capacityChipLabel}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            ApplicationStyle.borderRadius12,
-                            Spaces.paddingHorizontal[8],
-                            Spaces.paddingVertical[4],
-                            {
-                              alignSelf: 'flex-start',
-                              backgroundColor: Colors.neutral800,
-                              borderColor: Colors.neutral500,
-                              borderWidth: 1,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                            {typeLabel}
-                          </Text>
-                        </View>
-                      </View>
-                      {addressLabel ? (
-                        <View
-                          style={[
-                            ApplicationStyle.borderRadius16,
-                            Spaces.padding[12],
-                            Spaces.gap[8],
-                            {
-                              backgroundColor: `${Colors.primary900}BB`,
-                              borderColor: `${Colors.primary500}2E`,
-                              borderWidth: 1,
-                            },
-                          ]}
-                        >
-                          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                            <Image
-                              source={Images.pin}
-                              style={[
-                                ApplicationStyle.icon16,
-                                ApplicationStyle.tintColor.primary200,
-                                { marginTop: 1 },
-                              ]}
-                            />
-                            <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
-                              {addressLabel}
-                            </Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <Text style={[Fonts.p2, Fonts.neutral300]}>
-                          {t('facilityList.defaults.addressMissing', 'Adresse non renseignee')}
-                        </Text>
-                      )}
-                      {addressLabel || (canEdit && facilityId) ? (
-                        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { marginTop: 2 }]}>
-                          {addressLabel ? (
-                            <Button
-                              onPress={() => handleOpenFacilityMap(facility)}
-                              size="small"
-                              title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-                              variant="Secondary"
-                            />
-                          ) : null}
-                          {canEdit && facilityId ? (
-                            <View style={{ marginLeft: 'auto' }}>
-                              <Button
-                                icon="edit"
-                                onPress={() => {
-                                  navigation.navigate(RouteNames.FacilityForm, {
-                                    clubId,
-                                    cmId: club?.parentMultisport?.documentId,
-                                    facility,
-                                  });
-                                }}
-                                size="small"
-                                title={t('common.edit', 'Modifier')}
-                                variant="Secondary"
-                              />
-                            </View>
-                          ) : null}
-                        </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </View>
+              ) : null}
 
               {/* Activities */}
               <View style={[Spaces.gap[16]]}>
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                  <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
-                  {canEdit ? (
-                    <Button
-                      icon="plus"
-                      isOption
-                      onPress={handleEditClub}
-                      variant="Primary"
-                    />
-                  ) : null}
-                </View>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
                 <View
+                  key={Math.random()}
                   style={[
                     Alignments.row,
                     Alignments.alignCenter,
@@ -799,9 +577,7 @@ function ClubDetails({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p1, Fonts.neutral00]}>
-                    {club?.activites?.length
-                      ? club.activites.map(({ name }) => name).join(', ')
-                      : t('common.messages.noData', 'Aucune donnée disponible')}
+                    {club?.activites?.map(({ name }) => name)?.join(', ')}
                   </Text>
                 </View>
               </View>

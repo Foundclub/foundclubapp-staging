@@ -41,9 +41,15 @@ import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { useAppMode } from '@/context/AppModeContext';
 import { useOnboarding } from '@/context/OnboardingContext';
+
+const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
+const tutorialDebugLog = (...args) => {
+  if (!isTutorialDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.log('[tutorial-debug]', ...args);
+};
 
 /**
  * @typedef {{

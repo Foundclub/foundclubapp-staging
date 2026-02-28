@@ -7,12 +7,8 @@ import useTheme from '@/theme/themeContext';
 import { navigationRef } from '@/navigation/navigationService';
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 
-import { createLogger } from '@/utils/logger/logger';
-
 import PublicNavigator from './public/PublicMainNavigator';
 import { RouteNames } from './routeNames';
-
-const appNavigatorLogger = createLogger('app-navigator');
 
 /**
  * AppNavigator component.
@@ -25,7 +21,8 @@ function AppNavigator({ navigationIntegration }) {
   // hooks
   const [{ auth, isAddingAccount }] = useAppContext();
   const { ApplicationStyle, Colors, scheme } = useTheme();
-  appNavigatorLogger.debug('Rendering', { hasAuthToken: Boolean(auth?.token), isAddingAccount });
+
+  console.log('[AppNavigator] Rendering. auth.token:', !!auth?.token, 'isAddingAccount:', isAddingAccount);
 
   const navigationTheme = scheme === 'dark'
     ? ApplicationStyle.darkNavigationTheme

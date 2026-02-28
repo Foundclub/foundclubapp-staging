@@ -21,20 +21,6 @@ import { updateMe } from '@/services/auth/authService';
 
 const searchIcon = require('@/assets/icons/search.png');
 
-const resolveAvailableRoute = (
-  navigation,
-  ...candidates
-) => {
-  const routeNames = navigation?.getState?.()?.routeNames || [];
-  const firstCandidate = candidates.find(Boolean);
-
-  if (!Array.isArray(routeNames) || routeNames.length === 0) {
-    return firstCandidate;
-  }
-
-  return candidates.find((candidate) => candidate && routeNames.includes(candidate)) || firstCandidate;
-};
-
 /**
  * User preferred sport selection screen
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -74,18 +60,9 @@ function UserSport({ navigation }) {
       // We look for the first view with index > currentIndex that has canShow !== false
       // Note: getOnboardingViews returns views with canShow property
       const nextView = views.views.find((v) => v.index > currentIndex && v.canShow !== false);
-      const sequentialNextRoute = getNextOnboardingRoute(RouteNames.UserSport);
-      const postOnboardingRoute = getPostOnboardingHomeRoute();
-      const nextRoute = resolveAvailableRoute(
-        navigation,
-        nextView?.route,
-        sequentialNextRoute,
-        postOnboardingRoute,
-      );
+      const nextRoute = nextView?.route || getPostOnboardingHomeRoute();
 
-      if (nextRoute) {
-        navigation.navigate(nextRoute);
-      }
+      navigation.navigate(nextRoute, { selectedSport: selectedSport.trim() });
     },
   });
 
@@ -104,14 +81,7 @@ function UserSport({ navigation }) {
   };
 
   const handleSkip = () => {
-    const nextRoute = resolveAvailableRoute(
-      navigation,
-      getNextOnboardingRoute(RouteNames.UserSport),
-      getPostOnboardingHomeRoute(),
-    );
-    if (nextRoute) {
-      navigation.navigate(nextRoute);
-    }
+    navigation.navigate(getNextOnboardingRoute(RouteNames.UserSport) || getPostOnboardingHomeRoute());
   };
 
   // Capitalize first letter of activity name

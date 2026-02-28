@@ -4,20 +4,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 
-import { createLogger } from '@/utils/logger/logger';
-
 import client from '../client';
-
-const eventServiceLogger = createLogger('event-service');
-
-const getEventQueryHash = (value) => {
-  const serialized = JSON.stringify(value || {});
-  let hash = 0;
-  Array.from(serialized).forEach((char) => {
-    hash = ((hash * 31) + char.charCodeAt(0)) % 2147483647;
-  });
-  return String(hash);
-};
 
 /**
  * @typedef {import('@/domains/event/types').FCEventForm} FCEventForm
@@ -105,19 +92,22 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
  * @param {FCEventForm[]} payloads
  * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
  */
-export const createEventsSequentially = async (payloads = []) => (
-  payloads.reduce(async (accPromise, payload) => {
-    const acc = await accPromise;
+export const createEventsSequentially = async (payloads = []) => {
+  const created = [];
+  const failed = [];
+
+  for (const payload of payloads) {
     try {
       const response = await createEvent(payload);
       const documentId = response?.data?.documentId || response?.documentId || null;
-      acc.created.push({ documentId, payload, response });
+      created.push({ documentId, payload, response });
     } catch (error) {
-      acc.failed.push({ error, payload });
+      failed.push({ error, payload });
     }
-    return acc;
-  }, Promise.resolve({ created: [], failed: [] }))
-);
+  }
+
+  return { created, failed };
+};
 
 /**
  * Rollback events by cancelling all provided documentIds.
@@ -550,25 +540,7 @@ export const getEvents = async (params = {}) => {
   };
 
   const response = await client.get('/events', { params: filters });
-  const pagination = response?.data?.meta?.pagination || {};
-  const queryHash = getEventQueryHash({
-    featuredRequestStatus,
-    featuredScope,
-    filtersObj,
-    lat,
-    lon,
-    page: page || 1,
-    pageSize: pageSize || 10,
-    radius,
-    sort: params.sort ? [params.sort] : ['date:asc'],
-  });
-  eventServiceLogger.debug('getEvents response summary', {
-    count: Array.isArray(response?.data?.data) ? response.data.data.length : 0,
-    page: pagination?.page,
-    pageSize: pagination?.pageSize,
-    queryHash,
-    total: pagination?.total,
-  });
+  console.log('getEvents API Response:', JSON.stringify(response.data, null, 2));
   try {
     const schema = Joi.object({
       data: Joi.array().items(eventSchema),
@@ -588,10 +560,7 @@ export const getEvents = async (params = {}) => {
     return validationResult;
   } catch (/** @type {any} */ error) {
     if (error?.isJoi) {
-      eventServiceLogger.error('Joi validation failed for events response', {
-        detailsCount: Array.isArray(error?.details) ? error.details.length : 0,
-        firstDetail: error?.details?.[0]?.message,
-      });
+      console.error('Joi Validation Error Details:', JSON.stringify(error.details, null, 2));
     }
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch events: ${errorToDisplay}`);
@@ -788,14 +757,12 @@ export const exportEventParticipants = async (eventId, eventName) => {
       try {
         // Try to add to media scanner so it shows up
         await ReactNativeBlobUtil.fs.scanFile([{ mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', path: res.path() }]);
-      } catch (_error) {
-        // Ignore: scanFile is best-effort on Android.
-      }
+      } catch (ignored) {}
     }
 
     return res.path();
   } catch (error) {
-    eventServiceLogger.error('Export participants failed', error);
+    console.error('[EventService] Export error:', error);
     throw error;
   }
 };

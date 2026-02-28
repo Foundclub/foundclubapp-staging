@@ -6,8 +6,7 @@ const chatMessageSchema = Joi.object({
   createdAt: Joi.date().required(),
   documentId: Joi.string().required(),
   event: Joi.object().optional().allow(null),
-  // Some chat entries (attachments/polls/compositions) can carry an empty textual message.
-  message: Joi.string().allow('').allow(null).required(),
+  message: Joi.string().required(),
   sender: Joi.object().required(),
   updatedAt: Joi.date().required(),
 }).required();
@@ -18,7 +17,6 @@ const chatSchema = Joi.object({
   documentId: Joi.string().required(),
   messages: Joi.alternatives().try(
     Joi.array().items(chatMessageSchema),
-    Joi.array().items(Joi.object().unknown(true)),
     Joi.array().length(0),
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),

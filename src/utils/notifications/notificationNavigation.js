@@ -213,10 +213,11 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : null;
 
-    case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
-    case NOTIFICATION_TYPES.EVENT_PARTICIPANT_REMINDER:
+      return eventDetailsDestination(payload.eventId) || { params: {}, route: RouteNames.MyEventList };
+
     case NOTIFICATION_TYPES.EVENT_REMINDER:
+
     case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
     case NOTIFICATION_TYPES.FEATURED_APPROVED:
     case NOTIFICATION_TYPES.FEATURED_REJECTED:

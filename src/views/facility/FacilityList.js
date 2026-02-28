@@ -4,8 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
-  Linking,
-  Platform,
   RefreshControl,
   SectionList,
   Text,
@@ -24,25 +22,18 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { deleteFacility, getCMFacilities, getFacilities } from '@/services/facility/facilityService';
 
-const getAddressLabel = (address, fallback = 'Adresse non renseignee') => {
-  if (!address) return fallback;
+const getAddressLabel = (address) => {
+  if (!address) return 'Adresse non renseignée';
   if (typeof address === 'string') return address;
   if (typeof address === 'object') {
-    return address?.description || address?.label || fallback;
+    return address?.description || address?.label || 'Adresse non renseignée';
   }
-  return fallback;
+  return 'Adresse non renseignée';
 };
 
-const getAddressCoordinates = (address) => {
-  if (!address || typeof address !== 'object') return null;
-  const coordinates = address?.geometry?.coordinates;
-  if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
-
-  const lng = Number(coordinates[0]);
-  const lat = Number(coordinates[1]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  return { lat, lng };
+const getSlotLabel = (slots) => {
+  const normalizedSlots = Number(slots || 1);
+  return `${normalizedSlots} ${normalizedSlots > 1 ? 'slots' : 'slot'}`;
 };
 
 const fetchContextFacilities = async (clubId, cmId) => {
@@ -205,43 +196,6 @@ function FacilityList() {
     });
   }, [contextClubId, contextCmId, navigation]);
 
-  const handleOpenFacilityMap = useCallback((facility) => {
-    const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
-    if (!addressLabel) return;
-
-    const coordinates = getAddressCoordinates(facility?.address);
-    const encodedAddress = encodeURIComponent(addressLabel);
-    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-
-    const nativeUrl = coordinates
-      ? Platform.select({
-        android: `geo:${coordinates.lat},${coordinates.lng}?q=${coordinates.lat},${coordinates.lng}(${encodedAddress})`,
-        default: fallbackUrl,
-        ios: `maps:${coordinates.lat},${coordinates.lng}?q=${encodedAddress}`,
-      })
-      : Platform.select({
-        android: `geo:0,0?q=${encodedAddress}`,
-        default: fallbackUrl,
-        ios: `maps:0,0?q=${encodedAddress}`,
-      });
-
-    if (!nativeUrl) {
-      Linking.openURL(fallbackUrl).catch(() => {});
-      return;
-    }
-
-    Linking.canOpenURL(nativeUrl)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(nativeUrl);
-        }
-        return Linking.openURL(fallbackUrl);
-      })
-      .catch(() => {
-        Linking.openURL(fallbackUrl).catch(() => {});
-      });
-  }, []);
-
   const sections = useMemo(() => getSections(facilities, t), [facilities, t]);
   const hasMultipleSections = sections.length > 1;
 
@@ -300,15 +254,7 @@ function FacilityList() {
 
   const renderItem = useCallback(({ item }) => {
     const facilityId = item?.documentId || item?.id;
-    const teams = Number(item?.maxSlots || 1);
-    const capacityLabel = `${teams} ${teams > 1
-      ? t('facilityList.capacity.teamPlural', 'equipes simultanees')
-      : t('facilityList.capacity.teamSingular', 'equipe simultanee')}`;
-    const addressLabel = getAddressLabel(
-      item?.address,
-      t('facilityList.defaults.addressMissing', 'Adresse non renseignee'),
-    );
-    const hasAddress = Boolean(getAddressLabel(item?.address, '').trim());
+    const slotLabel = getSlotLabel(item?.maxSlots);
 
     return (
       <View
@@ -346,7 +292,7 @@ function FacilityList() {
         </View>
 
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
-          {renderMetaChip(capacityLabel, 'primary')}
+          {renderMetaChip(slotLabel, 'primary')}
           {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
         </View>
 
@@ -367,18 +313,9 @@ function FacilityList() {
               { flex: 1 },
             ]}
           >
-            {addressLabel}
+            {getAddressLabel(item?.address)}
           </Text>
         </View>
-        {hasAddress ? (
-          <Button
-            onPress={() => handleOpenFacilityMap(item)}
-            size="small"
-            style={{ alignSelf: 'flex-start' }}
-            title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-            variant="Secondary"
-          />
-        ) : null}
 
         {item?.isReadOnly ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
@@ -430,7 +367,6 @@ function FacilityList() {
     Spaces.padding,
     handleDelete,
     handleEdit,
-    handleOpenFacilityMap,
     renderMetaChip,
     t,
   ]);

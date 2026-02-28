@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -44,32 +44,6 @@ const isReservationTypeName = (typeName = '') => {
   return normalized.includes('reservation');
 };
 
-const ONE_HOUR_IN_MINUTES = 60;
-
-const toMinutesOfDay = (dateValue) => (
-  (dateValue?.getHours?.() || 0) * 60 + (dateValue?.getMinutes?.() || 0)
-);
-
-const buildAutomaticEndTime = (startDate) => {
-  const nextEnd = new Date(startDate);
-  nextEnd.setMinutes(nextEnd.getMinutes() + ONE_HOUR_IN_MINUTES);
-
-  if (nextEnd.getDate() !== startDate.getDate()) {
-    const cappedEnd = new Date(startDate);
-    cappedEnd.setHours(23, 59, 0, 0);
-    return cappedEnd;
-  }
-
-  return nextEnd;
-};
-
-const ensureEndAfterStart = (startDate, endDate) => {
-  if (toMinutesOfDay(endDate) <= toMinutesOfDay(startDate)) {
-    return buildAutomaticEndTime(startDate);
-  }
-  return endDate;
-};
-
 /**
  *
  * @param root0
@@ -95,16 +69,8 @@ function EventWizardLogistics({ navigation }) {
   const isReservation = isReservationTypeName(state.type?.name);
 
   const [date, setDate] = useState(state.date ? new Date(state.date) : new Date());
-  const [startTime, setStartTime] = useState(
-    state.startTime ? new Date(state.startTime) : new Date(),
-  );
-  const [endTime, setEndTime] = useState(() => {
-    const initialStart = state.startTime ? new Date(state.startTime) : new Date();
-    const initialEnd = state.endTime
-      ? new Date(state.endTime)
-      : buildAutomaticEndTime(initialStart);
-    return ensureEndAfterStart(initialStart, initialEnd);
-  });
+  const [startTime, setStartTime] = useState(state.startTime ? new Date(state.startTime) : new Date());
+  const [endTime, setEndTime] = useState(state.endTime ? new Date(state.endTime) : new Date());
   const [isRecurrent, setIsRecurrent] = useState(Boolean(state.isRecurrent));
   const [recurrenceFrequency, setRecurrenceFrequency] = useState(state.recurrenceFrequency || 'week');
   const [recurrenceIntervalText, setRecurrenceIntervalText] = useState(
@@ -124,15 +90,6 @@ function EventWizardLogistics({ navigation }) {
     const parsed = parseInteger(recurrenceIntervalText);
     return parsed && parsed > 0 ? parsed : 1;
   }, [recurrenceIntervalText]);
-
-  const handleStartTimeChange = (nextStartTime) => {
-    setStartTime(nextStartTime);
-    setEndTime(buildAutomaticEndTime(nextStartTime));
-  };
-
-  const handleEndTimeChange = (nextEndTime) => {
-    setEndTime(ensureEndAfterStart(startTime, nextEndTime));
-  };
 
   const handleNext = () => {
     const fullStartDate = new Date(date);
@@ -212,7 +169,7 @@ function EventWizardLogistics({ navigation }) {
               display="inline"
               label={t('eventEdit.fields.startTime.label')}
               mode="time"
-              onChange={handleStartTimeChange}
+              onChange={setStartTime}
               value={startTime}
             />
           </View>
@@ -221,7 +178,7 @@ function EventWizardLogistics({ navigation }) {
               display="inline"
               label={t('eventEdit.fields.endTime.label')}
               mode="time"
-              onChange={handleEndTimeChange}
+              onChange={setEndTime}
               value={endTime}
             />
           </View>

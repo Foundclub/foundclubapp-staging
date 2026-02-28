@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
@@ -8,8 +8,6 @@ import {
   useState,
 } from 'react';
 import { MMKV } from 'react-native-mmkv';
-
-import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 
 const defaultOnboardingContextValue = {
   canGoBack: false,
@@ -29,6 +27,12 @@ const defaultOnboardingContextValue = {
 const OnboardingContext = createContext(defaultOnboardingContextValue);
 const storage = new MMKV();
 const ONBOARDING_PROGRESS_PREFIX = 'onboarding-progress-v1';
+const isTutorialDebugEnabled = () => __DEV__ && global.__FC_TUTORIAL_DEBUG__ !== false;
+const tutorialDebugLog = (...args) => {
+  if (!isTutorialDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.log('[tutorial-debug]', ...args);
+};
 
 const getCompletedStepsKey = (flowId) => `${ONBOARDING_PROGRESS_PREFIX}:${flowId}:completed`;
 

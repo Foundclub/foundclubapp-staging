@@ -10,11 +10,7 @@ import Home from '@/views/Home';
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { createLogger } from '@/utils/logger/logger';
-
 import AuthStackNavigator from './AuthStackNavigator';
-
-const publicTabLogger = createLogger('public-tab-navigator');
 
 const Tab = createBottomTabNavigator();
 
@@ -26,10 +22,8 @@ function PublicTabNavigator() {
   const { Colors, Images } = useTheme();
   const { t } = useTranslation();
   const [{ isAddingAccount }] = useAppContext();
-  publicTabLogger.debug('Rendering', {
-    initialRoute: isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search,
-    isAddingAccount,
-  });
+
+  console.log('[PublicTabNavigator] Rendering. isAddingAccount:', isAddingAccount, 'Initial Route:', isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search);
 
   /**
    * Render tab bar icon.

@@ -49,7 +49,6 @@ export const RouteNames = /** @type {const} */ ({
   MyEventList: 'MyEventList',
   MyTeamList: 'MyTeamList',
   NotificationList: 'NotificationList',
-  PollDetails: 'PollDetails',
   Profile: 'Profile',
   ProfileEdit: 'ProfileEdit',
   Register: 'Register',

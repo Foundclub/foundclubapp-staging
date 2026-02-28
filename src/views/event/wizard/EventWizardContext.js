@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext, useContext, useMemo, useReducer,
 } from 'react';
 
@@ -9,7 +9,7 @@ const createDefaultTimeRange = () => {
   const start = new Date(now);
   start.setHours(now.getHours() + 1, 0, 0, 0);
   const end = new Date(start);
-  end.setHours(start.getHours() + 1, 0, 0, 0);
+  end.setHours(start.getHours() + 1, 30, 0, 0);
   return { end, start };
 };
 

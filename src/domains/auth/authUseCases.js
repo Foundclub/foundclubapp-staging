@@ -316,9 +316,7 @@ export const NOTIFICATION_TYPES = {
   TEAM_REQUEST: 'teamRequest',
 
   // Events
-  EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
-  EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_REMINDER: 'eventReminder',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
   FEATURED_APPROVED: 'featuredApproved',
@@ -367,7 +365,7 @@ export const NOTIFICATION_TYPES = {
 /**
  * Sanitize user object to prevent storage overflow while keeping essential data
  * @param {User} user
- * @returns {Partial<User> | undefined}
+ * @returns {Partial<User>}
  */
 export const sanitizeUser = (user) => {
   if (!user) return undefined;

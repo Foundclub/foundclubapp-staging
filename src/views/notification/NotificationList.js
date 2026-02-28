@@ -3,7 +3,7 @@ import {
   format, isThisWeek, isToday, isYesterday,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Alert, FlatList, Platform, Text, ToastAndroid, TouchableOpacity, View,
 } from 'react-native';
@@ -12,7 +12,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import useTheme from '@/theme/themeContext';
 
-import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -70,12 +69,7 @@ const getRelativeTime = (/** @type {string | Date} */ dateStr) => {
  *
  */
 function NotificationList() {
-  const {
-    Alignments,
-    Colors,
-    Fonts,
-    Spaces,
-  } = useTheme();
+  const { Colors, Fonts, Spaces } = useTheme();
   const navigation = useNavigation();
   const nav = /** @type {any} */ (navigation);
   const {
@@ -282,9 +276,9 @@ function NotificationList() {
                 <Text
                   numberOfLines={1}
                   style={[
-                    notification.read ? Fonts.p2 : Fonts.p2Bold,
-                    { color: Colors.neutral00, flex: 1 },
-                  ]}
+                        notification.read ? Fonts.p2 : Fonts.p2Bold,
+                        { color: Colors.neutral00, flex: 1 },
+                      ]}
                 >
                   {notification.title}
                 </Text>
@@ -325,45 +319,32 @@ function NotificationList() {
     }
   }, [hasNextPage, isFetchingNextPage, loadMore]);
 
-  const handleBackPress = useCallback(() => {
-    if (nav.canGoBack()) {
-      nav.goBack();
-      return;
-    }
-
-    nav.navigate(RouteNames.HomeTab);
-  }, [nav]);
-
   return (
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={[Spaces.padding[16]]}
     >
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginBottom[16]]}>
-        <View style={{ width: 48 }}>
-          <HeaderBackButton
-            onPress={handleBackPress}
-            withDefaultMargin={false}
-          />
-        </View>
-        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Notifications</Text>
-        </View>
-        <View style={[Alignments.alignEnd, { minWidth: 72 }]}>
-          {unreadCount > 0 ? (
-            <TouchableOpacity
-              onPress={async () => {
-                try {
-                  await markAllAsRead();
-                } catch (error) {
-                  showActionError('Impossible de marquer toutes les notifications comme lues.', error);
-                }
-              }}
-            >
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Tout lire</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
+      <View style={{
+        alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16,
+      }}
+      >
+        <TouchableOpacity onPress={() => nav.goBack()}>
+          <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Retour</Text>
+        </TouchableOpacity>
+        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Notifications</Text>
+        {unreadCount > 0 ? (
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                await markAllAsRead();
+              } catch (error) {
+                showActionError('Impossible de marquer toutes les notifications comme lues.', error);
+              }
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Tout lire</Text>
+          </TouchableOpacity>
+        ) : <View style={{ width: 56 }} />}
       </View>
       <FlatList
         contentContainerStyle={{ paddingBottom: 40 }}

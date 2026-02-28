@@ -527,7 +527,6 @@ const useMessaging = (currentChatId) => {
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
-    socket,
     startClubChat,
     startTeamChat,
     startWhisperChat,

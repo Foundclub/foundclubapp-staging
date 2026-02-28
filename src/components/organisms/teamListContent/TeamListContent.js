@@ -337,50 +337,14 @@ function TeamListContent({
           ]}
         />
 
-        <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
-          {(() => {
-            const getUniqueMemberCount = () => {
-              const ids = new Set();
-              const collect = (list = []) => {
-                list.forEach((member) => {
-                  if (!member) return;
-                  const memberId = member.documentId || member.id || member.phoneNumber;
-                  if (memberId) ids.add(String(memberId));
-                });
-              };
-
-              collect(item?.players);
-              collect(item?.trainers);
-              collect(item?.members);
-
-              if (ids.size > 0) return ids.size;
-              return Number(item?.players?.length || 0) + Number(item?.trainers?.length || 0);
-            };
-
-            const sectionLabel = item?.section?.name;
-            const categoryLabel = item?.category?.name || item?.category;
-            const levelLabel = item?.level?.name || item?.level;
-            const membersLabel = String(getUniqueMemberCount());
-
-            const metaItems = [
-              { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
-              { label: t('teamList.fields.category', 'Catégorie'), value: categoryLabel },
-              { label: t('teamList.fields.level', 'Niveau'), value: levelLabel },
-              { label: t('teamList.fields.members', 'Membres'), value: membersLabel },
-            ].filter((meta) => String(meta?.value || '').trim().length > 0);
-
-            return metaItems.map((meta) => (
-              <View
-                key={`${meta.label}-${meta.value}`}
-                style={{ flexGrow: 1, minWidth: isCompactScreen ? 132 : 156 }}
-              >
-                <Text style={[Fonts.p3, Fonts.neutral300]}>{meta.label}</Text>
-                <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {meta.value}
-                </Text>
-              </View>
-            ));
-          })()}
+        <View style={[Spaces.gap[8], Alignments.row, Alignments.wrap]}>
+          {item?.section ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+              {t('teamList.fields.section')}
+              {' : '}
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{item.section.name}</Text>
+            </Text>
+          ) : null}
         </View>
       </>
     );
