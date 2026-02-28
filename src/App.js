@@ -1,9 +1,11 @@
+import React, { useEffect } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as Sentry from '@sentry/react-native';
 import {
   MutationCache, QueryCache, QueryClient, QueryClientProvider,
 } from '@tanstack/react-query';
 import { isAxiosError } from 'axios/dist/browser/axios.cjs';
+import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,6 +25,10 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 
 import { AppModeProvider } from '@/context/AppModeContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
+import {
+  clearPersistedBootError,
+  readPersistedBootError,
+} from '@/utils/bootDiagnostics';
 
 const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase();
 const isStaging = appEnv === 'staging';
@@ -115,6 +121,25 @@ const queryClient = new QueryClient({
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
+  useEffect(() => {
+    const previousBootError = readPersistedBootError();
+    if (!previousBootError) return;
+
+    console.error('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
+
+    const summary = [
+      previousBootError.context,
+      previousBootError.name,
+      previousBootError.message,
+    ].filter(Boolean).join('\n');
+
+    Alert.alert(
+      'Crash precedent detecte',
+      summary.slice(0, 500),
+    );
+    clearPersistedBootError();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
