@@ -34,12 +34,26 @@ jobs:
       - name: Validate required signing secrets
         shell: bash
         run: |
+          test -n "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}" || (echo "Missing secret: GOOGLE_SERVICE_INFO_PLIST_BASE64" && exit 1)
           test -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" || (echo "Missing secret: BUILD_CERTIFICATE_BASE64" && exit 1)
           test -n "${{ secrets.P12_PASSWORD }}" || (echo "Missing secret: P12_PASSWORD" && exit 1)
           test -n "${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}" || (echo "Missing secret: BUILD_PROVISION_PROFILE_BASE64" && exit 1)
           test -n "${{ secrets.KEYCHAIN_PASSWORD }}" || (echo "Missing secret: KEYCHAIN_PASSWORD" && exit 1)
           test -n "${{ secrets.APPLE_TEAM_ID }}" || (echo "Missing secret: APPLE_TEAM_ID" && exit 1)
           echo "All required signing secrets are present."
+
+      - name: Restore GoogleService-Info.plist
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          data = base64.b64decode(os.environ["GOOGLE_SERVICE_INFO_PLIST_BASE64"])
+          Path("ios/GoogleService-Info.plist").write_bytes(data)
+          PY
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
 
       - name: Decode signing assets
         run: |
