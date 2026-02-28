@@ -7,6 +7,8 @@ jobs:
   build-ios:
     runs-on: macos-latest
     env:
+      APP_ENV: staging
+      ENV: staging
       IOS_WORKSPACE: ios/foundclub.xcworkspace
       IOS_SCHEME: foundclub
       IOS_CONFIGURATION: Release
