@@ -126,6 +126,7 @@ jobs:
           replacements = {
               'DEVELOPMENT_TEAM = "";': f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";',
               'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
+              '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";': '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";',
           }
 
           for old, new in replacements.items():
