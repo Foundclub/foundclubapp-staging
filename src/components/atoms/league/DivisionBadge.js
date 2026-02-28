@@ -14,7 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import { clampLeagueDivision } from '@/utils/league/division';
 
-import Div1Badge from '@/assets/league/divisions/Div-1.svg';
+import Div1Badge from '@/assets/league/divisions/DIV-1.svg';
 import Div2Badge from '@/assets/league/divisions/Div-2.svg';
 import Div3Badge from '@/assets/league/divisions/Div-3.svg';
 import Div4Badge from '@/assets/league/divisions/Div-4.svg';
