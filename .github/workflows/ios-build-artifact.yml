@@ -155,6 +155,9 @@ jobs:
 
       - name: Build archive
         shell: bash
+        env:
+          SENTRY_ALLOW_FAILURE: "true"
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -o pipefail
           mkdir -p ios/build
