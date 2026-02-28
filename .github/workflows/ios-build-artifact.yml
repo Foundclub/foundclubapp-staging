@@ -113,6 +113,31 @@ jobs:
           </plist>
           EOF
 
+      - name: Configure app target signing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          pbxproj = Path("ios/foundclub.xcodeproj/project.pbxproj")
+          text = pbxproj.read_text()
+
+          replacements = {
+              'DEVELOPMENT_TEAM = "";': f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";',
+              'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
+          }
+
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected setting not found in project.pbxproj: {old}")
+              text = text.replace(old, new)
+
+          pbxproj.write_text(text)
+          PY
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
       - name: Build archive
         shell: bash
         run: |
@@ -127,9 +152,6 @@ jobs:
             -destination "generic/platform=iOS" \
             -sdk iphoneos \
             -archivePath ios/build/foundclub.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_ID}" \
             clean archive 2>&1 | tee "$LOG_PATH"; then
             echo "xcodebuild archive failed. Extracting error lines:"
             grep -n "error:" "$LOG_PATH" || true
