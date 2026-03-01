@@ -64,8 +64,8 @@ const getDocumentPickerModule = () => {
   try {
     // Lazy import to avoid eager native resolution during app bootstrap.
     // eslint-disable-next-line global-require
-    const maybeModule = require('react-native-document-picker');
-    cachedDocumentPickerModule = maybeModule?.default || maybeModule;
+    const maybeModule = require('@react-native-documents/picker');
+    cachedDocumentPickerModule = maybeModule;
     return cachedDocumentPickerModule;
   } catch (error) {
     conversationLogger.warn('DocumentPicker module unavailable', error);
@@ -73,6 +73,13 @@ const getDocumentPickerModule = () => {
     return null;
   }
 };
+
+const isDocumentPickerCancellation = (documentPicker, error) => (
+  typeof documentPicker?.isErrorWithCode === 'function'
+  && !!documentPicker?.errorCodes?.OPERATION_CANCELED
+  && documentPicker.isErrorWithCode(error)
+  && error?.code === documentPicker.errorCodes.OPERATION_CANCELED
+);
 
 /**
  * Chat conversation screen component
@@ -428,18 +435,27 @@ function Conversation({ navigation, route }) {
     }
 
     const documentPicker = getDocumentPickerModule();
-    if (!documentPicker?.pickSingle || !documentPicker?.types?.allFiles) {
+    if (!documentPicker?.pick || !documentPicker?.keepLocalCopy) {
       Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
       return;
     }
 
     try {
-      const selectedFile = await documentPicker.pickSingle({
-        copyTo: 'cachesDirectory',
-        type: [documentPicker.types.allFiles],
+      const [selectedFile] = await documentPicker.pick();
+
+      const [localCopyResult] = await documentPicker.keepLocalCopy({
+        destination: 'cachesDirectory',
+        files: [
+          {
+            fileName: selectedFile.name || `file_${Date.now()}`,
+            uri: selectedFile.uri,
+          },
+        ],
       });
 
-      const selectedUri = selectedFile.fileCopyUri || selectedFile.uri;
+      const selectedUri = localCopyResult?.status === 'success'
+        ? localCopyResult.localUri
+        : selectedFile.uri;
       if (!selectedUri) {
         Alert.alert('Erreur', 'Impossible de recuperer ce fichier.');
         return;
@@ -451,7 +467,7 @@ function Conversation({ navigation, route }) {
         uri: selectedUri,
       });
     } catch (error) {
-      if (typeof documentPicker.isCancel === 'function' && documentPicker.isCancel(error)) return;
+      if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Document picker failed', error);
       Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
     }
