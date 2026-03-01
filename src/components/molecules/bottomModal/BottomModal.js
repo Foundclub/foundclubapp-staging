@@ -1,7 +1,7 @@
 import {
   BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView, BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { BlurView } from '@react-native-community/blur';
+import { BlurView } from '@sbaiahmed1/react-native-blur';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
