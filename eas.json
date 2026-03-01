@@ -10,7 +10,7 @@
             },
             "env": {
                 "APP_ENV": "staging",
-                "FC_DISABLE_DOCUMENT_PICKER": "1",
+                "FC_DISABLE_DOCUMENT_PICKER": "0",
                 "FC_DISABLE_NOTIFICATIONS_BOOTSTRAP": "1"
             }
         },
@@ -21,7 +21,7 @@
             },
             "env": {
                 "APP_ENV": "staging",
-                "FC_DISABLE_DOCUMENT_PICKER": "1",
+                "FC_DISABLE_DOCUMENT_PICKER": "0",
                 "FC_DISABLE_NOTIFICATIONS_BOOTSTRAP": "1"
             }
         },
