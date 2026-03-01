@@ -1,4 +1,4 @@
-import { BlurView } from '@react-native-community/blur';
+import { BlurView } from '@sbaiahmed1/react-native-blur';
 import React, {
   useCallback, useMemo, useRef, useState,
 } from 'react';
