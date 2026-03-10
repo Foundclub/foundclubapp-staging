@@ -1,5 +1,4 @@
 import { createStackNavigator } from '@react-navigation/stack';
-import { useTranslation } from 'react-i18next';
 
 import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
 import AdminClaimList from '@/views/admin/AdminClaimList';
@@ -13,6 +12,10 @@ import AdminRevenue from '@/views/admin/AdminRevenue';
 import AdminUserDetail from '@/views/admin/AdminUserDetail';
 import AdminUserList from '@/views/admin/AdminUserList';
 import FeaturedRequestsList from '@/views/admin/FeaturedRequestsList';
+import SuperAdminContentExplorer from '@/views/admin/SuperAdminContentExplorer';
+import SuperAdminEntryDetail from '@/views/admin/SuperAdminEntryDetail';
+import SuperAdminEntryForm from '@/views/admin/SuperAdminEntryForm';
+import SuperAdminEntryList from '@/views/admin/SuperAdminEntryList';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -23,8 +26,6 @@ const Stack = createStackNavigator();
  *
  */
 function AdminStack() {
-  const { t } = useTranslation();
-
   return (
     <Stack.Navigator
       id={undefined}
@@ -126,6 +127,38 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Litiges League',
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminContentExplorer}
+        name={RouteNames.SuperAdminContentExplorer}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Explorer CM',
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminEntryList}
+        name={RouteNames.SuperAdminEntryList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Entrées',
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminEntryDetail}
+        name={RouteNames.SuperAdminEntryDetail}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Détail',
+        }}
+      />
+      <Stack.Screen
+        component={SuperAdminEntryForm}
+        name={RouteNames.SuperAdminEntryForm}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Edition',
         }}
       />
     </Stack.Navigator>

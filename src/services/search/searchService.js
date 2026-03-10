@@ -263,10 +263,14 @@ export const getMatchReasonLabel = (reason) => {
       return 'Correspond a la description';
     case 'GEO_NEARBY':
       return 'A proximite';
+    case 'LOCATION_FUZZY':
+      return 'Lieu proche de la recherche';
     case 'LOCATION_MATCH':
       return 'Correspond au lieu';
     case 'NAME_EXACT':
       return 'Correspondance exacte du nom';
+    case 'NAME_FUZZY':
+      return 'Nom proche de la recherche';
     case 'NAME_PREFIX':
       return 'Correspondance du nom';
     case 'TEAM_MATCH':

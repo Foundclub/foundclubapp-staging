@@ -18,6 +18,7 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} props.onDecline - Callback when user declines
  * @param {() => void} [props.onAbout] - Callback when user wants to see details
  * @param {() => void} props.onLogin - Callback when user needs to login
+ * @param {boolean} [props.hasAcceptedRequest]
  * @param {boolean} [props.hasPendingRequest]
  * @param {() => void} [props.onDeleteParticipation] - Callback to delete their participation
  * @param {() => void} [props.onEdit] - Callback when user wants to edit the event
@@ -26,6 +27,7 @@ import Tag from '@/components/atoms/tag/Tag';
  */
 function EventAnswerButtons({
   event,
+  hasAcceptedRequest,
   hasPendingRequest,
   onAbout,
   onCancel,
@@ -55,7 +57,7 @@ function EventAnswerButtons({
 
   // If user is a player, show appropriate participation buttons
   if (userData?.role?.name === USER_ROLES.player) {
-    if (alreadyJoined || hasPendingRequest) {
+    if (alreadyJoined || hasAcceptedRequest || hasPendingRequest) {
       return (
         <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag

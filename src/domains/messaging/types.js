@@ -7,7 +7,7 @@
  * @typedef {object} Chat
  * @property {string} id - The unique identifier of the chat
  * @property {string} documentId
- * @property {'whisper' | 'club' | 'team' | 'league_match' | 'multisport' | string} type - Chat type
+ * @property {'whisper' | 'club' | 'team' | 'league_match' | 'multisport' | 'group' | string} type - Chat type
  * @property {User[]} participants - The users participating in the chat
  * @property {ChatMessage[]} [messages] - The messages in the chat
  * @property {Date} createdAt - When the chat was created
@@ -16,14 +16,27 @@
  * @property {Team} [team] - The team this chat belongs to
  * @property {LeagueMatch} [league_match] - Linked league match
  * @property {MultisportClubRef} [multisportClub] - Linked multisport club
+ * @property {string} [groupName] - Group chat display name
+ * @property {User[]} [groupAdmins] - Group chat admins
  * @property {User[]} [archivedBy] - Users who archived the chat
  * @property {User[]} [pinnedBy] - Users who pinned the chat
  * @property {User[]} [myTeamMembers] - Synthetic team members field for some endpoints
  */
 
 /**
- * @typedef {{ url?: string; id?: string | number; documentId?: string; mime?: string; name?: string }} MessageAttachment
- * @typedef {{ date?: string; venue?: string; [key: string]: any }} MessageComposition
+ * @typedef {{ url?: string; id?: string | number; documentId?: string; mime?: string; name?: string; size?: number }} MessageAttachment
+ * @typedef {{
+ *   type?: 'poll' | 'proposal' | 'voice_note' | 'location_share' | 'contact_share' | 'event_share' | string;
+ *   date?: string;
+ *   venue?: string;
+ *   durationMs?: number;
+ *   waveform?: number[];
+ *   eventDocumentId?: string;
+ *   userDocumentId?: string;
+ *   lat?: number;
+ *   lng?: number;
+ *   [key: string]: any;
+ * }} MessageComposition
  */
 
 /**

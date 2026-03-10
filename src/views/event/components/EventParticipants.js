@@ -116,6 +116,8 @@ function EventParticipants({
         onMarkArrival={onCoachMarkArrival}
         onPress={handleUserPress}
         player={player}
+        showLateBadge={options.showLateBadge !== false}
+        statusLabel={options.statusLabel}
         styles={{
           Alignments, ApplicationStyle, Colors, Fonts, Spaces,
         }}
@@ -260,6 +262,8 @@ function EventParticipants({
           {
             allowLiveLate: false,
             keyPrefix: `${section.key}-missing`,
+            showLateBadge: false,
+            statusLabel: t('eventDetails.participationStatus.missing'),
           },
         )}
 
@@ -276,6 +280,8 @@ function EventParticipants({
             {section.notAnswered.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-not-answered`,
+              showLateBadge: false,
+              statusLabel: t('eventDetails.participationStatus.notAnswered'),
             }))}
           </>
         ) : null}
@@ -296,11 +302,15 @@ function EventParticipants({
               allowLiveLate: false,
               keyPrefix: `${section.key}-hist-present`,
               showCoachActions: false,
+              showLateBadge: false,
+              statusLabel: t('eventDetails.participationStatus.participating'),
             }))}
             {historicalMissing.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-hist-missing`,
               showCoachActions: false,
+              showLateBadge: false,
+              statusLabel: t('eventDetails.participationStatus.missing'),
             }))}
           </View>
         ) : null}
@@ -345,6 +355,8 @@ function EventParticipants({
             {
               allowLiveLate: false,
               keyPrefix: 'legacy-missing',
+              showLateBadge: false,
+              statusLabel: t('eventDetails.participationStatus.missing'),
             },
           )}
           {(participationsByStatus.notAnswered || []).length > 0 && (
@@ -360,6 +372,8 @@ function EventParticipants({
               {(participationsByStatus.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
+                showLateBadge: false,
+                statusLabel: t('eventDetails.participationStatus.notAnswered'),
               }))}
             </>
           )}
@@ -421,6 +435,8 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
+ * showLateBadge?: boolean,
+ * statusLabel?: string,
  * styles: any
  * }} props
  */
@@ -434,6 +450,8 @@ function ParticipantItem({
   onMarkArrival,
   onPress,
   player,
+  showLateBadge = true,
+  statusLabel,
   styles,
 }) {
   const {
@@ -453,6 +471,13 @@ function ParticipantItem({
   }
 
   const lateLabel = lateMinutes > 0 ? `+${lateMinutes} min` : '0 min';
+  const badgeLabel = showLateBadge ? 'Retard' : (statusLabel || 'Statut');
+  let badgeBackgroundColor = '#33415566';
+  let badgeTextColor = '#cbd5e1';
+  if (showLateBadge) {
+    badgeBackgroundColor = lateMinutes > 0 ? '#F59E0B22' : '#16A34A22';
+    badgeTextColor = lateMinutes > 0 ? '#fbbf24' : '#4ade80';
+  }
 
   return (
     <View
@@ -490,15 +515,17 @@ function ParticipantItem({
             Spaces.paddingVertical[4],
             ApplicationStyle.borderRadius12,
             Alignments.alignCenter,
-            { backgroundColor: lateMinutes > 0 ? '#F59E0B22' : '#16A34A22' },
+            { backgroundColor: badgeBackgroundColor },
           ]}
         >
-          <Text style={[Fonts.p4, lateMinutes > 0 ? { color: '#fbbf24' } : { color: '#4ade80' }]}>
-            Retard
+          <Text style={[Fonts.p4, { color: badgeTextColor }]}>
+            {badgeLabel}
           </Text>
-          <Text style={[Fonts.p4Bold, lateMinutes > 0 ? { color: '#fbbf24' } : { color: '#4ade80' }]}>
-            {lateLabel}
-          </Text>
+          {showLateBadge ? (
+            <Text style={[Fonts.p4Bold, { color: badgeTextColor }]}>
+              {lateLabel}
+            </Text>
+          ) : null}
         </View>
       </TouchableOpacity>
 

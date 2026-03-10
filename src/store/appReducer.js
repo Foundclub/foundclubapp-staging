@@ -74,7 +74,9 @@ export default function appReducer(state, action) {
       return { ...state, eventFilters: action.payload };
     }
     case 'SET_FCM_TOKEN': {
-      return { ...state, fcmToken: action.payload };
+      const token = typeof action.payload === 'string' ? action.payload.trim() : '';
+      const safeToken = token.length > 0 && token.length <= 8192 ? token : undefined;
+      return { ...state, fcmToken: safeToken };
     }
     case 'SET_MERCATO_FILTERS': {
       return { ...state, mercatoFilters: action.payload };

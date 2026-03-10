@@ -1,10 +1,14 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Image, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Text,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { useHistoryWizard } from '@/views/historyWizard/HistoryWizardContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -12,50 +16,45 @@ import { useCreateHistory, useUpdateHistory } from '@/services/userHistory/userH
 
 import { getImageUrl } from '@/utils/imageUrl';
 
-import { useHistoryWizard } from './HistoryWizardContext';
 const calendarIcon = require('@/assets/icons/calendar.png');
 const defaultClubIcon = require('@/assets/icons/shield.png');
 
 /**
- *
- * @param root0
- * @param root0.navigation
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
  */
 function HistoryWizardRecap({ navigation }) {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Colors, Fonts, Spaces,
   } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useHistoryWizard();
 
   const createHistoryMutation = useCreateHistory();
   const updateHistoryMutation = useUpdateHistory();
 
-  const isEditing = !!state.editingEntry;
+  const isEditing = Boolean(state.editingEntry);
   const isLoading = createHistoryMutation.isPending || updateHistoryMutation.isPending;
 
   const getClubName = () => {
     if (state.club?.name) return state.club.name;
     if (state.multisportClub?.name) return state.multisportClub.name;
     if (state.customClubName) return state.customClubName;
-    return 'Club non défini';
+    return 'Club non defini';
   };
 
   const getPeriodText = () => {
     if (state.isCurrentlyActive) {
-      return `${state.startYear} - Aujourd'hui`;
+      return `${state.startYear} - Aujourd hui`;
     }
+
     if (state.startYear === state.endYear) {
       return `${state.startYear}`;
     }
+
     return `${state.startYear} - ${state.endYear}`;
   };
 
-  const handleSubmit = () => {
-    console.log('DEBUG: HistoryWizardRecap state:', JSON.stringify(state, null, 2));
-
-    const data = {
-      category: state.category?.documentId || null,
+  const buildPayloads = () => {
+    const baseData = {
       club: state.club?.documentId || null,
       customClubName: state.useCustomClub ? state.customClubName : null,
       endYear: state.isCurrentlyActive ? null : state.endYear,
@@ -65,27 +64,63 @@ function HistoryWizardRecap({ navigation }) {
       startYear: state.startYear,
     };
 
-    console.log('DEBUG: HistoryWizardRecap submitting data:', JSON.stringify(data, null, 2));
-
-    const onSuccess = () => {
-      dispatch({ type: 'RESET' });
-
-      if (state.returnRoute) {
-        // If a specific return route was asked (e.g. Onboarding), go there
-        navigation.navigate(state.returnRoute);
-      } else {
-        // Default behavior: Reset navigation to profile
-        navigation.reset({
-          index: 0,
-          routes: [{ name: RouteNames.Profile }],
-        });
-      }
-    };
+    const categoryIds = state.categories
+      .map((category) => category?.documentId)
+      .filter(Boolean);
 
     if (isEditing) {
-      updateHistoryMutation.mutate({ data, id: state.editingEntry.documentId }, { onSuccess });
-    } else {
-      createHistoryMutation.mutate(data, { onSuccess });
+      return [{
+        ...baseData,
+        category: categoryIds[0] || null,
+      }];
+    }
+
+    if (categoryIds.length === 0) {
+      return [{
+        ...baseData,
+        category: null,
+      }];
+    }
+
+    return categoryIds.map((categoryId) => ({
+      ...baseData,
+      category: categoryId,
+    }));
+  };
+
+  const handleSuccess = () => {
+    dispatch({ type: 'RESET' });
+
+    if (state.returnRoute) {
+      navigation.navigate(state.returnRoute);
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: RouteNames.Profile }],
+    });
+  };
+
+  const handleSubmit = async () => {
+    const payloads = buildPayloads();
+
+    try {
+      if (isEditing) {
+        await updateHistoryMutation.mutateAsync({
+          data: payloads[0],
+          id: state.editingEntry.documentId,
+        });
+      } else {
+        await payloads.reduce(
+          (promise, payload) => promise.then(() => createHistoryMutation.mutateAsync(payload)),
+          Promise.resolve(),
+        );
+      }
+
+      handleSuccess();
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible d enregistrer cette experience pour le moment.');
     }
   };
 
@@ -95,35 +130,35 @@ function HistoryWizardRecap({ navigation }) {
       nextLabel={isEditing ? 'Enregistrer' : 'Valider'}
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
-      subtitle="Vérifie les informations avant de valider"
-      title="Récapitulatif"
+      subtitle="Verifie les informations avant de valider"
+      title="Recapitulatif"
     >
       <View style={[Spaces.gap[32]]}>
-        {/* Club Card - Premium Design */}
-        <View style={{
-          backgroundColor: Colors.neutral800,
-          borderColor: `${Colors.primary500}40`,
-          borderRadius: 20,
-          borderWidth: 1,
-          elevation: 4,
-          padding: 24,
-          shadowColor: Colors.primary500,
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-        }}
+        <View
+          style={{
+            backgroundColor: Colors.neutral800,
+            borderColor: `${Colors.primary500}40`,
+            borderRadius: 20,
+            borderWidth: 1,
+            elevation: 4,
+            padding: 24,
+            shadowColor: Colors.primary500,
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+          }}
         >
-          {/* Club Logo - Centered Top */}
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
-            <View style={{
-              alignItems: 'center',
-              backgroundColor: '#FFFFFF',
-              borderColor: Colors.primary500,
-              borderRadius: 20,
-              borderWidth: 2,
-              height: 80,
-              justifyContent: 'center',
-              width: 80,
-            }}
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: '#FFFFFF',
+                borderColor: Colors.primary500,
+                borderRadius: 20,
+                borderWidth: 2,
+                height: 80,
+                justifyContent: 'center',
+                width: 80,
+              }}
             >
               <Image
                 resizeMode="contain"
@@ -139,7 +174,6 @@ function HistoryWizardRecap({ navigation }) {
             </View>
           </View>
 
-          {/* Club Name - Centered */}
           <Text
             numberOfLines={2}
             style={[
@@ -154,93 +188,100 @@ function HistoryWizardRecap({ navigation }) {
             {getClubName()}
           </Text>
 
-          {/* Tags Row - Centered */}
-          <View style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
-            justifyContent: 'center',
-            marginBottom: 16,
-          }}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 8,
+              justifyContent: 'center',
+              marginBottom: 16,
+            }}
           >
-            {state.category && (
-              <View style={{
-                backgroundColor: Colors.primary500,
-                borderRadius: 20,
-                paddingHorizontal: 14,
-                paddingVertical: 6,
-              }}
+            {state.categories.map((category) => (
+              <View
+                key={category.documentId || category.name}
+                style={{
+                  backgroundColor: Colors.primary500,
+                  borderRadius: 20,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                }}
               >
-                <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>{state.category.name}</Text>
+                <Text style={[Fonts.p2Bold, { color: '#FFFFFF' }]}>{category.name}</Text>
               </View>
-            )}
-            {state.level && (
-              <View style={{
-                backgroundColor: 'transparent',
-                borderColor: Colors.neutral500,
-                borderRadius: 20,
-                borderWidth: 1,
-                paddingHorizontal: 14,
-                paddingVertical: 6,
-              }}
+            ))}
+            {state.level ? (
+              <View
+                style={{
+                  backgroundColor: 'transparent',
+                  borderColor: Colors.neutral500,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                }}
               >
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{state.level.name}</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
-          {/* Period - Centered with Icon */}
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral900,
-            borderRadius: 12,
-            flexDirection: 'row',
-            justifyContent: 'center',
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-          }}
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: Colors.neutral900,
+              borderRadius: 12,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+            }}
           >
             <Image
               source={calendarIcon}
               style={{
-                height: 18, marginRight: 8, tintColor: Colors.primary500, width: 18,
+                height: 18,
+                marginRight: 8,
+                tintColor: Colors.primary500,
+                width: 18,
               }}
             />
             <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
               {getPeriodText()}
             </Text>
-            {state.isCurrentlyActive && (
-              <View style={{
-                backgroundColor: '#10B981',
-                borderRadius: 10,
-                marginLeft: 10,
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-              }}
+            {state.isCurrentlyActive ? (
+              <View
+                style={{
+                  backgroundColor: '#10B981',
+                  borderRadius: 10,
+                  marginLeft: 10,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                }}
               >
                 <Text style={[Fonts.p3, { color: '#FFFFFF', fontWeight: 'bold' }]}>ACTIF</Text>
               </View>
-            )}
+            ) : null}
           </View>
         </View>
 
-        {/* Warning Declaration - Compact */}
-        <View style={{
-          backgroundColor: Colors.neutral800,
-          borderColor: '#F59E0B' + '40',
-          borderRadius: 16,
-          borderWidth: 1,
-          padding: 16,
-        }}
+        <View
+          style={{
+            backgroundColor: Colors.neutral800,
+            borderColor: '#F59E0B40',
+            borderRadius: 16,
+            borderWidth: 1,
+            padding: 16,
+          }}
         >
           <View style={{ alignItems: 'flex-start', flexDirection: 'row' }}>
-            <Text style={{ fontSize: 20, marginRight: 12 }}>⚠️</Text>
+            <Text style={{ fontSize: 20, marginRight: 12 }}>!</Text>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, { color: '#F59E0B', marginBottom: 4 }]}>
-                Déclaration sur l'honneur
+                Declaration sur l honneur
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral00, lineHeight: 18 }]}>
-                Ces informations peuvent être vérifiées par la communauté.
+                Ces informations peuvent etre verifiees par la communaute.
               </Text>
             </View>
           </View>

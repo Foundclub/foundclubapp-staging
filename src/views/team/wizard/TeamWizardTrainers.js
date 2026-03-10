@@ -9,6 +9,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -24,6 +25,7 @@ function TeamWizardTrainers({ navigation }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { dispatch, state } = useTeamWizard();
+  const handleExitWizard = useTeamWizardExit(navigation);
   const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
 
   const { data: clubData, refetch: refetchClubData } = useGetClub(state.clubId, {
@@ -56,6 +58,7 @@ function TeamWizardTrainers({ navigation }) {
     () => state.trainers?.filter(Boolean) || [],
     [state.trainers],
   );
+  const hasSelectedTrainer = selectedValue.length > 0;
 
   const handleTrainerCreated = useCallback((/** @type {{ documentId?: string }} */ createdTrainer) => {
     if (!createdTrainer?.documentId) return;
@@ -72,14 +75,16 @@ function TeamWizardTrainers({ navigation }) {
   return (
     <>
       <WizardStepLayout
+        isNextDisabled={!hasSelectedTrainer}
         nextLabel={t('common.next', 'Suivant')}
         onBack={() => navigation.navigate(RouteNames.TeamWizardLevel)}
+        onClose={handleExitWizard}
         onNext={() => navigation.navigate(RouteNames.TeamWizardRecap)}
         onSkip={() => {}}
         stepCount={8}
         stepIndex={7}
-        subtitle={t('teamWizard.steps.trainers.subtitle', 'Ajoute un ou plusieurs entraineurs pour encadrer cette equipe.')}
-        title={t('teamWizard.steps.trainers.title', 'Entraineurs (optionnel)')}
+        subtitle={t('teamWizard.steps.trainers.subtitle', 'Selectionne au moins un entraineur pour encadrer cette equipe.')}
+        title={t('teamWizard.steps.trainers.title', 'Entraineurs')}
       >
         <View>
           <AutocompleteSelect

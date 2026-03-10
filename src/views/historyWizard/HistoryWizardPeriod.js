@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo } from 'react';
 import {
   ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -7,10 +6,9 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { useHistoryWizard } from '@/views/historyWizard/HistoryWizardContext';
 
 import { RouteNames } from '@/navigation/routeNames';
-
-import { useHistoryWizard } from './HistoryWizardContext';
 
 /**
  *
@@ -21,13 +19,12 @@ function HistoryWizardPeriod({ navigation }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useHistoryWizard();
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    for (let y = currentYear; y >= 1990; y--) {
+    for (let y = currentYear; y >= 1990; y -= 1) {
       years.push(y);
     }
     return years;
@@ -37,7 +34,7 @@ function HistoryWizardPeriod({ navigation }) {
     <WizardStepLayout
       nextLabel="Continuer"
       onBack={() => navigation.goBack()}
-      onNext={() => navigation.navigate(RouteNames.HistoryWizardRecap)}
+      onNext={() => navigation.navigate(RouteNames.HistoryWizardLevel)}
       subtitle="Indique les années de ta présence dans ce club"
       title="Quelle période ?"
     >
@@ -80,7 +77,7 @@ function HistoryWizardPeriod({ navigation }) {
             trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
             value={state.isCurrentlyActive}
           />
-          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>J'y suis toujours</Text>
+          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Je suis toujours dans ce club</Text>
         </View>
 
         {/* End Year (if not currently active) */}

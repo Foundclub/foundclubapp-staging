@@ -98,9 +98,72 @@ const getStoredJson = (key, fallbackValue) => {
   return safeJsonParse(storage.getString(key), fallbackValue, key);
 };
 
+const MAX_PERSISTED_STRING_LENGTH = 250000;
+
+/**
+ * Safely stringify values before persisting to storage.
+ * Returns undefined when serialization fails or becomes suspiciously large.
+ * @param {string} key
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+const safeJsonStringify = (key, value) => {
+  try {
+    const serialized = JSON.stringify(value);
+    if (typeof serialized !== 'string' || serialized.length === 0) {
+      return undefined;
+    }
+    if (serialized.length > MAX_PERSISTED_STRING_LENGTH) {
+      console.warn('[BOOT] APP_CONTEXT_STRINGIFY_SKIPPED_TOO_LARGE', {
+        key,
+        length: serialized.length,
+      });
+      return undefined;
+    }
+    return serialized;
+  } catch (error) {
+    console.warn('[BOOT] APP_CONTEXT_STRINGIFY_FAILED', {
+      error: error?.message || 'unknown',
+      key,
+    });
+    return undefined;
+  }
+};
+
+/**
+ * Normalize a persisted fcmToken value from legacy formats.
+ * @param {string | undefined} rawValue
+ * @returns {string | undefined}
+ */
+const normalizeStoredFcmToken = (rawValue) => {
+  if (typeof rawValue !== 'string') return undefined;
+  if (rawValue.length > 8192) return undefined;
+  const trimmed = rawValue.trim();
+  if (!trimmed) return undefined;
+
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'string' && parsed.trim().length > 0 && parsed.length <= 8192) {
+        return parsed;
+      }
+      return undefined;
+    } catch (_error) {
+      return undefined;
+    }
+  }
+
+  return trimmed;
+};
+
 const storedAuth = getStoredJson('auth', undefined);
 const storedAuthSessionsRaw = getStoredJson('authSessions', []);
 const storedAuthSessions = Array.isArray(storedAuthSessionsRaw) ? storedAuthSessionsRaw : [];
+const rawStoredFcmToken = storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined;
+const storedFcmToken = normalizeStoredFcmToken(rawStoredFcmToken);
+if (storage.contains('fcmToken') && !storedFcmToken) {
+  storage.delete('fcmToken');
+}
 
 /**
  * Initial state for the global application context.
@@ -116,7 +179,7 @@ const initStore = {
   })(),
   clubFilters: undefined,
   eventFilters: undefined,
-  fcmToken: storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined,
+  fcmToken: storedFcmToken,
   isAddingAccount: false,
   mercatoFilters: undefined,
   onboardingViews: undefined,
@@ -133,7 +196,7 @@ const initStore = {
  * @param {any} newValue - The value to set in local storage.
  */
 const setPersistantState = (key, newValue) => {
-  if (newValue && newValue !== 'undefined') {
+  if (typeof newValue === 'string' && newValue.trim().length > 0 && newValue !== 'undefined') {
     storage.set(key, newValue);
   } else {
     storage.delete(key);
@@ -162,9 +225,12 @@ function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    setPersistantState('auth', JSON.stringify(state.auth));
-    setPersistantState('authSessions', JSON.stringify(state.authSessions));
-    setPersistantState('fcmToken', JSON.stringify(state.fcmToken));
+    setPersistantState('auth', safeJsonStringify('auth', state.auth));
+    setPersistantState('authSessions', safeJsonStringify('authSessions', state.authSessions));
+    setPersistantState(
+      'fcmToken',
+      typeof state.fcmToken === 'string' ? state.fcmToken.trim() : undefined,
+    );
     setPersistantState('theme', state.theme);
   }, [state]);
 

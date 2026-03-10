@@ -19,6 +19,7 @@ import { runOnJS } from 'react-native-reanimated';
 
 import { images as Images } from '@/theme/images';
 import useTheme from '@/theme/themeContext';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 // Constants
 const HOUR_HEIGHT = 60;
@@ -35,7 +36,7 @@ const TIME_COLUMN_WIDTH = 44;
  *   type?: string | { name?: string };
  *   team?: { name?: string };
  *   category?: { name?: string };
- *   facility?: { name?: string };
+ *   facility?: { name?: string; planningColor?: string; color?: string };
  *   title?: string;
  *   name?: string;
  *   league_match?: unknown;
@@ -113,9 +114,9 @@ function PlanningWeekTimelineView({
    * @returns {string}
    */
   const getEventColor = (event) => {
-    // 1. Gold for League Matches
-    if (event.league_match) {
-      return '#FFD700'; // Gold
+    const facilityColor = resolveFacilityPlanningColor(event?.facility);
+    if (facilityColor) {
+      return facilityColor;
     }
 
     const rawType = typeof event.type === 'string' ? event.type : event.type?.name;
@@ -787,6 +788,7 @@ function PlanningWeekTimelineView({
                         const showType = !isSmallEvent && eventType;
                         const showFacility = !isSmallEvent && facilityName;
                         const showTime = !isTinyEvent && (!isWeekMode || event.height > 52);
+                        const showLeagueBadge = !!event.league_match;
 
                         return (
                             <TouchableOpacity
@@ -868,6 +870,22 @@ function PlanningWeekTimelineView({
                                       {formatTime(event.endTime)}
                                     </Text>
                                 )}
+
+                                {showLeagueBadge ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: Colors.gold500,
+                                      borderColor: 'rgba(0,18,24,0.8)',
+                                      borderRadius: 999,
+                                      borderWidth: 1,
+                                      height: isWeekMode ? 8 : 10,
+                                      position: 'absolute',
+                                      right: 3,
+                                      top: 3,
+                                      width: isWeekMode ? 8 : 10,
+                                    }}
+                                  />
+                                ) : null}
                               </TouchableOpacity>
                         );
                       })}

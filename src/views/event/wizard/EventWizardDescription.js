@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
@@ -36,7 +36,7 @@ function EventWizardDescription({ navigation }) {
       payload: { description },
       type: 'SET_META',
     });
-    navigation.navigate(RouteNames.EventWizardVisibility);
+    navigation.navigate(RouteNames.EventWizardRecap);
   };
 
   return (
@@ -46,7 +46,7 @@ function EventWizardDescription({ navigation }) {
       onSkip={handleNext}
       showSkip
       stepCount={10}
-      stepIndex={7}
+      stepIndex={9}
       subtitle={t('eventWizard.steps.description.subtitle')}
       title={t('eventWizard.steps.description.title')}
     >

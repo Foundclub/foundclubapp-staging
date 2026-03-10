@@ -363,6 +363,23 @@ export default {
     view: 'Voir',
   },
   conversation: {
+    attachments: {
+      camera: 'Camera',
+      contact: 'Contact',
+      createPoll: 'Creer un sondage',
+      document: 'Document',
+      documentDisabled: 'Indisponible sur cette build',
+      event: 'Evenement',
+      noContact: 'Aucun contact partageable',
+      pickFile: 'Envoyer un fichier',
+      pickMedia: 'Envoyer un media',
+      photos: 'Photos',
+      poll: 'Sondage',
+      subtitle: 'Partagez du contenu dans cette conversation',
+      takePhoto: 'Prendre une photo',
+      title: 'Ajouter',
+      unavailable: 'Bientot disponible',
+    },
     messagePlaceholder: 'Message',
     modals: {
       actions: {
@@ -370,9 +387,37 @@ export default {
         seeUser: 'Voir le profil',
       },
       reportSuccess: {
-        description: 'Merci de votre retour, nous allons traiter votre demande dans les plus brefs délais.',
-        title: 'Votre signalement a bien été envoyé',
+        description: 'Merci de votre retour, nous allons traiter votre demande dans les plus brefs delais.',
+        title: 'Votre signalement a bien ete envoye',
       },
+    },
+    shareContact: {
+      empty: 'Aucun contact partageable dans ce chat.',
+      send: 'Partager',
+      title: 'Partager un contact',
+    },
+    shareEvent: {
+      empty: 'Aucun evenement disponible.',
+      title: 'Partager un evenement',
+    },
+    shareLocation: {
+      placeholder: 'Rechercher une adresse',
+      send: 'Partager',
+      title: 'Partager une localisation',
+    },
+    voice: {
+      hint: 'Glisser gauche pour annuler, glisser haut pour verrouiller.',
+      hintShort: 'Maintenez appuye pour enregistrer',
+      locked: 'Note vocale verrouillee',
+      lockedHint: 'Enregistrement verrouille. Touchez envoyer ou annuler.',
+      permissionDescription: 'Autorisez le micro pour envoyer des notes vocales.',
+      permissionTitle: 'Micro requis',
+      recording: 'Enregistrement vocal',
+      sendErrorDescription: 'Impossible d envoyer la note vocale. Reessayez.',
+      sendErrorTitle: 'Envoi impossible',
+      sending: 'Envoi en cours...',
+      unavailableDescription: 'Le module vocal n est pas disponible sur cette build.',
+      unavailableTitle: 'Vocal indisponible',
     },
   },
   createClubRequest: {
@@ -450,6 +495,15 @@ export default {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
         title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
       },
+      recurrenceCancel: {
+        actions: {
+          all: 'Tous les evenements',
+          future: 'Cet evenement et les suivants',
+          thisEvent: 'Cet evenement',
+        },
+        description: 'Cet evenement fait partie d une serie. Que voulez-vous annuler ?',
+        title: 'Annulation d un evenement recurrent',
+      },
       deleteParticipation: {
         actions: {
           cancel: 'Non, retour',
@@ -523,8 +577,8 @@ export default {
       },
       invitedTeams: {
         label: 'Inviter des équipes',
-        myTeams: 'MES ÉQUIPES',
-        otherTeams: 'AUTRES ÉQUIPES',
+        myTeams: 'MES \u00c9QUIPES',
+        otherTeams: 'AUTRES \u00c9QUIPES',
         placeholder: 'Sélectionner des équipes',
       },
       isRecurrent: {
@@ -658,7 +712,7 @@ export default {
     info: {
       alreadyJoined: 'Je participe !',
       alreadyMissing: 'Je serai absent·e',
-      pendingRequest: 'Participation en attente',
+      pendingRequest: 'Demande en attente',
     },
     joinModal: {
       actions: {
@@ -671,21 +725,21 @@ export default {
       },
       description: 'Je soussigné(e), participant majeur ou, le cas échéant, représentant légal du participant mineur, reconnais et accepte ce qui suit :'
         + '\n\nRôle de Found Club : '
-        + '\n    - Found Club est une plateforme de mise en relation et n’organise pas l’événement. Found Club ne fournit aucune assurance liée à la participation.'
+        + '\n    - Found Club est une plateforme de mise en relation et n\'organise pas l\'événement. Found Club ne fournit aucune assurance liée à la participation.'
         + '\n\nTrajets aller/retour :'
-        + '\n    - Sauf transport expressément organisé par l’organisateur, le trajet vers et depuis l’événement est sous ma responsabilité (ou celle du représentant légal pour un mineur), y compris assurance et choix du mode de transport.'
+        + '\n    - Sauf transport expressément organisé par l\'organisateur, le trajet vers et depuis l\'événement est sous ma responsabilité (ou celle du représentant légal pour un mineur), y compris assurance et choix du mode de transport.'
         + '\n\nAssurance :'
-        + '\n    - J’atteste disposer (ou, pour un mineur, que l’enfant dispose) d’une couverture d’assurance appropriée (ex. licence fédérale en cours et/ou responsabilité civile). J’ai compris que Found Club n’assure ni les dommages corporels ni matériels.'
+        + '\n    - J\'atteste disposer (ou, pour un mineur, que l\'enfant dispose) d\'une couverture d\'assurance appropriée (ex. licence fédérale en cours et/ou responsabilité civile). J\'ai compris que Found Club n\'assure ni les dommages corporels ni matériels.'
         + '\n\nAptitude médicale :'
-        + '\nJ’atteste être apte à la pratique au jour de l’événement (ou que l’enfant est apte, conformément aux exigences fédérales : certificat/questionnaire le cas échéant) et je m’engage à ne pas participer / ne pas autoriser la participation en cas de doute sur l’état de santé.'
+        + '\nJ\'atteste être apte à la pratique au jour de l\'événement (ou que l\'enfant est apte, conformément aux exigences fédérales : certificat/questionnaire le cas échéant) et je m\'engage à ne pas participer / ne pas autoriser la participation en cas de doute sur l\'état de santé.'
         + '\n\nLimites de responsabilité (droit FR) :'
-        + '\nDans la mesure permise par la loi, je m’engage à ne pas rechercher la responsabilité de Found Club du fait de la participation ; cette clause ne s’applique pas en cas de faute lourde ou intentionnelle ou de manquement grave aux obligations de sécurité imputable à Found Club ou à l’organisateur.'
+        + '\nDans la mesure permise par la loi, je m\'engage à ne pas rechercher la responsabilité de Found Club du fait de la participation ; cette clause ne s\'applique pas en cas de faute lourde ou intentionnelle ou de manquement grave aux obligations de sécurité imputable à Found Club ou à l\'organisateur.'
         + '\n\nRèglement & sécurité :'
-        + '\nJe m’engage (ou j’engage le mineur) à respecter le règlement, les consignes de sécurité et les instructions des encadrants ; l’organisateur peut refuser ou interrompre la participation en cas de non-respect.'
+        + '\nJe m\'engage (ou j\'engage le mineur) à respecter le règlement, les consignes de sécurité et les instructions des encadrants ; l\'organisateur peut refuser ou interrompre la participation en cas de non-respect.'
         + '\n\nUrgence médicale :'
-        + '\nJ’autorise l’organisateur à prévenir les secours en cas d’urgence ; pour un mineur, j’autorise l’organisateur à accompagner l’enfant si nécessaire et je m’engage à rester joignable.',
+        + '\nJ\'autorise l\'organisateur à prévenir les secours en cas d\'urgence ; pour un mineur, j\'autorise l\'organisateur à accompagner l\'enfant si nécessaire et je m\'engage à rester joignable.',
       title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
-      validation: 'En cochant les cases et en validant mon inscription, je confirme avoir lu, compris et accepté la présente déclaration et j’accepte de participer à l’événement dans ces conditions.',
+      validation: 'En cochant les cases et en validant mon inscription, je confirme avoir lu, compris et accepté la présente déclaration et j\'accepte de participer à l\'événement dans ces conditions.',
     },
     noData: 'Aucun évènement trouvé.',
     title: 'Mes évènements',
@@ -784,6 +838,12 @@ export default {
         isRecurrent: 'Evenement recurrent',
         recurrenceDays: 'Jours de recurrence',
         recurrenceInterval: 'Intervalle de recurrence',
+        recurrenceIntervalDecrement: "Reduire l'intervalle de recurrence",
+        recurrenceIntervalIncrement: "Augmenter l'intervalle de recurrence",
+        recurrenceIntervalMonthlyMany: 'Tous les {{count}} mois',
+        recurrenceIntervalMonthlyOne: 'Tous les mois',
+        recurrenceIntervalWeeklyMany: 'Toutes les {{count}} semaines',
+        recurrenceIntervalWeeklyOne: 'Toutes les semaines',
         recurrenceTitle: 'Configuration recurrence',
         reservationMode: 'Mode de reservation',
         reservationTitle: 'Parametres reservation',
@@ -838,11 +898,11 @@ export default {
         title: 'Mode de validation',
       },
       visibility: {
-        private: 'Prive',
-        privateDesc: 'Visible uniquement pour les membres concernes.',
         public: 'Public',
         publicDesc: 'Visible pour tous les profils qui y ont acces.',
         subtitle: "Definis qui peut voir l'evenement.",
+        team: 'Equipe',
+        teamDesc: 'Visibilite uniquement pour les membres de l equipe creatrice de l evenement.',
         title: 'Visibilite',
       },
     },
@@ -852,11 +912,16 @@ export default {
       teamPlural: 'equipes simultanees',
       teamSingular: 'equipe simultanee',
     },
+    fields: {
+      planningColor: 'Couleur dans le planning',
+    },
     errors: {
       addressGeocodeRequired: 'Selectionnez une adresse geolocalisee dans la liste.',
+      planningColorInvalid: 'Selectionnez une couleur valide.',
     },
     hints: {
       addressSelection: 'Selectionnez une adresse dans la liste pour activer le GPS.',
+      planningColor: 'Cette couleur apparaitra dans le planning pour identifier rapidement l installation.',
     },
   },
   facilityList: {
@@ -868,6 +933,9 @@ export default {
     },
     defaults: {
       addressMissing: 'Adresse non renseignee',
+    },
+    labels: {
+      planningColor: 'Couleur planning',
     },
   },
   home: {
@@ -926,6 +994,10 @@ export default {
         title: 'FoundClub League',
       },
       manage: {
+        addAd: {
+          subtitle: 'Publier une annonce pour rechercher un profil particulier.',
+          title: 'Ajouter une annonce',
+        },
         addEvent: {
           subtitle: 'Cr\u00e9e rapidement un entra\u00eenement, match ou s\u00e9ance d essai.',
           title: 'Ajouter un \u00e9v\u00e9nement',
@@ -1070,6 +1142,10 @@ export default {
         description: 'Creez un entrainement, match ou detection pour vos equipes.',
         title: 'Ajouter un evenement',
       },
+      manageAddAd: {
+        description: 'Publiez une annonce de recrutement pour cibler des profils precis.',
+        title: 'Ajouter une annonce',
+      },
       manageClub: {
         description: 'Accedez a votre espace club pour piloter votre organisation.',
         title: 'Gerer mon club',
@@ -1159,7 +1235,7 @@ export default {
     chat: 'Messagerie',
     home: 'Accueil',
     myClub: 'Mon club',
-    myTeams: 'Mes équipes',
+    myTeams: 'Mes \u00e9quipes',
     planning: 'Mon planning',
     requests: 'Demandes',
     search: 'Rechercher',
@@ -1200,7 +1276,7 @@ export default {
   },
   myTeamList: {
 
-    title: 'Mes équipes',
+    title: 'Mes \u00e9quipes',
   },
   onboardingAffiliation: {
     a11y: {
@@ -1342,7 +1418,7 @@ export default {
       manageRequests: 'Gerer mes demandes',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
-      myTeams: 'Mes équipes',
+      myTeams: 'Mes \u00e9quipes',
       save: 'Continuer',
     },
     alerts: {
@@ -1458,6 +1534,63 @@ export default {
       team: 'Equipe',
       unknown: 'Demande',
     },
+  },
+  squadDetails: {
+    actions: {
+      deleteTeam: 'Supprimer l\'equipe',
+      deleteTeamError: 'Impossible de supprimer l\'equipe.',
+      edit: 'Modifier',
+      editTeam: 'Modifier l\'equipe',
+      menuDescription: 'Choisissez une action.',
+      menuTitle: 'Actions equipe',
+      openRequests: 'Voir les demandes',
+      requests: 'Demandes',
+      unavailableTitle: 'Action non disponible',
+    },
+    join: {
+      pending: 'Demande en attente...',
+      request: 'Demander a rejoindre',
+    },
+    labels: {
+      locationUnknown: 'Localisation non renseignee',
+    },
+    roster: {
+      captain: 'Capitaine',
+      player: 'Joueur',
+      title: 'Effectif',
+    },
+    slots: {
+      addTitle: 'Ajouter un creneau',
+      added: 'Creneau ajoute',
+      deleteConfirm: 'Voulez-vous vraiment supprimer ce creneau ?',
+      deleteError: 'Impossible de supprimer le creneau',
+      deleted: 'Creneau supprime',
+      editTitle: 'Modifier le creneau',
+      joinHint: 'Rejoignez la squad pour participer aux creneaux.',
+      multipleAdded: '{{count}} creneaux ajoutes',
+      saveError: 'Impossible de sauvegarder le creneau',
+      statusError: 'Impossible de modifier votre statut.',
+      updated: 'Creneau modifie',
+    },
+  },
+  teamSlotList: {
+    add: '+ Ajouter',
+    checkInSoon: 'Check-in bientot disponible.',
+    comingSoon: 'Bientot disponible',
+    confirmedPlayers: 'Joueurs confirmes',
+    cta: {
+      confirmPresence: 'Je suis present',
+      removePresence: 'Retirer ma presence',
+    },
+    empty: 'Aucun creneau defini.',
+    joinHint: 'Rejoindre la squad pour participer.',
+    memberHelp: 'Touchez pour confirmer votre presence.',
+    status: {
+      complete: 'Complet',
+      confirmed: '{{count}}/{{required}} confirmes',
+      remaining: 'Encore {{count}}',
+    },
+    title: 'Disponibilites (creneaux)',
   },
   reservation: {
     actions: {
@@ -1658,9 +1791,9 @@ export default {
       members: 'Membres',
       section: 'Section',
     },
-    noData: 'Aucune équipe trouvée.',
-    searchPlaceholder: 'Rechercher dans mes équipes...',
-    title: 'Équipes de mon club',
+    noData: 'Aucune \u00e9quipe trouv\u00e9e.',
+    searchPlaceholder: 'Mes \u00e9quipes',
+    title: '\u00c9quipes de mon club',
   },
   teamMembershipRequestList: {
     actions: {
@@ -1748,3 +1881,4 @@ export default {
     title: 'Bienvenu·e sur',
   },
 };
+

@@ -1,19 +1,35 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable react/jsx-props-no-spreading */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ImageBackground, Linking, StatusBar, Text, TouchableOpacity, View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ImageBackground,
+  Linking,
+  PanResponder,
+  PermissionsAndroid,
+  Platform,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import 'dayjs/locale/fr';
 import {
-  Actions,
   Bubble,
   Composer,
   GiftedChat,
   InputToolbar,
-  MessageImage,
   Time,
 } from 'react-native-gifted-chat';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -27,9 +43,15 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
+import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
+import EventShareBubble from '@/components/molecules/eventShareBubble/EventShareBubble';
+import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChatAttachmentSheet from '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
@@ -38,7 +60,14 @@ import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/propo
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
+import {
+  cancelRecording,
+  isVoiceNoteRecordingSupported,
+  startRecording,
+  stopRecording,
+} from '@/services/chat/voiceNoteService';
 import client from '@/services/client';
+import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { cancelMatch, confirmMatch, updateMatch } from '@/services/league/leagueMatchService';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
@@ -49,12 +78,20 @@ import { createLogger } from '@/utils/logger/logger';
 import { EVENTS } from '@/hooks/useSocket';
 
 const conversationLogger = createLogger('conversation');
-const isFlagEnabled = (rawValue) => {
+const isFlagEnabled = (rawValue, defaultValue = false) => {
+  if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
   const normalized = String(rawValue || '').trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
 const isDocumentPickerDisabled = isFlagEnabled(process.env.FC_DISABLE_DOCUMENT_PICKER);
+const isAttachmentSheetV2Enabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_SHEET_V2, true);
+const isChatRetryEnabled = isFlagEnabled(process.env.FC_CHAT_MESSAGE_RETRY_V1, true);
+const isSocketReadTypingEnabled = isFlagEnabled(process.env.FC_CHAT_SOCKET_READ_TYPING_V1, true);
+const isVoiceNotesEnabled = isFlagEnabled(process.env.FC_CHAT_VOICE_NOTES, true);
+const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION, true);
+const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
+const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
 
 /** @type {any | null | undefined} */
 let cachedDocumentPickerModule;
@@ -87,9 +124,14 @@ const isDocumentPickerCancellation = (documentPicker, error) => (
  * @returns {import('react').ReactElement} Conversation screen component
  */
 function Conversation({ navigation, route }) {
-  const { chatId } = route.params ?? {};
+  const chatId = String(
+    route?.params?.chatId
+    || route?.params?.chatDocumentId
+    || route?.params?.id
+    || '',
+  ).trim();
   const { t } = useTranslation();
-  const { userData } = useAuth();
+  const { allMyTeams, userData } = useAuth();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const formatDateForGoogleCalendar = (/** @type {string | number | Date} */ dateInput) => {
@@ -136,14 +178,17 @@ function Conversation({ navigation, route }) {
 
   /* import deleteMessage from useMessaging hook */
   const {
-    deleteMessage,
     getConversationName,
+    removeGroupMember,
+    respondToProposal,
+    retryFailedMessage,
     sendMessage,
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
     socket,
-    updateMessage,
+    updateGroupMeta,
+    votePoll,
   } = useMessaging(chatId);
 
   /**
@@ -153,53 +198,10 @@ function Conversation({ navigation, route }) {
    * & {documentId: string}} currentMessage - The message object
    * @returns {void}
    */
-  const handleMessageLongPress = (_, currentMessage) => {
-    const isOwnMessage = currentMessage.user._id === userData?.documentId;
-
-    // Base actions
-    /** @type {import('react-native').AlertButton[]} */
-    const actions = [
-      { onPress: () => setReplyingTo(currentMessage), text: 'Répondre' },
-    ];
-
-    if (isOwnMessage) {
-      actions.push({
-        onPress: () => {
-          Alert.alert(
-            t('conversation.modals.deleteConfirm.title', 'Supprimer le message ?'),
-            t('conversation.modals.deleteConfirm.description', 'Cette action est irréversible.'),
-            [
-              { style: 'cancel', text: t('common.cancel', 'Annuler') },
-              {
-                onPress: () => deleteMessage(currentMessage.documentId),
-                style: 'destructive',
-                text: t('common.delete', 'Supprimer'),
-              },
-            ],
-          );
-        },
-        style: 'destructive',
-        text: t('conversation.actions.delete', 'Supprimer'),
-      });
-    } else {
-      actions.push({
-        onPress: () => {
-          setIsReportModalVisible(true);
-          setSelectedMessage(currentMessage);
-        },
-        text: t('conversation.actions.report', 'Signaler'),
-      });
-    }
-
-    actions.push({ style: 'cancel', text: t('common.cancel', 'Annuler') });
-
-    Alert.alert(
-      t('conversation.actions.title', 'Actions'),
-      '',
-      actions,
-    );
-  };
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState('');
+  const [isGroupMutationLoading, setIsGroupMutationLoading] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(
     /**
      * @type {import('react-native-gifted-chat').IMessage & {documentId: string} | undefined}
@@ -211,6 +213,82 @@ function Conversation({ navigation, route }) {
     hasNextPage,
   } = useGetChatMessages({ chatId });
   const { data: chatData } = useGetChatById(chatId);
+  const isGroupChat = chatData?.type === 'group';
+  const groupAdminIds = useMemo(() => {
+    if (!Array.isArray(chatData?.groupAdmins)) return [];
+    return chatData.groupAdmins
+      .map((admin) => String(admin?.documentId || admin?.id || ''))
+      .filter(Boolean);
+  }, [chatData?.groupAdmins]);
+  const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
+
+  useEffect(() => {
+    if (!isGroupChat) return;
+    setGroupNameDraft(String(chatData?.groupName || ''));
+  }, [chatData?.groupName, isGroupChat]);
+
+  const myTeamIds = useMemo(
+    () => Array.from(
+      new Set(
+        (allMyTeams || [])
+          .map((team) => team?.documentId)
+          .filter(Boolean),
+      ),
+    ),
+    [allMyTeams],
+  );
+
+  const {
+    data: sharedEventsPages,
+    isFetching: isLoadingSharedEvents,
+  } = useGetEvents(
+    {
+      myTeams: myTeamIds,
+      pageSize: 20,
+      sort: 'date:asc',
+    },
+    {
+      enabled: isEventShareEnabled && myTeamIds.length > 0,
+    },
+  );
+
+  const shareableEvents = useMemo(() => {
+    if (!Array.isArray(sharedEventsPages?.pages)) return [];
+    const seen = new Set();
+    /** @type {any[]} */
+    const events = [];
+
+    sharedEventsPages.pages.forEach((page) => {
+      if (!Array.isArray(page?.data)) return;
+      page.data.forEach((event) => {
+        const eventId = String(event?.documentId || event?.id || '');
+        if (!eventId || seen.has(eventId)) return;
+        seen.add(eventId);
+        events.push(event);
+      });
+    });
+
+    return events.slice(0, 40);
+  }, [sharedEventsPages?.pages]);
+
+  const shareableContacts = useMemo(() => {
+    const participants = Array.isArray(chatData?.participants) ? chatData.participants : [];
+    return participants
+      .filter((participant) => participant?.documentId && participant.documentId !== userData?.documentId)
+      .map((participant) => ({
+        avatar: participant?.avatar,
+        documentId: participant?.documentId,
+        firstname: participant?.firstname || '',
+        lastname: participant?.lastname || '',
+        role: participant?.role?.name || participant?.role?.type || '',
+      }));
+  }, [chatData?.participants, userData?.documentId]);
+
+  const canRecordVoiceNote = useMemo(
+    () => isVoiceNotesEnabled && isVoiceNoteRecordingSupported(),
+    [],
+  );
+
   const {
     Alignments,
     ApplicationStyle,
@@ -221,7 +299,7 @@ function Conversation({ navigation, route }) {
   } = useTheme();
 
   // DEBUG LOGS
-  const { bottom, top } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
   const HEADER_SIDE_WIDTH = 56;
 
   const { isPending: isReportingMessage, mutate: reportMessage } = useMutation({
@@ -238,15 +316,40 @@ function Conversation({ navigation, route }) {
 
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
+  const [composerText, setComposerText] = useState('');
+  const [pendingMediaDraft, setPendingMediaDraft] = useState(
+    /** @type {{ asset: { fileName?: string; type?: string; uri?: string | null } } | null} */ (null),
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const [isLocationShareModalVisible, setIsLocationShareModalVisible] = useState(false);
+  const [isContactShareModalVisible, setIsContactShareModalVisible] = useState(false);
+  const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
+  const [selectedLocationOption, setSelectedLocationOption] = useState(/** @type {any} */ (undefined));
+  const [selectedContactId, setSelectedContactId] = useState('');
+
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [isVoiceRecordingLocked, setIsVoiceRecordingLocked] = useState(false);
+  const [isSendingVoiceNote, setIsSendingVoiceNote] = useState(false);
+  const [voiceRecordingDurationMs, setVoiceRecordingDurationMs] = useState(0);
+  const [voiceRecordingHint, setVoiceRecordingHint] = useState('');
+  const isVoiceRecordingRef = useRef(false);
+  const isVoiceRecordingLockedRef = useRef(false);
 
   // Event Participation Logic
   const queryClient = useQueryClient();
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
+
+  useEffect(() => {
+    isVoiceRecordingRef.current = isVoiceRecording;
+  }, [isVoiceRecording]);
+
+  useEffect(() => {
+    isVoiceRecordingLockedRef.current = isVoiceRecordingLocked;
+  }, [isVoiceRecordingLocked]);
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
@@ -281,42 +384,56 @@ function Conversation({ navigation, route }) {
 
   // Typing Indicator Logic
   useEffect(() => {
-    if (!socket) return;
+    if (!isSocketReadTypingEnabled) return undefined;
+    if (!socket) return undefined;
 
-    const handleTypingStart = (/** @type {{ chatDocumentId?: string }} */ { chatDocumentId }) => {
+    const handleTypingStart = (
+      /** @type {{ chatDocumentId?: string; userDocumentId?: string }} */
+      { chatDocumentId, userDocumentId },
+    ) => {
       if (chatDocumentId === chatId) {
-        // Since we don't have user info in typing event, we just show generic
-        // In a real app we'd pass userId
-        setTypingUsers((prev) => new Set(prev).add('someone'));
+        if (!userDocumentId || userDocumentId === userData?.documentId) return;
+        setTypingUsers((prev) => new Set(prev).add(userDocumentId));
       }
     };
 
-    const handleTypingStop = (/** @type {{ chatDocumentId?: string }} */ { chatDocumentId }) => {
+    const handleTypingStop = (
+      /** @type {{ chatDocumentId?: string; userDocumentId?: string }} */
+      { chatDocumentId, userDocumentId },
+    ) => {
       if (chatDocumentId === chatId) {
         setTypingUsers((prev) => {
           const newSet = new Set(prev);
-          newSet.clear(); // For now, basic implementation
+          if (userDocumentId) {
+            newSet.delete(userDocumentId);
+          } else {
+            newSet.clear();
+          }
           return newSet;
         });
       }
     };
 
-    socket.on(EVENTS.TYPING_START, handleTypingStart);
-    socket.on(EVENTS.TYPING_STOP, handleTypingStop);
+    socket.on(EVENTS.TYPING_STARTED, handleTypingStart);
+    socket.on(EVENTS.TYPING_STOPPED, handleTypingStop);
 
     return () => {
-      socket.off(EVENTS.TYPING_START, handleTypingStart);
-      socket.off(EVENTS.TYPING_STOP, handleTypingStop);
+      socket.off(EVENTS.TYPING_STARTED, handleTypingStart);
+      socket.off(EVENTS.TYPING_STOPPED, handleTypingStop);
     };
-  }, [socket, chatId]);
+  }, [socket, chatId, userData?.documentId]);
 
-  // Read Receipt on Mount
-  useEffect(() => {
-    sendReadReceipt(chatId);
-  }, [chatId, sendReadReceipt]);
+  useEffect(() => () => {
+    if (isVoiceRecordingRef.current || isVoiceRecordingLockedRef.current) {
+      cancelRecording().catch(() => {});
+    }
+  }, []);
 
   // Handle Input Text Change for Typing Indicator
   const handleInputTextChanged = (/** @type {string} */ text) => {
+    setComposerText(text);
+    if (!isSocketReadTypingEnabled) return;
+
     if (text.length > 0) {
       sendTypingStart(chatId);
     } else {
@@ -324,32 +441,46 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const uploadAndSendAttachment = async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
-    if (!asset?.uri || !chatId) return;
+  const uploadAttachmentAsset = useCallback(async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
+    if (!asset?.uri) return [];
+
+    const isVideo = typeof asset.type === 'string' && asset.type.startsWith('video/');
+    const isAudio = typeof asset.type === 'string' && asset.type.startsWith('audio/');
+    let defaultExtension = 'jpg';
+    if (isVideo) {
+      defaultExtension = 'mp4';
+    } else if (isAudio) {
+      defaultExtension = 'm4a';
+    }
+    const formData = new FormData();
+
+    formData.append('files', /** @type {any} */ ({
+      name: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
+      type: asset.type || 'application/octet-stream',
+      uri: asset.uri,
+    }));
+
+    const uploadResponse = await client.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
+  }, []);
+
+  const uploadAndSendAttachment = async (
+    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+    /** @type {{ caption?: string; replyTo?: { documentId?: string } | null }} */ options = {},
+  ) => {
+    if (!asset?.uri || !chatId) return false;
 
     try {
       setIsUploading(true);
-
-      const isVideo = typeof asset.type === 'string' && asset.type.startsWith('video/');
-      const defaultExtension = isVideo ? 'mp4' : 'jpg';
-      const formData = new FormData();
-
-      formData.append('files', /** @type {any} */ ({
-        name: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
-        type: asset.type || 'application/octet-stream',
-        uri: asset.uri,
-      }));
-
-      const uploadResponse = await client.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const uploadedFiles = Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
+      const uploadedFiles = await uploadAttachmentAsset(asset);
       if (uploadedFiles.length === 0) {
         Alert.alert('Erreur', 'Aucune piece jointe n a pu etre envoyee.');
-        return;
+        return false;
       }
 
       const uploadedMime = uploadedFiles?.[0]?.mime || asset.type || '';
@@ -357,16 +488,66 @@ function Conversation({ navigation, route }) {
       const isImageAttachment = typeof uploadedMime === 'string'
         && uploadedMime.startsWith('image/');
 
-      sendMessage(chatId, isImageAttachment ? '' : `Piece jointe: ${uploadedName}`, {
+      const normalizedCaption = String(options?.caption || '').trim();
+      const fallbackText = isImageAttachment ? '' : `Piece jointe: ${uploadedName}`;
+      const messageText = normalizedCaption || fallbackText;
+
+      sendMessage(chatId, messageText, {
         attachments: uploadedFiles,
+        replyTo: options?.replyTo || null,
         sender: userData,
       });
+      return true;
     } catch (error) {
       conversationLogger.warn('Attachment upload failed', error);
       Alert.alert('Erreur', 'Impossible d envoyer cette piece jointe.');
+      return false;
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const normalizePickedAsset = (
+    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
+  ) => {
+    const rawType = String(selectedAsset?.type || '').trim().toLowerCase();
+    const safeType = rawType || 'application/octet-stream';
+    const baseName = String(selectedAsset?.fileName || '').trim();
+
+    let extension = 'bin';
+    if (safeType.startsWith('image/')) {
+      extension = safeType.split('/')[1] || 'jpg';
+    } else if (safeType.startsWith('video/')) {
+      extension = safeType.split('/')[1] || 'mp4';
+    } else if (safeType.startsWith('audio/')) {
+      extension = safeType.split('/')[1] || 'm4a';
+    } else if (safeType.includes('/')) {
+      extension = safeType.split('/')[1] || extension;
+    }
+
+    return {
+      fileName: baseName || `media_${Date.now()}.${extension}`,
+      type: safeType,
+      uri: selectedAsset?.uri,
+    };
+  };
+
+  const queueOrSendPickedAsset = async (
+    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
+  ) => {
+    const normalizedAsset = normalizePickedAsset(selectedAsset);
+    if (!normalizedAsset?.uri) return;
+
+    const isImageAsset = String(normalizedAsset.type || '').toLowerCase().startsWith('image/');
+    if (isImageAsset) {
+      setPendingMediaDraft({ asset: normalizedAsset });
+      return;
+    }
+
+    await uploadAndSendAttachment(normalizedAsset, {
+      replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+    });
+    setReplyingTo(null);
   };
 
   const handlePickMedia = async () => {
@@ -387,19 +568,56 @@ function Conversation({ navigation, route }) {
       const selectedAsset = response.assets?.[0];
       if (!selectedAsset) return;
 
-      await uploadAndSendAttachment({
-        fileName: selectedAsset.fileName,
-        type: selectedAsset.type,
-        uri: selectedAsset.uri,
-      });
+      await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Media picker failed', error);
       Alert.alert('Erreur', 'Impossible d ouvrir la galerie.');
     }
   };
 
+  const ensureCameraPermission = async () => {
+    if (Platform.OS !== 'android') return true;
+
+    try {
+      const alreadyGranted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+      );
+      if (alreadyGranted) return true;
+
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          buttonNegative: t('common.actions.cancel', 'Annuler'),
+          buttonNeutral: t('common.actions.askLater', 'Plus tard'),
+          buttonPositive: t('common.actions.ok', 'OK'),
+          message: t(
+            'permissions.camera.message',
+            'L application a besoin de la camera pour prendre une photo.',
+          ),
+          title: t('permissions.camera.title', 'Permission Camera'),
+        },
+      );
+
+      if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          t('permissions.camera.denied', 'Permission camera refusee'),
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      conversationLogger.warn('Camera permission request failed', error);
+      Alert.alert('Erreur', 'Impossible de verifier la permission camera.');
+      return false;
+    }
+  };
+
   const handleTakePhoto = async () => {
     try {
+      const hasCameraPermission = await ensureCameraPermission();
+      if (!hasCameraPermission) return;
+
       const response = await launchCamera({
         cameraType: 'back',
         includeBase64: false,
@@ -417,11 +635,7 @@ function Conversation({ navigation, route }) {
       const selectedAsset = response.assets?.[0];
       if (!selectedAsset) return;
 
-      await uploadAndSendAttachment({
-        fileName: selectedAsset.fileName,
-        type: selectedAsset.type,
-        uri: selectedAsset.uri,
-      });
+      await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Camera open failed', error);
       Alert.alert('Erreur', 'Impossible de prendre la photo.');
@@ -513,11 +727,417 @@ function Conversation({ navigation, route }) {
     setIsPollModalVisible(false);
   };
 
+  const parseCoordinatesFromOption = (option) => {
+    const rawValue = String(option?.value || '');
+    const [lngRaw, latRaw] = rawValue.split('|');
+    const lat = Number(latRaw);
+    const lng = Number(lngRaw);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return { lat: null, lng: null };
+    }
+
+    return { lat, lng };
+  };
+
+  const resolveEventLocationLabel = (event) => {
+    const fallback = event?.location?.label || event?.facility?.address || event?.facility?.name || '';
+    if (!event?.locationDetails) return fallback;
+
+    try {
+      const parsed = JSON.parse(event.locationDetails);
+      const parsedLabel = parsed?.address?.description || parsed?.address?.label || parsed?.address?.address;
+      return parsedLabel || fallback;
+    } catch (_error) {
+      return fallback;
+    }
+  };
+
+  const handleShareLocation = () => {
+    if (!chatId || !selectedLocationOption) return;
+    const { lat, lng } = parseCoordinatesFromOption(selectedLocationOption);
+
+    const composition = {
+      address: selectedLocationOption?.label || '',
+      label: selectedLocationOption?.label || '',
+      lat,
+      lng,
+      type: 'location_share',
+    };
+
+    sendMessage(chatId, '', {
+      composition,
+      sender: userData,
+    });
+    setSelectedLocationOption(undefined);
+    setIsLocationShareModalVisible(false);
+  };
+
+  const handleShareContact = () => {
+    if (!chatId || !selectedContactId) return;
+    const selectedContact = shareableContacts.find((contact) => contact.documentId === selectedContactId);
+    if (!selectedContact) return;
+
+    const composition = {
+      avatarUrl: selectedContact?.avatar?.url || '',
+      firstname: selectedContact.firstname || '',
+      lastname: selectedContact.lastname || '',
+      roleLabel: selectedContact.role || '',
+      type: 'contact_share',
+      userDocumentId: selectedContact.documentId,
+    };
+
+    sendMessage(chatId, '', {
+      composition,
+      sender: userData,
+    });
+    setSelectedContactId('');
+    setIsContactShareModalVisible(false);
+  };
+
+  const handleShareEvent = (event) => {
+    if (!chatId || !event?.documentId) return;
+
+    const composition = {
+      eventDate: event?.date || null,
+      eventDocumentId: event.documentId,
+      eventName: event?.name || 'Evenement',
+      locationLabel: resolveEventLocationLabel(event),
+      teamName: event?.team?.name || '',
+      type: 'event_share',
+    };
+
+    sendMessage(chatId, '', {
+      composition,
+      sender: userData,
+    });
+    setIsEventShareModalVisible(false);
+  };
+
+  const handleOpenGroupManagement = () => {
+    if (!isGroupAdmin) return;
+    setGroupNameDraft(String(chatData?.groupName || ''));
+    setIsMenuVisible(false);
+    setIsGroupManagementVisible(true);
+  };
+
+  const handleSaveGroupName = async () => {
+    const nextGroupName = String(groupNameDraft || '').trim();
+    if (!chatId || !nextGroupName) {
+      Alert.alert('Nom requis', 'Entrez un nom de groupe valide.');
+      return;
+    }
+
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({
+        chatId,
+        data: { groupName: nextGroupName },
+      });
+      Alert.alert('Succes', 'Nom du groupe mis a jour.');
+    } catch (error) {
+      conversationLogger.warn('Failed to update group name', error);
+      Alert.alert('Erreur', 'Impossible de mettre a jour le nom du groupe.');
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  const handleAddGroupMembers = () => {
+    if (!chatId) return;
+    setIsGroupManagementVisible(false);
+    navigation.navigate(RouteNames.NewConversation, {
+      chatId,
+      mode: 'add_group_members',
+    });
+  };
+
+  const handleRemoveGroupMember = (member) => {
+    const memberId = String(member?.documentId || member?.id || '').trim();
+    if (!chatId || !memberId) return;
+
+    const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || 'ce membre';
+    Alert.alert(
+      'Retirer un membre',
+      `Retirer ${memberLabel} du groupe ?`,
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: async () => {
+            try {
+              setIsGroupMutationLoading(true);
+              await removeGroupMember({
+                chatId,
+                userId: memberId,
+              });
+            } catch (error) {
+              conversationLogger.warn('Failed to remove group member', error);
+              Alert.alert('Erreur', 'Impossible de retirer ce membre.');
+            } finally {
+              setIsGroupMutationLoading(false);
+            }
+          },
+          style: 'destructive',
+          text: 'Retirer',
+        },
+      ],
+    );
+  };
+
+  const resetVoiceRecordingState = useCallback(() => {
+    setIsVoiceRecording(false);
+    setIsVoiceRecordingLocked(false);
+    setIsSendingVoiceNote(false);
+    setVoiceRecordingDurationMs(0);
+    setVoiceRecordingHint('');
+  }, []);
+
+  const handleStartVoiceRecording = useCallback(async () => {
+    if (!canRecordVoiceNote || !chatId) {
+      Alert.alert(
+        t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+        t('conversation.voice.unavailableDescription', 'Le module vocal n est pas disponible sur cette build.'),
+      );
+      return;
+    }
+
+    if (isVoiceRecordingRef.current) return;
+    try {
+      setVoiceRecordingHint(t('conversation.voice.hint', 'Glisser gauche pour annuler, glisser haut pour verrouiller.'));
+      setVoiceRecordingDurationMs(0);
+      await startRecording({
+        onProgress: (durationMs) => setVoiceRecordingDurationMs(durationMs),
+      });
+      setIsVoiceRecording(true);
+      setIsVoiceRecordingLocked(false);
+    } catch (error) {
+      conversationLogger.warn('Failed to start voice recording', error);
+      Alert.alert(
+        t('conversation.voice.permissionTitle', 'Micro requis'),
+        t('conversation.voice.permissionDescription', 'Autorisez le micro pour envoyer des notes vocales.'),
+      );
+      resetVoiceRecordingState();
+    }
+  }, [canRecordVoiceNote, chatId, resetVoiceRecordingState, t]);
+
+  const handleCancelVoiceRecording = useCallback(async () => {
+    if (!isVoiceRecordingRef.current && !isVoiceRecordingLockedRef.current) return;
+
+    try {
+      await cancelRecording();
+    } catch (_error) {
+      // No-op cleanup.
+    }
+    resetVoiceRecordingState();
+  }, [resetVoiceRecordingState]);
+
+  const handleStopVoiceRecordingAndSend = useCallback(async () => {
+    if (!chatId || !isVoiceRecordingRef.current) return;
+
+    try {
+      setIsSendingVoiceNote(true);
+      const draft = await stopRecording();
+
+      if (!draft?.uri) {
+        throw new Error('VOICE_EMPTY');
+      }
+      if ((draft?.durationMs || 0) < 500) {
+        await handleCancelVoiceRecording();
+        return;
+      }
+
+      const uploadedFiles = await uploadAttachmentAsset({
+        fileName: `voice-note-${Date.now()}.m4a`,
+        type: draft.mime || 'audio/mp4',
+        uri: draft.uri,
+      });
+
+      if (!uploadedFiles.length) {
+        throw new Error('VOICE_UPLOAD_FAILED');
+      }
+
+      sendMessage(chatId, '', {
+        attachments: uploadedFiles,
+        composition: {
+          durationMs: draft.durationMs,
+          mime: draft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
+          size: draft.size || uploadedFiles?.[0]?.size || 0,
+          type: 'voice_note',
+          version: 1,
+          waveform: draft.waveform || [],
+        },
+        replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+        sender: userData,
+      });
+      setReplyingTo(null);
+      resetVoiceRecordingState();
+    } catch (error) {
+      conversationLogger.warn('Failed to send voice note', error);
+      Alert.alert(
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+        t('conversation.voice.sendErrorDescription', 'Impossible d envoyer la note vocale. Reessayez.'),
+      );
+      resetVoiceRecordingState();
+    }
+  }, [chatId, handleCancelVoiceRecording, replyingTo, resetVoiceRecordingState, sendMessage, t, uploadAttachmentAsset, userData]);
+
+  const microphonePanResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: () => isVoiceRecordingRef.current,
+    onPanResponderGrant: () => {
+      handleStartVoiceRecording();
+    },
+    onPanResponderMove: (_event, gestureState) => {
+      if (!isVoiceRecordingRef.current || isVoiceRecordingLockedRef.current) return;
+
+      if (gestureState.dx <= -60) {
+        handleCancelVoiceRecording();
+        return;
+      }
+
+      if (gestureState.dy <= -60) {
+        setIsVoiceRecordingLocked(true);
+        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouille. Touchez envoyer ou annuler.'));
+      }
+    },
+    onPanResponderRelease: () => {
+      if (!isVoiceRecordingRef.current) return;
+      if (isVoiceRecordingLockedRef.current) return;
+      handleStopVoiceRecordingAndSend();
+    },
+    onPanResponderTerminate: () => {
+      if (!isVoiceRecordingRef.current) return;
+      if (!isVoiceRecordingLockedRef.current) {
+        handleCancelVoiceRecording();
+      }
+    },
+    onStartShouldSetPanResponder: () => true,
+  }), [
+    handleCancelVoiceRecording,
+    handleStartVoiceRecording,
+    handleStopVoiceRecordingAndSend,
+    t,
+  ]);
+
+  const openSharedContact = (userDocumentId) => {
+    if (!userDocumentId) return;
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId: userDocumentId },
+      screen: RouteNames.UserDetails,
+    });
+  };
+
+  const openSharedEvent = (eventDocumentId) => {
+    if (!eventDocumentId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: eventDocumentId },
+      screen: RouteNames.EventDetails,
+    });
+  };
+
   const runAttachmentAction = (/** @type {() => Promise<void> | void} */ action) => {
     setIsAttachmentMenuVisible(false);
     setTimeout(() => {
       action();
     }, 250);
+  };
+
+  const attachmentSheetActions = useMemo(() => {
+    let contactReason = '';
+    if (!isContactShareEnabled) {
+      contactReason = t('conversation.attachments.unavailable', 'Bientot disponible');
+    } else if (shareableContacts.length === 0) {
+      contactReason = t('conversation.attachments.noContact', 'Aucun contact partageable');
+    }
+
+    const documentReason = isDocumentPickerDisabled
+      ? t('conversation.attachments.documentDisabled', 'Indisponible sur cette build')
+      : '';
+    const eventReason = !isEventShareEnabled
+      ? t('conversation.attachments.unavailable', 'Bientot disponible')
+      : '';
+    const locationReason = !isLocationShareEnabled
+      ? t('conversation.attachments.unavailable', 'Bientot disponible')
+      : '';
+
+    return [
+      {
+        icon: 'PH',
+        key: 'photos',
+        label: t('conversation.attachments.photos', 'Photos'),
+        loading: isUploading,
+      },
+      {
+        icon: 'CA',
+        key: 'camera',
+        label: t('conversation.attachments.camera', 'Camera'),
+        loading: isUploading,
+      },
+      {
+        disabled: !isLocationShareEnabled,
+        icon: 'LO',
+        key: 'location',
+        label: t('conversation.attachments.location', 'Localisation'),
+        unavailableReason: locationReason,
+      },
+      {
+        disabled: !isContactShareEnabled || shareableContacts.length === 0,
+        icon: 'CO',
+        key: 'contact',
+        label: t('conversation.attachments.contact', 'Contact'),
+        unavailableReason: contactReason,
+      },
+      {
+        disabled: isDocumentPickerDisabled,
+        icon: 'DO',
+        key: 'document',
+        label: t('conversation.attachments.document', 'Document'),
+        unavailableReason: documentReason,
+      },
+      {
+        icon: 'PO',
+        key: 'poll',
+        label: t('conversation.attachments.poll', 'Sondage'),
+      },
+      {
+        disabled: !isEventShareEnabled,
+        icon: 'EV',
+        key: 'event',
+        label: t('conversation.attachments.event', 'Evenement'),
+        unavailableReason: eventReason,
+      },
+    ];
+  }, [
+    isUploading,
+    shareableContacts.length,
+    t,
+  ]);
+
+  const handleAttachmentSheetAction = (actionKey) => {
+    switch (actionKey) {
+      case 'camera':
+        runAttachmentAction(handleTakePhoto);
+        break;
+      case 'contact':
+        runAttachmentAction(() => setIsContactShareModalVisible(true));
+        break;
+      case 'document':
+        runAttachmentAction(handlePickFile);
+        break;
+      case 'event':
+        runAttachmentAction(() => setIsEventShareModalVisible(true));
+        break;
+      case 'location':
+        runAttachmentAction(() => setIsLocationShareModalVisible(true));
+        break;
+      case 'photos':
+        runAttachmentAction(handlePickMedia);
+        break;
+      case 'poll':
+        runAttachmentAction(handleCreatePoll);
+        break;
+      default:
+        break;
+    }
   };
 
   /* Proposal Logic */
@@ -595,11 +1215,15 @@ function Conversation({ navigation, route }) {
     // Update local cache immediately (Optimistic)
     queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
+      const targetMessageId = String(message.documentId || message._id || message.id || '');
       return {
         ...oldData,
         pages: oldData.pages.map((/** @type {any} */ page) => ({
           ...page,
-          data: page.data.map((/** @type {any} */ msg) => (msg.id === message._id ? { ...msg, composition: updatedComposition } : msg)),
+          data: page.data.map((/** @type {any} */ msg) => {
+            const msgId = String(msg.documentId || msg._id || msg.id || '');
+            return msgId === targetMessageId ? { ...msg, composition: updatedComposition } : msg;
+          }),
         })),
       };
     });
@@ -608,23 +1232,17 @@ function Conversation({ navigation, route }) {
       if (status === 'accepted') {
         conversationLogger.debug('Accepting match proposal', { matchId });
         await confirmMatch(matchId);
-        // Persist message update
-        await updateMessage({
-          data: {
-            composition: updatedComposition,
-          },
-          messageId: message.documentId || message._id || message.id,
-        });
+        await respondToProposal(
+          String(message.documentId || message._id || message.id || ''),
+          'accepted',
+        );
         Alert.alert('Match confirme', 'Le match est valide !');
         promptAddMatchToCalendar(message);
       } else {
-        // Handle Decline
-        await updateMessage({
-          data: {
-            composition: updatedComposition,
-          },
-          messageId: message.documentId || message._id || message.id,
-        });
+        await respondToProposal(
+          String(message.documentId || message._id || message.id || ''),
+          'declined',
+        );
         conversationLogger.debug('Proposal declined');
       }
 
@@ -636,20 +1254,6 @@ function Conversation({ navigation, route }) {
       // Rollback could go here
     }
   };
-
-  const headerLeft = useMemo(() => (
-    <HeaderBackButton
-      onPress={() => {
-        navigation.navigate(RouteNames.HomeTab, {
-          screen: RouteNames.Chat,
-        });
-      }}
-    />
-  ), [navigation]);
-
-  // Removed inline require
-
-  // ... inside component ...
 
   const handleCancelMatch = async () => {
     const matchId = getEntityDocumentId(chatData?.league_match);
@@ -713,6 +1317,8 @@ function Conversation({ navigation, route }) {
     } else if (!displayTitle) {
       displayTitle = getConversationName({
         chatClub: chatData?.club,
+        chatGroupName: chatData?.groupName,
+        chatMultisportClub: chatData?.multisportClub,
         chatParticipants: chatData?.participants,
         chatTeam: chatData?.team,
         chatType: chatData?.type || '',
@@ -737,7 +1343,7 @@ function Conversation({ navigation, route }) {
   });
 
   // Anonymization helper for league_match chats
-  const getAnonymizedName = (/** @type {User} */ sender, /** @type {number} */ senderIndex) => {
+  const getAnonymizedName = useCallback((/** @type {User} */ sender) => {
     // If not a league match chat, show real name
     if (chatData?.type !== 'league_match') {
       return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
@@ -771,7 +1377,7 @@ function Conversation({ navigation, route }) {
       || areSameEntityId(chatData?.league_match?.team_b?.captain?.documentId, sender?.documentId);
 
     return isCaptain ? 'Capitaine Adverse' : 'Joueur Adverse';
-  };
+  }, [chatData, userData?.documentId]);
 
   const voterNameDirectory = useMemo(() => {
     /** @type {Map<string, string>} */
@@ -811,44 +1417,107 @@ function Conversation({ navigation, route }) {
   };
 
   const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
-    const formattedMessages = page.data.map((msg, index) => ({
-      _id: msg.id,
-      composition: msg.composition,
-      createdAt: new Date(msg.createdAt),
-      documentId: msg.documentId,
-      event: msg.event,
-      image: msg.attachments?.[0]?.url
+    const formattedMessages = page.data.map((msg) => {
+      const firstAttachmentUrl = msg.attachments?.[0]?.url || '';
+      const firstAttachmentMime = String(msg.attachments?.[0]?.mime || '');
+      const isImageAttachment = firstAttachmentUrl
         && (
-          (msg.attachments?.[0]?.mime || '').startsWith('image/')
-          || /\.(png|jpe?g|gif|webp)$/i.test(msg.attachments[0].url)
-        )
-        ? (msg.attachments[0].url.startsWith('http')
-          ? msg.attachments[0].url
-          : `${process.env.API_URL || 'http://10.0.2.2:1337'}${msg.attachments[0].url}`)
-        : undefined,
-      pending: msg.pending,
-      readBy: msg.readBy,
-      replyTo: msg.replyTo,
-      text: msg.message,
-      user: {
-        _id: msg.sender?.documentId || '', // Check optional chaining
-        avatar: msg.sender?.avatar?.url
-          ? (msg.sender.avatar.url.startsWith('http')
-            ? msg.sender.avatar.url
-            : `${process.env.API_URL || 'http://10.0.2.2:1337'}${msg.sender.avatar.url}`)
-          : undefined,
-        name: getAnonymizedName(msg.sender, index),
-      },
-    }));
-    return [...acc, ...formattedMessages];
-  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, chatData, userData]);
+          firstAttachmentMime.startsWith('image/')
+          || /\.(png|jpe?g|gif|webp)$/i.test(firstAttachmentUrl)
+        );
 
-  const canShowUsernameOnMessage = useMemo(() => {
-    const hasMultipleParticpants = chatData?.participants && chatData?.participants.length > 2;
-    return chatData?.type !== 'whisper' || hasMultipleParticpants;
-  }, [chatData]);
+      let imageUrl;
+      if (isImageAttachment) {
+        imageUrl = firstAttachmentUrl.startsWith('http')
+          ? firstAttachmentUrl
+          : `${process.env.API_URL || 'http://10.0.2.2:1337'}${firstAttachmentUrl}`;
+      }
+
+      const senderAvatarUrl = msg.sender?.avatar?.url || '';
+      let avatarUrl;
+      if (senderAvatarUrl) {
+        avatarUrl = senderAvatarUrl.startsWith('http')
+          ? senderAvatarUrl
+          : `${process.env.API_URL || 'http://10.0.2.2:1337'}${senderAvatarUrl}`;
+      }
+
+      return {
+        _id: msg.id,
+        attachments: msg.attachments || [],
+        composition: msg.composition,
+        createdAt: new Date(msg.createdAt),
+        documentId: msg.documentId,
+        event: msg.event,
+        failed: msg.failed,
+        image: imageUrl,
+        pending: msg.pending,
+        readBy: msg.readBy,
+        replyTo: msg.replyTo,
+        text: msg.message,
+        user: {
+          _id: msg.sender?.documentId || '',
+          avatar: avatarUrl,
+          name: getAnonymizedName(msg.sender),
+        },
+      };
+    });
+    return [...acc, ...formattedMessages];
+  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, getAnonymizedName]);
+
+  const latestMessageId = String(
+    messages?.[0]?.documentId
+    || messages?.[0]?._id
+    || '',
+  ).trim();
+
+  useEffect(() => {
+    if (!isSocketReadTypingEnabled) return;
+    if (!chatId) return;
+    sendReadReceipt(chatId, latestMessageId || undefined);
+  }, [chatId, latestMessageId, sendReadReceipt]);
+
+  const openFirstAttachment = useCallback(async (message) => {
+    const attachmentUrl = String(message?.attachments?.[0]?.url || '').trim();
+    if (!attachmentUrl) return;
+
+    const resolvedUrl = attachmentUrl.startsWith('http')
+      ? attachmentUrl
+      : `${process.env.API_URL || 'http://10.0.2.2:1337'}${attachmentUrl}`;
+
+    try {
+      await Linking.openURL(resolvedUrl);
+    } catch (error) {
+      conversationLogger.warn('Failed to open attachment URL', error);
+    }
+  }, []);
+
+  const clearPendingMediaDraft = () => {
+    setPendingMediaDraft(null);
+  };
+
+  const sendPendingMediaDraft = async () => {
+    if (!pendingMediaDraft?.asset?.uri) return;
+    if (!chatId) return;
+
+    const sent = await uploadAndSendAttachment(pendingMediaDraft.asset, {
+      caption: composerText,
+      replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+    });
+
+    if (!sent) return;
+
+    clearPendingMediaDraft();
+    setReplyingTo(null);
+    setComposerText('');
+    sendTypingStop(chatId);
+  };
 
   const onSend = (msgs = /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) => {
+    if (pendingMediaDraft?.asset?.uri) {
+      sendPendingMediaDraft();
+      return;
+    }
+
     msgs.forEach((msg) => {
       if (chatId) {
         sendMessage(chatId, msg.text, {
@@ -859,6 +1528,7 @@ function Conversation({ navigation, route }) {
       }
     });
     setReplyingTo(null);
+    setComposerText('');
   };
 
   const handleVoteOnPoll = async (
@@ -895,8 +1565,6 @@ function Conversation({ navigation, route }) {
       if (allowMultipleVotes) {
         if (isTarget && !hasCurrentUser) {
           nextVoters = [...voters, currentUserId];
-        } else if (isTarget && hasCurrentUser) {
-          nextVoters = voters.filter((value) => value !== currentUserId);
         }
       } else if (isTarget && !hasCurrentUser) {
         nextVoters = [...voters, currentUserId];
@@ -942,12 +1610,7 @@ function Conversation({ navigation, route }) {
     });
 
     try {
-      await updateMessage({
-        data: {
-          composition: nextComposition,
-        },
-        messageId: String(messageId),
-      });
+      await votePoll(String(messageId), optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       Alert.alert('Erreur', 'Impossible de sauvegarder ce vote.');
@@ -1145,6 +1808,54 @@ function Conversation({ navigation, route }) {
           </View>
         );
       }
+
+      if (currentMessage.composition.type === 'location_share') {
+        return (
+          <View style={{ marginBottom, marginTop }}>
+            <LocationShareBubble
+              composition={currentMessage.composition}
+              isMe={!isLeft}
+            />
+          </View>
+        );
+      }
+
+      if (currentMessage.composition.type === 'contact_share') {
+        return (
+          <View style={{ marginBottom, marginTop }}>
+            <ContactShareBubble
+              composition={currentMessage.composition}
+              isMe={!isLeft}
+              onPressContact={openSharedContact}
+            />
+          </View>
+        );
+      }
+
+      if (currentMessage.composition.type === 'event_share') {
+        return (
+          <View style={{ marginBottom, marginTop }}>
+            <EventShareBubble
+              composition={currentMessage.composition}
+              isMe={!isLeft}
+              onPressEvent={openSharedEvent}
+            />
+          </View>
+        );
+      }
+
+      if (currentMessage.composition.type === 'voice_note') {
+        return (
+          <View style={{ marginBottom, marginTop }}>
+            <VoiceNoteBubble
+              attachments={currentMessage.attachments || []}
+              composition={currentMessage.composition}
+              isMe={!isLeft}
+            />
+          </View>
+        );
+      }
+
       return (
         <View style={{
           marginBottom,
@@ -1159,7 +1870,8 @@ function Conversation({ navigation, route }) {
       );
     }
 
-    const isPending = currentMessage.pending;
+    const isPending = Boolean(currentMessage.pending);
+    const isFailed = Boolean(currentMessage.failed);
 
     return (
       <View style={{ opacity: isPending ? 0.5 : 1 }}>
@@ -1174,7 +1886,7 @@ function Conversation({ navigation, route }) {
         }}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            Réponse à
+            Reponse a
             {' '}
             {currentMessage.replyTo.sender?.firstname}
           </Text>
@@ -1185,14 +1897,22 @@ function Conversation({ navigation, route }) {
         )}
         <Bubble
           {...props}
-          renderTicks={(/** @type {any} */ currentMessage) => {
-            if (currentMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>🕒</Text>;
+          onPress={() => {
+            if (Array.isArray(currentMessage?.attachments) && currentMessage.attachments.length > 0) {
+              openFirstAttachment(currentMessage);
+            }
+          }}
+          renderTicks={(/** @type {any} */ bubbleMessage) => {
+            if (bubbleMessage.failed) {
+              return <Text style={{ color: Colors.error500, fontSize: 10, marginRight: 4 }}>!</Text>;
+            }
+            if (bubbleMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>...</Text>;
             // Checkmark logic using icons or text
             const tickColor = 'rgba(255,255,255,0.8)';
-            if (currentMessage.readBy && currentMessage.readBy.length > 0) {
-              return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>✓✓</Text>;
+            if (bubbleMessage.readBy && bubbleMessage.readBy.length > 0) {
+              return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>vv</Text>;
             }
-            return <Text style={{ color: tickColor, fontSize: 10 }}>✓</Text>;
+            return <Text style={{ color: tickColor, fontSize: 10 }}>v</Text>;
           }}
           renderTime={renderTime}
           textStyle={{
@@ -1222,6 +1942,25 @@ function Conversation({ navigation, route }) {
             },
           }}
         />
+        {isChatRetryEnabled && isFailed && !isLeft ? (
+          <View style={{ alignItems: 'flex-end', marginRight: 10, marginTop: 4 }}>
+            <TouchableOpacity
+              onPress={() => retryFailedMessage(chatId, currentMessage)}
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                borderColor: Colors.error500,
+                borderRadius: 12,
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              }}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
+                {t('common.retry', 'Reessayer')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -1238,7 +1977,11 @@ function Conversation({ navigation, route }) {
   const renderComposer = (props) => (
     <Composer
       {...props}
-      placeholder={t('conversation.messagePlaceholder')}
+      placeholder={
+        pendingMediaDraft?.asset?.uri
+          ? t('conversation.attachments.captionPlaceholder', 'Ajouter une legende')
+          : t('conversation.messagePlaceholder')
+      }
       textInputProps={{
         maxLength: 1000,
         multiline: true,
@@ -1335,38 +2078,154 @@ function Conversation({ navigation, route }) {
     </View>
   );
 
+  const formatDurationLabel = (durationMs) => {
+    const totalSeconds = Math.max(0, Math.floor((Number(durationMs) || 0) / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
   const renderAccessory = () => {
-    if (!replyingTo) return null;
+    const hasMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
+    const hasReplyPreview = !!replyingTo;
+    const hasVoicePreview = isVoiceRecording || isSendingVoiceNote;
+    if (!hasMediaDraft && !hasReplyPreview && !hasVoicePreview) return null;
+
     return (
-      <View style={[
-        ApplicationStyle.backgroundColor.neutral100,
-        Spaces.padding[8],
-        Alignments.row,
-        Alignments.justifySpaceBetween,
-        Alignments.alignCenter,
-      ]}
-      >
-        <View>
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            Repondre à
-            {replyingTo.user?.name}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>{replyingTo.text}</Text>
-        </View>
-        <Button
-          onPress={() => setReplyingTo(null)}
-          title="X"
-          variant="SecondaryLight"
-        />
+      <View style={Spaces.gap[8]}>
+        {hasMediaDraft ? (
+          <View style={[
+            ApplicationStyle.backgroundColor.neutral100,
+            Spaces.padding[10],
+            Alignments.row,
+            Alignments.alignCenter,
+            { borderRadius: 14, gap: 10 },
+          ]}
+          >
+            <Image
+              source={{ uri: pendingMediaDraft?.asset?.uri || '' }}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 10,
+                height: 56,
+                width: 56,
+              }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {t('conversation.attachments.previewTitle', 'Photo prete a envoyer')}
+              </Text>
+              <Text
+                numberOfLines={2}
+                style={[Fonts.p4, { color: Colors.neutral400 }]}
+              >
+                {composerText?.trim()
+                  ? t('conversation.attachments.previewWithCaption', 'La legende sera envoyee avec la photo.')
+                  : t('conversation.attachments.previewWithoutCaption', 'Ajoutez une legende puis confirmez l envoi.')}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button
+                onPress={clearPendingMediaDraft}
+                size="sm"
+                title={t('common.cancel', 'Annuler')}
+                variant="SecondaryLight"
+              />
+              <Button
+                isLoading={isUploading}
+                onPress={sendPendingMediaDraft}
+                size="sm"
+                title={t('common.send', 'Envoyer')}
+                variant="PrimaryLight"
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {hasVoicePreview ? (
+          <View style={[
+            ApplicationStyle.backgroundColor.neutral100,
+            Spaces.padding[10],
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            { borderRadius: 14 },
+          ]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {isVoiceRecordingLocked
+                  ? t('conversation.voice.locked', 'Note vocale verrouillee')
+                  : t('conversation.voice.recording', 'Enregistrement vocal')}
+              </Text>
+              <Text
+                numberOfLines={2}
+                style={[Fonts.p4, { color: Colors.neutral400 }]}
+              >
+                {isSendingVoiceNote
+                  ? t('conversation.voice.sending', 'Envoi en cours...')
+                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintenez appuye pour enregistrer')}`}
+              </Text>
+            </View>
+            {isVoiceRecordingLocked ? (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button
+                  onPress={handleCancelVoiceRecording}
+                  size="sm"
+                  title={t('common.cancel', 'Annuler')}
+                  variant="SecondaryLight"
+                />
+                <Button
+                  isLoading={isSendingVoiceNote}
+                  onPress={handleStopVoiceRecordingAndSend}
+                  size="sm"
+                  title={t('common.send', 'Envoyer')}
+                  variant="PrimaryLight"
+                />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {hasReplyPreview ? (
+          <View style={[
+            ApplicationStyle.backgroundColor.neutral100,
+            Spaces.padding[8],
+            Alignments.row,
+            Alignments.justifySpaceBetween,
+            Alignments.alignCenter,
+          ]}
+          >
+            <View>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                Repondre a
+                {' '}
+                {replyingTo.user?.name}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>{replyingTo.text}</Text>
+            </View>
+            <Button
+              onPress={() => setReplyingTo(null)}
+              title="X"
+              variant="SecondaryLight"
+            />
+          </View>
+        ) : null}
       </View>
     );
   };
 
   const renderFooter = () => {
     if (typingUsers.size > 0) {
+      const typingNames = Array.from(typingUsers)
+        .map((typingUserId) => resolveVoterName(String(typingUserId)))
+        .filter(Boolean);
+      const typingLabel = typingNames.length > 0
+        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'ecrivent' : 'ecrit'}...`
+        : 'Quelqu\'un ecrit...';
       return (
         <View style={[Spaces.padding[8], Spaces.marginLeft[16]]}>
-          <Text style={[Fonts.p3, Fonts.neutral500]}>Quelqu'un écrit...</Text>
+          <Text style={[Fonts.p3, Fonts.neutral500]}>{typingLabel}</Text>
         </View>
       );
     }
@@ -1391,7 +2250,7 @@ function Conversation({ navigation, route }) {
         ]}
         >
           <Text style={[Fonts.p2, Fonts.neutral500]}>
-            📣
+            ðŸ“£
             {' '}
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
@@ -1428,7 +2287,41 @@ function Conversation({ navigation, route }) {
    * @returns {React.ReactNode} Rendered send button component
    */
   const renderSend = (props) => {
-    if (!props.text) return null;
+    const hasPendingMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
+    const hasText = String(props.text || '').trim().length > 0;
+    if (!hasText && !hasPendingMediaDraft && !canRecordVoiceNote) return null;
+
+    if (!hasText && !hasPendingMediaDraft && canRecordVoiceNote) {
+      return (
+        <View
+          {...microphonePanResponder.panHandlers}
+          style={{
+            height: 44, justifyContent: 'center', marginLeft: 8, marginRight: 8,
+          }}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: isVoiceRecording ? Colors.error500 : Colors.primary500,
+              borderRadius: 16,
+              height: 32,
+              justifyContent: 'center',
+              opacity: isSendingVoiceNote ? 0.7 : 1,
+              width: 32,
+            }}
+          >
+            {isSendingVoiceNote ? (
+              <ActivityIndicator color={Colors.neutral00} size="small" />
+            ) : (
+              <Text style={{ color: Colors.neutral00, fontSize: 14 }}>
+                {'\uD83C\uDFA4'}
+              </Text>
+            )}
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={{
         height: 44, justifyContent: 'center', marginLeft: 8, marginRight: 8,
@@ -1436,6 +2329,10 @@ function Conversation({ navigation, route }) {
       >
         <TouchableOpacity
           onPress={() => {
+            if (hasPendingMediaDraft) {
+              sendPendingMediaDraft();
+              return;
+            }
             if (props.onSend) {
               props.onSend({ text: props.text }, true);
             }
@@ -1546,12 +2443,15 @@ function Conversation({ navigation, route }) {
           loadEarlier={hasNextPage}
           locale="fr"
           messages={messages}
+          onInputTextChanged={handleInputTextChanged}
           onLoadEarlier={() => fetchNextPage()}
           onPress={handleMessagePress}
           onSend={onSend}
           renderBubble={renderBubble}
+          renderFooter={renderFooter}
           renderInputToolbar={renderInputToolbar}
           renderSend={renderSend}
+          text={composerText}
           user={{
             _id: userData?.documentId || '',
             avatar: userData?.avatar?.url,
@@ -1578,6 +2478,14 @@ function Conversation({ navigation, route }) {
             />
             )}
 
+            {isGroupAdmin && (
+            <Button
+              onPress={handleOpenGroupManagement}
+              title={t('conversation.actions.manageGroup', 'Gerer le groupe')}
+              variant="SecondaryLight"
+            />
+            )}
+
             <Button
               onPress={() => {
                 setIsMenuVisible(false);
@@ -1598,41 +2506,261 @@ function Conversation({ navigation, route }) {
         </BottomModal>
 
         <BottomModal
+          close={() => setIsGroupManagementVisible(false)}
+          isVisible={isGroupManagementVisible}
+        >
+          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[12]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              {t('conversation.group.title', 'Gestion du groupe')}
+            </Text>
+
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t('conversation.group.nameLabel', 'Nom du groupe')}
+            </Text>
+            <TextInput
+              onChangeText={setGroupNameDraft}
+              placeholder={t('conversation.group.namePlaceholder', 'Nom du groupe')}
+              placeholderTextColor={Colors.neutral300}
+              style={[
+                Fonts.p2,
+                ApplicationStyle.borderRadius16,
+                Spaces.paddingHorizontal[16],
+                Spaces.paddingVertical[12],
+                {
+                  borderColor: Colors.primary500,
+                  borderWidth: 1,
+                  color: Colors.neutral00,
+                },
+              ]}
+              value={groupNameDraft}
+            />
+
+            <Button
+              disabled={isGroupMutationLoading}
+              isLoading={isGroupMutationLoading}
+              onPress={handleSaveGroupName}
+              title={t('conversation.group.saveName', 'Enregistrer le nom')}
+              variant="SecondaryLight"
+            />
+
+            <Button
+              disabled={isGroupMutationLoading}
+              onPress={handleAddGroupMembers}
+              title={t('conversation.group.addMembers', 'Ajouter des membres')}
+              variant="SecondaryLight"
+            />
+
+            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
+              {t('conversation.group.members', 'Membres')}
+            </Text>
+            {(Array.isArray(chatData?.participants) ? chatData.participants : []).map((participant) => {
+              const participantId = String(participant?.documentId || participant?.id || '').trim();
+              if (!participantId) return null;
+              const isSelf = participantId === String(userData?.documentId || '');
+              const isMemberAdmin = groupAdminIds.includes(participantId);
+              const participantName = `${participant?.firstname || ''} ${participant?.lastname || ''}`.trim() || participant?.username || participant?.phoneNumber || participantId;
+
+              return (
+                <View
+                  key={`group-member:${participantId}`}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifyBetween,
+                    Spaces.paddingVertical[8],
+                  ]}
+                >
+                  <View style={Alignments.fill}>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>{participantName}</Text>
+                    <Text style={[Fonts.p4, Fonts.neutral300]}>
+                      {isMemberAdmin ? t('conversation.group.admin', 'Admin') : t('conversation.group.member', 'Membre')}
+                    </Text>
+                  </View>
+                  {!isSelf && (
+                    <TouchableOpacity
+                      disabled={isGroupMutationLoading}
+                      onPress={() => handleRemoveGroupMember(participant)}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.warning500 || Colors.primary500 }]}>
+                        {t('conversation.group.remove', 'Retirer')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+
+            <Button
+              onPress={() => setIsGroupManagementVisible(false)}
+              title={t('common.close', 'Fermer')}
+              variant="PrimaryLight"
+            />
+          </View>
+        </BottomModal>
+
+        <BottomModal
           close={() => setIsAttachmentMenuVisible(false)}
-          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 18 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 56, paddingTop: 18 }}
           hideCloseButton
           isVisible={isAttachmentMenuVisible}
         >
+          {isAttachmentSheetV2Enabled ? (
+            <ChatAttachmentSheet
+              actions={attachmentSheetActions}
+              onActionPress={handleAttachmentSheetAction}
+              subtitle={t('conversation.attachments.subtitle', 'Partagez du contenu dans cette conversation')}
+              title={t('conversation.attachments.title', 'Ajouter')}
+            />
+          ) : (
+            <View style={Spaces.gap[16]}>
+              <Button
+                disabled={isUploading}
+                isLoading={isUploading}
+                onPress={() => runAttachmentAction(handleTakePhoto)}
+                title={t('conversation.attachments.takePhoto', 'Prendre une photo')}
+                variant="PrimaryLight"
+              />
+              <Button
+                disabled={isUploading}
+                onPress={() => runAttachmentAction(handlePickMedia)}
+                title={t('conversation.attachments.pickMedia', 'Envoyer un media')}
+                variant="SecondaryLight"
+              />
+              <Button
+                disabled={isUploading}
+                onPress={() => runAttachmentAction(handlePickFile)}
+                title={t('conversation.attachments.pickFile', 'Envoyer un fichier')}
+                variant="SecondaryLight"
+              />
+              <Button
+                onPress={() => runAttachmentAction(handleCreatePoll)}
+                title={t('conversation.attachments.createPoll', 'Creer un sondage')}
+                variant="SecondaryLight"
+              />
+              <Button
+                onPress={() => setIsAttachmentMenuVisible(false)}
+                title={t('common.cancel', 'Fermer')}
+                variant="PrimaryLight"
+              />
+            </View>
+          )}
+        </BottomModal>
+
+        <BottomModal
+          close={() => {
+            setIsLocationShareModalVisible(false);
+            setSelectedLocationOption(undefined);
+          }}
+          isVisible={isLocationShareModalVisible}
+        >
           <View style={Spaces.gap[16]}>
+            <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+              {t('conversation.shareLocation.title', 'Partager une localisation')}
+            </Text>
+            <AutocompleteAddressInput
+              address={selectedLocationOption}
+              placeholder={t('conversation.shareLocation.placeholder', 'Rechercher une adresse')}
+              setAddress={setSelectedLocationOption}
+            />
             <Button
-              disabled={isUploading}
-              isLoading={isUploading}
-              onPress={() => runAttachmentAction(handleTakePhoto)}
-              title={t('conversation.attachments.takePhoto', 'Prendre une photo')}
+              disabled={!selectedLocationOption}
+              onPress={handleShareLocation}
+              title={t('conversation.shareLocation.send', 'Partager')}
               variant="PrimaryLight"
             />
+          </View>
+        </BottomModal>
+
+        <BottomModal
+          close={() => {
+            setIsContactShareModalVisible(false);
+            setSelectedContactId('');
+          }}
+          isVisible={isContactShareModalVisible}
+        >
+          <View style={Spaces.gap[12]}>
+            <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+              {t('conversation.shareContact.title', 'Partager un contact')}
+            </Text>
+
+            {shareableContacts.length === 0 ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
+                {t('conversation.shareContact.empty', 'Aucun contact partageable dans ce chat.')}
+              </Text>
+            ) : shareableContacts.map((contact) => {
+              const fullName = `${contact?.firstname || ''} ${contact?.lastname || ''}`.trim() || 'Membre';
+              const isSelected = selectedContactId === contact.documentId;
+
+              return (
+                <TouchableOpacity
+                  key={`contact-share-${contact.documentId}`}
+                  onPress={() => setSelectedContactId(contact.documentId)}
+                  style={{
+                    borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.16)',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 11,
+                  }}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{fullName}</Text>
+                  {contact?.role ? (
+                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{contact.role}</Text>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+
             <Button
-              disabled={isUploading}
-              onPress={() => runAttachmentAction(handlePickMedia)}
-              title={t('conversation.attachments.pickMedia', 'Envoyer un media')}
-              variant="SecondaryLight"
-            />
-            <Button
-              disabled={isUploading}
-              onPress={() => runAttachmentAction(handlePickFile)}
-              title={t('conversation.attachments.pickFile', 'Envoyer un fichier')}
-              variant="SecondaryLight"
-            />
-            <Button
-              onPress={() => runAttachmentAction(handleCreatePoll)}
-              title={t('conversation.attachments.createPoll', 'Creer un sondage')}
-              variant="SecondaryLight"
-            />
-            <Button
-              onPress={() => setIsAttachmentMenuVisible(false)}
-              title={t('common.cancel', 'Fermer')}
+              disabled={!selectedContactId}
+              onPress={handleShareContact}
+              title={t('conversation.shareContact.send', 'Partager')}
               variant="PrimaryLight"
             />
+          </View>
+        </BottomModal>
+
+        <BottomModal
+          close={() => setIsEventShareModalVisible(false)}
+          isVisible={isEventShareModalVisible}
+        >
+          <View style={Spaces.gap[12]}>
+            <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+              {t('conversation.shareEvent.title', 'Partager un evenement')}
+            </Text>
+
+            {isLoadingSharedEvents ? (
+              <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                <ActivityIndicator color={Colors.primary500} />
+              </View>
+            ) : null}
+
+            {!isLoadingSharedEvents && shareableEvents.length === 0 ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
+                {t('conversation.shareEvent.empty', 'Aucun evenement disponible.')}
+              </Text>
+            ) : null}
+
+            {!isLoadingSharedEvents && shareableEvents.map((event) => (
+              <TouchableOpacity
+                key={`event-share-${event.documentId || event.id}`}
+                onPress={() => handleShareEvent(event)}
+                style={{
+                  borderColor: 'rgba(255,255,255,0.16)',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  paddingHorizontal: 12,
+                  paddingVertical: 11,
+                }}
+              >
+                <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                  {event?.name || 'Evenement'}
+                </Text>
+                <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                  {event?.date ? new Date(event.date).toLocaleString('fr-FR') : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </BottomModal>
 

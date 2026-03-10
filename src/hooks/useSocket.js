@@ -21,7 +21,9 @@ export const EVENTS = {
   READ_MESSAGE: 'read-message',
   SEND_MESSAGE: 'send-message',
   TYPING_START: 'typing-start',
+  TYPING_STARTED: 'typing-started',
   TYPING_STOP: 'typing-stop',
+  TYPING_STOPPED: 'typing-stopped',
 };
 
 /**

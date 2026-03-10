@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, ImageBackground, RefreshControl, ScrollView, Share, Text, TouchableOpacity, View,
@@ -24,7 +24,9 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
-import { updateLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
+import {
+  deleteLeagueTeam, requestToJoinSquad, updateLeagueTeam,
+} from '@/services/leagueTeam/leagueTeamService';
 import { createTeamSlot, deleteTeamSlot, updateTeamSlot } from '@/services/teamSlot/teamSlotService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
@@ -88,9 +90,23 @@ function SquadDetailsScreen({ navigation, route }) {
     () => normalizedHomeBase?.city
       || normalizedHomeBase?.label
       || normalizedHomeBase?.address
-      || 'Localisation non renseignee',
-    [normalizedHomeBase],
+      || t('squadDetails.labels.locationUnknown', 'Localisation non renseignee'),
+    [normalizedHomeBase, t],
   );
+
+  const uiTone = useMemo(() => ({
+    captainBadgeBg: `${Colors.gold500}24`,
+    captainBadgeBorder: `${Colors.gold500}73`,
+    cardStrokeGold: `${Colors.gold500}47`,
+    chipInfoBg: `${Colors.primary500}1F`,
+    chipInfoBorder: `${Colors.primary500}61`,
+    editButtonBg: `${Colors.neutral900}A6`,
+    overlayBg: `${Colors.neutral900}66`,
+    playerBadgeBg: `${Colors.primary500}1F`,
+    playerBadgeBorder: `${Colors.primary500}59`,
+    rosterCaptainBorder: `${Colors.gold500}40`,
+    rosterPlayerBorder: `${Colors.primary500}33`,
+  }), [Colors]);
 
   const handleShare = useCallback(() => {
     const squadId = team?.documentId || teamId;
@@ -112,10 +128,9 @@ function SquadDetailsScreen({ navigation, route }) {
         return;
       }
       setIsUpdating(true);
-      const { requestToJoinSquad } = require('@/services/leagueTeam/leagueTeamService');
       await requestToJoinSquad(String(teamId || ''), currentUserId || '');
       await refetch();
-      Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a reçu votre demande.'));
+      Alert.alert(t('squad.join.successTitle', 'Demande envoyee'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
     } catch (error) {
       console.error(error);
       Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
@@ -191,35 +206,65 @@ function SquadDetailsScreen({ navigation, route }) {
       console.error(e);
       const pickerError = /** @type {{ code?: string }} */ (e);
       if (pickerError?.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Erreur', 'Impossible de mettre à jour l\'image');
+        Alert.alert('Erreur', 'Impossible de mettre a jour l\'image');
       }
     }
   };
 
-  const handleSaveSlot = async (/** @type {{ day: string, startTime: string, endTime: string }} */ slotData) => {
+  const handleSaveSlot = async (
+    /** @type {{ day: string, startTime: string, endTime: string } | { day: string, startTime: string, endTime: string }[]} */ slotInput,
+  ) => {
+    let slotsToSave = [];
+    if (Array.isArray(slotInput)) {
+      slotsToSave = slotInput.filter(Boolean);
+    } else if (slotInput) {
+      slotsToSave = [slotInput];
+    }
+    if (slotsToSave.length === 0) return;
+
     try {
       setIsUpdating(true);
 
-      // slotData = { day: 'monday', startTime: '20:00', endTime: '22:00' }
-      // New recurring format: just send hours, no date calculation
-      const payload = {
-        end_hour: `${slotData.endTime}:00`, // "22:00" -> "22:00:00"
-        league_team: String(teamId || ''),
-        recurrence_day: slotData.day,
-        start_hour: `${slotData.startTime}:00`, // "20:00" -> "20:00:00"
-        status: 'open',
-      };
-
       if (editingSlot) {
+        const slotData = slotsToSave[0];
         const editingSlotId = getEntityDocumentId(editingSlot);
         if (!editingSlotId) {
           throw new Error('Missing slot id');
         }
+
+        const payload = {
+          end_hour: `${slotData.endTime}:00`,
+          league_team: String(teamId || ''),
+          recurrence_day: slotData.day,
+          start_hour: `${slotData.startTime}:00`,
+          status: 'open',
+        };
+
         await updateTeamSlot(editingSlotId, payload);
-        Alert.alert('Succès', 'Créneau modifié');
+        Alert.alert(
+          t('common.success', 'Succes'),
+          t('squadDetails.slots.updated', 'Creneau modifie'),
+        );
       } else {
-        await createTeamSlot(payload);
-        Alert.alert('Succès', 'Créneau ajouté');
+        await Promise.all(
+          slotsToSave.map((slotData) => {
+            const payload = {
+              end_hour: `${slotData.endTime}:00`,
+              league_team: String(teamId || ''),
+              recurrence_day: slotData.day,
+              start_hour: `${slotData.startTime}:00`,
+              status: 'open',
+            };
+            return createTeamSlot(payload);
+          }),
+        );
+
+        Alert.alert(
+          t('common.success', 'Succes'),
+          slotsToSave.length > 1
+            ? t('squadDetails.slots.multipleAdded', '{{count}} creneaux ajoutes', { count: slotsToSave.length })
+            : t('squadDetails.slots.added', 'Creneau ajoute'),
+        );
       }
 
       await refetch();
@@ -229,7 +274,10 @@ function SquadDetailsScreen({ navigation, route }) {
     } catch (e) {
       console.error(e);
       setIsUpdating(false);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le créneau');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('squadDetails.slots.saveError', 'Impossible de sauvegarder le creneau'),
+      );
     }
   };
 
@@ -245,11 +293,17 @@ function SquadDetailsScreen({ navigation, route }) {
       setIsSlotModalVisible(false);
       setEditingSlot(null);
       setIsUpdating(false);
-      Alert.alert('Succès', 'Créneau supprimé');
+      Alert.alert(
+        t('common.success', 'Succes'),
+        t('squadDetails.slots.deleted', 'Creneau supprime'),
+      );
     } catch (e) {
       console.error(e);
       setIsUpdating(false);
-      Alert.alert('Erreur', 'Impossible de supprimer le créneau');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('squadDetails.slots.deleteError', 'Impossible de supprimer le creneau'),
+      );
     }
   };
 
@@ -262,7 +316,10 @@ function SquadDetailsScreen({ navigation, route }) {
     try {
       if (!currentUserId) return;
       if (!isMember) {
-        Alert.alert('Action non disponible', 'Rejoignez la squad pour participer aux creneaux.');
+        Alert.alert(
+          t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
+          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux creneaux.'),
+        );
         return;
       }
       // Check if already participant
@@ -287,23 +344,81 @@ function SquadDetailsScreen({ navigation, route }) {
             || e?.response?.data?.error?.details?.code
             || e?.response?.data?.error?.code;
       if (backendCode === 'SQUAD_MEMBERSHIP_REQUIRED') {
-        Alert.alert('Action non disponible', 'Rejoignez la squad pour participer aux creneaux.');
+        Alert.alert(
+          t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
+          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux creneaux.'),
+        );
         return;
       }
-      Alert.alert('Erreur', 'Impossible de modifier votre statut.');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('squadDetails.slots.statusError', 'Impossible de modifier votre statut.'),
+      );
     }
   };
+
+  const handleDeleteTeam = useCallback(() => {
+    Alert.alert(
+      t('squad.delete.title', 'Supprimer l\'equipe'),
+      t('squad.delete.confirmation', 'Etes-vous sur de vouloir supprimer votre equipe ? Cette action est irreversible.'),
+      [
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              await deleteLeagueTeam(teamId);
+              navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
+            } catch (error) {
+              console.error(error);
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                t('squadDetails.actions.deleteTeamError', 'Impossible de supprimer l\'equipe.'),
+              );
+            } finally {
+              setIsUpdating(false);
+            }
+          },
+          style: 'destructive',
+          text: t('common.delete', 'Supprimer'),
+        },
+      ],
+    );
+  }, [navigation, t, teamId]);
+
+  const openCaptainActionsMenu = useCallback(() => {
+    Alert.alert(
+      t('squadDetails.actions.menuTitle', 'Actions equipe'),
+      t('squadDetails.actions.menuDescription', 'Choisissez une action.'),
+      [
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
+        {
+          onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId }),
+          text: t('squadDetails.actions.editTeam', 'Modifier l\'equipe'),
+        },
+        {
+          onPress: () => navigation.navigate(RouteNames.SquadRequests, { teamId }),
+          text: t('squadDetails.actions.openRequests', 'Voir les demandes'),
+        },
+        {
+          onPress: handleDeleteTeam,
+          style: 'destructive',
+          text: t('squadDetails.actions.deleteTeam', 'Supprimer l\'equipe'),
+        },
+      ],
+    );
+  }, [handleDeleteTeam, navigation, t, teamId]);
 
   const showJoinAction = !isMember && !isCaptain;
 
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 120 }]}
+        contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 32 }]}
         refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading || isUpdating} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 16, marginTop: 4 }]}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 20, marginTop: 4 }]}>
           <HeaderBackButton
             onPress={() => navigation.goBack()}
             style={{ marginLeft: 0 }}
@@ -313,10 +428,20 @@ function SquadDetailsScreen({ navigation, route }) {
             {isCaptain ? (
               <TouchableOpacity
                 onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId })}
-                style={{ marginRight: 12 }}
+                style={{
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  marginRight: 8,
+                  minHeight: 44,
+                  minWidth: 44,
+                  paddingHorizontal: 10,
+                }}
               >
                 <View>
-                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>Demandes</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+                    {t('squadDetails.actions.requests', 'Demandes')}
+                  </Text>
                   {team?.join_requests?.length > 0 ? (
                     <View style={{
                       backgroundColor: Colors.error500,
@@ -335,28 +460,59 @@ function SquadDetailsScreen({ navigation, route }) {
             {isCaptain ? (
               <TouchableOpacity
                 onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
-                style={{ marginRight: 12 }}
+                style={{
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  marginRight: 8,
+                  minHeight: 44,
+                  minWidth: 44,
+                  paddingHorizontal: 10,
+                }}
               >
-                <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Modifier</Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                  {t('squadDetails.actions.edit', 'Modifier')}
+                </Text>
               </TouchableOpacity>
             ) : null}
-            <TouchableOpacity onPress={handleShare}>
+            <TouchableOpacity
+              onPress={handleShare}
+              style={{
+                alignItems: 'center',
+                borderRadius: 12,
+                justifyContent: 'center',
+                marginRight: isCaptain ? 8 : 0,
+                minHeight: 44,
+                minWidth: 44,
+              }}
+            >
               <Image
                 source={Images.share}
                 style={[ApplicationStyle.icon24, { tintColor: Colors.primary500 }]}
               />
             </TouchableOpacity>
+            {isCaptain ? (
+              <TouchableOpacity
+                onPress={openCaptainActionsMenu}
+                style={{
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  minHeight: 44,
+                  minWidth: 44,
+                }}
+              >
+                <Text style={[Fonts.h3, { color: Colors.primary500 }]}>...</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
 
         {/* Header / Identity */}
-        <View style={[Alignments.alignCenter, { marginBottom: 24, marginTop: 8 }]}>
+        <View style={[Alignments.alignCenter, { marginBottom: 18, marginTop: 2 }]}>
           <Text style={[Fonts.p2Bold, { color: Colors.gold500, letterSpacing: 0.8, marginBottom: 6 }]}>SQUAD</Text>
           <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 4, textAlign: 'center' }]}>{team?.name}</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 6, textAlign: 'center' }]}>{locationLabel}</Text>
-          {team?.activities?.[0]?.name && (
-          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>{team.activities[0].name.toUpperCase()}</Text>
-          )}
+          <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>{locationLabel}</Text>
         </View>
 
         {/* Join Action for Non-Members */}
@@ -364,7 +520,9 @@ function SquadDetailsScreen({ navigation, route }) {
         <View style={[Alignments.alignCenter, { marginBottom: 30, marginTop: 8, width: '100%' }]}>
           {hasPendingRequest ? (
             <View style={{ backgroundColor: Colors.neutral800, borderRadius: 8, padding: 12 }}>
-              <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>Demande en attente...</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+                {t('squadDetails.join.pending', 'Demande en attente...')}
+              </Text>
             </View>
           ) : (
             <Button
@@ -373,7 +531,7 @@ function SquadDetailsScreen({ navigation, route }) {
               style={{
                 alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%',
               }}
-              title="Demander a rejoindre"
+              title={t('squadDetails.join.request', 'Demander a rejoindre')}
               variant="Primary"
             />
           )}
@@ -389,7 +547,7 @@ function SquadDetailsScreen({ navigation, route }) {
           style={[
             { marginBottom: 32, marginTop: showJoinAction ? 2 : 0 },
             {
-              borderColor: 'rgba(250, 204, 21, 0.28)',
+              borderColor: uiTone.cardStrokeGold,
               borderRadius: 16,
               borderWidth: 1,
               overflow: 'hidden',
@@ -410,7 +568,7 @@ function SquadDetailsScreen({ navigation, route }) {
             {team?.cover?.url && (
               <View style={{
                 ...Alignments.absolute,
-                backgroundColor: 'rgba(0,0,0,0.4)',
+                backgroundColor: uiTone.overlayBg,
                 zIndex: -1,
               }}
               />
@@ -425,7 +583,7 @@ function SquadDetailsScreen({ navigation, route }) {
               <TouchableOpacity onPress={() => handleImageUpload('cover')} style={{ alignItems: 'center' }}>
                 {/* Plus icon */}
                 <View style={{
-                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  backgroundColor: uiTone.editButtonBg,
                   borderRadius: 20,
                   padding: 8,
                 }}
@@ -480,12 +638,23 @@ function SquadDetailsScreen({ navigation, route }) {
               </View>
             </View>
 
-            <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10, textAlign: 'center' }]}>
-              {locationLabel}
-            </Text>
-
             {/* League badges */}
             <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
+              {team?.activities?.[0]?.name ? (
+                <View style={{
+                  backgroundColor: uiTone.chipInfoBg,
+                  borderColor: uiTone.chipInfoBorder,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                }}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                    {String(team.activities[0].name).toUpperCase()}
+                  </Text>
+                </View>
+              ) : null}
               {team?.division ? (
                 <DivisionBadge
                   division={team.division}
@@ -496,8 +665,8 @@ function SquadDetailsScreen({ navigation, route }) {
               ) : null}
               {team?.elo ? (
                 <View style={{
-                  backgroundColor: 'rgba(1, 179, 244, 0.12)',
-                  borderColor: 'rgba(1, 179, 244, 0.38)',
+                  backgroundColor: uiTone.chipInfoBg,
+                  borderColor: uiTone.chipInfoBorder,
                   borderRadius: 999,
                   borderWidth: 1,
                   paddingHorizontal: 14,
@@ -518,12 +687,15 @@ function SquadDetailsScreen({ navigation, route }) {
         {/* Availability Slots */}
         <View style={{ marginBottom: 28 }}>
           <TeamSlotList
+            cardWidthMode="responsive"
             currentUserId={currentUser?.documentId}
             isCaptain={isCaptain}
             isMember={Boolean(isMember)}
+            layout="carousel"
             onAddSlot={() => setIsSlotModalVisible(true)}
             onCheckIn={handleCheckIn}
             onSlotPress={handleSlotPress}
+            showMemberHelperText
             slots={team?.slots || []}
           />
         </View>
@@ -532,7 +704,8 @@ function SquadDetailsScreen({ navigation, route }) {
         <View style={{ marginBottom: 24 }}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[12]]}>
             <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
-              Effectif (
+              {t('squadDetails.roster.title', 'Effectif')}
+              {' ('}
               {rosterCount}
               )
             </Text>
@@ -548,7 +721,7 @@ function SquadDetailsScreen({ navigation, route }) {
               Spaces.padding[12],
               ApplicationStyle.borderRadius12,
               Spaces.marginBottom[8],
-              { borderColor: 'rgba(250, 204, 21, 0.25)', borderWidth: 1 },
+              { borderColor: uiTone.rosterCaptainBorder, borderWidth: 1 },
             ]}
           >
             <ProfileAvatar imageUrl={team.captain.avatar?.url} size={40} />
@@ -560,8 +733,8 @@ function SquadDetailsScreen({ navigation, route }) {
               </Text>
               <View style={{
                 alignSelf: 'flex-start',
-                backgroundColor: 'rgba(250, 204, 21, 0.14)',
-                borderColor: 'rgba(250, 204, 21, 0.45)',
+                backgroundColor: uiTone.captainBadgeBg,
+                borderColor: uiTone.captainBadgeBorder,
                 borderRadius: 999,
                 borderWidth: 1,
                 marginTop: 4,
@@ -569,7 +742,9 @@ function SquadDetailsScreen({ navigation, route }) {
                 paddingVertical: 3,
               }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Capitaine</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                  {t('squadDetails.roster.captain', 'Capitaine')}
+                </Text>
               </View>
             </View>
           </View>
@@ -585,7 +760,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 Spaces.padding[12],
                 ApplicationStyle.borderRadius12,
                 Spaces.marginBottom[8],
-                { borderColor: 'rgba(1, 179, 244, 0.2)', borderWidth: 1 },
+                { borderColor: uiTone.rosterPlayerBorder, borderWidth: 1 },
               ]}
             >
               <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
@@ -597,8 +772,8 @@ function SquadDetailsScreen({ navigation, route }) {
                 </Text>
                 <View style={{
                   alignSelf: 'flex-start',
-                  backgroundColor: 'rgba(1, 179, 244, 0.12)',
-                  borderColor: 'rgba(1, 179, 244, 0.35)',
+                  backgroundColor: uiTone.playerBadgeBg,
+                  borderColor: uiTone.playerBadgeBorder,
                   borderRadius: 999,
                   borderWidth: 1,
                   marginTop: 4,
@@ -606,7 +781,9 @@ function SquadDetailsScreen({ navigation, route }) {
                   paddingVertical: 3,
                 }}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>Joueur</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
+                    {t('squadDetails.roster.player', 'Joueur')}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -614,70 +791,13 @@ function SquadDetailsScreen({ navigation, route }) {
         </View>
 
       </ScrollView>
-
-      {/* Delete Team Button (Captain Only) - Fixed at bottom */}
-      {isCaptain && (
-      <View style={[
-        {
-          backgroundColor: 'rgba(9, 27, 42, 0.98)',
-          borderTopColor: 'rgba(1, 179, 244, 0.26)',
-          borderTopWidth: 1,
-          bottom: 0,
-          left: -24,
-          paddingBottom: 40,
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          position: 'absolute',
-          right: -24,
-        },
-      ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            Alert.alert(
-              t('squad.delete.title', 'Supprimer l\'équipe'),
-              t('squad.delete.confirmation', 'Êtes-vous sûr de vouloir supprimer votre équipe ? Cette action est irréversible.'),
-              [
-                { style: 'cancel', text: t('common.cancel', 'Annuler') },
-                {
-                  onPress: async () => {
-                    try {
-                      setIsUpdating(true);
-                      const { deleteLeagueTeam } = require('@/services/leagueTeam/leagueTeamService');
-                      await deleteLeagueTeam(teamId);
-                      navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
-                    } catch (error) {
-                      console.error(error);
-                      Alert.alert('Erreur', 'Impossible de supprimer l\'équipe.');
-                    } finally {
-                      setIsUpdating(false);
-                    }
-                  },
-                  style: 'destructive',
-                  text: t('common.delete', 'Supprimer'),
-                },
-              ],
-            );
-          }}
-          style={[
-            Alignments.alignCenter,
-            Spaces.padding[16],
-            ApplicationStyle.borderRadius16,
-            { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: Colors.error500, borderWidth: 1 },
-          ]}
-        >
-          <Text style={[Fonts.p1Bold, { color: Colors.error500 }]}>
-            {t('squad.delete.button', 'Supprimer l\'équipe')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-      )}
-
       <BottomModal
         close={() => setIsSlotModalVisible(false)}
         headerComponent={(
           <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-            {editingSlot ? 'Modifier le créneau' : 'Ajouter un créneau'}
+            {editingSlot
+              ? t('squadDetails.slots.editTitle', 'Modifier le créneau')
+              : t('squadDetails.slots.addTitle', 'Ajouter un créneau')}
           </Text>
            )}
         isVisible={isSlotModalVisible}
@@ -695,11 +815,15 @@ function SquadDetailsScreen({ navigation, route }) {
             // Fix for "Alert not attached to Activity" on Android
             setTimeout(() => {
               Alert.alert(
-                'Confirmation',
-                'Voulez-vous vraiment supprimer ce créneau ?',
+                t('common.confirmation', 'Confirmation'),
+                t('squadDetails.slots.deleteConfirm', 'Voulez-vous vraiment supprimer ce créneau ?'),
                 [
-                  { style: 'cancel', text: 'Annuler' },
-                  { onPress: () => editingSlot && handleDeleteSlot(editingSlot), style: 'destructive', text: 'Supprimer' },
+                  { style: 'cancel', text: t('common.cancel', 'Annuler') },
+                  {
+                    onPress: () => editingSlot && handleDeleteSlot(editingSlot),
+                    style: 'destructive',
+                    text: t('common.delete', 'Supprimer'),
+                  },
                 ],
               );
             }, 500);

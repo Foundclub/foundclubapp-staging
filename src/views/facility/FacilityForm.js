@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -23,6 +24,11 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
+import {
+  FACILITY_PLANNING_PALETTE,
+  isValidFacilityPlanningColor,
+  resolveFacilityPlanningColor,
+} from '@/utils/facilityPlanningColor';
 
 const schema = Joi.object({
   address: Joi.alternatives().try(
@@ -35,6 +41,10 @@ const schema = Joi.object({
   }),
   name: Joi.string().required().messages({
     'string.empty': 'Le nom est requis',
+  }),
+  planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
+    'any.only': 'Selectionnez une couleur valide',
+    'string.empty': 'Selectionnez une couleur',
   }),
   type: Joi.string().required().messages({
     'string.empty': 'Le type est requis',
@@ -134,6 +144,7 @@ function FacilityForm() {
       address: facility?.address || null,
       maxSlots: Number(facility?.maxSlots || 1),
       name: facility?.name || '',
+      planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
       type: facility?.type || 'Terrain',
     },
     resolver: joiResolver(schema),
@@ -145,6 +156,7 @@ function FacilityForm() {
   const watchedType = watch('type');
   const watchedAddress = watch('address');
   const watchedMaxSlots = watch('maxSlots');
+  const watchedPlanningColor = watch('planningColor');
 
   const subtitle = useMemo(() => (
     isEdit
@@ -336,6 +348,68 @@ function FacilityForm() {
                 </View>
               )}
             />
+
+            <Controller
+              control={control}
+              name="planningColor"
+              render={({ field: { onChange, value } }) => {
+                const selectedColor = isValidFacilityPlanningColor(value)
+                  ? String(value).toUpperCase()
+                  : FACILITY_PLANNING_PALETTE[0];
+
+                return (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('facilityForm.fields.planningColor', 'Couleur dans le planning')}
+                    </Text>
+                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[10]]}>
+                      {FACILITY_PLANNING_PALETTE.map((color) => {
+                        const isSelected = selectedColor === color;
+                        return (
+                          <TouchableOpacity
+                            key={color}
+                            activeOpacity={0.85}
+                            onPress={() => onChange(color)}
+                            style={{
+                              alignItems: 'center',
+                              backgroundColor: color,
+                              borderColor: isSelected ? Colors.neutral00 : `${Colors.neutral00}66`,
+                              borderRadius: 999,
+                              borderWidth: isSelected ? 2 : 1,
+                              height: 28,
+                              justifyContent: 'center',
+                              width: 28,
+                            }}
+                          >
+                            {isSelected ? (
+                              <View style={{
+                                backgroundColor: Colors.neutral00,
+                                borderRadius: 999,
+                                height: 8,
+                                width: 8,
+                              }}
+                              />
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {errors.planningColor?.message ? (
+                      <Text style={[Fonts.p2, Fonts.error700]}>
+                        {t('facilityForm.errors.planningColorInvalid', errors.planningColor.message)}
+                      </Text>
+                    ) : (
+                      <Text style={[Fonts.p3, Fonts.neutral300]}>
+                        {t(
+                          'facilityForm.hints.planningColor',
+                          'Cette couleur apparaitra dans le planning pour identifier rapidement l installation.',
+                        )}
+                      </Text>
+                    )}
+                  </View>
+                );
+              }}
+            />
           </View>
 
           <View
@@ -443,6 +517,24 @@ function FacilityForm() {
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
               {renderMetaChip(getCapacityLabel(watchedMaxSlots, t), 'primary')}
               {renderMetaChip(watchedType || t('facilityForm.defaults.type', 'Type inconnu'), 'neutral')}
+            </View>
+
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+              <View
+                style={{
+                  backgroundColor: isValidFacilityPlanningColor(watchedPlanningColor)
+                    ? String(watchedPlanningColor).toUpperCase()
+                    : FACILITY_PLANNING_PALETTE[0],
+                  borderColor: `${Colors.neutral00}66`,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 12,
+                  width: 12,
+                }}
+              />
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {t('facilityForm.fields.planningColor', 'Couleur dans le planning')}
+              </Text>
             </View>
 
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>

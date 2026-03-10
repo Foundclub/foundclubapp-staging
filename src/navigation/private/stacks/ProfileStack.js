@@ -1,6 +1,12 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import HistoryWizardCategory from '@/views/historyWizard/HistoryWizardCategory';
+import HistoryWizardClub from '@/views/historyWizard/HistoryWizardClub';
+import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
+import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
+import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
+import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
 import UserDetails from '@/views/profile/UserDetails';
@@ -8,18 +14,11 @@ import UserDetails from '@/views/profile/UserDetails';
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
-// History Wizard
-import HistoryWizardCategory from '@/views/historyWizard/HistoryWizardCategory';
-import HistoryWizardClub from '@/views/historyWizard/HistoryWizardClub';
-import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
-import HistoryWizardLevel from '@/views/historyWizard/HistoryWizardLevel';
-import HistoryWizardPeriod from '@/views/historyWizard/HistoryWizardPeriod';
-import HistoryWizardRecap from '@/views/historyWizard/HistoryWizardRecap';
-
 const Stack = createStackNavigator();
 
 /**
- *
+ * Profile stack and history wizard flow.
+ * @returns {import('react').ReactElement}
  */
 function ProfileStack() {
   const { t } = useTranslation();
@@ -55,29 +54,20 @@ function ProfileStack() {
             headerTitle: '',
           }}
         />
-        {/* History Wizard Screens */}
-        <Stack.Screen
-          component={HistoryWizardClub}
-          name={RouteNames.HistoryWizardClub}
-          options={{
-            ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
-          }}
-        />
         <Stack.Screen
           component={HistoryWizardCategory}
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
+            headerTitle: 'Ajouter une experience',
           }}
         />
         <Stack.Screen
-          component={HistoryWizardLevel}
-          name={RouteNames.HistoryWizardLevel}
+          component={HistoryWizardClub}
+          name={RouteNames.HistoryWizardClub}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
+            headerTitle: 'Ajouter une experience',
           }}
         />
         <Stack.Screen
@@ -85,7 +75,15 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardPeriod}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
+            headerTitle: 'Ajouter une experience',
+          }}
+        />
+        <Stack.Screen
+          component={HistoryWizardLevel}
+          name={RouteNames.HistoryWizardLevel}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ajouter une experience',
           }}
         />
         <Stack.Screen
@@ -93,7 +91,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardRecap}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une expérience',
+            headerTitle: 'Ajouter une experience',
           }}
         />
       </Stack.Navigator>

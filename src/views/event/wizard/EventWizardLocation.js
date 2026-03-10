@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -34,7 +34,7 @@ function EventWizardLocation({ navigation }) {
       payload: { facility: facilityId, location },
       type: 'SET_LOCATION',
     });
-    navigation.navigate(RouteNames.EventWizardRecap);
+    navigation.navigate(RouteNames.EventWizardVisibility);
   };
 
   const handleAddFacility = () => {
@@ -50,7 +50,7 @@ function EventWizardLocation({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={10}
-      stepIndex={9}
+      stepIndex={5}
       subtitle={t('eventWizard.steps.location.subtitle')}
       title={t('eventWizard.steps.location.title')}
     >

@@ -47,7 +47,7 @@ function UserSportHistory({ navigation }) {
         resetContext: true,
         returnRoute: RouteNames.UserSportHistory,
       },
-      screen: RouteNames.HistoryWizardClub,
+      screen: RouteNames.HistoryWizardCategory,
     });
   };
 

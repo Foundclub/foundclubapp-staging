@@ -10,6 +10,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { getChatMessagePreview } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -69,9 +70,10 @@ function Messaging({ navigation, route }) {
     // Sort: Multisport > Club > Team > Whisper
     // We want Multisport (m) at top, then Club (c)
     // Map types to priority
-    /** @type {Record<'multisport' | 'club' | 'league_match' | 'team' | 'whisper', number>} */
+    /** @type {Record<'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper', number>} */
     const priority = {
       club: 1,
+      group: 2.5,
       league_match: 1.5, // High priority but after club/multisport? Or top? Let's put it high.
       multisport: 0,
       team: 2,
@@ -87,8 +89,8 @@ function Messaging({ navigation, route }) {
         if (isPinnedA && !isPinnedB) return -1;
         if (!isPinnedA && isPinnedB) return 1;
 
-        const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (a.type)] ?? 99;
-        const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'team' | 'whisper'} */ (b.type)] ?? 99;
+        const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (a.type)] ?? 99;
+        const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (b.type)] ?? 99;
 
         if (pA !== pB) return pA - pB;
 
@@ -129,6 +131,24 @@ function Messaging({ navigation, route }) {
             isSmall
           />
         );
+      case 'group':
+      case 'whisper': {
+        const participant = chat.participants?.find(
+          (p) => p.documentId !== userData?.documentId,
+        ) || chat.participants?.[0];
+        return (
+          <ProfileAvatar
+            imageStyle={{ borderRadius: 40 }}
+            imageUrl={participant?.avatar?.url}
+            size={40}
+            style={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: 40 },
+            ]}
+          />
+        );
+      }
       case 'league_match':
         return (
           <View style={{
@@ -178,23 +198,6 @@ function Messaging({ navigation, route }) {
             isSmall
           />
         );
-      case 'whisper': {
-        const participant = chat.participants?.find(
-          (p) => p.documentId !== userData?.documentId,
-        ) || chat.participants?.[0];
-        return (
-          <ProfileAvatar
-            imageStyle={{ borderRadius: 40 }}
-            imageUrl={participant?.avatar?.url}
-            size={40}
-            style={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: 40 },
-            ]}
-          />
-        );
-      }
       default:
         return (
           <Image
@@ -217,6 +220,7 @@ function Messaging({ navigation, route }) {
     return allChats.filter((chat) => {
       const name = getConversationName({
         chatClub: chat.club,
+        chatGroupName: chat.groupName,
         chatLeagueMatch: chat.league_match,
         chatMultisportClub: chat.multisportClub,
         chatParticipants: chat.participants,
@@ -292,7 +296,7 @@ function Messaging({ navigation, route }) {
       }}
     >
       <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-        {t('messaging.archive', 'Supprimer')}
+        {t('messaging.archive', 'Archiver')}
       </Text>
     </TouchableOpacity>
   );
@@ -311,6 +315,12 @@ function Messaging({ navigation, route }) {
     ));
 
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+    let chatBackgroundStyle = ApplicationStyle.backgroundColor.transparent;
+    if (hasUnread) {
+      chatBackgroundStyle = ApplicationStyle.backgroundColor.primary700;
+    } else if (chat.type === 'league_match') {
+      chatBackgroundStyle = 'rgba(212, 175, 55, 0.1)';
+    }
 
     return (
       <Swipeable
@@ -323,9 +333,7 @@ function Messaging({ navigation, route }) {
             ApplicationStyle.borderRadius2,
             Spaces.padding[16],
             Spaces.marginBottom[8],
-            hasUnread
-              ? ApplicationStyle.backgroundColor.primary700
-              : (chat.type === 'league_match' ? 'rgba(212, 175, 55, 0.1)' : ApplicationStyle.backgroundColor.transparent),
+            chatBackgroundStyle,
             isPinned && { borderLeftColor: Colors.primary500, borderLeftWidth: 4 },
             chat.type === 'league_match' && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
           ]}
@@ -353,6 +361,7 @@ function Messaging({ navigation, route }) {
                 >
                   {getConversationName({
                     chatClub: chat.club,
+                    chatGroupName: chat.groupName,
                     chatLeagueMatch: chat.league_match,
                     chatMultisportClub: chat.multisportClub,
                     chatParticipants: chat.participants,
@@ -389,7 +398,7 @@ function Messaging({ navigation, route }) {
                       Alignments.fill,
                     ]}
                   >
-                    {lastMessage.message}
+                    {getChatMessagePreview(lastMessage)}
                   </Text>
                   <Text style={[Fonts.p3Bold, hasUnread ? Fonts.neutral00 : Fonts.neutral500]}>
                     {formatDistanceToNow(new Date(lastMessage.createdAt), {

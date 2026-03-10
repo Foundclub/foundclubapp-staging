@@ -1,6 +1,7 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, View } from 'react-native';
+import {
+  ScrollView, Text, TouchableOpacity, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
@@ -16,6 +17,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @param root0.isNextLoading
  * @param root0.nextLabel
  * @param root0.onBack
+ * @param root0.onClose
  * @param root0.onNext
  * @param root0.onSkip
  * @param root0.showSkip
@@ -30,6 +32,7 @@ function WizardStepLayout({
   isNextLoading = false,
   nextLabel,
   onBack,
+  onClose,
   onNext,
   onSkip,
   showSkip = false,
@@ -61,9 +64,33 @@ function WizardStepLayout({
       ]}
     >
       <View style={[Alignments.fill]}>
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24]]}>
+        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], { position: 'relative' }]}>
+          {onClose ? (
+            <TouchableOpacity
+              accessibilityLabel={t('common.close', 'Fermer')}
+              hitSlop={{
+                bottom: 10, left: 10, right: 10, top: 10,
+              }}
+              onPress={onClose}
+              style={{
+                alignItems: 'center',
+                borderColor: Colors.primary500,
+                borderRadius: 14,
+                borderWidth: 1,
+                height: 28,
+                justifyContent: 'center',
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                width: 28,
+                zIndex: 2,
+              }}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>X</Text>
+            </TouchableOpacity>
+          ) : null}
           {hasProgress ? (
-            <View style={[Spaces.marginBottom[16]]}>
+            <View style={[Spaces.marginBottom[16], { paddingRight: onClose ? 40 : 0 }]}>
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[8]]}>
                 {t('eventWizard.common.stepCounter', {
                   current: stepIndex,

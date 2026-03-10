@@ -26,6 +26,7 @@ export const getUnreadStatus = (
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object
+ * @param {string} [params.chatGroupName] - Group chat display name
  * @param {MultisportClubRef} [params.chatMultisportClub] - The multisport club object
  * @param {User[]} [params.chatParticipants] - Array of chat participants
  * @param {Team} [params.chatTeam] - The chat team object
@@ -35,28 +36,19 @@ export const getUnreadStatus = (
  * @returns {string} The generated conversation name
  */
 export const getConversationName = ({
-  chatClub, chatLeagueMatch, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
+  chatClub, chatGroupName, chatLeagueMatch, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
 }) => {
   switch (chatType) {
     case 'club':
       return chatClub?.name || '';
+    case 'group':
+      return chatGroupName || 'Groupe';
     case 'league_match':
-      // Logic: "Match vs [Opponent]"
-      // We need to identify the opponent team name.
-      // We assume the user is part of one of the teams.
-      // However, we might not have the full team list here easily.
-      // We rely on chatLeagueMatch being passed.
       if (chatLeagueMatch) {
-        const teamA = chatLeagueMatch.team_a;
-        const teamB = chatLeagueMatch.team_b;
-        const date = chatLeagueMatch.date ? new Date(chatLeagueMatch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '';
-
-        // If we can't determine "my" team easily (complicated logic), just show "Match [Date]"
-        // Or "Team A vs Team B"
-        // User requested to avoid opponent name and use "Match X" or "Match [Date]"
-        // Since we don't have match number easily, we use date.
-        return `Match du ${date}`;
-        return `Match ${date}`;
+        const date = chatLeagueMatch.date
+          ? new Date(chatLeagueMatch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+          : '';
+        return date ? `Match du ${date}` : 'Match de Ligue';
       }
       return 'Match de Ligue';
     case 'multisport':
@@ -72,4 +64,43 @@ export const getConversationName = ({
     default:
       return '';
   }
+};
+
+/**
+ * Returns a user-friendly preview for a chat message.
+ * @param {ChatMessage | undefined | null} message
+ * @returns {string}
+ */
+export const getChatMessagePreview = (message) => {
+  if (!message) return '';
+
+  const text = String(message?.message || '').trim();
+  if (text) return text;
+
+  const compositionType = String(message?.composition?.type || '').trim().toLowerCase();
+  switch (compositionType) {
+    case 'contact_share':
+      return 'Contact partage';
+    case 'event_share':
+      return 'Evenement partage';
+    case 'location_share':
+      return 'Localisation';
+    case 'poll':
+      return 'Sondage';
+    case 'proposal':
+      return 'Proposition';
+    case 'voice_note':
+      return 'Note vocale';
+    default:
+      break;
+  }
+
+  if (Array.isArray(message?.attachments) && message.attachments.length > 0) {
+    const firstMime = String(message.attachments?.[0]?.mime || '').toLowerCase();
+    if (firstMime.startsWith('image/')) return 'Photo';
+    if (firstMime.startsWith('audio/')) return 'Note vocale';
+    return 'Piece jointe';
+  }
+
+  return '';
 };

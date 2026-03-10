@@ -7,6 +7,7 @@ import useAuth from '@/domains/auth/useAuth';
 import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -19,6 +20,7 @@ function TeamWizardName({ navigation, route }) {
   const { userData } = useAuth();
   const { dispatch, state } = useTeamWizard();
   const initRef = useRef(false);
+  const handleExitWizard = useTeamWizardExit(navigation);
 
   useEffect(() => {
     if (initRef.current) return;
@@ -42,7 +44,8 @@ function TeamWizardName({ navigation, route }) {
     <WizardStepLayout
       isNextDisabled={!state.name?.trim()}
       nextLabel={t('common.next', 'Suivant')}
-      onBack={() => navigation.goBack()}
+      onBack={handleExitWizard}
+      onClose={handleExitWizard}
       onNext={handleNext}
       onSkip={() => {}}
       stepCount={8}

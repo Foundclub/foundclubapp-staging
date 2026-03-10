@@ -101,6 +101,21 @@ const eventDetailsDestination = (eventId) => {
 };
 
 /**
+ * @param {unknown} eventId
+ */
+const eventLineupDestination = (eventId) => {
+  const safeEventId = normalizeEntityId(eventId);
+  if (!safeEventId) return null;
+  return {
+    params: {
+      params: { eventId: safeEventId },
+      screen: RouteNames.TacticalSelectionV2,
+    },
+    route: RouteNames.EventStack,
+  };
+};
+
+/**
  * @param {unknown} teamId
  */
 const teamDetailsDestination = (teamId) => {
@@ -163,6 +178,38 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     };
   }
 
+  const leagueTabTypes = new Set([
+    NOTIFICATION_TYPES.LEAGUE_AUTOMATION,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
+    NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
+    NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT,
+    NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED,
+    NOTIFICATION_TYPES.REMATCH_REQUEST,
+    NOTIFICATION_TYPES.RSVP_ALERT,
+  ]);
+
+  if (leagueTabTypes.has(type)) {
+    return { params: {}, route: RouteNames.LeagueMatchTab };
+  }
+
+  const recruitmentTypes = new Set([
+    NOTIFICATION_TYPES.RECRUITMENT_APPLICATION,
+    NOTIFICATION_TYPES.RECRUITMENT_APPLICATION_AUTO,
+  ]);
+
+  if (recruitmentTypes.has(type)) {
+    return payload.adId
+      ? {
+        params: { adId: String(payload.adId) },
+        route: RouteNames.RecruitmentAdDetails,
+      }
+      : null;
+  }
+
   switch (type) {
     case NOTIFICATION_TYPES.ADD_TO_TEAM:
     case NOTIFICATION_TYPES.NEW_TEAM:
@@ -215,6 +262,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
 
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
+    case NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER:
     case NOTIFICATION_TYPES.EVENT_PARTICIPANT_REMINDER:
     case NOTIFICATION_TYPES.EVENT_REMINDER:
     case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
@@ -227,24 +275,11 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.RESERVATION_COMPLETE:
     case NOTIFICATION_TYPES.RESERVATION_PLAYER_JOINED:
     case NOTIFICATION_TYPES.RESERVATION_SOS_ALERT:
+      if (type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER) {
+        return eventLineupDestination(payload.eventId)
+          || eventDetailsDestination(payload.eventId);
+      }
       return eventDetailsDestination(payload.eventId);
-    case NOTIFICATION_TYPES.LEAGUE_AUTOMATION:
-
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED:
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING:
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_DUE:
-
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE:
-
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H:
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO:
-
-    case NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT:
-    case NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED:
-    case NOTIFICATION_TYPES.REMATCH_REQUEST:
-
-    case NOTIFICATION_TYPES.RSVP_ALERT:
-      return { params: {}, route: RouteNames.LeagueMatchTab };
     case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
     case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
@@ -292,21 +327,11 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : { params: {}, route: RouteNames.SquadSearch };
 
+    case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
-
     case NOTIFICATION_TYPES.NEW_WHISPER:
       return chatDestination(payload.chatId || payload.conversationId);
-
-    case NOTIFICATION_TYPES.RECRUITMENT_APPLICATION:
-
-    case NOTIFICATION_TYPES.RECRUITMENT_APPLICATION_AUTO:
-      return payload.adId
-        ? {
-          params: { adId: String(payload.adId) },
-          route: RouteNames.RecruitmentAdDetails,
-        }
-        : null;
 
     case NOTIFICATION_TYPES.SEARCH_ALERT_MATCH: {
       const alertType = payload.alertType || payload.matchType || payload.dataType || payload.kind || payload.notificationKind || payload.type;

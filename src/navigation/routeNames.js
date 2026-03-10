@@ -68,6 +68,10 @@ export const RouteNames = /** @type {const} */ ({
   SearchReservations: 'SearchReservations',
   SquadDetails: 'SquadDetails', // New route for League Squad Details
   SquadEdit: 'SquadEdit',
+  SuperAdminContentExplorer: 'SuperAdminContentExplorer',
+  SuperAdminEntryDetail: 'SuperAdminEntryDetail',
+  SuperAdminEntryForm: 'SuperAdminEntryForm',
+  SuperAdminEntryList: 'SuperAdminEntryList',
   Team: 'Team',
   TeamDetails: 'TeamDetails',
   TeamEdit: 'TeamEdit',

@@ -21,7 +21,8 @@ const readBaseline = () => {
     throw new Error(`Missing baseline file: ${path.relative(projectRoot, baselinePath)}`);
   }
 
-  const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+  const rawBaseline = fs.readFileSync(baselinePath, 'utf8').replace(/^\uFEFF/, '');
+  const baseline = JSON.parse(rawBaseline);
   const maxErrors = Number.parseInt(baseline.maxErrors, 10);
   if (!Number.isFinite(maxErrors) || maxErrors < 0) {
     throw new Error('Invalid baseline: "maxErrors" must be a non-negative integer');

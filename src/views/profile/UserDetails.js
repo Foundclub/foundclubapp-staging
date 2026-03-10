@@ -22,6 +22,7 @@ import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -31,6 +32,13 @@ import {
   useGetMyHistories,
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
+
+const isFlagEnabled = (rawValue, defaultValue = false) => {
+  if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
+  const normalized = String(rawValue).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+};
+const isGroupChatEnabled = isFlagEnabled(process.env.FC_CHAT_GROUP_V1, false);
 
 const toComparableId = (value) => (
   value === undefined || value === null ? '' : String(value).trim()
@@ -107,12 +115,14 @@ const normalizeWeight = (value, fallback) => {
   return String(normalized).includes('kg') ? normalized : `${normalized} kg`;
 };
 
-const getHistoryClubName = (history) => (
-  history?.club?.name
-  || history?.multisport_club?.name
-  || history?.customClubName
-  || ''
-);
+const toTextLabel = (value) => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const nested = value?.name || value?.label || value?.title;
+    return typeof nested === 'string' ? nested.trim() : '';
+  }
+  return String(value).trim();
+};
 
 /**
  * Render a themed section card for profile blocks.
@@ -269,7 +279,7 @@ function UserDetails({ navigation, route }) {
     USER_ROLES,
     userData: currentUser,
   } = useAuth();
-  const { startWhisperChat } = useMessaging();
+  const { startGroupChat, startWhisperChat } = useMessaging();
   const insets = useSafeAreaInsets();
 
   const currentUserId = toComparableId(currentUser?.documentId || currentUser?.id);
@@ -288,17 +298,11 @@ function UserDetails({ navigation, route }) {
 
   const user = isSelfProfile ? currentUser : fetchedUser;
 
-  const {
-    data: ownHistoriesData,
-    refetch: refetchOwnHistories,
-  } = useGetMyHistories({
+  const { refetch: refetchOwnHistories } = useGetMyHistories({
     enabled: isSelfProfile,
   });
 
-  const {
-    data: targetHistoriesData,
-    refetch: refetchTargetHistories,
-  } = useGetUserHistories(targetUserId, {
+  const { refetch: refetchTargetHistories } = useGetUserHistories(targetUserId, {
     enabled: Boolean(targetUserId) && !isSelfProfile,
   });
 
@@ -329,36 +333,8 @@ function UserDetails({ navigation, route }) {
   const roleLabel = formatRoleLabel(user?.role?.name);
   const sectionLabel = formatSectionLabel(user?.section?.name);
   const fallbackValue = t('userDetails.notSet', 'Non renseigne');
-  const histories = isSelfProfile ? ownHistoriesData : targetHistoriesData;
-
-  const historySummary = useMemo(() => {
-    const manualHistory = String(user?.sportsHistory || '').trim();
-    if (manualHistory) {
-      return manualHistory;
-    }
-
-    const historyList = Array.isArray(histories) ? histories : [];
-    if (!historyList.length) {
-      return fallbackValue;
-    }
-
-    const names = historyList
-      .map((item) => getHistoryClubName(item))
-      .map((name) => String(name || '').trim())
-      .filter(Boolean);
-
-    if (!names.length) {
-      return t('userDetails.historySummary.count', '{{count}} experience(s)', {
-        count: historyList.length,
-      });
-    }
-
-    const uniqueNames = [...new Set(names)];
-    if (uniqueNames.length === 1) {
-      return uniqueNames[0];
-    }
-    return `${uniqueNames[0]} +${uniqueNames.length - 1}`;
-  }, [fallbackValue, histories, t, user?.sportsHistory]);
+  const preferredSportValue = toTextLabel(user?.preferredSport);
+  const bestLevelValue = toTextLabel(user?.bestLevel);
 
   const addressLabel = useMemo(() => parseAddressLabel(user?.address), [user?.address]);
 
@@ -422,11 +398,13 @@ function UserDetails({ navigation, route }) {
 
     if (computedAge < 13) {
       if (user.parentAccount?.documentId) {
-        const newChat = await startWhisperChat([
-          currentUser.documentId,
-          user.documentId,
-          user.parentAccount.documentId,
-        ]);
+        const participants = [user.documentId, user.parentAccount.documentId];
+        const newChat = isGroupChatEnabled
+          ? await startGroupChat({
+            groupName: 'Contact mineur',
+            participants,
+          })
+          : await startWhisperChat(participants);
         if (newChat?.documentId) {
           navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
         }
@@ -443,7 +421,7 @@ function UserDetails({ navigation, route }) {
       return;
     }
 
-    const newChat = await startWhisperChat([currentUser.documentId, user.documentId]);
+    const newChat = await startWhisperChat([user.documentId]);
     if (newChat?.documentId) {
       navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
     }
@@ -614,6 +592,23 @@ function UserDetails({ navigation, route }) {
             ) : null}
           </View>
 
+          <UserHistorySection
+            bestLevel={bestLevelValue || undefined}
+            isOwnProfile={isSelfProfile}
+            onAddPress={
+              isSelfProfile
+                ? () => navigation.navigate(RouteNames.HistoryWizardCategory)
+                : undefined
+            }
+            onEditPress={
+              isSelfProfile
+                ? () => navigation.navigate(RouteNames.HistoryWizardCategory)
+                : undefined
+            }
+            preferredSport={preferredSportValue || undefined}
+            userId={isSelfProfile ? undefined : targetUserId}
+          />
+
           <SectionCard
             ApplicationStyle={ApplicationStyle}
             Colors={Colors}
@@ -630,7 +625,7 @@ function UserDetails({ navigation, route }) {
                 icon={Images.running}
                 label={t('userDetails.fields.sport', 'Sport')}
                 Spaces={Spaces}
-                value={formatNullableValue(user?.preferredSport, fallbackValue)}
+                value={formatNullableValue(preferredSportValue, fallbackValue)}
               />
               <InfoItem
                 Alignments={Alignments}
@@ -640,7 +635,7 @@ function UserDetails({ navigation, route }) {
                 icon={Images.shield}
                 label={t('userDetails.fields.bestLevel', 'Niveau')}
                 Spaces={Spaces}
-                value={formatNullableValue(user?.bestLevel, fallbackValue)}
+                value={formatNullableValue(bestLevelValue, fallbackValue)}
               />
               <InfoItem
                 Alignments={Alignments}
@@ -672,17 +667,6 @@ function UserDetails({ navigation, route }) {
                 label={t('userDetails.fields.category', 'Categorie')}
                 Spaces={Spaces}
                 value={formatNullableValue(user?.category, fallbackValue)}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                fullWidth
-                icon={Images.edit}
-                label={t('userDetails.fields.history', 'Historique sportif')}
-                Spaces={Spaces}
-                value={historySummary}
               />
             </View>
           </SectionCard>

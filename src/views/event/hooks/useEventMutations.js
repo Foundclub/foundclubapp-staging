@@ -62,6 +62,12 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const deleteParticipationMutation = useMutation({
     mutationFn: deleteEventParticipation,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || t('errors.EVENT_PARTICIPATION_DELETE_ERROR'),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();

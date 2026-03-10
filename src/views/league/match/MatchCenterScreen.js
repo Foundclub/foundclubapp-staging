@@ -599,39 +599,54 @@ function MatchCenterScreen() {
       : [...prev, slotId]));
   };
 
-  const handleAddSearchSlot = async (/** @type {AddSearchSlotPayload} */ slotData) => {
+  const handleAddSearchSlot = async (
+    /** @type {AddSearchSlotPayload | AddSearchSlotPayload[]} */ slotInput,
+  ) => {
     if (!mySquad || isSavingSearchSlot) return;
+
+    let slotsToCreate = [];
+    if (Array.isArray(slotInput)) {
+      slotsToCreate = slotInput.filter(Boolean);
+    } else if (slotInput) {
+      slotsToCreate = [slotInput];
+    }
+
+    if (slotsToCreate.length === 0) return;
 
     try {
       setIsSavingSearchSlot(true);
       const teamId = getEntityDocumentId(mySquad);
       const previousSlotIds = new Set(toDocumentIdList(squadSlots));
-      const payload = {
-        end_hour: `${slotData.endTime}:00`,
-        league_team: teamId,
-        recurrence_day: slotData.day,
-        start_hour: `${slotData.startTime}:00`,
-        status: 'open',
-      };
 
-      await createTeamSlot(payload);
+      await Promise.all(
+        slotsToCreate.map((slotData) => {
+          const payload = {
+            end_hour: `${slotData.endTime}:00`,
+            league_team: teamId,
+            recurrence_day: slotData.day,
+            start_hour: `${slotData.startTime}:00`,
+            status: 'open',
+          };
+          return createTeamSlot(payload);
+        }),
+      );
+
       const refreshedSlots = await getAvailableSlots(teamId);
       setSquadSlots(refreshedSlots || []);
 
-      const newlyAddedSlot = (refreshedSlots || []).find((slot) => {
-        const slotId = getEntityDocumentId(slot);
-        return slotId && !previousSlotIds.has(slotId);
-      });
+      const newSlotIds = (refreshedSlots || [])
+        .map((slot) => getEntityDocumentId(slot))
+        .filter((slotId) => typeof slotId === 'string' && slotId.length > 0 && !previousSlotIds.has(slotId));
 
-      const newSlotId = getEntityDocumentId(newlyAddedSlot);
-      if (newSlotId) {
-        setSelectedSlotIds((prev) => (
-          prev.includes(newSlotId) ? prev : [...prev, newSlotId]
-        ));
+      if (newSlotIds.length > 0) {
+        setSelectedSlotIds((prev) => Array.from(new Set([...newSlotIds, ...prev])));
       }
 
       setIsAddingSearchSlot(false);
-      Alert.alert('Succes', 'Creneau ajoute a la recherche.');
+      Alert.alert(
+        'Succes',
+        slotsToCreate.length > 1 ? `${slotsToCreate.length} creneaux ajoutes a la recherche.` : 'Creneau ajoute a la recherche.',
+      );
     } catch (error) {
       console.error('Add search slot error:', error);
       Alert.alert('Erreur', "Impossible d'ajouter le creneau.");

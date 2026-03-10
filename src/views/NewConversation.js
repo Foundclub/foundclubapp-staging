@@ -19,6 +19,16 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import client from '@/services/client';
 
+import { createLogger } from '@/utils/logger/logger';
+
+const newConversationLogger = createLogger('new-conversation');
+const isFlagEnabled = (rawValue, defaultValue = false) => {
+  if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
+  const normalized = String(rawValue).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+};
+const isGroupChatEnabled = isFlagEnabled(process.env.FC_CHAT_GROUP_V1, false);
+
 /**
  * @typedef {import('@/domains/auth/types').User} User
  * @typedef {import('@/domains/team/types').Team} Team
@@ -114,15 +124,22 @@ const searchUsers = async ({ clubId, multisportId, query }) => {
 };
 
 /**
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
+ * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route?: any }} props
  */
-function NewConversation({ navigation }) {
+function NewConversation({ navigation, route }) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
-  const { startWhisperChat } = useMessaging();
+  const {
+    addGroupMembers,
+    startGroupChat,
+    startWhisperChat,
+  } = useMessaging();
+  const mode = String(route?.params?.mode || '').trim();
+  const addMembersChatId = String(route?.params?.chatId || '').trim();
+  const isAddMembersMode = mode === 'add_group_members' && Boolean(addMembersChatId);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState(/** @type {Set<string>} */ (new Set()));
@@ -168,8 +185,10 @@ function NewConversation({ navigation }) {
     enabled: true,
     queryFn: async () => {
       const res = await searchUsers({ clubId, multisportId, query: searchQuery });
-      console.log('[NewConversation] searchUsers result count:', res?.length);
-      console.log('[NewConversation] multisportId used:', multisportId);
+      newConversationLogger.debug('searchUsers result', {
+        count: Array.isArray(res) ? res.length : 0,
+        hasMultisportScope: Boolean(multisportId),
+      });
       return res;
     },
     queryKey: ['users', 'search', searchQuery, clubId],
@@ -247,13 +266,27 @@ function NewConversation({ navigation }) {
     if (selectedUserIds.size === 0 || !userData?.documentId) return;
     setIsCreating(true);
     try {
-      const participants = [userData.documentId, ...Array.from(selectedUserIds)];
-      const chat = await startWhisperChat(participants);
-      if (chat) {
-        navigation.replace(RouteNames.Conversation, { chatId: chat.documentId });
+      const participants = Array.from(selectedUserIds);
+      if (isAddMembersMode) {
+        await addGroupMembers({
+          chatId: addMembersChatId,
+          memberIds: participants,
+        });
+        navigation.goBack();
+      } else {
+        const shouldCreateGroup = isGroupChatEnabled && participants.length > 1;
+        const chat = shouldCreateGroup
+          ? await startGroupChat({
+            groupName: `Groupe (${participants.length + 1})`,
+            participants,
+          })
+          : await startWhisperChat(participants);
+        if (chat) {
+          navigation.replace(RouteNames.Conversation, { chatId: chat.documentId });
+        }
       }
     } catch (error) {
-      console.error('Failed to create chat', error);
+      newConversationLogger.error('Failed to create chat', error?.message || error);
     } finally {
       setIsCreating(false);
     }
@@ -308,6 +341,13 @@ function NewConversation({ navigation }) {
     );
   };
 
+  let createButtonTitle = t('common.start', 'Démarrer la discussion');
+  if (isAddMembersMode) {
+    createButtonTitle = t('messaging.addMembersCta', `Ajouter (${selectedUserIds.size})`);
+  } else if (selectedUserIds.size > 1) {
+    createButtonTitle = t('messaging.createGroup', `Créer un groupe (${selectedUserIds.size})`);
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -322,7 +362,9 @@ function NewConversation({ navigation }) {
       <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter]}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginLeft[16]]}>
-          {t('messaging.newConversation', 'Nouvelle discussion')}
+          {isAddMembersMode
+            ? t('messaging.addGroupMembers', 'Ajouter des membres')
+            : t('messaging.newConversation', 'Nouvelle discussion')}
         </Text>
       </View>
 
@@ -431,9 +473,7 @@ function NewConversation({ navigation }) {
           <Button
             isLoading={isCreating}
             onPress={handleCreate}
-            title={selectedUserIds.size > 1
-              ? t('messaging.createGroup', `Créer un groupe (${selectedUserIds.size})`)
-              : t('common.start', 'Démarrer la discussion')}
+            title={createButtonTitle}
             variant="Primary"
           />
         </View>

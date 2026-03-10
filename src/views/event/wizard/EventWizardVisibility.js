@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -17,9 +17,9 @@ const VISIBILITY_OPTIONS = [
     titleKey: 'eventWizard.steps.visibility.public',
   },
   {
-    descriptionKey: 'eventWizard.steps.visibility.privateDesc',
+    descriptionKey: 'eventWizard.steps.visibility.teamDesc',
     key: 'closed',
-    titleKey: 'eventWizard.steps.visibility.private',
+    titleKey: 'eventWizard.steps.visibility.team',
   },
 ];
 
@@ -49,7 +49,7 @@ function EventWizardVisibility({ navigation }) {
       payload: { sessionStatus },
       type: 'SET_META',
     });
-    navigation.navigate(RouteNames.EventWizardLocation);
+    navigation.navigate(RouteNames.EventWizardParticipants);
   };
 
   return (
@@ -57,7 +57,7 @@ function EventWizardVisibility({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={10}
-      stepIndex={8}
+      stepIndex={6}
       subtitle={t('eventWizard.steps.visibility.subtitle')}
       title={t('eventWizard.steps.visibility.title')}
     >

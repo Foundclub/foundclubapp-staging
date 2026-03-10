@@ -1,13 +1,20 @@
 import Joi from 'joi';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import client from '../client';
 
+const chatServiceLogger = createLogger('chat-service');
+
 const chatMessageSchema = Joi.object({
+  attachments: Joi.array().items(Joi.object().unknown(true)).optional(),
+  composition: Joi.object().allow(null).optional(),
   createdAt: Joi.date().required(),
   documentId: Joi.string().required(),
   event: Joi.object().optional().allow(null),
   // Some chat entries (attachments/polls/compositions) can carry an empty textual message.
   message: Joi.string().allow('').allow(null).required(),
+  replyTo: Joi.object().allow(null).optional(),
   sender: Joi.object().required(),
   updatedAt: Joi.date().required(),
 }).required();
@@ -23,7 +30,7 @@ const chatSchema = Joi.object({
   ).optional(),
   participants: Joi.array().items(Joi.object()).required(),
   pinnedBy: Joi.array().items(Joi.object()).optional(),
-  type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match').required(),
+  type: Joi.string().valid('whisper', 'club', 'team', 'multisport', 'league_match', 'group').required(),
   updatedAt: Joi.date().required(),
 }).required();
 
@@ -94,6 +101,9 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
             logo: true,
           },
         },
+        groupAdmins: {
+          populate: ['avatar'],
+        },
         league_match: {
           populate: {
             team_a: { populate: ['captain'] },
@@ -102,7 +112,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
           },
         },
         messages: {
-          populate: ['sender', 'sender.avatar'],
+          populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
           sort: ['createdAt:desc'],
         },
         multisportClub: {
@@ -163,6 +173,9 @@ export const getChatById = async (chatId) => {
             logo: true,
           },
         },
+        groupAdmins: {
+          populate: ['avatar'],
+        },
         league_match: {
           populate: {
             team_a: { populate: ['captain'] },
@@ -171,7 +184,7 @@ export const getChatById = async (chatId) => {
           },
         },
         messages: {
-          populate: ['sender', 'sender.avatar'],
+          populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
           sort: ['createdAt:desc'],
         },
         multisportClub: {
@@ -215,11 +228,12 @@ export const getChatById = async (chatId) => {
       });
 
       if (matchResponse.data?.data?.length > 0) {
-        console.log('[getChatById] Recovered missing league_match relation');
-        chatData.league_match = matchResponse.data.data[0];
+        chatServiceLogger.info('Recovered missing league_match relation');
+        const [recoveredMatch] = matchResponse.data.data;
+        chatData.league_match = recoveredMatch;
       }
     } catch (err) {
-      console.warn('[getChatById] Failed to fetch fallback league_match', err);
+      chatServiceLogger.warn('Failed to fetch fallback league_match', err?.message || err);
     }
   }
 
@@ -263,11 +277,15 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
         pageSize,
       },
       populate: {
+        attachments: true,
         chat: {
           populate: ['participants'],
         },
         event: {
           populate: ['facility', 'league_match', 'league_match.team_a', 'league_match.team_b'],
+        },
+        replyTo: {
+          populate: ['sender', 'sender.avatar'],
         },
         sender: {
           populate: ['avatar'],
@@ -304,20 +322,29 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
  * Create a new chat message
  * @param {object} params
  * @param {string} params.chatId - The chat id
- * @param {string} params.message - The message text
+ * @param {string} [params.message] - The message text
  * @param {object} [params.event] - The event object (optional)
  * @param {object} [params.composition] - The composition object (optional)
+ * @param {Array<{ id?: number; documentId?: string }>} [params.attachments] - Attachments relation payload
+ * @param {{ documentId?: string; id?: string | number } | null} [params.replyTo] - Reply target
  * @returns {Promise<ChatMessage>}
  */
 export const createChatMessage = async ({
-  chatId, composition, event, message,
+  attachments,
+  chatId,
+  composition,
+  event,
+  message,
+  replyTo,
 }) => {
   const response = await client.post('/chat-messages', {
     data: {
+      attachments,
       chat: chatId,
       composition,
       event,
-      message,
+      message: message || '',
+      replyTo,
     },
   });
 
@@ -407,6 +434,73 @@ export const createTeamChat = async (team) => {
 };
 
 /**
+ * Create a new group chat
+ * @param {{ groupName: string; participants: string[] }} params
+ * @returns {Promise<Chat>}
+ */
+export const createGroupChat = async ({ groupName, participants }) => {
+  const response = await client.post('/chats/group', {
+    data: {
+      groupName,
+      participants,
+    },
+  });
+
+  try {
+    const schema = Joi.object({
+      data: Joi.object({ documentId: Joi.string().required() }).required(),
+    }).required();
+
+    const validationResult = await schema.validateAsync(response.data, {
+      allowUnknown: true,
+    });
+    return validationResult.data;
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw new Error(`Failed to create group chat: ${errorToDisplay}`);
+  }
+};
+
+/**
+ * Add members to group chat
+ * @param {string} chatId
+ * @param {string[]} memberIds
+ * @returns {Promise<Chat>}
+ */
+export const addGroupMembers = async (chatId, memberIds) => {
+  const response = await client.post(`/chats/${chatId}/group-members`, {
+    data: {
+      members: memberIds,
+    },
+  });
+  return response.data.data;
+};
+
+/**
+ * Remove member from group chat
+ * @param {string} chatId
+ * @param {string} userId
+ * @returns {Promise<Chat>}
+ */
+export const removeGroupMember = async (chatId, userId) => {
+  const response = await client.delete(`/chats/${chatId}/group-members/${userId}`);
+  return response.data.data;
+};
+
+/**
+ * Update group metadata
+ * @param {string} chatId
+ * @param {{ groupName?: string; addAdminIds?: string[]; removeAdminIds?: string[] }} data
+ * @returns {Promise<Chat>}
+ */
+export const updateGroupMeta = async (chatId, data) => {
+  const response = await client.patch(`/chats/${chatId}/group-meta`, {
+    data,
+  });
+  return response.data.data;
+};
+
+/**
  * Delete a message
  * @param {string} messageId - The message id
  * @returns {Promise<void>}
@@ -466,4 +560,30 @@ export const updateMessage = async (messageId, data) => {
     data,
   });
   return response.data.data;
+};
+
+/**
+ * Vote on a poll message
+ * @param {string} messageId
+ * @param {string} optionId
+ * @returns {Promise<{ success: boolean; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ */
+export const votePollMessage = async (messageId, optionId) => {
+  const response = await client.post(`/chat-messages/${messageId}/poll-vote`, {
+    optionId,
+  });
+  return response.data;
+};
+
+/**
+ * Respond to a proposal message
+ * @param {string} messageId
+ * @param {'accepted' | 'declined'} status
+ * @returns {Promise<{ success: boolean; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ */
+export const respondProposalMessage = async (messageId, status) => {
+  const response = await client.post(`/chat-messages/${messageId}/proposal-response`, {
+    status,
+  });
+  return response.data;
 };

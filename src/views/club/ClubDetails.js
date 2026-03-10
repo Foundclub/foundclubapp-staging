@@ -29,6 +29,7 @@ import { claimClub, updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { useGetFacilities } from '@/services/facility/facilityQueries';
 
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
 
 import ClubPlanning from './ClubPlanningScreen';
@@ -662,17 +663,51 @@ function ClubDetails({ navigation, route }) {
                   const capacityChipLabel = getFacilityCapacityChipLabel(facility?.maxSlots, t);
                   const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
                   const addressLabel = getFacilityAddressLabel(facility?.address);
+                  const planningColor = resolveFacilityPlanningColor(facility);
+                  const canOpenFacilityEdit = Boolean(canEdit && facilityId);
+                  const handleOpenFacilityEdit = () => {
+                    navigation.navigate(RouteNames.FacilityForm, {
+                      clubId,
+                      cmId: club?.parentMultisport?.documentId,
+                      facility,
+                    });
+                  };
                   return (
-                    <View
+                    <TouchableOpacity
+                      accessibilityLabel={canOpenFacilityEdit ? t(
+                        'facilityList.accessibility.editCard',
+                        `Modifier l'installation ${facility?.name || ''}`.trim(),
+                      ) : undefined}
+                      accessibilityRole={canOpenFacilityEdit ? 'button' : undefined}
+                      activeOpacity={canOpenFacilityEdit ? 0.9 : 1}
+                      disabled={!canOpenFacilityEdit}
                       key={String(facilityId || facility?.name)}
+                      onPress={canOpenFacilityEdit ? handleOpenFacilityEdit : undefined}
                       style={[
                         ApplicationStyle.borderRadius24,
-                        ApplicationStyle.backgroundColor.primary700,
                         { paddingHorizontal: 18, paddingVertical: 18 },
                         Spaces.gap[12],
-                        { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
+                        {
+                          backgroundColor: `${planningColor}22`,
+                          borderColor: planningColor,
+                          borderWidth: 1,
+                          overflow: 'hidden',
+                          position: 'relative',
+                        },
                       ]}
                     >
+                      <View
+                        style={{
+                          backgroundColor: planningColor,
+                          borderBottomRightRadius: 8,
+                          borderTopRightRadius: 8,
+                          height: '100%',
+                          left: 0,
+                          position: 'absolute',
+                          top: 0,
+                          width: 4,
+                        }}
+                      />
                       <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                         {facility?.name || 'Installation'}
                       </Text>
@@ -684,13 +719,13 @@ function ClubDetails({ navigation, route }) {
                             Spaces.paddingVertical[4],
                             {
                               alignSelf: 'flex-start',
-                              backgroundColor: `${Colors.primary500}1F`,
-                              borderColor: Colors.primary500,
+                              backgroundColor: `${planningColor}1F`,
+                              borderColor: planningColor,
                               borderWidth: 1,
                             },
                           ]}
                         >
-                          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                          <Text style={[Fonts.p3Bold, { color: planningColor }]}>
                             {capacityChipLabel}
                           </Text>
                         </View>
@@ -754,17 +789,11 @@ function ClubDetails({ navigation, route }) {
                               variant="Secondary"
                             />
                           ) : null}
-                          {canEdit && facilityId ? (
+                          {canOpenFacilityEdit ? (
                             <View style={{ marginLeft: 'auto' }}>
                               <Button
                                 icon="edit"
-                                onPress={() => {
-                                  navigation.navigate(RouteNames.FacilityForm, {
-                                    clubId,
-                                    cmId: club?.parentMultisport?.documentId,
-                                    facility,
-                                  });
-                                }}
+                                onPress={handleOpenFacilityEdit}
                                 size="small"
                                 title={t('common.edit', 'Modifier')}
                                 variant="Secondary"
@@ -773,7 +802,7 @@ function ClubDetails({ navigation, route }) {
                           ) : null}
                         </View>
                       ) : null}
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>

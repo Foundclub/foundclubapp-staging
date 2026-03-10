@@ -81,12 +81,11 @@ function CMPlanningContent({ cmId, navigation }) {
   const events = useMemo(() => rawSlots.map((/** @type {any} */ slot) => ({
     date: slot.startAt, // Ensure ISO string
     endTime: slot.endTime, // HH:mm
-    facility: slot.installation ? { name: slot.installation.name } : null,
+    facility: slot.installation ? { color: slot.installation.color, name: slot.installation.name } : null,
     id: slot.eventId,
     startTime: slot.startTime, // HH:mm
     title: slot.title,
     type: 'Entrainement', // Default or derive from data if available
-    // You might want to map color or other props here if your API provides them
     team: { name: slot.title }, // Fallback for title display logic in component
     // We need original event ID for navigation
     documentId: slot.eventId,

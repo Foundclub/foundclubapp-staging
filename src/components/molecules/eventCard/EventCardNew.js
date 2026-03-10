@@ -29,6 +29,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getShortAddress } from '@/utils/location';
 
 // Assets
@@ -87,6 +88,7 @@ const formatEventDateLabel = (value) => {
  * @param props.onRefuse
  * @param props.onValidate
  * @param props.showClubHeader
+ * @param {boolean} [props.useFacilityAccentColor]
  */
 function EventCardNew({
   actionLabel,
@@ -99,6 +101,7 @@ function EventCardNew({
   onRefuse,
   onValidate,
   showClubHeader = false,
+  useFacilityAccentColor = false,
 }) {
   const {
     Alignments,
@@ -117,6 +120,29 @@ function EventCardNew({
   const alreadyJoined = haveIAlreadyJoined({
     participations: item?.participations,
     userId: userData?.documentId,
+  });
+  const doesRequestBelongToCurrentUser = (request) => {
+    if (userData?.documentId && request?.user?.documentId) {
+      return request.user.documentId === userData.documentId;
+    }
+
+    if (userData?.id != null && request?.user?.id != null) {
+      return String(request.user.id) === String(userData.id);
+    }
+
+    return false;
+  };
+  const hasPendingRequest = (item?.participationRequests || []).some((request) => {
+    if (request?.isActive === false || request?.participationStatus !== 'pending') {
+      return false;
+    }
+    return doesRequestBelongToCurrentUser(request);
+  });
+  const hasAcceptedRequest = (item?.participationRequests || []).some((request) => {
+    if (request?.isActive === false || request?.participationStatus !== 'accepted') {
+      return false;
+    }
+    return doesRequestBelongToCurrentUser(request);
   });
 
   // Booking status for reservations
@@ -178,10 +204,21 @@ function EventCardNew({
   const invitedTeamNames = (item?.invitedTeams || [])
     .map((team) => team?.name)
     .filter(Boolean);
+  const facilityAccentColor = useFacilityAccentColor ? resolveFacilityPlanningColor(item?.facility) : null;
+  const containerAccentStyle = facilityAccentColor ? { borderColor: facilityAccentColor } : null;
+  const headerAccentStyle = facilityAccentColor
+    ? {
+      backgroundColor: `${facilityAccentColor}1A`,
+      borderColor: facilityAccentColor,
+    }
+    : null;
+  const headerTextAccentStyle = facilityAccentColor ? { color: facilityAccentColor } : null;
+  const locationIconAccentStyle = facilityAccentColor ? { tintColor: facilityAccentColor } : null;
+  const locationTextAccentStyle = facilityAccentColor ? { color: facilityAccentColor } : null;
 
   return (
 
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Animated.View style={[styles.container, containerAccentStyle, animatedStyle]}>
       {/* Background Image */}
       <ImageBackground
         imageStyle={styles.backgroundImage}
@@ -204,8 +241,8 @@ function EventCardNew({
         {/* Non-interactive Content (Passes touches to background Pressable) */}
         <View pointerEvents="none">
           {/* Header: Event Type or Sport for Reservations */}
-          <View style={styles.headerContainer}>
-            <Text style={styles.headerText}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
+          <View style={[styles.headerContainer, headerAccentStyle]}>
+            <Text style={[styles.headerText, headerTextAccentStyle]}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
           </View>
 
           {/* Club / Team Info */}
@@ -344,8 +381,8 @@ function EventCardNew({
 
                 {/* Location Row */}
                 <View style={styles.detailRow}>
-                  <Image source={Images.pin} style={styles.icon} />
-                  <Text numberOfLines={1} style={styles.detailText}>
+                  <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
+                  <Text numberOfLines={1} style={[styles.detailText, locationTextAccentStyle]}>
                       {locationText || 'Lieu non défini'}
                     </Text>
                 </View>
@@ -355,8 +392,8 @@ function EventCardNew({
                 {/* Standard Event Layout */}
                 <View style={styles.detailRow}>
                     <View style={styles.detailLeft}>
-                      <Image source={Images.pin} style={styles.icon} />
-                      <Text numberOfLines={1} style={styles.detailText}>
+                      <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
+                      <Text numberOfLines={1} style={[styles.detailText, locationTextAccentStyle]}>
                             {locationText || 'Lieu non défini'}
                           </Text>
                     </View>
@@ -447,6 +484,8 @@ function EventCardNew({
           ) : (
             <EventAnswerButtons
               event={item}
+              hasAcceptedRequest={hasAcceptedRequest}
+              hasPendingRequest={hasPendingRequest}
               onAbout={() => onPress?.(item)}
               onDecline={() => onDecline?.(item)}
               onJoin={() => onJoin?.(item)}

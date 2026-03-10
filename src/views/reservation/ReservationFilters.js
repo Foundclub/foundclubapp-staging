@@ -2,7 +2,6 @@ import { joiResolver } from '@hookform/resolvers/joi';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 
 import Slider from '@react-native-community/slider';
-import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +24,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getFieldError } from '@/utils/form/formUtils';
 
 /** @typedef {{ label: string; value: string }} Option */
@@ -35,7 +33,6 @@ const filtersSchema = Joi.object({
   city: Joi.object().allow(''),
   maxPrice: Joi.number().allow('').optional(),
   radius: Joi.number().allow(''),
-  startTime: Joi.date().allow(null).optional(),
 });
 
 /**
@@ -46,7 +43,6 @@ const filtersSchema = Joi.object({
 function ReservationFilters({ navigation }) {
   // local states
   const [activitySearchValue, setActivitySearchValue] = useState('');
-  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ content: '', title: '' });
 
@@ -63,7 +59,6 @@ function ReservationFilters({ navigation }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
-    setValue,
     watch,
   } = useForm({
     defaultValues: {
@@ -71,7 +66,6 @@ function ReservationFilters({ navigation }) {
       city: reservationFilters?.city || { label: '', value: '' },
       maxPrice: reservationFilters?.maxPrice || '',
       radius: reservationFilters?.radius || 20,
-      startTime: reservationFilters?.startTime || null,
     },
     mode: 'onBlur',
     resolver: joiResolver(filtersSchema),
@@ -118,7 +112,6 @@ function ReservationFilters({ navigation }) {
    *   city: { label: string; value: string };
    *   maxPrice: string | number;
    *   radius: number;
-   *   startTime: Date | null;
    * }} data - The filter data
    */
   const handleApplyFilters = (data) => {
@@ -130,15 +123,8 @@ function ReservationFilters({ navigation }) {
       data.radius,
     ) : undefined;
 
-    // Format startTime to HH:mm:ss string
-    let formattedStartTime = null;
-    if (data.startTime) {
-      formattedStartTime = format(data.startTime, 'HH:mm:ss');
-    }
-
     const payload = {
       ...data,
-      startTime: formattedStartTime,
       ...(geohash && { geohash }),
     };
 
@@ -290,44 +276,6 @@ function ReservationFilters({ navigation }) {
           )}
         />
 
-        {/* Start Time */}
-        <Controller
-          control={control}
-          name="startTime"
-          render={({ field: { onChange, value } }) => (
-            <>
-              <TouchableOpacity onPress={() => setIsTimePickerVisible(true)}>
-                <Input
-                  editable={false}
-                  error={getFieldError({ errors: formErrors, fieldName: 'startTime' })}
-                  label={t('reservationFilters.fields.startTime.label', 'À partir de')}
-                  placeholder={t('reservationFilters.fields.startTime.placeholder', 'Sélectionnez une heure')}
-                  pointerEvents="none"
-                  value={value ? format(value, 'HH:mm') : ''}
-                />
-              </TouchableOpacity>
-              <BottomModal
-                close={() => setIsTimePickerVisible(false)}
-                isVisible={isTimePickerVisible}
-              >
-                <View style={[Spaces.padding[24]]}>
-                  {/* <DateTimePicker
-                                        display="spinner"
-                                        mode="time"
-                                        onChange={(event, selectedTime) => {
-                                            setIsTimePickerVisible(false);
-                                            if (event.type === 'set' && selectedTime) {
-                                                onChange(selectedTime);
-                                            }
-                                        }}
-                                        value={value || new Date()}
-                                    /> */}
-                  <Text>Time Picker temporarily disabled</Text>
-                </View>
-              </BottomModal>
-            </>
-          )}
-        />
       </ScrollView>
 
       {/* Buttons */}

@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -11,6 +10,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -25,7 +25,6 @@ import { useEventWizard } from './EventWizardContext';
  */
 function EventWizardInvites({ navigation }) {
   const {
-    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
@@ -39,12 +38,6 @@ function EventWizardInvites({ navigation }) {
     borderColor: 'rgba(1, 179, 244, 0.24)',
     borderWidth: 1,
   };
-  const selectedSurfaceStyle = {
-    backgroundColor: 'rgba(1, 179, 244, 0.16)',
-    borderColor: Colors.primary500,
-    borderWidth: 1,
-  };
-
   const [availableTeams, setAvailableTeams] = useState([]);
   const [selectedTeams, setSelectedTeams] = useState(state.invitedTeams || []);
   const [isLoading, setIsLoading] = useState(false);
@@ -119,45 +112,13 @@ function EventWizardInvites({ navigation }) {
   const renderTeamCard = (team) => {
     const isSelected = selectedTeams.includes(team.documentId);
     return (
-      <TouchableOpacity
+      <EventWizardTeamCard
+        isSelected={isSelected}
         key={team.documentId}
         onPress={() => toggleTeam(team.documentId)}
-        style={[
-          ApplicationStyle.card,
-          Spaces.padding[16],
-          Alignments.row,
-          Alignments.alignCenter,
-          Alignments.justifySpaceBetween,
-          {
-            ...(isSelected ? selectedSurfaceStyle : cardSurfaceStyle),
-          },
-        ]}
-      >
-        <View style={{ flex: 1, paddingRight: 16 }}>
-          <Text style={[Fonts.h4, isSelected ? Fonts.primary100 : Fonts.neutral00]}>{team.name}</Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {team.category?.name || '-'}
-            {' - '}
-            {team.level?.name || '-'}
-          </Text>
-        </View>
-        <View
-          style={{
-            alignItems: 'center',
-            backgroundColor: isSelected ? Colors.primary500 : 'transparent',
-            borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.42)',
-            borderRadius: 12,
-            borderWidth: 1.5,
-            height: 24,
-            justifyContent: 'center',
-            width: 24,
-          }}
-        >
-          {isSelected ? (
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>OK</Text>
-          ) : null}
-        </View>
-      </TouchableOpacity>
+        showSelectionIndicator
+        team={team}
+      />
     );
   };
 
@@ -217,6 +178,8 @@ function EventWizardInvites({ navigation }) {
           ) : null}
         </View>
       ) : null}
+
+      <View style={Spaces.paddingBottom[24]} />
     </WizardStepLayout>
   );
 }

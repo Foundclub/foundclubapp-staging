@@ -1,5 +1,3 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -7,12 +5,11 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { useHistoryWizard } from '@/views/historyWizard/HistoryWizardContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetLevels } from '@/services/level/levelQueries';
-
-import { useHistoryWizard } from './HistoryWizardContext';
 
 /**
  *
@@ -21,7 +18,6 @@ import { useHistoryWizard } from './HistoryWizardContext';
  */
 function HistoryWizardLevel({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useHistoryWizard();
   const { data: levels, isLoading } = useGetLevels();
 
@@ -33,10 +29,10 @@ function HistoryWizardLevel({ navigation }) {
     <WizardStepLayout
       isNextDisabled={!state.level}
       onBack={() => navigation.goBack()}
-      onNext={() => navigation.navigate(RouteNames.HistoryWizardPeriod)}
-      onSkip={() => navigation.navigate(RouteNames.HistoryWizardPeriod)}
+      onNext={() => navigation.navigate(RouteNames.HistoryWizardRecap)}
+      onSkip={() => navigation.navigate(RouteNames.HistoryWizardRecap)}
       showSkip
-      subtitle="Sélectionne le niveau de compétition"
+      subtitle="Sélectionne le meilleur niveau joué"
       title="Quel niveau ?"
     >
       {isLoading ? (

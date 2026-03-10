@@ -134,7 +134,7 @@ function EventWizardParticipants({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={10}
-      stepIndex={5}
+      stepIndex={7}
       subtitle={t(
         'eventWizard.steps.participants.subtitle',
         'Choisis une capacite max, ou laisse l evenement en acces illimite.',

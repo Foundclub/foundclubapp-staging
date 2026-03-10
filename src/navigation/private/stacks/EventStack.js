@@ -103,6 +103,16 @@ function EventStack() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          component={EventWizardLocation}
+          name={RouteNames.EventWizardLocation}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardVisibility}
+          name={RouteNames.EventWizardVisibility}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           component={EventWizardParticipants}
           name={RouteNames.EventWizardParticipants}
           options={{ headerShown: false }}
@@ -115,16 +125,6 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardDescription}
           name={RouteNames.EventWizardDescription}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          component={EventWizardVisibility}
-          name={RouteNames.EventWizardVisibility}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          component={EventWizardLocation}
-          name={RouteNames.EventWizardLocation}
           options={{ headerShown: false }}
         />
         <Stack.Screen

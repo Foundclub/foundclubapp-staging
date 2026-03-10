@@ -125,7 +125,7 @@ function App() {
     const previousBootError = readPersistedBootError();
     if (!previousBootError) return;
 
-    console.error('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
+    console.warn('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
 
     const summary = [
       previousBootError.context,

@@ -205,6 +205,7 @@ function ParticipantEventList({ navigation }) {
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item.reservation)}
             onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
+            useFacilityAccentColor={item?.reservation?.sessionStatus === 'open'}
           />
         </View>
       );
@@ -218,6 +219,7 @@ function ParticipantEventList({ navigation }) {
           onLogin={() => {}}
           onParticipate={() => handleParticipateToEvent(item)}
           onPress={() => handleEventPress(item)}
+          useFacilityAccentColor={item?.sessionStatus === 'open'}
         />
       </View>
     );
@@ -277,7 +279,7 @@ function ParticipantEventList({ navigation }) {
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
               ⭐ À la une dans mon club
             </Text>
-            <FeaturedEvents events={featuredEvents} />
+            <FeaturedEvents events={featuredEvents} useFacilityAccentColorForPublic />
           </View>
         )}
 

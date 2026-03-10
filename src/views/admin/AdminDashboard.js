@@ -6,7 +6,6 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -34,7 +33,6 @@ function AdminDashboard() {
   // 1. Featured Requests Count
   const {
     data: featuredRequestsData,
-    isLoading: isFeaturedLoading,
     refetch: refetchFeatured,
   } = useGetEvents({
     featuredRequestStatus: 'pending',
@@ -43,7 +41,6 @@ function AdminDashboard() {
 
   const {
     data: stats,
-    isLoading: isStatsLoading,
     refetch: refetchStats,
   } = useGetAdminStats();
 
@@ -54,7 +51,6 @@ function AdminDashboard() {
 
   const {
     data: claimsData,
-    isLoading: isClaimsLoading,
     refetch: refetchClaims,
   } = useGetPendingClubClaims();
 
@@ -87,6 +83,7 @@ function AdminDashboard() {
    * @param root0.title
    * @param root0.value
    */
+  // eslint-disable-next-line react/no-unstable-nested-components
   function DashboardCard({
     color = Colors.primary500, onPress, title, value,
   }) {
@@ -183,6 +180,13 @@ function AdminDashboard() {
             onPress={() => navigation.navigate(RouteNames.AdminClubList)}
             title="Clubs"
             value="🏟️"
+          />
+
+          <DashboardCard
+            color={Colors.primary500}
+            onPress={() => navigation.navigate(RouteNames.SuperAdminContentExplorer)}
+            title="Explorer CM"
+            value="CM"
           />
 
         </View>

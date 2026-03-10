@@ -318,6 +318,7 @@ export const NOTIFICATION_TYPES = {
   // Events
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
+  EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_REMINDER: 'eventReminder',
   EVENT_TEAM_INVITED: 'eventTeamInvited',
@@ -333,6 +334,7 @@ export const NOTIFICATION_TYPES = {
   SEARCH_ALERT_MATCH: 'searchAlertMatch',
 
   // Messages
+  NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',
   NEW_TEAM_MESSAGE: 'newTeamMessage',
   NEW_TEAM_PLAYER_MESSAGE: 'newTeamPlayerMessage',
   NEW_WHISPER: 'newWhisper',

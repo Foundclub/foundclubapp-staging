@@ -1,4 +1,9 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useReducer,
+} from 'react';
 
 /**
  * @typedef {{ documentId?: string, name?: string, logo?: { url?: string }, _type?: string, sectionsCount?: number, sections?: Array<{ documentId?: string, name?: string }> }} HistoryWizardClub
@@ -9,10 +14,11 @@ import React, { createContext, useContext, useReducer } from 'react';
 /**
  * @typedef {{
  *  documentId?: string,
+ *  categories?: HistoryWizardOption[] | null,
+ *  category?: HistoryWizardOption | null,
  *  club?: HistoryWizardClub | null,
  *  multisport_club?: HistoryWizardClub | null,
  *  customClubName?: string,
- *  category?: HistoryWizardOption | null,
  *  level?: HistoryWizardOption | null,
  *  startYear?: number,
  *  endYear?: number,
@@ -25,7 +31,7 @@ import React, { createContext, useContext, useReducer } from 'react';
  *  multisportClub: HistoryWizardClub | null,
  *  customClubName: string,
  *  useCustomClub: boolean,
- *  category: HistoryWizardOption | null,
+ *  categories: HistoryWizardOption[],
  *  level: HistoryWizardOption | null,
  *  startYear: number,
  *  endYear: number,
@@ -34,40 +40,40 @@ import React, { createContext, useContext, useReducer } from 'react';
  *  returnRoute: string | null,
  * }} HistoryWizardState
  */
-/**
- * @typedef {{
- *  type:
- *    | 'SET_RETURN_ROUTE'
- *    | 'SET_CLUB'
- *    | 'SET_MULTISPORT_CLUB'
- *    | 'SET_CUSTOM_CLUB'
- *    | 'SET_CATEGORY'
- *    | 'SET_LEVEL'
- *    | 'SET_START_YEAR'
- *    | 'SET_END_YEAR'
- *    | 'SET_CURRENTLY_ACTIVE'
- *    | 'SET_EDITING_ENTRY'
- *    | 'RESET',
- *  payload?: any,
- * }} HistoryWizardAction
- */
+/** @typedef {{ type: string, payload?: any }} HistoryWizardAction */
 /**
  * @typedef {{ state: HistoryWizardState, dispatch: (action: HistoryWizardAction) => void }} HistoryWizardContextValue
  */
 
-/** @type {HistoryWizardState} */
-const initialState = {
-  category: null,
-  club: null,
-  customClubName: '',
-  editingEntry: null,
-  endYear: new Date().getFullYear(),
-  isCurrentlyActive: false,
-  level: null,
-  multisportClub: null,
-  returnRoute: null,
-  startYear: new Date().getFullYear(),
-  useCustomClub: false,
+const createInitialState = () => {
+  const currentYear = new Date().getFullYear();
+
+  /** @type {HistoryWizardState} */
+  return {
+    categories: [],
+    club: null,
+    customClubName: '',
+    editingEntry: null,
+    endYear: currentYear,
+    isCurrentlyActive: false,
+    level: null,
+    multisportClub: null,
+    returnRoute: null,
+    startYear: currentYear,
+    useCustomClub: false,
+  };
+};
+
+const normalizeCategories = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload.filter(Boolean);
+  }
+
+  if (payload) {
+    return [payload];
+  }
+
+  return [];
 };
 
 /**
@@ -77,50 +83,90 @@ const initialState = {
  */
 function historyWizardReducer(state, action) {
   switch (action.type) {
+    case 'CLEAR_CLUB_SELECTION':
+      return {
+        ...state,
+        club: null,
+        customClubName: '',
+        multisportClub: null,
+        useCustomClub: false,
+      };
     case 'RESET':
-      return initialState;
+      return createInitialState();
+    case 'SET_CATEGORIES':
+      return { ...state, categories: normalizeCategories(action.payload) };
     case 'SET_CATEGORY':
-      return { ...state, category: action.payload };
+      return { ...state, categories: normalizeCategories(action.payload) };
     case 'SET_CLUB':
       return {
-        ...state, club: action.payload, customClubName: '', multisportClub: null, useCustomClub: false,
+        ...state,
+        club: action.payload || null,
+        customClubName: '',
+        multisportClub: null,
+        useCustomClub: false,
       };
     case 'SET_CURRENTLY_ACTIVE':
       return { ...state, isCurrentlyActive: action.payload };
     case 'SET_CUSTOM_CLUB':
       return {
-        ...state, club: null, customClubName: action.payload, multisportClub: null, useCustomClub: true,
+        ...state,
+        club: null,
+        customClubName: action.payload,
+        multisportClub: null,
+        useCustomClub: true,
       };
     case 'SET_EDITING_ENTRY':
       if (action.payload) {
+        const editingCategories = Array.isArray(action.payload.categories)
+          ? action.payload.categories.filter(Boolean)
+          : normalizeCategories(action.payload.category);
+        const currentYear = new Date().getFullYear();
+
         return {
           ...state,
-          category: action.payload.category || null,
+          categories: editingCategories,
           club: action.payload.club || null,
           customClubName: action.payload.customClubName || '',
           editingEntry: action.payload,
-          endYear: action.payload.endYear || new Date().getFullYear(),
+          endYear: action.payload.endYear || currentYear,
           isCurrentlyActive: action.payload.isCurrentlyActive || false,
           level: action.payload.level || null,
           multisportClub: action.payload.multisport_club || null,
-          returnRoute: null, // Reset return route when editing
-          startYear: action.payload.startYear || new Date().getFullYear(),
+          returnRoute: null,
+          startYear: action.payload.startYear || currentYear,
           useCustomClub: !action.payload.club && !!action.payload.customClubName,
         };
       }
-      return initialState;
+      return createInitialState();
     case 'SET_END_YEAR':
       return { ...state, endYear: action.payload };
     case 'SET_LEVEL':
       return { ...state, level: action.payload };
     case 'SET_MULTISPORT_CLUB':
       return {
-        ...state, club: null, customClubName: '', multisportClub: action.payload, useCustomClub: false,
+        ...state,
+        club: null,
+        customClubName: '',
+        multisportClub: action.payload || null,
+        useCustomClub: false,
       };
     case 'SET_RETURN_ROUTE':
       return { ...state, returnRoute: action.payload };
     case 'SET_START_YEAR':
       return { ...state, startYear: action.payload };
+    case 'TOGGLE_CATEGORY': {
+      if (!action.payload?.documentId) return state;
+      const exists = state.categories.some(
+        (category) => category?.documentId === action.payload.documentId,
+      );
+
+      return {
+        ...state,
+        categories: exists
+          ? state.categories.filter((category) => category?.documentId !== action.payload.documentId)
+          : [...state.categories, action.payload],
+      };
+    }
     default:
       return state;
   }
@@ -132,10 +178,11 @@ const HistoryWizardContext = createContext(/** @type {HistoryWizardContextValue 
  * @param {{ children: React.ReactNode }} props
  */
 export function HistoryWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(historyWizardReducer, initialState);
+  const [state, dispatch] = useReducer(historyWizardReducer, undefined, createInitialState);
+  const value = useMemo(() => ({ dispatch, state }), [dispatch, state]);
 
   return (
-    <HistoryWizardContext.Provider value={{ dispatch, state }}>
+    <HistoryWizardContext.Provider value={value}>
       {children}
     </HistoryWizardContext.Provider>
   );

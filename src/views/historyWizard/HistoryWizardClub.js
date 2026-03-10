@@ -1,31 +1,73 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import Slider from '@react-native-community/slider';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Image, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
+import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
+import Input from '@/components/molecules/input/Input';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useSearchClubs } from '@/services/club/clubQueries';
+import { useGetActivities } from '@/services/activity/activityQueries';
+import { useGetClubs, useSearchClubs as useLegacySearchClubs } from '@/services/club/clubQueries';
+import { useSearchClubs as useSmartSearchClubs } from '@/services/search/searchQueries';
+import { mapSearchPayload } from '@/services/search/searchService';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import { getLocationCoordinates, normalizeLocationInput } from '@/utils/location';
 
 import { useHistoryWizard } from './HistoryWizardContext';
 
-const searchIcon = require('@/assets/icons/search.png');
-const defaultClubIcon = require('@/assets/icons/shield.png');
+const DEFAULT_RADIUS = 20;
 
 /** @typedef {import('@/domains/club/types').Club} Club */
 /** @typedef {{ documentId?: string; name?: string }} ClubSection */
+
+const createDefaultFilters = () => ({
+  activity: '',
+  lat: undefined,
+  location: undefined,
+  lon: undefined,
+  radius: DEFAULT_RADIUS,
+});
+
+/**
+ * @param {string} value
+ * @param {{ label: string, value: string }[]} options
+ * @returns {string}
+ */
+const getSelectedLabel = (value, options) => options.find((option) => option.value === value)?.label || '';
+
+/**
+ * @param {number} radius
+ * @param {any} location
+ * @param {string} activity
+ * @returns {number}
+ */
+const getFilterCount = (radius, location, activity) => {
+  let count = 0;
+  if (location?.label) count += 1;
+  if (location?.label && radius !== DEFAULT_RADIUS) count += 1;
+  if (activity) count += 1;
+  return count;
+};
 
 /**
  * @param {{
@@ -39,75 +81,250 @@ function HistoryWizardClub({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
+  const { getGeohashForPointAndRadius } = usePlaces();
   const { dispatch, state } = useHistoryWizard();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [customClubName, setCustomClubName] = useState(state.customClubName || '');
   const [showCustomInput, setShowCustomInput] = useState(state.useCustomClub);
-
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [activitySearchValue, setActivitySearchValue] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState(createDefaultFilters);
+  const [draftFilters, setDraftFilters] = useState(createDefaultFilters);
   const [selectedMultisport, setSelectedMultisport] = useState(/** @type {Club | undefined} */ (undefined));
   const [showMultisportModal, setShowMultisportModal] = useState(false);
 
   useEffect(() => {
-    // Check if we need to reset the context (e.g. starting a new flow)
     if (route.params?.resetContext) {
       dispatch({ type: 'RESET' });
     }
 
-    // Check if a return route was provided
     if (route.params?.returnRoute) {
       dispatch({ payload: route.params.returnRoute, type: 'SET_RETURN_ROUTE' });
     }
   }, [route.params, dispatch]);
 
-  const { data: clubResults, isLoading } = useSearchClubs(searchQuery, {
-    enabled: searchQuery.length >= 2 && !showCustomInput,
+  const hasSelectedClub = Boolean(state.club || state.multisportClub);
+
+  const { data: allActivities } = useGetActivities();
+
+  const activityOptions = useMemo(() => {
+    const options = allActivities?.map(({ documentId, name }) => ({
+      label: name,
+      value: documentId,
+    })) || [];
+
+    if (!activitySearchValue.trim()) {
+      return options;
+    }
+
+    return options.filter((option) => option.label.toLowerCase().includes(activitySearchValue.trim().toLowerCase()));
+  }, [activitySearchValue, allActivities]);
+
+  const hasSearchTerm = searchQuery.trim().length >= 2;
+
+  const hasGeoFilter = Number.isFinite(appliedFilters.lat) && Number.isFinite(appliedFilters.lon);
+  const hasActivityFilter = Boolean(appliedFilters.activity);
+  const hasActiveFilters = hasGeoFilter || hasActivityFilter;
+
+  const searchParams = useMemo(() => ({
+    activity: appliedFilters.activity || undefined,
+    lat: appliedFilters.lat,
+    lon: appliedFilters.lon,
+    pageSize: 10,
+    q: searchQuery.trim(),
+    radius: appliedFilters.lat && appliedFilters.lon ? appliedFilters.radius : undefined,
+    sort: 'relevance',
+  }), [appliedFilters.activity, appliedFilters.lat, appliedFilters.lon, appliedFilters.radius, searchQuery]);
+
+  const shouldSearch = hasSearchTerm && !showCustomInput && !hasSelectedClub;
+
+  const geohash = useMemo(() => {
+    if (!hasGeoFilter) return undefined;
+    return getGeohashForPointAndRadius(
+      Number(appliedFilters.lat),
+      Number(appliedFilters.lon),
+      Number(appliedFilters.radius || DEFAULT_RADIUS),
+    );
+  }, [
+    appliedFilters.lat,
+    appliedFilters.lon,
+    appliedFilters.radius,
+    getGeohashForPointAndRadius,
+    hasGeoFilter,
+  ]);
+
+  const defaultListParams = useMemo(() => ({
+    activity: appliedFilters.activity || undefined,
+    geohash,
+    pageSize: 12,
+  }), [appliedFilters.activity, geohash]);
+
+  const { data: defaultClubPages, isLoading: isDefaultLoading } = useGetClubs(defaultListParams, {
+    enabled: !shouldSearch && !showCustomInput && !hasSelectedClub,
   });
 
+  const {
+    data: smartClubPages,
+    error: smartSearchError,
+    isLoading: isSmartLoading,
+  } = useSmartSearchClubs(searchParams, {
+    enabled: searchQuery.length >= 2 && !showCustomInput && !hasSelectedClub,
+  });
+
+  const smartClubResults = useMemo(() => smartClubPages?.pages?.reduce(
+    (acc, page) => acc.concat(mapSearchPayload(page)),
+    [],
+  ) || [], [smartClubPages]);
+
+  const shouldEnableLegacyFallback = shouldSearch
+    && !hasActiveFilters
+    && (Boolean(smartSearchError) || smartClubResults.length === 0);
+
+  const {
+    data: legacyClubResults,
+    isLoading: isLegacyLoading,
+  } = useLegacySearchClubs(searchQuery, {
+    enabled: shouldEnableLegacyFallback,
+  });
+
+  const clubResults = useMemo(() => {
+    if (smartClubResults.length > 0) {
+      return smartClubResults;
+    }
+
+    if (shouldEnableLegacyFallback) {
+      return legacyClubResults || [];
+    }
+
+    return [];
+  }, [legacyClubResults, shouldEnableLegacyFallback, smartClubResults]);
+  const isLoading = isSmartLoading || (shouldEnableLegacyFallback && isLegacyLoading);
+  const hasSearchError = Boolean(smartSearchError && (!shouldEnableLegacyFallback || !legacyClubResults?.length));
+  const defaultClubResults = useMemo(() => defaultClubPages?.pages?.reduce(
+    (acc, page) => acc.concat(page?.data || []),
+    [],
+  ) || [], [defaultClubPages]);
+  const displayedResults = hasSearchTerm ? clubResults : defaultClubResults;
+  const displayedIsLoading = hasSearchTerm ? isLoading : isDefaultLoading;
+  const shouldShowNoResults = !displayedIsLoading
+    && !hasSelectedClub
+    && displayedResults.length === 0
+    && (hasSearchTerm || hasActiveFilters);
+
+  const appliedFilterCount = useMemo(
+    () => getFilterCount(appliedFilters.radius, appliedFilters.location, appliedFilters.activity),
+    [appliedFilters.activity, appliedFilters.location, appliedFilters.radius],
+  );
+
+  const draftLocationHasCoordinates = Boolean(getLocationCoordinates(draftFilters.location));
+
+  const handleSearchField = (value) => {
+    setSearchQuery(value);
+
+    if (value && (state.club || state.multisportClub || state.useCustomClub)) {
+      dispatch({ type: 'CLEAR_CLUB_SELECTION' });
+    }
+  };
+
   const handleSelectClub = (/** @type {Club} */ club) => {
-    if (club._type === 'multisport') {
+    if (Reflect.get(club, '_type') === 'multisport') {
       setSelectedMultisport(club);
       setShowMultisportModal(true);
-    } else {
-      dispatch({ payload: club, type: 'SET_CLUB' });
-      navigation.navigate(RouteNames.HistoryWizardCategory);
+      return;
     }
+
+    dispatch({ payload: club, type: 'SET_CLUB' });
+    navigation.navigate(RouteNames.HistoryWizardPeriod);
   };
 
   const handleSelectMultisportParent = () => {
     dispatch({ payload: selectedMultisport, type: 'SET_MULTISPORT_CLUB' });
     setShowMultisportModal(false);
-    navigation.navigate(RouteNames.HistoryWizardCategory);
+    navigation.navigate(RouteNames.HistoryWizardPeriod);
   };
 
   const handleSelectMultisportSection = (/** @type {ClubSection} */ section) => {
-    // Sections are just Clubs, but we need to fetch the full club details potentially later,
-    // or we assume section has enough info. Ideally we'd want the logo etc.
-    // Since section from search only has id/name, we might need to handle logo display gracefully
-    // or fetch it. For now, we trust the flow.
-    // Wait, sections from getClubs (includeMultisport) only have documentId and name.
-    // We should probably treat it as a club selection but maybe we need more data?
-    // Let's assume for now we just set it and the recap/display will handle it or fetch needed info.
-    // Actually, checking clubService, sections populated fields are ['documentId', 'name'].
-    // We might need to fetch the full club if we want to display logo immediately?
-    // UserHistorySection fetches its own data so it will be fine.
-    // HistoryWizardRecap uses state.club.
-    // If state.club only has name/id, the logo will be missing in Recap.
-    // That's a minor issue we can accept or fix by fetching.
-    // Let's set it as club.
     dispatch({ payload: section, type: 'SET_CLUB' });
     setShowMultisportModal(false);
-    navigation.navigate(RouteNames.HistoryWizardCategory);
+    navigation.navigate(RouteNames.HistoryWizardPeriod);
   };
 
-  const handleUseCustomClub = () => {
-    if (customClubName.trim()) {
-      dispatch({ payload: customClubName.trim(), type: 'SET_CUSTOM_CLUB' });
-      navigation.navigate(RouteNames.HistoryWizardCategory);
+  const handleApplyFilters = () => {
+    const normalizedLocation = normalizeLocationInput(draftFilters.location);
+    const coordinates = getLocationCoordinates(normalizedLocation);
+
+    const nextFilters = {
+      activity: draftFilters.activity || '',
+      lat: coordinates?.lat,
+      location: normalizedLocation || undefined,
+      lon: coordinates?.lng,
+      radius: draftFilters.radius || DEFAULT_RADIUS,
+    };
+
+    setAppliedFilters(nextFilters);
+    setDraftFilters(nextFilters);
+    setShowFiltersPanel(false);
+  };
+
+  const handleClearFilters = () => {
+    const emptyFilters = createDefaultFilters();
+    setAppliedFilters(emptyFilters);
+    setDraftFilters(emptyFilters);
+    setActivitySearchValue('');
+    setShowFiltersPanel(false);
+  };
+
+  const handleOpenFilters = () => {
+    setDraftFilters({
+      activity: appliedFilters.activity || '',
+      lat: appliedFilters.lat,
+      location: appliedFilters.location,
+      lon: appliedFilters.lon,
+      radius: appliedFilters.radius || DEFAULT_RADIUS,
+    });
+    setShowFiltersPanel((current) => !current);
+  };
+
+  const handleOpenCustomInput = () => {
+    setShowCustomInput(true);
+    setShowFiltersPanel(false);
+    setSearchQuery('');
+    dispatch({ type: 'CLEAR_CLUB_SELECTION' });
+  };
+
+  const handleBackToSearch = () => {
+    setShowCustomInput(false);
+    setCustomClubName('');
+
+    if (state.useCustomClub) {
+      dispatch({ type: 'CLEAR_CLUB_SELECTION' });
     }
   };
 
-  const canProceed = !!(state.club || state.multisportClub || (showCustomInput && customClubName.trim()));
+  const handleNext = () => {
+    if (showCustomInput) {
+      const value = customClubName.trim();
+      if (!value) return;
+      dispatch({ payload: value, type: 'SET_CUSTOM_CLUB' });
+    }
+
+    navigation.navigate(RouteNames.HistoryWizardPeriod);
+  };
+
+  const canProceed = Boolean(
+    state.club
+      || state.multisportClub
+      || (showCustomInput && customClubName.trim())
+      || (!showCustomInput && state.useCustomClub && state.customClubName.trim()),
+  );
+
+  const selectedClubCard = state.club || state.multisportClub
+    ? {
+      ...(state.club || state.multisportClub),
+      sectionsCount: state.multisportClub?.sectionsCount,
+    }
+    : null;
 
   return (
     <TutorialFlowBoundary
@@ -127,13 +344,12 @@ function HistoryWizardClub({ navigation, route }) {
         isNextDisabled={!canProceed}
         nextLabel={t('common.actions.next', 'Suivant')}
         onBack={() => navigation.goBack()}
-        onNext={canProceed ? () => navigation.navigate(RouteNames.HistoryWizardCategory) : undefined}
-        onSkip={() => {}}
+        onNext={handleNext}
         subtitle="Recherche ton club ou saisis-le manuellement"
         title="Quel club ?"
       >
         <OnboardingWrapper
-          description="Commencez par rechercher votre club ou saisir le nom manuellement."
+          description="Commence par rechercher ton club ou saisis le nom manuellement."
           id="history-wizard-club-input"
           order={1}
           spotlight={{
@@ -147,151 +363,176 @@ function HistoryWizardClub({ navigation, route }) {
         >
           {!showCustomInput ? (
             <View style={[Spaces.gap[16]]}>
-              {/* Search Input */}
-              <View style={{
-                alignItems: 'center',
-                borderBottomColor: '#FFFFFF',
-                borderBottomWidth: 1.5,
-                flexDirection: 'row',
-                height: 48,
-              }}
-              >
-                <Image
-                  source={searchIcon}
-                  style={{
-                    height: 24, marginRight: 12, tintColor: '#FFFFFF', width: 24,
-                  }}
-                />
-                <TextInput
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    if (state.club || state.multisportClub) dispatch({ type: 'RESET' }); // Reset if user types again
-                  }}
-                  placeholder="Rechercher un club..."
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  style={[Fonts.p1, { color: '#FFFFFF', flex: 1, paddingVertical: 12 }]}
-                  value={state.club ? (state.club.name || '') : (state.multisportClub ? (state.multisportClub.name || '') : searchQuery)}
-                />
-                {isLoading && <ActivityIndicator color={Colors.primary500} size="small" />}
-              </View>
+              <SearchComponent
+                filterNumber={appliedFilterCount}
+                handleSearchField={handleSearchField}
+                inputStyle={{
+                  includeFontPadding: false,
+                  lineHeight: 22,
+                  minHeight: 24,
+                  paddingVertical: 0,
+                  textAlignVertical: 'center',
+                }}
+                openFilters={handleOpenFilters}
+                placeholder="Rechercher un club..."
+                searchDefaultValue={searchQuery}
+              />
 
-              {/* Club Results */}
-              {searchQuery.length >= 2 && !state.club && !state.multisportClub && (
-              <View style={[Spaces.gap[8]]}>
-                {(clubResults || []).slice(0, 6).map((/** @type {Club} */ club) => (
-                  <TouchableOpacity
-                    key={club.documentId}
-                    onPress={() => handleSelectClub(club)}
-                    style={{
-                      alignItems: 'center',
+              {showFiltersPanel ? (
+                <View
+                  style={[
+                    Spaces.gap[16],
+                    Spaces.padding[16],
+                    {
                       backgroundColor: Colors.neutral800,
-                      borderColor: Colors.neutral700,
-                      borderRadius: 12,
+                      borderColor: Colors.primary200,
+                      borderRadius: 16,
                       borderWidth: 1,
-                      flexDirection: 'row',
-                      padding: 12,
-                    }}
-                  >
-                    <Image
-                      resizeMode="contain"
-                      source={club.logo?.url ? { uri: getImageUrl(club.logo.url) } : defaultClubIcon}
-                      style={{
-                        height: 40,
-                        marginRight: 12,
-                        tintColor: club.logo?.url ? undefined : Colors.neutral300,
-                        width: 40,
-                      }}
+                    },
+                  ]}
+                >
+                  <AutocompleteAddressInput
+                    address={draftFilters.location}
+                    label="Ville ou adresse"
+                    placeholder="Choisir une localisation"
+                    setAddress={(location) => setDraftFilters((current) => ({
+                      ...current,
+                      location,
+                    }))}
+                  />
+
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                      {`Rayon : ${draftFilters.radius} km`}
+                    </Text>
+                    <Slider
+                      disabled={!draftLocationHasCoordinates}
+                      maximumTrackTintColor={Colors.primary700}
+                      maximumValue={50}
+                      minimumTrackTintColor={Colors.primary500}
+                      minimumValue={2}
+                      onValueChange={(radius) => setDraftFilters((current) => ({
+                        ...current,
+                        radius,
+                      }))}
+                      step={1}
+                      style={{ height: 50, width: '100%' }}
+                      tapToSeek
+                      thumbTintColor={Colors.primary500}
+                      value={draftFilters.radius}
                     />
+                  </View>
+
+                  <AutocompleteSelect
+                    isSearchable
+                    label="Sport"
+                    options={activityOptions}
+                    placeholder="Choisir un sport"
+                    searchValue={activitySearchValue}
+                    setSearchValue={setActivitySearchValue}
+                    setValue={(option) => setDraftFilters((current) => ({
+                      ...current,
+                      activity: option?.value || '',
+                    }))}
+                    value={getSelectedLabel(draftFilters.activity, activityOptions)}
+                  />
+
+                  <View style={[Alignments.row, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{club.name}</Text>
-                      {club._type === 'multisport' && (
-                      <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                        Club Multisport •
-                        {club.sectionsCount || 0}
-                        {' '}
-                        sections
-                      </Text>
-                      )}
+                      <Button
+                        onPress={handleClearFilters}
+                        title="Effacer"
+                        variant="Secondary"
+                      />
                     </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              )}
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        onPress={handleApplyFilters}
+                        title="Appliquer"
+                        variant="Primary"
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : null}
 
-              {/* Selected Club Display */}
-              {(state.club || state.multisportClub) && (
-              <View style={{
-                backgroundColor: `${Colors.primary500}20`,
-                borderColor: Colors.primary500,
-                borderRadius: 12,
-                borderWidth: 2,
-                padding: 16,
-              }}
-              >
-                <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                  {state.club?.name || state.multisportClub?.name}
-                </Text>
-                {state.multisportClub && (
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>Club Multisport</Text>
-                )}
-              </View>
-              )}
+              {!hasSelectedClub ? (
+                <View style={[Spaces.gap[8]]}>
+                  {displayedIsLoading ? (
+                    <ActivityIndicator color={Colors.primary500} size="small" />
+                  ) : null}
 
-              {/* Custom Club Option */}
-              <TouchableOpacity onPress={() => setShowCustomInput(true)}>
+                  {displayedResults.slice(0, hasSearchTerm ? 6 : 8).map((/** @type {Club} */ club) => (
+                    <ClubSearchResultCard
+                      item={club}
+                      key={club.documentId}
+                      onPress={() => handleSelectClub(club)}
+                    />
+                  ))}
+
+                  {shouldShowNoResults ? (
+                    <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
+                      Aucun club trouve pour cette recherche.
+                    </Text>
+                  ) : null}
+                  {!displayedIsLoading && hasSearchTerm && hasSearchError ? (
+                    <Text style={[Fonts.p3, { color: Colors.error500, textAlign: 'center' }]}>
+                      {shouldEnableLegacyFallback
+                        ? 'La recherche intelligente est indisponible, fallback actif.'
+                        : 'La recherche intelligente est indisponible.'}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {selectedClubCard ? (
+                <ClubSearchResultCard
+                  isMultisport={Boolean(state.multisportClub)}
+                  isSelected
+                  item={selectedClubCard}
+                />
+              ) : null}
+
+              <TouchableOpacity onPress={handleOpenCustomInput}>
                 <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                  Club non trouvé ? Saisir manuellement →
+                  Club non trouve ? Saisir manuellement
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={[Spaces.gap[16]]}>
-              {/* Custom Club Input */}
-              <View style={{
-                borderBottomColor: '#FFFFFF',
-                borderBottomWidth: 1.5,
-                height: 48,
-              }}
-              >
-                <TextInput
-                  autoFocus
-                  onChangeText={setCustomClubName}
-                  placeholder="Nom du club..."
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  style={[Fonts.p1, { color: '#FFFFFF', flex: 1, paddingVertical: 12 }]}
-                  value={customClubName}
-                />
-              </View>
+              <Input
+                autoFocus
+                onChangeText={setCustomClubName}
+                placeholder="Nom du club..."
+                value={customClubName}
+              />
 
-              {/* Back to search option */}
-              <TouchableOpacity onPress={() => { setShowCustomInput(false); setCustomClubName(''); }}>
+              {customClubName.trim() ? (
+                <View
+                  style={{
+                    backgroundColor: `${Colors.primary500}16`,
+                    borderColor: Colors.primary500,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    padding: 16,
+                  }}
+                >
+                  <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                    {customClubName.trim()}
+                  </Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity onPress={handleBackToSearch}>
                 <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                  ← Revenir à la recherche
+                  Revenir a la recherche
                 </Text>
               </TouchableOpacity>
-
-              {customClubName.trim() && (
-              <TouchableOpacity
-                onPress={handleUseCustomClub}
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary500,
-                  borderRadius: 12,
-                  padding: 16,
-                }}
-              >
-                <Text style={[Fonts.p1Bold, { color: '#FFFFFF' }]}>
-                  Valider "
-                  {customClubName.trim()}
-                  "
-                </Text>
-              </TouchableOpacity>
-              )}
             </View>
           )}
         </OnboardingWrapper>
 
-        {/* Multisport Selection Modal */}
         <BottomModal
           close={() => setShowMultisportModal(false)}
           headerComponent={(
@@ -300,48 +541,25 @@ function HistoryWizardClub({ navigation, route }) {
                 {selectedMultisport?.name}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                Sélectionnez votre entité de rattachement
+                Selectionne ton entite de rattachement
               </Text>
             </View>
-        )}
+          )}
           isVisible={showMultisportModal}
           snapPoints={['90%']}
         >
           <View style={[Spaces.gap[12]]}>
-            {/* Option 1: Global Multisport Club */}
-            <TouchableOpacity
+            <ClubSearchResultCard
+              item={selectedMultisport}
               onPress={handleSelectMultisportParent}
-              style={{
-                alignItems: 'center',
-                backgroundColor: Colors.neutral800,
-                borderColor: Colors.primary500,
-                borderRadius: 12,
-                borderWidth: 1,
-                flexDirection: 'row',
-                padding: 16,
-              }}
-            >
-              <Image
-                resizeMode="contain"
-                source={selectedMultisport?.logo?.url ? { uri: getImageUrl(selectedMultisport.logo.url) } : defaultClubIcon}
-                style={{
-                  height: 40,
-                  marginRight: 12,
-                  tintColor: selectedMultisport?.logo?.url ? undefined : Colors.primary500,
-                  width: 40,
-                }}
-              />
-              <View>
-                <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>Club Multisport (Global)</Text>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Je suis rattaché à la structure principale</Text>
-              </View>
-            </TouchableOpacity>
+            />
 
             <View style={{ backgroundColor: Colors.neutral700, height: 1, marginVertical: 8 }} />
 
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Sections disponibles :</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+              Sections disponibles :
+            </Text>
 
-            {/* Option 2: Sections */}
             {selectedMultisport?.sections?.map((section) => (
               <TouchableOpacity
                 key={section.documentId}
@@ -356,21 +574,32 @@ function HistoryWizardClub({ navigation, route }) {
                   padding: 16,
                 }}
               >
-                <View style={{
-                  alignItems: 'center', backgroundColor: Colors.neutral700, borderRadius: 8, height: 40, justifyContent: 'center', marginRight: 12, width: 40,
-                }}
+                <View
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: Colors.neutral700,
+                    borderRadius: 8,
+                    height: 40,
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    width: 40,
+                  }}
                 >
                   <Text style={[Fonts.h4Bold, { color: Colors.neutral300 }]}>
-                    {section.name.charAt(0).toUpperCase()}
+                    {section.name?.charAt(0)?.toUpperCase() || '?'}
                   </Text>
                 </View>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{section.name}</Text>
+                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                  {section.name}
+                </Text>
               </TouchableOpacity>
             ))}
 
-            {(!selectedMultisport?.sections || selectedMultisport.sections.length === 0) && (
-            <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucune section listée.</Text>
-            )}
+            {(!selectedMultisport?.sections || selectedMultisport.sections.length === 0) ? (
+              <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>
+                Aucune section listee.
+              </Text>
+            ) : null}
           </View>
         </BottomModal>
       </WizardStepLayout>

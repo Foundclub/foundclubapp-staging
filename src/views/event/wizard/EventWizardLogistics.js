@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -45,6 +45,7 @@ const isReservationTypeName = (typeName = '') => {
 };
 
 const ONE_HOUR_IN_MINUTES = 60;
+const MIN_RECURRENCE_INTERVAL = 1;
 
 const toMinutesOfDay = (dateValue) => (
   (dateValue?.getHours?.() || 0) * 60 + (dateValue?.getMinutes?.() || 0)
@@ -70,6 +71,28 @@ const ensureEndAfterStart = (startDate, endDate) => {
   return endDate;
 };
 
+const buildNextAvailableStart = (referenceDate = new Date()) => {
+  const next = new Date(referenceDate);
+  next.setHours(next.getHours() + 1, 0, 0, 0);
+  return next;
+};
+
+const areSameDay = (firstDate, secondDate) => (
+  firstDate.getFullYear() === secondDate.getFullYear()
+  && firstDate.getMonth() === secondDate.getMonth()
+  && firstDate.getDate() === secondDate.getDate()
+);
+
+const buildDefaultRecurrenceEndDate = (startDate, frequency, interval) => {
+  const fallbackEnd = new Date(startDate);
+  if (frequency === 'month') {
+    fallbackEnd.setMonth(fallbackEnd.getMonth() + Math.max(1, interval));
+    return fallbackEnd;
+  }
+  fallbackEnd.setDate(fallbackEnd.getDate() + (7 * Math.max(1, interval)));
+  return fallbackEnd;
+};
+
 /**
  *
  * @param root0
@@ -91,6 +114,8 @@ function EventWizardLogistics({ navigation }) {
   const fieldBorder = 'rgba(1, 179, 244, 0.26)';
   const chipSurface = 'rgba(1, 179, 244, 0.08)';
   const chipBorder = 'rgba(1, 179, 244, 0.24)';
+  const intervalControlSurface = 'rgba(1, 179, 244, 0.1)';
+  const intervalControlBorder = 'rgba(1, 179, 244, 0.28)';
 
   const isReservation = isReservationTypeName(state.type?.name);
 
@@ -122,8 +147,102 @@ function EventWizardLogistics({ navigation }) {
 
   const recurrenceInterval = useMemo(() => {
     const parsed = parseInteger(recurrenceIntervalText);
-    return parsed && parsed > 0 ? parsed : 1;
+    return parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
   }, [recurrenceIntervalText]);
+
+  const recurrenceIntervalLabel = useMemo(() => {
+    const safeInterval = Math.max(MIN_RECURRENCE_INTERVAL, recurrenceInterval);
+    if (recurrenceFrequency === 'month') {
+      return safeInterval === 1
+        ? t('eventWizard.steps.logistics.recurrenceIntervalMonthlyOne', 'Tous les mois')
+        : t(
+          'eventWizard.steps.logistics.recurrenceIntervalMonthlyMany',
+          'Tous les {{count}} mois',
+          { count: safeInterval },
+        );
+    }
+
+    return safeInterval === 1
+      ? t('eventWizard.steps.logistics.recurrenceIntervalWeeklyOne', 'Toutes les semaines')
+      : t(
+        'eventWizard.steps.logistics.recurrenceIntervalWeeklyMany',
+        'Toutes les {{count}} semaines',
+        { count: safeInterval },
+      );
+  }, [recurrenceFrequency, recurrenceInterval, t]);
+
+  const canDecreaseRecurrenceInterval = recurrenceInterval > MIN_RECURRENCE_INTERVAL;
+
+  const intervalAdjustButtonStyle = (isEnabled) => ([
+    ApplicationStyle.card,
+    Alignments.alignCenter,
+    Alignments.justifyCenter,
+    {
+      backgroundColor: isEnabled ? 'rgba(1, 179, 244, 0.16)' : 'rgba(1, 179, 244, 0.08)',
+      borderColor: intervalControlBorder,
+      borderRadius: 14,
+      height: 46,
+      opacity: isEnabled ? 1 : 0.45,
+      width: 46,
+    },
+  ]);
+
+  const handleDecreaseRecurrenceInterval = () => {
+    setRecurrenceIntervalText((currentValue) => {
+      const parsed = parseInteger(currentValue);
+      const safeCurrent = parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
+      return toNumberInputText(Math.max(MIN_RECURRENCE_INTERVAL, safeCurrent - 1));
+    });
+  };
+
+  const handleIncreaseRecurrenceInterval = () => {
+    setRecurrenceIntervalText((currentValue) => {
+      const parsed = parseInteger(currentValue);
+      const safeCurrent = parsed && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
+      return toNumberInputText(safeCurrent + 1);
+    });
+  };
+
+  useEffect(() => {
+    const now = new Date();
+    const fullStartDate = new Date(date);
+    fullStartDate.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+
+    if (fullStartDate.getTime() > now.getTime()) return;
+
+    const suggestedStart = buildNextAvailableStart(now);
+    const suggestedEnd = buildAutomaticEndTime(suggestedStart);
+
+    if (!areSameDay(date, suggestedStart)) {
+      setDate(suggestedStart);
+    }
+
+    setStartTime(suggestedStart);
+    setEndTime(suggestedEnd);
+  // Intentionally run once on mount to fix stale/past defaults.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!isRecurrent || recurrenceFrequency !== 'week') return;
+
+    const baseDay = date.getDay();
+    setRecurrenceDays((current) => {
+      const normalizedCurrent = Array.isArray(current)
+        ? current.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+        : [];
+
+      if (normalizedCurrent.length === 0) {
+        return [baseDay];
+      }
+
+      if (!normalizedCurrent.includes(baseDay)) {
+        return [baseDay, ...normalizedCurrent];
+      }
+
+      return normalizedCurrent;
+    });
+  }, [date, isRecurrent, recurrenceFrequency]);
 
   const handleStartTimeChange = (nextStartTime) => {
     setStartTime(nextStartTime);
@@ -151,12 +270,44 @@ function EventWizardLogistics({ navigation }) {
       return;
     }
 
+    let normalizedRecurrenceStartDate = null;
+    let normalizedRecurrenceEndDate = null;
+
     if (isRecurrent) {
-      if (!recurrenceStartDate || !recurrenceEndDate) {
-        Alert.alert(t('common.error'), t('eventWizard.errors.recurrenceDatesRequired'));
+      normalizedRecurrenceStartDate = recurrenceStartDate
+        ? new Date(recurrenceStartDate)
+        : new Date(fullStartDate);
+
+      normalizedRecurrenceEndDate = recurrenceEndDate
+        ? new Date(recurrenceEndDate)
+        : buildDefaultRecurrenceEndDate(
+          normalizedRecurrenceStartDate,
+          recurrenceFrequency,
+          recurrenceInterval,
+        );
+    }
+
+    if (isRecurrent) {
+      if (!recurrenceStartDate) {
+        setRecurrenceStartDate(normalizedRecurrenceStartDate);
+      }
+      if (!recurrenceEndDate) {
+        setRecurrenceEndDate(normalizedRecurrenceEndDate);
+      }
+    }
+
+    if (isRecurrent) {
+      if (
+        !normalizedRecurrenceStartDate
+        || !normalizedRecurrenceEndDate
+      ) {
+        Alert.alert(
+          t('common.error'),
+          t('eventWizard.errors.recurrenceDatesRequired'),
+        );
         return;
       }
-      if (recurrenceEndDate < recurrenceStartDate) {
+      if (normalizedRecurrenceEndDate < normalizedRecurrenceStartDate) {
         Alert.alert(t('common.error'), t('eventWizard.errors.recurrenceInvalidRange'));
         return;
       }
@@ -172,10 +323,10 @@ function EventWizardLogistics({ navigation }) {
       isRecurrent,
       pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
       recurrenceDays: isRecurrent && recurrenceFrequency === 'week' ? recurrenceDays : [],
-      recurrenceEndDate: isRecurrent ? recurrenceEndDate : null,
+      recurrenceEndDate: normalizedRecurrenceEndDate,
       recurrenceFrequency,
       recurrenceInterval,
-      recurrenceStartDate: isRecurrent ? recurrenceStartDate : null,
+      recurrenceStartDate: normalizedRecurrenceStartDate,
       reservationMode,
       startTime: fullStartDate,
     };
@@ -185,7 +336,7 @@ function EventWizardLogistics({ navigation }) {
       type: 'SET_LOGISTICS',
     });
 
-    navigation.navigate(RouteNames.EventWizardParticipants);
+    navigation.navigate(RouteNames.EventWizardLocation);
   };
 
   return (
@@ -290,19 +441,48 @@ function EventWizardLogistics({ navigation }) {
               <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginBottom[8]]}>
                 {t('eventWizard.steps.logistics.recurrenceInterval')}
               </Text>
-              <TextInput
-                keyboardType="numeric"
-                onChangeText={setRecurrenceIntervalText}
-                placeholder="1"
-                placeholderTextColor={Colors.neutral500}
+              <View
                 style={[
                   ApplicationStyle.card,
                   Spaces.padding[12],
-                  Fonts.p1,
-                  { backgroundColor: fieldSurface, borderColor: fieldBorder, color: Colors.neutral00 },
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  { backgroundColor: intervalControlSurface, borderColor: fieldBorder },
                 ]}
-                value={recurrenceIntervalText}
-              />
+              >
+                <TouchableOpacity
+                  accessibilityLabel={t(
+                    'eventWizard.steps.logistics.recurrenceIntervalDecrement',
+                    "Reduire l'intervalle de recurrence",
+                  )}
+                  disabled={!canDecreaseRecurrenceInterval}
+                  onPress={handleDecreaseRecurrenceInterval}
+                  style={intervalAdjustButtonStyle(canDecreaseRecurrenceInterval)}
+                >
+                  <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+                </TouchableOpacity>
+
+                <View style={[Alignments.alignCenter, Spaces.gap[4], { flex: 1 }, Spaces.paddingHorizontal[12]]}>
+                  <Text style={[Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
+                    {recurrenceInterval}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                    {recurrenceIntervalLabel}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  accessibilityLabel={t(
+                    'eventWizard.steps.logistics.recurrenceIntervalIncrement',
+                    "Augmenter l'intervalle de recurrence",
+                  )}
+                  onPress={handleIncreaseRecurrenceInterval}
+                  style={intervalAdjustButtonStyle(true)}
+                >
+                  <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {recurrenceFrequency === 'week' ? (
@@ -314,6 +494,12 @@ function EventWizardLogistics({ navigation }) {
                   onChange={setRecurrenceDays}
                   selectedDays={recurrenceDays}
                 />
+                <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
+                  {t(
+                    'eventWizard.steps.logistics.recurrenceBaseDayHint',
+                    'Le jour de l evenement est preselectionne. Tu peux ajouter d autres jours.',
+                  )}
+                </Text>
               </View>
             ) : null}
 

@@ -141,7 +141,7 @@ function EventWizardRecap({ navigation }) {
   const timeValue = getFormattedTime();
   const locationValue = getLocationDisplayText();
   const visibilityValue = state.sessionStatus === 'closed'
-    ? t('eventWizard.steps.visibility.private')
+    ? t('eventWizard.steps.visibility.team')
     : t('eventWizard.steps.visibility.public');
   const validationValue = state.validationMode === 'manual'
     ? t('eventEdit.fields.validationMode.options.manual')

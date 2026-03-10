@@ -612,7 +612,7 @@ function HomeHubContent({ auth, navigation, route }) {
         navigateAfterClosingModals(() => {
           navigation.navigate(RouteNames.ProfileStack, {
             params: { ...tutorialParams, resetContext: true, returnRoute: RouteNames.HomeTab },
-            screen: RouteNames.HistoryWizardClub,
+            screen: RouteNames.HistoryWizardCategory,
           });
         });
         return;
@@ -747,6 +747,10 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType });
   }, [navigation]);
 
+  const handleAddRecruitmentAd = useCallback(() => {
+    navigation.navigate(RouteNames.AdWizardStack);
+  }, [navigation]);
+
   const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
     const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
     if (!hasRequestsContext) {
@@ -803,7 +807,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const handleOpenHistory = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, {
       params: { resetContext: true, returnRoute: RouteNames.HomeTab },
-      screen: RouteNames.HistoryWizardClub,
+      screen: RouteNames.HistoryWizardCategory,
     });
   }, [navigation]);
 
@@ -897,22 +901,11 @@ function HomeHubContent({ auth, navigation, route }) {
           emphasis: 'primary',
           icon: 'users',
           key: 'manage-club',
-          layout: 'full',
           onPress: handleOpenManageClub,
           subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accedez a votre espace club et gerer votre organisation.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.manageClub.title', 'Gerer mon club'),
           tutorial: makeTutorial('manageClub', 2, 'Gerer mon club', 'Accedez a votre espace club pour piloter votre organisation.'),
-        },
-        {
-          accentColor: Colors.primary500,
-          icon: 'calendar',
-          key: 'manage-add-event',
-          onPress: handleAddEvent,
-          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
-          subtitleLines: 2,
-          title: t('homeHub.cards.manage.addEvent.title'),
-          tutorial: makeTutorial('manageAddEvent', 3, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
         },
         {
           accentColor: Colors.primary500,
@@ -923,9 +916,39 @@ function HomeHubContent({ auth, navigation, route }) {
           title: t('homeHub.cards.manage.requests.title'),
           tutorial: makeTutorial(
             'manageRequests',
-            4,
+            3,
             'Demandes',
             'Regroupez et traitez toutes les demandes depuis un seul ecran.',
+          ),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'calendar',
+          key: 'manage-add-event',
+          onPress: handleAddEvent,
+          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.addEvent.title'),
+          tutorial: makeTutorial(
+            'manageAddEvent',
+            4,
+            'Ajouter un evenement',
+            'Creez un entrainement, match ou detection pour vos equipes.',
+          ),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'running',
+          key: 'manage-add-ad',
+          onPress: handleAddRecruitmentAd,
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil precis.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
+          tutorial: makeTutorial(
+            'manageAddAd',
+            5,
+            'Ajouter une annonce',
+            'Publiez une annonce de recrutement pour cibler des profils precis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -941,14 +964,13 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           accentColor: Colors.primary500,
           emphasis: 'primary',
-          icon: 'calendar',
-          key: 'manage-add-event',
-          layout: 'full',
-          onPress: handleAddEvent,
-          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          icon: 'users',
+          key: 'manage-club',
+          onPress: handleOpenManageClub,
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accedez a votre espace club et gerer votre organisation.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.addEvent.title'),
-          tutorial: makeTutorial('manageAddEvent', 2, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
+          title: t('homeHub.cards.manage.manageClub.title', 'Gerer mon club'),
+          tutorial: makeTutorial('manageClub', 2, 'Gerer mon club', 'Accedez a votre espace club pour piloter votre organisation.'),
         },
         {
           accentColor: Colors.primary500,
@@ -962,6 +984,31 @@ function HomeHubContent({ auth, navigation, route }) {
             3,
             'Demandes',
             'Regroupez et traitez toutes les demandes depuis un seul ecran.',
+          ),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'calendar',
+          key: 'manage-add-event',
+          onPress: handleAddEvent,
+          subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.addEvent.title'),
+          tutorial: makeTutorial('manageAddEvent', 4, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
+        },
+        {
+          accentColor: Colors.primary500,
+          icon: 'running',
+          key: 'manage-add-ad',
+          onPress: handleAddRecruitmentAd,
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil precis.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
+          tutorial: makeTutorial(
+            'manageAddAd',
+            5,
+            'Ajouter une annonce',
+            'Publiez une annonce de recrutement pour cibler des profils precis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -976,6 +1023,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [
     Colors.primary500,
     handleAddEvent,
+    handleAddRecruitmentAd,
     handleOpenManageClub,
     handleOpenRequestsHub,
     isCoach,
@@ -1250,7 +1298,7 @@ function HomeHubContent({ auth, navigation, route }) {
         </OnboardingWrapper>
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)}>
-          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} Spaces={Spaces} title={isPresident ? t('homeHub.sections.manageClub') : t('homeHub.sections.manageTeams')} />
+          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('search', event)}>
           <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.search')} />

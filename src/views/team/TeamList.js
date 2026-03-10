@@ -124,6 +124,7 @@ function TeamList({ navigation, route }) {
           canManageTeam ? (
             <Button
               onPress={handleAddTeam}
+              style={[Spaces.marginTop[16]]}
               title={`+ ${t('teamList.actions.add')}`}
               variant="Primary"
             />

@@ -1,20 +1,22 @@
-import React from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
-import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetTeams } from '@/services/team/teamQueries';
+
+import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 import { useEventWizard } from './EventWizardContext';
 
@@ -25,7 +27,6 @@ import { useEventWizard } from './EventWizardContext';
  */
 function EventWizardTeam({ navigation }) {
   const {
-    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
@@ -34,18 +35,74 @@ function EventWizardTeam({ navigation }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { dispatch } = useEventWizard();
-  const { getClubInitials } = useClub();
-  const cardSurfaceStyle = {
-    backgroundColor: 'rgba(4, 31, 44, 0.82)',
-    borderColor: 'rgba(1, 179, 244, 0.24)',
-  };
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const myTeams = Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [];
+  const trainedTeamIds = new Set(
+    (userData?.trainedTeams || [])
+      .map((team) => team?.documentId)
+      .filter(Boolean),
+  );
+
+  const { data: teamsData } = useGetTeams(
+    {
+      clubId: userData?.club?.documentId,
+      pageSize: 100,
+    },
+    {
+      enabled: Boolean(userData?.club?.documentId && trainedTeamIds.size > 0),
+    },
+  );
+
+  const fetchedTeams = teamsData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
+  const fallbackTeams = Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [];
+  const myTeams = fetchedTeams.length > 0
+    ? fetchedTeams.filter((team) => (
+      trainedTeamIds.has(team?.documentId)
+      || team?.trainers?.some((trainer) => trainer?.documentId === userData?.documentId)
+    ))
+    : fallbackTeams;
+  const orderedTeams = useMemo(() => sortTeamsForDisplay(myTeams), [myTeams]);
+
+  const normalizeSearchText = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  const filteredTeams = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(searchQuery);
+    if (!normalizedQuery) return orderedTeams;
+
+    return orderedTeams.filter((team) => {
+      const searchableParts = [
+        team?.name,
+        team?.club?.name,
+        team?.section?.name,
+        team?.category?.name || team?.category,
+        team?.level?.name || team?.level,
+        ...(Array.isArray(team?.activities) ? team.activities.map((activity) => activity?.name) : []),
+      ];
+
+      return searchableParts
+        .map((part) => normalizeSearchText(part))
+        .some((part) => part.includes(normalizedQuery));
+    });
+  }, [orderedTeams, searchQuery]);
+  const hasTeams = orderedTeams.length > 0;
+  const hasFilteredTeams = filteredTeams.length > 0;
 
   const handleSelectTeam = (team) => {
     dispatch({ payload: team, type: 'SET_TEAM' });
     navigation.navigate(RouteNames.EventWizardInvites);
   };
+
+  const renderTeamCard = (team) => (
+    <EventWizardTeamCard
+      key={team.documentId}
+      onPress={() => handleSelectTeam(team)}
+      team={team}
+    />
+  );
 
   return (
     <WizardStepLayout
@@ -56,49 +113,51 @@ function EventWizardTeam({ navigation }) {
       title={t('eventWizard.steps.team.title')}
     >
       <View style={[Spaces.gap[16]]}>
-        {myTeams.length === 0 ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
+        {hasTeams ? (
+          <Input
+            density="compact"
+            icon="search"
+            onChangeText={setSearchQuery}
+            placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
+            value={searchQuery}
+          />
+        ) : null}
+
+        {!hasTeams ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              {
+                backgroundColor: Colors.primary700,
+                borderColor: `${Colors.primary500}55`,
+              },
+            ]}
+          >
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
               {t('eventWizard.errors.noTeams')}
             </Text>
           </View>
         ) : null}
 
-        {myTeams.map((team) => (
-          <TouchableOpacity
-            key={team.documentId}
-            onPress={() => handleSelectTeam(team)}
+        {hasTeams && !hasFilteredTeams ? (
+          <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[16],
-              Alignments.row,
-              Alignments.alignCenter,
-              cardSurfaceStyle,
+              Spaces.padding[24],
+              {
+                backgroundColor: Colors.primary700,
+                borderColor: `${Colors.primary500}55`,
+              },
             ]}
           >
-            {team.club?.logo?.url ? (
-              <ProfileAvatar
-                imageUrl={team.club.logo.url}
-                size={50}
-                style={{ marginRight: 16 }}
-              />
-            ) : (
-              <TeamShield
-                initials={getClubInitials(team.club?.name || '')}
-                size={50}
-                style={{ marginRight: 16 }}
-              />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3, Fonts.neutral00]}>{team.name}</Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {team.category?.name || '-'}
-                {' - '}
-                {team.level?.name || '-'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+            <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+              {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
+            </Text>
+          </View>
+        ) : null}
+
+        {hasFilteredTeams ? filteredTeams.map(renderTeamCard) : null}
       </View>
     </WizardStepLayout>
   );

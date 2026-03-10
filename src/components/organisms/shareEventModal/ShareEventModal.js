@@ -57,6 +57,7 @@ function ShareEventModal({
 
     const priority = {
       club: 1,
+      group: 2.5,
       multisport: 0,
       team: 2,
       whisper: 3,
@@ -66,7 +67,7 @@ function ShareEventModal({
       if (!chat || !userData) return false;
 
       // Whisper and Team chats: All participants can write
-      if (chat.type === 'whisper' || chat.type === 'team') return true;
+      if (chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group') return true;
 
       // Club Chat: Only Club Admins can write
       if (chat.type === 'club') {
@@ -129,6 +130,7 @@ function ShareEventModal({
           return <ProfileAvatar enablePreview={false} imageUrl={chat.team.logo.url} size={40} />;
         }
         return <TeamShield initials={getClubInitials(chat?.team?.name || '')} isSmall />;
+      case 'group':
       case 'whisper':
       default: {
         const participant = chat.participants?.find((p) => p.documentId !== userData?.documentId) || chat.participants?.[0];
@@ -157,6 +159,7 @@ function ShareEventModal({
       <Text style={[Fonts.p2Bold, Fonts.neutral00, Alignments.fill]}>
         {getConversationName({
           chatClub: chat.club,
+          chatGroupName: chat.groupName,
           chatMultisportClub: chat.multisportClub,
           chatParticipants: chat.participants,
           chatTeam: chat.team,

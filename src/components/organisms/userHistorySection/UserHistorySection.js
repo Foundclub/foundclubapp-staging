@@ -1,6 +1,12 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Alert, Image, Text, TouchableOpacity, View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
@@ -8,7 +14,11 @@ import useTheme from '@/theme/themeContext';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 
-import { useDeleteHistory, useGetMyHistories, useGetUserHistories } from '@/services/userHistory/userHistoryQueries';
+import {
+  useDeleteHistory,
+  useGetMyHistories,
+  useGetUserHistories,
+} from '@/services/userHistory/userHistoryQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -26,37 +36,74 @@ import { getImageUrl } from '@/utils/imageUrl';
  *   level?: { name?: string };
  * }} UserHistoryItem
  */
+
 /**
- * UserHistorySection - Displays user's sports history (CV)
  * @param {object} props
- * @param {string} [props.userId] - The user's documentId (optional, if not provided shows current user's history)
- * @param {boolean} props.isOwnProfile - Whether this is the current user's profile
- * @param {() => void} [props.onAddPress] - Callback when add button is pressed
- * @param {(item: UserHistoryItem) => void} [props.onEditPress] - Callback when edit button is pressed
- * @param {string} [props.bestLevel] - User best level display
- * @param {string} [props.preferredSport] - Preferred sport display
+ * @param {string} [props.userId]
+ * @param {boolean} props.isOwnProfile
+ * @param {() => void} [props.onAddPress]
+ * @param {(item: UserHistoryItem) => void} [props.onEditPress]
+ * @param {string} [props.bestLevel]
+ * @param {string} [props.preferredSport]
+ * @returns {import('react').ReactElement}
  */
 function UserHistorySection({
-  bestLevel, isOwnProfile = false, onAddPress, onEditPress, preferredSport, userId,
+  bestLevel,
+  isOwnProfile = false,
+  onAddPress,
+  onEditPress,
+  preferredSport,
+  userId,
 }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Images,
+    Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
+  const shouldUseUserHistory = Boolean(userId);
 
-  const { data: historiesData, isLoading } = userId
-    ? useGetUserHistories(userId)
-    : useGetMyHistories();
-  const histories = Array.isArray(historiesData) ? historiesData : [];
+  const { data: myHistoriesData, isLoading: isLoadingMyHistories } = useGetMyHistories({
+    enabled: !shouldUseUserHistory,
+  });
+  const { data: userHistoriesData, isLoading: isLoadingUserHistories } = useGetUserHistories(
+    userId || '',
+    {
+      enabled: shouldUseUserHistory,
+    },
+  );
+
+  const historiesData = shouldUseUserHistory ? userHistoriesData : myHistoriesData;
+  const isLoading = shouldUseUserHistory ? isLoadingUserHistories : isLoadingMyHistories;
+  const sortedHistories = useMemo(() => {
+    const source = Array.isArray(historiesData) ? historiesData : [];
+    return [...source].sort((left, right) => {
+      const leftActive = left?.isCurrentlyActive ? 1 : 0;
+      const rightActive = right?.isCurrentlyActive ? 1 : 0;
+      if (leftActive !== rightActive) return rightActive - leftActive;
+
+      const leftStart = Number(left?.startYear || 0);
+      const rightStart = Number(right?.startYear || 0);
+      if (leftStart !== rightStart) return rightStart - leftStart;
+
+      const leftEnd = Number(left?.endYear || 0);
+      const rightEnd = Number(right?.endYear || 0);
+      return rightEnd - leftEnd;
+    });
+  }, [historiesData]);
 
   const deleteHistoryMutation = useDeleteHistory();
 
   const handleDelete = (/** @type {string | number | undefined} */ historyId) => {
     if (!historyId) return;
+
     Alert.alert(
       t('common.actions.delete', 'Supprimer'),
-      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
+      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette experience ?'),
       [
         {
           style: 'cancel',
@@ -71,59 +118,71 @@ function UserHistorySection({
     );
   };
 
-  // Format year range display
   const formatYearRange = (/** @type {UserHistoryItem} */ item) => {
-    if (item.isCurrentlyActive || !item.endYear) {
-      return `${item.startYear} - Aujourd'hui`;
+    const start = String(item?.startYear || '').trim();
+    const end = String(item?.endYear || '').trim();
+
+    if (item?.isCurrentlyActive && start) {
+      return `${start} - Aujourd'hui`;
     }
-    if (item.startYear === item.endYear) {
-      return `${item.startYear}`;
+    if (start && end) {
+      return start === end ? start : `${start} - ${end}`;
     }
-    return `${item.startYear} - ${item.endYear}`;
+    if (start) return start;
+    if (end) return end;
+    return t('profile.history.periodNotSet', 'Periode non renseignee');
   };
 
-  // Get club display name
   const getClubName = (/** @type {UserHistoryItem} */ item) => {
-    if (item.club?.name) {
-      return item.club.name;
-    }
-    if (item.multisport_club?.name) {
-      return item.multisport_club.name;
-    }
-    return item.customClubName || 'Club inconnu';
+    if (item?.club?.name) return item.club.name;
+    if (item?.multisport_club?.name) return item.multisport_club.name;
+    return item?.customClubName || t('profile.history.unknownClub', 'Club inconnu');
   };
 
-  // Render club logo or shield with initials
   const renderClubLogo = (/** @type {UserHistoryItem} */ item) => {
-    // If club has a logo, show it
-    const logoUrl = item.club?.logo?.url || item.multisport_club?.logo?.url;
+    const logoUrl = item?.club?.logo?.url || item?.multisport_club?.logo?.url;
 
     if (logoUrl) {
       return (
-        <Image
-          resizeMode="contain"
-          source={{ uri: getImageUrl(logoUrl) }}
+        <View
           style={{
-            backgroundColor: Colors.neutral700,
-            borderRadius: 8,
-            height: 48,
-            marginRight: 12,
-            width: 48,
+            alignItems: 'center',
+            backgroundColor: `${Colors.primary700}A6`,
+            borderColor: `${Colors.primary500}66`,
+            borderRadius: 12,
+            borderWidth: 1,
+            height: 44,
+            justifyContent: 'center',
+            overflow: 'hidden',
+            width: 44,
           }}
-        />
+        >
+          <Image
+            resizeMode="cover"
+            source={{ uri: getImageUrl(logoUrl) }}
+            style={{
+              height: '100%',
+              width: '100%',
+            }}
+          />
+        </View>
       );
     }
 
-    // Otherwise show TeamShield with initials
-    const clubName = item.club?.name || item.multisport_club?.name || item.customClubName || '';
-    const initials = getClubInitials(clubName);
-
-    return (
-      <View style={{ marginRight: 12 }}>
-        <TeamShield initials={initials} isSmall />
-      </View>
-    );
+    const clubName = item?.club?.name || item?.multisport_club?.name || item?.customClubName || '';
+    return <TeamShield initials={getClubInitials(clubName)} isSmall size={44} />;
   };
+
+  const infoPills = [
+    preferredSport ? {
+      label: t('userDetails.fields.sport', 'Sport'),
+      value: preferredSport,
+    } : null,
+    bestLevel ? {
+      label: t('profile.history.bestLevel', 'Meilleur niveau'),
+      value: bestLevel,
+    } : null,
+  ].filter(Boolean);
 
   if (isLoading) {
     return (
@@ -134,103 +193,114 @@ function UserHistorySection({
   }
 
   return (
-    <View style={[Spaces.gap[16]]}>
-      {/* Header */}
+    <View
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        Spaces.gap[16],
+        {
+          backgroundColor: `${Colors.primary700}73`,
+          borderColor: `${Colors.primary500}80`,
+        },
+      ]}
+    >
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-          {t('profile.history.title', 'Historique sportif')}
-        </Text>
-        {isOwnProfile && (
+        <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('profile.history.title', 'Historique sportif')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('profile.history.count', '{{count}} experience(s)', { count: sortedHistories.length })}
+          </Text>
+        </View>
+
+        {isOwnProfile ? (
           <TouchableOpacity
             onPress={() => onAddPress?.()}
             style={{
               alignItems: 'center',
               backgroundColor: Colors.primary500,
-              borderRadius: 16,
-              height: 32,
+              borderRadius: 18,
+              height: 36,
               justifyContent: 'center',
-              width: 32,
+              width: 36,
             }}
           >
             <Image
               resizeMode="contain"
-              source={/** @type {any} */ (require('@/assets/icons/plus.png'))}
+              source={Images.plus}
               style={{ height: 14, tintColor: '#FFF', width: 14 }}
             />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
-      {/* Best Level & Sport Info */}
-      {(bestLevel || preferredSport) && (
-        <View style={[
-          Spaces.padding[12],
-          ApplicationStyle.backgroundColor.neutral800,
-          ApplicationStyle.borderRadius8,
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.gap[12],
+      <View
+        style={[
+          ApplicationStyle.separator,
+          { backgroundColor: `${Colors.primary500}3D` },
         ]}
-        >
-          <Image
-            resizeMode="contain"
-            source={/** @type {any} */ (require('@/assets/icons/flag.png'))}
-            style={{ height: 20, tintColor: Colors.primary500, width: 20 }}
-          />
-          <View>
-            {preferredSport && (
-              <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                {preferredSport}
-              </Text>
-            )}
-            {bestLevel && (
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {t('profile.history.bestLevel', 'Meilleur niveau')}
+      />
+
+      {infoPills.length > 0 ? (
+        <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+          {infoPills.map((item) => (
+            <View
+              key={item.label}
+              style={{
+                backgroundColor: `${Colors.primary500}20`,
+                borderColor: `${Colors.primary500}66`,
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+              }}
+            >
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {item.label}
                 {' '}
                 :
-                {bestLevel}
+                {' '}
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{item.value}</Text>
               </Text>
-            )}
-          </View>
+            </View>
+          ))}
         </View>
-      )}
+      ) : null}
 
-      {/* Empty state */}
-      {histories.length === 0 && (
-        <View style={[
-          Spaces.padding[24],
-          Alignments.alignCenter,
-          {
-            backgroundColor: Colors.neutral800,
-            borderColor: Colors.neutral700,
-            borderRadius: 12,
-            borderStyle: 'dashed',
-            borderWidth: 1,
-          },
-        ]}
+      {sortedHistories.length === 0 ? (
+        <View
+          style={[
+            Spaces.padding[16],
+            Alignments.alignCenter,
+            {
+              backgroundColor: Colors.neutral800,
+              borderColor: Colors.neutral700,
+              borderRadius: 12,
+              borderStyle: 'dashed',
+              borderWidth: 1,
+            },
+          ]}
         >
-          <Text style={[Fonts.p1, { color: Colors.neutral00, textAlign: 'center' }]}>
+          <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
             {isOwnProfile
               ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
-              : t('profile.history.emptyOther', 'Aucun historique renseigné')}
+              : t('profile.history.emptyOther', 'Aucun historique renseigne')}
           </Text>
-          {isOwnProfile && (
-            <TouchableOpacity
-              onPress={() => onAddPress?.()}
-              style={[Spaces.marginTop[16]]}
-            >
-              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                + Ajouter une expérience
+
+          {isOwnProfile ? (
+            <TouchableOpacity onPress={() => onAddPress?.()} style={[Spaces.marginTop[14]]}>
+              <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                +
+                {' '}
+                {t('profile.history.add', 'Ajouter une experience')}
               </Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
-      )}
-
-      {/* History list */}
-      {histories.length > 0 && (
-        <View style={[Spaces.gap[12]]}>
-          {histories.map((/** @type {UserHistoryItem} */ item) => (
+      ) : (
+        <View style={[Spaces.gap[16]]}>
+          {sortedHistories.map((/** @type {UserHistoryItem} */ item) => (
             <TouchableOpacity
               disabled={!isOwnProfile}
               key={item.documentId || item.id}
@@ -238,78 +308,109 @@ function UserHistorySection({
                 if (isOwnProfile) onEditPress?.(item);
               }}
               style={[
-                Spaces.padding[16],
-                Alignments.row,
-                Alignments.alignCenter,
+                Spaces.padding[12],
+                Spaces.gap[12],
                 {
-                  backgroundColor: Colors.neutral800,
-                  borderColor: Colors.neutral700,
+                  backgroundColor: `${Colors.primary700}8F`,
+                  borderColor: `${Colors.primary500}66`,
                   borderRadius: 12,
                   borderWidth: 1,
                 },
               ]}
             >
-              {/* Club logo or shield with initials */}
-              {renderClubLogo(item)}
-
-              {/* Info */}
-              <View style={[Alignments.fill, Spaces.gap[4]]}>
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                  {getClubName(item)}
-                </Text>
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                  {item.category?.name && (
-                    <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                      {item.category.name}
-                    </Text>
-                  )}
-                  {item.category?.name && item.level?.name && (
-                    <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>•</Text>
-                  )}
-                  {item.level?.name && (
-                    <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                      {item.level.name}
-                    </Text>
-                  )}
+              <View style={[Alignments.row, Alignments.alignStart, Spaces.gap[12]]}>
+                {renderClubLogo(item)}
+                <View style={[Alignments.fill, Spaces.gap[4]]}>
+                  <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { lineHeight: 22 }]}>
+                    {getClubName(item)}
+                  </Text>
+                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                    {formatYearRange(item)}
+                  </Text>
                 </View>
-                <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-                  {formatYearRange(item)}
-                </Text>
+                {item?.isCurrentlyActive ? (
+                  <View
+                    style={{
+                      backgroundColor: `${Colors.primary500}20`,
+                      borderColor: `${Colors.primary500}66`,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>Actif</Text>
+                  </View>
+                ) : null}
               </View>
 
-              {/* Active badge */}
-              {item.isCurrentlyActive && (
-                <View style={{
-                  backgroundColor: `${Colors.primary500}20`,
-                  borderRadius: 4,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                }}
-                >
-                  <Text style={[Fonts.p3, { color: Colors.primary500 }]}>Actif</Text>
-                </View>
-              )}
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[4]]}>
+                {item?.category?.name ? (
+                  <View
+                    style={{
+                      backgroundColor: `${Colors.neutral700}55`,
+                      borderRadius: 999,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <Text style={[Fonts.p3, Fonts.neutral100]}>
+                      {t('userDetails.fields.category', 'Categorie')}
+                      {' '}
+                      :
+                      {' '}
+                      {item.category.name}
+                    </Text>
+                  </View>
+                ) : null}
+                {item?.level?.name ? (
+                  <View
+                    style={{
+                      backgroundColor: `${Colors.neutral700}55`,
+                      borderRadius: 999,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <Text style={[Fonts.p3, Fonts.neutral100]}>
+                      {t('userDetails.fields.bestLevel', 'Niveau')}
+                      {' '}
+                      :
+                      {' '}
+                      {item.level.name}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
 
-              {/* Delete Button */}
-              {isOwnProfile && (
-                <TouchableOpacity
-                  onPress={() => handleDelete(item.documentId || item.id)}
+              {isOwnProfile ? (
+                <View
                   style={[
-                    Spaces.padding[8],
-                    { marginRight: -8 },
+                    Alignments.row,
+                    Alignments.justifySpaceBetween,
+                    Alignments.alignCenter,
+                    Spaces.marginTop[4],
                   ]}
                 >
-                  <Image
-                    resizeMode="contain"
-                    source={Images.trash}
-                    style={{
-                      height: 20,
-                      tintColor: '#FF4D4D',
-                      width: 20,
-                    }}
-                  />
-                </TouchableOpacity>
-              )}
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {t('profile.history.tapToEdit', 'Touchez la carte pour modifier')}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(item.documentId || item.id)}
+                    style={[Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}
+                  >
+                    <Image
+                      resizeMode="contain"
+                      source={Images.trash}
+                      style={{
+                        height: 20,
+                        tintColor: '#FF4D4D',
+                        width: 20,
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </TouchableOpacity>
           ))}
         </View>

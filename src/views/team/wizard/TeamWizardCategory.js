@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -19,6 +20,7 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 function TeamWizardCategory({ navigation }) {
   const { t } = useTranslation();
   const { dispatch, state } = useTeamWizard();
+  const handleExitWizard = useTeamWizardExit(navigation);
   const [searchValue, setSearchValue] = useState('');
   const { data: categories } = useGetCategories();
 
@@ -42,6 +44,7 @@ function TeamWizardCategory({ navigation }) {
       isNextDisabled={!state.category}
       nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardActivity)}
+      onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardLevel)}
       onSkip={() => {}}
       stepCount={8}

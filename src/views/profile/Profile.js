@@ -207,26 +207,31 @@ function Profile({ navigation, route }) {
   };
 
   const renderUserClub = () => {
+    const clubIdentitySize = 44;
+    const clubIdentityRadius = clubIdentitySize / 2;
+    const clubRowStyle = [
+      Alignments.row,
+      Alignments.alignCenter,
+      Spaces.gap[8],
+      { minWidth: 0, paddingRight: 4, width: '100%' },
+    ];
+
     // Check if user has a regular club
     if (userData?.club) {
       return (
         <TouchableOpacity
           onPress={handleOpenClub}
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[16],
-            { marginTop: -10, maxWidth: '85%' }]}
+          style={clubRowStyle}
         >
           {userData?.club?.logo?.url ? (
             <ProfileAvatar
-              imageStyle={{ borderRadius: 60 }}
+              imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={userData.club.logo.url}
-              size={60}
+              size={clubIdentitySize}
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.neutral00,
-                { borderRadius: 60 },
+                { borderRadius: clubIdentityRadius },
               ]}
             />
           ) : (
@@ -235,18 +240,18 @@ function Profile({ navigation, route }) {
                 userData?.club?.name
                   ? getClubInitials(userData.club?.name) : ''
               }
-              isSmall
+              size={clubIdentitySize}
             />
           )}
           <View style={[
-            { height: 40, width: 1 },
+            { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,
           ]}
           />
           <Text
+            ellipsizeMode="tail"
             numberOfLines={2}
-            style={[Fonts.p1Black, Fonts.neutral00,
-              { maxWidth: '90%' }]}
+            style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, minWidth: 0 }]}
           >
             {userData?.club?.name}
           </Text>
@@ -260,39 +265,35 @@ function Profile({ navigation, route }) {
       return (
         <TouchableOpacity
           onPress={() => handleOpenMultisportClub(cm.documentId)}
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[16],
-            { marginTop: -10, maxWidth: '85%' }]}
+          style={clubRowStyle}
         >
           {cm?.logo?.url ? (
             <ProfileAvatar
-              imageStyle={{ borderRadius: 60 }}
+              imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={cm.logo.url}
-              size={60}
+              size={clubIdentitySize}
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.primary500,
-                { borderRadius: 60 },
+                { borderRadius: clubIdentityRadius },
               ]}
             />
           ) : (
             <TeamShield
               initials={cm?.name ? getClubInitials(cm.name) : 'CM'}
-              isSmall
+              size={clubIdentitySize}
             />
           )}
           <View style={[
-            { height: 40, width: 1 },
+            { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.primary500,
           ]}
           />
-          <View style={[Spaces.gap[4], { flex: 1 }]}>
+          <View style={[Spaces.gap[4], { flex: 1, minWidth: 0 }]}>
             <Text
               ellipsizeMode="tail"
-              numberOfLines={1}
-              style={[Fonts.p1Black, Fonts.neutral00]}
+              numberOfLines={2}
+              style={[Fonts.p2Bold, Fonts.neutral00]}
             >
               {cm?.name}
             </Text>
@@ -328,21 +329,17 @@ function Profile({ navigation, route }) {
       return team ? (
         <TouchableOpacity
           onPress={() => handleOpenTeam(team.documentId || '')}
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[16],
-            { marginTop: -10, maxWidth: '85%' }]}
+          style={clubRowStyle}
         >
           {team?.club?.logo?.url ? (
             <ProfileAvatar
-              imageStyle={{ borderRadius: 60 }}
+              imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={team.club.logo.url}
-              size={60}
+              size={clubIdentitySize}
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.neutral00,
-                { borderRadius: 60 },
+                { borderRadius: clubIdentityRadius },
               ]}
             />
           ) : (
@@ -351,15 +348,19 @@ function Profile({ navigation, route }) {
                 team?.club?.name
                   ? getClubInitials(team.club?.name) : ''
               }
-              isSmall
+              size={clubIdentitySize}
             />
           )}
           <View style={[
-            { height: 40, width: 1 },
+            { height: 24, width: 1 },
             ApplicationStyle.backgroundColor.neutral300,
           ]}
           />
-          <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>
+          <Text
+            ellipsizeMode="tail"
+            numberOfLines={2}
+            style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, minWidth: 0 }]}
+          >
             {team?.club?.name || team?.name}
           </Text>
         </TouchableOpacity>
@@ -567,8 +568,8 @@ function Profile({ navigation, route }) {
             <View
               style={[
                 Alignments.row,
-                Alignments.alignCenter,
-                Spaces.gap[24],
+                Alignments.alignStart,
+                Spaces.gap[16],
               ]}
             >
               <ProfileAvatar
@@ -583,16 +584,15 @@ function Profile({ navigation, route }) {
               />
               {userData?.firstname && userData?.lastname && (
               <View style={[
-                { maxWidth: '70%' },
+                { flex: 1, minWidth: 0 },
                 Alignments.justifyStart,
                 Alignments.alignStart,
-                Spaces.gap[24],
+                Spaces.gap[12],
               ]}
               >
                 <Text
                   numberOfLines={2}
                   style={[
-                    Fonts.textCenter,
                     Fonts.h4Black,
                     Fonts.neutral00]}
                 >
@@ -603,6 +603,27 @@ function Profile({ navigation, route }) {
               )}
             </View>
           </WithDataWrapper>
+          {/* Sports History Section - prioritize this block at top of profile content */}
+          <UserHistorySection
+            bestLevel={
+              typeof userData?.bestLevel === 'string'
+                ? userData.bestLevel
+                : userData?.bestLevel?.name
+            }
+            isOwnProfile
+            onAddPress={() => navigation.navigate(RouteNames.HistoryWizardCategory)}
+            onEditPress={() => {
+              // TODO: Pass entry to wizard for editing
+              navigation.navigate(RouteNames.HistoryWizardCategory);
+            }}
+            preferredSport={
+              typeof userData?.preferredSport === 'string'
+                ? userData.preferredSport
+                : userData?.preferredSport?.name
+            }
+            userId={undefined}
+          />
+
           {isProfileMainTutorial ? (
             <OnboardingWrapper
               description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
@@ -616,19 +637,6 @@ function Profile({ navigation, route }) {
               {profileActionsContent}
             </OnboardingWrapper>
           ) : profileActionsContent}
-
-          {/* Sports History Section */}
-          <UserHistorySection
-            bestLevel={userData?.bestLevel}
-            isOwnProfile
-            onAddPress={() => navigation.navigate(RouteNames.HistoryWizardClub)}
-            onEditPress={(/** @type {any} */ entry) => {
-            // TODO: Pass entry to wizard for editing
-              navigation.navigate(RouteNames.HistoryWizardClub);
-            }}
-            preferredSport={userData?.preferredSport}
-            userId={userData?.documentId || ''}
-          />
 
           {isLogoutTutorial ? (
             <OnboardingWrapper
@@ -663,8 +671,10 @@ function Profile({ navigation, route }) {
         </ScrollView>
         <BottomModal
           close={() => setIsAccountModalVisible(false)}
+          contentContainerStyle={{ paddingBottom: 8 }}
           hideCloseButton
           isVisible={isAccountModalVisible}
+          useSafeAreaBottomInset={false}
         >
           {isAccountSwitcherTutorial ? (
             <OnboardingWrapper

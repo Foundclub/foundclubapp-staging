@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import Input from '@/components/molecules/input/Input';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -14,11 +15,13 @@ import { RouteNames } from '@/navigation/routeNames';
 function TeamWizardDescription({ navigation }) {
   const { t } = useTranslation();
   const { dispatch, state } = useTeamWizard();
+  const handleExitWizard = useTeamWizardExit(navigation);
 
   return (
     <WizardStepLayout
       nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardName)}
+      onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardSection)}
       onSkip={() => {}}
       stepCount={8}

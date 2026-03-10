@@ -45,7 +45,7 @@ const EVENT_TUTORIAL_STEPS = [
     title: 'Types de recherche',
   },
   {
-    description: 'Utilisez la recherche texte, la date et les filtres avances pour affiner.',
+    description: 'Utilisez la recherche texte et les filtres avances pour affiner.',
     id: 'filters',
     target: 'filters',
     title: 'Filtres evenement',

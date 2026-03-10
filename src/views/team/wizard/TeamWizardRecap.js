@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -19,6 +20,8 @@ import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { createTeam } from '@/services/team/teamService';
 
+import { useAppMode } from '@/context/AppModeContext';
+
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
@@ -26,7 +29,9 @@ import { createTeam } from '@/services/team/teamService';
 function TeamWizardRecap({ navigation }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { isGold } = useAppMode();
   const { dispatch, state } = useTeamWizard();
+  const handleExitWizard = useTeamWizardExit(navigation);
   const {
     Alignments,
     ApplicationStyle,
@@ -64,6 +69,24 @@ function TeamWizardRecap({ navigation }) {
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       const targetClubId = selectedOverview.clubId;
       dispatch({ type: 'RESET' });
+      const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;
+      const targetScreen = isGold ? RouteNames.LeagueSquadTab : RouteNames.MyTeamList;
+      const rootNavigation = navigation.getParent();
+
+      if (rootNavigation) {
+        rootNavigation.reset({
+          index: 0,
+          routes: [{
+            name: rootRoute,
+            params: {
+              params: !isGold && targetClubId ? { clubId: targetClubId } : undefined,
+              screen: targetScreen,
+            },
+          }],
+        });
+        return;
+      }
+
       navigation.reset({
         index: 0,
         routes: [{
@@ -81,14 +104,27 @@ function TeamWizardRecap({ navigation }) {
       && selectedOverview.activity
       && selectedOverview.category
       && selectedOverview.level
+      && selectedOverview.trainers.length > 0
       && selectedOverview.clubId,
     ),
-    [selectedOverview.activity, selectedOverview.category, selectedOverview.clubId, selectedOverview.level, selectedOverview.name, selectedOverview.section],
+    [
+      selectedOverview.activity,
+      selectedOverview.category,
+      selectedOverview.clubId,
+      selectedOverview.level,
+      selectedOverview.name,
+      selectedOverview.section,
+      selectedOverview.trainers.length,
+    ],
   );
 
   const handleSubmit = () => {
     if (!selectedOverview.clubId) {
       Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.clubRequired', 'Club introuvable. Recommence la creation depuis la liste equipe.'));
+      return;
+    }
+    if (selectedOverview.trainers.length === 0) {
+      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.trainerRequired', 'Selectionne au moins un entraineur.'));
       return;
     }
 
@@ -130,6 +166,7 @@ function TeamWizardRecap({ navigation }) {
       isNextLoading={createTeamMutation.isPending}
       nextLabel={t('teamWizard.actions.create', 'Creer l equipe')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
+      onClose={handleExitWizard}
       onNext={handleSubmit}
       onSkip={() => {}}
       stepCount={8}
@@ -175,7 +212,7 @@ function TeamWizardRecap({ navigation }) {
           </View>
 
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('teamWizard.recap.quickHint', 'Nom, section, sport, categorie, niveau et club sont requis.')}
+            {t('teamWizard.recap.quickHint', 'Nom, section, sport, categorie, niveau, club et entraineur sont requis.')}
           </Text>
         </View>
 

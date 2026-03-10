@@ -20,6 +20,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -30,6 +31,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
+
+import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 /** @typedef {any} Team */
 /** @typedef {any} User */
@@ -193,9 +196,9 @@ function TeamListContent({
     });
 
     return {
-      myTeams: my,
-      otherTeams: other,
-      pendingTeams: [...pending, ...pendingClubs],
+      myTeams: sortTeamsForDisplay(my),
+      otherTeams: sortTeamsForDisplay(other),
+      pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
   }, [isLeagueMode, teams, userData]);
 
@@ -263,7 +266,7 @@ function TeamListContent({
   const renderTeamCard = useCallback((/** @type {Team} */ item, isPending = false) => {
     const pendingBorderColor = Colors.warning500 || Colors.gold500;
     const cardAccentColor = isPending ? pendingBorderColor : Colors.primary500;
-    const cardPadding = isCompactScreen ? 16 : 24;
+    const cardPadding = isCompactScreen ? 14 : 18;
     const sportLabel = item?.activities?.[0]?.name || item?.sport;
     const isLeagueCard = isLeagueMode;
 
@@ -331,13 +334,14 @@ function TeamListContent({
         <View
           style={[
             Alignments.fullWidth,
-            Spaces.marginVertical[16],
+            Spaces.marginTop[12],
+            Spaces.marginBottom[12],
             ApplicationStyle.separator,
             { backgroundColor: `${cardAccentColor}40` },
           ]}
         />
 
-        <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+        <View style={[Alignments.fullWidth, Alignments.row, Alignments.wrap, Spaces.gap[10]]}>
           {(() => {
             const getUniqueMemberCount = () => {
               const ids = new Set();
@@ -361,6 +365,8 @@ function TeamListContent({
             const categoryLabel = item?.category?.name || item?.category;
             const levelLabel = item?.level?.name || item?.level;
             const membersLabel = String(getUniqueMemberCount());
+            const allSponsors = Array.isArray(item?.club?.sponsor) ? item.club.sponsor.filter(Boolean) : [];
+            const sponsors = allSponsors.slice(0, 2);
 
             const metaItems = [
               { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
@@ -369,17 +375,51 @@ function TeamListContent({
               { label: t('teamList.fields.members', 'Membres'), value: membersLabel },
             ].filter((meta) => String(meta?.value || '').trim().length > 0);
 
-            return metaItems.map((meta) => (
-              <View
-                key={`${meta.label}-${meta.value}`}
-                style={{ flexGrow: 1, minWidth: isCompactScreen ? 132 : 156 }}
-              >
-                <Text style={[Fonts.p3, Fonts.neutral300]}>{meta.label}</Text>
-                <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {meta.value}
-                </Text>
-              </View>
-            ));
+            return (
+              <>
+                {sponsors.length > 0 ? (
+                  <View style={[Alignments.fullWidth, Spaces.marginBottom[12], Spaces.gap[8]]}>
+                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                      {sponsors.map((sponsor) => (
+                        <View
+                          key={sponsor?.documentId || sponsor?.id || sponsor?.link || sponsor?.title}
+                          style={{ minWidth: isCompactScreen ? 128 : 144, width: '47%' }}
+                        >
+                          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                            <SponsorLogoTile
+                              height={24}
+                              imageUrl={sponsor?.logo?.url}
+                              link={sponsor?.link}
+                              showTitle={false}
+                              width={40}
+                            />
+                            <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral100, Alignments.fill]}>
+                              {sponsor?.title || sponsor?.name}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                    {allSponsors.length > sponsors.length ? (
+                      <Text style={[Fonts.p3Bold, Fonts.primary100]}>
+                        {`+${allSponsors.length - sponsors.length}`}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+                {metaItems.map((meta) => (
+                  <View
+                    key={`${meta.label}-${meta.value}`}
+                    style={{ minWidth: isCompactScreen ? 128 : 144, width: '47%' }}
+                  >
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>{meta.label}</Text>
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {meta.value}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            );
           })()}
         </View>
       </>
@@ -500,7 +540,7 @@ function TeamListContent({
               borderRadius: 24,
               borderWidth: 1,
               justifyContent: 'center',
-              minHeight: isCompactScreen ? 152 : 168,
+              minHeight: isCompactScreen ? 138 : 150,
               padding: cardPadding,
             }}
           >
@@ -529,7 +569,7 @@ function TeamListContent({
           filterNumber={filterNumber}
           handleSearchField={setSearchValue}
           openFilters={handleOpenFilters}
-          placeholder={t('teamList.searchPlaceholder', 'Rechercher dans mes équipes...')}
+          placeholder={t('teamList.searchPlaceholder', 'Mes équipes')}
           searchDefaultValue={searchValue || teamFilters?.name || ''}
         />
       </View>

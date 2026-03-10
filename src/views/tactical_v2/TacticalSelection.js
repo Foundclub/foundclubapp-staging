@@ -1,5 +1,10 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Alert,
   FlatList,
@@ -18,6 +23,8 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { useGetEvent } from '@/services/event/eventQueries';
+
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -30,7 +37,7 @@ import { getImageUrl } from '@/utils/imageUrl';
  */
 function TacticalSelection() {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
@@ -40,32 +47,102 @@ function TacticalSelection() {
   const params = route.params || {};
   const {
     eventId,
-    existingComposition,
-    players: teamPlayers = [],
-    sport = 'football',
-    teamId,
+    existingComposition: existingCompositionParam,
+    players: teamPlayersParam = [],
+    sport: sportParam = 'football',
+    teamId: teamIdParam,
   } = params;
 
-  // Initialize selected IDs from existing composition
-  const initialSelectedIds = useMemo(() => {
-    if (existingComposition?.placements?.length) {
-      const ids = existingComposition.placements.map((/** @type {{ playerId?: string }} */ p) => p.playerId || '');
-      return new Set(ids);
+  const shouldHydrateFromEvent = Boolean(eventId) && (!Array.isArray(teamPlayersParam) || teamPlayersParam.length === 0);
+
+  const { data: eventFromApi } = useGetEvent(eventId || '', {
+    enabled: shouldHydrateFromEvent,
+  });
+
+  const existingComposition = useMemo(() => {
+    if (existingCompositionParam && typeof existingCompositionParam === 'object') {
+      return existingCompositionParam;
     }
-    return new Set();
-  }, [existingComposition]);
+    if (typeof existingCompositionParam === 'string') {
+      try {
+        const parsed = JSON.parse(existingCompositionParam);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    const fromApi = eventFromApi?.composition;
+    if (!fromApi) return null;
+    if (typeof fromApi === 'string') {
+      try {
+        const parsed = JSON.parse(fromApi);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+      } catch (_error) {
+        return null;
+      }
+    }
+    if (typeof fromApi === 'object') return fromApi;
+    return null;
+  }, [existingCompositionParam, eventFromApi?.composition]);
+
+  const teamPlayers = useMemo(() => {
+    if (Array.isArray(teamPlayersParam) && teamPlayersParam.length > 0) {
+      return teamPlayersParam;
+    }
+
+    const rawPlayers = Array.isArray(eventFromApi?.team?.players) ? eventFromApi.team.players : [];
+    return rawPlayers
+      .map((player) => {
+        const documentId = String(player?.documentId || player?.id || '').trim();
+        if (!documentId) return null;
+        return {
+          avatar: player?.avatar || null,
+          documentId,
+          firstname: player?.firstname || '',
+          id: documentId,
+          lastname: player?.lastname || '',
+          number: player?.number,
+        };
+      })
+      .filter(Boolean);
+  }, [eventFromApi?.team?.players, teamPlayersParam]);
+
+  const sport = sportParam || 'football';
+  const teamId = teamIdParam || eventFromApi?.team?.documentId || undefined;
 
   // State
   /** @type {[Set<string>, React.Dispatch<React.SetStateAction<Set<string>>>]} */
-  const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [manualFirstname, setManualFirstname] = useState('');
   const [manualLastname, setManualLastname] = useState('');
   const [manualNumber, setManualNumber] = useState('');
-  /** @type {TacticalPlayer[]} */
-  const initialManualPlayers = existingComposition?.manualPlayers || [];
-  const [manualPlayers, setManualPlayers] = useState(initialManualPlayers);
+  const [manualPlayers, setManualPlayers] = useState(/** @type {TacticalPlayer[]} */ ([]));
+  const [bootstrappedFromComposition, setBootstrappedFromComposition] = useState(false);
+
+  useEffect(() => {
+    if (bootstrappedFromComposition) return;
+    if (!existingComposition || typeof existingComposition !== 'object') return;
+
+    const placements = Array.isArray(existingComposition?.placements)
+      ? existingComposition.placements
+      : [];
+    const manual = Array.isArray(existingComposition?.manualPlayers)
+      ? existingComposition.manualPlayers
+      : [];
+
+    const initialSet = new Set(
+      placements
+        .map((/** @type {{ playerId?: string }} */ placement) => String(placement?.playerId || '').trim())
+        .filter(Boolean),
+    );
+
+    setSelectedIds(initialSet);
+    setManualPlayers(manual);
+    setBootstrappedFromComposition(true);
+  }, [bootstrappedFromComposition, existingComposition]);
 
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -86,22 +163,22 @@ function TacticalSelection() {
     const result = /** @type {TacticalPlayer[]} */ ([]);
 
     // Add team players first
-    for (const p of teamPlayers) {
+    teamPlayers.forEach((p) => {
       const id = p.id || p.documentId || '';
       if (!seenIds.has(id)) {
         seenIds.add(id);
         result.push(p);
       }
-    }
+    });
 
     // Add manual players if not already in team players
-    for (const p of manualPlayers) {
+    manualPlayers.forEach((p) => {
       const id = p.id || p.documentId || '';
       if (!seenIds.has(id)) {
         seenIds.add(id);
         result.push(p);
       }
-    }
+    });
 
     return result;
   }, [teamPlayers, manualPlayers]);
@@ -187,21 +264,18 @@ function TacticalSelection() {
           ...p, firstname: editFirstname.trim(), lastname: editLastname.trim(), number: editNumber.trim() || undefined,
         }
         : p)));
+    } else if (editNumber.trim()) {
+      setNumberOverrides((prev) => ({
+        ...prev,
+        [playerId]: editNumber.trim(),
+      }));
     } else {
-      // Store number override for team player
-      if (editNumber.trim()) {
-        setNumberOverrides((prev) => ({
-          ...prev,
-          [playerId]: editNumber.trim(),
-        }));
-      } else {
-        // Remove override if empty
-        setNumberOverrides((prev) => {
-          const next = { ...prev };
-          delete next[playerId];
-          return next;
-        });
-      }
+      // Remove override if empty
+      setNumberOverrides((prev) => {
+        const next = { ...prev };
+        delete next[playerId];
+        return next;
+      });
     }
     setEditModalVisible(false);
     setEditingPlayer(null);
@@ -271,9 +345,10 @@ function TacticalSelection() {
     const displayNumber = isManualPlayer ? item.number : (numberOverrides[playerId] || item.number);
 
     // Avatar URI - null for manual players (force initials)
-    const rawAvatarUrl = isManualPlayer ? null : (
-      typeof item.avatar === 'string' ? item.avatar : item.avatar?.url
-    );
+    let rawAvatarUrl = null;
+    if (!isManualPlayer) {
+      rawAvatarUrl = typeof item.avatar === 'string' ? item.avatar : item.avatar?.url;
+    }
     const avatarUri = rawAvatarUrl ? getImageUrl(rawAvatarUrl) : null;
 
     return (

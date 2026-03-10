@@ -3,6 +3,7 @@ import { getApp } from '@react-native-firebase/app';
 import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 
+import { createLogger } from '@/utils/logger/logger';
 import { normalizeNotificationPayload } from '@/utils/notifications/notificationNavigation';
 
 import {
@@ -14,6 +15,7 @@ import {
 } from './notificationActions/rsvpActions';
 
 let handlersRegistered = false;
+const notificationsBgLogger = createLogger('notifications-bg');
 
 /**
  * @param {any} remoteMessage
@@ -37,7 +39,7 @@ export const registerBackgroundHandler = () => {
   handlersRegistered = true;
 
   ensureNotificationActionSetup().catch((error) => {
-    console.warn('[NotificationBackground] Failed to setup action categories:', error);
+    notificationsBgLogger.warn('Failed to setup action categories', error);
   });
 
   const messagingInstance = getMessaging(getApp());
@@ -56,7 +58,7 @@ export const registerBackgroundHandler = () => {
         });
       }
     } catch (error) {
-      console.warn('[NotificationBackground] Failed to process FCM message:', error);
+      notificationsBgLogger.warn('Failed to process FCM background message', error);
     }
     return Promise.resolve();
   });
@@ -77,12 +79,14 @@ export const registerBackgroundHandler = () => {
       if (type === EventType.PRESS && detail.notification?.data) {
         const normalizedData = normalizeNotificationPayload(detail.notification.data);
         if (normalizedData?.type) {
-          console.log(`[NOTIF_OPENED] type=${normalizedData.type} source=background_notifee_press`);
+          notificationsBgLogger.debug(
+            `[NOTIF_OPENED] type=${normalizedData.type} source=background_notifee_press`,
+          );
         }
         storePendingOpenNotification(normalizedData);
       }
     } catch (error) {
-      console.warn('[NotificationBackground] Failed to process notifee background event:', error);
+      notificationsBgLogger.warn('Failed to process notifee background event', error);
     }
   });
 };

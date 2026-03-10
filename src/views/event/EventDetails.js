@@ -682,8 +682,12 @@ function EventDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleDeleteParticipation = useCallback(() => {
+    const currentUserKey = getUserKey(userData);
+    if (!currentUserKey) return;
+
     const myParticipation = activeEventParticipations.find(
-      (participation) => participation.user.documentId === userData?.documentId,
+      (participation) => participation?.documentId
+        && getUserKey(participation?.user) === currentUserKey,
     );
 
     if (myParticipation?.documentId) {
@@ -702,17 +706,59 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    if (event?.missings?.some((/** @type {User} */ missing) => missing.documentId === userData?.documentId)) {
+    if (event?.missings?.some((/** @type {User} */ missing) => getUserKey(missing) === currentUserKey)) {
       Alert.alert(
         t('eventDetails.modals.editResponse.title'),
         t('eventDetails.modals.editResponse.description'),
         [
           { style: 'cancel', text: t('common.cancel') },
-          { onPress: () => handleParticipateToEvent(event), text: t('common.confirm') },
+          {
+            onPress: () => {
+              if (!event?.documentId || !userData?.documentId) return;
+              mutations.createEventParticipationMutation.mutate({
+                event: event.documentId,
+                user: userData.documentId,
+              });
+              setIsJoinModalVisible(false);
+            },
+            text: t('common.confirm'),
+          },
         ],
       );
+      return;
     }
-  }, [activeEventParticipations, event, mutations, t, userData?.documentId]);
+
+    const isListedAsParticipant = (event?.participations || []).some(
+      (/** @type {User} */ participant) => getUserKey(participant) === currentUserKey,
+    );
+
+    if (isListedAsParticipant && event?.documentId) {
+      Alert.alert(
+        t('eventDetails.modals.deleteParticipation.title'),
+        t('eventDetails.modals.deleteParticipation.description'),
+        [
+          { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
+          {
+            onPress: () => mutations.missingEventMutation.mutate(event.documentId),
+            style: 'destructive',
+            text: t('eventDetails.modals.deleteParticipation.actions.confirm'),
+          },
+        ],
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('common.error'),
+      'Impossible de retrouver votre reponse pour cet evenement. Rechargez la page et reessayez.',
+    );
+  }, [
+    activeEventParticipations,
+    event,
+    mutations,
+    t,
+    userData,
+  ]);
 
   const handleExportParticipants = useCallback(async () => {
     if (!eventId) return;
@@ -735,20 +781,66 @@ function EventDetails({ navigation, route }) {
   const handleCancelEvent = () => {
     if (!eventId) return;
     if (event?.recurrenceGroupId) {
-      Alert.alert(t('eventDetails.modals.recurrenceCancel.title'), t('eventDetails.modals.recurrenceCancel.description'), [
-        { style: 'cancel', text: t('common.cancel') },
-        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive', text: t('this') },
-        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'future' }), style: 'destructive', text: t('future') },
-        { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId, recurrenceMode: 'all' }), style: 'destructive', text: t('all') },
-      ]);
+      Alert.alert(
+        t('eventDetails.modals.recurrenceCancel.title'),
+        t('eventDetails.modals.recurrenceCancel.description'),
+        [
+          { style: 'cancel', text: t('eventDetails.modals.actions.cancel') },
+          {
+            onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }),
+            style: 'destructive',
+            text: t('eventDetails.modals.recurrenceCancel.actions.thisEvent'),
+          },
+          {
+            onPress: () => mutations.cancelEventMutation.mutate({
+              documentId: eventId,
+              recurrenceMode: 'future',
+            }),
+            style: 'destructive',
+            text: t('eventDetails.modals.recurrenceCancel.actions.future'),
+          },
+          {
+            onPress: () => mutations.cancelEventMutation.mutate({
+              documentId: eventId,
+              recurrenceMode: 'all',
+            }),
+            style: 'destructive',
+            text: t('eventDetails.modals.recurrenceCancel.actions.all'),
+          },
+        ],
+      );
       return;
     }
 
-    Alert.alert(t('title'), t('desc'), [
-      { style: 'cancel', text: t('cancel') },
-      { onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }), style: 'destructive', text: t('confirm') },
-    ]);
+    Alert.alert(
+      t('eventDetails.modals.cancelEvent.title'),
+      t('eventDetails.modals.cancelEvent.description'),
+      [
+        { style: 'cancel', text: t('eventDetails.modals.actions.cancel') },
+        {
+          onPress: () => mutations.cancelEventMutation.mutate({ documentId: eventId }),
+          style: 'destructive',
+          text: t('eventDetails.modals.actions.confirm'),
+        },
+      ],
+    );
   };
+
+  const isMatchEvent = useMemo(() => {
+    const typeName = String(event?.type?.name || '').trim().toLowerCase();
+    return typeName.includes('match');
+  }, [event?.type?.name]);
+
+  const handleManageComposition = useCallback(() => {
+    if (!eventId) return;
+    navigation.navigate(RouteNames.TacticalSelectionV2, {
+      eventId,
+      existingComposition: event?.composition || null,
+      players: event?.team?.players || [],
+      sport: event?.team?.activities?.[0]?.name || 'football',
+      teamId: event?.team?.documentId,
+    });
+  }, [event?.composition, event?.team?.activities, event?.team?.documentId, event?.team?.players, eventId, navigation]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
     if (!targetUser?.documentId) return;
@@ -912,6 +1004,15 @@ function EventDetails({ navigation, route }) {
           onLogin={() => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount })}
           onParticipate={() => handleParticipateToEvent(event)}
         />
+        {canEdit && isMatchEvent && (
+          <View style={{ marginTop: 12 }}>
+            <Button
+              onPress={handleManageComposition}
+              title="Gerer la compo"
+              variant="Secondary"
+            />
+          </View>
+        )}
         {canEdit && canRequestFeatured && (
           <View style={{ marginTop: 12 }}>
             <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre a la une" variant="Secondary" />

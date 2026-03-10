@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -18,6 +18,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
+
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 /**
  * FacilitySelector component
@@ -60,22 +62,6 @@ function FacilitySelector({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  };
-  const selectedBadgeStyle = {
-    backgroundColor: 'rgba(1, 179, 244, 0.16)',
-    borderColor: Colors.primary500,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  };
-  const selectedCheckStyle = {
-    alignItems: 'center',
-    backgroundColor: Colors.primary500,
-    borderRadius: 10,
-    height: 20,
-    justifyContent: 'center',
-    width: 20,
   };
 
   const {
@@ -233,6 +219,24 @@ function FacilitySelector({
                 {facilities.map((facility) => {
                   const id = facility.documentId || facility.id;
                   const isSelected = facilityId === id;
+                  const planningColor = resolveFacilityPlanningColor(facility) || Colors.primary500;
+                  const cardTintColor = `${planningColor}${isSelected ? '36' : '22'}`;
+                  const selectedBadgeStyle = {
+                    backgroundColor: `${planningColor}24`,
+                    borderColor: planningColor,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  };
+                  const selectedCheckStyle = {
+                    alignItems: 'center',
+                    backgroundColor: planningColor,
+                    borderRadius: 10,
+                    height: 20,
+                    justifyContent: 'center',
+                    width: 20,
+                  };
                   return (
                     <TouchableOpacity
                       activeOpacity={0.86}
@@ -243,15 +247,29 @@ function FacilitySelector({
                         Spaces.padding[16],
                         Spaces.gap[8],
                         {
-                          backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.22)' : 'rgba(1, 179, 244, 0.10)',
-                          borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+                          backgroundColor: cardTintColor,
+                          borderColor: planningColor,
                           minHeight: 84,
-                          shadowColor: isSelected ? Colors.primary500 : 'transparent',
+                          overflow: 'hidden',
+                          position: 'relative',
+                          shadowColor: isSelected ? planningColor : 'transparent',
                           shadowOpacity: isSelected ? 0.24 : 0,
                           shadowRadius: isSelected ? 8 : 0,
                         },
                       ]}
                     >
+                      <View
+                        style={{
+                          backgroundColor: planningColor,
+                          borderBottomRightRadius: 8,
+                          borderTopRightRadius: 8,
+                          height: '100%',
+                          left: 0,
+                          position: 'absolute',
+                          top: 0,
+                          width: 4,
+                        }}
+                      />
                       <View
                         style={{
                           alignItems: 'center',
@@ -261,7 +279,7 @@ function FacilitySelector({
                       >
                         <Text
                           numberOfLines={1}
-                          style={[Fonts.p2Bold, isSelected ? Fonts.primary100 : Fonts.neutral00, { flex: 1, marginRight: 12 }]}
+                          style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, marginRight: 12 }]}
                         >
                           {facility.isShared ? `${facility.name} (CM)` : facility.name}
                         </Text>
@@ -274,7 +292,7 @@ function FacilitySelector({
                               />
                             </View>
                             <View style={[selectedBadgeStyle, { marginLeft: 8 }]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                              <Text style={[Fonts.p4Bold, { color: planningColor }]}>
                                 {t('common.selected', 'Selectionnee')}
                               </Text>
                             </View>

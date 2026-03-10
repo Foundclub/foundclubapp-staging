@@ -17,9 +17,10 @@ import { RouteNames } from '@/navigation/routeNames';
  * Displays a horizontal list of featured events
  * @param {object} props
  * @param {Array} props.events - List of featured events
+ * @param {boolean} [props.useFacilityAccentColorForPublic]
  * @returns {React.ReactElement} FeaturedEvents component
  */
-function FeaturedEvents({ events = [] }) {
+function FeaturedEvents({ events = [], useFacilityAccentColorForPublic = false }) {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { Colors, Fonts, Spaces } = useTheme();
@@ -60,6 +61,7 @@ function FeaturedEvents({ events = [] }) {
               <EventCardNew
                 item={item}
                 onPress={handleCardPress}
+                useFacilityAccentColor={useFacilityAccentColorForPublic && item?.sessionStatus === 'open'}
               />
             </View>
           );

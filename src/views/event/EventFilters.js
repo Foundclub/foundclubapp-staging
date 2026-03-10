@@ -2,7 +2,6 @@ import { joiResolver } from '@hookform/resolvers/joi';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { useRoute } from '@react-navigation/native';
-import { format } from 'date-fns';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +34,6 @@ import {
 } from '@/services/searchAlert/searchAlertService';
 import { useGetTeams } from '@/services/team/teamQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getFieldError } from '@/utils/form/formUtils';
 
 /** @typedef {{ label: string; value: string }} Option */
@@ -45,7 +43,6 @@ import { getFieldError } from '@/utils/form/formUtils';
  *   category?: string | string[];
  *   city?: { label?: string; value?: string };
  *   club?: Option | null;
- *   date?: Date | string | null;
  *   level?: string | string[];
  *   radius?: number;
  *   team?: Option | null;
@@ -71,7 +68,6 @@ const filtersSchema = Joi.object({
     label: Joi.string(),
     value: Joi.string(),
   }).allow(null).optional(),
-  date: Joi.date().allow(null).optional(),
   level: Joi.alternatives().try(Joi.string(), Joi.array().items(Joi.string())).allow(''),
   radius: Joi.number().allow(''),
   team: Joi.object({
@@ -105,7 +101,6 @@ function EventFilters({ navigation }) {
   const [typeSearchValue, setTypeSearchValue] = useState('');
   const [teamSearchValue, setTeamSearchValue] = useState('');
   const [selectedClub, setSelectedClub] = useState('');
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ content: '', title: '' });
 
@@ -131,7 +126,6 @@ function EventFilters({ navigation }) {
         category: savedFilters.category || [],
         city: savedFilters.city || { label: '', value: '' },
         club: savedFilters.club || null,
-        date: savedFilters.date || null,
         level: savedFilters.level || [],
         radius: savedFilters.radius || 20,
         team: savedFilters.team || null,
@@ -143,7 +137,6 @@ function EventFilters({ navigation }) {
       category: eventFilters?.category || [],
       city: eventFilters?.city || { label: '', value: '' },
       club: eventFilters?.club || null,
-      date: eventFilters?.date || null,
       level: eventFilters?.level || [],
       radius: eventFilters?.radius || 20,
       team: eventFilters?.team || null,
@@ -381,23 +374,9 @@ function EventFilters({ navigation }) {
    *   type: string | string[];
    *   city: { label: string; value: string };
    *   radius: number;
-   *   date: string | null;
    * }} data - The filter data
    */
   const handleApplyFilters = (/** @type {EventFilterFormValues} */ data) => {
-    // format date params
-    let startDateAfter = null;
-    let startDateBefore = null;
-
-    if (data.date) {
-      const startOfDay = new Date(data.date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(data.date);
-      endOfDay.setHours(23, 59, 59, 999);
-      startDateAfter = startOfDay;
-      startDateBefore = endOfDay;
-    }
-
     // fomat place params
     const coordinates = data.city?.value?.split('|');
     const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
@@ -412,8 +391,6 @@ function EventFilters({ navigation }) {
 
     const payload = {
       ...data,
-      startDateAfter,
-      startDateBefore,
       teamIds: data?.team?.value ? [data.team.value] : null,
       ...(geohash && { geohash }),
       ...(lat && lon && { lat, lon, radius: data.radius }),
@@ -765,44 +742,6 @@ function EventFilters({ navigation }) {
           )}
         />
 
-        <Controller
-          control={control}
-          name="date"
-          render={({
-            field: { onChange, value },
-          }) => (
-            <>
-              <Input
-                error={getFieldError({ errors: formErrors, fieldName: 'date' })}
-                inputMode="none"
-                label={t('eventFilters.fields.date.label')}
-                onPressIn={() => setIsDatePickerVisible(true)}
-                placeholder={t('eventFilters.fields.date.placeholder')}
-                readOnly
-                style={[Fonts.neutral00]}
-                value={value ? formatDateWithDayPrefix(value) : ''}
-              />
-              <BottomModal
-                close={() => setIsDatePickerVisible(false)}
-                isVisible={isDatePickerVisible}
-              >
-                {/* <DateTimePicker
-                  display="spinner"
-                  minimumDate={new Date()}
-                  mode="date"
-                  onChange={(event, selectedDate) => {
-                    setIsDatePickerVisible(false);
-                    if (event.type === 'set' && selectedDate) {
-                      onChange(selectedDate);
-                    }
-                  }}
-                  value={value ? new Date(value) : new Date()}
-                /> */}
-                <Text style={{ color: 'white', padding: 20, textAlign: 'center' }}>Date Picker temporarily disabled</Text>
-              </BottomModal>
-            </>
-          )}
-        />
       </ScrollView>
 
       <View style={[Spaces.gap[24]]}>

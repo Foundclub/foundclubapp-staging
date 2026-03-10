@@ -27,6 +27,8 @@ import { uploadFile } from '../club/clubService';
  * @typedef {{ data?: { name?: string; documentId?: string } }} CreateCMSectionResponse
  * @typedef {{ name?: string; geohash?: string; page?: number; pageSize?: number }} MultisportClubSearchParams
  * @typedef {{ sectionId?: string; installationId?: string; from?: string; to?: string }} CMPlanningFilters
+ * @typedef {{ id?: string; name?: string; color?: string | null }} PlanningInstallation
+ * @typedef {{ eventId?: string; title?: string; startAt?: string; endAt?: string; startTime?: string; endTime?: string; installation?: PlanningInstallation }} CMPlanningSlot
  * @typedef {{ path?: string; id?: number | string; documentId?: string }} MediaRef
  * @typedef {{ logo?: MediaRef | number | string; [key: string]: any }} SponsorPayload
  * @typedef {{ logo?: MediaRef | number | string; sponsor?: SponsorPayload[]; [key: string]: any }} MultisportClubUpdatePayload
@@ -121,7 +123,7 @@ export const getCMClubs = async (cmId) => {
  * Get planning for a multisport club
  * @param {string} cmId - MultisportClub documentId
  * @param {CMPlanningFilters} [filters] - Optional filters (sectionId, installationId, from, to)
- * @returns {Promise<object>} Planning slots
+ * @returns {Promise<{ data?: CMPlanningSlot[]; meta?: object }>} Planning slots
  */
 export const getCMPlanning = async (cmId, filters = {}) => {
   const params = new URLSearchParams();

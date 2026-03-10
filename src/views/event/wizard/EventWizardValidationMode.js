@@ -89,7 +89,7 @@ function EventWizardValidationMode({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={10}
-      stepIndex={6}
+      stepIndex={8}
       subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences a l'evenement.")}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >

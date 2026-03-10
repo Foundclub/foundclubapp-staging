@@ -20,7 +20,7 @@
  * @property {'future' | 'all'} [recurrenceMode] - Recurrence update mode
  * @property {boolean} [isFeatured] - Is featured event
  * @property {'none' | 'pending' | 'approved' | 'rejected'} [featuredRequestStatus] - Featured request status
- * @property {{documentId?: string, name?: string}} [facility] - Event facility
+ * @property {{documentId?: string, name?: string, planningColor?: string, color?: string}} [facility] - Event facility
  * @property {string[]} [myTeams] - User's teams filter
  * @property {string[]} [teamIds] - Team IDs filter
  * @property {any} [composition] - Tactical composition payload
@@ -52,7 +52,7 @@
  * @property {'none' | 'pending' | 'approved' | 'rejected'} [featuredRequestStatus] - Featured request status
  * @property {string} [startTime] - Event start time
  * @property {string} [endTime] - Event end time
- * @property {{ documentId?: string; name?: string; maxSlots?: number }} [facility] - Selected facility
+ * @property {{ documentId?: string; name?: string; maxSlots?: number; planningColor?: string; color?: string }} [facility] - Selected facility
  * @property {Team[]} [invitedTeams] - Invited opponent teams
  * @property {any} [reservation] - Reservation object if applicable
  */

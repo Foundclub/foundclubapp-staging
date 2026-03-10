@@ -46,7 +46,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>L'application Foundclub a besoin d'accéder à votre appareil photo pour vous permettre de prendre une photo de profil.</string>
+	<string>L'application Foundclub a besoin d'acceder a votre appareil photo pour vous permettre de prendre une photo de profil.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>L'application Foundclub a besoin d'acceder au microphone pour envoyer des notes vocales.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -82,3 +84,4 @@
 	<false/>
 </dict>
 </plist>
+

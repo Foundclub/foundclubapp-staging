@@ -1,11 +1,10 @@
 import {
-  forwardRef, useEffect, useRef, useState,
+  forwardRef, useCallback, useEffect, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Keyboard, Text, TouchableOpacity, View,
+  Image, Keyboard, Text, TouchableOpacity, View,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +21,7 @@ import Input from '../input/Input';
  * @property {boolean} [isMulti] - Whether multiple options can be selected.
  * @property {boolean} [isSearchable] - The flag to know if the select is searchable or not.
  * @property {boolean} [disabled] - The flag to know if the select is searchable or not.
+ * @property {string} [confirmButtonLabel] - Optional footer confirm button label.
  * @property {string} [actionLabel] - Optional secondary action label shown in the modal footer.
  * @property {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight'} [actionVariant]
  *  - Optional secondary action button variant.
@@ -41,6 +41,8 @@ import Input from '../input/Input';
  * @property {keyof import('../../../theme/types').AllImages} [customIcon] - The custom icon.
  * @property {'start' | 'end'} [customIconPosition]
  * @property {boolean} [lightMode] - The flag to know if the select is in light mode.
+ * @property {string} [modalTitle] - Optional modal title override.
+ * @property {(string|number)[]} [modalSnapPoints] - Optional modal snap points override.
  */
 
 /**
@@ -62,7 +64,7 @@ const AutocompleteSelect = forwardRef(
   (props, ref) => {
     // hooks
     const {
-      Alignments, Colors, Fonts, Spaces,
+      Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
     } = useTheme();
     const { t } = useTranslation();
     const hasLabel = Boolean(props.label);
@@ -77,6 +79,7 @@ const AutocompleteSelect = forwardRef(
     // refs
     const searchInputRef = useRef(null);
     const openModalTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+    const wasValuesVisibleRef = useRef(false);
 
     useEffect(() => () => {
       if (openModalTimeoutRef.current) {
@@ -84,18 +87,81 @@ const AutocompleteSelect = forwardRef(
       }
     }, []);
 
+    /**
+     * @param {unknown} value
+     * @returns {string[]}
+     */
+    const toComparableTokens = useCallback((value) => {
+      if (value === null || value === undefined) return [];
+      if (typeof value === 'object') {
+        const obj = /** @type {{ value?: unknown, label?: unknown }} */ (value);
+        const valueToken = obj.value === null || obj.value === undefined ? '' : String(obj.value).trim();
+        const labelToken = obj.label === null || obj.label === undefined ? '' : String(obj.label).trim();
+        return [valueToken, labelToken].filter(Boolean);
+      }
+      const token = String(value).trim();
+      return token ? [token] : [];
+    }, []);
+
+    const hydrateSelectedOptionsFromProps = useCallback(() => {
+      if (!props.options || props.options.length === 0) {
+        if (props.isMulti) {
+          if (!Array.isArray(props.value)) return [];
+          return props.value
+            .map((item) => {
+              const itemTokens = toComparableTokens(item);
+              if (itemTokens.length === 0) return null;
+              return { label: itemTokens[0], value: itemTokens[0] };
+            })
+            .filter(Boolean);
+        }
+
+        const firstValue = Array.isArray(props.value) ? props.value[0] : props.value;
+        const firstValueTokens = toComparableTokens(firstValue);
+        if (firstValueTokens.length === 0) return undefined;
+        return { label: firstValueTokens[0], value: firstValueTokens[0] };
+      }
+
+      const valueTokens = Array.isArray(props.value)
+        ? props.value.flatMap((item) => toComparableTokens(item))
+        : toComparableTokens(props.value);
+      const tokenSet = new Set(valueTokens);
+
+      if (props.isMulti) {
+        if (tokenSet.size === 0) return [];
+        return props.options.filter((option) => {
+          const optionTokens = [...toComparableTokens(option?.value), ...toComparableTokens(option?.label)];
+          return optionTokens.some((token) => tokenSet.has(token));
+        });
+      }
+
+      if (tokenSet.size === 0) return undefined;
+      return props.options.find((option) => {
+        const optionTokens = [...toComparableTokens(option?.value), ...toComparableTokens(option?.label)];
+        return optionTokens.some((token) => tokenSet.has(token));
+      });
+    }, [props.isMulti, props.options, props.value, toComparableTokens]);
+
+    useEffect(() => {
+      const justOpened = areValuesVisible && !wasValuesVisibleRef.current;
+      if (justOpened) {
+        setSelectedOptions(hydrateSelectedOptionsFromProps());
+      }
+      wasValuesVisibleRef.current = areValuesVisible;
+    }, [areValuesVisible, hydrateSelectedOptionsFromProps]);
+
     // methods
     const handleFocus = () => {
       if (!props.disabled) {
         Keyboard.dismiss();
-        // Open after keyboard dismissal so the bottom sheet always appears above it.
         if (openModalTimeoutRef.current) {
           clearTimeout(openModalTimeoutRef.current);
         }
+        const openDelay = props.isSearchable ? 80 : 0;
         openModalTimeoutRef.current = setTimeout(() => {
           setAreValuesVisible(true);
           openModalTimeoutRef.current = null;
-        }, 120);
+        }, openDelay);
         if (props?.onFocus) {
           props?.onFocus();
         }
@@ -121,11 +187,16 @@ const AutocompleteSelect = forwardRef(
       }
     };
 
-    const handleCloseModal = () => {
+    const handleCloseModal = (persistSelection = true) => {
       if (openModalTimeoutRef.current) {
         clearTimeout(openModalTimeoutRef.current);
         openModalTimeoutRef.current = null;
       }
+
+      if (persistSelection) {
+        props.setValue(selectedOptions);
+      }
+
       setAreValuesVisible(false);
       if (props.setSearchValue) {
         props.setSearchValue('');
@@ -133,12 +204,11 @@ const AutocompleteSelect = forwardRef(
     };
 
     const handleValidation = () => {
-      handleCloseModal();
-      props.setValue(selectedOptions);
+      handleCloseModal(true);
     };
 
     const handleActionPress = () => {
-      handleCloseModal();
+      handleCloseModal(true);
       if (props.onActionPress) {
         props.onActionPress();
       }
@@ -174,6 +244,28 @@ const AutocompleteSelect = forwardRef(
       // const option = props.options.find((opt) => opt.value === props.value);
       return props.value || undefined;
     };
+
+    const modalFooter = (
+      <View style={[Spaces.paddingBottom[16]]}>
+        {props.actionLabel && props.onActionPress ? (
+          <View style={[Spaces.marginBottom[12]]}>
+            <Button
+              onPress={handleActionPress}
+              title={props.actionLabel}
+              variant={props.actionVariant || 'SecondaryLight'}
+            />
+          </View>
+        ) : null}
+        <Button
+          onPress={handleValidation}
+          title={props.confirmButtonLabel || t('modals.actions.select')}
+          variant="Primary"
+        />
+      </View>
+    );
+
+    const modalTitle = props.modalTitle || props.label || props.placeholder || t('modals.actions.select');
+    const modalSnapPoints = props.modalSnapPoints || [props.isSearchable ? '86%' : '78%'];
 
     return (
       <View style={[Alignments.relative]}>
@@ -215,50 +307,68 @@ const AutocompleteSelect = forwardRef(
         </View>
         <BottomModal
           close={handleCloseModal}
+          footerComponent={modalFooter}
+          headerComponent={(
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  Fonts.h3Bold,
+                  Fonts.neutral00,
+                  Spaces.marginRight[16],
+                  { flex: 1 },
+                ]}
+              >
+                {modalTitle}
+              </Text>
+              <TouchableOpacity
+                accessibilityLabel={t('common.close', 'Fermer')}
+                hitSlop={{
+                  bottom: 8, left: 8, right: 8, top: 8,
+                }}
+                onPress={handleCloseModal}
+              >
+                <Image
+                  source={Images.close}
+                  style={[
+                    ApplicationStyle.icon28,
+                    { tintColor: Colors.primary200 },
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          hideCloseButton
           isVisible={areValuesVisible}
+          scrollable
+          snapPoints={modalSnapPoints}
         >
           <View
             style={[
-              Spaces.gap[24],
-              { flex: 1 },
-              Alignments.justifySpaceBetween,
+              Spaces.gap[16],
             ]}
           >
-            {/* Header and Search Input */}
-            <View style={[Spaces.paddingTop[24]]}>
-              <Text style={[
-                Fonts.h3Bold,
-                Fonts.neutral00,
-                Spaces.marginTop[4]]}
-              >
-                {props.label}
-              </Text>
-              {/* search input */}
-              {props.isSearchable ? (
-                <Input
-                  autoCapitalize="none"
-                  autoComplete="off"
-                  autoCorrect={false}
-                  enterKeyHint="search"
-                  icon="search"
-                  inputMode="search"
-                  onChangeText={props.setSearchValue}
-                  placeholder={t('modals.actions.search')}
-                  ref={searchInputRef}
-                />
-              ) : null}
-            </View>
+            {/* Search input */}
+            {props.isSearchable ? (
+              <Input
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect={false}
+                enterKeyHint="search"
+                icon="search"
+                inputMode="search"
+                onChangeText={props.setSearchValue}
+                placeholder={t('modals.actions.search')}
+                ref={searchInputRef}
+              />
+            ) : null}
 
             {/* Options - Scrollable area */}
-            <ScrollView
-              contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24]]}
-              keyboardShouldPersistTaps="handled"
-              style={{ flex: 1, maxHeight: 350 }}
-            >
-              {props.options.map((option, index) => (
+            <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
+              {props.options.map((option) => (
                 option.isHeader ? (
                   <Text
-                    key={`${option.value}-${index}`}
+                    key={`header-${option.value || option.label}`}
                     style={[
                       Fonts.p3Bold,
                       Fonts.neutral500,
@@ -270,11 +380,12 @@ const AutocompleteSelect = forwardRef(
                   </Text>
                 ) : (
                   <View
-                    key={`${option.value}-${option.label}-${index}`}
+                    key={`option-${option.value || option.label}`}
                     style={[Alignments.row, Spaces.marginTop[8]]}
                   >
                     <Checkable
                       customFillColor={Colors.neutral00}
+                      disableBounceAnimation
                       disabled={false}
                       isChecked={handleIsChecked(option)}
                       setIsChecked={
@@ -292,24 +403,6 @@ const AutocompleteSelect = forwardRef(
                     {t('common.messages.noData')}
                   </Text>
                 ) : null}
-            </ScrollView>
-
-            {/* Footer actions */}
-            <View style={[Spaces.paddingBottom[16]]}>
-              {props.actionLabel && props.onActionPress ? (
-                <View style={[Spaces.marginBottom[12]]}>
-                  <Button
-                    onPress={handleActionPress}
-                    title={props.actionLabel}
-                    variant={props.actionVariant || 'SecondaryLight'}
-                  />
-                </View>
-              ) : null}
-              <Button
-                onPress={handleValidation}
-                title={t('modals.actions.select')}
-                variant="Primary"
-              />
             </View>
           </View>
         </BottomModal>

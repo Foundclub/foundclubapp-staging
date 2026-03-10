@@ -20,11 +20,13 @@ import useTheme from '@/theme/themeContext';
  * @param {import('react-native').ViewStyle
  * | Array<import('react-native').ViewStyle>} [props.fontStyle] - The font style.
  * @param {string} [props.customFillColor] - The custom fill color.
+ * @param {boolean} [props.disableBounceAnimation] - Disable bounce animation for smoother large lists.
  * @returns {React.ReactElement} Checkable component.
  */
 function Checkable({
   children,
   customFillColor = undefined,
+  disableBounceAnimation = false,
   disabled = false,
   fontStyle,
   isChecked,
@@ -103,6 +105,10 @@ function Checkable({
         </Text>
         )}
         <BouncyCheckbox
+          bounceEffectIn={disableBounceAnimation ? 1 : undefined}
+          bounceEffectOut={disableBounceAnimation ? 1 : undefined}
+          bounceVelocityIn={disableBounceAnimation ? 0 : undefined}
+          bounceVelocityOut={disableBounceAnimation ? 0 : undefined}
           disableText
           fillColor={customFillColor || (type === 'circle' ? Colors.neutral00 : 'transparent')}
           iconComponent={(isChecked || type === 'circle') ? iconComponent : null}

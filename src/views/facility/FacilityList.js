@@ -9,6 +9,7 @@ import {
   RefreshControl,
   SectionList,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -23,6 +24,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { deleteFacility, getCMFacilities, getFacilities } from '@/services/facility/facilityService';
+
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 const getAddressLabel = (address, fallback = 'Adresse non renseignee') => {
   if (!address) return fallback;
@@ -309,76 +312,122 @@ function FacilityList() {
       t('facilityList.defaults.addressMissing', 'Adresse non renseignee'),
     );
     const hasAddress = Boolean(getAddressLabel(item?.address, '').trim());
+    const planningColor = resolveFacilityPlanningColor(item);
+    const cardTintColor = `${planningColor}22`;
+    const isEditable = !item?.isReadOnly;
+    const accessibilityEditLabel = t(
+      'facilityList.accessibility.editCard',
+      `Modifier l'installation ${item?.name || ''}`.trim(),
+    );
 
     return (
       <View
         style={[
-          ApplicationStyle.backgroundColor.primary700,
           ApplicationStyle.borderRadius24,
           Spaces.padding[16],
           Spaces.gap[12],
           {
-            borderColor: `${Colors.primary500}33`,
+            backgroundColor: cardTintColor,
+            borderColor: planningColor,
             borderWidth: 1,
             marginBottom: 12,
+            overflow: 'hidden',
+            position: 'relative',
           },
         ]}
       >
         <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.justifySpaceBetween,
-            Spaces.gap[8],
-          ]}
+          style={{
+            backgroundColor: planningColor,
+            borderBottomRightRadius: 8,
+            borderTopRightRadius: 8,
+            height: '100%',
+            left: 0,
+            position: 'absolute',
+            top: 0,
+            width: 4,
+          }}
+        />
+        <TouchableOpacity
+          accessibilityLabel={isEditable ? accessibilityEditLabel : undefined}
+          accessibilityRole={isEditable ? 'button' : undefined}
+          activeOpacity={isEditable ? 0.9 : 1}
+          disabled={!isEditable}
+          onPress={isEditable ? () => handleEdit(item) : undefined}
+          style={[Spaces.gap[12]]}
         >
-          <Text
-            numberOfLines={2}
+          <View
             style={[
-              Fonts.h4Black,
-              Fonts.neutral00,
-              { flex: 1 },
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              Spaces.gap[8],
             ]}
           >
-            {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
-          </Text>
-          {item?.isReadOnly ? renderMetaChip('Multisport', 'warning') : null}
-        </View>
+            <Text
+              numberOfLines={2}
+              style={[
+                Fonts.h4Black,
+                Fonts.neutral00,
+                { flex: 1 },
+              ]}
+            >
+              {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
+            </Text>
+            {item?.isReadOnly ? renderMetaChip('Multisport', 'warning') : null}
+          </View>
 
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
-          {renderMetaChip(capacityLabel, 'primary')}
-          {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
-        </View>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
+            {renderMetaChip(capacityLabel, 'primary')}
+            {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
+          </View>
 
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <Image
-            source={Images.pin}
-            style={[
-              ApplicationStyle.icon16,
-              ApplicationStyle.tintColor.primary200,
-              { marginTop: 1 },
-            ]}
-          />
-          <Text
-            numberOfLines={2}
-            style={[
-              Fonts.p2,
-              Fonts.primary100,
-              { flex: 1 },
-            ]}
-          >
-            {addressLabel}
-          </Text>
-        </View>
-        {hasAddress ? (
-          <Button
-            onPress={() => handleOpenFacilityMap(item)}
-            size="small"
-            style={{ alignSelf: 'flex-start' }}
-            title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-            variant="Secondary"
-          />
-        ) : null}
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <View
+              style={{
+                backgroundColor: planningColor || Colors.primary500,
+                borderColor: `${Colors.neutral00}66`,
+                borderRadius: 999,
+                borderWidth: 1,
+                height: 12,
+                width: 12,
+              }}
+            />
+            <Text style={[Fonts.p3, Fonts.primary100]}>
+              {t('facilityList.labels.planningColor', 'Couleur planning')}
+            </Text>
+          </View>
+
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <Image
+              source={Images.pin}
+              style={[
+                ApplicationStyle.icon16,
+                ApplicationStyle.tintColor.primary200,
+                { marginTop: 1 },
+              ]}
+            />
+            <Text
+              numberOfLines={2}
+              style={[
+                Fonts.p2,
+                Fonts.primary100,
+                { flex: 1 },
+              ]}
+            >
+              {addressLabel}
+            </Text>
+          </View>
+          {hasAddress ? (
+            <Button
+              onPress={() => handleOpenFacilityMap(item)}
+              size="small"
+              style={{ alignSelf: 'flex-start' }}
+              title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
+              variant="Secondary"
+            />
+          ) : null}
+        </TouchableOpacity>
 
         {item?.isReadOnly ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
@@ -386,13 +435,6 @@ function FacilityList() {
           </Text>
         ) : (
           <View style={[Alignments.row, Alignments.justifyEnd, Alignments.wrap, Spaces.gap[8]]}>
-            <Button
-              icon="edit"
-              onPress={() => handleEdit(item)}
-              size="small"
-              title={t('common.edit', 'Modifier')}
-              variant="Secondary"
-            />
             <Button
               icon="trash"
               iconColor={Colors.error500}
@@ -413,11 +455,11 @@ function FacilityList() {
     Alignments.justifySpaceBetween,
     Alignments.row,
     Alignments.wrap,
-    ApplicationStyle.backgroundColor.primary700,
     ApplicationStyle.borderRadius24,
     ApplicationStyle.icon16,
     ApplicationStyle.tintColor.primary200,
     Colors.error500,
+    Colors.neutral00,
     Colors.primary500,
     Fonts.h4Black,
     Fonts.neutral00,
@@ -434,7 +476,6 @@ function FacilityList() {
     renderMetaChip,
     t,
   ]);
-
   const renderSectionHeader = useCallback(({ section }) => (
     hasMultipleSections ? (
       <View style={[Spaces.marginBottom[8], Spaces.marginTop[4]]}>

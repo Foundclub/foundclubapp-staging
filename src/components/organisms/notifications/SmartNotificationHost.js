@@ -1,6 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import {
-  Pressable, StyleSheet, Text, View,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -11,6 +15,7 @@ import { navigate } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
+import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
@@ -35,13 +40,16 @@ function SmartNotificationHost() {
     dismissSnackbar,
   } = useSmartNotifications();
 
-  if (!smartNotifEnabled) return null;
+  const isLineupReminder = activeSnackbar?.type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER;
 
   useEffect(() => {
-    if (!activeSnackbar) return undefined;
+    if (!activeSnackbar || isLineupReminder) return undefined;
     const timer = setTimeout(() => dismissSnackbar(), AUTO_HIDE_SNACKBAR_MS);
     return () => clearTimeout(timer);
-  }, [activeSnackbar, dismissSnackbar]);
+  }, [activeSnackbar, dismissSnackbar, isLineupReminder]);
+
+  // Lineup reminder popup must stay available even when smart league snackbars are feature-flagged off.
+  if (!smartNotifEnabled && !isLineupReminder) return null;
 
   const handleOpenFromPayload = (payload) => {
     const destination = resolveNotificationDestination(payload);
@@ -55,7 +63,7 @@ function SmartNotificationHost() {
 
   return (
     <>
-      {activeSnackbar ? (
+      {activeSnackbar && !isLineupReminder ? (
         <View style={styles.snackbarWrap}>
           <Pressable
             onPress={() => {
@@ -80,6 +88,46 @@ function SmartNotificationHost() {
         </View>
       ) : null}
 
+      {activeSnackbar && isLineupReminder ? (
+        <Modal
+          animationType="fade"
+          onRequestClose={dismissSnackbar}
+          statusBarTranslucent
+          transparent
+          visible
+        >
+          <View style={styles.lineupOverlay}>
+            <Pressable onPress={dismissSnackbar} style={styles.lineupOverlayTapArea} />
+            <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+                {activeSnackbar.title || 'Publier la compo'}
+              </Text>
+              <Text style={[Fonts.p2, styles.lineupDescription, { color: Colors.neutral100 }]}>
+                {activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+              </Text>
+
+              <View style={styles.lineupActions}>
+                <Pressable
+                  onPress={dismissSnackbar}
+                  style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Plus tard</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    handleOpenFromPayload(activeSnackbar);
+                    dismissSnackbar();
+                  }}
+                  style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>Publier la compo</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
       <MatchFinalPosterModal
         onClose={dismissRecap}
         onOpenDetails={() => {
@@ -98,6 +146,56 @@ function SmartNotificationHost() {
 }
 
 const styles = StyleSheet.create({
+  lineupActions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  lineupCard: {
+    backgroundColor: 'rgba(19, 60, 80, 0.98)',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginHorizontal: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    width: '88%',
+    zIndex: 2,
+  },
+  lineupDescription: {
+    marginTop: 8,
+  },
+  lineupOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  lineupOverlayTapArea: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  lineupPrimaryButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
+  lineupSecondaryButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 12,
+  },
   snackbar: {
     borderRadius: 12,
     borderWidth: 1,

@@ -35,6 +35,7 @@ import useTheme from '@/theme/themeContext';
  * @param {object} [props.scrollViewProps] - Optional extra props forwarded to BottomSheetScrollView
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
+ * @param {boolean} [props.useSafeAreaBottomInset] - Apply safe area bottom inset to the sheet container
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({
@@ -53,6 +54,7 @@ function BottomModal({
   scrollViewRef,
   snapPoints,
   style,
+  useSafeAreaBottomInset = true,
 }) {
   /**
    * @type {React.MutableRefObject<import('@gorhom/bottom-sheet').BottomSheetModal | null>}
@@ -156,8 +158,21 @@ function BottomModal({
   );
 
   const contentBottomPadding = useMemo(
-    () => (footerComponent ? 16 : 40) + keyboardHeight,
-    [footerComponent, keyboardHeight],
+    () => {
+      if (!footerComponent) return 40 + keyboardHeight;
+      const safeInset = useSafeAreaBottomInset ? insets.bottom : 0;
+      // Keep enough room for sticky footer buttons so the list never hides them.
+      return 140 + safeInset + keyboardHeight;
+    },
+    [footerComponent, insets.bottom, keyboardHeight, useSafeAreaBottomInset],
+  );
+  const sheetBottomInset = useMemo(
+    () => (useSafeAreaBottomInset ? insets.bottom : 0) + keyboardHeight,
+    [insets.bottom, keyboardHeight, useSafeAreaBottomInset],
+  );
+  const footerBottomInset = useMemo(
+    () => (useSafeAreaBottomInset ? insets.bottom : 0) + keyboardHeight,
+    [insets.bottom, keyboardHeight, useSafeAreaBottomInset],
   );
 
   return (
@@ -168,7 +183,7 @@ function BottomModal({
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
         style]}
-      bottomInset={insets.bottom + keyboardHeight}
+      bottomInset={sheetBottomInset}
       enableContentPanningGesture={Platform.OS === 'ios'}
       enableDynamicSizing={!snapPoints}
       enablePanDownToClose
@@ -231,6 +246,7 @@ function BottomModal({
           </BottomSheetScrollView>
         ) : (
           <BottomSheetView style={[
+            footerComponent ? { paddingBottom: contentBottomPadding } : null,
             Spaces.paddingHorizontal[24],
             !headerComponent ? Spaces.paddingTop[12] : null,
             contentContainerStyle,
@@ -240,13 +256,22 @@ function BottomModal({
           </BottomSheetView>
         )}
 
-        {/* Fixed Footer */}
+        {/* Sticky Footer */}
         {footerComponent && (
           <View style={[
+            Alignments.absolute,
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
-            { paddingBottom: insets.bottom + 40 + keyboardHeight },
-            { borderTopColor: 'rgba(255,255,255,0.1)', borderTopWidth: 1 }, // Optional separator
+            {
+              backgroundColor: Colors.primary700,
+              borderTopColor: 'rgba(255,255,255,0.1)',
+              borderTopWidth: 1,
+              bottom: footerBottomInset,
+              left: 0,
+              paddingBottom: 12,
+              right: 0,
+              zIndex: 5,
+            },
           ]}
           >
             {footerComponent}

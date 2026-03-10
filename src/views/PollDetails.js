@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
 function PollDetails({ navigation, route }) {
   const { chatId = '', messageId = '', poll: initialPoll = null } = route.params || {};
   const { userData } = useAuth();
-  const { updateMessage } = useMessaging(chatId);
+  const { votePoll } = useMessaging(chatId);
   const queryClient = useQueryClient();
   const { bottom, top } = useSafeAreaInsets();
   const {
@@ -210,8 +210,6 @@ function PollDetails({ navigation, route }) {
       if (allowMultipleVotes) {
         if (isTarget && !hasCurrentUser) {
           nextVoters = [...voters, currentUserId];
-        } else if (isTarget && hasCurrentUser) {
-          nextVoters = voters.filter((value) => value !== currentUserId);
         }
       } else if (isTarget && !hasCurrentUser) {
         nextVoters = [...voters, currentUserId];
@@ -257,10 +255,7 @@ function PollDetails({ navigation, route }) {
 
     try {
       setIsSubmittingVote(true);
-      await updateMessage({
-        data: { composition: nextComposition },
-        messageId: String(effectiveMessageId),
-      });
+      await votePoll(String(effectiveMessageId), optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       Alert.alert('Erreur', 'Impossible de sauvegarder ce vote.');

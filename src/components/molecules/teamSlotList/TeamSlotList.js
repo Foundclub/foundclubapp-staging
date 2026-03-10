@@ -1,6 +1,7 @@
-import React from 'react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -26,14 +27,25 @@ const formatHour = (timeValue) => {
   return `${hour}h${minute}`;
 };
 
-const getStatus = (count) => {
+const getStatus = (count, t) => {
   if (count >= REQUIRED_PLAYERS) {
-    return { label: 'Complet', tone: 'ready' };
+    return { label: t('teamSlotList.status.complete', 'Complet'), tone: 'ready' };
   }
   if (count >= REQUIRED_PLAYERS - 2) {
-    return { label: `Encore ${REQUIRED_PLAYERS - count}`, tone: 'warning' };
+    return {
+      label: t('teamSlotList.status.remaining', `Encore ${REQUIRED_PLAYERS - count}`, {
+        count: REQUIRED_PLAYERS - count,
+      }),
+      tone: 'warning',
+    };
   }
-  return { label: `${count}/${REQUIRED_PLAYERS} confirmes`, tone: 'default' };
+  return {
+    label: t('teamSlotList.status.confirmed', `${count}/${REQUIRED_PLAYERS} confirmés`, {
+      count,
+      required: REQUIRED_PLAYERS,
+    }),
+    tone: 'default',
+  };
 };
 
 /**
@@ -47,19 +59,51 @@ const getStatus = (count) => {
  * @param {() => void} [props.onAddSlot]
  * @param {boolean} [props.actionsEnabled]
  * @param {string} [props.currentUserId]
+ * @param {'carousel' | 'list'} [props.layout]
+ * @param {'responsive' | 'fixed'} [props.cardWidthMode]
+ * @param {boolean} [props.showMemberHelperText]
  * @returns {import('react').ReactElement}
  */
 export default function TeamSlotList({
   actionsEnabled = true,
+  cardWidthMode = 'responsive',
   currentUserId,
   isCaptain = false,
   isMember = true,
+  layout = 'carousel',
   onAddSlot,
   onCheckIn,
   onSlotPress,
+  showMemberHelperText = true,
   slots = [],
 }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
+  const { width: viewportWidth } = useWindowDimensions();
+
+  const slotCardWidth = useMemo(() => {
+    if (layout === 'list') return '100%';
+    if (cardWidthMode === 'fixed') return 198;
+    const horizontalPadding = 56;
+    const calculatedWidth = viewportWidth - horizontalPadding;
+    return Math.max(188, Math.min(246, calculatedWidth));
+  }, [cardWidthMode, layout, viewportWidth]);
+
+  const isCarouselLayout = layout === 'carousel';
+  const cardTone = {
+    addBg: `${Colors.gold500}1F`,
+    addBorder: `${Colors.gold500}6B`,
+    emptyBg: `${Colors.primary900}CC`,
+    emptyBorder: `${Colors.primary500}33`,
+    slotBg: `${Colors.primary900}E0`,
+    slotBorderDefault: `${Colors.primary500}47`,
+    slotBorderReady: `${Colors.gold500}73`,
+    statusBg: `${Colors.neutral00}14`,
+    statusBorder: `${Colors.neutral00}29`,
+    trackBg: `${Colors.neutral00}1F`,
+    unavailableBg: `${Colors.primary500}1F`,
+    unavailableBorder: `${Colors.primary500}52`,
+  };
 
   return (
     <View style={{ marginTop: 24 }}>
@@ -74,14 +118,14 @@ export default function TeamSlotList({
           color: Colors.gold500, flex: 1, flexShrink: 1, paddingRight: 10,
         }]}
         >
-          Disponibilites (Creneaux)
+          {t('teamSlotList.title', 'Disponibilités (créneaux)')}
         </Text>
         {isCaptain && actionsEnabled ? (
           <TouchableOpacity
             onPress={onAddSlot}
             style={{
-              backgroundColor: 'rgba(250, 204, 21, 0.12)',
-              borderColor: 'rgba(250, 204, 21, 0.42)',
+              backgroundColor: cardTone.addBg,
+              borderColor: cardTone.addBorder,
               borderRadius: 999,
               borderWidth: 1,
               flexShrink: 0,
@@ -90,14 +134,16 @@ export default function TeamSlotList({
               paddingVertical: 6,
             }}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>+ Ajouter</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+              {t('teamSlotList.add', '+ Ajouter')}
+            </Text>
           </TouchableOpacity>
         ) : null}
         {isCaptain && !actionsEnabled ? (
           <View
             style={{
-              backgroundColor: 'rgba(1, 179, 244, 0.12)',
-              borderColor: 'rgba(1, 179, 244, 0.32)',
+              backgroundColor: cardTone.unavailableBg,
+              borderColor: cardTone.unavailableBorder,
               borderRadius: 999,
               borderWidth: 1,
               flexShrink: 0,
@@ -106,40 +152,45 @@ export default function TeamSlotList({
               paddingVertical: 6,
             }}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Bientot disponible</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              {t('teamSlotList.comingSoon', 'Bientôt disponible')}
+            </Text>
           </View>
         ) : null}
       </View>
 
       {slots.length === 0 ? (
         <View style={{
-          backgroundColor: 'rgba(9, 27, 42, 0.78)',
-          borderColor: 'rgba(1, 179, 244, 0.20)',
+          backgroundColor: cardTone.emptyBg,
+          borderColor: cardTone.emptyBorder,
           borderRadius: 12,
           borderWidth: 1,
           padding: 14,
         }}
         >
-          <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>Aucun creneau defini.</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
+            {t('teamSlotList.empty', 'Aucun créneau défini.')}
+          </Text>
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={{ paddingRight: 6 }}
-          horizontal
+          horizontal={isCarouselLayout}
           showsHorizontalScrollIndicator={false}
         >
           {slots.map((slot, index) => {
             const participantsCount = slot?.participants?.length || 0;
             const checkedIn = slot?.participants?.some((p) => p?.documentId === currentUserId);
-            const status = getStatus(participantsCount);
+            const status = getStatus(participantsCount, t);
             const progressRatio = Math.min(1, participantsCount / REQUIRED_PLAYERS);
             const slotKey = slot?.documentId || `${slot?.recurrence_day || 'slot'}-${index}`;
 
-            const statusColor = status.tone === 'ready'
-              ? Colors.success500
-              : status.tone === 'warning'
-                ? Colors.gold500
-                : Colors.neutral300;
+            let statusColor = Colors.neutral300;
+            if (status.tone === 'ready') {
+              statusColor = Colors.success500;
+            } else if (status.tone === 'warning') {
+              statusColor = Colors.gold500;
+            }
 
             return (
               <TouchableOpacity
@@ -151,15 +202,16 @@ export default function TeamSlotList({
                   }
                 }}
                 style={{
-                  backgroundColor: 'rgba(9, 27, 42, 0.88)',
+                  backgroundColor: cardTone.slotBg,
                   borderColor: status.tone === 'ready'
-                    ? 'rgba(250, 204, 21, 0.45)'
-                    : 'rgba(1, 179, 244, 0.28)',
+                    ? cardTone.slotBorderReady
+                    : cardTone.slotBorderDefault,
                   borderRadius: 14,
                   borderWidth: 1,
-                  marginRight: 10,
+                  marginBottom: isCarouselLayout ? 0 : 10,
+                  marginRight: isCarouselLayout ? 10 : 0,
                   padding: 12,
-                  width: 198,
+                  width: slotCardWidth,
                 }}
               >
                 <View style={{
@@ -173,8 +225,8 @@ export default function TeamSlotList({
                     {dayMap[slot?.recurrence_day] || slot?.recurrence_day || 'Jour'}
                   </Text>
                   <View style={{
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    borderColor: 'rgba(255,255,255,0.16)',
+                    backgroundColor: cardTone.statusBg,
+                    borderColor: cardTone.statusBorder,
                     borderRadius: 999,
                     borderWidth: 1,
                     paddingHorizontal: 8,
@@ -194,14 +246,15 @@ export default function TeamSlotList({
 
                 <View style={{ marginBottom: 10 }}>
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
-                    Joueurs confirmes:
+                    {t('teamSlotList.confirmedPlayers', 'Joueurs confirmés')}
+                    :
                     {' '}
                     {participantsCount}
                     /
                     {REQUIRED_PLAYERS}
                   </Text>
                   <View style={{
-                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    backgroundColor: cardTone.trackBg,
                     borderRadius: 999,
                     height: 6,
                     overflow: 'hidden',
@@ -212,7 +265,7 @@ export default function TeamSlotList({
                       backgroundColor: progressRatio >= 1 ? Colors.gold500 : Colors.primary500,
                       borderRadius: 999,
                       height: 6,
-                      width: `${Math.max(6, progressRatio * 100)}%`,
+                      width: `${progressRatio * 100}%`,
                     }}
                     />
                   </View>
@@ -233,9 +286,16 @@ export default function TeamSlotList({
                     }}
                   >
                     <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary500 }]}>
-                      {checkedIn ? 'Retirer ma presence' : 'Je suis present'}
+                      {checkedIn
+                        ? t('teamSlotList.cta.removePresence', 'Retirer ma présence')
+                        : t('teamSlotList.cta.confirmPresence', 'Je suis présent')}
                     </Text>
                   </TouchableOpacity>
+                ) : null}
+                {isMember && actionsEnabled && showMemberHelperText ? (
+                  <Text style={[Fonts.p3, { color: Colors.neutral300, paddingTop: 8, textAlign: 'center' }]}>
+                    {t('teamSlotList.memberHelp', 'Touchez pour confirmer votre présence.')}
+                  </Text>
                 ) : null}
                 {isMember && !actionsEnabled ? (
                   <Text
@@ -245,13 +305,14 @@ export default function TeamSlotList({
                       textAlign: 'center',
                     }]}
                   >
-                    Check-in bientot disponible.
+                    {t('teamSlotList.checkInSoon', 'Check-in bientôt disponible.')}
                   </Text>
-                ) : (
+                ) : null}
+                {!isMember ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' }]}>
-                    Rejoindre la squad pour participer.
+                    {t('teamSlotList.joinHint', 'Rejoindre la squad pour participer.')}
                   </Text>
-                )}
+                ) : null}
               </TouchableOpacity>
             );
           })}

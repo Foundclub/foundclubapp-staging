@@ -1,24 +1,69 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import useAuth from '@/domains/auth/useAuth';
 import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
 import { storage } from '@/store/appContext';
 
 import {
+  addGroupMembers,
   archiveChat,
   createClubChat,
+  createGroupChat,
   createTeamChat,
   createWhisperChat,
   deleteMessage,
   getChats,
   pinChat,
+  removeGroupMember,
+  respondProposalMessage,
   unarchiveChat,
   unpinChat,
-  updateMessage,
+  updateGroupMeta,
+  votePollMessage,
 } from '@/services/chat/chatService';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import useSocket, { EVENTS } from '@/hooks/useSocket';
+
+const messagingLogger = createLogger('messaging');
+
+const normalizeChatId = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const getAttachmentSignature = (attachments = []) => attachments
+  .map((attachment) => String(
+    attachment?.documentId
+    || attachment?.id
+    || attachment?.url
+    || attachment?.name
+    || '',
+  ))
+  .filter(Boolean)
+  .join('|');
+
+const getMessageSignature = (message) => {
+  const text = String(message?.message || '').trim();
+  const compositionType = String(message?.composition?.type || '');
+  const eventRef = String(message?.event?.documentId || message?.event || '');
+  const replyRef = String(message?.replyTo?.documentId || message?.replyTo?.id || '');
+  const attachmentSignature = getAttachmentSignature(message?.attachments || []);
+
+  return `${text}::${compositionType}::${eventRef}::${replyRef}::${attachmentSignature}`;
+};
+
+const getMessageEntityId = (message) => (
+  // eslint-disable-next-line no-underscore-dangle
+  String(message?.documentId || message?.id || message?._id || '')
+);
+
+const getSenderEntityId = (message) => (
+  // eslint-disable-next-line no-underscore-dangle
+  normalizeChatId(message?.sender?.documentId || message?.sender?.id || message?.user?._id || '')
+);
 
 /**
  * Custom hook to handle messaging functionality
@@ -29,6 +74,39 @@ const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
   const { userData } = useAuth();
+  const pendingTimeoutsRef = useRef(new Map());
+
+  const clearPendingTimeout = useCallback((tempMessageId) => {
+    const timeoutId = pendingTimeoutsRef.current.get(tempMessageId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      pendingTimeoutsRef.current.delete(tempMessageId);
+    }
+  }, []);
+
+  const markMessageState = useCallback((chatId, messageId, patch) => {
+    queryClient.setQueryData(['chat-messages', chatId], (oldData) => {
+      if (!oldData?.pages) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          data: Array.isArray(page?.data)
+            ? page.data.map((msg) => {
+              const currentId = getMessageEntityId(msg);
+              if (currentId !== String(messageId)) return msg;
+              return { ...msg, ...patch };
+            })
+            : [],
+        })),
+      };
+    });
+  }, [queryClient]);
+
+  useEffect(() => () => {
+    pendingTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    pendingTimeoutsRef.current.clear();
+  }, []);
 
   /**
    * Update the last read message timestamp for a chat
@@ -78,10 +156,18 @@ const useMessaging = (currentChatId) => {
         const cleanPages = oldData.pages.map((page) => {
           // Ensure page.data is an array
           const data = Array.isArray(page?.data) ? page.data : [];
+          const confirmedSignature = getMessageSignature(formattedMessage);
           // Filter out pending messages that look identical to the confirmed one
           const filteredData = data.filter((msg) => {
-            if (msg.pending && msg.message === formattedMessage.message) return false;
-            // Add more duplicate checks if needed (e.g. by tempId if available)
+            if (!msg?.pending && !msg?.failed) return true;
+            const pendingSignature = getMessageSignature(msg);
+            if (pendingSignature === confirmedSignature) {
+              const pendingId = getMessageEntityId(msg);
+              if (pendingId) {
+                clearPendingTimeout(pendingId);
+              }
+              return false;
+            }
             return true;
           });
           return { ...page, data: filteredData };
@@ -135,7 +221,7 @@ const useMessaging = (currentChatId) => {
         };
       },
     );
-  }, [queryClient]);
+  }, [queryClient, clearPendingTimeout]);
 
   const handleMessageDeleted = useCallback((/** @type {MessageDeletionData} */ data) => {
     queryClient.setQueryData(
@@ -153,38 +239,95 @@ const useMessaging = (currentChatId) => {
     );
   }, [queryClient]);
 
+  const handleMessageRead = useCallback((payload) => {
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    const readerId = normalizeChatId(payload?.userDocumentId);
+    if (!chatDocumentId || !readerId) return;
+
+    queryClient.setQueryData(['chat-messages', chatDocumentId], (oldData) => {
+      if (!oldData?.pages) return oldData;
+
+      const lastSeenMessageId = normalizeChatId(payload?.lastSeenMessageId || '');
+      let cutoffTime = null;
+
+      if (lastSeenMessageId) {
+        const foundMessage = oldData.pages
+          .flatMap((page) => (Array.isArray(page?.data) ? page.data : []))
+          .find((message) => {
+            const id = normalizeChatId(getMessageEntityId(message));
+            return id === lastSeenMessageId;
+          });
+        if (foundMessage?.createdAt) {
+          cutoffTime = new Date(foundMessage.createdAt).getTime();
+        }
+      }
+
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          data: Array.isArray(page?.data)
+            ? page.data.map((message) => {
+              const senderId = getSenderEntityId(message);
+              if (!senderId || senderId === readerId) return message;
+
+              if (cutoffTime !== null) {
+                const createdAt = new Date(message?.createdAt || 0).getTime();
+                if (!Number.isFinite(createdAt) || createdAt > cutoffTime) {
+                  return message;
+                }
+              }
+
+              const readBy = Array.isArray(message?.readBy) ? message.readBy : [];
+              const alreadyRead = readBy.some((entry) => normalizeChatId(entry?.documentId || entry?.id) === readerId);
+              if (alreadyRead) return message;
+
+              return {
+                ...message,
+                readBy: [...readBy, { documentId: readerId }],
+              };
+            })
+            : [],
+        })),
+      };
+    });
+  }, [queryClient]);
+
   const handleJoined = useCallback((/** @type {JoinData} */ data) => {
     queryClient.invalidateQueries({ queryKey: ['chat-messages', data.chatDocumentId] });
   }, [queryClient]);
 
   // Subscribe to chat events when socket is available
   useEffect(() => {
-    if (!isConnected || !currentChatId || !socket) return undefined;
+    const safeCurrentChatId = normalizeChatId(currentChatId);
+    if (!isConnected || !safeCurrentChatId || !socket) return undefined;
 
     // Join the chat first
-    socket.emit(EVENTS.JOIN_CHAT, { chatDocumentId: currentChatId });
+    socket.emit(EVENTS.JOIN_CHAT, { chatDocumentId: safeCurrentChatId });
 
     // Set up event listeners after joining
     socket.on(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
     socket.on(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
+    socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, (error) => {
-      // eslint-disable-next-line no-console
-      console.error('Chat error:', error.message);
+      messagingLogger.error('Socket chat error', error?.message || error);
     });
 
     // Cleanup: leave chat and remove listeners
     return () => {
-      socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: currentChatId });
+      socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeCurrentChatId });
       socket.off(EVENTS.MESSAGE_RECEIVED);
       socket.off(EVENTS.MESSAGE_DELETED);
+      socket.off(EVENTS.MESSAGE_READ);
       socket.off(EVENTS.JOINED);
       socket.off(EVENTS.ERROR);
-      updateLastReadMessage(currentChatId);
+      updateLastReadMessage(safeCurrentChatId);
     };
   }, [socket,
     handleNewMessage,
     handleMessageDeleted,
+    handleMessageRead,
     handleJoined,
     currentChatId,
     isConnected,
@@ -200,10 +343,13 @@ const useMessaging = (currentChatId) => {
   const createTeamChatMutation = useMutation({
     mutationFn: createTeamChat,
   });
+  const createGroupChatMutation = useMutation({
+    mutationFn: createGroupChat,
+  });
 
   const deleteMessageMutation = useMutation({
     mutationFn: deleteMessage,
-    onSuccess: (_, messageId) => {
+    onSuccess: () => {
       // Optimistic or Real update? The socket will handle real update for others.
       // For me, I can remove it immediately if socket delay is high.
       // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
@@ -228,6 +374,46 @@ const useMessaging = (currentChatId) => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chats'] }),
   });
 
+  const votePollMutation = useMutation({
+    mutationFn: (payload) => votePollMessage(payload.messageId, payload.optionId),
+    onSuccess: (data) => {
+      if (data?.messageDocumentId) {
+        queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId] });
+      }
+    },
+  });
+
+  const proposalResponseMutation = useMutation({
+    mutationFn: (payload) => respondProposalMessage(payload.messageId, payload.status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId] });
+    },
+  });
+
+  const addGroupMembersMutation = useMutation({
+    mutationFn: ({ chatId, memberIds }) => addGroupMembers(chatId, memberIds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    },
+  });
+
+  const removeGroupMemberMutation = useMutation({
+    mutationFn: ({ chatId, userId }) => removeGroupMember(chatId, userId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    },
+  });
+
+  const updateGroupMetaMutation = useMutation({
+    mutationFn: ({ chatId, data }) => updateGroupMeta(chatId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['chat', variables?.chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    },
+  });
+
   /**
    * Send a message
    * @param {string} chatId - The chat id
@@ -240,25 +426,39 @@ const useMessaging = (currentChatId) => {
     /** @type {string} */ message,
     /** @type {object} */ extraData = {},
   ) => {
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId) {
+      messagingLogger.warn('sendMessage skipped: missing chatId');
+      return null;
+    }
+
     // Check if socket is connected before sending
-    if (!isConnected || !socket) return;
+    if (!isConnected || !socket) {
+      messagingLogger.warn('sendMessage skipped: socket disconnected', { chatId: safeChatId });
+      return null;
+    }
 
     // Optimistic Update
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
+      attachments: extraData.attachments || [],
+      chat: { documentId: safeChatId },
+      composition: extraData.composition,
       createdAt: new Date().toISOString(),
       documentId: tempId,
       event: extraData.event,
+      failed: false,
       id: tempId,
-      message,
+      message: message || '',
       pending: true,
+      readBy: [],
+      replyTo: extraData.replyTo || null,
       sender: { documentId: 'me', ...extraData.sender }, // We need current user info here
-      ...extraData,
     };
 
     // Update Cache Immediately
     queryClient.setQueryData(
-      ['chat-messages', chatId],
+      ['chat-messages', safeChatId],
       (/** @type {any} */ oldData) => {
         // Safe check for valid pages structure, init if absolutely missing
         if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
@@ -286,10 +486,22 @@ const useMessaging = (currentChatId) => {
     );
 
     socket.emit(EVENTS.SEND_MESSAGE, {
-      chatDocumentId: chatId,
+      attachments: extraData.attachments,
+      chatDocumentId: safeChatId,
+      composition: extraData.composition,
+      event: extraData.event,
       message,
-      ...extraData, // files, replyTo, event
+      replyTo: extraData.replyTo || null,
     });
+
+    const timeoutId = setTimeout(() => {
+      pendingTimeoutsRef.current.delete(tempId);
+      markMessageState(safeChatId, tempId, {
+        failed: true,
+        pending: false,
+      });
+    }, 10000);
+    pendingTimeoutsRef.current.set(tempId, timeoutId);
 
     // Update chat list to show latest message AND unarchive
     queryClient.setQueriesData(
@@ -301,7 +513,7 @@ const useMessaging = (currentChatId) => {
           pages: oldData.pages.map((page) => ({
             ...page,
             data: Array.isArray(page.data) ? page.data.map((chat) => {
-              if (chat.documentId === chatId) {
+              if (chat.documentId === safeChatId) {
                 return {
                   ...chat,
                   archivedBy: [], // Force unarchive
@@ -315,18 +527,28 @@ const useMessaging = (currentChatId) => {
         };
       },
     );
-  }, [socket, isConnected, queryClient]);
+    return tempId;
+  }, [socket, isConnected, queryClient, markMessageState]);
 
   const sendTypingStart = useCallback((chatId) => {
-    if (socket) socket.emit(EVENTS.TYPING_START, { chatDocumentId: chatId });
+    const safeChatId = normalizeChatId(chatId);
+    if (socket && safeChatId) socket.emit(EVENTS.TYPING_START, { chatDocumentId: safeChatId });
   }, [socket]);
 
   const sendTypingStop = useCallback((chatId) => {
-    if (socket) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: chatId });
+    const safeChatId = normalizeChatId(chatId);
+    if (socket && safeChatId) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: safeChatId });
   }, [socket]);
 
-  const sendReadReceipt = useCallback((chatId) => {
-    if (socket) socket.emit(EVENTS.READ_MESSAGE, { chatDocumentId: chatId });
+  const sendReadReceipt = useCallback((chatId, lastSeenMessageId) => {
+    const safeChatId = normalizeChatId(chatId);
+    const safeLastSeenId = normalizeChatId(lastSeenMessageId || '');
+    if (socket && safeChatId) {
+      socket.emit(EVENTS.READ_MESSAGE, {
+        chatDocumentId: safeChatId,
+        ...(safeLastSeenId ? { lastSeenMessageId: safeLastSeenId } : {}),
+      });
+    }
   }, [socket]);
 
   /**
@@ -335,23 +557,11 @@ const useMessaging = (currentChatId) => {
    * @returns {void}
    */
   const joinChat = useCallback((/** @type {string} */ chatId) => {
-    if (socket) {
-      socket.emit(EVENTS.JOIN_CHAT, chatId);
+    const safeChatId = normalizeChatId(chatId);
+    if (socket && safeChatId) {
+      socket.emit(EVENTS.JOIN_CHAT, { chatDocumentId: safeChatId });
     }
   }, [socket]);
-
-  /* UPDATE MESSAGE MUTATION */
-  const updateMessageMutation = useMutation({
-    mutationFn: (/** @type {{ messageId: string; data: any }} */ payload) => updateMessage(payload.messageId, payload.data),
-    onError: (error) => {
-      // eslint-disable-next-line no-console
-      console.error('Error updating message:', error);
-    },
-    onSuccess: (data) => {
-      // Optimistically we might have already updated, but let's confirm
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', currentChatId || data.chat?.documentId] });
-    },
-  });
 
   /**
    * Leave a chat room
@@ -359,10 +569,53 @@ const useMessaging = (currentChatId) => {
    * @returns {void}
    */
   const leaveChat = useCallback((/** @type {string} */ chatId) => {
-    if (socket) {
-      socket.emit(EVENTS.LEAVE_CHAT, chatId);
+    const safeChatId = normalizeChatId(chatId);
+    if (socket && safeChatId) {
+      socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeChatId });
     }
   }, [socket]);
+
+  const retryFailedMessage = useCallback((chatId, failedMessage) => {
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId || !failedMessage) return;
+
+    const failedMessageId = normalizeChatId(
+      failedMessage.documentId
+      || failedMessage.id
+      // eslint-disable-next-line no-underscore-dangle
+      || failedMessage._id
+      || '',
+    );
+
+    if (failedMessageId) {
+      clearPendingTimeout(failedMessageId);
+      queryClient.setQueryData(['chat-messages', safeChatId], (oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            data: Array.isArray(page?.data)
+              ? page.data.filter((message) => {
+                const messageId = normalizeChatId(getMessageEntityId(message));
+                return messageId !== failedMessageId;
+              })
+              : [],
+          })),
+        };
+      });
+    }
+
+    sendMessage(safeChatId, failedMessage?.message || failedMessage?.text || '', {
+      attachments: failedMessage?.attachments || [],
+      composition: failedMessage?.composition,
+      event: failedMessage?.event?.documentId || failedMessage?.event || undefined,
+      replyTo: failedMessage?.replyTo?.documentId
+        ? { documentId: failedMessage.replyTo.documentId }
+        : null,
+      sender: userData,
+    });
+  }, [clearPendingTimeout, queryClient, sendMessage, userData]);
 
   /**
    * Start a whisper chat
@@ -370,14 +623,22 @@ const useMessaging = (currentChatId) => {
    * @returns {Promise<Chat | undefined>} The created chat or existing chat
    */
   const startWhisperChat = async (participants) => {
-    // Check inputs
-    if (!participants || !Array.isArray(participants)) {
-      console.error('startWhisperChat called with invalid participants', participants);
+    const currentUserId = normalizeChatId(userData?.documentId || '');
+    if (!currentUserId || !participants || !Array.isArray(participants)) {
+      messagingLogger.warn('startWhisperChat called with invalid payload');
       return undefined;
     }
 
-    // Sort participants to ensure consistent comparison
-    const sortedParticipants = [...participants].sort();
+    const otherParticipants = Array.from(
+      new Set(
+        participants
+          .map((participantId) => normalizeChatId(participantId))
+          .filter((participantId) => participantId && participantId !== currentUserId),
+      ),
+    );
+    if (otherParticipants.length === 0) return undefined;
+
+    const sortedParticipants = [currentUserId, ...otherParticipants].sort();
 
     // Check existing chats by ensuring we have the data
     try {
@@ -429,19 +690,18 @@ const useMessaging = (currentChatId) => {
             try {
               await unarchiveChatMutation.mutateAsync(existingChat.documentId);
             } catch (e) {
-              console.error('Failed to unarchive chat on open', e);
+              messagingLogger.warn('Failed to unarchive chat on open', e?.message || e);
             }
           }
           return existingChat;
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error checking existing chats:', error);
+      messagingLogger.warn('Error checking existing chats', error?.message || error);
     }
 
     // If no existing chat found, create a new one
-    const result = await createWhisperChatMutation.mutateAsync(participants);
+    const result = await createWhisperChatMutation.mutateAsync(otherParticipants);
     return result;
   };
 
@@ -465,8 +725,7 @@ const useMessaging = (currentChatId) => {
         if (existingChat) return existingChat;
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error checking existing team chats:', error);
+      messagingLogger.warn('Error checking existing team chats', error?.message || error);
     }
 
     // If no existing chat found, create a new one
@@ -494,8 +753,7 @@ const useMessaging = (currentChatId) => {
         if (existingChat) return existingChat;
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error checking existing club chats:', error);
+      messagingLogger.warn('Error checking existing club chats', error?.message || error);
     }
 
     // If no existing chat found, create a new one
@@ -503,19 +761,60 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
+  const startGroupChat = async ({ groupName, participants }) => {
+    const currentUserId = normalizeChatId(userData?.documentId || '');
+    if (!currentUserId) return undefined;
+
+    const memberIds = Array.from(
+      new Set(
+        (Array.isArray(participants) ? participants : [])
+          .map((participantId) => normalizeChatId(participantId))
+          .filter((participantId) => participantId && participantId !== currentUserId),
+      ),
+    );
+
+    if (memberIds.length < 2) {
+      messagingLogger.warn('startGroupChat skipped: not enough participants');
+      return undefined;
+    }
+
+    const safeGroupName = String(groupName || '').trim();
+    if (!safeGroupName) {
+      messagingLogger.warn('startGroupChat skipped: missing group name');
+      return undefined;
+    }
+
+    return createGroupChatMutation.mutateAsync({
+      groupName: safeGroupName,
+      participants: memberIds,
+    });
+  };
+
+  const votePoll = useCallback((messageId, optionId) => votePollMutation.mutateAsync({
+    messageId,
+    optionId,
+  }), [votePollMutation]);
+
+  const respondToProposal = useCallback((messageId, status) => proposalResponseMutation.mutateAsync({
+    messageId,
+    status,
+  }), [proposalResponseMutation]);
+
   // Update last read message when entering/leaving chat
   useEffect(() => {
-    if (currentChatId && socket) {
-      updateLastReadMessage(currentChatId);
+    const safeCurrentChatId = normalizeChatId(currentChatId);
+    if (safeCurrentChatId && socket) {
+      updateLastReadMessage(safeCurrentChatId);
 
       return () => {
-        updateLastReadMessage(currentChatId);
+        updateLastReadMessage(safeCurrentChatId);
       };
     }
     return undefined;
   }, [currentChatId, socket, updateLastReadMessage]);
 
   return {
+    addGroupMembers: addGroupMembersMutation.mutateAsync,
     archiveChat: archiveChatMutation.mutate,
     deleteMessage: deleteMessageMutation.mutate,
     getConversationName,
@@ -523,18 +822,23 @@ const useMessaging = (currentChatId) => {
     joinChat,
     leaveChat,
     pinChat: pinChatMutation.mutate,
+    removeGroupMember: removeGroupMemberMutation.mutateAsync,
+    respondToProposal,
+    retryFailedMessage,
     sendMessage,
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
     socket,
     startClubChat,
+    startGroupChat,
     startTeamChat,
     startWhisperChat,
     unarchiveChat: unarchiveChatMutation.mutate,
     unpinChat: unpinChatMutation.mutate,
+    updateGroupMeta: updateGroupMetaMutation.mutateAsync,
     updateLastReadMessage,
-    updateMessage: updateMessageMutation.mutateAsync,
+    votePoll,
   };
 };
 

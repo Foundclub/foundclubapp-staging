@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  LayoutAnimation, Platform, Text, UIManager, View,
+  Platform, Text, UIManager, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -26,17 +26,22 @@ const DAYS = [
 ];
 
 /**
+ * @typedef {{ day: string, startTime: string, endTime: string }} TeamSlotDraft
+ */
+
+/**
  * @param {object} props
- * @param {(slot: { day: string, startTime: string, endTime: string }) => void} props.onAdd
+ * @param {(slotOrSlots: TeamSlotDraft | TeamSlotDraft[]) => void} props.onAdd
  * @param {() => void} props.onCancel
  * @param {{ day?: string, startTime?: string, endTime?: string } | null} [props.initialValues]
  * @param {() => void} [props.onDelete]
- * @param {(draft: { isValid: boolean, slot: { day: string, startTime: string, endTime: string } | null }) => void} [props.onDraftChange]
+ * @param {(draft: { isValid: boolean, slot: TeamSlotDraft | null, slots: TeamSlotDraft[] }) => void} [props.onDraftChange]
  */
 function TeamSlotCreationForm({
   initialValues, onAdd, onCancel, onDelete, onDraftChange,
 }) {
   const { Colors, Fonts } = useTheme();
+  const isEditMode = Boolean(initialValues);
 
   const [selectedDay, setSelectedDay] = useState(() => {
     if (initialValues?.day) {
@@ -45,12 +50,15 @@ function TeamSlotCreationForm({
     return null;
   });
 
-  // Initialize times with Date objects
+  const [selectedDays, setSelectedDays] = useState(
+    /** @type {{ label: string, value: string }[]} */ ([]),
+  );
+
   const [startTimeDate, setStartTimeDate] = useState(() => {
     const d = new Date();
     if (initialValues?.startTime) {
       const [h, m] = initialValues.startTime.split(':');
-      d.setHours(parseInt(h), parseInt(m), 0, 0);
+      d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
     } else {
       d.setHours(20, 0, 0, 0);
     }
@@ -61,14 +69,13 @@ function TeamSlotCreationForm({
     const d = new Date();
     if (initialValues?.endTime) {
       const [h, m] = initialValues.endTime.split(':');
-      d.setHours(parseInt(h), parseInt(m), 0, 0);
+      d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
     } else {
       d.setHours(22, 0, 0, 0);
     }
     return d;
   });
 
-  // Time Picker Data
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
 
@@ -88,7 +95,6 @@ function TeamSlotCreationForm({
     if (type === 'minute') newStart.setMinutes(value);
     setStartTimeDate(newStart);
 
-    // Auto-adjust End Time if it becomes invalid or too close
     const minEnd = new Date(newStart);
     minEnd.setHours(minEnd.getHours() + 1);
 
@@ -108,31 +114,59 @@ function TeamSlotCreationForm({
     setEndTimeDate(newEnd);
   };
 
-  const handleAdd = () => {
-    if (!selectedDay) return;
-    onAdd({
-      day: selectedDay.value,
-      endTime: formatTime(endTimeDate),
-      startTime: formatTime(startTimeDate),
-    });
-  };
+  const selectedDayValues = useMemo(() => {
+    if (isEditMode) {
+      return selectedDay?.value ? [selectedDay.value] : [];
+    }
 
-  const isFormValid = useMemo(() => selectedDay && startTimeDate && endTimeDate && endTimeDate > startTimeDate, [selectedDay, startTimeDate, endTimeDate]);
+    return selectedDays
+      .map((day) => day?.value)
+      .filter((day) => typeof day === 'string' && day.length > 0);
+  }, [isEditMode, selectedDay, selectedDays]);
+
+  const hasValidTimeRange = useMemo(() => endTimeDate > startTimeDate, [endTimeDate, startTimeDate]);
+
+  const slotsDraft = useMemo(() => {
+    if (!hasValidTimeRange || selectedDayValues.length === 0) return [];
+
+    const startTime = formatTime(startTimeDate);
+    const endTime = formatTime(endTimeDate);
+
+    return selectedDayValues.map((dayValue) => ({
+      day: dayValue,
+      endTime,
+      startTime,
+    }));
+  }, [hasValidTimeRange, selectedDayValues, startTimeDate, endTimeDate]);
+
+  const isFormValid = useMemo(
+    () => hasValidTimeRange && slotsDraft.length > 0,
+    [hasValidTimeRange, slotsDraft],
+  );
 
   useEffect(() => {
     if (!onDraftChange) return;
-    const selectedDayValue = selectedDay?.value;
+
     onDraftChange({
       isValid: Boolean(isFormValid),
-      slot: isFormValid && selectedDayValue
-        ? {
-          day: selectedDayValue,
-          endTime: formatTime(endTimeDate),
-          startTime: formatTime(startTimeDate),
-        }
-        : null,
+      slot: isFormValid && slotsDraft.length > 0 ? slotsDraft[0] : null,
+      slots: isFormValid ? slotsDraft : [],
     });
-  }, [onDraftChange, isFormValid, selectedDay, startTimeDate, endTimeDate]);
+  }, [onDraftChange, isFormValid, slotsDraft]);
+
+  const handleAdd = () => {
+    if (!isFormValid || slotsDraft.length === 0) return;
+    onAdd(isEditMode ? slotsDraft[0] : slotsDraft);
+  };
+
+  const daySelectValue = isEditMode
+    ? (selectedDay?.label || '')
+    : selectedDays
+      .map((day) => String(day.value || ''))
+      .filter(Boolean);
+
+  const dayModalTitle = isEditMode ? 'Jour' : 'Choisir les jours';
+  const dayPlaceholder = isEditMode ? 'Choisir un jour' : 'Choisir un ou plusieurs jours';
 
   return (
     <View style={{
@@ -141,24 +175,49 @@ function TeamSlotCreationForm({
       borderRadius: 16,
       borderWidth: 1,
       paddingHorizontal: 16,
-      paddingTop: 40, // Increased padding top for modal header
+      paddingTop: 40,
       paddingVertical: 16,
     }}
     >
       <View style={{ marginBottom: 16 }}>
-        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Jour</Text>
+        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+          {isEditMode ? 'Jour' : 'Jour(s)'}
+        </Text>
         <AutocompleteSelect
+          confirmButtonLabel="Enregistrer"
+          isMulti={!isEditMode}
           isSearchable={false}
+          modalSnapPoints={['88%']}
+          modalTitle={dayModalTitle}
           options={DAYS}
-          placeholder="Sélectionner un jour"
-          setValue={setSelectedDay}
-          value={selectedDay?.label || ''}
+          placeholder={dayPlaceholder}
+          setValue={(value) => {
+            if (isEditMode) {
+              let nextSelectedDay = null;
+              if (Array.isArray(value)) {
+                nextSelectedDay = value[0] || null;
+              } else if (value) {
+                nextSelectedDay = value;
+              }
+              setSelectedDay(nextSelectedDay);
+              return;
+            }
+
+            let nextSelectedDays = [];
+            if (Array.isArray(value)) {
+              nextSelectedDays = value.filter((option) => Boolean(option?.value));
+            } else if (value) {
+              nextSelectedDays = [value];
+            }
+            setSelectedDays(nextSelectedDays);
+          }}
+          value={daySelectValue}
         />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Début</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Debut</Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <WheelPicker
               data={hours}
@@ -179,6 +238,7 @@ function TeamSlotCreationForm({
             />
           </View>
         </View>
+
         <View style={{ alignItems: 'center', flex: 1 }}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Fin</Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
@@ -200,7 +260,6 @@ function TeamSlotCreationForm({
               width={40}
             />
           </View>
-
         </View>
       </View>
 
@@ -226,7 +285,7 @@ function TeamSlotCreationForm({
             onPress={onDelete}
             style={{ borderColor: Colors.error500, borderWidth: 1 }}
             textStyle={{ color: Colors.error500 }}
-            title="Supprimer ce créneau"
+            title="Supprimer ce creneau"
             variant="Secondary"
           />
         )}

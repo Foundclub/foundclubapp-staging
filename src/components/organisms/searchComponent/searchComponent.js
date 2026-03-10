@@ -14,11 +14,13 @@ import Input from '@/components/molecules/input/Input';
  * @param {(text: string) => void} props.handleSearchField - Function to handle search field changes
  * @param {string} [props.searchDefaultValue] - Default value for the search field
  * @param {string} [props.placeholder] - Placeholder text for the search input
+ * @param {import('react-native').TextStyle | import('react-native').TextStyle[]} [props.inputStyle]
  * @returns {import('react').ReactElement} Search component
  */
 function SearchComponent({
   filterNumber = undefined,
   handleSearchField,
+  inputStyle,
   openFilters,
   placeholder,
   searchDefaultValue = '',
@@ -79,6 +81,7 @@ function SearchComponent({
           onSubmitEditing={handleSubmit}
           placeholder={placeholder}
           placeholderTextColor={Colors.neutral300}
+          style={inputStyle}
           value={search}
         />
       </View>
