@@ -37,7 +37,7 @@ function TeamWizardActivity({ navigation }) {
     const allActivities = activities || [];
     const filteredByClub = allowedActivityIds.size > 0
       ? allActivities.filter((activity) => allowedActivityIds.has(String(activity.documentId || '')))
-      : [];
+      : allActivities;
 
     return filteredByClub.map((activity) => ({
       label: activity.name,
