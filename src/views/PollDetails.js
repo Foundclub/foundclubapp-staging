@@ -19,7 +19,7 @@ import useTheme from '@/theme/themeContext';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 
-import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
+import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 
 const getVoters = (option) => (Array.isArray(option?.voters)
   ? option.voters.filter((value) => typeof value === 'string' && value.length > 0)

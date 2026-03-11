@@ -1,5 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable react/jsx-props-no-spreading */
+import * as DocumentPicker from '@react-native-documents/picker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
@@ -8,7 +9,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useTranslation } from 'react-i18next';
+import * as ReactI18next from 'react-i18next';
+import 'dayjs/locale/fr';
 import {
   ActivityIndicator,
   Alert,
@@ -24,7 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import 'dayjs/locale/fr';
 import {
   Bubble,
   Composer,
@@ -37,6 +38,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
+import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -59,7 +61,7 @@ import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/propo
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueries';
+import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 import {
   cancelRecording,
   isVoiceNoteRecordingSupported,
@@ -78,6 +80,12 @@ import { createLogger } from '@/utils/logger/logger';
 import { EVENTS } from '@/hooks/useSocket';
 
 const conversationLogger = createLogger('conversation');
+
+const useTranslationCompat = (
+  typeof ReactI18next.useTranslation === 'function'
+    ? ReactI18next.useTranslation
+    : () => ({ i18n, t: (key, options) => i18n.t(key, options) })
+);
 const isFlagEnabled = (rawValue, defaultValue = false) => {
   if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
   const normalized = String(rawValue || '').trim().toLowerCase();
@@ -92,24 +100,6 @@ const isVoiceNotesEnabled = isFlagEnabled(process.env.FC_CHAT_VOICE_NOTES, true)
 const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION, true);
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
-
-/** @type {any | null | undefined} */
-let cachedDocumentPickerModule;
-
-const getDocumentPickerModule = () => {
-  if (cachedDocumentPickerModule !== undefined) return cachedDocumentPickerModule;
-  try {
-    // Lazy import to avoid eager native resolution during app bootstrap.
-    // eslint-disable-next-line global-require
-    const maybeModule = require('@react-native-documents/picker');
-    cachedDocumentPickerModule = maybeModule;
-    return cachedDocumentPickerModule;
-  } catch (error) {
-    conversationLogger.warn('DocumentPicker module unavailable', error);
-    cachedDocumentPickerModule = null;
-    return null;
-  }
-};
 
 const isDocumentPickerCancellation = (documentPicker, error) => (
   typeof documentPicker?.isErrorWithCode === 'function'
@@ -130,7 +120,7 @@ function Conversation({ navigation, route }) {
     || route?.params?.id
     || '',
   ).trim();
-  const { t } = useTranslation();
+  const { t } = useTranslationCompat();
   const { allMyTeams, userData } = useAuth();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -648,7 +638,7 @@ function Conversation({ navigation, route }) {
       return;
     }
 
-    const documentPicker = getDocumentPickerModule();
+    const documentPicker = DocumentPicker;
     if (!documentPicker?.pick || !documentPicker?.keepLocalCopy) {
       Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
       return;

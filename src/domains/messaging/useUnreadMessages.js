@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useGetChats } from '@/services/chat/chatQueries';
+import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 import useAuth from '../auth/useAuth';
 import useMessaging from './useMessaging';

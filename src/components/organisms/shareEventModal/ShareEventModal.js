@@ -16,7 +16,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
-import { useGetChats } from '@/services/chat/chatQueries';
+import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 /**
  * Modal to select a chat to share an event

@@ -27,7 +27,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetChats } from '@/services/chat/chatQueries';
+import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 /**
  * Main messaging screen component
