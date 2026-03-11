@@ -44,9 +44,11 @@ function Messaging({ navigation, route }) {
   const { getClubInitials } = useClub();
   const safeTeamIds = useMemo(
     () => (Array.isArray(allMyTeams)
-      ? allMyTeams
-        .map((team) => String(team?.documentId || '').trim())
-        .filter(Boolean)
+      ? Array.from(new Set(
+        allMyTeams
+          .map((team) => String(team?.documentId || '').trim())
+          .filter(Boolean),
+      ))
       : []),
     [allMyTeams],
   );

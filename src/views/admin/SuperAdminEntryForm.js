@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -310,7 +311,7 @@ const buildPayloadFromForm = (attributes, formValues) => {
     if (NUMBER_TYPES.has(type)) {
       const numeric = parseNumberValue(type, value);
       if (!numeric.ok) {
-        errors.push(`Le champ "${name}" doit être un nombre valide.`);
+        errors.push(`Le champ "${name}" doit etre un nombre valide.`);
       } else {
         accumulator[name] = numeric.value;
       }
@@ -358,6 +359,15 @@ const getFieldLabel = (attribute) => {
   return `${attribute?.name || 'field'}${required}`;
 };
 
+const getAttributeSection = (attribute) => {
+  const type = String(attribute?.type || '');
+  if (type === 'relation') return 'relations';
+  if (type === MEDIA_TYPE) return 'media';
+  if (type === 'boolean' || type === 'enumeration') return 'booleanEnum';
+  if (JSON_TYPES.has(type) || type === 'richtext') return 'advanced';
+  return 'scalars';
+};
+
 /**
  * @param {{ navigation: any; route: any }} props
  * @returns {import('react').ReactElement}
@@ -367,6 +377,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   const uidDisplayName = route?.params?.uidDisplayName || uid;
   const mode = route?.params?.mode || 'create';
   const documentId = route?.params?.documentId;
+  const { t } = useTranslation();
 
   const {
     Alignments,
@@ -420,6 +431,21 @@ function SuperAdminEntryForm({ navigation, route }) {
     [editableAttributes],
   );
 
+  const groupedAttributes = useMemo(() => (
+    editableAttributes.reduce((accumulator, attribute) => {
+      const sectionKey = getAttributeSection(attribute);
+      if (!accumulator[sectionKey]) accumulator[sectionKey] = [];
+      accumulator[sectionKey].push(attribute);
+      return accumulator;
+    }, {
+      advanced: [],
+      booleanEnum: [],
+      media: [],
+      relations: [],
+      scalars: [],
+    })
+  ), [editableAttributes]);
+
   useEffect(() => {
     if (isHydrated) return;
     if (metadataQuery.isLoading) return;
@@ -454,7 +480,10 @@ function SuperAdminEntryForm({ navigation, route }) {
 
     if (!fieldName || !targetUid) return;
     if (!q) {
-      Alert.alert('Recherche relation', 'Merci de saisir au moins 1 caractère.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.relationSearchTitle', 'Recherche relation'),
+        t('superAdminContentManager.alerts.relationSearchMinChars', 'Merci de saisir au moins 1 caractere.'),
+      );
       return;
     }
 
@@ -473,7 +502,10 @@ function SuperAdminEntryForm({ navigation, route }) {
         [fieldName]: response?.data || [],
       }));
     } catch (error) {
-      Alert.alert('Recherche impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.relationSearchFailedTitle', 'Recherche impossible'),
+        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+      );
     } finally {
       setRelationLoadingField('');
     }
@@ -566,13 +598,19 @@ function SuperAdminEntryForm({ navigation, route }) {
 
       const uploadedFiles = Array.isArray(response?.data) ? response.data : [];
       if (!uploadedFiles.length) {
-        Alert.alert('Upload impossible', 'Aucun fichier n a ete recu par le serveur.');
+        Alert.alert(
+          t('superAdminContentManager.alerts.uploadFailedTitle', 'Upload impossible'),
+          t('superAdminContentManager.alerts.uploadNoFile', 'Aucun fichier n a ete recu par le serveur.'),
+        );
         return;
       }
 
       uploadedFiles.forEach((file) => addMediaToField(attribute, file));
     } catch (error) {
-      Alert.alert('Upload impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.uploadFailedTitle', 'Upload impossible'),
+        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+      );
     } finally {
       setMediaUploadingField('');
     }
@@ -589,7 +627,10 @@ function SuperAdminEntryForm({ navigation, route }) {
 
       if (response?.didCancel) return;
       if (response?.errorCode) {
-        Alert.alert('Galerie', response?.errorMessage || 'Impossible d ouvrir la galerie.');
+        Alert.alert(
+          t('superAdminContentManager.media.gallery', 'Galerie'),
+          response?.errorMessage || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d ouvrir la galerie.'),
+        );
         return;
       }
 
@@ -597,7 +638,10 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (!asset?.uri) return;
       await uploadMediaAsset(attribute, asset);
     } catch (error) {
-      Alert.alert('Galerie', error?.message || 'Impossible d ouvrir la galerie.');
+      Alert.alert(
+        t('superAdminContentManager.media.gallery', 'Galerie'),
+        error?.message || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d ouvrir la galerie.'),
+      );
     }
   };
 
@@ -612,7 +656,10 @@ function SuperAdminEntryForm({ navigation, route }) {
 
       if (response?.didCancel) return;
       if (response?.errorCode) {
-        Alert.alert('Camera', response?.errorMessage || 'Impossible d ouvrir la camera.');
+        Alert.alert(
+          t('superAdminContentManager.media.camera', 'Camera'),
+          response?.errorMessage || t('superAdminContentManager.alerts.openCameraFailed', 'Impossible d ouvrir la camera.'),
+        );
         return;
       }
 
@@ -620,7 +667,10 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (!asset?.uri) return;
       await uploadMediaAsset(attribute, asset);
     } catch (error) {
-      Alert.alert('Camera', error?.message || 'Impossible de prendre une photo.');
+      Alert.alert(
+        t('superAdminContentManager.media.camera', 'Camera'),
+        error?.message || t('superAdminContentManager.alerts.takePhotoFailed', 'Impossible de prendre une photo.'),
+      );
     }
   };
 
@@ -629,7 +679,10 @@ function SuperAdminEntryForm({ navigation, route }) {
     const hasModernPick = typeof documentPicker?.pick === 'function';
     const hasLegacyPick = typeof documentPicker?.pickSingle === 'function';
     if (!hasModernPick && !hasLegacyPick) {
-      Alert.alert('Fichier', 'Le selecteur de fichiers est indisponible sur cette build.');
+      Alert.alert(
+        t('superAdminContentManager.media.file', 'Fichier'),
+        t('superAdminContentManager.alerts.filePickerUnavailable', 'Le selecteur de fichiers est indisponible sur cette build.'),
+      );
       return;
     }
 
@@ -670,7 +723,10 @@ function SuperAdminEntryForm({ navigation, route }) {
       }
 
       if (!selectedUri) {
-        Alert.alert('Fichier', 'Impossible de recuperer ce fichier.');
+        Alert.alert(
+          t('superAdminContentManager.media.file', 'Fichier'),
+          t('superAdminContentManager.alerts.fileResolveFailed', 'Impossible de recuperer ce fichier.'),
+        );
         return;
       }
 
@@ -688,14 +744,20 @@ function SuperAdminEntryForm({ navigation, route }) {
         && error?.code === documentPicker.errorCodes.OPERATION_CANCELED
       ) return;
       if (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error)) return;
-      Alert.alert('Fichier', error?.message || 'Impossible de selectionner ce fichier.');
+      Alert.alert(
+        t('superAdminContentManager.media.file', 'Fichier'),
+        error?.message || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de selectionner ce fichier.'),
+      );
     }
   };
 
   const handleSave = async () => {
     const { data, errors } = buildPayloadFromForm(editableAttributes, formValues);
     if (errors.length > 0) {
-      Alert.alert('Validation', errors.join('\n'));
+      Alert.alert(
+        t('superAdminContentManager.alerts.validationTitle', 'Validation'),
+        errors.join('\n'),
+      );
       return;
     }
 
@@ -728,7 +790,10 @@ function SuperAdminEntryForm({ navigation, route }) {
         navigation.goBack();
       }
     } catch (error) {
-      Alert.alert('Enregistrement impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.saveFailedTitle', 'Enregistrement impossible'),
+        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+      );
     }
   };
 
@@ -755,9 +820,9 @@ function SuperAdminEntryForm({ navigation, route }) {
       >
         <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-          Relation vers
+          {t('superAdminContentManager.form.relationTo', 'Relation vers')}
           {' '}
-          {attribute?.relation?.target || 'inconnue'}
+          {attribute?.relation?.target || t('superAdminContentManager.common.unknown', 'inconnue')}
         </Text>
 
         <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
@@ -775,7 +840,9 @@ function SuperAdminEntryForm({ navigation, route }) {
             >
               <Text style={[Fonts.p2, { color: Colors.neutral00, flex: 1 }]}>{relationId}</Text>
               <TouchableOpacity onPress={() => removeRelationId(attribute, relationId)}>
-                <Text style={[Fonts.p2, { color: Colors.error500 }]}>Retirer</Text>
+                <Text style={[Fonts.p2, { color: Colors.error500 }]}>
+                  {t('superAdminContentManager.actions.remove', 'Retirer')}
+                </Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -785,7 +852,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           <TextInput
             autoCapitalize="none"
             onChangeText={(value) => handleFieldValue(fieldName, value)}
-            placeholder="documentId relation"
+            placeholder={t('superAdminContentManager.form.relationDocumentId', 'documentId relation')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ApplicationStyle.backgroundColor.neutral700,
@@ -805,7 +872,7 @@ function SuperAdminEntryForm({ navigation, route }) {
             <TextInput
               autoCapitalize="none"
               onChangeText={(value) => setRelationManualId((previous) => ({ ...previous, [fieldName]: value }))}
-              placeholder="documentId à ajouter"
+              placeholder={t('superAdminContentManager.form.documentIdToAdd', 'documentId a ajouter')}
               placeholderTextColor={Colors.neutral300}
               style={[
                 ApplicationStyle.backgroundColor.neutral700,
@@ -835,7 +902,9 @@ function SuperAdminEntryForm({ navigation, route }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>Ajouter ID</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
+                {t('superAdminContentManager.actions.addId', 'Ajouter ID')}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -844,7 +913,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           <TextInput
             autoCapitalize="none"
             onChangeText={(value) => setRelationQueries((previous) => ({ ...previous, [fieldName]: value }))}
-            placeholder="Rechercher une relation..."
+            placeholder={t('superAdminContentManager.form.searchRelationPlaceholder', 'Rechercher une relation...')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ApplicationStyle.backgroundColor.neutral700,
@@ -872,7 +941,9 @@ function SuperAdminEntryForm({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
-              {relationLoadingField === fieldName ? '...' : 'Chercher'}
+              {relationLoadingField === fieldName
+                ? '...'
+                : t('superAdminContentManager.actions.search', 'Chercher')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -922,11 +993,14 @@ function SuperAdminEntryForm({ navigation, route }) {
       >
         <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-          {isMultiple ? 'Media multiple autorise' : 'Media unique'}
+          {isMultiple
+            ? t('superAdminContentManager.form.mediaMultipleAllowed', 'Media multiple autorise')
+            : t('superAdminContentManager.form.mediaSingle', 'Media unique')}
         </Text>
         {allowedText ? (
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[2]]}>
-            Types autorises:
+            {t('superAdminContentManager.form.allowedTypes', 'Types autorises')}
+            {': '}
             {' '}
             {allowedText}
           </Text>
@@ -943,7 +1017,9 @@ function SuperAdminEntryForm({ navigation, route }) {
               Spaces.paddingVertical[8],
             ]}
           >
-            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>Galerie</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
+              {t('superAdminContentManager.media.gallery', 'Galerie')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             disabled={isUploading}
@@ -955,7 +1031,9 @@ function SuperAdminEntryForm({ navigation, route }) {
               Spaces.paddingVertical[8],
             ]}
           >
-            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>Camera</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
+              {t('superAdminContentManager.media.camera', 'Camera')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             disabled={isUploading}
@@ -967,20 +1045,24 @@ function SuperAdminEntryForm({ navigation, route }) {
               Spaces.paddingVertical[8],
             ]}
           >
-            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>Fichier</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
+              {t('superAdminContentManager.media.file', 'Fichier')}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {isUploading ? (
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], Spaces.marginTop[8]]}>
             <ActivityIndicator color={Colors.primary500} />
-            <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>Upload en cours...</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
+              {t('superAdminContentManager.form.uploading', 'Upload en cours...')}
+            </Text>
           </View>
         ) : null}
 
         {selectedItems.length === 0 ? (
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-            Aucun media selectionne.
+            {t('superAdminContentManager.form.noMediaSelected', 'Aucun media selectionne.')}
           </Text>
         ) : (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
@@ -1011,7 +1093,9 @@ function SuperAdminEntryForm({ navigation, route }) {
                     ) : null}
                   </View>
                   <TouchableOpacity disabled={isUploading} onPress={() => removeMediaFromField(attribute, item)}>
-                    <Text style={[Fonts.p2, { color: Colors.error500 }]}>Retirer</Text>
+                    <Text style={[Fonts.p2, { color: Colors.error500 }]}>
+                      {t('superAdminContentManager.actions.remove', 'Retirer')}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -1038,9 +1122,9 @@ function SuperAdminEntryForm({ navigation, route }) {
     if (type === 'boolean') {
       const current = value;
       const variants = [
-        { label: 'Oui', value: true },
-        { label: 'Non', value: false },
-        { label: 'Aucun', value: null },
+        { label: t('superAdminContentManager.form.yes', 'Oui'), value: true },
+        { label: t('superAdminContentManager.form.no', 'Non'), value: false },
+        { label: t('superAdminContentManager.form.none', 'Aucun'), value: null },
       ];
 
       return (
@@ -1126,7 +1210,8 @@ function SuperAdminEntryForm({ navigation, route }) {
       >
         <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-          Type:
+          {t('superAdminContentManager.form.type', 'Type')}
+          {': '}
           {type}
         </Text>
         <TextInput
@@ -1155,6 +1240,23 @@ function SuperAdminEntryForm({ navigation, route }) {
     );
   };
 
+  const renderSection = (sectionKey, title, description) => {
+    const attributes = groupedAttributes?.[sectionKey] || [];
+    if (!attributes.length) return null;
+
+    return (
+      <View style={Spaces.marginBottom[16]}>
+        <Text style={[Fonts.h4, Fonts.neutral00]}>{title}</Text>
+        {description ? (
+          <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>{description}</Text>
+        ) : null}
+        <View style={Spaces.marginTop[10]}>
+          {attributes.map((attribute) => renderScalarField(attribute))}
+        </View>
+      </View>
+    );
+  };
+
   if (!isHydrated) {
     return (
       <ScreenContainer bgImage="bg2">
@@ -1170,7 +1272,9 @@ function SuperAdminEntryForm({ navigation, route }) {
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[32]]}>
         <View style={[Spaces.marginTop[16], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
-            {isEditMode ? 'Modifier une entrée' : 'Créer une entrée'}
+            {isEditMode
+              ? t('superAdminContentManager.form.titleEdit', 'Modifier une entree')
+              : t('superAdminContentManager.form.titleCreate', 'Creer une entree')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
             {uidDisplayName}
@@ -1190,16 +1294,43 @@ function SuperAdminEntryForm({ navigation, route }) {
         ]}
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>
-            Champs éditables (
-            {editableAttributes.length}
-            )
+            {`${t('superAdminContentManager.form.editableFields', 'Champs editables')} (${editableAttributes.length})`}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-            {editableAttributes.map((attribute) => attribute?.name).join(', ') || 'Aucun champ détecté'}
+            {editableAttributes.map((attribute) => attribute?.name).join(', ')
+              || t('superAdminContentManager.form.noEditableFields', 'Aucun champ detecte')}
           </Text>
         </View>
 
-        {editableAttributes.map((attribute) => renderScalarField(attribute))}
+        {renderSection(
+          'scalars',
+          t('superAdminContentManager.form.sections.scalars', 'Scalaires'),
+          t('superAdminContentManager.form.sections.scalarsHint', 'Texte, nombres et dates.'),
+        )}
+
+        {renderSection(
+          'booleanEnum',
+          t('superAdminContentManager.form.sections.booleanEnum', 'Booleens / Enums'),
+          t('superAdminContentManager.form.sections.booleanEnumHint', 'Valeurs a choix rapide.'),
+        )}
+
+        {renderSection(
+          'relations',
+          t('superAdminContentManager.form.sections.relations', 'Relations'),
+          t('superAdminContentManager.form.sections.relationsHint', 'Associez des entrees liees.'),
+        )}
+
+        {renderSection(
+          'media',
+          t('superAdminContentManager.form.sections.media', 'Medias'),
+          t('superAdminContentManager.form.sections.mediaHint', 'Ajoutez images ou fichiers.'),
+        )}
+
+        {renderSection(
+          'advanced',
+          t('superAdminContentManager.form.sections.advanced', 'Avance'),
+          t('superAdminContentManager.form.sections.advancedHint', 'JSON, rich text et champs complexes.'),
+        )}
 
         {unsupportedAttributes.length > 0 ? (
           <View style={[
@@ -1214,17 +1345,17 @@ function SuperAdminEntryForm({ navigation, route }) {
               style={[Alignments.row, Alignments.alignCenter, { justifyContent: 'space-between' }]}
             >
               <Text style={[Fonts.h4, { color: Colors.warning500 }]}>
-                Fallback JSON avancé (
-                {unsupportedAttributes.length}
-                )
+                {`${t('superAdminContentManager.form.rawFallbackTitle', 'Fallback JSON avance')} (${unsupportedAttributes.length})`}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
-                {showRawFallback ? 'Masquer' : 'Afficher'}
+                {showRawFallback
+                  ? t('superAdminContentManager.actions.hide', 'Masquer')
+                  : t('superAdminContentManager.actions.show', 'Afficher')}
               </Text>
             </TouchableOpacity>
             {showRawFallback ? (
               <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
-                Champs non totalement supportés en mode UI guidé:
+                {t('superAdminContentManager.form.rawFallbackHint', 'Champs non totalement supportes en mode guide:')}
                 {' '}
                 {unsupportedAttributes.map((attribute) => attribute?.name).join(', ')}
               </Text>
@@ -1239,11 +1370,11 @@ function SuperAdminEntryForm({ navigation, route }) {
         ]}
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>
-            Raison (optionnelle sauf règles sensibles)
+            {t('superAdminContentManager.form.reasonLabel', 'Raison (optionnelle sauf regles sensibles)')}
           </Text>
           <TextInput
             onChangeText={setReason}
-            placeholder="Ajouter un contexte d’audit"
+            placeholder={t('superAdminContentManager.form.reasonPlaceholder', 'Ajouter un contexte d audit')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ApplicationStyle.backgroundColor.neutral700,
@@ -1270,7 +1401,9 @@ function SuperAdminEntryForm({ navigation, route }) {
           ]}
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00, textAlign: 'center' }]}>
-            {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+            {isSubmitting
+              ? t('superAdminContentManager.actions.saving', 'Enregistrement...')
+              : t('superAdminContentManager.actions.save', 'Enregistrer')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

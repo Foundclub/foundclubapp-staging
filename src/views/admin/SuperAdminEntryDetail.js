@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +12,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -67,6 +69,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const [reason, setReason] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -104,7 +107,10 @@ function SuperAdminEntryDetail({ navigation, route }) {
   const handleDelete = async () => {
     const normalizedReason = reason.trim();
     if (normalizedReason.length < 3) {
-      Alert.alert('Raison requise', 'Minimum 3 caractères.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.reasonRequiredTitle', 'Raison requise'),
+        t('superAdminContentManager.alerts.reasonRequiredMessage', 'Minimum 3 caracteres.'),
+      );
       return;
     }
 
@@ -117,7 +123,10 @@ function SuperAdminEntryDetail({ navigation, route }) {
       closeDeleteModal();
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Suppression impossible', error?.message || 'Une erreur est survenue.');
+      Alert.alert(
+        t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
+        error?.message || t('superAdminContentManager.common.genericError', 'Une erreur est survenue.'),
+      );
     }
   };
 
@@ -128,43 +137,31 @@ function SuperAdminEntryDetail({ navigation, route }) {
           <Text numberOfLines={1} style={[Fonts.h3, Fonts.neutral00]}>
             {uidDisplayName}
           </Text>
-          <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+          <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>
             {viewModel.title}
           </Text>
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[14],
-            Spaces.marginBottom[12],
-            {
-              backgroundColor: 'rgba(0, 18, 24, 0.58)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>Résumé</Text>
+        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>{t('superAdminContentManager.detail.sections.summary', 'Resume')}</Text>
           <View style={[Spaces.marginTop[8], Spaces.gap[6]]}>
             <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>ID court</Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>{viewModel.shortDocumentId || '-'}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.shortId', 'ID court')}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral100]}>{viewModel.shortDocumentId || '-'}</Text>
             </View>
             <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Document ID</Text>
-              <Text
-                numberOfLines={1}
-                style={[Fonts.p3, { color: Colors.neutral100, maxWidth: '68%', textAlign: 'right' }]}
-              >
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.common.id', 'Document ID')}</Text>
+              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral100, maxWidth: '68%', textAlign: 'right' }]}>
                 {viewModel.documentId || '-'}
               </Text>
             </View>
             <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Créé le</Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>{viewModel.createdAt || '-'}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.createdAt', 'Cree le')}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral100]}>{viewModel.createdAt || '-'}</Text>
             </View>
             <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Modifié le</Text>
-              <Text style={[Fonts.p3, { color: Colors.primary200 }]}>{viewModel.updatedAt || '-'}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.updatedAt', 'Modifie le')}</Text>
+              <Text style={[Fonts.p3, Fonts.primary200]}>{viewModel.updatedAt || '-'}</Text>
             </View>
           </View>
 
@@ -190,50 +187,30 @@ function SuperAdminEntryDetail({ navigation, route }) {
           ) : null}
 
           <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}>
-            <TouchableOpacity
+            <Button
               onPress={() => navigation.navigate(RouteNames.SuperAdminEntryForm, {
                 documentId,
                 mode: 'edit',
                 uid,
                 uidDisplayName,
               })}
-              style={[
-                ApplicationStyle.buttonPrimary,
-                ApplicationStyle.borderRadius12,
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[10],
-                { flex: 1 },
-              ]}
-            >
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>Modifier</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
+              style={{ flex: 1 }}
+              title={t('superAdminContentManager.actions.edit', 'Modifier')}
+              variant="Primary"
+            />
+            <Button
               onPress={refetch}
-              style={[
-                ApplicationStyle.backgroundColor.neutral700,
-                ApplicationStyle.borderRadius12,
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[10],
-                { flex: 1 },
-              ]}
-            >
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>Rafraîchir</Text>
-            </TouchableOpacity>
+              style={{ flex: 1 }}
+              title={t('superAdminContentManager.actions.refresh', 'Rafraichir')}
+              variant="Secondary"
+            />
           </View>
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[14],
-            Spaces.marginBottom[12],
-            {
-              backgroundColor: 'rgba(0, 18, 24, 0.58)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Champs clés</Text>
+        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+          <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
+            {t('superAdminContentManager.detail.sections.keyFields', 'Champs cles')}
+          </Text>
           {isLoading ? (
             <ActivityIndicator color={Colors.primary500} />
           ) : (
@@ -253,66 +230,55 @@ function SuperAdminEntryDetail({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>{field.label}</Text>
-                  <Text
-                    numberOfLines={1}
-                    style={[Fonts.p3, { color: Colors.neutral100, flex: 1, textAlign: 'right' }]}
-                  >
+                  <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral100, flex: 1, textAlign: 'right' }]}>
                     {field.value}
                   </Text>
                 </View>
               )) : (
-                <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun champ clé détecté.</Text>
+                <Text style={[Fonts.p2, Fonts.neutral300]}>
+                  {t('superAdminContentManager.detail.noKeyFields', 'Aucun champ cle detecte.')}
+                </Text>
               )}
             </View>
           )}
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[14],
-            Spaces.marginBottom[12],
-            {
-              backgroundColor: 'rgba(0, 18, 24, 0.58)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Relations / Médias</Text>
+        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+          <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
+            {t('superAdminContentManager.detail.sections.relationsMedia', 'Relations / Medias')}
+          </Text>
           {viewModel.complexFields.length > 0 ? (
             <View style={Spaces.gap[8]}>
               {viewModel.complexFields.map((field) => (
                 <View
                   key={field.key}
                   style={[
-                    ApplicationStyle.backgroundColor.neutral800,
+                    ApplicationStyle.backgroundColor.neutral700,
                     ApplicationStyle.borderRadius12,
                     Spaces.paddingHorizontal[10],
                     Spaces.paddingVertical[8],
                   ]}
                 >
-                  <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{field.label}</Text>
-                  <Text style={[Fonts.p2, { color: Colors.neutral100 }, Spaces.marginTop[4]]}>{field.value}</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{field.label}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>{field.value}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune relation ou média exploitable.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              {t('superAdminContentManager.detail.noRelations', 'Aucune relation ou media exploitable.')}
+            </Text>
           )}
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[14],
-            Spaces.marginBottom[12],
-            {
-              backgroundColor: 'rgba(0, 18, 24, 0.58)',
-            },
-          ]}
-        >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Audit récent</Text>
+        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+          <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
+            {t('superAdminContentManager.detail.sections.audit', 'Audit recent')}
+          </Text>
           {auditLogs.length === 0 ? (
-            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun log disponible.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              {t('superAdminContentManager.detail.noAudit', 'Aucun log disponible.')}
+            </Text>
           ) : (
             <View style={Spaces.gap[8]}>
               {auditLogs.slice(0, 20).map((log, index) => {
@@ -325,27 +291,24 @@ function SuperAdminEntryDetail({ navigation, route }) {
                   <View
                     key={logKey}
                     style={[
-                      ApplicationStyle.backgroundColor.neutral800,
+                      ApplicationStyle.backgroundColor.neutral700,
                       ApplicationStyle.borderRadius12,
                       Spaces.paddingHorizontal[10],
                       Spaces.paddingVertical[8],
-                      {
-                        borderColor: Colors.neutral700,
-                        borderWidth: 1,
-                      },
+                      { borderColor: Colors.neutral600, borderWidth: 1 },
                     ]}
                   >
                     <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-                      <Text style={[Fonts.p2Bold, { color: Colors.primary200 }]}>{action}</Text>
-                      <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{when}</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.primary200]}>{action}</Text>
+                      <Text style={[Fonts.p3, Fonts.neutral300]}>{when}</Text>
                     </View>
-                    <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral100 }, Spaces.marginTop[4]]}>
+                    <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral100, Spaces.marginTop[4]]}>
                       {actor}
                     </Text>
                     {log?.reason ? (
-                      <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[2]]}>
-                        Raison:
-                        {' '}
+                      <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[2]]}>
+                        {t('superAdminContentManager.common.reason', 'Raison')}
+                        {': '}
                         {String(log.reason)}
                       </Text>
                     ) : null}
@@ -356,23 +319,18 @@ function SuperAdminEntryDetail({ navigation, route }) {
           )}
         </View>
 
-        <View
-          style={[
-            ApplicationStyle.card,
-            Spaces.padding[14],
-            Spaces.marginBottom[12],
-            {
-              backgroundColor: Colors.neutral900,
-            },
-          ]}
-        >
+        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral900 }]}>
           <TouchableOpacity
             onPress={() => setShowJson((previous) => !previous)}
             style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
           >
-            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>JSON complet</Text>
-            <Text style={[Fonts.p2Bold, { color: Colors.primary200 }]}>
-              {showJson ? 'Masquer' : 'Afficher'}
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('superAdminContentManager.detail.sections.rawJson', 'JSON complet')}
+            </Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {showJson
+                ? t('superAdminContentManager.actions.hide', 'Masquer')
+                : t('superAdminContentManager.actions.show', 'Afficher')}
             </Text>
           </TouchableOpacity>
 
@@ -381,26 +339,19 @@ function SuperAdminEntryDetail({ navigation, route }) {
               {jsonPreview}
             </Text>
           ) : (
-            <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Vue avancée repliée pour garder l&apos;écran lisible.
+            <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
+              {t('superAdminContentManager.detail.rawJsonCollapsed', 'Vue avancee repliee pour garder lecran lisible.')}
             </Text>
           )}
         </View>
 
-        <TouchableOpacity
+        <Button
           onPress={() => setIsDeleteModalOpen(true)}
-          style={[
-            ApplicationStyle.borderRadius12,
-            Spaces.paddingVertical[12],
-            {
-              backgroundColor: 'rgba(255, 40, 79, 0.14)',
-              borderColor: Colors.error500,
-              borderWidth: 1,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.error500, textAlign: 'center' }]}>Supprimer l&apos;entrée</Text>
-        </TouchableOpacity>
+          style={[{ backgroundColor: 'rgba(255, 40, 79, 0.14)', borderColor: Colors.error500, borderWidth: 1 }]}
+          textStyle={{ color: Colors.error500 }}
+          title={t('superAdminContentManager.actions.deleteEntry', 'Supprimer lentree')}
+          variant="Secondary"
+        />
       </ScrollView>
 
       <BottomModal
@@ -409,16 +360,18 @@ function SuperAdminEntryDetail({ navigation, route }) {
         scrollable={false}
         snapPoints={['45%']}
       >
-        <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Supprimer l&apos;entrée</Text>
-        <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
-          Action définitive. Une raison d&apos;audit est obligatoire.
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {t('superAdminContentManager.deleteModal.title', 'Supprimer lentree')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
+          {t('superAdminContentManager.deleteModal.description', 'Action definitive. Une raison daudit est obligatoire.')}
         </Text>
 
         <View style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
             {viewModel.title}
           </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
             {viewModel.documentId}
           </Text>
         </View>
@@ -426,7 +379,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
         <TextInput
           multiline
           onChangeText={setReason}
-          placeholder="Raison obligatoire (minimum 3 caractères)"
+          placeholder={t('superAdminContentManager.deleteModal.reasonPlaceholder', 'Raison obligatoire (minimum 3 caracteres)')}
           placeholderTextColor={Colors.neutral400}
           style={[
             ApplicationStyle.borderRadius12,
@@ -447,16 +400,12 @@ function SuperAdminEntryDetail({ navigation, route }) {
         />
 
         <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}>
-          <TouchableOpacity
+          <Button
             onPress={closeDeleteModal}
-            style={[
-              ApplicationStyle.borderRadius12,
-              Spaces.paddingVertical[12],
-              { backgroundColor: Colors.neutral700, flex: 1 },
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>Annuler</Text>
-          </TouchableOpacity>
+            style={{ flex: 1 }}
+            title={t('superAdminContentManager.actions.cancel', 'Annuler')}
+            variant="Secondary"
+          />
           <TouchableOpacity
             disabled={deleteMutation.isPending}
             onPress={handleDelete}
@@ -464,13 +413,17 @@ function SuperAdminEntryDetail({ navigation, route }) {
               ApplicationStyle.borderRadius12,
               Spaces.paddingVertical[12],
               {
+                alignItems: 'center',
                 backgroundColor: deleteMutation.isPending ? Colors.neutral700 : Colors.error500,
                 flex: 1,
+                justifyContent: 'center',
               },
             ]}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-              {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              {deleteMutation.isPending
+                ? t('superAdminContentManager.actions.deleting', 'Suppression...')
+                : t('superAdminContentManager.actions.delete', 'Supprimer')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Image,
-  RefreshControl,
   Text,
   TextInput,
   TouchableOpacity,
@@ -11,6 +11,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -23,11 +24,11 @@ const searchIcon = require('@/assets/icons/search.png');
 
 const sortByDisplayName = (a, b) => String(a?.displayName || '').localeCompare(String(b?.displayName || ''), 'fr');
 
-const getKindLabel = (kind) => {
+const getKindLabel = (kind, t) => {
   if (kind === 'singleType') {
-    return 'single type';
+    return t('superAdminContentManager.explorer.singleType', 'single type');
   }
-  return 'collection type';
+  return t('superAdminContentManager.explorer.collectionType', 'collection type');
 };
 
 const getInitials = (label) => {
@@ -53,6 +54,7 @@ function SuperAdminContentExplorer({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const [query, setQuery] = useState('');
 
@@ -90,13 +92,15 @@ function SuperAdminContentExplorer({ navigation }) {
   return (
     <ScreenContainer bgImage="bg2">
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[16]]}>
-        <Text style={[Fonts.h2, Fonts.neutral00]}>Explorer Content Manager</Text>
-        <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
-          Parcourez tous les content-types API Strapi
+        <Text style={[Fonts.h2, Fonts.neutral00]}>
+          {t('superAdminContentManager.explorer.title', 'Explorer Content Manager')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
+          {t('superAdminContentManager.explorer.subtitle', 'Parcourez tous les content-types API Strapi.')}
         </Text>
       </View>
 
-      <View style={[Spaces.paddingHorizontal[16], Spaces.marginTop[12], Spaces.marginBottom[12]]}>
+      <View style={[Spaces.paddingHorizontal[16], Spaces.marginTop[12], Spaces.marginBottom[12], Spaces.gap[10]]}>
         <View
           style={[
             ApplicationStyle.card,
@@ -105,25 +109,23 @@ function SuperAdminContentExplorer({ navigation }) {
             Alignments.row,
             Alignments.alignCenter,
             {
-              backgroundColor: 'rgba(0, 18, 24, 0.7)',
+              backgroundColor: Colors.neutral800,
               justifyContent: 'space-between',
             },
           ]}
         >
-          <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
-            Types:
-            {' '}
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('superAdminContentManager.explorer.types', 'Types')}
+            {': '}
             {contentTypes.length}
           </Text>
-          <Text style={[Fonts.p2, { color: Colors.primary200 }]}>
-            Resultats:
-            {' '}
+          <Text style={[Fonts.p2, Fonts.primary200]}>
+            {t('superAdminContentManager.explorer.results', 'Resultats')}
+            {': '}
             {filtered.length}
           </Text>
         </View>
-      </View>
 
-      <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[12]]}>
         <View
           style={[
             ApplicationStyle.card,
@@ -131,9 +133,7 @@ function SuperAdminContentExplorer({ navigation }) {
             Alignments.alignCenter,
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
-            {
-              backgroundColor: 'rgba(12, 12, 13, 0.6)',
-            },
+            { backgroundColor: Colors.neutral800 },
           ]}
         >
           <Image
@@ -147,21 +147,15 @@ function SuperAdminContentExplorer({ navigation }) {
           />
           <TextInput
             onChangeText={setQuery}
-            placeholder="Rechercher un content-type"
+            placeholder={t('superAdminContentManager.explorer.searchPlaceholder', 'Rechercher un content-type')}
             placeholderTextColor={Colors.neutral300}
-            style={[
-              Fonts.p1,
-              { color: Colors.neutral00, flex: 1 },
-            ]}
+            style={[Fonts.p1, { color: Colors.neutral00, flex: 1 }]}
             value={query}
           />
           {query.length > 0 ? (
             <TouchableOpacity
               hitSlop={{
-                bottom: 8,
-                left: 8,
-                right: 8,
-                top: 8,
+                bottom: 8, left: 8, right: 8, top: 8,
               }}
               onPress={() => setQuery('')}
             >
@@ -184,21 +178,14 @@ function SuperAdminContentExplorer({ navigation }) {
         keyExtractor={(item) => item.uid}
         ListEmptyComponent={
           !isLoading ? (
-            <View style={[ApplicationStyle.card, Spaces.padding[16], Alignments.alignCenter, Spaces.marginTop[24]]}>
-              <Text style={[Fonts.h4, { color: Colors.neutral100 }]}>Aucun content-type trouve</Text>
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8], { textAlign: 'center' }]}>
-                Ajustez la recherche ou verifiez les permissions superadmin.
-              </Text>
-            </View>
+            <SuperAdminEmptyState
+              description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou verifiez les permissions Super Admin.')}
+              title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouve')}
+            />
           ) : null
         }
-        refreshControl={(
-          <RefreshControl
-            onRefresh={refetch}
-            refreshing={isLoading}
-            tintColor={Colors.primary500}
-          />
-        )}
+        onRefresh={refetch}
+        refreshing={isLoading}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => navigation.navigate(RouteNames.SuperAdminEntryList, {
@@ -210,8 +197,9 @@ function SuperAdminContentExplorer({ navigation }) {
               Spaces.padding[16],
               Spaces.marginBottom[12],
               {
-                backgroundColor: 'rgba(0, 18, 24, 0.58)',
+                backgroundColor: Colors.neutral800,
                 borderColor: Colors.primary700,
+                borderWidth: 1,
               },
             ]}
           >
@@ -234,10 +222,10 @@ function SuperAdminContentExplorer({ navigation }) {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={[Fonts.h4, { color: Colors.neutral00 }]}>
+                <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
                   {item?.displayName || item?.uid}
                 </Text>
-                <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+                <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>
                   {item?.uid}
                 </Text>
               </View>
@@ -264,7 +252,7 @@ function SuperAdminContentExplorer({ navigation }) {
                 ]}
               >
                 <Text style={[Fonts.p2, { color: Colors.primary200, fontSize: 12 }]}>
-                  {getKindLabel(item?.kind)}
+                  {getKindLabel(item?.kind, t)}
                 </Text>
               </View>
               {item?.draftAndPublish ? (
@@ -278,7 +266,9 @@ function SuperAdminContentExplorer({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p2, { color: Colors.warning500, fontSize: 12 }]}>draft + publish</Text>
+                  <Text style={[Fonts.p2, { color: Colors.warning500, fontSize: 12 }]}>
+                    {t('superAdminContentManager.explorer.draftPublish', 'draft + publish')}
+                  </Text>
                 </View>
               ) : null}
             </View>

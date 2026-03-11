@@ -48,51 +48,63 @@ const chatSchema = Joi.object({
  */
 export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
   const safeTeamIds = Array.isArray(filters.currentUserTeamIds)
-    ? filters.currentUserTeamIds
-      .map((teamId) => String(teamId || '').trim())
-      .filter(Boolean)
+    ? Array.from(
+      new Set(
+        filters.currentUserTeamIds
+          .map((teamId) => String(teamId || '').trim())
+          .filter(Boolean),
+      ),
+    )
     : [];
+
+  /** @type {Array<Record<string, any>>} */
+  const chatOrFilters = [];
+
+  if (filters.currentUserId) {
+    chatOrFilters.push({
+      participants: {
+        documentId: filters.currentUserId,
+      },
+      type: 'whisper',
+    });
+  }
+
+  if (filters.currentUserClubId) {
+    chatOrFilters.push({
+      club: {
+        documentId: filters.currentUserClubId,
+      },
+      type: 'whisper',
+    });
+  }
+
+  if (safeTeamIds.length > 0) {
+    // Compact form: one filter for both whisper and team chats tied to any of my teams.
+    chatOrFilters.push({
+      team: {
+        documentId: {
+          $in: safeTeamIds,
+        },
+      },
+      type: {
+        $in: ['whisper', 'team'],
+      },
+    });
+  }
+
+  if (filters.currentUserId) {
+    chatOrFilters.push({
+      participants: {
+        documentId: filters.currentUserId,
+      },
+      type: 'league_match',
+    });
+  }
 
   const response = await client.get('/chats', {
     params: {
       filters: {
-        $or: [
-          // Get whisper chats where current user is a participant
-          filters.currentUserId ? {
-            participants: {
-              documentId: filters.currentUserId,
-            },
-            type: 'whisper',
-          } : null,
-          // Get whisper chats related to user's club
-          filters.currentUserClubId ? {
-            club: {
-              documentId: filters.currentUserClubId,
-            },
-            type: 'whisper',
-          } : null,
-          // Get whisper chats related to user's teams' clubs
-          ...(safeTeamIds.map((teamId) => ({
-            team: {
-              documentId: teamId,
-            },
-            type: 'whisper',
-          })) || []),
-          // Get team chats where user's teams are involved
-          ...(safeTeamIds.map((teamId) => ({
-            team: {
-              documentId: teamId,
-            },
-            type: 'team',
-          })) || []),
-          // Get league matches where user is a participant
-          filters.currentUserId ? {
-            participants: {
-              documentId: filters.currentUserId,
-            },
-            type: 'league_match',
-          } : null,
-        ].filter(Boolean),
+        $or: chatOrFilters,
       },
       pagination: {
         page,
