@@ -20,6 +20,7 @@ import {
  * meta: { pagination: { page: number; pageCount: number; total: number } } }[] }>}
  */
 export const useGetChats = (params, options) => useInfiniteQuery({
+  enabled: Boolean(params?.currentUserId) && (options?.enabled ?? true),
   getNextPageParam: (lastPage) => {
     if (!lastPage) return undefined;
     const { meta: { pagination } } = lastPage;

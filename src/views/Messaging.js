@@ -42,6 +42,14 @@ function Messaging({ navigation, route }) {
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
   const { getClubInitials } = useClub();
+  const safeTeamIds = useMemo(
+    () => (Array.isArray(allMyTeams)
+      ? allMyTeams
+        .map((team) => String(team?.documentId || '').trim())
+        .filter(Boolean)
+      : []),
+    [allMyTeams],
+  );
 
   const {
     data: chatsData,
@@ -53,7 +61,7 @@ function Messaging({ navigation, route }) {
   } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
-    currentUserTeamIds: allMyTeams?.map((team) => team.documentId || ''),
+    currentUserTeamIds: safeTeamIds,
   });
 
   const {

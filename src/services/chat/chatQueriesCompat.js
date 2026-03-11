@@ -10,6 +10,7 @@ import {
 const hasFunction = (value) => typeof value === 'function';
 
 const useFallbackGetChats = (params, options) => useInfiniteQuery({
+  enabled: Boolean(params?.currentUserId) && (options?.enabled ?? true),
   getNextPageParam: (lastPage) => {
     if (!lastPage) return undefined;
     const { meta: { pagination } } = lastPage;

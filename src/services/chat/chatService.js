@@ -47,6 +47,12 @@ const chatSchema = Joi.object({
  * meta: { pagination: { page: number, pageCount: number, total: number }}}>}
  */
 export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
+  const safeTeamIds = Array.isArray(filters.currentUserTeamIds)
+    ? filters.currentUserTeamIds
+      .map((teamId) => String(teamId || '').trim())
+      .filter(Boolean)
+    : [];
+
   const response = await client.get('/chats', {
     params: {
       filters: {
@@ -66,14 +72,14 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
             type: 'whisper',
           } : null,
           // Get whisper chats related to user's teams' clubs
-          ...(filters.currentUserTeamIds?.map((teamId) => ({
+          ...(safeTeamIds.map((teamId) => ({
             team: {
               documentId: teamId,
             },
             type: 'whisper',
           })) || []),
           // Get team chats where user's teams are involved
-          ...(filters.currentUserTeamIds?.map((teamId) => ({
+          ...(safeTeamIds.map((teamId) => ({
             team: {
               documentId: teamId,
             },
@@ -143,6 +149,13 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
   try {
     const schema = Joi.object({
       data: Joi.array().items(chatSchema).empty(Joi.array().length(0)),
+      meta: Joi.object({
+        pagination: Joi.object({
+          page: Joi.number().required(),
+          pageCount: Joi.number().required(),
+          total: Joi.number().required(),
+        }).required(),
+      }).required(),
     }).required();
 
     const validationResult = await schema.validateAsync(response.data, {
@@ -150,8 +163,22 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to fetch chats: ${errorToDisplay}`);
+    const rawData = Array.isArray(response?.data?.data) ? response.data.data : [];
+    const rawPagination = response?.data?.meta?.pagination || {};
+    chatServiceLogger.warn('Chat list schema mismatch, using fallback payload', {
+      error: error?.message || error,
+      length: rawData.length,
+    });
+    return {
+      data: rawData,
+      meta: {
+        pagination: {
+          page: Number(rawPagination.page || page || 1),
+          pageCount: Number(rawPagination.pageCount || 1),
+          total: Number(rawPagination.total || rawData.length),
+        },
+      },
+    };
   }
 };
 
