@@ -1,13 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   FlatList, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -17,8 +15,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getCMMembers } from '@/services/multisportClub/multisportClubService';
 
-import { getImageUrl } from '@/utils/imageUrl';
-
 /**
  * Screen to display list of members in a CM
  * @param {object} props
@@ -27,7 +23,6 @@ import { getImageUrl } from '@/utils/imageUrl';
  */
 function CMMembersScreen({ navigation, route }) {
   const { cmId } = route.params || {};
-  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -56,7 +51,7 @@ function CMMembersScreen({ navigation, route }) {
 
     { label: 'Tous', value: 'all' },
     { label: 'Dirigeants', value: 'presidents' },
-    { label: 'Entraîneurs', value: 'coaches' },
+    { label: 'Entraineurs', value: 'coaches' },
     { label: 'Joueurs', value: 'players' },
   ];
 
@@ -223,7 +218,7 @@ function CMMembersScreen({ navigation, route }) {
           keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouvé.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouve.</Text>
             </View>
           )}
           refreshControl={

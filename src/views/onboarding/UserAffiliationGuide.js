@@ -42,6 +42,7 @@ import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 const DEBOUNCE_MS = 300;
 const RESULT_CARD_MIN_HEIGHT = 96;
 const SKELETON_RESULT_COUNT = 3;
+const SKELETON_PLACEHOLDER_KEYS = ['one', 'two', 'three'];
 const AFFILIATION_TUTORIAL_FLOW_PREFIX = 'onboarding-affiliation-v2';
 
 const getClubCardMeta = (item, fallbackLabel) => {
@@ -76,10 +77,16 @@ function UserAffiliationGuideContent({ navigation }) {
   const { isActive, startOnboarding, totalSteps } = useOnboarding();
 
   const roleName = userData?.role?.name;
-  const isClubFlow = roleName === USER_ROLES.coach || roleName === USER_ROLES.president;
+  const isStaffAffiliationFlow = roleName === USER_ROLES.coach || roleName === USER_ROLES.president;
+  const isPlayerAffiliationFlow = roleName === USER_ROLES.player;
+
+  const [selectedClub, setSelectedClub] = useState(null);
+  const isClubFlow = isStaffAffiliationFlow || (isPlayerAffiliationFlow && !selectedClub?.documentId);
+  const isPlayerClubSelectionStep = isClubFlow && !isStaffAffiliationFlow;
   const roleTargetLabel = isClubFlow
     ? t('onboardingAffiliation.common.roleTargetClub', 'club')
     : t('onboardingAffiliation.common.roleTargetTeam', 'equipe');
+  const selectedClubId = selectedClub?.documentId || undefined;
   const clubFiltersCount = getClubFiltersNumber(clubFilters);
 
   const [searchValue, setSearchValue] = useState('');
@@ -115,9 +122,10 @@ function UserAffiliationGuideContent({ navigation }) {
   }), [clubFilters?.activity, clubFilters?.geohash, debouncedSearch]);
 
   const teamQueryParams = useMemo(() => ({
+    clubId: selectedClubId,
     name: debouncedSearch || undefined,
     pageSize: 20,
-  }), [debouncedSearch]);
+  }), [debouncedSearch, selectedClubId]);
 
   const clubsQuery = useGetClubs(clubQueryParams, { enabled: isClubFlow });
   const teamsQuery = useGetTeams(teamQueryParams, { enabled: !isClubFlow });
@@ -172,13 +180,19 @@ function UserAffiliationGuideContent({ navigation }) {
   const handleSelectResult = useCallback((item) => {
     if (!item?.documentId) return;
     if (isClubFlow) {
-      navigation.navigate(RouteNames.ClubStack, {
-        params: {
-          clubId: item.documentId,
-          fromOnboardingAffiliation: true,
-        },
-        screen: RouteNames.Club,
-      });
+      if (isStaffAffiliationFlow) {
+        navigation.navigate(RouteNames.ClubStack, {
+          params: {
+            clubId: item.documentId,
+            fromOnboardingAffiliation: true,
+          },
+          screen: RouteNames.Club,
+        });
+      } else {
+        setSelectedClub(item);
+        setSearchValue('');
+        setDebouncedSearch('');
+      }
       return;
     }
 
@@ -186,7 +200,13 @@ function UserAffiliationGuideContent({ navigation }) {
       params: { teamId: item.documentId },
       screen: RouteNames.TeamDetails,
     });
-  }, [isClubFlow, navigation]);
+  }, [isClubFlow, isStaffAffiliationFlow, navigation]);
+
+  const handleResetSelectedClub = useCallback(() => {
+    setSelectedClub(null);
+    setSearchValue('');
+    setDebouncedSearch('');
+  }, []);
 
   const handleOpenNotFoundModal = useCallback(() => {
     setRequestedName(searchValue.trim());
@@ -223,6 +243,7 @@ function UserAffiliationGuideContent({ navigation }) {
       comment: comment.trim() || undefined,
       requestKind: isClubFlow ? 'club_not_found' : 'team_not_found',
       searchContext: {
+        clubId: selectedClubId,
         currentQuery: searchValue.trim(),
         role: roleName,
         screen: RouteNames.UserAffiliationGuide,
@@ -237,6 +258,7 @@ function UserAffiliationGuideContent({ navigation }) {
     requestedName,
     roleName,
     roleTargetLabel,
+    selectedClubId,
     searchValue,
     t,
   ]);
@@ -301,29 +323,71 @@ function UserAffiliationGuideContent({ navigation }) {
         item,
         t('onboardingAffiliation.results.openTeamFallback', 'Voir fiche equipe'),
       );
+    const cardAccessibilityHint = (() => {
+      if (!isClubFlow) {
+        return t(
+          'onboardingAffiliation.a11y.cardHintTeam',
+          'Ouvre la fiche de l equipe pour demander a rejoindre.',
+        );
+      }
+      if (isPlayerClubSelectionStep) {
+        return t(
+          'onboardingAffiliation.a11y.cardHintClubSelect',
+          'Selectionne ce club pour voir ses equipes.',
+        );
+      }
+      return t(
+        'onboardingAffiliation.a11y.cardHintClub',
+        'Ouvre la fiche du club pour confirmer l affiliation.',
+      );
+    })();
+    const cardAccessibilityLabel = (() => {
+      if (!isClubFlow) {
+        return t(
+          'onboardingAffiliation.a11y.cardLabelTeam',
+          'Ouvrir la fiche de l equipe {{name}}',
+          { name: cardName },
+        );
+      }
+      if (isPlayerClubSelectionStep) {
+        return t(
+          'onboardingAffiliation.a11y.cardLabelClubSelect',
+          'Selectionner le club {{name}}',
+          { name: cardName },
+        );
+      }
+      return t(
+        'onboardingAffiliation.a11y.cardLabelClub',
+        'Ouvrir la fiche du club {{name}}',
+        { name: cardName },
+      );
+    })();
+    const resultTutorialDescription = (() => {
+      if (!isClubFlow) {
+        return t(
+          'onboardingAffiliation.tutorial.stepResultDescriptionTeam',
+          'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
+        );
+      }
+      if (isPlayerClubSelectionStep) {
+        return t(
+          'onboardingAffiliation.tutorial.stepResultDescriptionClubSelect',
+          'Selectionne ton club pour afficher ensuite ses equipes.',
+        );
+      }
+      return t(
+        'onboardingAffiliation.tutorial.stepResultDescriptionClub',
+        'Ouvre la fiche du club pour utiliser le bouton C est mon club.',
+      );
+    })();
+    const resultTutorialTitle = isClubFlow
+      ? t('onboardingAffiliation.tutorial.stepResultTitleClub', 'Selectionner un club')
+      : t('onboardingAffiliation.tutorial.stepResultTitleTeam', 'Selectionner une equipe');
 
     const cardButton = (
       <TouchableOpacity
-        accessibilityHint={isClubFlow
-          ? t(
-            'onboardingAffiliation.a11y.cardHintClub',
-            'Ouvre la fiche du club pour confirmer l affiliation.',
-          )
-          : t(
-            'onboardingAffiliation.a11y.cardHintTeam',
-            'Ouvre la fiche de l equipe pour demander a rejoindre.',
-          )}
-        accessibilityLabel={isClubFlow
-          ? t(
-            'onboardingAffiliation.a11y.cardLabelClub',
-            'Ouvrir la fiche du club {{name}}',
-            { name: cardName },
-          )
-          : t(
-            'onboardingAffiliation.a11y.cardLabelTeam',
-            'Ouvrir la fiche de l equipe {{name}}',
-            { name: cardName },
-          )}
+        accessibilityHint={cardAccessibilityHint}
+        accessibilityLabel={cardAccessibilityLabel}
         accessibilityRole="button"
         onPress={() => handleSelectResult(item)}
         style={[
@@ -370,15 +434,7 @@ function UserAffiliationGuideContent({ navigation }) {
 
     return (
       <OnboardingWrapper
-        description={isClubFlow
-          ? t(
-            'onboardingAffiliation.tutorial.stepResultDescriptionClub',
-            'Ouvre la fiche du club pour utiliser le bouton C est mon club.',
-          )
-          : t(
-            'onboardingAffiliation.tutorial.stepResultDescriptionTeam',
-            'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
-          )}
+        description={resultTutorialDescription}
         id={wrapperId}
         order={2}
         spotlight={{
@@ -388,9 +444,7 @@ function UserAffiliationGuideContent({ navigation }) {
           paddingY: 3,
         }}
         style={Spaces.marginBottom[12]}
-        title={isClubFlow
-          ? t('onboardingAffiliation.tutorial.stepResultTitleClub', 'Selectionner un club')
-          : t('onboardingAffiliation.tutorial.stepResultTitleTeam', 'Selectionner une equipe')}
+        title={resultTutorialTitle}
       >
         {cardButton}
       </OnboardingWrapper>
@@ -402,9 +456,9 @@ function UserAffiliationGuideContent({ navigation }) {
       <Text style={[Fonts.p2, Fonts.neutral300]}>
         {t('onboardingAffiliation.states.loading', 'Recherche en cours...')}
       </Text>
-      {[...Array(SKELETON_RESULT_COUNT)].map((_, index) => (
+      {SKELETON_PLACEHOLDER_KEYS.slice(0, SKELETON_RESULT_COUNT).map((placeholderKey) => (
         <View
-          key={`skeleton-${index}`}
+          key={`skeleton-${placeholderKey}`}
           style={[
             Spaces.padding[16],
             ApplicationStyle.borderRadius16,
@@ -488,21 +542,49 @@ function UserAffiliationGuideContent({ navigation }) {
     </View>
   );
 
-  const emptyMessage = debouncedSearch
-    ? (isClubFlow
-      ? t(
-        'onboardingAffiliation.states.emptyWithQueryClub',
-        'Aucun club trouve pour "{{query}}".',
-        { query: debouncedSearch },
-      )
-      : t(
+  const emptyMessage = (() => {
+    if (debouncedSearch) {
+      if (isClubFlow) {
+        return t(
+          'onboardingAffiliation.states.emptyWithQueryClub',
+          'Aucun club trouve pour "{{query}}".',
+          { query: debouncedSearch },
+        );
+      }
+      return t(
         'onboardingAffiliation.states.emptyWithQueryTeam',
         'Aucune equipe trouvee pour "{{query}}".',
         { query: debouncedSearch },
-      ))
-    : (isClubFlow
-      ? t('onboardingAffiliation.states.emptyWithoutQueryClub', 'Aucun club a afficher pour le moment.')
-      : t('onboardingAffiliation.states.emptyWithoutQueryTeam', 'Aucune equipe a afficher pour le moment.'));
+      );
+    }
+    if (isClubFlow) {
+      return t('onboardingAffiliation.states.emptyWithoutQueryClub', 'Aucun club a afficher pour le moment.');
+    }
+    return t('onboardingAffiliation.states.emptyWithoutQueryTeam', 'Aucune equipe a afficher pour le moment.');
+  })();
+
+  const screenTitle = isClubFlow
+    ? t('onboardingAffiliation.titleClub', 'Trouve ton club')
+    : t('onboardingAffiliation.titleTeam', 'Trouve ton equipe');
+
+  const screenSubtitle = (() => {
+    if (!isClubFlow) {
+      return t(
+        'onboardingAffiliation.subtitleTeamFromClub',
+        'Recherche ton equipe dans le club selectionne puis ouvre sa fiche pour envoyer ta demande.',
+      );
+    }
+    if (isPlayerClubSelectionStep) {
+      return t(
+        'onboardingAffiliation.subtitleClubSelection',
+        'Recherche puis selectionne ton club pour voir ses equipes.',
+      );
+    }
+    return t(
+      'onboardingAffiliation.subtitleClub',
+      'Recherche ton club puis ouvre sa fiche pour valider C est mon club.',
+    );
+  })();
 
   return (
     <ScreenContainer
@@ -516,22 +598,51 @@ function UserAffiliationGuideContent({ navigation }) {
         <View style={[Spaces.gap[16], Alignments.fill, { paddingBottom: stickyFooterInset }]}>
           <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-              {isClubFlow
-                ? t('onboardingAffiliation.titleClub', 'Trouve ton club')
-                : t('onboardingAffiliation.titleTeam', 'Trouve ton equipe')}
+              {screenTitle}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {isClubFlow
-                ? t(
-                  'onboardingAffiliation.subtitleClub',
-                  'Recherche ton club puis ouvre sa fiche pour valider C est mon club.',
-                )
-                : t(
-                  'onboardingAffiliation.subtitleTeam',
-                  'Recherche ton equipe puis ouvre sa fiche pour envoyer ta demande.',
-                )}
+              {screenSubtitle}
             </Text>
           </View>
+
+          {!isClubFlow && selectedClub ? (
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[10],
+                Alignments.rowBetween,
+                Alignments.alignCenter,
+                Spaces.gap[12],
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('onboardingAffiliation.selectedClubLabel', 'Club selectionne')}
+                </Text>
+                <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                  {selectedClub.name || '-'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={handleResetSelectedClub}
+                style={[
+                  Spaces.paddingHorizontal[10],
+                  Spaces.paddingVertical[8],
+                  ApplicationStyle.borderRadius16,
+                  {
+                    borderColor: `${Colors.primary500}99`,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('onboardingAffiliation.actions.changeClub', 'Changer de club')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>

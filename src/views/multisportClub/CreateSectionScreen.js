@@ -1,8 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -26,8 +31,13 @@ import { createCMSection, getMultisportClubById } from '@/services/multisportClu
  * @property {string} [managerPhone]
  */
 
+const normalizeSearchText = (value = '') => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
 /**
- * Create Section - Form to create a new club section under a MultisportClub
  * @param {{
  *  navigation: import('@react-navigation/native').NavigationProp<any>;
  *  route: { params?: { cmId?: string } };
@@ -35,104 +45,121 @@ import { createCMSection, getMultisportClubById } from '@/services/multisportClu
  */
 function CreateSectionScreen({ navigation, route }) {
   const { cmId } = route?.params ?? {};
-
-  const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
-  } = useTheme();
   const { t } = useTranslation();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Fonts,
+    Spaces,
+  } = useTheme();
 
   const [name, setName] = useState('');
   const [selectedActivity, setSelectedActivity] = useState(
     /** @type {Option | null} */ (null),
   );
+  const [activitySearchValue, setActivitySearchValue] = useState('');
   const [address, setAddress] = useState(
     /** @type {Option | undefined} */ (undefined),
   );
   const [managerPhone, setManagerPhone] = useState('');
 
-  // Fetch activities
   const { data: activities = [] } = useQuery({
     queryFn: getActivities,
     queryKey: ['activities'],
-    select: (data) => (Array.isArray(data) ? data : []).map((act) => ({
-      label: act?.name || '',
-      value: act?.documentId || '',
-    })),
+    select: (data) => {
+      const activityList = Array.isArray(data) ? data : [];
+      const seen = new Set();
+      return activityList
+        .map((activity) => ({
+          label: String(activity?.name || '').trim(),
+          value: activity?.documentId || '',
+        }))
+        .filter((option) => {
+          if (!option.label || !option.value) return false;
+          const uniqueKey = `${option.value}-${normalizeSearchText(option.label)}`;
+          if (seen.has(uniqueKey)) return false;
+          seen.add(uniqueKey);
+          return true;
+        })
+        .sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
+    },
   });
 
-  // Fetch CM details for pre-filling address
+  const filteredActivities = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(activitySearchValue);
+    if (!normalizedSearch) return activities;
+    return activities.filter((activity) => normalizeSearchText(String(activity?.label || ''))
+      .includes(normalizedSearch));
+  }, [activities, activitySearchValue]);
+
   const { data: cmDetails } = useQuery({
     enabled: !!cmId,
     queryFn: () => getMultisportClubById(cmId),
     queryKey: ['multisportClub', cmId],
   });
 
-  // Pre-fill address when cmDetails is loaded
   useEffect(() => {
-    if (cmDetails && !address) {
-      if (cmDetails.address) {
-        // If address object exists (Location Picker)
-        setAddress({
-          label: cmDetails.addressDetails || cmDetails.address.label,
-          value: `${cmDetails.address.lng}|${cmDetails.address.lat}`, // Construct value expected by backend custom logic
-        });
-      } else if (cmDetails.addressDetails) {
-        // Fallback if only text address
-        setAddress({
-          label: cmDetails.addressDetails,
-          value: null,
-        });
-      }
+    if (!cmDetails || address) return;
+    if (cmDetails.address) {
+      setAddress({
+        label: cmDetails.addressDetails || cmDetails.address.label,
+        value: `${cmDetails.address.lng}|${cmDetails.address.lat}`,
+      });
+      return;
     }
-  }, [cmDetails, address]);
+    if (cmDetails.addressDetails) {
+      setAddress({
+        label: cmDetails.addressDetails,
+        value: null,
+      });
+    }
+  }, [address, cmDetails]);
 
   const createMutation = useMutation({
-    mutationFn: (/** @type {SectionPayload} */ data) => createCMSection(cmId || '', data),
+    mutationFn: (data) => createCMSection(cmId || '', /** @type {SectionPayload} */ (data)),
     onError: (error) => {
+      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la creation de la section.');
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
-        : 'Une erreur est survenue lors de la création de la section.';
+        : fallbackMessage;
       Alert.alert(
-        'Erreur',
-        typeof message === 'string' ? message : 'Une erreur est survenue lors de la création de la section.',
+        t('APIerrors.title', 'Erreur'),
+        typeof message === 'string' ? message : fallbackMessage,
       );
     },
     onSuccess: (result) => {
       Alert.alert(
-        'Section créée',
-        `La section "${result?.data?.name || name}" a été créée avec succès.${managerPhone ? '\nUne demande d\'adhésion a été créée pour le dirigeant.' : ''}`,
-        [
-          {
-            onPress: () => navigation.goBack(),
-            text: 'OK',
-          },
-        ],
+        t('multisport.sectionCreatedTitle', 'Section creee'),
+        t(
+          'multisport.sectionCreatedMessage',
+          'La section "{{name}}" a ete creee avec succes.',
+          { name: result?.data?.name || name },
+        ),
+        [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );
     },
   });
 
   const handleCreate = () => {
     if (!name.trim()) {
-      Alert.alert('Erreur', 'Le nom de la section est obligatoire.');
+      Alert.alert(t('APIerrors.title', 'Erreur'), t('multisport.formErrors.sectionNameRequired', 'Le nom de la section est obligatoire.'));
       return;
     }
-
-    // Address validation (optional, but requested precise address)
-    if (!address || !address.label) {
-      Alert.alert('Erreur', 'L\'adresse est obligatoire.');
+    if (!address?.label) {
+      Alert.alert(t('APIerrors.title', 'Erreur'), t('multisport.formErrors.addressRequired', "L'adresse est obligatoire."));
       return;
     }
 
     createMutation.mutate({
       activites: selectedActivity ? [selectedActivity.value] : [],
       addressLabel: address.label,
-      coordinates: address.value || undefined, // "lon|lat" from AutocompleteAddressInput
+      coordinates: address.value || undefined,
       managerPhone: managerPhone.trim() || undefined,
       name: name.trim(),
     });
   };
 
-  const isValid = name.trim().length > 0 && !!address?.label;
+  const isValid = name.trim().length > 0 && Boolean(address?.label);
 
   return (
     <ScreenContainer
@@ -152,98 +179,106 @@ function CreateSectionScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.h3Black, Fonts.neutral00]}>
-              Nouvelle section
+              {t('multisport.createSection.title', 'Nouvelle section')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral200]}>
-              Créez une nouvelle section sportive pour votre club multisport.
+              {t('multisport.createSection.subtitle', 'Creez une section sportive pour votre club multisport.')}
             </Text>
           </View>
 
-          {/* Form */}
-          <View style={[
-            ApplicationStyle.borderRadius16,
-            ApplicationStyle.backgroundColor.primary700,
-            Spaces.padding[16],
-            Spaces.gap[16],
-          ]}
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.primary500,
+              Spaces.padding[16],
+              Spaces.gap[16],
+            ]}
           >
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Nom de la section *
+                {t('multisport.createSection.fields.name.label', 'Nom de la section *')}
               </Text>
               <Input
                 autoCapitalize="words"
                 onChangeText={setName}
-                placeholder="Ex: Football, Basketball..."
+                placeholder={t('multisport.createSection.fields.name.placeholder', 'Ex: Football, Basketball')}
                 value={name}
               />
             </View>
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Sport
+                {t('multisport.createSection.fields.sport.label', 'Sport')}
               </Text>
               <AutocompleteSelect
                 isSearchable
-                options={activities}
-                placeholder="Choisir un sport"
+                options={filteredActivities}
+                placeholder={t('multisport.createSection.fields.sport.placeholder', 'Choisir un sport')}
+                searchValue={activitySearchValue}
+                setSearchValue={setActivitySearchValue}
                 setValue={setSelectedActivity}
                 value={selectedActivity?.label}
               />
+              {activitySearchValue.trim().length > 0 && filteredActivities.length === 0 ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond a votre recherche.')}
+                </Text>
+              ) : null}
             </View>
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Adresse / Ville *
+                {t('multisport.createSection.fields.address.label', 'Adresse / Ville *')}
               </Text>
               <AutocompleteAddressInput
                 address={address}
-                placeholder="Ex: 10 rue de Paris..."
+                placeholder={t('multisport.createSection.fields.address.placeholder', 'Rechercher une adresse')}
                 setAddress={(value) => setAddress(value)}
               />
             </View>
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Numéro du dirigeant (Optionnel)
+                {t('multisport.createSection.fields.managerPhone.label', 'Numero du dirigeant (optionnel)')}
               </Text>
               <Input
                 keyboardType="phone-pad"
                 onChangeText={setManagerPhone}
-                placeholder="Ex: 0612345678"
+                placeholder={t('multisport.createSection.fields.managerPhone.placeholder', 'Ex: 0612345678')}
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                Ce numéro sera utilisé pour assigner automatiquement le dirigeant lors de sa connexion.
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant a la section.')}
               </Text>
             </View>
           </View>
 
-          {/* Info */}
-          <View style={[
-            ApplicationStyle.borderRadius12,
-            ApplicationStyle.backgroundColor.primary700,
-            Spaces.padding[16],
-            Alignments.row,
-            Spaces.gap[12],
-          ]}
+          <View
+            style={[
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.primary500,
+              Spaces.padding[16],
+            ]}
           >
-            <Text style={{ fontSize: 20 }}>💡</Text>
-            <Text style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>
-              Une fois la section créée, vous pourrez y ajouter des équipes, des événements et des membres.
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t('multisport.createSection.info', 'Une fois creee, la section pourra accueillir equipes, evenements et membres.')}
             </Text>
           </View>
         </ScrollView>
 
-        {/* Submit Button */}
         <View style={[Spaces.paddingTop[16]]}>
           <Button
             disabled={!isValid || createMutation.isPending}
             onPress={handleCreate}
-            title={createMutation.isPending ? 'Création...' : 'Créer la section'}
+            title={createMutation.isPending
+              ? t('multisport.createSection.actions.creating', 'Creation...')
+              : t('multisport.createSection.actions.create', 'Creer la section')}
             variant="Primary"
           />
         </View>

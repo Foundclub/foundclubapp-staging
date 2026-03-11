@@ -1,6 +1,5 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable react/jsx-props-no-spreading */
-import * as DocumentPicker from '@react-native-documents/picker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
@@ -101,11 +100,32 @@ const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION,
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
 
+/** @type {any | null | undefined} */
+let cachedDocumentPickerModule;
+
+const getDocumentPickerModule = () => {
+  if (cachedDocumentPickerModule !== undefined) return cachedDocumentPickerModule;
+
+  try {
+    // Lazy load to avoid boot-time crashes when native module is missing on a stale build.
+    // eslint-disable-next-line global-require
+    const pickerModule = require('@react-native-documents/picker');
+    cachedDocumentPickerModule = pickerModule?.default || pickerModule;
+    return cachedDocumentPickerModule;
+  } catch (_error) {
+    cachedDocumentPickerModule = null;
+    return null;
+  }
+};
+
 const isDocumentPickerCancellation = (documentPicker, error) => (
-  typeof documentPicker?.isErrorWithCode === 'function'
-  && !!documentPicker?.errorCodes?.OPERATION_CANCELED
-  && documentPicker.isErrorWithCode(error)
-  && error?.code === documentPicker.errorCodes.OPERATION_CANCELED
+  (
+    typeof documentPicker?.isErrorWithCode === 'function'
+    && !!documentPicker?.errorCodes?.OPERATION_CANCELED
+    && documentPicker.isErrorWithCode(error)
+    && error?.code === documentPicker.errorCodes.OPERATION_CANCELED
+  )
+  || (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error))
 );
 
 /**
@@ -638,24 +658,30 @@ function Conversation({ navigation, route }) {
       return;
     }
 
-    const documentPicker = DocumentPicker;
-    if (!documentPicker?.pick || !documentPicker?.keepLocalCopy) {
+    const documentPicker = getDocumentPickerModule();
+    if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
       Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
       return;
     }
 
     try {
-      const [selectedFile] = await documentPicker.pick();
+      const selectedResult = await documentPicker.pick();
+      const selectedFile = Array.isArray(selectedResult) ? selectedResult[0] : selectedResult;
+      if (!selectedFile) return;
 
-      const [localCopyResult] = await documentPicker.keepLocalCopy({
-        destination: 'cachesDirectory',
-        files: [
-          {
-            fileName: selectedFile.name || `file_${Date.now()}`,
-            uri: selectedFile.uri,
-          },
-        ],
-      });
+      let localCopyResult;
+      if (typeof documentPicker?.keepLocalCopy === 'function' && selectedFile?.uri) {
+        const [localCopy] = await documentPicker.keepLocalCopy({
+          destination: 'cachesDirectory',
+          files: [
+            {
+              fileName: selectedFile.name || `file_${Date.now()}`,
+              uri: selectedFile.uri,
+            },
+          ],
+        });
+        localCopyResult = localCopy;
+      }
 
       const selectedUri = localCopyResult?.status === 'success'
         ? localCopyResult.localUri

@@ -137,6 +137,27 @@ function EventDetails({ navigation, route }) {
   const {
     data: event, error, isLoading, refetch,
   } = useGetEvent(eventId || '');
+  const eventDescriptionText = useMemo(() => {
+    const rawDescription = event?.description;
+    if (typeof rawDescription === 'string') {
+      return rawDescription.trim();
+    }
+    if (typeof rawDescription === 'number') {
+      return String(rawDescription);
+    }
+    if (rawDescription && typeof rawDescription === 'object') {
+      if (typeof rawDescription.description === 'string') {
+        return rawDescription.description.trim();
+      }
+      if (typeof rawDescription.label === 'string') {
+        return rawDescription.label.trim();
+      }
+      if (typeof rawDescription.address === 'string') {
+        return rawDescription.address.trim();
+      }
+    }
+    return '';
+  }, [event?.description]);
   const canEdit = Boolean(canManageEvent(event));
   const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
 
@@ -1084,12 +1105,12 @@ function EventDetails({ navigation, route }) {
         <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
           <EventHeader event={event} />
 
-          {event?.description && (
+          {eventDescriptionText ? (
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
-              <Text style={[Fonts.p1, Fonts.primary100]}>{event.description}</Text>
+              <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
             </View>
-          )}
+          ) : null}
 
           <EventParticipants
             attendanceByUserId={attendanceByUserId}

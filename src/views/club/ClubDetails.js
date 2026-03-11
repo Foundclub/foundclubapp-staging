@@ -14,8 +14,11 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Checkable from '@/components/atoms/checkable/Checkable';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -23,6 +26,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
@@ -91,6 +95,13 @@ function ClubDetails({ navigation, route }) {
   const { getClubInitials } = useClub();
   const [selectedTab, setSelectedTab] = useState('infos');
   const [joinRequestPending, setJoinRequestPending] = useState(false);
+  const [isEditingActivities, setIsEditingActivities] = useState(false);
+  const [isAddActivityModalVisible, setIsAddActivityModalVisible] = useState(false);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activitiesToAdd, setActivitiesToAdd] = useState(
+    /** @type {string[]} */
+    ([]),
+  );
 
   const handleGoToNextOnboardingStep = useCallback(() => {
     if (!fromOnboardingAffiliation) return;
@@ -127,6 +138,10 @@ function ClubDetails({ navigation, route }) {
     isLoading: facilitiesLoading,
     refetch: refetchFacilities,
   } = useGetFacilities(clubId ?? '');
+  const {
+    data: allActivities,
+    isLoading: activitiesLoading,
+  } = useGetActivities();
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
@@ -135,7 +150,7 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
-  const deleteSponsorMutation = useMutation({
+  const updateClubMutation = useMutation({
     mutationFn: updateClub,
     onSuccess: () => {
       refetch();
@@ -336,13 +351,55 @@ function ClubDetails({ navigation, route }) {
         {
           onPress: () => {
             if (club) {
-              const newClub = Object.assign(club, {
+              const newClub = {
+                ...club,
                 sponsor: (club?.sponsor || []).filter((s) => s.link !== sponsor.link),
-              });
-              deleteSponsorMutation.mutate(newClub);
+              };
+              updateClubMutation.mutate(newClub);
             }
           },
           text: t('clubDetails.alerts.deleteSponsor.actions.confirm'),
+        },
+      ],
+    );
+  };
+
+  /**
+   * Handle delete activity action
+   * @param {Activity} activity
+   */
+  const handleDeleteActivity = (activity) => {
+    if (!club) return;
+
+    const activityName = activity?.name || t('clubDetails.titles.activities');
+    const removedActivityId = activity?.documentId || activity?.id || activity?.name;
+    if (!removedActivityId) return;
+
+    Alert.alert(
+      `Supprimer le sport ${activityName} ?`,
+      'Etes-vous sur de vouloir continuer ?',
+      [
+        {
+          style: 'cancel',
+          text: t('common.actions.cancel', 'Annuler'),
+        },
+        {
+          onPress: () => {
+            const remainingActivities = (club?.activites || []).filter((item) => {
+              const id = item?.documentId || item?.id || item?.name;
+              return id !== removedActivityId;
+            });
+
+            const newClub = {
+              ...club,
+              activites: remainingActivities
+                .map((item) => item?.documentId || item?.id)
+                .filter(Boolean),
+            };
+
+            updateClubMutation.mutate(newClub);
+          },
+          text: t('common.actions.delete', 'Supprimer'),
         },
       ],
     );
@@ -484,6 +541,177 @@ function ClubDetails({ navigation, route }) {
   if (selectedTab === 'planning' && !isMember) {
     setSelectedTab('infos');
   }
+
+  const isActivityEditMode = canEdit && isEditingActivities;
+
+  const existingActivityIds = useMemo(
+    () => (club?.activites || [])
+      .map((activity) => activity?.documentId || activity?.id)
+      .filter(Boolean),
+    [club?.activites],
+  );
+
+  const addableActivities = useMemo(() => {
+    const search = activitySearch.trim().toLowerCase();
+    const existingIds = new Set(existingActivityIds.map(String));
+
+    return (allActivities || []).filter((activity) => {
+      const activityId = activity?.documentId || activity?.id;
+      const activityName = String(activity?.name || '').trim();
+      if (!activityId || !activityName) return false;
+      if (existingIds.has(String(activityId))) return false;
+      if (!search) return true;
+      return activityName.toLowerCase().includes(search);
+    });
+  }, [activitySearch, allActivities, existingActivityIds]);
+
+  const handleOpenAddActivityModal = useCallback(() => {
+    setActivitiesToAdd([]);
+    setActivitySearch('');
+    setIsAddActivityModalVisible(true);
+  }, []);
+
+  const handleCloseAddActivityModal = useCallback(() => {
+    setIsAddActivityModalVisible(false);
+    setActivitiesToAdd([]);
+    setActivitySearch('');
+  }, []);
+
+  const handleToggleActivityToAdd = useCallback((activityId) => {
+    const normalizedId = String(activityId || '').trim();
+    if (!normalizedId) return;
+
+    setActivitiesToAdd((current) => {
+      if (current.includes(normalizedId)) {
+        return current.filter((id) => id !== normalizedId);
+      }
+      return [...current, normalizedId];
+    });
+  }, []);
+
+  const handleConfirmAddActivities = useCallback(() => {
+    if (!club || activitiesToAdd.length === 0) {
+      handleCloseAddActivityModal();
+      return;
+    }
+
+    const nextActivityIds = existingActivityIds.map(String);
+    activitiesToAdd.map(String).forEach((activityId) => {
+      if (!nextActivityIds.includes(activityId)) {
+        nextActivityIds.push(activityId);
+      }
+    });
+
+    const newClub = {
+      ...club,
+      activites: nextActivityIds,
+    };
+
+    updateClubMutation.mutate(newClub, {
+      onSuccess: () => {
+        handleCloseAddActivityModal();
+      },
+    });
+  }, [
+    activitiesToAdd,
+    club,
+    existingActivityIds,
+    handleCloseAddActivityModal,
+    updateClubMutation,
+  ]);
+
+  const activitiesHeaderActions = (() => {
+    if (!canEdit) return null;
+
+    if (isActivityEditMode) {
+      return (
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Button
+            icon="plus"
+            isOption
+            onPress={handleOpenAddActivityModal}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => setIsEditingActivities(false)}
+            size="small"
+            title={t('common.finish', 'Terminer')}
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <Button
+        onPress={() => setIsEditingActivities(true)}
+        size="small"
+        title={t('clubDetails.actions.editInfo', 'Modifier')}
+        variant="Secondary"
+      />
+    );
+  })();
+
+  const activitiesContent = (() => {
+    if (isActivityEditMode) {
+      if (club?.activites?.length) {
+        return (
+          <View style={[Spaces.gap[12]]}>
+            {club.activites.map((activity) => (
+              <View
+                key={activity?.documentId || activity?.id || activity?.name}
+                style={[
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.backgroundColor.primary700,
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                ]}
+              >
+                <Text style={[Fonts.p1, Fonts.neutral00, { flex: 1 }]}>
+                  {activity?.name}
+                </Text>
+                <Button
+                  icon="trash"
+                  isOption
+                  onPress={() => handleDeleteActivity(activity)}
+                  variant="SecondaryLight"
+                />
+              </View>
+            ))}
+          </View>
+        );
+      }
+
+      return (
+        <Text style={[Fonts.p1, Fonts.neutral00]}>
+          {t('common.messages.noData', 'Aucune donnee disponible')}
+        </Text>
+      );
+    }
+
+    return (
+      <Text numberOfLines={3} style={[Fonts.p1, Fonts.neutral00]}>
+        {club?.activites?.length
+          ? club.activites.map(({ name }) => name).join(', ')
+          : t('common.messages.noData', 'Aucune donnee disponible')}
+      </Text>
+    );
+  })();
+
+  const addActivitiesModalFooter = (
+    <View style={[Spaces.paddingBottom[16]]}>
+      <Button
+        disabled={activitiesToAdd.length === 0 || updateClubMutation.isPending}
+        isLoading={updateClubMutation.isPending}
+        onPress={handleConfirmAddActivities}
+        title="Ajouter"
+        variant="Primary"
+      />
+    </View>
+  );
 
   return (
     <ScreenContainer
@@ -811,30 +1039,10 @@ function ClubDetails({ navigation, route }) {
               <View style={[Spaces.gap[16]]}>
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                   <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
-                  {canEdit ? (
-                    <Button
-                      icon="plus"
-                      isOption
-                      onPress={handleEditClub}
-                      variant="Primary"
-                    />
-                  ) : null}
+                  {activitiesHeaderActions}
                 </View>
-                <View
-                  style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Spaces.gap[16],
-                  ]}
-                >
-                  <Text style={[Fonts.p1, Fonts.neutral00]}>
-                    {club?.activites?.length
-                      ? club.activites.map(({ name }) => name).join(', ')
-                      : t('common.messages.noData', 'Aucune donnée disponible')}
-                  </Text>
-                </View>
+                {activitiesContent}
               </View>
-
               {/* Sponsors */}
               {(club?.sponsor?.length || canEdit) && (
                 <View style={[Spaces.gap[16]]}>
@@ -1111,6 +1319,79 @@ function ClubDetails({ navigation, route }) {
           />
         ) : null
       }
+      <BottomModal
+        close={handleCloseAddActivityModal}
+        footerComponent={addActivitiesModalFooter}
+        headerComponent={(
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
+              {t('clubDetails.titles.activities')}
+            </Text>
+            <TouchableOpacity
+              accessibilityLabel={t('common.close', 'Fermer')}
+              hitSlop={{
+                bottom: 8, left: 8, right: 8, top: 8,
+              }}
+              onPress={handleCloseAddActivityModal}
+            >
+              <Image
+                source={Images.close}
+                style={[ApplicationStyle.icon28, { tintColor: Colors.primary200 }]}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+        hideCloseButton
+        isVisible={isAddActivityModalVisible}
+        scrollable
+        snapPoints={['86%']}
+      >
+        <View style={[Spaces.gap[16]]}>
+          <Input
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect={false}
+            enterKeyHint="search"
+            icon="search"
+            inputMode="search"
+            onChangeText={setActivitySearch}
+            placeholder={t('modals.actions.search', 'Rechercher...')}
+            value={activitySearch}
+          />
+
+          <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
+            {activitiesLoading ? (
+              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                {t('common.messages.loading', 'Chargement...')}
+              </Text>
+            ) : null}
+
+            {!activitiesLoading && addableActivities.map((activity) => {
+              const activityId = String(activity?.documentId || activity?.id || '');
+              const isChecked = activitiesToAdd.includes(activityId);
+
+              return (
+                <View key={`option-${activityId}`} style={[Alignments.row, Spaces.marginTop[8]]}>
+                  <Checkable
+                    customFillColor={Colors.neutral00}
+                    disableBounceAnimation
+                    isChecked={isChecked}
+                    setIsChecked={() => handleToggleActivityToAdd(activityId)}
+                    text={activity?.name || ''}
+                    type="square"
+                  />
+                </View>
+              );
+            })}
+
+            {!activitiesLoading && addableActivities.length === 0 ? (
+              <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                {t('common.messages.noData', 'Aucune donnee disponible')}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </BottomModal>
       {
         /* Claim Club Button - Show if not member, not admin, and club has no owners */
         !isMember && !canEdit && !canJoinClub && owners?.length === 0 && userData ? (

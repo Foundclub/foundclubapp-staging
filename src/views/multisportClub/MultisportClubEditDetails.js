@@ -54,7 +54,7 @@ function MultisportClubEditDetails({ navigation, route }) {
 
   // hooks
   const {
-    Alignments, Fonts, Spaces,
+    Alignments, Spaces,
   } = useTheme();
   const { t } = useTranslation();
 
@@ -225,10 +225,10 @@ function MultisportClubEditDetails({ navigation, route }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   inputMode="tel"
                   keyboardType="phone-pad"
-                  label="Téléphone"
+                  label={t('multisport.edit.fields.phone.label', 'Telephone')}
                   onBlur={onBlur}
                   onChangeText={onChange}
-                  placeholder="Téléphone"
+                  placeholder={t('multisport.edit.fields.phone.placeholder', 'Telephone')}
                   ref={ref}
                   value={value}
                 />

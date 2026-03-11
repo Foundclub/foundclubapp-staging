@@ -11,6 +11,10 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import {
+  normalizeLocationInput,
+  getLocationCoordinates as resolveLocationCoordinates,
+} from '@/utils/location';
 
 // Assets
 const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
@@ -35,6 +39,39 @@ const getBackgroundImage = (typeName) => {
 };
 
 /**
+ * @param {unknown} value
+ * @returns {string}
+ */
+const toDisplayText = (value) => {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  if (!value || typeof value !== 'object') {
+    return '';
+  }
+
+  if (typeof value.description === 'string') {
+    return value.description.trim();
+  }
+  if (typeof value.label === 'string') {
+    return value.label.trim();
+  }
+  if (typeof value.address === 'string') {
+    return value.address.trim();
+  }
+  if (typeof value.name === 'string') {
+    return value.name.trim();
+  }
+  if (value.address && typeof value.address === 'object') {
+    return toDisplayText(value.address);
+  }
+  return '';
+};
+
+/**
  *
  * @param root0
  * @param root0.event
@@ -47,18 +84,24 @@ function EventHeader({ event }) {
   const { getClubInitials } = useClub();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
-  const clubName = event?.team?.club?.name;
-  const sectionName = event?.team?.section?.name;
+  const clubName = toDisplayText(event?.team?.club?.name);
+  const sectionName = toDisplayText(event?.team?.section?.name);
   const logoUrl = event?.team?.club?.logo?.url;
   const locationDetails = event?.locationDetails;
   const invitedTeamNames = (event?.invitedTeams || [])
-    .map((team) => team?.name)
+    .map((team) => toDisplayText(team?.name))
     .filter(Boolean);
 
   const getParsedLocationDetails = () => {
     try {
       if (!locationDetails) return null;
-      return JSON.parse(locationDetails);
+      if (typeof locationDetails === 'string') {
+        return JSON.parse(locationDetails);
+      }
+      if (typeof locationDetails === 'object') {
+        return locationDetails;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -66,27 +109,17 @@ function EventHeader({ event }) {
 
   const getLocationText = () => {
     const parsed = getParsedLocationDetails();
-    const addr = parsed?.address;
-    const detailAddress = typeof addr === 'object' ? addr?.description : addr;
-    return detailAddress || event?.location?.label || '';
+    const fromDetails = toDisplayText(parsed?.address);
+    const fromEventLocation = toDisplayText(event?.location);
+    const normalized = normalizeLocationInput(parsed?.address || event?.location || parsed);
+    return fromDetails || fromEventLocation || normalized?.label || normalized?.address || '';
   };
 
   const getLocationCoordinates = () => {
-    const eventLat = Number(event?.location?.lat);
-    const eventLng = Number(event?.location?.lng);
-    if (Number.isFinite(eventLat) && Number.isFinite(eventLng)) {
-      return { lat: eventLat, lng: eventLng };
-    }
-
     const parsed = getParsedLocationDetails();
-    const geometryCoordinates = parsed?.address?.geometry?.coordinates;
-    if (!Array.isArray(geometryCoordinates) || geometryCoordinates.length < 2) return null;
-
-    const lng = Number(geometryCoordinates[0]);
-    const lat = Number(geometryCoordinates[1]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-    return { lat, lng };
+    return resolveLocationCoordinates(event?.location)
+      || resolveLocationCoordinates(parsed?.address)
+      || resolveLocationCoordinates(parsed);
   };
 
   const handleOpenLocationInGps = () => {

@@ -39,6 +39,13 @@ function JoinEventModal({
     Fonts,
     Spaces,
   } = useTheme();
+  const checkableWrapperStyle = [
+    ApplicationStyle.borderWidth0,
+    ApplicationStyle.backgroundColor.transparent,
+    Spaces.padding[0],
+    Alignments.rowReverse,
+    { flex: 0, width: '100%' },
+  ];
 
   const handleClose = useCallback(() => {
     onClose();
@@ -95,12 +102,7 @@ function JoinEventModal({
             setIsChecked={() => setAcceptResponsibility(!acceptResponsibility)}
             text={t('eventList.joinModal.checkboxes.responsibility')}
             type="square"
-            wrapperStyle={[
-              ApplicationStyle.borderWidth0,
-              ApplicationStyle.backgroundColor.transparent,
-              Spaces.padding[0],
-              Alignments.rowReverse,
-            ]}
+            wrapperStyle={checkableWrapperStyle}
           />
           <Checkable
             fontStyle={[Fonts.p2, Fonts.neutral00]}
@@ -108,12 +110,7 @@ function JoinEventModal({
             setIsChecked={() => setAcceptConditions(!acceptConditions)}
             text={t('eventList.joinModal.checkboxes.conditions')}
             type="square"
-            wrapperStyle={[
-              ApplicationStyle.borderWidth0,
-              ApplicationStyle.backgroundColor.transparent,
-              Spaces.padding[0],
-              Alignments.rowReverse,
-            ]}
+            wrapperStyle={checkableWrapperStyle}
           />
           <Text style={[Fonts.p2, Fonts.neutral00]}>
             {t('eventList.joinModal.validation')}

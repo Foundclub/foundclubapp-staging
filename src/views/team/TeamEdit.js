@@ -346,11 +346,16 @@ function TeamEdit({ navigation, route }) {
 
   const handleDeleteTeam = useCallback(() => {
     if (!teamId || deleteTeamMutation.isPending) return;
+
+    const teamDisplayName = String(teamData?.name || '').trim() || t('teamDetails.title', 'Equipe');
     Alert.alert(
       t('teamEdit.actions.deleteTitle', 'Supprimer l\'equipe'),
       t(
-        'teamEdit.actions.deleteConfirm',
-        'Voulez-vous vraiment supprimer cette equipe ? Cette action est irreversible.',
+        'teamEdit.actions.deleteConfirmWithName',
+        {
+          defaultValue: `Voulez-vous vraiment supprimer l'equipe "${teamDisplayName}" ? Cette action est irreversible.`,
+          teamName: teamDisplayName,
+        },
       ),
       [
         {
@@ -360,11 +365,11 @@ function TeamEdit({ navigation, route }) {
         {
           onPress: () => deleteTeamMutation.mutate(teamId),
           style: 'destructive',
-          text: t('teamEdit.actions.deleteTeam', 'Supprimer l\'equipe'),
+          text: t('teamEdit.actions.deleteConfirmAction', 'Oui, supprimer'),
         },
       ],
     );
-  }, [deleteTeamMutation, t, teamId]);
+  }, [deleteTeamMutation, t, teamData?.name, teamId]);
 
   useEffect(() => {
     navigation.setOptions({

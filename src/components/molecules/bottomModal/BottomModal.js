@@ -157,22 +157,17 @@ function BottomModal({
     [close, Colors, Alignments.fill],
   );
 
+  const footerBottomInset = useMemo(() => (
+    (useSafeAreaBottomInset ? insets.bottom : 0)
+    + (keyboardBehavior === 'interactive' ? 0 : keyboardHeight)
+  ), [insets.bottom, keyboardBehavior, keyboardHeight, useSafeAreaBottomInset]);
+  const sheetBottomInset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
   const contentBottomPadding = useMemo(
     () => {
-      if (!footerComponent) return 40 + keyboardHeight;
-      const safeInset = useSafeAreaBottomInset ? insets.bottom : 0;
-      // Keep enough room for sticky footer buttons so the list never hides them.
-      return 140 + safeInset + keyboardHeight;
+      const keyboardOffset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
+      return (footerComponent ? 16 : 40) + keyboardOffset;
     },
-    [footerComponent, insets.bottom, keyboardHeight, useSafeAreaBottomInset],
-  );
-  const sheetBottomInset = useMemo(
-    () => (useSafeAreaBottomInset ? insets.bottom : 0) + keyboardHeight,
-    [insets.bottom, keyboardHeight, useSafeAreaBottomInset],
-  );
-  const footerBottomInset = useMemo(
-    () => (useSafeAreaBottomInset ? insets.bottom : 0) + keyboardHeight,
-    [insets.bottom, keyboardHeight, useSafeAreaBottomInset],
+    [footerComponent, keyboardBehavior, keyboardHeight],
   );
 
   return (
@@ -218,7 +213,9 @@ function BottomModal({
       <View style={[snapPoints ? Alignments.fill : undefined]}>
         {/* Fixed Header */}
         {headerComponent && (
-          <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}>
+          <View
+            style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}
+          >
             {headerComponent}
           </View>
         )}
@@ -229,10 +226,10 @@ function BottomModal({
             contentContainerStyle={[
               Spaces.paddingHorizontal[24],
               !headerComponent ? Spaces.paddingTop[12] : null,
+              contentContainerStyle,
               // Keep actions and last fields visible above keyboard.
               { paddingBottom: contentBottomPadding },
               { minHeight: 100 },
-              contentContainerStyle,
             ]}
             keyboardShouldPersistTaps="handled"
             ref={scrollViewRef}
@@ -246,31 +243,26 @@ function BottomModal({
           </BottomSheetScrollView>
         ) : (
           <BottomSheetView style={[
-            footerComponent ? { paddingBottom: contentBottomPadding } : null,
             Spaces.paddingHorizontal[24],
             !headerComponent ? Spaces.paddingTop[12] : null,
             contentContainerStyle,
+            footerComponent ? { paddingBottom: contentBottomPadding } : null,
           ]}
           >
             {children}
           </BottomSheetView>
         )}
 
-        {/* Sticky Footer */}
+        {/* Fixed Footer */}
         {footerComponent && (
           <View style={[
-            Alignments.absolute,
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
             {
               backgroundColor: Colors.primary700,
               borderTopColor: 'rgba(255,255,255,0.1)',
               borderTopWidth: 1,
-              bottom: footerBottomInset,
-              left: 0,
-              paddingBottom: 12,
-              right: 0,
-              zIndex: 5,
+              paddingBottom: 12 + footerBottomInset,
             },
           ]}
           >

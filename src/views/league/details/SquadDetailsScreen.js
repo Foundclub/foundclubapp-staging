@@ -358,9 +358,13 @@ function SquadDetailsScreen({ navigation, route }) {
   };
 
   const handleDeleteTeam = useCallback(() => {
+    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Equipe');
     Alert.alert(
-      t('squad.delete.title', 'Supprimer l\'equipe'),
-      t('squad.delete.confirmation', 'Etes-vous sur de vouloir supprimer votre equipe ? Cette action est irreversible.'),
+      t('squadDetails.delete.title', 'Supprimer l\'equipe'),
+      t('squadDetails.delete.confirmationWithName', {
+        defaultValue: `Etes-vous sur de vouloir supprimer l'equipe "${teamDisplayName}" ? Cette action est irreversible.`,
+        teamName: teamDisplayName,
+      }),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -384,7 +388,7 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [navigation, t, teamId]);
+  }, [navigation, t, team?.name, teamId]);
 
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(

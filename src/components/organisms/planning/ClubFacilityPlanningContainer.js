@@ -62,7 +62,10 @@ function ClubFacilityPlanningContainer({ clubId }) {
 
   const handleEventPress = (event) => {
     if (event?.documentId) {
-      navigation.navigate(RouteNames.EventDetails, { eventId: event.documentId });
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.documentId },
+        screen: RouteNames.EventDetails,
+      });
     }
   };
 

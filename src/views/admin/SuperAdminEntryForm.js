@@ -63,7 +63,7 @@ const getDocumentPickerModule = () => {
   try {
     // Lazy import: prevents native module crashes at bootstrap on unsupported builds.
     // eslint-disable-next-line global-require
-    const maybeModule = require('react-native-document-picker');
+    const maybeModule = require('@react-native-documents/picker');
     cachedDocumentPickerModule = maybeModule?.default || maybeModule;
     return cachedDocumentPickerModule;
   } catch (_error) {
@@ -626,18 +626,49 @@ function SuperAdminEntryForm({ navigation, route }) {
 
   const pickMediaFromDocument = async (attribute) => {
     const documentPicker = getDocumentPickerModule();
-    if (!documentPicker?.pickSingle || !documentPicker?.types?.allFiles) {
+    const hasModernPick = typeof documentPicker?.pick === 'function';
+    const hasLegacyPick = typeof documentPicker?.pickSingle === 'function';
+    if (!hasModernPick && !hasLegacyPick) {
       Alert.alert('Fichier', 'Le selecteur de fichiers est indisponible sur cette build.');
       return;
     }
 
     try {
-      const selected = await documentPicker.pickSingle({
-        copyTo: 'cachesDirectory',
-        type: [documentPicker.types.allFiles],
-      });
+      let selected;
+      if (hasModernPick) {
+        const selectedResult = await documentPicker.pick({
+          type: documentPicker?.types?.allFiles ? [documentPicker.types.allFiles] : undefined,
+        });
+        selected = Array.isArray(selectedResult) ? selectedResult[0] : selectedResult;
+      } else {
+        selected = await documentPicker.pickSingle({
+          copyTo: 'cachesDirectory',
+          type: [documentPicker.types.allFiles],
+        });
+      }
 
-      const selectedUri = selected?.fileCopyUri || selected?.uri;
+      if (!selected) return;
+
+      let selectedUri = selected?.fileCopyUri || selected?.uri;
+      if (
+        hasModernPick
+        && typeof documentPicker?.keepLocalCopy === 'function'
+        && selected?.uri
+      ) {
+        const [localCopyResult] = await documentPicker.keepLocalCopy({
+          destination: 'cachesDirectory',
+          files: [
+            {
+              fileName: selected.name || `file_${Date.now()}`,
+              uri: selected.uri,
+            },
+          ],
+        });
+        if (localCopyResult?.status === 'success' && localCopyResult?.localUri) {
+          selectedUri = localCopyResult.localUri;
+        }
+      }
+
       if (!selectedUri) {
         Alert.alert('Fichier', 'Impossible de recuperer ce fichier.');
         return;
@@ -649,6 +680,13 @@ function SuperAdminEntryForm({ navigation, route }) {
         uri: selectedUri,
       });
     } catch (error) {
+      if (
+        hasModernPick
+        && typeof documentPicker?.isErrorWithCode === 'function'
+        && documentPicker?.errorCodes?.OPERATION_CANCELED
+        && documentPicker.isErrorWithCode(error)
+        && error?.code === documentPicker.errorCodes.OPERATION_CANCELED
+      ) return;
       if (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error)) return;
       Alert.alert('Fichier', error?.message || 'Impossible de selectionner ce fichier.');
     }

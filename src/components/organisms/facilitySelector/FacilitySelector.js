@@ -14,7 +14,6 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
@@ -43,6 +42,7 @@ function FacilitySelector({
 }) {
   const { t } = useTranslation();
   const {
+    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
@@ -50,6 +50,25 @@ function FacilitySelector({
     Spaces,
   } = useTheme();
   const [mode, setMode] = useState('club');
+  const locationModes = useMemo(
+    () => [
+      {
+        description: t('eventEdit.locationMode.clubHint', 'Installation du club'),
+        title: t('eventEdit.locationMode.club', 'Club'),
+        value: 'club',
+      },
+      {
+        description: t('eventEdit.locationMode.externalHint', 'Adresse exterieure'),
+        title: t('eventEdit.locationMode.external', 'Exterieur'),
+        value: 'external',
+      },
+    ],
+    [t],
+  );
+  const selectedLocationMode = useMemo(
+    () => locationModes.find((item) => item.value === mode) || locationModes[0],
+    [locationModes, mode],
+  );
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -166,15 +185,77 @@ function FacilitySelector({
         {t('eventEdit.fields.location.label', 'Lieu')}
       </Text>
 
-      <View style={{ alignItems: 'flex-start' }}>
-        <SegmentedControl
-          onChange={handleModeChange}
-          options={[
-            { label: t('eventEdit.locationMode.club', 'Club'), value: 'club' },
-            { label: t('eventEdit.locationMode.external', 'Exterieur'), value: 'external' },
-          ]}
-          value={mode}
-        />
+      <View style={[Spaces.gap[12]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventWizard.steps.location.modeHint', 'Choisis si le lieu est dans ton club ou en exterieur.')}
+        </Text>
+        <View style={[Alignments.row, Spaces.gap[12]]}>
+          {locationModes.map((modeOption) => {
+            const isActive = modeOption.value === mode;
+            const cardBg = isActive ? `${Colors.primary500}1A` : 'rgba(255,255,255,0.06)';
+            const cardBorder = isActive ? Colors.primary500 : 'rgba(255,255,255,0.34)';
+            return (
+              <TouchableOpacity
+                accessibilityHint={t('eventWizard.steps.location.modeButtonHint', 'Selectionne ce mode de lieu')}
+                accessibilityLabel={`${modeOption.title}. ${modeOption.description}`}
+                accessibilityRole="button"
+                activeOpacity={0.9}
+                key={modeOption.value}
+                onPress={() => handleModeChange(modeOption.value)}
+                style={[
+                  ApplicationStyle.borderRadius100,
+                  Spaces.paddingHorizontal[16],
+                  Spaces.paddingVertical[12],
+                  {
+                    backgroundColor: cardBg,
+                    borderColor: cardBorder,
+                    borderWidth: isActive ? 1.4 : 1,
+                    flex: 1,
+                    minHeight: 48,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    Alignments.row,
+                    Alignments.justifySpaceBetween,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p2Bold, isActive ? Fonts.primary500 : Fonts.neutral100, { flex: 1 }]}
+                  >
+                    {modeOption.title}
+                  </Text>
+                  <View
+                    style={{
+                      alignItems: 'center',
+                      backgroundColor: isActive ? Colors.primary500 : 'transparent',
+                      borderColor: isActive ? Colors.primary500 : Colors.neutral400,
+                      borderRadius: 10,
+                      borderWidth: 1.6,
+                      height: 20,
+                      justifyContent: 'center',
+                      width: 20,
+                    }}
+                  >
+                    {isActive ? (
+                      <Image
+                        source={Images.check}
+                        style={{ height: 12, tintColor: Colors.neutral900, width: 12 }}
+                      />
+                    ) : null}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {selectedLocationMode?.description}
+        </Text>
       </View>
 
       {mode === 'club' ? (

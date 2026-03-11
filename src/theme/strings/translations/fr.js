@@ -1254,10 +1254,116 @@ export default {
     },
   },
   multisport: {
-    deleteSectionConfirm: 'Êtes-vous sûr de vouloir supprimer la section "{{name}}" ?\nCette action est irréversible et supprimera toutes les équipes et membres associés.',
+    accessibility: {
+      addSponsor: 'Ajouter un partenaire',
+      callPhone: 'Appeler le club',
+      deleteSection: 'Supprimer la section',
+      editClub: 'Modifier les informations du club',
+      openAdminHint: 'Ouvrir le profil du dirigeant',
+      openSectionHint: 'Ouvrir le detail de la section',
+      sendEmail: 'Envoyer un email au club',
+    },
+    actions: {
+      addAd: {
+        subtitle: 'Publier une annonce de recherche de profil.',
+        title: 'Ajouter une annonce',
+      },
+      addEvent: {
+        subtitle: 'Creer un evenement pour une section ou une equipe.',
+        title: 'Ajouter un evenement',
+      },
+      createSection: {
+        title: 'Creer une section',
+      },
+      manageClub: {
+        subtitle: 'Modifier les informations et reglages du club.',
+        title: 'Gerer mon club',
+      },
+      requests: {
+        subtitle: 'Traiter les demandes en attente de votre organisation.',
+        title: 'Demandes',
+      },
+    },
+    badge: 'OMNISPORT',
+    createSection: {
+      actions: {
+        create: 'Creer la section',
+        creating: 'Creation...',
+      },
+      fields: {
+        address: {
+          label: 'Adresse / Ville *',
+          placeholder: 'Rechercher une adresse',
+        },
+        managerPhone: {
+          help: 'Ce numero sera utilise pour rattacher le dirigeant a la section.',
+          label: 'Numero du dirigeant (optionnel)',
+          placeholder: 'Ex: 0612345678',
+        },
+        name: {
+          label: 'Nom de la section *',
+          placeholder: 'Ex: Football, Basketball',
+        },
+        sport: {
+          label: 'Sport',
+          noResults: 'Aucun sport ne correspond a votre recherche.',
+          placeholder: 'Choisir un sport',
+        },
+      },
+      info: 'Une fois creee, la section pourra accueillir equipes, evenements et membres.',
+      subtitle: 'Creez une section sportive pour votre club multisport.',
+      title: 'Nouvelle section',
+    },
+    deleteSectionConfirm: 'Etes-vous sur de vouloir supprimer la section "{{name}}" ? Cette action est irreversible.',
     deleteSectionTitle: 'Supprimer la section',
-    sectionCreated: 'La section a été créée avec succès.',
-    sectionDeleted: 'La section a été supprimée avec succès.',
+    edit: {
+      fields: {
+        phone: {
+          label: 'Telephone',
+          placeholder: 'Telephone',
+        },
+      },
+    },
+    empty: {
+      admins: 'Aucun dirigeant rattache.',
+      partners: 'Aucun partenaire ajoute.',
+      sections: 'Aucune section disponible pour le moment.',
+    },
+    fallback: {
+      noClub: 'Aucun club multisport associe a ce compte.',
+    },
+    formErrors: {
+      addressRequired: "L'adresse est obligatoire.",
+      generic: 'Une erreur est survenue lors de la creation de la section.',
+      sectionNameRequired: 'Le nom de la section est obligatoire.',
+    },
+    hero: {
+      summary: 'Vue globale du club multisport et de ses sections.',
+    },
+    labels: {
+      members: 'membres',
+      teams: 'equipes',
+    },
+    sectionCreated: 'La section a ete creee avec succes.',
+    sectionCreatedMessage: 'La section "{{name}}" a ete creee avec succes.',
+    sectionCreatedTitle: 'Section creee',
+    sectionDeleted: 'La section a ete supprimee avec succes.',
+    stats: {
+      admins: 'Dirigeants',
+      members: 'Membres',
+      sections: 'Sections',
+      teams: 'Equipes',
+    },
+    titles: {
+      admins: 'Dirigeants omnisport',
+      partners: 'Partenaires',
+      quickActions: 'Actions rapides',
+      sections: 'Mes sections',
+    },
+    tutorial: {
+      mainDescription: 'Gerez vos sections, vos membres et vos actions rapides depuis un seul ecran.',
+      mainTitle: 'Gestion multisport',
+    },
   },
   myEventList: {
     actions: {
@@ -1282,8 +1388,10 @@ export default {
     a11y: {
       backHint: 'Revient a l etape precedente de l onboarding.',
       cardHintClub: 'Ouvre la fiche du club pour confirmer l affiliation.',
+      cardHintClubSelect: 'Selectionne ce club pour voir ses equipes.',
       cardHintTeam: 'Ouvre la fiche de l equipe pour demander a rejoindre.',
       cardLabelClub: 'Ouvrir la fiche du club {{name}}',
+      cardLabelClubSelect: 'Selectionner le club {{name}}',
       cardLabelTeam: 'Ouvrir la fiche de l equipe {{name}}',
       continueLaterHint: 'Passe cette etape et continue l onboarding.',
       filterHint: 'Ouvre les filtres de recherche de club.',
@@ -1305,6 +1413,7 @@ export default {
       tooltipSkipHint: 'Quitte le tutoriel guide.',
     },
     actions: {
+      changeClub: 'Changer de club',
       continueLater: 'Continuer plus tard',
       notFoundClub: 'Je ne trouve pas mon club',
       notFoundTeam: 'Je ne trouve pas mon equipe',
@@ -1353,6 +1462,7 @@ export default {
       placeholderClub: 'Nom du club',
       placeholderTeam: 'Nom de l equipe',
     },
+    selectedClubLabel: 'Club selectionne',
     states: {
       emptyWithoutQueryClub: 'Aucun club a afficher pour le moment.',
       emptyWithoutQueryTeam: 'Aucune equipe a afficher pour le moment.',
@@ -1364,7 +1474,9 @@ export default {
       retry: 'Reessayer',
     },
     subtitleClub: 'Recherche ton club puis ouvre sa fiche pour valider C est mon club.',
+    subtitleClubSelection: 'Recherche puis selectionne ton club pour voir ses equipes.',
     subtitleTeam: 'Recherche ton equipe puis ouvre sa fiche pour envoyer ta demande.',
+    subtitleTeamFromClub: 'Recherche ton equipe dans le club selectionne puis ouvre sa fiche pour envoyer ta demande.',
     titleClub: 'Trouve ton club',
     titleTeam: 'Trouve ton equipe',
     tutorial: {
@@ -1375,6 +1487,7 @@ export default {
       stepNotFoundTitleClub: 'Je ne trouve pas mon club',
       stepNotFoundTitleTeam: 'Je ne trouve pas mon equipe',
       stepResultDescriptionClub: 'Ouvre la fiche du club pour utiliser le bouton C est mon club.',
+      stepResultDescriptionClubSelect: 'Selectionne ton club pour afficher ensuite ses equipes.',
       stepResultDescriptionTeam: 'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
       stepResultTitleClub: 'Selectionner un club',
       stepResultTitleTeam: 'Selectionner une equipe',
@@ -1603,7 +1716,7 @@ export default {
       missingPlayers_plural: 'Il manque {{count}} joueurs',
       pricePerPerson: '{{price}}€/pers',
     },
-    featured: 'À la une :',
+    featured: 'ì la une :',
     featuredRequest: {
       approved: 'Approuvée',
       cancelError: 'Erreur lors de l\'annulation',
@@ -1638,7 +1751,7 @@ export default {
         placeholder: 'Ex: 20',
       },
       startTime: {
-        label: 'À partir de',
+        label: 'ì partir de',
         placeholder: 'Heure de début',
       },
     },
@@ -1861,19 +1974,19 @@ export default {
     },
     descriptions: {
       club: {
-        bold: '🔥 Rejoins un club',
+        bold: '- Rejoins un club',
         regular: 'et progresse dans ta carrière sportive.',
       },
       info: {
-        bold: '📢 Reste informé·e',
+        bold: '- Reste informé·e',
         regular: ' des nouveautés grâce aux notifications',
       },
       register: {
-        bold: '📅 Inscris-toi',
+        bold: '- Inscris-toi',
         regular: ' à des entrainements et détections ouverts',
       },
       search: {
-        bold: '🔎 Recherche',
+        bold: '- Recherche',
         regular: ' des clubs et des évènements près de chez toi.',
       },
     },

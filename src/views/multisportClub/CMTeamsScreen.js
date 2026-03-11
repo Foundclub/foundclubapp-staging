@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -27,7 +26,6 @@ import { getCMTeams } from '@/services/multisportClub/multisportClubService';
  */
 function CMTeamsScreen({ navigation, route }) {
   const { cmId } = route.params || {};
-  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -47,7 +45,7 @@ function CMTeamsScreen({ navigation, route }) {
     queryKey: ['cm-teams', cmId],
   });
 
-  const allTeams = teamsData?.data || [];
+  const allTeams = useMemo(() => teamsData?.data || [], [teamsData?.data]);
   const sections = teamsData?.meta?.filters?.sections || [];
 
   const displayedTeams = useMemo(() => allTeams.filter((team) => {
@@ -57,7 +55,7 @@ function CMTeamsScreen({ navigation, route }) {
   }), [allTeams, searchQuery, selectedSection]);
 
   React.useEffect(() => {
-    navigation.setOptions({ headerTitle: `Équipes (${displayedTeams.length})` });
+    navigation.setOptions({ headerTitle: `Equipes (${displayedTeams.length})` });
   }, [navigation, displayedTeams.length]);
 
   const renderItem = ({ item }) => (
@@ -98,7 +96,7 @@ function CMTeamsScreen({ navigation, route }) {
         {item.category && <Text style={[Fonts.p3, Fonts.neutral100]}>{item.category}</Text>}
         {item.level && (
         <Text style={[Fonts.p3, Fonts.neutral100]}>
-          •
+          -
           {item.level}
         </Text>
         )}
@@ -118,7 +116,7 @@ function CMTeamsScreen({ navigation, route }) {
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SearchBar
           onChangeText={setSearchQuery}
-          placeholder="Rechercher une équipe..."
+          placeholder="Rechercher une equipe..."
           value={searchQuery}
           withCalendar={false}
           withFilter={false}
@@ -185,7 +183,7 @@ function CMTeamsScreen({ navigation, route }) {
           keyExtractor={(item) => item.documentId || item.id}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucune équipe trouvée.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucune equipe trouvee.</Text>
             </View>
           )}
           refreshControl={

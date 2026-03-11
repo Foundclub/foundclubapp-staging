@@ -1,5 +1,5 @@
 import {
-  forwardRef, useCallback, useEffect, useRef, useState,
+  forwardRef, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -266,6 +266,22 @@ const AutocompleteSelect = forwardRef(
 
     const modalTitle = props.modalTitle || props.label || props.placeholder || t('modals.actions.select');
     const modalSnapPoints = props.modalSnapPoints || [props.isSearchable ? '86%' : '78%'];
+    const renderOptions = useMemo(() => {
+      const keyCollisions = new Map();
+
+      return (props.options || []).map((option) => {
+        const isHeader = Boolean(option?.isHeader);
+        const baseToken = String(option?.value ?? option?.label ?? 'empty');
+        const baseKey = `${isHeader ? 'header' : 'option'}-${baseToken}`;
+        const collisionIndex = keyCollisions.get(baseKey) || 0;
+        keyCollisions.set(baseKey, collisionIndex + 1);
+
+        return {
+          key: collisionIndex === 0 ? baseKey : `${baseKey}-${collisionIndex}`,
+          option,
+        };
+      });
+    }, [props.options]);
 
     return (
       <View style={[Alignments.relative]}>
@@ -365,10 +381,10 @@ const AutocompleteSelect = forwardRef(
 
             {/* Options - Scrollable area */}
             <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
-              {props.options.map((option) => (
+              {renderOptions.map(({ key, option }) => (
                 option.isHeader ? (
                   <Text
-                    key={`header-${option.value || option.label}`}
+                    key={key}
                     style={[
                       Fonts.p3Bold,
                       Fonts.neutral500,
@@ -380,7 +396,7 @@ const AutocompleteSelect = forwardRef(
                   </Text>
                 ) : (
                   <View
-                    key={`option-${option.value || option.label}`}
+                    key={key}
                     style={[Alignments.row, Spaces.marginTop[8]]}
                   >
                     <Checkable

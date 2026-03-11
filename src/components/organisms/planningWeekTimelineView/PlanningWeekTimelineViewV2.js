@@ -28,6 +28,32 @@ const MIN_EVENT_HEIGHT = 24;
 const TIME_COLUMN_WIDTH = 44;
 
 /**
+ * @param {TimelineEvent} event
+ * @returns {{ startH: number; startM: number; endH: number; endM: number }}
+ */
+const extractEventHours = (event) => {
+  const startParts = String(event?.startTime || '').split(':');
+  const endParts = String(event?.endTime || '').split(':');
+
+  const startH = Number.parseInt(startParts[0] || '0', 10);
+  const startM = Number.parseInt(startParts[1] || '0', 10);
+  const endH = Number.parseInt(endParts[0] || '0', 10);
+  const endM = Number.parseInt(endParts[1] || '0', 10);
+
+  const safeStartH = Number.isFinite(startH) ? Math.max(0, Math.min(23, startH)) : 0;
+  const safeStartM = Number.isFinite(startM) ? Math.max(0, Math.min(59, startM)) : 0;
+  const safeEndH = Number.isFinite(endH) ? Math.max(0, Math.min(23, endH)) : 1;
+  const safeEndM = Number.isFinite(endM) ? Math.max(0, Math.min(59, endM)) : 0;
+
+  return {
+    endH: safeEndH,
+    endM: safeEndM,
+    startH: safeStartH,
+    startM: safeStartM,
+  };
+};
+
+/**
  * @typedef {{
  *   id?: string | number;
  *   date?: string | Date;
@@ -167,27 +193,35 @@ function PlanningWeekTimelineView({
     });
   }, [events, weekDays]);
 
+  // Only events with an explicit hour range are rendered in the timeline.
+  const timedWeekEvents = useMemo(
+    () => weekEvents.filter((/** @type {TimelineEvent} */ event) => Boolean(event?.startTime && event?.endTime)),
+    [weekEvents],
+  );
+
+  // 2bis. Start display from the first visible event hour (mode-aware via weekEvents).
+  const displayStartHour = useMemo(() => {
+    if (!timedWeekEvents || timedWeekEvents.length === 0) return 8;
+
+    let minHour = 24;
+    timedWeekEvents.forEach((/** @type {TimelineEvent} */ event) => {
+      const { startH } = extractEventHours(event);
+      if (startH < minHour) minHour = startH;
+    });
+
+    return minHour === 24 ? 8 : minHour;
+  }, [timedWeekEvents]);
+
   // 3. Calculate Active Hours (Accordion Logic)
   // STRICT: Only hours that actually have events are active. No padding.
   const activeHours = useMemo(() => {
     const active = new Set();
-    if (!weekEvents || weekEvents.length === 0) return active;
+    if (!timedWeekEvents || timedWeekEvents.length === 0) return active;
 
-    weekEvents.forEach((/** @type {TimelineEvent} */ event) => {
-      let startH = 0;
-      let endH = 0;
-      let endM = 0;
-
-      if (event.startTime && event.endTime) {
-        startH = parseInt(event.startTime.split(':')[0], 10);
-        const endParts = event.endTime.split(':');
-        endH = parseInt(endParts[0], 10);
-        endM = parseInt(endParts[1], 10);
-      } else if (event.date) {
-        const d = new Date(event.date);
-        startH = d.getHours();
-        endH = startH + 1;
-      }
+    timedWeekEvents.forEach((/** @type {TimelineEvent} */ event) => {
+      const {
+        endH, endM, startH,
+      } = extractEventHours(event);
 
       // Handle midnight crossing (rare but possible)
       if (endH < startH) {
@@ -208,20 +242,12 @@ function PlanningWeekTimelineView({
       }
     });
     return active;
-  }, [weekEvents]);
+  }, [timedWeekEvents]);
 
   // Calculate minStartHour for Smart Scroll
   const minStartHour = useMemo(() => {
-    if (!weekEvents || weekEvents.length === 0) return 8; // Default to 8am if no events
-    let min = 24;
-    weekEvents.forEach((/** @type {TimelineEvent} */ e) => {
-      if (e.startTime) {
-        const h = parseInt(e.startTime.split(':')[0], 10);
-        if (h < min) min = h;
-      }
-    });
-    return min === 24 ? 8 : Math.max(0, min - 1); // Scroll to 1 hour before first event
-  }, [weekEvents]);
+    return displayStartHour;
+  }, [displayStartHour]);
 
   // 4. Build Timeline Structure (The "Map" of the vertical axis)
   const timelineStructure = useMemo(() => {
@@ -230,7 +256,7 @@ function PlanningWeekTimelineView({
     /** @type {{ start: number; end: number; id: string } | null} */
     let currentEmptyBlock = null;
 
-    for (let h = 0; h <= 23; h++) {
+    for (let h = displayStartHour; h <= 23; h++) {
       const isActive = activeHours.has(h);
 
       if (isActive) {
@@ -254,7 +280,7 @@ function PlanningWeekTimelineView({
       structure.push({ type: 'collapsed', ...currentEmptyBlock });
     }
     return structure;
-  }, [activeHours]);
+  }, [activeHours, displayStartHour]);
 
   // 5. Calculate Y-Positions (Top) for each hour
   const hourPositions = useMemo(() => {
@@ -295,13 +321,11 @@ function PlanningWeekTimelineView({
 
   // 6. Process Events for Layout (Calculate Top, Height, DayIndex)
   const processedEvents = useMemo(() => {
-    const mapped = weekEvents.map((/** @type {TimelineEvent} */ event) => {
-      if (!event.startTime || !event.endTime || !event.date) return null;
-
-      const startH = parseInt(event.startTime.split(':')[0], 10);
-      const startM = parseInt(event.startTime.split(':')[1], 10);
-      const endH = parseInt(event.endTime.split(':')[0], 10);
-      const endM = parseInt(event.endTime.split(':')[1], 10);
+    const mapped = timedWeekEvents.map((/** @type {TimelineEvent} */ event) => {
+      if (!event.date) return null;
+      const {
+        endH, endM, startH, startM,
+      } = extractEventHours(event);
 
       const eventDate = new Date(event.date);
       const dayIndex = differenceInCalendarDays(eventDate, weekDays[0]);
@@ -388,7 +412,7 @@ function PlanningWeekTimelineView({
       };
     }).filter((event) => event !== null);
     return /** @type {PositionedEvent[]} */ (mapped);
-  }, [weekEvents, hourPositions, activeHours, weekDays, timelineStructure]);
+  }, [timedWeekEvents, hourPositions, activeHours, weekDays, timelineStructure]);
 
   // 7. Handle Overlaps (Columns)
   const eventsWithLayout = useMemo(() => {
