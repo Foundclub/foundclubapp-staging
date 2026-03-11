@@ -120,6 +120,8 @@ const truncate = (value, maxLength = 52) => {
   return `${normalized.slice(0, maxLength - 1)}...`;
 };
 
+const normalizeComparisonValue = (value) => normalizeString(value).toLowerCase();
+
 const isDateLikeField = (key = '') => (
   /date$/i.test(key)
   || /at$/i.test(key)
@@ -389,14 +391,26 @@ export const getListRequestConfig = ({ attributes, sortMode, uid }) => {
   };
 };
 
-export const getEntryCardViewModel = ({ entry, uid }) => ({
-  badges: getBadges(entry, uid),
-  documentId: normalizeString(entry?.documentId),
-  fields: getKeyFields(entry, uid, 3),
-  shortDocumentId: getShortDocumentId(entry?.documentId),
-  title: getTitle(entry, uid),
-  updatedAt: formatDate(entry?.updatedAt || ''),
-});
+export const getEntryCardViewModel = ({ entry, uid }) => {
+  const title = getTitle(entry, uid);
+  const titleComparison = normalizeComparisonValue(title);
+  const filteredFields = getKeyFields(entry, uid, 5)
+    .filter((field) => {
+      const fieldValue = normalizeComparisonValue(field?.value);
+      if (!fieldValue) return false;
+      return fieldValue !== titleComparison;
+    })
+    .slice(0, 3);
+
+  return {
+    badges: getBadges(entry, uid),
+    documentId: normalizeString(entry?.documentId),
+    fields: filteredFields,
+    shortDocumentId: getShortDocumentId(entry?.documentId),
+    title,
+    updatedAt: formatDate(entry?.updatedAt || ''),
+  };
+};
 
 export const getEntryDetailViewModel = ({ attributes, entry, uid }) => ({
   badges: getBadges(entry, uid),

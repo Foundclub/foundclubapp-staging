@@ -6,19 +6,21 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
+import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetSuperadminContentTypes } from '@/services/admin/superadminQueries';
 
-const rightIcon = require('@/assets/icons/arrowRight.png');
 const closeIcon = require('@/assets/icons/close.png');
 const searchIcon = require('@/assets/icons/search.png');
 
@@ -54,6 +56,7 @@ function SuperAdminContentExplorer({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
 
   const [query, setQuery] = useState('');
@@ -65,6 +68,10 @@ function SuperAdminContentExplorer({ navigation }) {
   } = useGetSuperadminContentTypes();
 
   const normalizedQuery = query.trim().toLowerCase();
+  const isCompactScreen = screenWidth <= 340;
+  const numColumns = isCompactScreen ? 1 : 2;
+  const pageHorizontalPadding = superAdminLayout.pageHorizontal;
+
   const contentTypes = useMemo(
     () => (Array.isArray(data?.data) ? data.data : []),
     [data?.data],
@@ -91,7 +98,7 @@ function SuperAdminContentExplorer({ navigation }) {
 
   return (
     <ScreenContainer bgImage="bg2">
-      <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[16]]}>
+      <View style={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.marginTop[superAdminLayout.pageTop]]}>
         <Text style={[Fonts.h2, Fonts.neutral00]}>
           {t('superAdminContentManager.explorer.title', 'Explorer Content Manager')}
         </Text>
@@ -100,7 +107,14 @@ function SuperAdminContentExplorer({ navigation }) {
         </Text>
       </View>
 
-      <View style={[Spaces.paddingHorizontal[16], Spaces.marginTop[12], Spaces.marginBottom[12], Spaces.gap[10]]}>
+      <View
+        style={[
+          { paddingHorizontal: pageHorizontalPadding },
+          Spaces.marginTop[12],
+          Spaces.marginBottom[12],
+          Spaces.gap[superAdminLayout.sectionGap],
+        ]}
+      >
         <View
           style={[
             ApplicationStyle.card,
@@ -109,7 +123,9 @@ function SuperAdminContentExplorer({ navigation }) {
             Alignments.row,
             Alignments.alignCenter,
             {
-              backgroundColor: Colors.neutral800,
+              backgroundColor: Colors.primary700,
+              borderColor: Colors.primary700,
+              borderWidth: 1,
               justifyContent: 'space-between',
             },
           ]}
@@ -133,7 +149,11 @@ function SuperAdminContentExplorer({ navigation }) {
             Alignments.alignCenter,
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
-            { backgroundColor: Colors.neutral800 },
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: Colors.primary500,
+              borderWidth: 1,
+            },
           ]}
         >
           <Image
@@ -173,107 +193,58 @@ function SuperAdminContentExplorer({ navigation }) {
       </View>
 
       <FlatList
-        contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[32]]}
+        columnWrapperStyle={numColumns === 2 ? { justifyContent: 'space-between' } : undefined}
+        contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[32]]}
         data={filtered}
+        key={numColumns}
         keyExtractor={(item) => item.uid}
         ListEmptyComponent={
           !isLoading ? (
-            <SuperAdminEmptyState
-              description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou verifiez les permissions Super Admin.')}
-              title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouve')}
-            />
-          ) : null
-        }
-        onRefresh={refetch}
-        refreshing={isLoading}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => navigation.navigate(RouteNames.SuperAdminEntryList, {
-              displayName: item?.displayName || item?.uid,
-              uid: item?.uid,
-            })}
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
-              Spaces.marginBottom[12],
-              {
-                backgroundColor: Colors.neutral800,
-                borderColor: Colors.primary700,
-                borderWidth: 1,
-              },
-            ]}
-          >
-            <View style={[Alignments.row, Alignments.alignCenter]}>
-              <View
-                style={[
-                  Alignments.center,
-                  {
-                    backgroundColor: Colors.primary900,
-                    borderColor: Colors.primary500,
-                    borderRadius: 22,
-                    borderWidth: 1,
-                    height: 44,
-                    marginRight: 12,
-                    width: 44,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p2Bold, { color: Colors.primary200 }]}>{getInitials(item?.displayName)}</Text>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
-                  {item?.displayName || item?.uid}
-                </Text>
-                <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>
-                  {item?.uid}
-                </Text>
-              </View>
-
-              <Image
-                source={rightIcon}
-                style={{
-                  height: 16,
-                  tintColor: Colors.neutral300,
-                  width: 16,
-                }}
+            <View style={{ width: '100%' }}>
+              <SuperAdminEmptyState
+                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou verifiez les permissions Super Admin.')}
+                title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouve')}
               />
             </View>
+          ) : null
+        }
+        numColumns={numColumns}
+        onRefresh={refetch}
+        refreshing={isLoading}
+        renderItem={({ item }) => {
+          const subtitleParts = [
+            item?.uid || '',
+            getKindLabel(item?.kind, t),
+          ].filter(Boolean);
 
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginTop[12], Spaces.gap[8]]}>
-              <View
-                style={[
-                  Spaces.paddingHorizontal[8],
-                  Spaces.paddingVertical[4],
-                  {
-                    backgroundColor: Colors.primary700,
-                    borderRadius: 6,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p2, { color: Colors.primary200, fontSize: 12 }]}>
-                  {getKindLabel(item?.kind, t)}
-                </Text>
-              </View>
-              {item?.draftAndPublish ? (
-                <View
-                  style={[
-                    Spaces.paddingHorizontal[8],
-                    Spaces.paddingVertical[4],
-                    {
-                      backgroundColor: Colors.warning900,
-                      borderRadius: 6,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p2, { color: Colors.warning500, fontSize: 12 }]}>
-                    {t('superAdminContentManager.explorer.draftPublish', 'draft + publish')}
-                  </Text>
-                </View>
-              ) : null}
+          if (item?.draftAndPublish) {
+            subtitleParts.push(t('superAdminContentManager.explorer.draftPublish', 'draft + publish'));
+          }
+
+          const subtitle = subtitleParts.join('\n');
+
+          return (
+            <View
+              style={{
+                marginBottom: 12,
+                width: numColumns === 1 ? '100%' : '48.5%',
+              }}
+            >
+              <HomeActionCard
+                accentColor={item?.draftAndPublish ? Colors.warning500 : Colors.primary500}
+                icon={item?.kind === 'singleType' ? 'edit' : 'users'}
+                layout="half"
+                onPress={() => navigation.navigate(RouteNames.SuperAdminEntryList, {
+                  displayName: item?.displayName || item?.uid,
+                  uid: item?.uid,
+                })}
+                subtitle={subtitle}
+                subtitleLines={2}
+                title={item?.displayName || getInitials(item?.uid)}
+              />
             </View>
-          </TouchableOpacity>
-        )}
+          );
+        }}
       />
     </ScreenContainer>
   );

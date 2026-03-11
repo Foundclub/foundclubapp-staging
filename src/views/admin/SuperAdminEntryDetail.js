@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -53,6 +55,13 @@ const getBadgeColors = (tone, colors) => {
   };
 };
 
+const DETAIL_LAYOUT = Object.freeze({
+  cardPadding: 16,
+  pageHorizontal: 16,
+  pageTop: 20,
+  sectionGap: 12,
+});
+
 /**
  * @param {{ navigation: any; route: any }} props
  * @returns {import('react').ReactElement}
@@ -70,10 +79,13 @@ function SuperAdminEntryDetail({ navigation, route }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
+  const { startWhisperChat } = useMessaging();
 
   const [reason, setReason] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showJson, setShowJson] = useState(false);
+  const [isContacting, setIsContacting] = useState(false);
 
   const {
     data,
@@ -88,8 +100,13 @@ function SuperAdminEntryDetail({ navigation, route }) {
   );
 
   const deleteMutation = useDeleteSuperadminEntry();
+  const pageHorizontalPadding = DETAIL_LAYOUT.pageHorizontal;
 
   const entry = data?.data || null;
+  const entryDocumentId = String(entry?.documentId || '').trim();
+  const currentUserDocumentId = String(userData?.documentId || '').trim();
+  const isUsersPermissionsEntry = uid === 'plugin::users-permissions.user';
+  const canContactEntryUser = Boolean(isUsersPermissionsEntry && entryDocumentId);
   const auditLogs = useMemo(() => data?.meta?.audit || [], [data?.meta?.audit]);
   const viewModel = useMemo(() => getEntryDetailViewModel({
     attributes,
@@ -97,6 +114,38 @@ function SuperAdminEntryDetail({ navigation, route }) {
     uid,
   }), [attributes, entry, uid]);
   const jsonPreview = useMemo(() => formatJsonPreview(entry || {}), [entry]);
+  const summaryRows = useMemo(() => ([
+    {
+      key: 'shortId',
+      label: t('superAdminContentManager.detail.shortId', 'ID court'),
+      value: viewModel.shortDocumentId || '-',
+    },
+    {
+      key: 'id',
+      label: t('superAdminContentManager.common.id', 'Document ID'),
+      value: viewModel.documentId || '-',
+    },
+    {
+      key: 'createdAt',
+      label: t('superAdminContentManager.detail.createdAt', 'Cree le'),
+      value: viewModel.createdAt || '-',
+    },
+    {
+      key: 'updatedAt',
+      label: t('superAdminContentManager.detail.updatedAt', 'Modifie le'),
+      value: viewModel.updatedAt || '-',
+    },
+  ]), [t, viewModel.createdAt, viewModel.documentId, viewModel.shortDocumentId, viewModel.updatedAt]);
+  const sectionCardStyle = [
+    ApplicationStyle.card,
+    Spaces.padding[DETAIL_LAYOUT.cardPadding],
+    { marginBottom: DETAIL_LAYOUT.sectionGap },
+    {
+      backgroundColor: Colors.primary700,
+      borderColor: Colors.primary700,
+      borderWidth: 1,
+    },
+  ];
 
   const closeDeleteModal = () => {
     if (deleteMutation.isPending) return;
@@ -130,39 +179,85 @@ function SuperAdminEntryDetail({ navigation, route }) {
     }
   };
 
+  const handleContactEntryUser = async () => {
+    if (!canContactEntryUser) return;
+
+    if (entryDocumentId === currentUserDocumentId) {
+      Alert.alert(
+        t('common.info', 'Info'),
+        t('messaging.errors.cannotMessageSelf', 'Impossible de lancer une conversation avec ton propre compte.'),
+      );
+      return;
+    }
+
+    setIsContacting(true);
+    try {
+      const chat = await startWhisperChat([entryDocumentId]);
+      if (!chat?.documentId) {
+        Alert.alert(
+          t('common.errors.error', 'Erreur'),
+          t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+        );
+        return;
+      }
+      navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+    } catch (error) {
+      Alert.alert(
+        t('common.errors.error', 'Erreur'),
+        error?.message || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+      );
+    } finally {
+      setIsContacting(false);
+    }
+  };
+
   return (
     <ScreenContainer bgImage="bg2">
-      <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[32]]}>
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[12]]}>
-          <Text numberOfLines={1} style={[Fonts.h3, Fonts.neutral00]}>
+      <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[48]]}>
+        <View style={[Spaces.marginTop[DETAIL_LAYOUT.pageTop], { marginBottom: DETAIL_LAYOUT.sectionGap }]}>
+          <Text numberOfLines={1} style={[Fonts.h2, Fonts.neutral00]}>
             {uidDisplayName}
           </Text>
-          <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>
+          <Text numberOfLines={1} style={[Fonts.p1, Fonts.neutral200, Spaces.marginTop[6]]}>
             {viewModel.title}
           </Text>
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>{t('superAdminContentManager.detail.sections.summary', 'Resume')}</Text>
-          <View style={[Spaces.marginTop[8], Spaces.gap[6]]}>
-            <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.shortId', 'ID court')}</Text>
-              <Text style={[Fonts.p3, Fonts.neutral100]}>{viewModel.shortDocumentId || '-'}</Text>
-            </View>
-            <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.common.id', 'Document ID')}</Text>
-              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral100, maxWidth: '68%', textAlign: 'right' }]}>
-                {viewModel.documentId || '-'}
-              </Text>
-            </View>
-            <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.createdAt', 'Cree le')}</Text>
-              <Text style={[Fonts.p3, Fonts.neutral100]}>{viewModel.createdAt || '-'}</Text>
-            </View>
-            <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{t('superAdminContentManager.detail.updatedAt', 'Modifie le')}</Text>
-              <Text style={[Fonts.p3, Fonts.primary200]}>{viewModel.updatedAt || '-'}</Text>
-            </View>
+        <View style={sectionCardStyle}>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('superAdminContentManager.detail.sections.summary', 'Resume')}
+          </Text>
+          <View style={Spaces.marginTop[10]}>
+            {summaryRows.map((row, index) => (
+              <View
+                key={row.key}
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  {
+                    borderBottomColor: Colors.neutral700,
+                    borderBottomWidth: index < summaryRows.length - 1 ? 1 : 0,
+                    justifyContent: 'space-between',
+                    paddingVertical: 8,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>{row.label}</Text>
+                <Text
+                  numberOfLines={row.key === 'id' ? 2 : 1}
+                  style={[
+                    Fonts.p3,
+                    {
+                      color: row.key === 'updatedAt' ? Colors.primary200 : Colors.neutral100,
+                      flex: 1.2,
+                      textAlign: 'right',
+                    },
+                  ]}
+                >
+                  {row.value}
+                </Text>
+              </View>
+            ))}
           </View>
 
           {viewModel.badges.length > 0 ? (
@@ -176,6 +271,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
                       ApplicationStyle.borderRadius12,
                       Spaces.paddingHorizontal[8],
                       Spaces.paddingVertical[4],
+                      { borderColor: Colors.primary700, borderWidth: 1 },
                       { backgroundColor: colors.backgroundColor },
                     ]}
                   >
@@ -205,9 +301,20 @@ function SuperAdminEntryDetail({ navigation, route }) {
               variant="Secondary"
             />
           </View>
+          {canContactEntryUser ? (
+            <Button
+              isLoading={isContacting}
+              onPress={handleContactEntryUser}
+              style={[Spaces.marginTop[8]]}
+              title={t('userDetails.actions.contact', 'Contacter')}
+              variant="Secondary"
+            />
+          ) : null}
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+        <View
+          style={sectionCardStyle}
+        >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
             {t('superAdminContentManager.detail.sections.keyFields', 'Champs cles')}
           </Text>
@@ -219,13 +326,15 @@ function SuperAdminEntryDetail({ navigation, route }) {
                 <View
                   key={field.key}
                   style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
+                    ApplicationStyle.borderRadius12,
+                    Spaces.paddingHorizontal[10],
+                    Spaces.paddingVertical[8],
+                    Spaces.marginBottom[8],
                     {
-                      borderBottomColor: Colors.neutral700,
-                      borderBottomWidth: 1,
+                      backgroundColor: Colors.primary900,
+                      borderColor: Colors.primary700,
+                      borderWidth: 1,
                       justifyContent: 'space-between',
-                      paddingVertical: 6,
                     },
                   ]}
                 >
@@ -243,7 +352,9 @@ function SuperAdminEntryDetail({ navigation, route }) {
           )}
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+        <View
+          style={sectionCardStyle}
+        >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
             {t('superAdminContentManager.detail.sections.relationsMedia', 'Relations / Medias')}
           </Text>
@@ -257,6 +368,11 @@ function SuperAdminEntryDetail({ navigation, route }) {
                     ApplicationStyle.borderRadius12,
                     Spaces.paddingHorizontal[10],
                     Spaces.paddingVertical[8],
+                    {
+                      backgroundColor: Colors.primary900,
+                      borderColor: Colors.primary700,
+                      borderWidth: 1,
+                    },
                   ]}
                 >
                   <Text style={[Fonts.p3, Fonts.neutral300]}>{field.label}</Text>
@@ -271,7 +387,9 @@ function SuperAdminEntryDetail({ navigation, route }) {
           )}
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral800 }]}>
+        <View
+          style={sectionCardStyle}
+        >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
             {t('superAdminContentManager.detail.sections.audit', 'Audit recent')}
           </Text>
@@ -295,7 +413,11 @@ function SuperAdminEntryDetail({ navigation, route }) {
                       ApplicationStyle.borderRadius12,
                       Spaces.paddingHorizontal[10],
                       Spaces.paddingVertical[8],
-                      { borderColor: Colors.neutral600, borderWidth: 1 },
+                      {
+                        backgroundColor: Colors.primary900,
+                        borderColor: Colors.primary700,
+                        borderWidth: 1,
+                      },
                     ]}
                   >
                     <View style={[Alignments.row, { justifyContent: 'space-between' }]}>
@@ -319,7 +441,18 @@ function SuperAdminEntryDetail({ navigation, route }) {
           )}
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[14], Spaces.marginBottom[12], { backgroundColor: Colors.neutral900 }]}>
+        <View
+          style={[
+            ApplicationStyle.card,
+            Spaces.padding[DETAIL_LAYOUT.cardPadding],
+            { marginBottom: DETAIL_LAYOUT.sectionGap },
+            {
+              backgroundColor: Colors.primary900,
+              borderColor: Colors.primary700,
+              borderWidth: 1,
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => setShowJson((previous) => !previous)}
             style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}

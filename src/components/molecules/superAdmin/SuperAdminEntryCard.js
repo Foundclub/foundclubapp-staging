@@ -7,6 +7,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
+
 const rightIcon = require('@/assets/icons/arrowRight.png');
 
 const getBadgeColors = (tone, colors) => {
@@ -60,89 +62,107 @@ function SuperAdminEntryCard({
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
+  const shouldShowActions = !isSelectionMode && Boolean(onOpenActions);
+  const shouldShowArrow = !isSelectionMode && !onOpenActions;
 
   return (
     <View
       style={[
         ApplicationStyle.card,
         ApplicationStyle.borderRadius16,
-        Spaces.padding[14],
-        Spaces.marginBottom[10],
+        Spaces.padding[superAdminLayout.cardPadding],
+        Spaces.marginBottom[12],
         {
-          backgroundColor: Colors.neutral800,
+          backgroundColor: Colors.primary700,
           borderColor: isSelected ? Colors.primary500 : Colors.primary700,
           borderWidth: 1,
         },
       ]}
     >
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
         {isSelectionMode ? (
           <TouchableOpacity
             accessibilityLabel={viewModel?.title || String(entry?.documentId || '')}
             onPress={onToggleSelect}
             style={[
-              ApplicationStyle.borderRadius12,
               {
                 alignItems: 'center',
-                backgroundColor: isSelected ? Colors.primary500 : 'transparent',
-                borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
-                borderWidth: 1,
-                height: 24,
                 justifyContent: 'center',
-                width: 24,
+                minHeight: 44,
+                minWidth: 44,
               },
             ]}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{isSelected ? 'X' : ''}</Text>
+            <View
+              style={[
+                Alignments.center,
+                {
+                  backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+                  borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
+                  borderRadius: 13,
+                  borderWidth: 1,
+                  height: 26,
+                  width: 26,
+                },
+              ]}
+            >
+              {isSelected ? (
+                <Image
+                  source={Images.check}
+                  style={{ height: 13, tintColor: Colors.neutral00, width: 13 }}
+                />
+              ) : null}
+            </View>
           </TouchableOpacity>
         ) : null}
 
-        <TouchableOpacity onPress={onPress} style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
+        <TouchableOpacity onPress={onPress} style={{ flex: 1, minHeight: 44 }}>
+          <Text numberOfLines={1} style={[Fonts.h4Bold, Fonts.neutral00]}>
             {viewModel?.title}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[2]]}>
-            {viewModel?.shortDocumentId || viewModel?.documentId}
           </Text>
         </TouchableOpacity>
 
-        {!isSelectionMode && onOpenActions ? (
+        {shouldShowActions ? (
           <TouchableOpacity
             accessibilityLabel={labels.openActions}
             onPress={onOpenActions}
             style={[
               ApplicationStyle.borderRadius12,
               Spaces.paddingHorizontal[10],
-              Spaces.paddingVertical[6],
+              Spaces.paddingVertical[8],
               {
-                backgroundColor: Colors.neutral700,
-                borderColor: Colors.neutral600,
+                backgroundColor: Colors.primary700,
+                borderColor: Colors.primary500,
                 borderWidth: 1,
               },
             ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral100]}>...</Text>
+            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>...</Text>
           </TouchableOpacity>
-        ) : (
+        ) : null}
+        {shouldShowArrow ? (
           <Image
             source={rightIcon}
             style={{
               height: 14,
-              tintColor: isSelectionMode ? Colors.neutral600 : Colors.neutral300,
+              tintColor: Colors.neutral300,
               width: 14,
             }}
           />
-        )}
+        ) : null}
       </View>
 
       {Array.isArray(viewModel?.fields) && viewModel.fields.length > 0 ? (
-        <View style={[Spaces.marginTop[8], Spaces.gap[4]]}>
+        <View style={[Spaces.marginTop[12], Spaces.gap[8]]}>
           {viewModel.fields.slice(0, 2).map((field) => (
-            <View key={field.key} style={[Alignments.row, { justifyContent: 'space-between' }]}>
-              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>{field.label}</Text>
-              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral100, flex: 1, textAlign: 'right' }]}>
+            <View key={field.key} style={[Alignments.row, Alignments.alignCenter, { justifyContent: 'space-between' }]}>
+              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
+                {field.label}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.neutral100, flex: 1, textAlign: 'right' }]}>
                 {field.value}
               </Text>
             </View>
@@ -150,7 +170,7 @@ function SuperAdminEntryCard({
         </View>
       ) : null}
 
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginTop[8], Spaces.gap[8]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginTop[12], Spaces.gap[8]]}>
         <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8], { flex: 1 }]}>
           {(viewModel?.badges || []).map((badge) => {
             const colors = getBadgeColors(badge.tone, Colors);
@@ -171,7 +191,7 @@ function SuperAdminEntryCard({
             );
           })}
         </View>
-        <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.primary200, maxWidth: '44%' }]}>
+        <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral200, maxWidth: '46%' }]}>
           {labels.updatedPrefix}
           {' '}
           {viewModel?.updatedAt || '-'}

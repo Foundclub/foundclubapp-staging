@@ -59,24 +59,35 @@ const getUserIdentifier = (user) => {
 
 // Simple service to search users
 /**
- * @param {{ query: string; clubId?: string; multisportId?: string }} params
+ * @param {{ query: string; clubId?: string; multisportId?: string; isSuperAdmin?: boolean }} params
  * @returns {Promise<User[]>}
  */
-const searchUsers = async ({ clubId, multisportId, query }) => {
+const searchUsers = async ({
+  clubId,
+  isSuperAdmin = false,
+  multisportId,
+  query,
+}) => {
+  const normalizedQuery = String(query || '').trim();
+
   // Strict scope check: Must have at least one scope to search
-  if (!clubId && !multisportId) {
+  if (!isSuperAdmin && !clubId && !multisportId) {
     return [];
   }
 
   const nameFilters = [
-    { firstname: { $containsi: query } },
-    { lastname: { $containsi: query } },
-    { username: { $containsi: query } },
+    { firstname: { $containsi: normalizedQuery } },
+    { lastname: { $containsi: normalizedQuery } },
+    { username: { $containsi: normalizedQuery } },
   ];
 
   let filters = {};
 
-  if (multisportId) {
+  if (isSuperAdmin) {
+    // SuperAdmin can search globally across all users.
+    // If query is empty, keep empty filters to retrieve a paginated global list.
+    filters = normalizedQuery ? { $or: nameFilters } : {};
+  } else if (multisportId) {
     // Multisport Scope:
     // We want to find users who belong to ANY club that is part of this Multisport entity.
     // This includes:
@@ -137,6 +148,9 @@ function NewConversation({ navigation, route }) {
     startGroupChat,
     startWhisperChat,
   } = useMessaging();
+  const roleType = String(userData?.role?.type || '').trim().toLowerCase();
+  const currentRoleName = String(userData?.role?.name || '').trim().toLowerCase();
+  const isSuperAdminUser = roleType === 'superadmin' || currentRoleName === 'superadmin';
   const mode = String(route?.params?.mode || '').trim();
   const addMembersChatId = String(route?.params?.chatId || '').trim();
   const isAddMembersMode = mode === 'add_group_members' && Boolean(addMembersChatId);
@@ -184,14 +198,20 @@ function NewConversation({ navigation, route }) {
   const { data: users, isLoading } = useQuery({
     enabled: true,
     queryFn: async () => {
-      const res = await searchUsers({ clubId, multisportId, query: searchQuery });
+      const res = await searchUsers({
+        clubId,
+        isSuperAdmin: isSuperAdminUser,
+        multisportId,
+        query: searchQuery,
+      });
       newConversationLogger.debug('searchUsers result', {
         count: Array.isArray(res) ? res.length : 0,
         hasMultisportScope: Boolean(multisportId),
+        isSuperAdmin: isSuperAdminUser,
       });
       return res;
     },
-    queryKey: ['users', 'search', searchQuery, clubId],
+    queryKey: ['users', 'search', searchQuery, clubId, multisportId, isSuperAdminUser],
   });
 
   const processedSections = useMemo(() => {
@@ -226,13 +246,13 @@ function NewConversation({ navigation, route }) {
     };
 
     filtered.forEach((/** @type {User} */ u) => {
-      const roleName = u.role?.name;
+      const userRoleName = u.role?.name;
       // Map API roles to Display Sections
-      if (roleName === 'Dirigeant' || roleName === 'President' || roleName === 'ClubAdmin') {
+      if (userRoleName === 'Dirigeant' || userRoleName === 'President' || userRoleName === 'ClubAdmin') {
         sectionsObj.Dirigeant.push(u);
-      } else if (roleName === 'Entraineur' || roleName === 'Coach') {
+      } else if (userRoleName === 'Entraineur' || userRoleName === 'Coach') {
         sectionsObj.Entraineur.push(u);
-      } else if (roleName === 'Joueur' || roleName === 'Player') {
+      } else if (userRoleName === 'Joueur' || userRoleName === 'Player') {
         sectionsObj.Joueur.push(u);
       } else {
         sectionsObj.Autre.push(u);

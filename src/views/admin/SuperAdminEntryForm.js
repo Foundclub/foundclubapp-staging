@@ -13,6 +13,7 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import useTheme from '@/theme/themeContext';
 
+import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -403,6 +404,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   const entryQuery = useGetSuperadminEntry(uid, isEditMode ? documentId : undefined);
   const createMutation = useCreateSuperadminEntry();
   const updateMutation = useUpdateSuperadminEntry();
+  const pageHorizontalPadding = superAdminLayout.pageHorizontal;
   const relationSearchMutation = useSearchSuperadminRelations();
 
   const allAttributes = useMemo(
@@ -814,7 +816,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,
-          Spaces.padding[14],
+          Spaces.padding[superAdminLayout.cardPadding],
           Spaces.marginBottom[12],
         ]}
       >
@@ -987,7 +989,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,
-          Spaces.padding[14],
+          Spaces.padding[superAdminLayout.cardPadding],
           Spaces.marginBottom[12],
         ]}
       >
@@ -1133,7 +1135,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           style={[
             ApplicationStyle.backgroundColor.neutral800,
             ApplicationStyle.borderRadius16,
-            Spaces.padding[14],
+            Spaces.padding[superAdminLayout.cardPadding],
             Spaces.marginBottom[12],
           ]}
         >
@@ -1168,7 +1170,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           style={[
             ApplicationStyle.backgroundColor.neutral800,
             ApplicationStyle.borderRadius16,
-            Spaces.padding[14],
+            Spaces.padding[superAdminLayout.cardPadding],
             Spaces.marginBottom[12],
           ]}
         >
@@ -1204,7 +1206,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,
-          Spaces.padding[14],
+          Spaces.padding[superAdminLayout.cardPadding],
           Spaces.marginBottom[12],
         ]}
       >
@@ -1269,8 +1271,8 @@ function SuperAdminEntryForm({ navigation, route }) {
 
   return (
     <ScreenContainer bgImage="bg2">
-      <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[32]]}>
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[12]]}>
+      <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[32]]}>
+        <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
             {isEditMode
               ? t('superAdminContentManager.form.titleEdit', 'Modifier une entree')
@@ -1289,7 +1291,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         <View style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,
-          Spaces.padding[14],
+          Spaces.padding[superAdminLayout.cardPadding],
           Spaces.marginBottom[12],
         ]}
         >
@@ -1336,7 +1338,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           <View style={[
             ApplicationStyle.backgroundColor.neutral800,
             ApplicationStyle.borderRadius16,
-            Spaces.padding[14],
+            Spaces.padding[superAdminLayout.cardPadding],
             Spaces.marginBottom[12],
           ]}
           >
@@ -1366,7 +1368,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         <View style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,
-          Spaces.padding[14],
+          Spaces.padding[superAdminLayout.cardPadding],
         ]}
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>

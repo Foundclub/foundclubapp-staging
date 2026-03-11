@@ -1,15 +1,19 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetAdminUser, useUpdateAdminUser } from '@/services/admin/adminQueries';
 import { useGetRoles } from '@/services/auth/authQueries';
@@ -24,20 +28,19 @@ function AdminUserDetail() {
   const route = useRoute();
   const navigation = useNavigation();
   const { userId } = route.params || {};
+  const { userData: currentUser } = useAuth();
+  const { startWhisperChat } = useMessaging();
 
-  console.log('[AdminUserDetail] userId received:', userId);
-
-  const { data: userData, error, isLoading } = useGetAdminUser(userId);
+  const { data: userData, isLoading } = useGetAdminUser(userId);
   const { data: rolesData } = useGetRoles();
   const updateMutation = useUpdateAdminUser();
-
-  console.log('[AdminUserDetail] userData:', userData, 'error:', error);
 
   const user = userData; // users-permissions returns user directly, not wrapped in data
   const roles = rolesData?.roles || rolesData || [];
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isContacting, setIsContacting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -77,6 +80,35 @@ function AdminUserDetail() {
         },
       ],
     );
+  };
+
+  const handleContact = async () => {
+    const targetUserDocumentId = String(user?.documentId || user?.id || userId || '').trim();
+    const currentUserDocumentId = String(currentUser?.documentId || currentUser?.id || '').trim();
+
+    if (!targetUserDocumentId) {
+      Alert.alert('Erreur', 'Document ID utilisateur introuvable pour ouvrir la conversation.');
+      return;
+    }
+
+    if (targetUserDocumentId === currentUserDocumentId) {
+      Alert.alert('Info', 'Tu ne peux pas créer une conversation avec ton propre compte.');
+      return;
+    }
+
+    setIsContacting(true);
+    try {
+      const chat = await startWhisperChat([targetUserDocumentId]);
+      if (!chat?.documentId) {
+        Alert.alert('Erreur', "Impossible d'ouvrir la conversation.");
+        return;
+      }
+      navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+    } catch (contactError) {
+      Alert.alert('Erreur', contactError?.message || "Impossible d'ouvrir la conversation.");
+    } finally {
+      setIsContacting(false);
+    }
   };
 
   if (isLoading) return <Loader />;
@@ -221,13 +253,22 @@ function AdminUserDetail() {
           </View>
         </View>
 
-        {/* Save Button */}
-        <Button
-          isLoading={updateMutation.isPending}
-          onPress={handleSave}
-          title="Sauvegarder"
-          variant="Primary"
-        />
+        <View style={[Alignments.row, Spaces.gap[10]]}>
+          <Button
+            isLoading={isContacting}
+            onPress={handleContact}
+            style={{ flex: 1 }}
+            title="Contacter"
+            variant="Secondary"
+          />
+          <Button
+            isLoading={updateMutation.isPending}
+            onPress={handleSave}
+            style={{ flex: 1 }}
+            title="Sauvegarder"
+            variant="Primary"
+          />
+        </View>
       </ScrollView>
     </ScreenContainer>
   );

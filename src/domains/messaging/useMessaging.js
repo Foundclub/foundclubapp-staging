@@ -28,6 +28,7 @@ import { createLogger } from '@/utils/logger/logger';
 import useSocket, { EVENTS } from '@/hooks/useSocket';
 
 const messagingLogger = createLogger('messaging');
+const isAttachmentDebugEnabled = ['1', 'true', 'yes'].includes(String(process.env.FC_CHAT_ATTACHMENT_DEBUG || 'true').trim().toLowerCase());
 
 const normalizeChatId = (value) => {
   if (typeof value !== 'string') return '';
@@ -311,7 +312,15 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, (error) => {
-      messagingLogger.error('Socket chat error', error?.message || error);
+      const errorPayload = {
+        chatId: safeCurrentChatId,
+        code: error?.code,
+        message: error?.message || error,
+      };
+      messagingLogger.error('Socket chat error', errorPayload);
+      if (isAttachmentDebugEnabled) {
+        messagingLogger.warn('[attachment-debug] socket error received', errorPayload);
+      }
     });
 
     // Cleanup: leave chat and remove listeners
@@ -427,14 +436,28 @@ const useMessaging = (currentChatId) => {
     /** @type {object} */ extraData = {},
   ) => {
     const safeChatId = normalizeChatId(chatId);
+    const attachmentCount = Array.isArray(extraData?.attachments) ? extraData.attachments.length : 0;
+    const payloadSummary = {
+      attachmentCount,
+      chatId: safeChatId,
+      hasComposition: Boolean(extraData?.composition),
+      hasEvent: Boolean(extraData?.event),
+      hasReplyTo: Boolean(extraData?.replyTo),
+      messageLength: String(message || '').length,
+      socketConnected: Boolean(isConnected && socket),
+    };
+    if (isAttachmentDebugEnabled && attachmentCount > 0) {
+      messagingLogger.warn('[attachment-debug] sendMessage called', payloadSummary);
+    }
+
     if (!safeChatId) {
-      messagingLogger.warn('sendMessage skipped: missing chatId');
+      messagingLogger.warn('sendMessage skipped: missing chatId', payloadSummary);
       return null;
     }
 
     // Check if socket is connected before sending
     if (!isConnected || !socket) {
-      messagingLogger.warn('sendMessage skipped: socket disconnected', { chatId: safeChatId });
+      messagingLogger.warn('sendMessage skipped: socket disconnected', payloadSummary);
       return null;
     }
 
@@ -493,6 +516,12 @@ const useMessaging = (currentChatId) => {
       message,
       replyTo: extraData.replyTo || null,
     });
+    if (isAttachmentDebugEnabled && attachmentCount > 0) {
+      messagingLogger.warn('[attachment-debug] sendMessage emitted to socket', {
+        ...payloadSummary,
+        tempId,
+      });
+    }
 
     const timeoutId = setTimeout(() => {
       pendingTimeoutsRef.current.delete(tempId);
@@ -819,6 +848,7 @@ const useMessaging = (currentChatId) => {
     deleteMessage: deleteMessageMutation.mutate,
     getConversationName,
     getUnreadStatus,
+    isSocketConnected: isConnected,
     joinChat,
     leaveChat,
     pinChat: pinChatMutation.mutate,

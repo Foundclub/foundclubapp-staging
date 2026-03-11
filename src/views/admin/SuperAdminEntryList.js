@@ -16,6 +16,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
 import SuperAdminEntryActionsSheet from '@/components/molecules/superAdmin/SuperAdminEntryActionsSheet';
 import SuperAdminEntryCard from '@/components/molecules/superAdmin/SuperAdminEntryCard';
+import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import SuperAdminListToolbar from '@/components/molecules/superAdmin/SuperAdminListToolbar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -64,6 +65,7 @@ const getBulkActionLabel = (action, t) => {
 function SuperAdminEntryList({ navigation, route }) {
   const uid = route?.params?.uid;
   const displayName = route?.params?.displayName || uid;
+  const pageHorizontalPadding = superAdminLayout.pageHorizontal;
 
   const {
     Alignments,
@@ -305,15 +307,16 @@ function SuperAdminEntryList({ navigation, route }) {
 
   return (
     <ScreenContainer bgImage="bg2">
-      <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[16]]}>
+      <View style={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.marginTop[20], Spaces.marginBottom[2]]}>
         <Text numberOfLines={1} style={[Fonts.h2, Fonts.neutral00]}>{displayName}</Text>
-        <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>
+        <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[6]]}>
           {uid}
         </Text>
       </View>
 
       <SuperAdminListToolbar
         feedbackMessage={feedbackMessage}
+        horizontalPadding={pageHorizontalPadding}
         onClearQuery={() => {
           setQuery('');
           setPage(1);
@@ -347,6 +350,7 @@ function SuperAdminEntryList({ navigation, route }) {
           page: t('superAdminContentManager.list.page', 'Page'),
           searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entree'),
           selectAll: t('superAdminContentManager.actions.selectAll', 'Tout selectionner'),
+          selected: t('superAdminContentManager.list.selectedEntries', 'entree(s) selectionnee(s)'),
           selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Selection multiple'),
           selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter selection'),
           total: t('superAdminContentManager.list.total', 'Total'),
@@ -358,11 +362,15 @@ function SuperAdminEntryList({ navigation, route }) {
         <View
           style={[
             ApplicationStyle.card,
-            Spaces.padding[10],
-            Spaces.gap[8],
-            Spaces.marginHorizontal[16],
-            Spaces.marginBottom[10],
-            { backgroundColor: Colors.neutral800 },
+            Spaces.padding[12],
+            Spaces.gap[10],
+            { marginHorizontal: pageHorizontalPadding },
+            Spaces.marginBottom[12],
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: Colors.primary700,
+              borderWidth: 1,
+            },
           ]}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
@@ -375,8 +383,8 @@ function SuperAdminEntryList({ navigation, route }) {
               onPress={() => openBulkActionModal('publish')}
               style={[
                 ApplicationStyle.borderRadius12,
-                Spaces.paddingHorizontal[10],
-                Spaces.paddingVertical[6],
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
                 {
                   backgroundColor: Colors.primary700,
                   borderColor: Colors.primary500,
@@ -393,11 +401,11 @@ function SuperAdminEntryList({ navigation, route }) {
               onPress={() => openBulkActionModal('unpublish')}
               style={[
                 ApplicationStyle.borderRadius12,
-                Spaces.paddingHorizontal[10],
-                Spaces.paddingVertical[6],
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
                 {
-                  backgroundColor: Colors.neutral700,
-                  borderColor: Colors.neutral600,
+                  backgroundColor: Colors.primary900,
+                  borderColor: Colors.primary700,
                   borderWidth: 1,
                 },
               ]}
@@ -411,10 +419,10 @@ function SuperAdminEntryList({ navigation, route }) {
               onPress={() => openBulkActionModal('delete')}
               style={[
                 ApplicationStyle.borderRadius12,
-                Spaces.paddingHorizontal[10],
-                Spaces.paddingVertical[6],
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
                 {
-                  backgroundColor: 'rgba(255, 40, 79, 0.14)',
+                  backgroundColor: Colors.error100,
                   borderColor: Colors.error500,
                   borderWidth: 1,
                 },
@@ -429,7 +437,7 @@ function SuperAdminEntryList({ navigation, route }) {
       ) : null}
 
       <FlatList
-        contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[24]]}
+        contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[96]]}
         data={entries}
         keyExtractor={(item) => item?.documentId}
         ListEmptyComponent={
@@ -480,12 +488,12 @@ function SuperAdminEntryList({ navigation, route }) {
       <View
         style={[
           ApplicationStyle.backgroundColor.neutral900,
-          Spaces.paddingHorizontal[16],
+          { paddingHorizontal: pageHorizontalPadding },
           Spaces.paddingVertical[10],
           Alignments.row,
           Alignments.alignCenter,
           Alignments.justifySpaceBetween,
-          { borderColor: Colors.neutral700, borderTopWidth: 1 },
+          { borderColor: Colors.primary700, borderTopWidth: 1 },
         ]}
       >
         <TouchableOpacity
@@ -495,7 +503,11 @@ function SuperAdminEntryList({ navigation, route }) {
             ApplicationStyle.borderRadius12,
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
-            { backgroundColor: pagination.page <= 1 ? Colors.neutral700 : Colors.primary700 },
+            {
+              backgroundColor: pagination.page <= 1 ? Colors.neutral800 : Colors.primary700,
+              borderColor: pagination.page <= 1 ? Colors.neutral600 : Colors.primary500,
+              borderWidth: 1,
+            },
           ]}
         >
           <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
@@ -518,8 +530,12 @@ function SuperAdminEntryList({ navigation, route }) {
             Spaces.paddingVertical[8],
             {
               backgroundColor: pagination.page >= (pagination.pageCount || 1)
-                ? Colors.neutral700
+                ? Colors.neutral800
                 : Colors.primary700,
+              borderColor: pagination.page >= (pagination.pageCount || 1)
+                ? Colors.neutral600
+                : Colors.primary500,
+              borderWidth: 1,
             },
           ]}
         >

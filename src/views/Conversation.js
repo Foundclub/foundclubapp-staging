@@ -16,6 +16,7 @@ import {
   Image,
   ImageBackground,
   Linking,
+  Modal,
   PanResponder,
   PermissionsAndroid,
   Platform,
@@ -35,6 +36,7 @@ import {
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import i18n from '@/theme/strings';
@@ -99,6 +101,24 @@ const isVoiceNotesEnabled = isFlagEnabled(process.env.FC_CHAT_VOICE_NOTES, true)
 const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION, true);
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
+const isAttachmentDebugEnabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_DEBUG, true);
+
+const toPublicApiOrigin = (rawApiUrl) => {
+  const raw = String(rawApiUrl || '').trim();
+  if (!raw) return 'http://10.0.2.2:1337';
+  return raw.replace(/\/api\/?$/i, '');
+};
+
+const toApiBaseUrl = (rawApiUrl) => {
+  const raw = String(rawApiUrl || '').trim();
+  if (!raw) return 'http://10.0.2.2:1337/api';
+  const withoutTrailingSlash = raw.replace(/\/+$/g, '');
+  if (/\/api$/i.test(withoutTrailingSlash)) return withoutTrailingSlash;
+  return `${withoutTrailingSlash}/api`;
+};
+
+const isLoopbackHost = (host) => ['10.0.2.2', '127.0.0.1', 'localhost']
+  .includes(String(host || '').trim().toLowerCase());
 
 /** @type {any | null | undefined} */
 let cachedDocumentPickerModule;
@@ -189,6 +209,7 @@ function Conversation({ navigation, route }) {
   /* import deleteMessage from useMessaging hook */
   const {
     getConversationName,
+    isSocketConnected,
     removeGroupMember,
     respondToProposal,
     retryFailedMessage,
@@ -200,6 +221,36 @@ function Conversation({ navigation, route }) {
     updateGroupMeta,
     votePoll,
   } = useMessaging(chatId);
+
+  const logAttachmentDebug = useCallback((message, meta = undefined) => {
+    if (!isAttachmentDebugEnabled) return;
+    conversationLogger.warn(`[attachment-debug] ${message}`, meta);
+  }, []);
+
+  const describeAsset = useCallback((asset) => {
+    const uri = String(asset?.uri || '');
+    const uriScheme = uri.includes(':') ? uri.split(':')[0] : 'unknown';
+    return {
+      fileName: String(asset?.fileName || ''),
+      hasUri: Boolean(uri),
+      size: Number(asset?.fileSize || asset?.size || 0) || 0,
+      type: String(asset?.type || ''),
+      uriScheme,
+    };
+  }, []);
+
+  const describeUploadItems = useCallback((items) => (
+    Array.isArray(items)
+      ? items.map((item) => ({
+        documentId: item?.documentId ?? null,
+        id: item?.id ?? null,
+        mime: item?.mime ?? null,
+        name: item?.name ?? null,
+        size: item?.size ?? null,
+        url: item?.url ?? null,
+      }))
+      : []
+  ), []);
 
   /**
    * Handle message long press event to show actions modal
@@ -308,9 +359,141 @@ function Conversation({ navigation, route }) {
     Spaces,
   } = useTheme();
 
-  // DEBUG LOGS
-  const { top } = useSafeAreaInsets();
+  // Safe area insets (notch + home indicator)
+  const { bottom, top } = useSafeAreaInsets();
+  const safeBottomInset = Math.max(bottom, 10);
+  const apiBaseUrl = useMemo(() => toApiBaseUrl(process.env.API_URL), []);
+  const publicApiOrigin = useMemo(() => toPublicApiOrigin(process.env.API_URL), []);
   const HEADER_SIDE_WIDTH = 56;
+  const resolveMediaUri = useCallback((rawUri) => {
+    const uri = String(rawUri || '').trim();
+    if (!uri) return '';
+
+    if (/^(https?:\/\/|file:\/\/|content:\/\/|data:image\/)/i.test(uri)) {
+      if (/^https?:\/\//i.test(uri)) {
+        try {
+          const currentUrl = new URL(uri);
+          const apiOriginUrl = new URL(publicApiOrigin);
+          if (isLoopbackHost(currentUrl.hostname) && !isLoopbackHost(apiOriginUrl.hostname)) {
+            return `${apiOriginUrl.origin}${currentUrl.pathname}${currentUrl.search || ''}`;
+          }
+        } catch (_error) {
+          // Keep original URI when parsing fails.
+        }
+      }
+      return uri;
+    }
+
+    if (uri.startsWith('//')) {
+      return `https:${uri}`;
+    }
+
+    const normalizedPath = uri.startsWith('/') ? uri : `/${uri}`;
+    return `${publicApiOrigin}${normalizedPath}`;
+  }, [publicApiOrigin]);
+
+  const fetchAttachmentUrlById = useCallback(async (attachmentId) => {
+    const numericId = Number(attachmentId);
+    if (!Number.isInteger(numericId) || numericId <= 0) return '';
+
+    try {
+      const response = await client.get(`/upload/files/${numericId}`);
+      const file = response?.data || {};
+      const candidates = [
+        file?.url,
+        file?.formats?.large?.url,
+        file?.formats?.medium?.url,
+        file?.formats?.small?.url,
+        file?.formats?.thumbnail?.url,
+        file?.previewUrl,
+      ];
+
+      for (let i = 0; i < candidates.length; i += 1) {
+        const resolved = resolveMediaUri(candidates[i]);
+        if (resolved) return resolved;
+      }
+    } catch (error) {
+      logAttachmentDebug('fetchAttachmentUrlById failed', {
+        attachmentId: numericId,
+        error: error?.message || error,
+      });
+    }
+
+    return '';
+  }, [logAttachmentDebug, resolveMediaUri]);
+
+  const normalizeAttachmentItem = useCallback((item) => {
+    if (!item || typeof item !== 'object') return null;
+    if (item?.attributes && typeof item.attributes === 'object') {
+      return {
+        ...item,
+        ...item.attributes,
+      };
+    }
+    return item;
+  }, []);
+
+  const normalizeMessageAttachments = useCallback((rawAttachments) => {
+    if (Array.isArray(rawAttachments)) {
+      return rawAttachments
+        .map((item) => normalizeAttachmentItem(item))
+        .filter(Boolean);
+    }
+
+    if (rawAttachments && Array.isArray(rawAttachments?.data)) {
+      return rawAttachments.data
+        .map((item) => normalizeAttachmentItem(item))
+        .filter(Boolean);
+    }
+
+    if (rawAttachments?.data && typeof rawAttachments.data === 'object') {
+      const normalizedSingle = normalizeAttachmentItem(rawAttachments.data);
+      return normalizedSingle ? [normalizedSingle] : [];
+    }
+
+    if (rawAttachments && typeof rawAttachments === 'object') {
+      const normalizedObject = normalizeAttachmentItem(rawAttachments);
+      return normalizedObject ? [normalizedObject] : [];
+    }
+
+    return [];
+  }, [normalizeAttachmentItem]);
+
+  const isImageAttachmentMessage = useCallback((message) => {
+    const attachment = normalizeMessageAttachments(message?.attachments)?.[0] || {};
+    const attachmentUrl = String(attachment?.url || '').toLowerCase();
+    const attachmentMime = String(attachment?.mime || '').toLowerCase();
+    const attachmentName = String(attachment?.name || '').toLowerCase();
+    const attachmentExt = String(attachment?.ext || '').toLowerCase();
+    const imageUri = String(message?.image || '').toLowerCase();
+
+    return attachmentMime.startsWith('image/')
+      || /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/i.test(attachmentUrl)
+      || /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/i.test(attachmentName)
+      || /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/i.test(attachmentExt)
+      || imageUri.startsWith('data:image/');
+  }, [normalizeMessageAttachments]);
+
+  const getPrimaryImageUriFromMessage = useCallback((message) => {
+    const attachment = normalizeMessageAttachments(message?.attachments)?.[0] || {};
+    const candidates = [
+      message?.image,
+      attachment?.url,
+      attachment?.formats?.large?.url,
+      attachment?.formats?.medium?.url,
+      attachment?.formats?.small?.url,
+      attachment?.formats?.thumbnail?.url,
+      attachment?.previewUrl,
+      attachment?.uri,
+    ];
+
+    for (let i = 0; i < candidates.length; i += 1) {
+      const resolved = resolveMediaUri(candidates[i]);
+      if (resolved) return resolved;
+    }
+
+    return '';
+  }, [normalizeMessageAttachments, resolveMediaUri]);
 
   const { isPending: isReportingMessage, mutate: reportMessage } = useMutation({
     mutationFn: createMessageReport,
@@ -339,12 +522,16 @@ function Conversation({ navigation, route }) {
   const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const [selectedLocationOption, setSelectedLocationOption] = useState(/** @type {any} */ (undefined));
   const [selectedContactId, setSelectedContactId] = useState('');
+  const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [didTryImageHttpsFallback, setDidTryImageHttpsFallback] = useState(false);
 
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [isVoiceRecordingLocked, setIsVoiceRecordingLocked] = useState(false);
   const [isSendingVoiceNote, setIsSendingVoiceNote] = useState(false);
   const [voiceRecordingDurationMs, setVoiceRecordingDurationMs] = useState(0);
   const [voiceRecordingHint, setVoiceRecordingHint] = useState('');
+  const loggedAttachmentShapeMessageIdsRef = useRef(new Set());
   const isVoiceRecordingRef = useRef(false);
   const isVoiceRecordingLockedRef = useRef(false);
 
@@ -451,8 +638,71 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const uploadAttachmentAsset = useCallback(async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
+  const uploadAttachmentAssetWithFetch = useCallback(async (
+    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+  ) => {
     if (!asset?.uri) return [];
+
+    logAttachmentDebug('uploadAttachmentAsset fetch fallback start', {
+      asset: describeAsset(asset),
+      chatId,
+      endpoint: `${apiBaseUrl}/upload`,
+    });
+
+    const formData = new FormData();
+    formData.append('files', /** @type {any} */ ({
+      name: asset.fileName || `upload_${Date.now()}.jpg`,
+      type: asset.type || 'application/octet-stream',
+      uri: asset.uri,
+    }));
+
+    const token = getAuthTokens()?.token;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await fetch(`${apiBaseUrl}/upload`, {
+      body: formData,
+      headers,
+      method: 'POST',
+    });
+    const rawBody = await response.text();
+    let parsedBody = null;
+    try {
+      parsedBody = rawBody ? JSON.parse(rawBody) : null;
+    } catch (_parseError) {
+      parsedBody = null;
+    }
+
+    if (!response.ok) {
+      const parsedError = parsedBody?.error?.message
+        || parsedBody?.error
+        || parsedBody?.message
+        || rawBody
+        || `HTTP ${response.status}`;
+      throw new Error(String(parsedError));
+    }
+
+    const uploadItems = Array.isArray(parsedBody) ? parsedBody : [];
+    logAttachmentDebug('uploadAttachmentAsset fetch fallback success', {
+      count: uploadItems.length,
+      items: describeUploadItems(uploadItems),
+      status: response.status,
+    });
+    return uploadItems;
+  }, [apiBaseUrl, chatId, describeAsset, describeUploadItems, logAttachmentDebug]);
+
+  const uploadAttachmentAsset = useCallback(async (/** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset) => {
+    if (!asset?.uri) {
+      logAttachmentDebug('uploadAttachmentAsset skipped: missing uri', {
+        chatId,
+        socketConnected: Boolean(isSocketConnected),
+      });
+      return [];
+    }
+
+    logAttachmentDebug('uploadAttachmentAsset start', {
+      asset: describeAsset(asset),
+      chatId,
+      socketConnected: Boolean(isSocketConnected),
+    });
 
     const isVideo = typeof asset.type === 'string' && asset.type.startsWith('video/');
     const isAudio = typeof asset.type === 'string' && asset.type.startsWith('audio/');
@@ -462,33 +712,133 @@ function Conversation({ navigation, route }) {
     } else if (isAudio) {
       defaultExtension = 'm4a';
     }
-    const formData = new FormData();
-
-    formData.append('files', /** @type {any} */ ({
-      name: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
-      type: asset.type || 'application/octet-stream',
-      uri: asset.uri,
-    }));
-
-    const uploadResponse = await client.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const maxAttempts = 3;
+    const wait = (ms) => new Promise((resolve) => {
+      setTimeout(resolve, ms);
     });
+    const attemptUpload = async (attempt) => {
+      try {
+        if (Platform.OS === 'android' && attempt === 1) {
+          try {
+            const androidFetchItems = await uploadAttachmentAssetWithFetch(asset);
+            if (androidFetchItems.length > 0) {
+              return androidFetchItems;
+            }
+          } catch (androidFetchError) {
+            logAttachmentDebug('uploadAttachmentAsset fetch-first failed', {
+              attempt,
+              chatId,
+              error: androidFetchError?.message || androidFetchError,
+            });
+          }
+        }
 
-    return Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
-  }, []);
+        const formData = new FormData();
+        formData.append('files', /** @type {any} */ ({
+          name: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
+          type: asset.type || 'application/octet-stream',
+          uri: asset.uri,
+        }));
+
+        const uploadResponse = await client.post('/upload', formData, {
+          timeout: 45000,
+        });
+        const uploadItems = Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
+        logAttachmentDebug('uploadAttachmentAsset success', {
+          attempt,
+          count: uploadItems.length,
+          items: describeUploadItems(uploadItems),
+          status: uploadResponse?.status,
+        });
+        return uploadItems;
+      } catch (error) {
+        const rawErrorMessage = (
+          typeof error === 'string'
+            ? error
+            : String(error?.message || error || '')
+        );
+        const errorMessage = rawErrorMessage.toLowerCase();
+        const hasHttpResponse = typeof error === 'object'
+          && error !== null
+          && Boolean(error?.response);
+        const errorCode = typeof error === 'object' && error !== null
+          ? error?.code
+          : undefined;
+        const responseStatus = typeof error === 'object' && error !== null
+          ? error?.response?.status
+          : undefined;
+        const isTransientNetworkError = !hasHttpResponse
+          && (
+            errorMessage.includes('network error')
+            || errorMessage.includes('network request failed')
+            || errorMessage.includes('failed to fetch')
+            || errorCode === 'ECONNABORTED'
+          );
+        const shouldRetry = attempt < maxAttempts && isTransientNetworkError;
+
+        logAttachmentDebug('uploadAttachmentAsset attempt failed', {
+          attempt,
+          chatId,
+          code: errorCode,
+          error: rawErrorMessage,
+          isTransientNetworkError,
+          responseStatus,
+          shouldRetry,
+        });
+
+        if (isTransientNetworkError) {
+          try {
+            const fallbackItems = await uploadAttachmentAssetWithFetch(asset);
+            if (fallbackItems.length > 0) {
+              return fallbackItems;
+            }
+          } catch (fetchFallbackError) {
+            logAttachmentDebug('uploadAttachmentAsset fetch fallback failed', {
+              attempt,
+              chatId,
+              error: fetchFallbackError?.message || fetchFallbackError,
+            });
+          }
+        }
+
+        if (!shouldRetry) {
+          throw error;
+        }
+
+        await wait(500 * attempt);
+        return attemptUpload(attempt + 1);
+      }
+    };
+
+    return attemptUpload(1);
+  }, [chatId, describeAsset, describeUploadItems, isSocketConnected, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
 
   const uploadAndSendAttachment = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
     /** @type {{ caption?: string; replyTo?: { documentId?: string } | null }} */ options = {},
   ) => {
-    if (!asset?.uri || !chatId) return false;
+    if (!asset?.uri || !chatId) {
+      logAttachmentDebug('uploadAndSendAttachment skipped: missing asset uri or chatId', {
+        asset: describeAsset(asset),
+        chatId,
+      });
+      return false;
+    }
 
     try {
       setIsUploading(true);
+      logAttachmentDebug('uploadAndSendAttachment begin', {
+        asset: describeAsset(asset),
+        captionLength: String(options?.caption || '').trim().length,
+        chatId,
+        hasReplyTo: Boolean(options?.replyTo?.documentId),
+      });
       const uploadedFiles = await uploadAttachmentAsset(asset);
       if (uploadedFiles.length === 0) {
+        logAttachmentDebug('uploadAndSendAttachment failed: zero uploaded files', {
+          asset: describeAsset(asset),
+          chatId,
+        });
         Alert.alert('Erreur', 'Aucune piece jointe n a pu etre envoyee.');
         return false;
       }
@@ -502,13 +852,38 @@ function Conversation({ navigation, route }) {
       const fallbackText = isImageAttachment ? '' : `Piece jointe: ${uploadedName}`;
       const messageText = normalizedCaption || fallbackText;
 
-      sendMessage(chatId, messageText, {
+      const optimisticMessageId = sendMessage(chatId, messageText, {
         attachments: uploadedFiles,
         replyTo: options?.replyTo || null,
         sender: userData,
       });
+
+      if (!optimisticMessageId) {
+        logAttachmentDebug('uploadAndSendAttachment socket send skipped or failed', {
+          chatId,
+          messageLength: messageText.length,
+          socketConnected: Boolean(isSocketConnected),
+          uploadedFiles: describeUploadItems(uploadedFiles),
+        });
+        Alert.alert('Erreur', 'Connexion messagerie indisponible. Reessayez dans quelques secondes.');
+        return false;
+      }
+
+      logAttachmentDebug('uploadAndSendAttachment success', {
+        chatId,
+        messageLength: messageText.length,
+        optimisticMessageId,
+        uploadedFiles: describeUploadItems(uploadedFiles),
+      });
       return true;
     } catch (error) {
+      logAttachmentDebug('uploadAndSendAttachment exception', {
+        chatId,
+        code: error?.code,
+        error: error?.message || error,
+        responseData: error?.response?.data,
+        responseStatus: error?.response?.status,
+      });
       conversationLogger.warn('Attachment upload failed', error);
       Alert.alert('Erreur', 'Impossible d envoyer cette piece jointe.');
       return false;
@@ -546,11 +921,24 @@ function Conversation({ navigation, route }) {
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
   ) => {
     const normalizedAsset = normalizePickedAsset(selectedAsset);
-    if (!normalizedAsset?.uri) return;
+    if (!normalizedAsset?.uri) {
+      logAttachmentDebug('queueOrSendPickedAsset skipped: normalized asset has no uri', {
+        selectedAsset: describeAsset(selectedAsset),
+      });
+      return;
+    }
+
+    logAttachmentDebug('queueOrSendPickedAsset normalized', {
+      normalizedAsset: describeAsset(normalizedAsset),
+      selectedAsset: describeAsset(selectedAsset),
+    });
 
     const isImageAsset = String(normalizedAsset.type || '').toLowerCase().startsWith('image/');
     if (isImageAsset) {
       setPendingMediaDraft({ asset: normalizedAsset });
+      logAttachmentDebug('queueOrSendPickedAsset draft queued (image)', {
+        asset: describeAsset(normalizedAsset),
+      });
       return;
     }
 
@@ -562,6 +950,7 @@ function Conversation({ navigation, route }) {
 
   const handlePickMedia = async () => {
     try {
+      logAttachmentDebug('handlePickMedia open picker');
       const response = await launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
@@ -569,17 +958,35 @@ function Conversation({ navigation, route }) {
         selectionLimit: 1,
       });
 
-      if (response.didCancel) return;
+      if (response.didCancel) {
+        logAttachmentDebug('handlePickMedia cancelled by user');
+        return;
+      }
       if (response.errorCode) {
+        logAttachmentDebug('handlePickMedia picker error', {
+          errorCode: response.errorCode,
+          errorMessage: response.errorMessage,
+        });
         Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la selection');
         return;
       }
 
       const selectedAsset = response.assets?.[0];
-      if (!selectedAsset) return;
+      if (!selectedAsset) {
+        logAttachmentDebug('handlePickMedia no asset returned');
+        return;
+      }
+      logAttachmentDebug('handlePickMedia asset selected', {
+        asset: describeAsset(selectedAsset),
+      });
 
       await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
+      logAttachmentDebug('handlePickMedia exception', {
+        error: error?.message || error,
+        responseData: error?.response?.data,
+        responseStatus: error?.response?.status,
+      });
       conversationLogger.warn('Media picker failed', error);
       Alert.alert('Erreur', 'Impossible d ouvrir la galerie.');
     }
@@ -625,8 +1032,12 @@ function Conversation({ navigation, route }) {
 
   const handleTakePhoto = async () => {
     try {
+      logAttachmentDebug('handleTakePhoto open camera');
       const hasCameraPermission = await ensureCameraPermission();
-      if (!hasCameraPermission) return;
+      if (!hasCameraPermission) {
+        logAttachmentDebug('handleTakePhoto blocked: missing camera permission');
+        return;
+      }
 
       const response = await launchCamera({
         cameraType: 'back',
@@ -636,17 +1047,35 @@ function Conversation({ navigation, route }) {
         saveToPhotos: false,
       });
 
-      if (response.didCancel) return;
+      if (response.didCancel) {
+        logAttachmentDebug('handleTakePhoto cancelled by user');
+        return;
+      }
       if (response.errorCode) {
+        logAttachmentDebug('handleTakePhoto camera error', {
+          errorCode: response.errorCode,
+          errorMessage: response.errorMessage,
+        });
         Alert.alert('Erreur', response.errorMessage || 'Impossible d ouvrir la camera');
         return;
       }
 
       const selectedAsset = response.assets?.[0];
-      if (!selectedAsset) return;
+      if (!selectedAsset) {
+        logAttachmentDebug('handleTakePhoto no asset returned');
+        return;
+      }
+      logAttachmentDebug('handleTakePhoto asset captured', {
+        asset: describeAsset(selectedAsset),
+      });
 
       await queueOrSendPickedAsset(selectedAsset);
     } catch (error) {
+      logAttachmentDebug('handleTakePhoto exception', {
+        error: error?.message || error,
+        responseData: error?.response?.data,
+        responseStatus: error?.response?.status,
+      });
       conversationLogger.warn('Camera open failed', error);
       Alert.alert('Erreur', 'Impossible de prendre la photo.');
     }
@@ -1220,7 +1649,7 @@ function Conversation({ navigation, route }) {
     if (!matchId && status === 'accepted') {
       // If matchId is missing in composition, try fallback to chat's match
       if (!chatData?.league_match) {
-        Alert.alert('Erreur', 'Impossible de retrouver le match associé.');
+        Alert.alert('Erreur', 'Impossible de retrouver le match associÃ©.');
         return;
       }
     }
@@ -1266,7 +1695,7 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la réponse.');
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la rÃ©ponse.');
       // Rollback could go here
     }
   };
@@ -1291,7 +1720,7 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier votre équipe pour l'annulation.");
+      Alert.alert('Erreur', "Impossible d'identifier votre Ã©quipe pour l'annulation.");
       return;
     }
 
@@ -1434,32 +1863,37 @@ function Conversation({ navigation, route }) {
 
   const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((acc, page) => {
     const formattedMessages = page.data.map((msg) => {
-      const firstAttachmentUrl = msg.attachments?.[0]?.url || '';
-      const firstAttachmentMime = String(msg.attachments?.[0]?.mime || '');
-      const isImageAttachment = firstAttachmentUrl
-        && (
-          firstAttachmentMime.startsWith('image/')
-          || /\.(png|jpe?g|gif|webp)$/i.test(firstAttachmentUrl)
-        );
-
-      let imageUrl;
-      if (isImageAttachment) {
-        imageUrl = firstAttachmentUrl.startsWith('http')
-          ? firstAttachmentUrl
-          : `${process.env.API_URL || 'http://10.0.2.2:1337'}${firstAttachmentUrl}`;
+      const rawAttachments = msg.attachments;
+      const normalizedAttachments = normalizeMessageAttachments(msg.attachments);
+      const messageKey = String(msg?.documentId || msg?.id || '');
+      if (
+        isAttachmentDebugEnabled
+        && rawAttachments
+        && normalizedAttachments.length === 0
+        && messageKey
+        && !loggedAttachmentShapeMessageIdsRef.current.has(messageKey)
+      ) {
+        loggedAttachmentShapeMessageIdsRef.current.add(messageKey);
+        const rawIsObject = rawAttachments && typeof rawAttachments === 'object';
+        logAttachmentDebug('message attachments normalization empty', {
+          hasDataArray: Boolean(rawIsObject && Array.isArray(rawAttachments?.data)),
+          hasDataObject: Boolean(rawIsObject && rawAttachments?.data && typeof rawAttachments.data === 'object' && !Array.isArray(rawAttachments.data)),
+          messageId: messageKey,
+          rawKeys: rawIsObject ? Object.keys(rawAttachments).slice(0, 10) : [],
+          rawType: Array.isArray(rawAttachments) ? 'array' : typeof rawAttachments,
+        });
       }
+      const safeMessage = { attachments: normalizedAttachments };
+      const imageUrl = isImageAttachmentMessage(safeMessage)
+        ? getPrimaryImageUriFromMessage(safeMessage)
+        : undefined;
 
       const senderAvatarUrl = msg.sender?.avatar?.url || '';
-      let avatarUrl;
-      if (senderAvatarUrl) {
-        avatarUrl = senderAvatarUrl.startsWith('http')
-          ? senderAvatarUrl
-          : `${process.env.API_URL || 'http://10.0.2.2:1337'}${senderAvatarUrl}`;
-      }
+      const avatarUrl = resolveMediaUri(senderAvatarUrl);
 
       return {
         _id: msg.id,
-        attachments: msg.attachments || [],
+        attachments: normalizedAttachments,
         composition: msg.composition,
         createdAt: new Date(msg.createdAt),
         documentId: msg.documentId,
@@ -1478,7 +1912,7 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, getAnonymizedName]);
+  }, /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   const latestMessageId = String(
     messages?.[0]?.documentId
@@ -1493,39 +1927,136 @@ function Conversation({ navigation, route }) {
   }, [chatId, latestMessageId, sendReadReceipt]);
 
   const openFirstAttachment = useCallback(async (message) => {
-    const attachmentUrl = String(message?.attachments?.[0]?.url || '').trim();
-    if (!attachmentUrl) return;
+    const normalizedAttachments = normalizeMessageAttachments(message?.attachments);
+    const normalizedMessage = { ...message, attachments: normalizedAttachments };
+    const isImageAttachment = isImageAttachmentMessage(normalizedMessage);
+    const previewUri = getPrimaryImageUriFromMessage(normalizedMessage);
 
-    const resolvedUrl = attachmentUrl.startsWith('http')
-      ? attachmentUrl
-      : `${process.env.API_URL || 'http://10.0.2.2:1337'}${attachmentUrl}`;
+    if (isImageAttachment && previewUri) {
+      logAttachmentDebug('openFirstAttachment image preview', {
+        resolvedUrl: previewUri,
+      });
+      setDidTryImageHttpsFallback(false);
+      setPreviewImageUrl(previewUri);
+      setIsImagePreviewVisible(true);
+      return;
+    }
+    const attachment = normalizedAttachments?.[0] || {};
+    let fallbackUrl = resolveMediaUri(
+      attachment?.url
+      || attachment?.uri
+      || attachment?.formats?.large?.url
+      || attachment?.formats?.medium?.url
+      || attachment?.formats?.small?.url
+      || attachment?.formats?.thumbnail?.url,
+    );
+    if (!fallbackUrl && attachment?.id) {
+      fallbackUrl = await fetchAttachmentUrlById(attachment.id);
+    }
+    if (!fallbackUrl) return;
+    const resolvedUrl = fallbackUrl;
+
+    if (isImageAttachment) {
+      setDidTryImageHttpsFallback(false);
+      setPreviewImageUrl(resolvedUrl);
+      setIsImagePreviewVisible(true);
+      return;
+    }
 
     try {
       await Linking.openURL(resolvedUrl);
     } catch (error) {
+      logAttachmentDebug('openFirstAttachment failed to open URL', {
+        error: error?.message || error,
+        resolvedUrl,
+      });
       conversationLogger.warn('Failed to open attachment URL', error);
     }
-  }, []);
+  }, [fetchAttachmentUrlById, resolveMediaUri, isImageAttachmentMessage, getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments]);
+
+  const renderMessageImage = useCallback((messageImageProps) => {
+    const rawMessage = messageImageProps?.currentMessage || {};
+    const safeMessage = {
+      ...rawMessage,
+      attachments: normalizeMessageAttachments(rawMessage?.attachments),
+    };
+    const resolvedUrl = getPrimaryImageUriFromMessage(safeMessage);
+    if (!resolvedUrl) return null;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          logAttachmentDebug('renderMessageImage open preview', { resolvedUrl });
+          setDidTryImageHttpsFallback(false);
+          setPreviewImageUrl(resolvedUrl);
+          setIsImagePreviewVisible(true);
+        }}
+      >
+        <Image
+          onError={(event) => {
+            logAttachmentDebug('renderMessageImage load error', {
+              error: event?.nativeEvent?.error || 'unknown',
+              resolvedUrl,
+            });
+          }}
+          resizeMode="cover"
+          source={{ uri: resolvedUrl }}
+          style={{
+            borderRadius: 12,
+            height: 170,
+            marginTop: 4,
+            width: 220,
+          }}
+        />
+      </TouchableOpacity>
+    );
+  }, [getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments]);
 
   const clearPendingMediaDraft = () => {
     setPendingMediaDraft(null);
   };
 
   const sendPendingMediaDraft = async () => {
-    if (!pendingMediaDraft?.asset?.uri) return;
-    if (!chatId) return;
+    if (!pendingMediaDraft?.asset?.uri) {
+      logAttachmentDebug('sendPendingMediaDraft skipped: no pending media draft');
+      return;
+    }
+    if (!chatId) {
+      logAttachmentDebug('sendPendingMediaDraft skipped: missing chatId', {
+        asset: describeAsset(pendingMediaDraft.asset),
+      });
+      return;
+    }
+
+    logAttachmentDebug('sendPendingMediaDraft start', {
+      asset: describeAsset(pendingMediaDraft.asset),
+      captionLength: String(composerText || '').trim().length,
+      chatId,
+      hasReplyTo: Boolean(replyingTo?.documentId),
+      socketConnected: Boolean(isSocketConnected),
+    });
 
     const sent = await uploadAndSendAttachment(pendingMediaDraft.asset, {
       caption: composerText,
       replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
     });
 
-    if (!sent) return;
+    if (!sent) {
+      logAttachmentDebug('sendPendingMediaDraft failed', {
+        asset: describeAsset(pendingMediaDraft.asset),
+        chatId,
+      });
+      return;
+    }
 
     clearPendingMediaDraft();
     setReplyingTo(null);
     setComposerText('');
     sendTypingStop(chatId);
+    logAttachmentDebug('sendPendingMediaDraft success', {
+      chatId,
+    });
   };
 
   const onSend = (msgs = /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) => {
@@ -1918,6 +2449,7 @@ function Conversation({ navigation, route }) {
               openFirstAttachment(currentMessage);
             }
           }}
+          renderMessageImage={renderMessageImage}
           renderTicks={(/** @type {any} */ bubbleMessage) => {
             if (bubbleMessage.failed) {
               return <Text style={{ color: Colors.error500, fontSize: 10, marginRight: 4 }}>!</Text>;
@@ -2262,11 +2794,11 @@ function Conversation({ navigation, route }) {
           Spaces.padding[16],
           Alignments.alignCenter,
           Alignments.justifyCenter,
-          { marginBottom: 10 },
+          { marginBottom: safeBottomInset },
         ]}
         >
           <Text style={[Fonts.p2, Fonts.neutral500]}>
-            ðŸ“£
+            Ã°Å¸â€œÂ£
             {' '}
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
@@ -2444,10 +2976,11 @@ function Conversation({ navigation, route }) {
 
       <View style={[Alignments.fill]}>
         <GiftedChat
+          bottomOffset={safeBottomInset}
           dateFormat="DD MMMM"
           dateFormatCalendar={{
             lastDay: '[Hier]',
-            lastWeek: '[La semaine dernière] dddd',
+            lastWeek: '[La semaine derniÃ¨re] dddd',
             nextDay: '[Demain]',
             nextWeek: 'dddd',
             sameDay: '[Aujourd\'hui]',
@@ -2474,6 +3007,75 @@ function Conversation({ navigation, route }) {
             name: `${userData?.firstname || ''} ${userData?.lastname || ''}`,
           }}
         />
+
+        <Modal
+          animationType="fade"
+          onRequestClose={() => {
+            setIsImagePreviewVisible(false);
+            setPreviewImageUrl('');
+            setDidTryImageHttpsFallback(false);
+          }}
+          transparent={false}
+          visible={isImagePreviewVisible}
+        >
+          <View style={{
+            alignItems: 'center',
+            backgroundColor: '#000',
+            flex: 1,
+            justifyContent: 'center',
+          }}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                setIsImagePreviewVisible(false);
+                setPreviewImageUrl('');
+                setDidTryImageHttpsFallback(false);
+              }}
+              style={{
+                left: 20,
+                padding: 12,
+                position: 'absolute',
+                top: top + 8,
+                zIndex: 2,
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>×</Text>
+            </TouchableOpacity>
+
+            {previewImageUrl ? (
+              <Image
+                onError={(event) => {
+                  const canRetryWithHttps = /^http:\/\//i.test(previewImageUrl)
+                    && !didTryImageHttpsFallback;
+                  if (canRetryWithHttps) {
+                    const httpsUrl = previewImageUrl.replace(/^http:\/\//i, 'https://');
+                    setDidTryImageHttpsFallback(true);
+                    setPreviewImageUrl(httpsUrl);
+                    logAttachmentDebug('imagePreviewModal retry with https', {
+                      previousUrl: previewImageUrl,
+                      retryUrl: httpsUrl,
+                    });
+                    return;
+                  }
+                  logAttachmentDebug('imagePreviewModal load error', {
+                    didTryImageHttpsFallback,
+                    error: event?.nativeEvent?.error || 'unknown',
+                    previewImageUrl,
+                  });
+                }}
+                onLoad={() => {
+                  logAttachmentDebug('imagePreviewModal load success', { previewImageUrl });
+                }}
+                resizeMode="contain"
+                source={{ uri: previewImageUrl }}
+                style={{
+                  height: '90%',
+                  width: '100%',
+                }}
+              />
+            ) : null}
+          </View>
+        </Modal>
 
         {/* Menu Modal */}
         <BottomModal
@@ -2506,7 +3108,7 @@ function Conversation({ navigation, route }) {
               onPress={() => {
                 setIsMenuVisible(false);
                 setTimeout(() => {
-                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.');
+                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramÃ¨tres.');
                 }, 300);
               }}
               title={t('conversation.actions.report', 'Signaler')}
@@ -2669,7 +3271,7 @@ function Conversation({ navigation, route }) {
           }}
           isVisible={isLocationShareModalVisible}
         >
-          <View style={Spaces.gap[16]}>
+          <View style={[Spaces.gap[16], { paddingBottom: 18 }]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
               {t('conversation.shareLocation.title', 'Partager une localisation')}
             </Text>
