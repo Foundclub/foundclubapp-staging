@@ -359,6 +359,16 @@ export const updateTeam = async (teamData) => {
 };
 
 /**
+ * Delete a team
+ * @param {string} teamId
+ * @returns {Promise<object>}
+ */
+export const deleteTeam = async (teamId) => {
+  const response = await client.delete(`/teams/${teamId}`);
+  return response.data;
+};
+
+/**
  * Leave a team
  * @param {string} teamId
  * @returns {Promise<object>}

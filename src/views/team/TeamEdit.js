@@ -7,11 +7,13 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView, Platform, View,
+  Alert,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { RouteNames } from '@/navigation/routeNames';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -28,7 +30,7 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetTeam } from '@/services/team/teamQueries';
-import { createTeam, updateTeam } from '@/services/team/teamService';
+import { createTeam, deleteTeam, updateTeam } from '@/services/team/teamService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -101,6 +103,18 @@ function TeamEdit({ navigation, route }) {
     mutationFn: teamId ? updateTeam : createTeam,
     onSuccess: () => {
       navigation.goBack();
+    },
+  });
+  const deleteTeamMutation = useMutation({
+    mutationFn: deleteTeam,
+    onError: () => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('teamEdit.actions.deleteError', 'Impossible de supprimer l\'equipe.'),
+      );
+    },
+    onSuccess: () => {
+      navigation.navigate(RouteNames.TeamList);
     },
   });
 
@@ -325,6 +339,33 @@ function TeamEdit({ navigation, route }) {
     }
   };
 
+  const canDeleteTeam = useMemo(
+    () => !!teamId && userData?.role?.name === USER_ROLES.president,
+    [teamId, userData?.role?.name],
+  );
+
+  const handleDeleteTeam = useCallback(() => {
+    if (!teamId || deleteTeamMutation.isPending) return;
+    Alert.alert(
+      t('teamEdit.actions.deleteTitle', 'Supprimer l\'equipe'),
+      t(
+        'teamEdit.actions.deleteConfirm',
+        'Voulez-vous vraiment supprimer cette equipe ? Cette action est irreversible.',
+      ),
+      [
+        {
+          style: 'cancel',
+          text: t('common.cancel', 'Annuler'),
+        },
+        {
+          onPress: () => deleteTeamMutation.mutate(teamId),
+          style: 'destructive',
+          text: t('teamEdit.actions.deleteTeam', 'Supprimer l\'equipe'),
+        },
+      ],
+    );
+  }, [deleteTeamMutation, t, teamId]);
+
   useEffect(() => {
     navigation.setOptions({
       headerTitle: teamId
@@ -537,12 +578,23 @@ function TeamEdit({ navigation, route }) {
           </View>
         </ScrollView>
 
-        <Button
-          isLoading={teamMutation.isPending}
-          onPress={handleSubmit(handleFormSubmit)}
-          title={t('teamEdit.actions.save')}
-          variant="Primary"
-        />
+        <View style={[Spaces.gap[12]]}>
+          <Button
+            isLoading={teamMutation.isPending}
+            onPress={handleSubmit(handleFormSubmit)}
+            title={t('teamEdit.actions.save')}
+            variant="Primary"
+          />
+          {canDeleteTeam ? (
+            <Button
+              disabled={teamMutation.isPending}
+              isLoading={deleteTeamMutation.isPending}
+              onPress={handleDeleteTeam}
+              title={t('teamEdit.actions.deleteTeam', 'Supprimer l\'equipe')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
       </KeyboardAvoidingView>
       <CreateTrainerModal
         isVisible={isCreateTrainerModalVisible}
