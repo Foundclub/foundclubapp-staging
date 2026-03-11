@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -10,6 +10,7 @@ import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { useGetClub } from '@/services/club/clubQueries';
 
 /** @typedef {{ label: string; value: string }} Option */
 
@@ -23,20 +24,49 @@ function TeamWizardActivity({ navigation }) {
   const handleExitWizard = useTeamWizardExit(navigation);
   const [searchValue, setSearchValue] = useState('');
   const { data: activities } = useGetActivities();
+  const { data: clubData } = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
 
-  const options = useMemo(() => {
-    const all = activities?.map((activity) => ({
+  const allowedActivityIds = useMemo(() => {
+    const ids = (clubData?.activites || [])
+      .map((activity) => String(activity?.documentId || '').trim())
+      .filter(Boolean);
+    return new Set(ids);
+  }, [clubData?.activites]);
+
+  const clubActivityOptions = useMemo(() => {
+    const allActivities = activities || [];
+    const filteredByClub = allowedActivityIds.size > 0
+      ? allActivities.filter((activity) => allowedActivityIds.has(String(activity.documentId || '')))
+      : [];
+
+    return filteredByClub.map((activity) => ({
       label: activity.name,
       value: activity.documentId || '',
-    })) || [];
+    }));
+  }, [activities, allowedActivityIds]);
 
-    if (!searchValue.trim()) return all;
-    return all.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()));
-  }, [activities, searchValue]);
+  const options = useMemo(() => {
+    if (!searchValue.trim()) return clubActivityOptions;
+    return clubActivityOptions.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()));
+  }, [clubActivityOptions, searchValue]);
+
+  useEffect(() => {
+    if (clubActivityOptions.length === 1) {
+      const singleSportId = clubActivityOptions[0].value;
+      if (singleSportId && state.activities !== singleSportId) {
+        dispatch({ payload: singleSportId, type: 'SET_ACTIVITY' });
+      }
+      return;
+    }
+
+    if (state.activities && !clubActivityOptions.some((option) => option.value === state.activities)) {
+      dispatch({ payload: '', type: 'SET_ACTIVITY' });
+    }
+  }, [clubActivityOptions, dispatch, state.activities]);
 
   const selectedLabel = useMemo(
-    () => options.find((option) => option.value === state.activities)?.label || '',
-    [options, state.activities],
+    () => clubActivityOptions.find((option) => option.value === state.activities)?.label || '',
+    [clubActivityOptions, state.activities],
   );
 
   return (
