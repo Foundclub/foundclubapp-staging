@@ -70,7 +70,7 @@ function EventWizardLocation({ navigation }) {
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.disabledNextHint',
-              'Selectionne une installation du club ou saisis une adresse exterieure pour continuer.',
+              'Sélectionné une installation du club ou saisis une adresse exterieure pour continuer.',
             )}
           </Text>
         ) : null}

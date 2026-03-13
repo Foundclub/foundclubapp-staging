@@ -143,7 +143,7 @@ function CreateSquadWizard({ navigation }) {
 
       const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
       if (!homeBasePayload) {
-        throw new Error('Adresse invalide: selectionnez une adresse avec des coordonnees.');
+        throw new Error('Adresse invalide: sélectionnez une adresse avec des coordonnées.');
       }
 
       const normalizedAddress = normalizeLocationInput(squadData.address);

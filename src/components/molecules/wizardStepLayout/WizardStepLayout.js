@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,113 +65,121 @@ function WizardStepLayout({
         { paddingBottom: insets.bottom + 16 },
       ]}
     >
-      <View style={[Alignments.fill]}>
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], { position: 'relative' }]}>
-          {onClose ? (
-            <TouchableOpacity
-              accessibilityLabel={t('common.close', 'Fermer')}
-              hitSlop={{
-                bottom: 10, left: 10, right: 10, top: 10,
-              }}
-              onPress={onClose}
-              style={{
-                alignItems: 'center',
-                borderColor: Colors.primary500,
-                borderRadius: 14,
-                borderWidth: 1,
-                height: 28,
-                justifyContent: 'center',
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                width: 28,
-                zIndex: 2,
-              }}
-            >
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>X</Text>
-            </TouchableOpacity>
-          ) : null}
-          {hasProgress ? (
-            <View style={[Spaces.marginBottom[16], { paddingRight: onClose ? 40 : 0 }]}>
-              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[8]]}>
-                {t('eventWizard.common.stepCounter', {
-                  current: stepIndex,
-                  defaultValue: `Etape ${stepIndex}/${stepCount}`,
-                  total: stepCount,
-                })}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  {
-                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                    borderColor: 'rgba(1, 179, 244, 0.22)',
-                    borderRadius: 999,
-                    height: 8,
-                    overflow: 'hidden',
-                  },
-                ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+        style={[Alignments.fill]}
+      >
+        <View style={[Alignments.fill]}>
+          <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], { position: 'relative' }]}>
+            {onClose ? (
+              <TouchableOpacity
+                accessibilityLabel={t('common.close', 'Fermer')}
+                hitSlop={{
+                  bottom: 10, left: 10, right: 10, top: 10,
+                }}
+                onPress={onClose}
+                style={{
+                  alignItems: 'center',
+                  borderColor: Colors.primary500,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  height: 28,
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  width: 28,
+                  zIndex: 2,
+                }}
               >
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>X</Text>
+              </TouchableOpacity>
+            ) : null}
+            {hasProgress ? (
+              <View style={[Spaces.marginBottom[16], { paddingRight: onClose ? 40 : 0 }]}>
+                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[8]]}>
+                  {t('eventWizard.common.stepCounter', {
+                    current: stepIndex,
+                    defaultValue: `Étape ${stepIndex}/${stepCount}`,
+                    total: stepCount,
+                  })}
+                </Text>
                 <View
-                  style={{
-                    backgroundColor: Colors.primary500,
-                    borderRadius: 999,
-                    height: '100%',
-                    width: `${normalizedProgress * 100}%`,
-                  }}
-                />
+                  style={[
+                    ApplicationStyle.card,
+                    {
+                      backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                      borderColor: 'rgba(1, 179, 244, 0.22)',
+                      borderRadius: 999,
+                      height: 8,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
+                  <View
+                    style={{
+                      backgroundColor: Colors.primary500,
+                      borderRadius: 999,
+                      height: '100%',
+                      width: `${normalizedProgress * 100}%`,
+                    }}
+                  />
+                </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[8]]}>
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text style={[Fonts.p1, Fonts.neutral100]}>
-              {subtitle}
+            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[8]]}>
+              {title}
             </Text>
-          ) : null}
+            {subtitle ? (
+              <Text style={[Fonts.p1, Fonts.neutral100]}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+
+          <ScrollView
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={[Spaces.paddingBottom[24]]}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
         </View>
 
-        <ScrollView
-          contentContainerStyle={[Spaces.paddingBottom[24]]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      </View>
-
-      <View style={[Spaces.gap[16]]}>
-        {showSkip ? (
-          <Button
-            onPress={onSkip}
-            title={t('common.ignore')}
-            variant="Secondary"
-          />
-        ) : null}
-        <View style={[Alignments.row, Spaces.gap[16]]}>
-          {onBack ? (
+        <View style={[Spaces.gap[16]]}>
+          {showSkip ? (
             <Button
-              onPress={onBack}
-              style={{ flex: 1 }}
-              title={t('common.back', 'Retour')}
+              onPress={onSkip}
+              title={t('common.ignore')}
               variant="Secondary"
             />
           ) : null}
-          {onNext ? (
-            <Button
-              disabled={isNextDisabled}
-              isLoading={isNextLoading}
-              onPress={onNext}
-              style={{ flex: 1 }}
-              title={nextLabel || t('common.next', 'Suivant')}
-              variant="Primary"
-            />
-          ) : null}
+          <View style={[Alignments.row, Spaces.gap[16]]}>
+            {onBack ? (
+              <Button
+                onPress={onBack}
+                style={{ flex: 1 }}
+                title={t('common.back', 'Retour')}
+                variant="Secondary"
+              />
+            ) : null}
+            {onNext ? (
+              <Button
+                disabled={isNextDisabled}
+                isLoading={isNextLoading}
+                onPress={onNext}
+                style={{ flex: 1 }}
+                title={nextLabel || t('common.next', 'Suivant')}
+                variant="Primary"
+              />
+            ) : null}
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }

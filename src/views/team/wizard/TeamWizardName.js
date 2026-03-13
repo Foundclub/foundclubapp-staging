@@ -50,8 +50,8 @@ function TeamWizardName({ navigation, route }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={1}
-      subtitle={t('teamWizard.steps.name.subtitle', 'Donne un nom clair a ton equipe pour la retrouver facilement.')}
-      title={t('teamWizard.steps.name.title', 'Nom de l equipe')}
+      subtitle={t('teamWizard.steps.name.subtitle', 'Donne un nom clair a ton équipe pour la retrouver facilement.')}
+      title={t('teamWizard.steps.name.title', 'Nom de l équipe')}
     >
       <View>
         <Input

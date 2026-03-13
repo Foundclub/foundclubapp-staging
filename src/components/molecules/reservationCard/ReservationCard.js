@@ -71,6 +71,7 @@ function ReservationCard({ item, onParticipate, onPress }) {
                 imageStyle={{ borderRadius: 20 }}
                 imageUrl={item.team.club.logo.url}
                 size={40}
+                variant="logo"
                 style={{ borderRadius: 20 }}
               />
             ) : (

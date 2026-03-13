@@ -278,7 +278,7 @@ function TeamMembershipRequestList({ navigation, route }) {
             </Text>
           </TouchableOpacity>
           <OnboardingWrapper
-            description="Ici vous pouvez accepter ou refuser les demandes d adhesion a vos equipes."
+            description="Ici vous pouvez accepter ou refuser les demandes d'adhésion à vos équipes."
             id="team-membership-requests-list"
             order={1}
             spotlight={{
@@ -289,7 +289,7 @@ function TeamMembershipRequestList({ navigation, route }) {
               paddingY: 2,
             }}
             style={{ flex: 1 }}
-            title="Demandes equipe"
+            title="Demandes équipe"
           >
             <View style={[
               Alignments.fill,

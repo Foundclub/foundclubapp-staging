@@ -39,8 +39,8 @@ function HistoryWizardCategory({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.HistoryWizardClub)}
       onSkip={() => navigation.navigate(RouteNames.HistoryWizardClub)}
       showSkip
-      subtitle="Selectionne une ou plusieurs categories"
-      title="Quelles categories ?"
+      subtitle="Sélectionné une ou plusieurs catégories"
+      title="Quelles catégories ?"
     >
       {isLoading ? (
         <ActivityIndicator color={Colors.primary500} size="large" />

@@ -211,7 +211,7 @@ function LeagueDashboard() {
     const topTeams = /** @type {LeaderboardEntry[]} */ (rankingData.slice(0, 3).map((/** @type {Team} */ t, /** @type {number} */ i) => ({
       form: computeTeamForm(t),
       isMe: getEntityDocumentId(t) === getEntityDocumentId(userTeam),
-      name: t.name || 'Equipe',
+      name: t.name || 'Équipe',
       points: Number(t.elo || 0),
       rank: i + 1,
     })));
@@ -227,7 +227,7 @@ function LeagueDashboard() {
       displayTeams.push({
         form: computeTeamForm(userTeam),
         isMe: true,
-        name: userTeam.name || 'Equipe',
+        name: userTeam.name || 'Équipe',
         points: Number(userTeam.elo || 0),
         rank: userIndex + 1,
       });

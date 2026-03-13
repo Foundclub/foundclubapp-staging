@@ -118,7 +118,7 @@ function CreateSectionScreen({ navigation, route }) {
   const createMutation = useMutation({
     mutationFn: (data) => createCMSection(cmId || '', /** @type {SectionPayload} */ (data)),
     onError: (error) => {
-      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la creation de la section.');
+      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la cr?ation de la section.');
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
         : fallbackMessage;
@@ -129,10 +129,10 @@ function CreateSectionScreen({ navigation, route }) {
     },
     onSuccess: (result) => {
       Alert.alert(
-        t('multisport.sectionCreatedTitle', 'Section creee'),
+        t('multisport.sectionCreatedTitle', 'Section créée'),
         t(
           'multisport.sectionCreatedMessage',
-          'La section "{{name}}" a ete creee avec succes.',
+          'La section "{{name}}" a été créée avec succès.',
           { name: result?.data?.name || name },
         ),
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
@@ -184,7 +184,7 @@ function CreateSectionScreen({ navigation, route }) {
               {t('multisport.createSection.title', 'Nouvelle section')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral200]}>
-              {t('multisport.createSection.subtitle', 'Creez une section sportive pour votre club multisport.')}
+              {t('multisport.createSection.subtitle', 'Créez une section sportive pour votre club multisport.')}
             </Text>
           </View>
 
@@ -225,7 +225,7 @@ function CreateSectionScreen({ navigation, route }) {
               />
               {activitySearchValue.trim().length > 0 && filteredActivities.length === 0 ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond a votre recherche.')}
+                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond à votre recherche.')}
                 </Text>
               ) : null}
             </View>
@@ -252,7 +252,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant a la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant à la section.')}
               </Text>
             </View>
           </View>
@@ -267,7 +267,7 @@ function CreateSectionScreen({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('multisport.createSection.info', 'Une fois creee, la section pourra accueillir equipes, evenements et membres.')}
+              {t('multisport.createSection.info', 'Une fois créée, la section pourra accueillir équipes, événements et membres.')}
             </Text>
           </View>
         </ScrollView>
@@ -277,8 +277,8 @@ function CreateSectionScreen({ navigation, route }) {
             disabled={!isValid || createMutation.isPending}
             onPress={handleCreate}
             title={createMutation.isPending
-              ? t('multisport.createSection.actions.creating', 'Creation...')
-              : t('multisport.createSection.actions.create', 'Creer la section')}
+              ? t('multisport.createSection.actions.creating', 'Cr?ation...')
+              : t('multisport.createSection.actions.create', 'Créer la section')}
             variant="Primary"
           />
         </View>

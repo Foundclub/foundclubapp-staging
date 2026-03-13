@@ -213,7 +213,7 @@ function SquadRequestsScreen({ navigation, route }) {
       ]}
     >
       <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-        {isLoading ? 'Chargement...' : t('teamMembershipRequestList.noData', 'Aucune demande d\'adhesion en attente')}
+        {isLoading ? 'Chargement...' : t('teamMembershipRequestList.noData', 'Aucune demande d\'adhésion en attente')}
       </Text>
     </View>
   ), [
@@ -247,7 +247,7 @@ function SquadRequestsScreen({ navigation, route }) {
             withDefaultMargin={false}
           />
           <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
-            {t('teamMembershipRequestList.title', 'Demandes d\'adhesion')}
+            {t('teamMembershipRequestList.title', 'Demandes d\'adhésion')}
           </Text>
           <View style={{ width: 36 }} />
         </View>

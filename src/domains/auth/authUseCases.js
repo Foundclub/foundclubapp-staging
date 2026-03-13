@@ -7,7 +7,7 @@ import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
 
 export const USER_ROLES = /** @type {const} */({
-  coach: 'Entraineur',
+  coach: 'Entraîneur',
   new: 'Authenticated',
   player: 'Joueur',
   president: 'Dirigeant',
@@ -318,6 +318,7 @@ export const NOTIFICATION_TYPES = {
   // Events
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
+  EVENT_CONVOCATION_PUBLISHED: 'eventConvocationPublished',
   EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_REMINDER: 'eventReminder',

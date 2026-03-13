@@ -56,11 +56,13 @@ function EventWizardDescription({ navigation }) {
             {t('eventWizard.steps.description.label')}
           </Text>
           <TextInput
+            blurOnSubmit={false}
             multiline
             numberOfLines={6}
             onChangeText={setDescription}
             placeholder={t('eventWizard.steps.description.placeholder')}
             placeholderTextColor={Colors.neutral500}
+            scrollEnabled
             style={[
               ApplicationStyle.card,
               Spaces.padding[16],
@@ -68,7 +70,8 @@ function EventWizardDescription({ navigation }) {
               fieldSurfaceStyle,
               {
                 color: Colors.neutral00,
-                minHeight: 150,
+                maxHeight: 260,
+                minHeight: 180,
                 textAlignVertical: 'top',
               },
             ]}

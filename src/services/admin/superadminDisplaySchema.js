@@ -97,7 +97,7 @@ const SORT_OPTIONS = [
   },
   {
     key: SORT_MODES.created,
-    label: 'Creation recente',
+    label: 'Cr?ation recente',
   },
   {
     key: SORT_MODES.alpha,

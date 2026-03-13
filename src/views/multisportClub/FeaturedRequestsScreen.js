@@ -65,7 +65,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
       refetch();
       Alert.alert(
         t('featuredRequests.approveSuccess.title', 'Demande acceptee'),
-        t('featuredRequests.approveSuccess.message', "L'evenement est maintenant a la une du club."),
+        t('featuredRequests.approveSuccess.message', "L'événement est maintenant à la une du club."),
       );
     },
   });
@@ -78,7 +78,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
       refetch();
       Alert.alert(
         t('featuredRequests.rejectSuccess.title', 'Demande refusee'),
-        t('featuredRequests.rejectSuccess.message', 'Le demandeur a ete notifie.'),
+        t('featuredRequests.rejectSuccess.message', 'Le demandeur a été notifie.'),
       );
     },
   });
@@ -86,7 +86,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   const handleApprove = useCallback((eventId) => {
     Alert.alert(
       t('featuredRequests.confirm.approve.title', 'Accepter la demande ?'),
-      t('featuredRequests.confirm.approve.message', 'Cet evenement sera visible dans le planning de tous les adherents du club.'),
+      t('featuredRequests.confirm.approve.message', 'Cet événement sera visible dans le planning de tous les adherents du club.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -152,7 +152,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
         >
           <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
             <OnboardingWrapper
-              description="Analysez les demandes et validez les evenements a la une."
+              description="Analysez les demandes et validez les événements à la une."
               id="featured-requests-list"
               order={1}
               spotlight={{
@@ -162,7 +162,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Demandes a la une"
+              title="Demandes à la une"
             >
               <TouchableOpacity
                 onPress={() => navigateToRequestsHub(navigation, {
@@ -200,7 +200,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                     style={[ApplicationStyle.borderRadius16, ApplicationStyle.backgroundColor.primary700, Spaces.padding[16], Spaces.gap[12]]}
                   >
                     <View style={[Spaces.gap[4]]}>
-                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{event.name || event.type?.name || 'Evenement'}</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{event.name || event.type?.name || 'Événement'}</Text>
                       <Text style={[Fonts.p2, Fonts.primary100]}>{event.team?.club?.name}</Text>
                       <Text style={[Fonts.p2, Fonts.primary100]}>
                         Date:

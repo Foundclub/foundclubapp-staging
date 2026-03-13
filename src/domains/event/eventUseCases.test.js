@@ -333,7 +333,7 @@ describe('Event Use Cases', () => {
         capacity: 10,
         participations: [],
         userId: 'user1',
-        userRole: { name: 'Entraineur' },
+        userRole: { name: 'Entraîneur' },
       });
       expect(result).toBe(false);
     });

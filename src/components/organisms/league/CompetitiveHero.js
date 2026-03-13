@@ -103,7 +103,7 @@ function CompetitiveHero({
           </View>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
             {maxDivisionReached ? (
-              <Text style={{ color: Colors.gold500 }}>Tu es deja au plus haut niveau.</Text>
+              <Text style={{ color: Colors.gold500 }}>Tu es déjà au plus haut niveau.</Text>
             ) : (
               <>
                 <Text style={{ color: Colors.gold500 }}>{Math.max((targetElo || elo) - elo, 0)}</Text>
@@ -117,7 +117,7 @@ function CompetitiveHero({
         <View style={[styles.rowBetween, { marginTop: 16 }]}>
           <View>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>SQUAD</Text>
-            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{teamName || 'Mon equipe'}</Text>
+            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{teamName || 'Mon équipe'}</Text>
           </View>
           <View style={styles.alignEnd}>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>RANK</Text>

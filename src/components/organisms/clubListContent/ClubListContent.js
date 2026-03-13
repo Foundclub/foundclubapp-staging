@@ -22,6 +22,10 @@ import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchS
 
 import SearchComponent from '../searchComponent/searchComponent';
 
+function ClubsListSeparator() {
+  return <View style={{ height: 12 }} />;
+}
+
 /**
  * Club list element to inject on home page or a dedicate one
  * @returns {import('react').ReactElement} ClubListContent component
@@ -29,7 +33,7 @@ import SearchComponent from '../searchComponent/searchComponent';
 function ClubListContent() {
   // hooks
   const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
+    Alignments, Fonts, Spaces,
   } = useTheme();
   const [isMapView] = useState(false);
   const [{ clubFilters }, appDispatch] = useAppContext();
@@ -192,16 +196,14 @@ function ClubListContent() {
     ) : null;
 
     return (
-      <View style={[Spaces.gap[8]]}>
-        <ClubSearchResultCard
-          footer={footer}
-          item={item}
-          onPress={() => (isMultisport
-            ? handleMultisportSelection(item.documentId)
-            : handleClubSelection(item.documentId))}
-          reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
-        />
-      </View>
+      <ClubSearchResultCard
+        footer={footer}
+        item={item}
+        onPress={() => (isMultisport
+          ? handleMultisportSelection(item.documentId)
+          : handleClubSelection(item.documentId))}
+        reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
+      />
     );
   };
 
@@ -214,56 +216,56 @@ function ClubListContent() {
   );
 
   return (
-    <View style={[Spaces.gap[40], Alignments.fill]}>
-      <View style={[Spaces.gap[40], Alignments.fill]}>
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-          <View style={{ flex: 1 }}>
-            <SearchComponent
-              filterNumber={getClubFiltersNumber(clubFilters)}
-              handleSearchField={handleSearchField}
-              openFilters={handleOpenFilters}
-              searchDefaultValue={clubFilters?.name}
-            />
-          </View>
-        </View>
-        {isMapView ? (
-          <SearchMap
-            items={displayedClubs}
-            onMarkerPress={handleClubSelection}
-            type="club"
+    <View style={[Alignments.fill, Spaces.gap[16]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+        <View style={{ flex: 1 }}>
+          <SearchComponent
+            filterNumber={getClubFiltersNumber(clubFilters)}
+            handleSearchField={handleSearchField}
+            inputDensity="default"
+            inputStyle={{ lineHeight: 20, paddingVertical: 2 }}
+            openFilters={handleOpenFilters}
+            placeholder={t('clubList.search.placeholder', 'Nom du club')}
+            searchDefaultValue={clubFilters?.name}
           />
-        ) : (
-          <WithDataWrapper
-            error={activeError?.message}
-            isLoading={activeIsLoading && !activeIsFetchingNext}
-            wrapperStyle={[Alignments.fill]}
-          >
-            <View style={[
-              Alignments.fill,
-              ApplicationStyle.borderRadius2,
-            ]}
-            >
-              <FlashList
-                data={displayedClubs}
-                keyExtractor={(item) => item?.documentId || 'unknown'}
-                ListEmptyComponent={renderEmptyList}
-                ListHeaderComponent={isSmartSearchEnabled ? (
-                  <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[8]]}>
-                    Trie par pertinence
-                  </Text>
-                ) : null}
-                onEndReached={handleEndReached}
-                onEndReachedThreshold={0.5}
-                onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
-                refreshing={activeIsLoading && !activeIsFetchingNext}
-                renderItem={renderItem}
-                showsVerticalScrollIndicator={false}
-              />
-            </View>
-          </WithDataWrapper>
-        )}
-
+        </View>
       </View>
+      {isMapView ? (
+        <SearchMap
+          items={displayedClubs}
+          onMarkerPress={handleClubSelection}
+          type="club"
+        />
+      ) : (
+        <WithDataWrapper
+          error={activeError?.message}
+          isLoading={activeIsLoading && !activeIsFetchingNext}
+          wrapperStyle={[Alignments.fill]}
+        >
+          <FlashList
+            contentContainerStyle={[
+              Spaces.paddingBottom[96],
+              displayedClubs.length === 0 ? Alignments.fill : null,
+            ]}
+            data={displayedClubs}
+            estimatedItemSize={112}
+            ItemSeparatorComponent={ClubsListSeparator}
+            keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
+            ListEmptyComponent={renderEmptyList}
+            ListHeaderComponent={isSmartSearchEnabled ? (
+              <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
+                Trie par pertinence
+              </Text>
+            ) : null}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
+            refreshing={activeIsLoading && !activeIsFetchingNext}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+          />
+        </WithDataWrapper>
+      )}
     </View>
   );
 }

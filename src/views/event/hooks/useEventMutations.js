@@ -216,7 +216,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        error?.message || "Impossible d'enregistrer votre arrivee.",
+        error?.message || "Impossible d'enregistrer votre arrivée.",
       );
     },
     onSuccess: () => {
@@ -232,7 +232,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const coachArrivalMutation = useMutation({
     mutationFn: ({ eventId, payload, userId }) => markCoachArrival(eventId, userId, payload),
     onError: () => {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivee.");
+      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivée.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -268,8 +268,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('eventDetails.featuredRequest.success.title', 'Demande envoyee'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise a la une a ete envoyee au dirigeant du club.'),
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise à la une a été envoyée au dirigeant du club.'),
       );
     },
   });

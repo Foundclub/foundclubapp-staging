@@ -248,13 +248,13 @@ export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now 
 
   /** @type {Record<string, {label: string, color: string, bg: string}>} */
   const map = {
-    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annule' },
-    confirmed_upcoming: { bg: withAlpha(palette.primary), color: palette.primary, label: 'A venir' },
+    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annul?' },
+    confirmed_upcoming: { bg: withAlpha(palette.primary), color: palette.primary, label: 'À venir' },
     disputed: { bg: withAlpha(palette.error), color: palette.error, label: 'Litige' },
     forfeit: { bg: withAlpha(palette.error), color: palette.error, label: 'Forfait' },
     no_show: { bg: withAlpha(palette.error), color: palette.error, label: 'No-show' },
     pending_validation: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Validation score' },
-    valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Valide' },
+    valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Validé' },
     waiting_proposal: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente accord' },
     waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score a saisir' },
     waiting_venue: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente terrain' },

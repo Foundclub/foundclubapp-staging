@@ -320,7 +320,7 @@ function ProposalMessageBubble({
           <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
           <View style={styles.footer}>
             <Text style={[Fonts.p4, { color: Colors.neutral300, fontStyle: 'italic' }]}>
-              En attente de la reponse adverse
+              En attente de la réponse adverse
             </Text>
           </View>
         </>

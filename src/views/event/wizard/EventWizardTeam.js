@@ -118,7 +118,7 @@ function EventWizardTeam({ navigation }) {
             density="compact"
             icon="search"
             onChangeText={setSearchQuery}
-            placeholder={t('teamList.searchPlaceholder', 'Rechercher une equipe')}
+            placeholder={t('teamList.searchPlaceholder', 'Rechercher une équipe')}
             value={searchQuery}
           />
         ) : null}
@@ -152,7 +152,7 @@ function EventWizardTeam({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-              {t('teamList.noSearchResult', 'Aucune equipe trouvee pour cette recherche')}
+              {t('teamList.noSearchResult', 'Aucune équipe trouvée pour cette recherche')}
             </Text>
           </View>
         ) : null}

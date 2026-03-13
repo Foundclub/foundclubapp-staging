@@ -13,6 +13,7 @@ import {
   createTeamChat,
   createWhisperChat,
   deleteMessage,
+  editMessage,
   getChats,
   pinChat,
   removeGroupMember,
@@ -35,6 +36,13 @@ const normalizeChatId = (value) => {
   return value.trim();
 };
 
+const normalizeClientMessageId = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const generateClientMessageId = () => `cmid-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
 const getAttachmentSignature = (attachments = []) => attachments
   .map((attachment) => String(
     attachment?.documentId
@@ -47,13 +55,14 @@ const getAttachmentSignature = (attachments = []) => attachments
   .join('|');
 
 const getMessageSignature = (message) => {
+  const clientMessageId = normalizeClientMessageId(message?.clientMessageId || '');
   const text = String(message?.message || '').trim();
   const compositionType = String(message?.composition?.type || '');
   const eventRef = String(message?.event?.documentId || message?.event || '');
   const replyRef = String(message?.replyTo?.documentId || message?.replyTo?.id || '');
   const attachmentSignature = getAttachmentSignature(message?.attachments || []);
 
-  return `${text}::${compositionType}::${eventRef}::${replyRef}::${attachmentSignature}`;
+  return `${clientMessageId}::${text}::${compositionType}::${eventRef}::${replyRef}::${attachmentSignature}`;
 };
 
 const getMessageEntityId = (message) => (
@@ -131,6 +140,7 @@ const useMessaging = (currentChatId) => {
         const formattedMessage = {
           attachments: message.attachments, // Handle attachments
           chat: message.chat,
+          clientMessageId: normalizeClientMessageId(message?.clientMessageId || ''),
           composition: message.composition, // Handle composition
           createdAt: message.createdAt,
           documentId: message.documentId,
@@ -161,6 +171,21 @@ const useMessaging = (currentChatId) => {
           // Filter out pending messages that look identical to the confirmed one
           const filteredData = data.filter((msg) => {
             if (!msg?.pending && !msg?.failed) return true;
+            const confirmedClientMessageId = normalizeClientMessageId(
+              formattedMessage?.clientMessageId || '',
+            );
+            const pendingClientMessageId = normalizeClientMessageId(msg?.clientMessageId || '');
+            if (
+              confirmedClientMessageId
+              && pendingClientMessageId
+              && pendingClientMessageId === confirmedClientMessageId
+            ) {
+              const pendingId = getMessageEntityId(msg);
+              if (pendingId) {
+                clearPendingTimeout(pendingId);
+              }
+              return false;
+            }
             const pendingSignature = getMessageSignature(msg);
             if (pendingSignature === confirmedSignature) {
               const pendingId = getMessageEntityId(msg);
@@ -225,15 +250,70 @@ const useMessaging = (currentChatId) => {
   }, [queryClient, clearPendingTimeout]);
 
   const handleMessageDeleted = useCallback((/** @type {MessageDeletionData} */ data) => {
+    const chatDocumentId = normalizeChatId(data?.chatDocumentId || data?.chat?.documentId);
+    if (!chatDocumentId) return;
+
+    const deletedMessageId = normalizeChatId(
+      data?.messageId
+      || data?.documentId
+      || data?.messageDocumentId,
+    );
+    if (!deletedMessageId) return;
+
     queryClient.setQueryData(
-      ['chat-messages', data.chatDocumentId],
+      ['chat-messages', chatDocumentId],
       (/** @type {any} */ oldData) => {
         if (!oldData || !oldData.pages) return oldData;
         return {
           ...oldData,
           pages: oldData.pages.map((/** @type {{ data: Array<{ id: string }> }} */ page) => ({
             ...page,
-            data: Array.isArray(page.data) ? page.data.filter((msg) => msg.id !== data.messageId && msg.documentId !== data.messageId) : [],
+            data: Array.isArray(page.data)
+              ? page.data.filter((msg) => {
+                const msgId = normalizeChatId(getMessageEntityId(msg));
+                return msgId !== deletedMessageId;
+              })
+              : [],
+          })),
+        };
+      },
+    );
+  }, [queryClient]);
+
+  const handleMessageUpdated = useCallback((payload) => {
+    const updatedMessage = payload?.message && typeof payload.message === 'object'
+      ? payload.message
+      : payload;
+    const chatDocumentId = normalizeChatId(
+      payload?.chatDocumentId
+      || updatedMessage?.chat?.documentId
+      || updatedMessage?.chat,
+    );
+    const messageDocumentId = normalizeChatId(
+      getMessageEntityId(updatedMessage),
+    );
+    if (!chatDocumentId || !messageDocumentId) return;
+
+    queryClient.setQueryData(
+      ['chat-messages', chatDocumentId],
+      (oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => ({
+            ...page,
+            data: Array.isArray(page?.data)
+              ? page.data.map((message) => {
+                const existingId = normalizeChatId(getMessageEntityId(message));
+                if (existingId !== messageDocumentId) return message;
+                return {
+                  ...message,
+                  ...updatedMessage,
+                  documentId: updatedMessage?.documentId || message.documentId,
+                  id: updatedMessage?.id || message.id,
+                };
+              })
+              : [],
           })),
         };
       },
@@ -309,6 +389,7 @@ const useMessaging = (currentChatId) => {
     // Set up event listeners after joining
     socket.on(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
     socket.on(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
+    socket.on(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, (error) => {
@@ -328,6 +409,7 @@ const useMessaging = (currentChatId) => {
       socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeCurrentChatId });
       socket.off(EVENTS.MESSAGE_RECEIVED);
       socket.off(EVENTS.MESSAGE_DELETED);
+      socket.off(EVENTS.MESSAGE_UPDATED);
       socket.off(EVENTS.MESSAGE_READ);
       socket.off(EVENTS.JOINED);
       socket.off(EVENTS.ERROR);
@@ -336,6 +418,7 @@ const useMessaging = (currentChatId) => {
   }, [socket,
     handleNewMessage,
     handleMessageDeleted,
+    handleMessageUpdated,
     handleMessageRead,
     handleJoined,
     currentChatId,
@@ -362,6 +445,16 @@ const useMessaging = (currentChatId) => {
       // Optimistic or Real update? The socket will handle real update for others.
       // For me, I can remove it immediately if socket delay is high.
       // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
+    },
+  });
+
+  const editMessageMutation = useMutation({
+    mutationFn: ({ data, messageId }) => editMessage(messageId, data),
+    onSuccess: (updatedMessage, variables) => {
+      handleMessageUpdated({
+        chatDocumentId: variables?.chatId || currentChatId,
+        message: updatedMessage,
+      });
     },
   });
 
@@ -436,10 +529,13 @@ const useMessaging = (currentChatId) => {
     /** @type {object} */ extraData = {},
   ) => {
     const safeChatId = normalizeChatId(chatId);
+    const safeClientMessageId = normalizeClientMessageId(extraData?.clientMessageId)
+      || generateClientMessageId();
     const attachmentCount = Array.isArray(extraData?.attachments) ? extraData.attachments.length : 0;
     const payloadSummary = {
       attachmentCount,
       chatId: safeChatId,
+      clientMessageId: safeClientMessageId,
       hasComposition: Boolean(extraData?.composition),
       hasEvent: Boolean(extraData?.event),
       hasReplyTo: Boolean(extraData?.replyTo),
@@ -466,6 +562,7 @@ const useMessaging = (currentChatId) => {
     const optimisticMessage = {
       attachments: extraData.attachments || [],
       chat: { documentId: safeChatId },
+      clientMessageId: safeClientMessageId,
       composition: extraData.composition,
       createdAt: new Date().toISOString(),
       documentId: tempId,
@@ -511,14 +608,44 @@ const useMessaging = (currentChatId) => {
     socket.emit(EVENTS.SEND_MESSAGE, {
       attachments: extraData.attachments,
       chatDocumentId: safeChatId,
+      clientMessageId: safeClientMessageId,
       composition: extraData.composition,
       event: extraData.event,
       message,
       replyTo: extraData.replyTo || null,
+    }, (ackPayload) => {
+      const ackError = ackPayload?.ok === false ? ackPayload?.error : null;
+      const ackMessage = ackPayload?.ok ? ackPayload?.message : null;
+
+      if (ackError) {
+        clearPendingTimeout(tempId);
+        markMessageState(safeChatId, tempId, {
+          failed: true,
+          pending: false,
+        });
+        messagingLogger.warn('sendMessage ack error', {
+          chatId: safeChatId,
+          code: ackError?.code,
+          message: ackError?.message || 'unknown',
+          tempId,
+        });
+        return;
+      }
+
+      if (ackMessage?.chat?.documentId === safeChatId) {
+        clearPendingTimeout(tempId);
+        handleNewMessage({
+          ...ackMessage,
+          clientMessageId: normalizeClientMessageId(
+            ackMessage?.clientMessageId || safeClientMessageId,
+          ),
+        });
+      }
     });
     if (isAttachmentDebugEnabled && attachmentCount > 0) {
       messagingLogger.warn('[attachment-debug] sendMessage emitted to socket', {
         ...payloadSummary,
+        clientMessageId: safeClientMessageId,
         tempId,
       });
     }
@@ -557,7 +684,7 @@ const useMessaging = (currentChatId) => {
       },
     );
     return tempId;
-  }, [socket, isConnected, queryClient, markMessageState]);
+  }, [socket, isConnected, queryClient, markMessageState, clearPendingTimeout, handleNewMessage]);
 
   const sendTypingStart = useCallback((chatId) => {
     const safeChatId = normalizeChatId(chatId);
@@ -637,6 +764,7 @@ const useMessaging = (currentChatId) => {
 
     sendMessage(safeChatId, failedMessage?.message || failedMessage?.text || '', {
       attachments: failedMessage?.attachments || [],
+      clientMessageId: failedMessage?.clientMessageId || undefined,
       composition: failedMessage?.composition,
       event: failedMessage?.event?.documentId || failedMessage?.event || undefined,
       replyTo: failedMessage?.replyTo?.documentId
@@ -845,7 +973,8 @@ const useMessaging = (currentChatId) => {
   return {
     addGroupMembers: addGroupMembersMutation.mutateAsync,
     archiveChat: archiveChatMutation.mutate,
-    deleteMessage: deleteMessageMutation.mutate,
+    deleteMessage: deleteMessageMutation.mutateAsync,
+    editMessage: editMessageMutation.mutateAsync,
     getConversationName,
     getUnreadStatus,
     isSocketConnected: isConnected,

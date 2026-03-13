@@ -233,7 +233,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraineur')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraîneur')),
       );
     },
     onSuccess: () => {
@@ -247,7 +247,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre a jour les entraineurs')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre à jour les entraîneurs')),
       );
     },
     onSuccess: () => {
@@ -273,8 +273,8 @@ function TeamDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['teamStats', teamId] });
       refetchTeamStats();
       Alert.alert(
-        t('common.success', 'Succes'),
-        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ete reinitialisees a partir de maintenant.'),
+        t('common.success', 'Succès'),
+        t('teamDetails.stats.resetSuccess', 'Les statistiques ont été reinitialisees a partir de maintenant.'),
       );
     },
   });
@@ -316,7 +316,7 @@ function TeamDetails({ navigation, route }) {
         setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
-          t('teamDetails.ffbb.noCandidate', 'Aucune equipe detectee depuis cette source.'),
+          t('teamDetails.ffbb.noCandidate', 'Aucune équipe detectee depuis cette source.'),
         );
         return;
       }
@@ -396,7 +396,7 @@ function TeamDetails({ navigation, route }) {
   const areSlotActionsEnabled = String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
   const showSlotFeatureComingSoon = () => Alert.alert(
     'Bientot disponible',
-    'La gestion des creneaux sera activee prochainement.',
+    'La gestion des créneaux sera activee prochainement.',
   );
   const showStatsTab = useMemo(
     () => !!isMyTeam,
@@ -545,7 +545,7 @@ function TeamDetails({ navigation, route }) {
     if (!selectedTrainerIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('teamDetails.alerts.trainerRequired', 'Au moins un entraineur est requis'),
+        t('teamDetails.alerts.trainerRequired', 'Au moins un entraîneur est requis'),
       );
       return;
     }
@@ -601,7 +601,7 @@ function TeamDetails({ navigation, route }) {
 
     Alert.alert(
       'Preselection effectuee',
-      `${assignmentTrainerName || 'L entraineur'} est preselectionne. Verifiez puis appuyez sur "Valider".`,
+      `${assignmentTrainerName || 'L entraîneur'} est preselectionne. V?rifiez puis appuyez sur "Valider".`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -692,7 +692,7 @@ function TeamDetails({ navigation, route }) {
         {
           onPress: () => {
             resetTeamStatsMutation.mutate({
-              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon equipe'),
+              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon équipe'),
             });
           },
           style: 'destructive',
@@ -951,6 +951,7 @@ function TeamDetails({ navigation, route }) {
                   imageStyle={{ borderRadius: 90 }}
                   imageUrl={team.club.logo.url}
                   size={90}
+                  variant="logo"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,
@@ -1378,7 +1379,7 @@ function TeamDetails({ navigation, route }) {
                 {/* Calendar filters + list */}
                 {(() => {
                   const modeOptions = [
-                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon equipe') },
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
                     { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Resultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
@@ -1581,8 +1582,8 @@ function TeamDetails({ navigation, route }) {
                   const groupedMatches = sortedMatches.reduce((groups, match) => {
                     const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
                     const roundLabel = match._roundLabel
-                      ? t('teamDetails.calendar.round.title', 'Journee {{round}}', { round: match._roundLabel })
-                      : t('teamDetails.calendar.round.unknown', 'Journee non precisee');
+                      ? t('teamDetails.calendar.round.title', 'Journée {{round}}', { round: match._roundLabel })
+                      : t('teamDetails.calendar.round.unknown', 'Journée non précisée');
                     const groupLabel = useRoundFilters ? roundLabel : monthLabel;
                     const groupSubtitle = useRoundFilters ? monthLabel : null;
                     const existingGroup = groups.find((group) => group.label === groupLabel);
@@ -1594,7 +1595,7 @@ function TeamDetails({ navigation, route }) {
                   }, []);
 
                   const emptyLabel = calendarDisplayMode === 'upcoming'
-                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir pour cette equipe.')
+                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match à venir pour cette équipe.')
                     : calendarDisplayMode === 'results'
                       ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
                       : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
@@ -1603,15 +1604,15 @@ function TeamDetails({ navigation, route }) {
                   const modeScopeText = isUpcomingMode
                     ? (
                       hasSelectedExternalTeam
-                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre equipe uniquement.')
-                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres a venir de la poule.')
+                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre équipe uniquement.')
+                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres à venir de la poule.')
                     )
                     : useRoundFilters
-                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organise par journee FFBB.')
+                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisé par journée FFBB.')
                       : t('teamDetails.calendar.scope.fullPool', 'Resultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
-                  const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Equipe suivie');
+                  const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Équipe suivie');
                   const followedTeamBadgeText = `${followedTeamLabel}: ${followedTeamName}`;
 
                   return (
@@ -1814,7 +1815,7 @@ function TeamDetails({ navigation, route }) {
                               const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
                               const statusLabel = match._isPlayed
                                 ? t('teamDetails.calendar.status.played', 'Termine')
-                                : t('teamDetails.calendar.status.upcoming', 'A venir');
+                                : t('teamDetails.calendar.status.upcoming', 'À venir');
                               const dateLabel = match._dateObj
                                 ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
                                 : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
@@ -1953,7 +1954,7 @@ function TeamDetails({ navigation, route }) {
               </View>
               <View style={[Alignments.alignCenter, { flex: 1 }]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.totalEvents}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Evenements</Text>
+                <Text style={[Fonts.p3, Fonts.neutral00]}>Événements</Text>
               </View>
               <View style={[Alignments.alignCenter, { flex: 1 }]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
@@ -2080,7 +2081,7 @@ function TeamDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('teamDetails.modals.trainers.title', 'Choisir les entraineurs')}
+              {t('teamDetails.modals.trainers.title', 'Choisir les entraîneurs')}
             </Text>
 
             <Input
@@ -2109,7 +2110,7 @@ function TeamDetails({ navigation, route }) {
               ))}
               {!trainerPickerOptions.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral500]}>
-                  {t('teamDetails.modals.trainers.noData', 'Aucun entraineur ou dirigeant disponible')}
+                  {t('teamDetails.modals.trainers.noData', 'Aucun entraîneur ou dirigeant disponible')}
                 </Text>
               ) : null}
             </ScrollView>
@@ -2117,7 +2118,7 @@ function TeamDetails({ navigation, route }) {
             <View style={[Spaces.gap[12]]}>
               <Button
                 onPress={handleOpenCreateTrainerModal}
-                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraineur')}
+                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraîneur')}
                 variant="SecondaryLight"
               />
               <View style={[Alignments.row, Spaces.gap[12]]}>

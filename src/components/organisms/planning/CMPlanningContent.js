@@ -85,7 +85,7 @@ function CMPlanningContent({ cmId, navigation }) {
     id: slot.eventId,
     startTime: slot.startTime, // HH:mm
     title: slot.title,
-    type: 'Entrainement', // Default or derive from data if available
+    type: 'Entraînement', // Default or derive from data if available
     team: { name: slot.title }, // Fallback for title display logic in component
     // We need original event ID for navigation
     documentId: slot.eventId,

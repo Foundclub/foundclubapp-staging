@@ -120,11 +120,11 @@ function TeamWizardRecap({ navigation }) {
 
   const handleSubmit = () => {
     if (!selectedOverview.clubId) {
-      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.clubRequired', 'Club introuvable. Recommence la creation depuis la liste equipe.'));
+      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.clubRequired', 'Club introuvable. Recommence la création depuis la liste équipe.'));
       return;
     }
     if (selectedOverview.trainers.length === 0) {
-      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.trainerRequired', 'Selectionne au moins un entraineur.'));
+      Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.trainerRequired', 'Sélectionnez au moins un entraîneur.'));
       return;
     }
 
@@ -164,14 +164,14 @@ function TeamWizardRecap({ navigation }) {
     <WizardStepLayout
       isNextDisabled={!isRecapReady}
       isNextLoading={createTeamMutation.isPending}
-      nextLabel={t('teamWizard.actions.create', 'Creer l equipe')}
+      nextLabel={t('teamWizard.actions.create', 'Créer l équipe')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
       onClose={handleExitWizard}
       onNext={handleSubmit}
       onSkip={() => {}}
       stepCount={8}
       stepIndex={8}
-      subtitle={t('teamWizard.steps.recap.subtitle', 'Verifie les informations avant de creer l equipe.')}
+      subtitle={t('teamWizard.steps.recap.subtitle', 'Vérifie les informations avant de créer l équipe.')}
       title={t('teamWizard.steps.recap.title', 'Recapitulatif')}
     >
       <View style={[Spaces.gap[16]]}>
@@ -188,7 +188,7 @@ function TeamWizardRecap({ navigation }) {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('teamWizard.recap.summaryTitle', 'Vue d ensemble')}
+              {t('teamWizard.recap.summaryTitle', 'Vue d\'ensemble')}
             </Text>
             <View
               style={[
@@ -205,14 +205,14 @@ function TeamWizardRecap({ navigation }) {
             >
               <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                 {isRecapReady
-                  ? t('teamWizard.recap.ready', 'Pret a creer')
+                  ? t('teamWizard.recap.ready', 'Prêt a créer')
                   : t('teamWizard.recap.incomplete', 'Champs manquants')}
               </Text>
             </View>
           </View>
 
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('teamWizard.recap.quickHint', 'Nom, section, sport, categorie, niveau, club et entraineur sont requis.')}
+            {t('teamWizard.recap.quickHint', 'Nom, section, sport, catégorie, niveau, club et entraîneur sont requis.')}
           </Text>
         </View>
 
@@ -277,7 +277,7 @@ function TeamWizardRecap({ navigation }) {
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t('teamWizard.recap.trainersCount', {
               count: selectedOverview.trainers.length,
-              defaultValue: `${selectedOverview.trainers.length} entraineur(s)`,
+              defaultValue: `${selectedOverview.trainers.length} entraîneur(s)`,
             })}
           </Text>
         </View>

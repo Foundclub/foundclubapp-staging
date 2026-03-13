@@ -118,7 +118,7 @@ function SearchScreenShell({
     >
       <View style={[
         Spaces.marginTop[16],
-        Spaces.marginBottom[8],
+        Spaces.marginBottom[16],
         Alignments.row,
         Alignments.alignCenter,
         Alignments.justifySpaceBetween,
@@ -142,7 +142,7 @@ function SearchScreenShell({
           style={[
             Alignments.row,
             Alignments.alignCenter,
-            Spaces.marginBottom[12],
+            Spaces.marginBottom[16],
           ]}
         >
           <View style={{ alignItems: 'flex-start', width: titleSideWidth }}>
@@ -185,7 +185,7 @@ function SearchScreenShell({
           style={[
             Alignments.row,
             Alignments.alignCenter,
-            Spaces.marginBottom[12],
+            Spaces.marginBottom[16],
           ]}
         >
           <View style={{ alignItems: 'flex-start', width: titleSideWidth }}>
@@ -246,7 +246,7 @@ function SearchScreenShell({
         </View>
       )}
 
-      <View style={[Alignments.fill]}>
+      <View style={[Alignments.fill, Spaces.marginTop[4]]}>
         {children}
       </View>
     </ScreenContainer>

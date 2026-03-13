@@ -70,7 +70,7 @@ function SquadNameStep({ data, onNext, updateData }) {
         }
 
         setNameCheckState('taken');
-        setNameMessage('Ce nom est deja pris. Choisis un autre nom.');
+        setNameMessage('Ce nom est déjà pris. Choisis un autre nom.');
 
         const candidates = buildSuggestionCandidates(normalizedName);
         const availabilityChecks = await Promise.all(
@@ -90,7 +90,7 @@ function SquadNameStep({ data, onNext, updateData }) {
       } catch (_error) {
         if (isCancelled) return;
         setNameCheckState('error');
-        setNameMessage('Impossible de verifier le nom maintenant. Reessaie.');
+        setNameMessage('Impossible de vérifier le nom maintenant. R?essaie.');
         setNameSuggestions([]);
       }
     };

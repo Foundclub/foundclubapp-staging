@@ -18,6 +18,7 @@ export const EVENTS = {
   MESSAGE_DELETED: 'message-deleted',
   MESSAGE_READ: 'message-read',
   MESSAGE_RECEIVED: 'message-received',
+  MESSAGE_UPDATED: 'message-updated',
   READ_MESSAGE: 'read-message',
   SEND_MESSAGE: 'send-message',
   TYPING_START: 'typing-start',

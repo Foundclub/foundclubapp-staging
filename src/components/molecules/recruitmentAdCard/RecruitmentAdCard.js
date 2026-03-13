@@ -180,6 +180,7 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
                         imageStyle={{ borderRadius: 24 }}
                         imageUrl={clubLogo}
                         size={48}
+                        variant="logo"
                         style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
                       />
                 ) : (

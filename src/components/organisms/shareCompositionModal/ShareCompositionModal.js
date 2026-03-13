@@ -140,17 +140,17 @@ function ShareCompositionModal({
     switch (chat.type) {
       case 'club':
         if (chat?.club?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.club.logo.url} size={40} />;
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.club.logo.url} size={40} variant="logo" />;
         }
         return <TeamShield initials={getClubInitials(chat?.club?.name || '')} isNeutral isSmall />;
       case 'multisport':
         if (chat?.multisportClub?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.multisportClub.logo.url} size={40} />;
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.multisportClub.logo.url} size={40} variant="logo" />;
         }
         return <TeamShield initials={getClubInitials(chat?.multisportClub?.name || '')} isNeutral isSmall />;
       case 'team':
         if (chat?.team?.logo?.url) {
-          return <ProfileAvatar enablePreview={false} imageUrl={chat.team.logo.url} size={40} />;
+          return <ProfileAvatar enablePreview={false} imageUrl={chat.team.logo.url} size={40} variant="logo" />;
         }
         return <TeamShield initials={getClubInitials(chat?.team?.name || '')} isSmall />;
       case 'group':

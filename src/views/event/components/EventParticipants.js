@@ -196,12 +196,12 @@ function EventParticipants({
     }
     if (section.isHome) {
       return {
-        text: t('eventDetails.invitedTeams.homeTeamBadge', 'Equipe organisatrice'),
+        text: t('eventDetails.invitedTeams.homeTeamBadge', 'Équipe organisatrice'),
         textStyle: [Fonts.p4, Fonts.primary500],
       };
     }
     return {
-      text: t('eventDetails.invitedTeams.invitedTeamBadge', 'Equipe invitee'),
+      text: t('eventDetails.invitedTeams.invitedTeamBadge', 'Équipe invitee'),
       textStyle: [Fonts.p4, Fonts.primary100],
     };
   };
@@ -291,11 +291,11 @@ function EventParticipants({
             <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
               {section.isExternal
                 ? t('eventDetails.invitedTeams.externalHistoricalTitle', 'Historique participants externes')
-                : t('eventDetails.invitedTeams.historicalTitle', 'Historique equipe retiree')}
+                : t('eventDetails.invitedTeams.historicalTitle', 'Historique équipe retiree')}
             </Text>
             {historicalPending.length > 0 ? (
               <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('eventDetails.invitedTeams.historicalPending', '{{count}} reponse(s) en attente').replace('{{count}}', String(historicalPending.length))}
+                {t('eventDetails.invitedTeams.historicalPending', '{{count}} réponse(s) en attente').replace('{{count}}', String(historicalPending.length))}
               </Text>
             ) : null}
             {historicalParticipating.map((player) => renderParticipant(player, {

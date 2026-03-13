@@ -40,8 +40,8 @@ function TeamList({ navigation, route }) {
     if (!openAssignTrainerGuide) return;
 
     Alert.alert(
-      'Assigner un entraineur',
-      `${assignmentTrainerName || 'Cet entraineur'} est maintenant dans votre club.\n\n1) Ouvrez une equipe.\n2) Appuyez sur "Modifier".\n3) Dans la section "Entraineurs", ajoutez puis validez.`,
+      'Assigner un entraîneur',
+      `${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1) Ouvrez une équipe.\n2) Appuyez sur "Modifier".\n3) Dans la section "Entraîneurs", ajoutez puis validez.`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -101,7 +101,7 @@ function TeamList({ navigation, route }) {
           </View>
         </View>
         <OnboardingWrapper
-          description="Consultez vos equipes, les demandes et ouvrez chaque fiche equipe."
+          description="Consultez vos équipes, les demandes et ouvrez chaque fiche équipe."
           id="team-list-main-content"
           order={1}
           spotlight={{
@@ -112,7 +112,7 @@ function TeamList({ navigation, route }) {
             paddingY: 2,
           }}
           style={{ flex: 1 }}
-          title="Mes equipes"
+          title="Mes équipes"
         >
           <TeamListContent
             assignmentTrainerId={assignmentTrainerId}

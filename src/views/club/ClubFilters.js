@@ -269,7 +269,7 @@ function ClubFiltersContent({ navigation, route }) {
         <OnboardingWrapper
           description={t(
             'onboardingAffiliation.filtersTutorial.activityDescription',
-            'Selectionne un sport pour filtrer uniquement les clubs correspondants.',
+            'Sélectionné un sport pour filtrer uniquement les clubs correspondants.',
           )}
           id="club-filters-activity"
           order={7}
@@ -321,7 +321,7 @@ function ClubFiltersContent({ navigation, route }) {
         <OnboardingWrapper
           description={t(
             'onboardingAffiliation.filtersTutorial.applyDescription',
-            'Applique tes filtres pour revenir a la liste avec des resultats plus precis.',
+            'Applique tes filtres pour revenir à la liste avec des r?sultats plus pr?cis.',
           )}
           id="club-filters-apply"
           order={8}

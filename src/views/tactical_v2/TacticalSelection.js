@@ -23,7 +23,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetEvent } from '@/services/event/eventQueries';
+import { useGetEvent, useGetEventTeamComposition } from '@/services/event/eventQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -59,39 +59,62 @@ function TacticalSelection() {
     enabled: shouldHydrateFromEvent,
   });
 
+  const { data: teamCompositionPayload } = useGetEventTeamComposition(
+    eventId || '',
+    teamIdParam || undefined,
+    {
+      enabled: Boolean(eventId),
+    },
+  );
+
+  const resolvedTeamId = useMemo(
+    () => teamCompositionPayload?.team?.documentId
+      || teamIdParam
+      || eventFromApi?.team?.documentId
+      || undefined,
+    [teamCompositionPayload?.team?.documentId, teamIdParam, eventFromApi?.team?.documentId],
+  );
+
   const existingComposition = useMemo(() => {
+    if (teamCompositionPayload?.draft && typeof teamCompositionPayload.draft === 'object') {
+      return teamCompositionPayload.draft;
+    }
+
     if (existingCompositionParam && typeof existingCompositionParam === 'object') {
+      if (existingCompositionParam?.schemaVersion === 2 && existingCompositionParam?.byTeam) {
+        const byTeamDraft = existingCompositionParam?.byTeam?.[resolvedTeamId || '']?.draft;
+        return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
+      }
       return existingCompositionParam;
     }
     if (typeof existingCompositionParam === 'string') {
       try {
         const parsed = JSON.parse(existingCompositionParam);
+        if (parsed && typeof parsed === 'object' && parsed?.schemaVersion === 2 && parsed?.byTeam) {
+          const byTeamDraft = parsed?.byTeam?.[resolvedTeamId || '']?.draft;
+          return byTeamDraft && typeof byTeamDraft === 'object' ? byTeamDraft : null;
+        }
         return parsed && typeof parsed === 'object' ? parsed : null;
       } catch (_error) {
         return null;
       }
     }
 
-    const fromApi = eventFromApi?.composition;
-    if (!fromApi) return null;
-    if (typeof fromApi === 'string') {
-      try {
-        const parsed = JSON.parse(fromApi);
-        return parsed && typeof parsed === 'object' ? parsed : null;
-      } catch (_error) {
-        return null;
-      }
-    }
-    if (typeof fromApi === 'object') return fromApi;
     return null;
-  }, [existingCompositionParam, eventFromApi?.composition]);
+  }, [teamCompositionPayload?.draft, existingCompositionParam, resolvedTeamId]);
 
   const teamPlayers = useMemo(() => {
     if (Array.isArray(teamPlayersParam) && teamPlayersParam.length > 0) {
       return teamPlayersParam;
     }
 
-    const rawPlayers = Array.isArray(eventFromApi?.team?.players) ? eventFromApi.team.players : [];
+    const candidateTeams = [
+      eventFromApi?.team,
+      ...(Array.isArray(eventFromApi?.invitedTeams) ? eventFromApi.invitedTeams : []),
+    ].filter(Boolean);
+    const matchedTeam = candidateTeams.find((team) => team?.documentId === resolvedTeamId)
+      || eventFromApi?.team;
+    const rawPlayers = Array.isArray(matchedTeam?.players) ? matchedTeam.players : [];
     return rawPlayers
       .map((player) => {
         const documentId = String(player?.documentId || player?.id || '').trim();
@@ -106,10 +129,10 @@ function TacticalSelection() {
         };
       })
       .filter(Boolean);
-  }, [eventFromApi?.team?.players, teamPlayersParam]);
+  }, [eventFromApi?.invitedTeams, eventFromApi?.team, resolvedTeamId, teamPlayersParam]);
 
   const sport = sportParam || 'football';
-  const teamId = teamIdParam || eventFromApi?.team?.documentId || undefined;
+  const teamId = resolvedTeamId;
 
   // State
   /** @type {[Set<string>, React.Dispatch<React.SetStateAction<Set<string>>>]} */
@@ -133,11 +156,16 @@ function TacticalSelection() {
       ? existingComposition.manualPlayers
       : [];
 
-    const initialSet = new Set(
-      placements
-        .map((/** @type {{ playerId?: string }} */ placement) => String(placement?.playerId || '').trim())
-        .filter(Boolean),
-    );
+    const selectedPlayerIds = Array.isArray(existingComposition?.selectedPlayerIds)
+      ? existingComposition.selectedPlayerIds
+      : [];
+    const selectedFromPlacements = placements
+      .map((/** @type {{ playerId?: string }} */ placement) => String(placement?.playerId || '').trim())
+      .filter(Boolean);
+    const initialSet = new Set([
+      ...selectedFromPlacements,
+      ...selectedPlayerIds.map((value) => String(value || '').trim()).filter(Boolean),
+    ]);
 
     setSelectedIds(initialSet);
     setManualPlayers(manual);
@@ -326,9 +354,10 @@ function TacticalSelection() {
       existingComposition, // Pass through for loading positions
       selectedPlayers,
       sport,
+      teamComposition: teamCompositionPayload || null,
       teamId, // Pass through for future team default composition
     });
-  }, [selectedIds, allPlayers, eventId, sport, existingComposition, teamId, navigation]);
+  }, [selectedIds, allPlayers, eventId, sport, existingComposition, teamCompositionPayload, teamId, navigation]);
 
   // Render player item
   const renderPlayer = useCallback((/** @type {{ item: TacticalPlayer }} */ { item }) => {
@@ -463,13 +492,29 @@ function TacticalSelection() {
           sélectionné
           {selectedIds.size > 1 ? 's' : ''}
         </Text>
+        {teamCompositionPayload?.draft?.updatedAt ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+            Brouillon mis à jour le
+            {' '}
+            {new Date(teamCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}
+          </Text>
+        ) : null}
+        {teamCompositionPayload?.published?.publishedAt ? (
+          <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 4 }]}>
+            Convocation publiee (v
+            {Number(teamCompositionPayload?.published?.version || 1)}
+            ) le
+            {' '}
+            {new Date(teamCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}
+          </Text>
+        ) : null}
       </View>
 
       {/* Player List */}
       <FlatList
         contentContainerStyle={[Spaces.paddingHorizontal[24], styles.listContent]}
         data={filteredPlayers}
-        keyExtractor={(item) => String(item.id || item.documentId || Math.random())}
+        keyExtractor={(item, index) => String(item.id || item.documentId || `player_${index}`)}
         ListEmptyComponent={(
           <View style={styles.emptyState}>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>

@@ -28,7 +28,7 @@ function EventShareBubble({
   const eventDocumentId = typeof composition?.eventDocumentId === 'string'
     ? composition.eventDocumentId
     : '';
-  const eventName = composition?.eventName || 'Evenement';
+  const eventName = composition?.eventName || 'Événement';
   const teamName = composition?.teamName || '';
   const locationLabel = composition?.locationLabel || '';
   const eventDate = composition?.eventDate ? dayjs(composition.eventDate).locale('fr').format('DD/MM/YYYY HH:mm') : '';
@@ -54,7 +54,7 @@ function EventShareBubble({
     >
       <View style={{ gap: 6, paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          Evenement partage
+          Événement partage
         </Text>
         <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
           {eventName}
@@ -64,7 +64,7 @@ function EventShareBubble({
         ) : null}
         {teamName ? (
           <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-            Equipe:
+            Équipe:
             {' '}
             {teamName}
           </Text>
@@ -86,7 +86,7 @@ function EventShareBubble({
           paddingVertical: 10,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Ouvrir l evenement</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Ouvrir l événement</Text>
       </TouchableOpacity>
     </View>
   );

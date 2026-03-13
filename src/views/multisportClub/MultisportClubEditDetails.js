@@ -161,6 +161,7 @@ function MultisportClubEditDetails({ navigation, route }) {
             <View style={[Alignments.row, Spaces.marginVertical[24]]}>
               <SelectAvatar
                 currentAvatar={logo}
+                imageResizeMode="contain"
                 onAvatarSelected={(avatar) => setLogo(avatar)}
                 size={110}
               />

@@ -47,7 +47,7 @@ function EventWizardTeamCard({
   const levelLabel = team?.level?.name || team?.level;
   const metaItems = [
     { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
-    { label: t('teamList.fields.category', 'Categorie'), value: categoryLabel },
+    { label: t('teamList.fields.category', 'Catégorie'), value: categoryLabel },
     { label: t('teamList.fields.level', 'Niveau'), value: levelLabel },
     {
       label: t('teamList.fields.members', 'Membres'),
@@ -76,6 +76,7 @@ function EventWizardTeamCard({
     <ProfileAvatar
       imageUrl={team.club.logo.url}
       size={60}
+      variant="logo"
       style={[
         ApplicationStyle.borderWidth1,
         ApplicationStyle.borderColor.primary500,

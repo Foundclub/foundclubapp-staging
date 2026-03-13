@@ -35,7 +35,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
+import { useGetEvent, useGetEventAttendance, useGetEventConvocation } from '@/services/event/eventQueries';
 import { exportEventParticipants } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
@@ -286,7 +286,7 @@ function EventDetails({ navigation, route }) {
         const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
         return {
           isLate: false,
-          message: `Arrivee enregistree: ${earlyMinutes} min en avance.`,
+          message: `Arrivée enregistrée: ${earlyMinutes} min en avance.`,
         };
       }
 
@@ -298,13 +298,13 @@ function EventDetails({ navigation, route }) {
       if (lateMinutes > 0) {
         return {
           isLate: true,
-          message: `Arrivee enregistree: +${lateMinutes} min de retard.`,
+          message: `Arrivée enregistrée: +${lateMinutes} min de retard.`,
         };
       }
 
       return {
         isLate: false,
-        message: 'Arrivee enregistree a l heure.',
+        message: 'Arrivée enregistrée à l\'heure.',
       };
     }
 
@@ -313,7 +313,7 @@ function EventDetails({ navigation, route }) {
       const minutesLeft = Math.max(1, Math.ceil(diffMs / 60000));
       return {
         isLate: false,
-        message: `Il vous reste ${minutesLeft} min pour ne pas etre en retard.`,
+        message: `Il vous reste ${minutesLeft} min pour ne pas être en retard.`,
       };
     }
 
@@ -388,13 +388,13 @@ function EventDetails({ navigation, route }) {
         isHome: true,
         key: event.team.documentId || 'home-team',
         players: uniqueUsers(event.team.players || []),
-        teamName: event.team.name || 'Equipe organisatrice',
+        teamName: event.team.name || 'Équipe organisatrice',
       } : null,
       ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
         players: uniqueUsers(team?.players || []),
-        teamName: team?.name || 'Equipe invitee',
+        teamName: team?.name || 'Équipe invitee',
       }))),
     ].filter(Boolean);
 
@@ -465,7 +465,7 @@ function EventDetails({ navigation, route }) {
         }
 
         const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || 'Equipe retiree';
+        const teamName = resolvedTeamName || 'Équipe retiree';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -675,13 +675,13 @@ function EventDetails({ navigation, route }) {
 
     if (status === 'accepted') {
       Alert.alert(t('eventDetails.modals.accept.title'), '', [
-        { onPress: () => setSelectedParticipationId(''), style: 'cancel', text: t('common.cancel') },
+        { onPress: () => setSelectedParticipationId(''), style: 'cancel', text: t('eventDetails.modals.actions.cancel') },
         {
           onPress: () => {
             mutations.acceptParticipationMutation.mutate(participationId);
             setSelectedParticipationId('');
           },
-          text: t('common.confirm'),
+          text: t('eventDetails.modals.actions.confirm'),
         },
       ]);
       return;
@@ -732,7 +732,7 @@ function EventDetails({ navigation, route }) {
         t('eventDetails.modals.editResponse.title'),
         t('eventDetails.modals.editResponse.description'),
         [
-          { style: 'cancel', text: t('common.cancel') },
+          { style: 'cancel', text: t('eventDetails.modals.actions.cancel') },
           {
             onPress: () => {
               if (!event?.documentId || !userData?.documentId) return;
@@ -742,7 +742,7 @@ function EventDetails({ navigation, route }) {
               });
               setIsJoinModalVisible(false);
             },
-            text: t('common.confirm'),
+            text: t('eventDetails.modals.actions.confirm'),
           },
         ],
       );
@@ -771,7 +771,7 @@ function EventDetails({ navigation, route }) {
 
     Alert.alert(
       t('common.error'),
-      'Impossible de retrouver votre reponse pour cet evenement. Rechargez la page et reessayez.',
+      'Impossible de retrouver votre réponse pour cet événement. Rechargez la page et réessayez.',
     );
   }, [
     activeEventParticipations,
@@ -798,6 +798,35 @@ function EventDetails({ navigation, route }) {
       Alert.alert(t('common.error'), t('eventDetails.exportError'));
     }
   }, [event?.name, eventId, t]);
+
+  const handleShareEventInChat = useCallback((/** @type {string} */ chatId) => {
+    const sentMessageId = sendMessage(chatId, 'Partage', { event: eventId || '' });
+
+    if (!sentMessageId) {
+      Alert.alert(
+        t('common.error'),
+        t('event.shareInChatError', 'Impossible de partager l\'événement pour le moment.'),
+      );
+      return;
+    }
+
+    setIsShareModalVisible(false);
+    setTimeout(() => {
+      Alert.alert(
+        t('event.shareInChatSuccessTitle', 'Événement partage'),
+        t(
+          'event.shareInChatSuccessDescription',
+          'Votre événement a bien été partage. Appuyez sur OK pour ouvrir la conversation.',
+        ),
+        [
+          {
+            onPress: () => navigation.navigate(RouteNames.Conversation, { chatId }),
+            text: 'OK',
+          },
+        ],
+      );
+    }, 120);
+  }, [eventId, navigation, sendMessage, t]);
 
   const handleCancelEvent = () => {
     if (!eventId) return;
@@ -852,16 +881,66 @@ function EventDetails({ navigation, route }) {
     return typeName.includes('match');
   }, [event?.type?.name]);
 
+  const compositionTeamId = useMemo(() => {
+    const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
+    if (!teams.length) return null;
+
+    const userDocumentId = userData?.documentId;
+    const trainedTeamIds = new Set(
+      (userData?.trainedTeams || [])
+        .map((team) => team?.documentId)
+        .filter(Boolean),
+    );
+
+    const managedTeam = teams.find((team) => trainedTeamIds.has(team?.documentId))
+      || teams.find((team) => (team?.trainers || []).some((trainer) => trainer?.documentId === userDocumentId));
+    if (managedTeam?.documentId) return managedTeam.documentId;
+
+    const playerTeam = teams.find((team) => (team?.players || []).some((player) => player?.documentId === userDocumentId));
+    if (playerTeam?.documentId) return playerTeam.documentId;
+
+    return teams[0]?.documentId || null;
+  }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+
+  const {
+    data: convocationPayload,
+    refetch: refetchConvocation,
+  } = useGetEventConvocation(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && isTeamMember),
+    },
+  );
+
+  const convocationPublished = convocationPayload?.published || null;
+  const convocationSnapshotPlayers = useMemo(
+    () => (Array.isArray(convocationPublished?.snapshotPlayers) ? convocationPublished.snapshotPlayers : []),
+    [convocationPublished?.snapshotPlayers],
+  );
+  const convocationPlayers = useMemo(() => convocationSnapshotPlayers
+    .map((player) => ({
+      ...player,
+      convoked: Boolean(player?.isConvoked),
+      label: `${String(player?.firstname || '').trim()} ${String(player?.lastname || '').trim()}`.trim() || 'Joueur',
+      rowKey: String(player?.documentId || player?.id || ''),
+    }))
+    .filter((player) => Boolean(player.rowKey))
+    .sort((a, b) => {
+      if (a.convoked === b.convoked) return a.label.localeCompare(b.label, 'fr');
+      return a.convoked ? -1 : 1;
+    }), [convocationSnapshotPlayers]);
+
   const handleManageComposition = useCallback(() => {
     if (!eventId) return;
     navigation.navigate(RouteNames.TacticalSelectionV2, {
       eventId,
-      existingComposition: event?.composition || null,
-      players: event?.team?.players || [],
+      existingComposition: null,
+      players: [],
       sport: event?.team?.activities?.[0]?.name || 'football',
-      teamId: event?.team?.documentId,
+      teamId: compositionTeamId || event?.team?.documentId,
     });
-  }, [event?.composition, event?.team?.activities, event?.team?.documentId, event?.team?.players, eventId, navigation]);
+  }, [compositionTeamId, event?.team?.activities, event?.team?.documentId, eventId, navigation]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
     if (!targetUser?.documentId) return;
@@ -901,7 +980,7 @@ function EventDetails({ navigation, route }) {
 
     const parsedMinutes = Number(lateModalMinutes);
     if (!Number.isFinite(parsedMinutes) || parsedMinutes < 0) {
-      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit etre un nombre positif.'));
+      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit être un nombre positif.'));
       return;
     }
 
@@ -964,18 +1043,18 @@ function EventDetails({ navigation, route }) {
             && !Number.isNaN(arrivedAtMs),
           );
 
-          let message = t('eventDetails.late.selfOnTime', 'Arrivee enregistree a l heure.');
+          let message = t('eventDetails.late.selfOnTime', 'Arrivée enregistrée à l\'heure.');
 
           if (hasValidTimestamps && eventStartMs && arrivedAtMs < eventStartMs) {
             const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
-            message = t('eventDetails.late.selfEarly', `Bravo ! Vous etes en avance de ${earlyMinutes} min.`);
+            message = t('eventDetails.late.selfEarly', `Bravo ! Vous êtes en avance de ${earlyMinutes} min.`);
           } else {
             const lateMinutesFromDiff = hasValidTimestamps && eventStartMs && arrivedAtMs > eventStartMs
               ? Math.max(1, Math.ceil((arrivedAtMs - eventStartMs) / 60000))
               : 0;
             const lateMinutes = Math.max(lateMinutesFromResponse, lateMinutesFromDiff);
             if (lateMinutes > 0) {
-              message = t('eventDetails.late.selfLate', `Arrivee enregistree: ${lateMinutes} min de retard.`);
+              message = t('eventDetails.late.selfLate', `Arrivée enregistrée: ${lateMinutes} min de retard.`);
             }
           }
 
@@ -1029,14 +1108,14 @@ function EventDetails({ navigation, route }) {
           <View style={{ marginTop: 12 }}>
             <Button
               onPress={handleManageComposition}
-              title="Gerer la compo"
+              title="Composition d'équipe"
               variant="Secondary"
             />
           </View>
         )}
         {canEdit && canRequestFeatured && (
           <View style={{ marginTop: 12 }}>
-            <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre a la une" variant="Secondary" />
+            <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre à la une" variant="Secondary" />
           </View>
         )}
         {event?.featuredRequestStatus === 'pending' && (
@@ -1055,7 +1134,19 @@ function EventDetails({ navigation, route }) {
       if (canAccessAttendance) {
         refetchAttendance();
       }
-    }, [canAccessAttendance, refetch, refetchAttendance, refetchParticipations]),
+      if (isMatchEvent && isTeamMember && compositionTeamId) {
+        refetchConvocation();
+      }
+    }, [
+      canAccessAttendance,
+      compositionTeamId,
+      isMatchEvent,
+      isTeamMember,
+      refetch,
+      refetchAttendance,
+      refetchConvocation,
+      refetchParticipations,
+    ]),
   );
 
   useLayoutEffect(() => {
@@ -1096,6 +1187,7 @@ function EventDetails({ navigation, route }) {
               refetch();
               refetchParticipations();
               if (canAccessAttendance) refetchAttendance();
+              if (isMatchEvent && isTeamMember && compositionTeamId) refetchConvocation();
             }}
             refreshing={isLoading}
           />
@@ -1132,6 +1224,60 @@ function EventDetails({ navigation, route }) {
             pendingParticipations={pendingParticipations}
             teamParticipationSections={teamParticipationSections}
           />
+
+          {isMatchEvent && isTeamMember ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Convocation</Text>
+              {convocationPublished ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={[Fonts.p2, Fonts.neutral300]}>
+                    Publiee le
+                    {' '}
+                    {convocationPublished?.publishedAt
+                      ? new Date(convocationPublished.publishedAt).toLocaleString('fr-FR')
+                      : '-'}
+                  </Text>
+                  {convocationPlayers.map((player) => (
+                    <View
+                      key={player.rowKey}
+                      style={[
+                        {
+                          alignItems: 'center',
+                          backgroundColor: Colors.neutral800,
+                          borderColor: player.convoked ? Colors.primary500 : Colors.neutral700,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
+                        {player.label}
+                      </Text>
+                      <Text
+                        style={[
+                          Fonts.p3,
+                          {
+                            color: player.convoked ? Colors.primary500 : Colors.neutral300,
+                            fontWeight: '700',
+                          },
+                        ]}
+                      >
+                        {player.convoked ? 'Convoque' : 'Non convoque'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={[Fonts.p2, Fonts.neutral300]}>
+                  Aucune convocation publiee pour le moment.
+                </Text>
+              )}
+            </View>
+          ) : null}
         </WithDataWrapper>
       </ScrollView>
 
@@ -1156,7 +1302,7 @@ function EventDetails({ navigation, route }) {
             isLoading={mutations.selfArrivalMutation.isPending}
             onPress={handleSelfArrival}
             title={hasSelfArrived
-              ? t('eventDetails.actions.selfArrivalDone', 'Arrivee enregistree')
+              ? t('eventDetails.actions.selfArrivalDone', 'Arrivée enregistrée')
               : t('eventDetails.actions.selfArrival', 'Je suis arrive')}
             variant="SecondaryLight"
           />
@@ -1210,7 +1356,7 @@ function EventDetails({ navigation, route }) {
         event={event}
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
-        onSelectChat={(/** @type {string} */ chatId) => sendMessage(chatId, 'Partage', { event: eventId || '' })}
+        onSelectChat={handleShareEventInChat}
       />
 
       <Modal
@@ -1267,12 +1413,12 @@ function EventDetails({ navigation, route }) {
                   <View style={[Spaces.gap[4]]}>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                       {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markTitle', 'Confirmer l arrivee')
+                        ? t('eventDetails.late.markTitle', 'Confirmer l\'arrivée')
                         : t('eventDetails.late.editTitle', 'Modifier le retard')}
                     </Text>
                     <Text style={[Fonts.p2, Fonts.neutral200]}>
                       {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markDescription', 'Confirmez l arrivee puis ajustez le retard si besoin.')
+                        ? t('eventDetails.late.markDescription', 'Confirmez l\'arrivée puis ajustez le retard si besoin.')
                         : t('eventDetails.late.editDescription', 'Modifiez le retard en minutes pour ce participant.')}
                     </Text>
                   </View>
@@ -1317,7 +1463,7 @@ function EventDetails({ navigation, route }) {
                       value={lateModalMinutes}
                     />
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {t('eventDetails.late.helper', '0 = a l heure. Ajustez la valeur si necessaire avant validation.')}
+                      {t('eventDetails.late.helper', '0 = à l\'heure. Ajustez la valeur si nécessaire avant validation.')}
                     </Text>
                   </View>
 

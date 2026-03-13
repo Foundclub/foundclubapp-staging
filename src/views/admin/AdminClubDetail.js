@@ -88,7 +88,7 @@ function AdminClubDetail() {
             >
               {club.logo?.url ? (
                 <Image
-                  resizeMode="cover"
+                  resizeMode="contain"
                   source={{ uri: club.logo.url }}
                   style={{ height: 80, width: 80 }}
                 />

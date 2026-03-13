@@ -161,7 +161,7 @@ function AdminUserDetail() {
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Club Associé</Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
-            <ProfileAvatar imageUrl={user.club.logo?.url} size={40} />
+            <ProfileAvatar imageUrl={user.club.logo?.url} size={40} variant="logo" />
             <Text style={[Fonts.p1, { color: Colors.neutral00 }, Spaces.marginLeft[12]]}>
               {user.club.name}
             </Text>

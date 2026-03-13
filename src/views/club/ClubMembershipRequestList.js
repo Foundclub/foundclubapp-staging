@@ -151,8 +151,8 @@ function ClubMembershipRequestList({ navigation, route }) {
       refetch();
 
       Alert.alert(
-        'Entraineur ajoute',
-        `${trainerLabel} a bien ete ajoute a votre club.\n\nVoulez-vous l'assigner a une equipe maintenant ?`,
+        'Entraîneur ajoute',
+        `${trainerLabel} a bien été ajoute à votre club.\n\nVoulez-vous l'assigner a une équipe maintenant ?`,
         [
           {
             style: 'cancel',
@@ -414,7 +414,7 @@ function ClubMembershipRequestList({ navigation, route }) {
             </Text>
           </TouchableOpacity>
           <OnboardingWrapper
-            description="Traitez ici les demandes d adhesion au club et assignez les profils valides."
+            description="Traitez ici les demandes d'adhésion au club et assignez les profils valides."
             id="club-membership-requests-list"
             order={1}
             spotlight={{

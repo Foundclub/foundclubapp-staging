@@ -75,7 +75,7 @@ function SquadAvailabilitiesStep({
 
   const handleContinue = () => {
     if (isAddingSlot) {
-      Alert.alert('Popup ouvert', 'Valide ou annule le popup Ajouter un creneau avant de continuer.');
+      Alert.alert('Popup ouvert', 'Validez ou annulez le popup « Ajouter un créneau » avant de continuer.');
       return;
     }
 
@@ -109,7 +109,7 @@ function SquadAvailabilitiesStep({
         color: Colors.neutral00, marginBottom: 10, marginTop: 0, textAlign: 'center',
       }]}
       >
-        Quand votre equipe joue-t-elle habituellement ?
+        Quand votre équipe joue-t-elle habituellement ?
       </Text>
 
       <ScrollView
@@ -155,7 +155,7 @@ function SquadAvailabilitiesStep({
         {(!sortedSlots || sortedSlots.length === 0) && !isAddingSlot && (
           <View style={{ alignItems: 'center', padding: 20 }}>
             <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center' }]}>
-              Ajoutez vos creneaux reguliers pour faciliter le matchmaking.
+              Ajoutez vos créneaux reguliers pour faciliter le matchmaking.
             </Text>
           </View>
         )}
@@ -164,7 +164,7 @@ function SquadAvailabilitiesStep({
           <Button
             onPress={toggleAddSlot}
             style={{ marginTop: 10 }}
-            title="+ Ajouter un creneau"
+            title="+ Ajouter un créneau"
             variant="Secondary"
           />
         ) : (

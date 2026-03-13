@@ -63,7 +63,7 @@ const compareCategories = (a, b) => {
  */
 export const getCategories = async () => {
   try {
-    const response = await client.get('/categories', {
+    const response = await client.get('/catégories', {
       params: {
         pagination: {
           page: 1,
@@ -83,6 +83,6 @@ export const getCategories = async () => {
     return [...validationResult.data].sort(compareCategories);
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to fetch categories: ${errorToDisplay}`);
+    throw new Error(`Failed to fetch catégories: ${errorToDisplay}`);
   }
 };

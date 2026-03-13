@@ -97,7 +97,7 @@ function SquadSearchScreen() {
       setSquads(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error('[SquadSearch] search failed:', error);
-      setErrorMessage('Erreur de recherche. Reessayez.');
+      setErrorMessage('Erreur de recherche. Réessayez.');
       setSquads([]);
     } finally {
       setIsLoading(false);
@@ -127,7 +127,7 @@ function SquadSearchScreen() {
       || normalizedHomeBase?.address
       || 'Ville inconnue';
     const sportLabel = item?.sport || 'Sport';
-    const categoryLabel = item?.category || 'Categorie';
+    const categoryLabel = item?.category || 'Catégorie';
     const sectionLabel = getSectionLabel(item?.section);
     const divisionLabel = `Div ${item?.division || '?'}`;
 
@@ -353,7 +353,7 @@ function SquadSearchScreen() {
               }}
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  Aucune squad trouvee
+                  Aucune squad trouv?e
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
                   Essaie avec d'autres filtres ou un autre nom de squad.

@@ -86,7 +86,7 @@ function UserBirthdate({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
     },
     onSuccess: () => {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserBirthdate)

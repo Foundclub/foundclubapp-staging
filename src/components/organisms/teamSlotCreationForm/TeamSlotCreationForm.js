@@ -217,7 +217,7 @@ function TeamSlotCreationForm({
 
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Debut</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>D?but</Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <WheelPicker
               data={hours}
@@ -285,7 +285,7 @@ function TeamSlotCreationForm({
             onPress={onDelete}
             style={{ borderColor: Colors.error500, borderWidth: 1 }}
             textStyle={{ color: Colors.error500 }}
-            title="Supprimer ce creneau"
+            title="Supprimer ce créneau"
             variant="Secondary"
           />
         )}

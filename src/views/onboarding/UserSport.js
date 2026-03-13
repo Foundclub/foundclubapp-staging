@@ -56,7 +56,7 @@ function UserSport({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre a jour votre profil.');
+      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour votre profil.');
     },
     onSuccess: () => {
       // Invalidate user query to refresh data

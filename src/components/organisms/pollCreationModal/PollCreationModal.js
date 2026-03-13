@@ -1,8 +1,8 @@
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -61,9 +61,8 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
   };
 
   useEffect(() => {
-    if (isVisible) {
-      resetDraft();
-    }
+    if (!isVisible) return;
+    resetDraft();
   }, [isVisible]);
 
   const normalizedOptions = useMemo(
@@ -72,6 +71,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
       .filter((value) => value.length > 0),
     [options],
   );
+
   const duplicateOptionIdSet = useMemo(() => {
     /** @type {Record<string, string[]>} */
     const buckets = {};
@@ -90,6 +90,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
     return duplicateIds;
   }, [options]);
+
   const questionLength = question.trim().length;
 
   const canSubmit = useMemo(() => {
@@ -98,6 +99,20 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     const uniqueCount = new Set(normalizedOptions.map((value) => value.toLowerCase())).size;
     return uniqueCount === normalizedOptions.length;
   }, [question, normalizedOptions]);
+
+  const inputStyle = useMemo(() => ([
+    Fonts.p2,
+    {
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderColor: 'rgba(255,255,255,0.16)',
+      borderRadius: 12,
+      borderWidth: 1,
+      color: Colors.neutral00,
+      minHeight: 52,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+  ]), [Colors.neutral00, Fonts.p2]);
 
   const handleChangeOption = (/** @type {string} */ optionId, /** @type {string} */ value) => {
     setOptions((prev) => prev.map((entry) => (
@@ -138,7 +153,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     }
 
     if (uniqueCount !== normalizedOptions.length) {
-      setError('Chaque option doit etre differente.');
+      setError('Chaque option doit être differente.');
       return;
     }
 
@@ -152,7 +167,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
       });
       handleClose();
     } catch (submitError) {
-      setError(submitError?.message || 'Impossible de creer ce sondage.');
+      setError(submitError?.message || 'Impossible de créer ce sondage.');
     } finally {
       setIsSubmitting(false);
     }
@@ -160,32 +175,20 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
   return (
     <BottomModal
+      androidKeyboardInputMode="adjustResize"
       close={handleClose}
-      contentContainerStyle={Spaces.gap[16]}
-      footerComponent={(
-        <View style={Spaces.gap[12]}>
-          {error ? <Text style={[Fonts.p3, { color: Colors.error500 }]}>{error}</Text> : null}
-          <Button
-            disabled={!canSubmit || isSubmitting}
-            isLoading={isSubmitting}
-            onPress={handleSubmit}
-            title="Envoyer le sondage"
-            variant="PrimaryLight"
-          />
-          <Button
-            onPress={handleClose}
-            title="Annuler"
-            variant="SecondaryLight"
-          />
-        </View>
-      )}
-      hideCloseButton
+      closeOnBackdropPress={false}
+      contentContainerStyle={[Spaces.gap[16], { paddingBottom: 20 }]}
+      enableContentPanningGesture={false}
+      enablePanDownToClose={false}
       isVisible={isVisible}
-      snapPoints={['74%']}
+      keyboardBehavior="interactive"
+      scrollViewProps={{ keyboardDismissMode: 'none' }}
+      snapPoints={['86%']}
     >
       <View style={[Spaces.gap[8], Spaces.marginBottom[12]]}>
         <Text style={[Fonts.h3, { color: Colors.primary500, textAlign: 'center' }]}>
-          Creer un sondage
+          Créer un sondage
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
           Pose une question, ajoute des options et lance le vote.
@@ -200,28 +203,16 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
             /140
           </Text>
         </View>
-        <TextInput
-          autoFocus
+        <BottomSheetTextInput
+          autoCorrect={false}
           maxLength={140}
           onChangeText={(value) => {
             setQuestion(value);
             setError('');
           }}
-          placeholder="Ex: Quel creneau vous convient ?"
+          placeholder="Ex: Quel créneau vous convient ?"
           placeholderTextColor={Colors.neutral400}
-          style={[
-            Fonts.p2,
-            {
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              borderColor: 'rgba(255,255,255,0.16)',
-              borderRadius: 12,
-              borderWidth: 1,
-              color: Colors.neutral00,
-              minHeight: 52,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-            },
-          ]}
+          style={inputStyle}
           value={question}
         />
       </View>
@@ -235,31 +226,28 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
             {MAX_OPTIONS}
           </Text>
         </View>
+
         {options.map((optionEntry, index) => {
           const hasDuplicate = duplicateOptionIdSet.has(optionEntry.id);
+          const optionInputStyle = [
+            ...inputStyle,
+            {
+              borderColor: hasDuplicate ? Colors.error500 : 'rgba(255,255,255,0.16)',
+              minHeight: 48,
+              paddingVertical: 9,
+            },
+          ];
 
           return (
             <View key={optionEntry.id} style={Spaces.gap[4]}>
               <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-                <TextInput
+                <BottomSheetTextInput
+                  autoCorrect={false}
                   maxLength={80}
                   onChangeText={(value) => handleChangeOption(optionEntry.id, value)}
                   placeholder={`Option ${index + 1}`}
                   placeholderTextColor={Colors.neutral400}
-                  style={[
-                    Fonts.p2,
-                    {
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      borderColor: hasDuplicate ? Colors.error500 : 'rgba(255,255,255,0.16)',
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      color: Colors.neutral00,
-                      flex: 1,
-                      minHeight: 48,
-                      paddingHorizontal: 12,
-                      paddingVertical: 9,
-                    },
-                  ]}
+                  style={optionInputStyle}
                   value={optionEntry.value}
                 />
                 {options.length > MIN_OPTIONS ? (
@@ -287,7 +275,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
               </View>
               {hasDuplicate ? (
                 <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-                  Cette option est deja utilisee.
+                  Cette option est déjà utilisee.
                 </Text>
               ) : null}
             </View>
@@ -346,7 +334,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
           </View>
         </TouchableOpacity>
         <Text style={[Fonts.p4, Fonts.neutral300]}>
-          Active cette option pour permettre a chacun de voter pour plusieurs reponses.
+          Active cette option pour permettre a chacun de voter pour plusieurs réponses.
         </Text>
       </View>
 
@@ -387,6 +375,23 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
             ? 'Les votes restent anonymes pour les autres membres.'
             : 'Les membres pourront voir qui a vote pour chaque option.'}
         </Text>
+      </View>
+
+      {error ? <Text style={[Fonts.p3, { color: Colors.error500 }]}>{error}</Text> : null}
+
+      <View style={Spaces.gap[12]}>
+        <Button
+          disabled={!canSubmit || isSubmitting}
+          isLoading={isSubmitting}
+          onPress={handleSubmit}
+          title="Envoyer le sondage"
+          variant="PrimaryLight"
+        />
+        <Button
+          onPress={handleClose}
+          title="Annuler"
+          variant="SecondaryLight"
+        />
       </View>
     </BottomModal>
   );

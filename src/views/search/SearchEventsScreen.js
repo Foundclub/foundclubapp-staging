@@ -33,10 +33,10 @@ const TOOLTIP_BOTTOM_GUARD = 72;
 
 const EVENT_TUTORIAL_STEPS = [
   {
-    description: 'Cet ecran vous permet de trouver les evenements selon vos criteres.',
+    description: 'Cet ?cran vous permet de trouver les événements selon vos crit?res.',
     id: 'intro',
     target: 'header',
-    title: 'Recherche evenement',
+    title: 'Recherche événement',
   },
   {
     description: 'Les chips en haut servent a changer rapidement de type de recherche.',
@@ -48,10 +48,10 @@ const EVENT_TUTORIAL_STEPS = [
     description: 'Utilisez la recherche texte et les filtres avances pour affiner.',
     id: 'filters',
     target: 'filters',
-    title: 'Filtres evenement',
+    title: 'Filtres événement',
   },
   {
-    description: 'Chaque carte affiche les details. Appuyez sur "A propos" pour ouvrir la fiche.',
+    description: 'Chaque carte affiche les détails. Appuyez sur "A propos" pour ouvrir la fiche.',
     id: 'cards',
     target: 'card',
     title: 'Resultats',

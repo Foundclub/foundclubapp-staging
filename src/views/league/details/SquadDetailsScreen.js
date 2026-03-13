@@ -130,7 +130,7 @@ function SquadDetailsScreen({ navigation, route }) {
       setIsUpdating(true);
       await requestToJoinSquad(String(teamId || ''), currentUserId || '');
       await refetch();
-      Alert.alert(t('squad.join.successTitle', 'Demande envoyee'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
+      Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
     } catch (error) {
       console.error(error);
       Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
@@ -206,7 +206,7 @@ function SquadDetailsScreen({ navigation, route }) {
       console.error(e);
       const pickerError = /** @type {{ code?: string }} */ (e);
       if (pickerError?.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Erreur', 'Impossible de mettre a jour l\'image');
+        Alert.alert('Erreur', 'Impossible de mettre à jour l\'image');
       }
     }
   };
@@ -242,8 +242,8 @@ function SquadDetailsScreen({ navigation, route }) {
 
         await updateTeamSlot(editingSlotId, payload);
         Alert.alert(
-          t('common.success', 'Succes'),
-          t('squadDetails.slots.updated', 'Creneau modifie'),
+          t('common.success', 'Succès'),
+          t('squadDetails.slots.updated', 'Créneau modifie'),
         );
       } else {
         await Promise.all(
@@ -260,10 +260,10 @@ function SquadDetailsScreen({ navigation, route }) {
         );
 
         Alert.alert(
-          t('common.success', 'Succes'),
+          t('common.success', 'Succès'),
           slotsToSave.length > 1
-            ? t('squadDetails.slots.multipleAdded', '{{count}} creneaux ajoutes', { count: slotsToSave.length })
-            : t('squadDetails.slots.added', 'Creneau ajoute'),
+            ? t('squadDetails.slots.multipleAdded', '{{count}} créneaux ajoutes', { count: slotsToSave.length })
+            : t('squadDetails.slots.added', 'Créneau ajoute'),
         );
       }
 
@@ -276,7 +276,7 @@ function SquadDetailsScreen({ navigation, route }) {
       setIsUpdating(false);
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('squadDetails.slots.saveError', 'Impossible de sauvegarder le creneau'),
+        t('squadDetails.slots.saveError', 'Impossible de sauvegarder le créneau'),
       );
     }
   };
@@ -294,15 +294,15 @@ function SquadDetailsScreen({ navigation, route }) {
       setEditingSlot(null);
       setIsUpdating(false);
       Alert.alert(
-        t('common.success', 'Succes'),
-        t('squadDetails.slots.deleted', 'Creneau supprime'),
+        t('common.success', 'Succès'),
+        t('squadDetails.slots.deleted', 'Créneau supprime'),
       );
     } catch (e) {
       console.error(e);
       setIsUpdating(false);
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('squadDetails.slots.deleteError', 'Impossible de supprimer le creneau'),
+        t('squadDetails.slots.deleteError', 'Impossible de supprimer le créneau'),
       );
     }
   };
@@ -318,7 +318,7 @@ function SquadDetailsScreen({ navigation, route }) {
       if (!isMember) {
         Alert.alert(
           t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
-          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux creneaux.'),
+          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux créneaux.'),
         );
         return;
       }
@@ -346,7 +346,7 @@ function SquadDetailsScreen({ navigation, route }) {
       if (backendCode === 'SQUAD_MEMBERSHIP_REQUIRED') {
         Alert.alert(
           t('squadDetails.actions.unavailableTitle', 'Action non disponible'),
-          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux creneaux.'),
+          t('squadDetails.slots.joinHint', 'Rejoignez la squad pour participer aux créneaux.'),
         );
         return;
       }
@@ -358,11 +358,11 @@ function SquadDetailsScreen({ navigation, route }) {
   };
 
   const handleDeleteTeam = useCallback(() => {
-    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Equipe');
+    const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Équipe');
     Alert.alert(
-      t('squadDetails.delete.title', 'Supprimer l\'equipe'),
+      t('squadDetails.delete.title', 'Supprimer l\'équipe'),
       t('squadDetails.delete.confirmationWithName', {
-        defaultValue: `Etes-vous sur de vouloir supprimer l'equipe "${teamDisplayName}" ? Cette action est irreversible.`,
+        defaultValue: `Êtes-vous s?r de vouloir supprimer l'équipe "${teamDisplayName}" ? Cette action est irr?versible.`,
         teamName: teamDisplayName,
       }),
       [
@@ -377,7 +377,7 @@ function SquadDetailsScreen({ navigation, route }) {
               console.error(error);
               Alert.alert(
                 t('common.error', 'Erreur'),
-                t('squadDetails.actions.deleteTeamError', 'Impossible de supprimer l\'equipe.'),
+                t('squadDetails.actions.deleteTeamError', 'Impossible de supprimer l\'équipe.'),
               );
             } finally {
               setIsUpdating(false);
@@ -392,13 +392,13 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
-      t('squadDetails.actions.menuTitle', 'Actions equipe'),
+      t('squadDetails.actions.menuTitle', 'Actions équipe'),
       t('squadDetails.actions.menuDescription', 'Choisissez une action.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
           onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId }),
-          text: t('squadDetails.actions.editTeam', 'Modifier l\'equipe'),
+          text: t('squadDetails.actions.editTeam', 'Modifier l\'équipe'),
         },
         {
           onPress: () => navigation.navigate(RouteNames.SquadRequests, { teamId }),
@@ -407,7 +407,7 @@ function SquadDetailsScreen({ navigation, route }) {
         {
           onPress: handleDeleteTeam,
           style: 'destructive',
-          text: t('squadDetails.actions.deleteTeam', 'Supprimer l\'equipe'),
+          text: t('squadDetails.actions.deleteTeam', 'Supprimer l\'équipe'),
         },
       ],
     );
@@ -608,6 +608,7 @@ function SquadDetailsScreen({ navigation, route }) {
                   <ProfileAvatar
                     imageUrl={team.crest.url}
                     size={80}
+                    variant="logo"
                     style={{ borderColor: Colors.gold500, borderRadius: 80, borderWidth: 2 }}
                   />
                 ) : (

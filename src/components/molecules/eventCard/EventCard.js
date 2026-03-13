@@ -87,6 +87,7 @@ function EventCard({
               imageStyle={{ borderRadius: 30 }}
               imageUrl={clubLogo}
               size={60}
+              variant="logo"
               style={{ borderRadius: 30 }}
             />
           ) : (

@@ -69,7 +69,7 @@ function MyTeamList({ navigation, route }) {
           </View>
         </View>
         <OnboardingWrapper
-          description="Retrouvez vos equipes, les demandes en attente et l acces aux details."
+          description="Retrouvez vos équipes, les demandes en attente et l'accès aux détails."
           id="my-teams-main-content"
           order={1}
           spotlight={{
@@ -80,7 +80,7 @@ function MyTeamList({ navigation, route }) {
             paddingY: 2,
           }}
           style={{ flex: 1 }}
-          title="Mes equipes"
+          title="Mes équipes"
         >
           <TeamListContent
             clubId={userData?.club?.documentId}

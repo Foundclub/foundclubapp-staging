@@ -150,7 +150,7 @@ function RankingScreen() {
         <LeagueCard style={{ overflow: 'hidden', padding: 0, ...leagueSurface }}>
           <View style={[styles.headerRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 40 }]}>#</Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>EQUIPE</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>Équipe</Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 60 }]}>ELO</Text>
           </View>
 
@@ -161,7 +161,7 @@ function RankingScreen() {
             ListEmptyComponent={(
               <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                  Aucune equipe sur cette division.
+                  Aucune équipe sur cette division.
                                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
                   Change de division ou relance plus tard.

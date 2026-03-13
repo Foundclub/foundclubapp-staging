@@ -312,7 +312,7 @@ const buildPayloadFromForm = (attributes, formValues) => {
     if (NUMBER_TYPES.has(type)) {
       const numeric = parseNumberValue(type, value);
       if (!numeric.ok) {
-        errors.push(`Le champ "${name}" doit etre un nombre valide.`);
+        errors.push(`Le champ "${name}" doit être un nombre validé.`);
       } else {
         accumulator[name] = numeric.value;
       }
@@ -602,7 +602,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (!uploadedFiles.length) {
         Alert.alert(
           t('superAdminContentManager.alerts.uploadFailedTitle', 'Upload impossible'),
-          t('superAdminContentManager.alerts.uploadNoFile', 'Aucun fichier n a ete recu par le serveur.'),
+          t('superAdminContentManager.alerts.uploadNoFile', 'Aucun fichier n\'a été recu par le serveur.'),
         );
         return;
       }
@@ -631,7 +631,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (response?.errorCode) {
         Alert.alert(
           t('superAdminContentManager.media.gallery', 'Galerie'),
-          response?.errorMessage || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d ouvrir la galerie.'),
+          response?.errorMessage || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d\'ouvrir la galerie.'),
         );
         return;
       }
@@ -642,7 +642,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.media.gallery', 'Galerie'),
-        error?.message || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d ouvrir la galerie.'),
+        error?.message || t('superAdminContentManager.alerts.openGalleryFailed', 'Impossible d\'ouvrir la galerie.'),
       );
     }
   };
@@ -660,7 +660,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (response?.errorCode) {
         Alert.alert(
           t('superAdminContentManager.media.camera', 'Camera'),
-          response?.errorMessage || t('superAdminContentManager.alerts.openCameraFailed', 'Impossible d ouvrir la camera.'),
+          response?.errorMessage || t('superAdminContentManager.alerts.openCameraFailed', 'Impossible d\'ouvrir la camera.'),
         );
         return;
       }
@@ -1064,7 +1064,7 @@ function SuperAdminEntryForm({ navigation, route }) {
 
         {selectedItems.length === 0 ? (
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-            {t('superAdminContentManager.form.noMediaSelected', 'Aucun media selectionne.')}
+            {t('superAdminContentManager.form.noMediaSelected', 'Aucun media sélectionné.')}
           </Text>
         ) : (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
@@ -1275,8 +1275,8 @@ function SuperAdminEntryForm({ navigation, route }) {
         <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
             {isEditMode
-              ? t('superAdminContentManager.form.titleEdit', 'Modifier une entree')
-              : t('superAdminContentManager.form.titleCreate', 'Creer une entree')}
+              ? t('superAdminContentManager.form.titleEdit', 'Modifier une entr?e')
+              : t('superAdminContentManager.form.titleCreate', 'Créer une entr?e')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
             {uidDisplayName}
@@ -1376,7 +1376,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           </Text>
           <TextInput
             onChangeText={setReason}
-            placeholder={t('superAdminContentManager.form.reasonPlaceholder', 'Ajouter un contexte d audit')}
+            placeholder={t('superAdminContentManager.form.reasonPlaceholder', 'Ajouter un contexte d\'audit')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ApplicationStyle.backgroundColor.neutral700,

@@ -49,8 +49,8 @@ function TeamWizardCategory({ navigation }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={5}
-      subtitle={t('teamWizard.steps.category.subtitle', 'Selectionne la categorie de ton equipe.')}
-      title={t('teamWizard.steps.category.title', 'Categorie')}
+      subtitle={t('teamWizard.steps.category.subtitle', 'Sélectionné la catégorie de ton équipe.')}
+      title={t('teamWizard.steps.category.title', 'Catégorie')}
     >
       <View>
         <AutocompleteSelect

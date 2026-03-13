@@ -202,8 +202,8 @@ function SuperAdminContentExplorer({ navigation }) {
           !isLoading ? (
             <View style={{ width: '100%' }}>
               <SuperAdminEmptyState
-                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou verifiez les permissions Super Admin.')}
-                title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouve')}
+                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou v?rifiez les permissions Super Admin.')}
+                title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouv?')}
               />
             </View>
           ) : null

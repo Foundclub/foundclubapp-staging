@@ -196,7 +196,7 @@ function FacilitySelector({
             const cardBorder = isActive ? Colors.primary500 : 'rgba(255,255,255,0.34)';
             return (
               <TouchableOpacity
-                accessibilityHint={t('eventWizard.steps.location.modeButtonHint', 'Selectionne ce mode de lieu')}
+                accessibilityHint={t('eventWizard.steps.location.modeButtonHint', 'Sélectionné ce mode de lieu')}
                 accessibilityLabel={`${modeOption.title}. ${modeOption.description}`}
                 accessibilityRole="button"
                 activeOpacity={0.9}
@@ -374,7 +374,7 @@ function FacilitySelector({
                             </View>
                             <View style={[selectedBadgeStyle, { marginLeft: 8 }]}>
                               <Text style={[Fonts.p4Bold, { color: planningColor }]}>
-                                {t('common.selected', 'Selectionnee')}
+                                {t('common.selected', 'Sélectionnée')}
                               </Text>
                             </View>
                           </View>

@@ -4,6 +4,7 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, Platform, Text, ToastAndroid, TouchableOpacity, View,
 } from 'react-native';
@@ -19,6 +20,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
+import { normalizeNotificationType, NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { useNotificationController } from '@/hooks/useNotificationController';
 
@@ -59,7 +61,7 @@ const getRelativeTime = (/** @type {string | Date} */ dateStr) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "A l'instant";
+  if (diffMins < 1) return "À l'instant";
   if (diffMins < 60) return `Il y a ${diffMins} min`;
   if (diffHours < 24) return `Il y a ${diffHours}h`;
   if (diffDays < 7) return `Il y a ${diffDays}j`;
@@ -78,6 +80,7 @@ function NotificationList() {
   } = useTheme();
   const navigation = useNavigation();
   const nav = /** @type {any} */ (navigation);
+  const { t } = useTranslation();
   const {
     deleteNotification,
     hasNextPage,
@@ -137,6 +140,14 @@ function NotificationList() {
     console.warn(`[NotificationList] ${message}`);
   };
 
+  const isDeclinedParticipationNotification = useCallback((/** @type {NotificationItem} */ notification) => {
+    const normalizedType = normalizeNotificationType(
+      notification?.type || notification?.data?.type || notification?.data?.notificationKind || '',
+    );
+    const status = String(notification?.data?.status || '').toLowerCase();
+    return normalizedType === NOTIFICATION_TYPES.PARTICIPATION_REQUEST && status === 'declined';
+  }, []);
+
   const handlePressNotification = useCallback(async (/** @type {NotificationItem} */ notification) => {
     try {
       await markAsRead(String(notification.documentId || notification.id || ''));
@@ -146,7 +157,11 @@ function NotificationList() {
 
     const payload = {
       ...(notification.data || {}),
+      createdAt: notification.createdAt,
+      notificationBody: notification.body,
+      notificationId: notification.documentId || notification.id,
       notificationKind: notification?.data?.type,
+      notificationTitle: notification.title,
       type: notification.type,
     };
     const destination = resolveNotificationDestination(payload);
@@ -236,6 +251,7 @@ function NotificationList() {
 
     const notification = item.data;
     const icon = getNotificationIcon(notification.type);
+    const isDeclinedParticipation = isDeclinedParticipationNotification(notification);
 
     return (
       <Animated.View entering={FadeInDown.delay(index * 30).duration(200)}>
@@ -298,6 +314,19 @@ function NotificationList() {
               >
                 {notification.body}
               </Text>
+              {isDeclinedParticipation ? (
+                <Text
+                  style={[
+                    Fonts.p3Bold,
+                    {
+                      color: Colors.error500 || '#EF4444',
+                      marginTop: 8,
+                    },
+                  ]}
+                >
+                  {t('notifications.labels.participationDeclined')}
+                </Text>
+              ) : null}
             </View>
 
             {!notification.read ? (
@@ -317,7 +346,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, handlePressNotification, renderRightActions, renderLeftActions]);
+  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, renderRightActions, renderLeftActions, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -380,7 +409,7 @@ function NotificationList() {
                           color: Colors.neutral00, marginTop: 8, opacity: 0.7, textAlign: 'center',
                         }]}
                         >
-                          Les nouvelles notifications apparaitront ici
+                          Les nouvelles notifications appara?tront ici
                         </Text>
                       </View>
                     ) : null

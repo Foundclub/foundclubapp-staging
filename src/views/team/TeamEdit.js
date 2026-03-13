@@ -110,7 +110,7 @@ function TeamEdit({ navigation, route }) {
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('teamEdit.actions.deleteError', 'Impossible de supprimer l\'equipe.'),
+        t('teamEdit.actions.deleteError', 'Impossible de supprimer l\'équipe.'),
       );
     },
     onSuccess: () => {
@@ -347,13 +347,13 @@ function TeamEdit({ navigation, route }) {
   const handleDeleteTeam = useCallback(() => {
     if (!teamId || deleteTeamMutation.isPending) return;
 
-    const teamDisplayName = String(teamData?.name || '').trim() || t('teamDetails.title', 'Equipe');
+    const teamDisplayName = String(teamData?.name || '').trim() || t('teamDetails.title', 'Équipe');
     Alert.alert(
-      t('teamEdit.actions.deleteTitle', 'Supprimer l\'equipe'),
+      t('teamEdit.actions.deleteTitle', 'Supprimer l\'équipe'),
       t(
         'teamEdit.actions.deleteConfirmWithName',
         {
-          defaultValue: `Voulez-vous vraiment supprimer l'equipe "${teamDisplayName}" ? Cette action est irreversible.`,
+          defaultValue: `Voulez-vous vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irr?versible.`,
           teamName: teamDisplayName,
         },
       ),
@@ -564,7 +564,7 @@ function TeamEdit({ navigation, route }) {
                 },
               }) => (
                 <AutocompleteSelect
-                  actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
+                  actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraîneur')}
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   isMulti
                   label={t('teamEdit.fields.trainers.label')}
@@ -595,7 +595,7 @@ function TeamEdit({ navigation, route }) {
               disabled={teamMutation.isPending}
               isLoading={deleteTeamMutation.isPending}
               onPress={handleDeleteTeam}
-              title={t('teamEdit.actions.deleteTeam', 'Supprimer l\'equipe')}
+              title={t('teamEdit.actions.deleteTeam', 'Supprimer l\'équipe')}
               variant="Secondary"
             />
           ) : null}

@@ -40,20 +40,24 @@ const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
 
 const getBackgroundImage = (typeName) => {
-  const normalizedType = typeName?.toLowerCase() || '';
+  const normalizedType = (typeName?.toLowerCase() || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
   if (normalizedType.includes('match')) return BG_MATCH;
-  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return BG_TRAINING;
-  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return BG_DETECTION;
-  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return BG_RESERVATION;
+  if (normalizedType.includes('entrainement')) return BG_TRAINING;
+  if (normalizedType.includes('detection')) return BG_DETECTION;
+  if (normalizedType.includes('reservation')) return BG_RESERVATION;
   return BG_OTHER;
 };
 
 const getHeaderTitle = (typeName) => {
-  const normalizedType = typeName?.toLowerCase() || '';
+  const normalizedType = (typeName?.toLowerCase() || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
   if (normalizedType.includes('match')) return 'MATCH';
-  if (normalizedType.includes('entrainement') || normalizedType.includes('entraînement')) return 'ENTRAÎNEMENT';
-  if (normalizedType.includes('detection') || normalizedType.includes('détection')) return 'DÉTECTION';
-  if (normalizedType.includes('réservation') || normalizedType.includes('reservation')) return 'RÉSERVATION';
+  if (normalizedType.includes('entrainement')) return 'ENTRAINEMENT';
+  if (normalizedType.includes('detection')) return 'DETECTION';
+  if (normalizedType.includes('reservation')) return 'RESERVATION';
   return typeName?.toUpperCase() || 'ÉVÈNEMENT';
 };
 
@@ -88,11 +92,13 @@ const formatEventDateLabel = (value) => {
  * @param props.onRefuse
  * @param props.onValidate
  * @param props.showClubHeader
+ * @param {'default' | 'share'} [props.mode]
  * @param {boolean} [props.useFacilityAccentColor]
  */
 function EventCardNew({
   actionLabel,
   item,
+  mode = 'default',
   onDecline,
   onJoin,
   onLogin,
@@ -175,6 +181,7 @@ function EventCardNew({
 
   const typeName = item?.type?.name || '';
   const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
+  const isShareMode = mode === 'share';
   const backgroundImage = getBackgroundImage(typeName);
   const headerTitle = getHeaderTitle(typeName);
 
@@ -253,6 +260,7 @@ function EventCardNew({
                   imageStyle={{ borderRadius: 20 }}
                   imageUrl={clubLogo}
                   size={40}
+                  variant="logo"
                   style={{ borderRadius: 20 }}
                 />
               ) : (
@@ -269,7 +277,7 @@ function EventCardNew({
               {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
               {invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={styles.invitedTeamsInline}>
-                  {`Equipes invitees: ${invitedTeamNames.join(', ')}`}
+                  {`Équipes invitees: ${invitedTeamNames.join(', ')}`}
                 </Text>
               ) : null}
             </View>
@@ -428,7 +436,8 @@ function EventCardNew({
         </View>
 
         {/* CTA - Interactive (Captures touches) */}
-        <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
+        {!isShareMode ? (
+          <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
           {onValidate && onRefuse ? (
             <View style={{
               elevation: 999, flexDirection: 'row', gap: 10, zIndex: 999,
@@ -493,7 +502,8 @@ function EventCardNew({
               onParticipate={() => onParticipate?.(item)}
             />
           )}
-        </View>
+          </View>
+        ) : null}
 
       </View>
     </Animated.View>

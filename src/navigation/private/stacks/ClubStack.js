@@ -77,7 +77,7 @@ function ClubStack() {
         name={RouteNames.AssignCoachTeams}
         options={{
           ...commonOptions,
-          headerTitle: 'Assigner a une equipe',
+          headerTitle: 'Assigner a une équipe',
         }}
       />
       <Stack.Screen

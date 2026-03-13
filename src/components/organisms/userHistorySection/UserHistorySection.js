@@ -103,7 +103,7 @@ function UserHistorySection({
 
     Alert.alert(
       t('common.actions.delete', 'Supprimer'),
-      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette experience ?'),
+      t('profile.history.deleteConfirmation', 'Voulez-vous vraiment supprimer cette expérience ?'),
       [
         {
           style: 'cancel',
@@ -210,7 +210,7 @@ function UserHistorySection({
             {t('profile.history.title', 'Historique sportif')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('profile.history.count', '{{count}} experience(s)', { count: sortedHistories.length })}
+            {t('profile.history.count', '{{count}} expérience(s)', { count: sortedHistories.length })}
           </Text>
         </View>
 
@@ -293,7 +293,7 @@ function UserHistorySection({
               <Text style={[Fonts.p1Bold, Fonts.primary500]}>
                 +
                 {' '}
-                {t('profile.history.add', 'Ajouter une experience')}
+                {t('profile.history.add', 'Ajouter une expérience')}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -355,7 +355,7 @@ function UserHistorySection({
                     }}
                   >
                     <Text style={[Fonts.p3, Fonts.neutral100]}>
-                      {t('userDetails.fields.category', 'Categorie')}
+                      {t('userDetails.fields.category', 'Catégorie')}
                       {' '}
                       :
                       {' '}

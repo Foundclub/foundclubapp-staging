@@ -49,7 +49,7 @@ function TeamWizardLevel({ navigation }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={6}
-      subtitle={t('teamWizard.steps.level.subtitle', 'Selectionne le niveau sportif de l equipe.')}
+      subtitle={t('teamWizard.steps.level.subtitle', 'Sélectionné le niveau sportif de l équipe.')}
       title={t('teamWizard.steps.level.title', 'Niveau')}
     >
       <View>

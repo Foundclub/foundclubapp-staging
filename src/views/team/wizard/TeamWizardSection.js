@@ -49,7 +49,7 @@ function TeamWizardSection({ navigation }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={3}
-      subtitle={t('teamWizard.steps.section.subtitle', 'Selectionne la section de l equipe.')}
+      subtitle={t('teamWizard.steps.section.subtitle', 'Sélectionné la section de l équipe.')}
       title={t('teamWizard.steps.section.title', 'Section')}
     >
       <View>

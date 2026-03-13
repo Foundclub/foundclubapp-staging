@@ -589,13 +589,13 @@ export const unarchiveChat = async (chatId) => {
 };
 
 /**
- * Update a chat message
+ * Edit a chat message with a strict server-side whitelist.
  * @param {string} messageId - The message id
- * @param {object} data - The data to update
+ * @param {{ message?: string; attachments?: Array<{ id?: number; documentId?: string }> }} data
  * @returns {Promise<ChatMessage>} The updated message
  */
-export const updateMessage = async (messageId, data) => {
-  const response = await client.put(`/chat-messages/${messageId}`, {
+export const editMessage = async (messageId, data) => {
+  const response = await client.patch(`/chat-messages/${messageId}/edit`, {
     data,
   });
   return response.data.data;

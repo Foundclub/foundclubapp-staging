@@ -53,11 +53,11 @@ const getSourceErrorLabel = (source, t) => {
     case 'club':
       return t('requestsHub.types.club', 'Club');
     case 'event':
-      return t('requestsHub.types.event', 'Evenement');
+      return t('requestsHub.types.event', 'Événement');
     case 'featured':
-      return t('requestsHub.types.featured', 'A la une');
+      return t('requestsHub.types.featured', 'À la une');
     case 'team':
-      return t('requestsHub.types.team', 'Equipe');
+      return t('requestsHub.types.team', 'Équipe');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }
@@ -143,10 +143,10 @@ function RequestsHub({ navigation, route }) {
     const targetClubId = item?.meta?.clubId || clubId;
 
     Alert.alert(
-      t('requestsHub.clubAssignedTitle', 'Entraineur ajoute'),
+      t('requestsHub.clubAssignedTitle', 'Entraîneur ajoute'),
       t(
         'requestsHub.clubAssignedMessage',
-        "{{name}} a ete ajoute au club. Voulez-vous l'assigner a une equipe maintenant ?",
+        "{{name}} a été ajoute au club. Voulez-vous l'assigner a une équipe maintenant ?",
       ).replace('{{name}}', trainerName),
       [
         { style: 'cancel', text: t('common.actions.askLater', 'Plus tard') },
@@ -180,7 +180,7 @@ function RequestsHub({ navigation, route }) {
     if (action === 'reject' && item?.type === 'event' && actionPosition === 'secondary') {
       Alert.alert(
         t('requestsHub.rejectEventTitle', 'Refuser la demande ?'),
-        t('requestsHub.rejectEventMessage', "L'evenement sera annule."),
+        t('requestsHub.rejectEventMessage', "L'événement sera annulé."),
         [
           { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
           {
@@ -271,10 +271,10 @@ function RequestsHub({ navigation, route }) {
 
   const filterChips = useMemo(() => ([
     { key: 'all', label: t('requestsHub.filters.all', 'Toutes') },
-    { key: 'team', label: t('requestsHub.filters.team', 'Equipe') },
+    { key: 'team', label: t('requestsHub.filters.team', 'Équipe') },
     { key: 'club', label: t('requestsHub.filters.club', 'Club') },
-    { key: 'event', label: t('requestsHub.filters.event', 'Evenement') },
-    { key: 'featured', label: t('requestsHub.filters.featured', 'A la une') },
+    { key: 'event', label: t('requestsHub.filters.event', 'Événement') },
+    { key: 'featured', label: t('requestsHub.filters.featured', 'À la une') },
   ]).filter((chip) => availableFilters.includes(chip.key)), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];

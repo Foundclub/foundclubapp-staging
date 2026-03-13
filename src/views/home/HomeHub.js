@@ -567,7 +567,7 @@ function HomeHubContent({ auth, navigation, route }) {
         if (!clubId) {
           Alert.alert(
             t('homeHub.alerts.noClub.title', 'Club introuvable'),
-            t('homeHub.alerts.noClub.description', 'Votre compte doit etre rattache a un club pour gerer ces demandes.'),
+            t('homeHub.alerts.noClub.description', 'Votre compte doit être rattache a un club pour gérer ces demandes.'),
           );
           return;
         }
@@ -676,8 +676,8 @@ function HomeHubContent({ auth, navigation, route }) {
       case TutorialIds.TEAM_MEMBERSHIP_REQUESTS:
         if (!trainedTeamIds.length) {
           Alert.alert(
-            t('homeHub.alerts.noTrainedTeams.title', 'Aucune equipe disponible'),
-            t('homeHub.alerts.noTrainedTeams.description', 'Vous devez etre entraineur d au moins une equipe pour gerer les demandes d adhesion.'),
+            t('homeHub.alerts.noTrainedTeams.title', 'Aucune équipe disponible'),
+            t('homeHub.alerts.noTrainedTeams.description', 'Vous devez être entraîneur d\'au moins une équipe pour gérer les demandes d\'adhésion.'),
           );
           return;
         }
@@ -756,7 +756,7 @@ function HomeHubContent({ auth, navigation, route }) {
     if (!hasRequestsContext) {
       Alert.alert(
         t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
-        t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gerer les demandes a la une.'),
+        t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
       );
       return;
     }
@@ -783,7 +783,7 @@ function HomeHubContent({ auth, navigation, route }) {
 
     Alert.alert(
       t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
-      t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gerer les demandes a la une.'),
+      t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
     );
   }, [clubId, cmId, navigation, t]);
 
@@ -836,28 +836,28 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const handleLogout = useCallback(() => {
     Alert.alert(
-      t('homeHub.account.logoutTitle', 'Deconnexion'),
+      t('homeHub.account.logoutTitle', 'Déconnexion'),
       t('homeHub.account.logoutDescription', 'Voulez-vous vous deconnecter de votre compte ?'),
       [
         { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
         {
           onPress: () => logoutMutation.mutate(fcmToken || ''),
           style: 'destructive',
-          text: t('profile.actions.logout', 'Deconnexion'),
+          text: t('profile.actions.logout', 'Déconnexion'),
         },
       ],
     );
   }, [fcmToken, logoutMutation, t]);
 
   const roleLabel = useMemo(() => {
-    if (isCoach) return t('homeHub.roles.coach', 'Entraineur');
+    if (isCoach) return t('homeHub.roles.coach', 'Entraîneur');
     if (isPresident) return t('homeHub.roles.president', 'Dirigeant');
     return t('homeHub.roles.player', 'Joueur');
   }, [isCoach, isPresident, t]);
 
   const tutorialOptions = useMemo(() => {
     const options = [
-      { id: TutorialIds.SEARCH_EVENTS, label: t('homeHub.cards.search.events.title', 'Evenement') },
+      { id: TutorialIds.SEARCH_EVENTS, label: t('homeHub.cards.search.events.title', 'Événement') },
       { id: TutorialIds.SEARCH_CLUBS, label: t('homeHub.cards.search.clubs.title', 'Club') },
       { id: TutorialIds.SEARCH_RESERVATIONS, label: t('homeHub.cards.search.reservations.title', 'Reservations') },
       { id: TutorialIds.SEARCH_RECRUITMENT, label: t('homeHub.cards.search.ads.title', 'Annonces') },
@@ -865,15 +865,15 @@ function HomeHubContent({ auth, navigation, route }) {
       { id: TutorialIds.PROFILE_EDIT, label: t('homeHub.cards.profile.edit.title', 'Modifier mon profil') },
       { id: TutorialIds.HISTORY_WIZARD, label: t('homeHub.cards.profile.history.title', 'Historique sportif') },
       { id: TutorialIds.PLANNING, label: t('homeHub.cards.quick.planning.title', 'Mon planning') },
-      { id: TutorialIds.MY_TEAMS, label: t('homeHub.cards.quick.teams.title', 'Mes equipes') },
+      { id: TutorialIds.MY_TEAMS, label: t('homeHub.cards.quick.teams.title', 'Mes équipes') },
       { id: TutorialIds.MESSAGING, label: t('homeHub.cards.quick.chat.title', 'Messagerie') },
       { id: TutorialIds.ACCOUNT_SWITCHER_MODAL, label: t('homeHub.cards.account.switch.title', 'Changer de compte') },
-      { id: TutorialIds.LOGOUT_CONFIRMATION, label: t('homeHub.cards.account.logout.title', 'Deconnexion') },
+      { id: TutorialIds.LOGOUT_CONFIRMATION, label: t('homeHub.cards.account.logout.title', 'Déconnexion') },
     ];
 
     if (isCoach || isPresident) {
       options.push(
-        { id: TutorialIds.EVENT_WIZARD_TYPE, label: t('homeHub.cards.manage.addEvent.title', 'Ajouter un evenement') },
+        { id: TutorialIds.EVENT_WIZARD_TYPE, label: t('homeHub.cards.manage.addEvent.title', 'Ajouter un événement') },
         { id: TutorialIds.REQUESTS_DASHBOARD, label: t('homeHub.cards.manage.requests.title', 'Demandes') },
       );
     }
@@ -902,10 +902,10 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           key: 'manage-club',
           onPress: handleOpenManageClub,
-          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accedez a votre espace club et gerer votre organisation.'),
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accédez à votre espace club et gérez votre organisation.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.manageClub.title', 'Gerer mon club'),
-          tutorial: makeTutorial('manageClub', 2, 'Gerer mon club', 'Accedez a votre espace club pour piloter votre organisation.'),
+          title: t('homeHub.cards.manage.manageClub.title', 'Gérer mon club'),
+          tutorial: makeTutorial('manageClub', 2, 'Gérer mon club', 'Accédez à votre espace club pour piloter votre organisation.'),
         },
         {
           accentColor: Colors.primary500,
@@ -918,7 +918,7 @@ function HomeHubContent({ auth, navigation, route }) {
             'manageRequests',
             3,
             'Demandes',
-            'Regroupez et traitez toutes les demandes depuis un seul ecran.',
+            'Regroupez et traitez toutes les demandes depuis un seul écran.',
           ),
         },
         {
@@ -932,8 +932,8 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageAddEvent',
             4,
-            'Ajouter un evenement',
-            'Creez un entrainement, match ou detection pour vos equipes.',
+            'Ajouter un événement',
+            'Créez un entraînement, match ou détection pour vos équipes.',
           ),
         },
         {
@@ -941,14 +941,14 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil precis.'),
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil précis.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
             'Ajouter une annonce',
-            'Publiez une annonce de recrutement pour cibler des profils precis.',
+            'Publiez une annonce de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -967,10 +967,10 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           key: 'manage-club',
           onPress: handleOpenManageClub,
-          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accedez a votre espace club et gerer votre organisation.'),
+          subtitle: t('homeHub.cards.manage.manageClub.subtitle', 'Accédez à votre espace club et gérez votre organisation.'),
           subtitleLines: 2,
-          title: t('homeHub.cards.manage.manageClub.title', 'Gerer mon club'),
-          tutorial: makeTutorial('manageClub', 2, 'Gerer mon club', 'Accedez a votre espace club pour piloter votre organisation.'),
+          title: t('homeHub.cards.manage.manageClub.title', 'Gérer mon club'),
+          tutorial: makeTutorial('manageClub', 2, 'Gérer mon club', 'Accédez à votre espace club pour piloter votre organisation.'),
         },
         {
           accentColor: Colors.primary500,
@@ -983,7 +983,7 @@ function HomeHubContent({ auth, navigation, route }) {
             'manageRequests',
             3,
             'Demandes',
-            'Regroupez et traitez toutes les demandes depuis un seul ecran.',
+            'Regroupez et traitez toutes les demandes depuis un seul écran.',
           ),
         },
         {
@@ -994,21 +994,21 @@ function HomeHubContent({ auth, navigation, route }) {
           subtitle: t('homeHub.cards.manage.addEvent.subtitle'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addEvent.title'),
-          tutorial: makeTutorial('manageAddEvent', 4, 'Ajouter un evenement', 'Creez un entrainement, match ou detection pour vos equipes.'),
+          tutorial: makeTutorial('manageAddEvent', 4, 'Ajouter un événement', 'Créez un entraînement, match ou détection pour vos équipes.'),
         },
         {
           accentColor: Colors.primary500,
           icon: 'running',
           key: 'manage-add-ad',
           onPress: handleAddRecruitmentAd,
-          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil precis.'),
+          subtitle: t('homeHub.cards.manage.addAd.subtitle', 'Publiez une annonce pour rechercher un profil précis.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.addAd.title', 'Ajouter une annonce'),
           tutorial: makeTutorial(
             'manageAddAd',
             5,
             'Ajouter une annonce',
-            'Publiez une annonce de recrutement pour cibler des profils precis.',
+            'Publiez une annonce de recrutement pour cibler des profils précis.',
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1043,7 +1043,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: () => navigation.navigate(RouteNames.SearchEvents),
       subtitle: t('homeHub.cards.search.events.subtitle'),
       title: t('homeHub.cards.search.events.title'),
-      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un evenement', 'Trouvez des evenements sportifs en utilisant les filtres de recherche.'),
+      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouvez des événements sportifs en utilisant les filtres de recherche.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1061,7 +1061,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: () => navigation.navigate(RouteNames.SearchReservations),
       subtitle: t('homeHub.cards.search.reservations.subtitle'),
       title: t('homeHub.cards.search.reservations.title'),
-      tutorial: makeTutorial('searchReservations', 12, 'Rechercher une reservation', 'Accedez aux reservations et filtrez selon votre activite.'),
+      tutorial: makeTutorial('searchReservations', 12, 'Rechercher une réservation', 'Accédez aux réservations et filtrez selon votre activité.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1147,7 +1147,7 @@ function HomeHubContent({ auth, navigation, route }) {
       tutorial: makeTutorial(
         'profileAlerts',
         33,
-        'Gerer mes alertes',
+        'Gérer mes alertes',
         'Configurez des alertes personnalisees selon vos recherches.',
         {
           nextAction: 'scrollDown',
@@ -1177,7 +1177,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: handleOpenPlanning,
       subtitle: t('homeHub.cards.quick.planning.subtitle'),
       title: t('homeHub.cards.quick.planning.title'),
-      tutorial: makeTutorial('quickPlanning', 40, 'Mon planning', 'Accedez rapidement a votre planning personnel.'),
+      tutorial: makeTutorial('quickPlanning', 40, 'Mon planning', 'Accédez rapidement à votre planning personnel.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1186,7 +1186,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: handleOpenMyTeams,
       subtitle: t('homeHub.cards.quick.teams.subtitle'),
       title: t('homeHub.cards.quick.teams.title'),
-      tutorial: makeTutorial('quickTeams', 41, 'Mes equipes', 'Retrouvez toutes vos equipes et leurs pages.'),
+      tutorial: makeTutorial('quickTeams', 41, 'Mes équipes', 'Retrouvez toutes vos équipes et leurs pages.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1237,7 +1237,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: handleLogout,
       subtitle: t('homeHub.cards.account.logout.subtitle'),
       title: t('homeHub.cards.account.logout.title'),
-      tutorial: makeTutorial('accountLogout', 51, 'Deconnexion', 'Deconnectez-vous proprement de l appareil actuel.'),
+      tutorial: makeTutorial('accountLogout', 51, 'Déconnexion', 'Déconnectez-vous proprement de l\'appareil actuel.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1278,7 +1278,7 @@ function HomeHubContent({ auth, navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <OnboardingWrapper
-          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un acces rapide a toutes les fonctionnalites principales.')}
+          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un accès rapide a toutes les fonctionnalites principales.')}
           id="homehub-header"
           nextAction={!hasManageSection ? 'scrollDown' : undefined}
           nextLabel={!hasManageSection ? scrollDownLabel : undefined}
@@ -1332,7 +1332,7 @@ function HomeHubContent({ auth, navigation, route }) {
           <BottomModal close={closeFeatureTutorialPicker} isVisible={isFeatureTutorialPickerVisible} snapPoints={['75%']}>
             <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('homeHubTutorial.featurePicker.title', 'Choisir un tutoriel')}</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.featurePicker.subtitle', 'Selectionnez une fonctionnalite a decouvrir.')}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.featurePicker.subtitle', 'Sélectionnez une fonctionnalite a decouvrir.')}</Text>
               {tutorialOptions.map((option) => (
                 <TouchableOpacity
                   key={option.id}
@@ -1404,7 +1404,7 @@ function HomeHubContent({ auth, navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t(
                 'homeHubTutorial.entry.description',
-                'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l application par vous meme.',
+                'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l\'application par vous même.',
               )}
             </Text>
             <View style={[Spaces.gap[8], Spaces.marginTop[4]]}>

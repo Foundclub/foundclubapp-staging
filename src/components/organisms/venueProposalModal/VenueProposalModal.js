@@ -196,14 +196,14 @@ function VenueProposalModal({
     const startUtcDate = toParisUtcDateFromLocalSelection(finalStartDate);
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
-      Alert.alert('Erreur', 'Impossible de convertir le creneau selectionne.');
+      Alert.alert('Erreur', 'Impossible de convertir le créneau sélectionné.');
       return;
     }
 
     if (startUtcDate <= new Date()) {
       Alert.alert(
-        'Creneau passe',
-        'Ce creneau est deja passe (heure de Paris). Choisis une date ou une heure future.',
+        'Créneau passe',
+        'Ce créneau est déjà passe (heure de Paris). Choisis une date ou une heure future.',
       );
       return;
     }
@@ -269,7 +269,7 @@ function VenueProposalModal({
             Ou jouer ?
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16, textAlign: 'center' }]}>
-            Propose un terrain et un creneau a ton adversaire.
+            Propose un terrain et un créneau a ton adversaire.
           </Text>
         </View>
       )}
@@ -292,7 +292,7 @@ function VenueProposalModal({
       </View>
 
       <View>
-        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>Creneau</Text>
+        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>Créneau</Text>
         <View
           style={{
             backgroundColor: 'rgba(1, 179, 244, 0.12)',
@@ -305,7 +305,7 @@ function VenueProposalModal({
           }}
         >
           <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            Creneau commun selectionne automatiquement
+            Créneau commun sélectionné automatiquement
           </Text>
         </View>
 
@@ -367,7 +367,7 @@ function VenueProposalModal({
             <DateTimeSelector
               buttonStyle={glassPickerStyle}
               display="inline"
-              label="Debut"
+              label="D?but"
               mode="time"
               onChange={setStartTime}
               onOpen={() => handleSelectorOpen('time')}

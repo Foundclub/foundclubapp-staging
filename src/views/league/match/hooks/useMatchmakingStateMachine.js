@@ -133,28 +133,28 @@ const buildSearchStatusLabel = ({
     : Number(searchInsights?.nextExpansionInSec || 0);
 
   const zoneLine = formatZoneLine(cityLabel || null, radiusKm);
-  const criteriaLine = `Critere prioritaire: ${divisionLabel} avec un ELO similaire.`;
+  const criteriaLine = `Crit?re prioritaire: ${divisionLabel} avec un ELO similaire.`;
 
   if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
-      return `Statut: adversaire potentiel trouve.\n${criteriaLine}\n${zoneLine}\nSuite: match auto dans ${formatSecondsCompact(nextExpansion)} si aucun meilleur profil.`;
+      return `Statut: adversaire potentiel trouv?.\n${criteriaLine}\n${zoneLine}\nSuite: match auto dans ${formatSecondsCompact(nextExpansion)} si aucun meilleur profil.`;
     }
-    return `Statut: adversaire potentiel trouve.\n${criteriaLine}\n${zoneLine}\nSuite: recherche elargie en cours.`;
+    return `Statut: adversaire potentiel trouv?.\n${criteriaLine}\n${zoneLine}\nSuite: recherche ?largie en cours.`;
   }
 
   if (tier <= 1) {
-    return `Statut: recherche precise en cours.\n${criteriaLine}\n${zoneLine}`;
+    return `Statut: recherche précise en cours.\n${criteriaLine}\n${zoneLine}`;
   }
 
   if (tier === 2) {
-    return `Statut: recherche elargie niveau 1.\nCritere actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
+    return `Statut: recherche ?largie niveau 1.\nCrit?re actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
   }
 
   if (tier === 3) {
-    return `Statut: recherche elargie niveau 2.\nCritere actuel: ${divisionLabel} +/-2.\nZone etendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
+    return `Statut: recherche ?largie niveau 2.\nCrit?re actuel: ${divisionLabel} +/-2.\nZone ?tendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
   }
 
-  return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilites restantes.\nZone etendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
+  return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilit?s restantes.\nZone ?tendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
 };
 
 /**

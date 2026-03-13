@@ -22,7 +22,7 @@ const notificationsBgLogger = createLogger('notifications-bg');
  * @param {Record<string, any>} data
  * @returns {string}
  */
-const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel evenement';
+const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel événement';
 
 /**
  * @param {any} remoteMessage
@@ -39,7 +39,7 @@ export const registerBackgroundHandler = () => {
   handlersRegistered = true;
 
   ensureNotificationActionSetup().catch((error) => {
-    notificationsBgLogger.warn('Failed to setup action categories', error);
+    notificationsBgLogger.warn('Failed to setup action catégories', error);
   });
 
   const messagingInstance = getMessaging(getApp());

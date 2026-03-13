@@ -104,6 +104,7 @@ function MultisportSectionsList({
                 imageStyle={{ borderRadius: 25 }}
                 imageUrl={logoUrl}
                 size={50}
+                variant="logo"
                 style={{ borderRadius: 25 }}
               />
             ) : (
@@ -123,7 +124,7 @@ function MultisportSectionsList({
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {teamsCount}
                   {' '}
-                  {t('multisport.labels.teams', 'equipes')}
+                  {t('multisport.labels.teams', 'équipes')}
                 </Text>
                 {typeof membersCount === 'number' ? (
                   <Text style={[Fonts.p3, Fonts.neutral200]}>

@@ -46,7 +46,7 @@ function SearchReservationsScreen({ navigation, route }) {
         }}
       >
         <OnboardingWrapper
-          description="Filtrez par activite et criteres avances pour trouver une reservation."
+          description="Filtrez par activité et crit?res avances pour trouver une reservation."
           id="search-reservations-content"
           order={3}
           spotlight={{

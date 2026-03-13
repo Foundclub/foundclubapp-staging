@@ -182,7 +182,7 @@ function ParticipantEventList({ navigation }) {
       participantEventListLogger.warn('Navigation blocked: missing event documentId');
       return;
     }
-    participantEventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
+    participantEventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
     // @ts-ignore
     navigation.navigate('EventStack', {
       params: { eventId: event.documentId },
@@ -258,7 +258,7 @@ function ParticipantEventList({ navigation }) {
         {/* Calendar Section */}
         <View>
           <OnboardingWrapper
-            description="Retrouvez vos evenements, votre calendrier et les actions de planning."
+            description="Retrouvez vos événements, votre calendrier et les actions de planning."
             id="planning-main-content"
             order={1}
             spotlight={{

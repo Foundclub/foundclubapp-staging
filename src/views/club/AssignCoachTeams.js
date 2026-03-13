@@ -23,7 +23,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetTeams } from '@/services/team/teamQueries';
 import { updateTeam } from '@/services/team/teamService';
 
-const getTeamDisplayName = (team) => String(team?.name || 'Equipe').trim() || 'Equipe';
+const getTeamDisplayName = (team) => String(team?.name || 'Équipe').trim() || 'Équipe';
 
 /**
  * @param {Team} team
@@ -106,13 +106,13 @@ function AssignCoachTeams({ navigation, route }) {
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Impossible d assigner l entraineur aux equipes selectionnees.',
+        'Impossible d\'assigner l\'entraîneur aux équipes sélectionnées.',
       );
     },
     onSuccess: () => {
       Alert.alert(
         'Assignation terminee',
-        `${trainerName || 'L entraineur'} a ete assigne aux equipes selectionnees.`,
+        `${trainerName || 'L entraîneur'} a été assigne aux équipes sélectionnées.`,
         [{
           onPress: () => navigation.goBack(),
           text: t('common.actions.ok', 'OK'),
@@ -152,14 +152,14 @@ function AssignCoachTeams({ navigation, route }) {
     if (!trainerId) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Impossible de retrouver cet entraineur. Merci de reessayer.',
+        'Impossible de retrouver cet entraîneur. Merci de reessayer.',
       );
       return;
     }
     if (!selectedTeamIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Selectionnez au moins une equipe.',
+        'Sélectionnez au moins une équipe.',
       );
       return;
     }
@@ -177,11 +177,11 @@ function AssignCoachTeams({ navigation, route }) {
       ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        Aucune equipe pour le moment.
+        Aucune équipe pour le moment.
       </Text>
       <Button
         onPress={handleCreateTeam}
-        title="Creer une equipe"
+        title="Créer une équipe"
         variant="Secondary"
       />
     </View>
@@ -225,7 +225,7 @@ function AssignCoachTeams({ navigation, route }) {
               {getTeamDisplayName(item)}
             </Text>
             <Text style={[Fonts.p3, Fonts.primary100]}>
-              {item?.activities?.[0]?.name || 'Equipe'}
+              {item?.activities?.[0]?.name || 'Équipe'}
             </Text>
           </View>
           {isAssigned ? (
@@ -240,7 +240,7 @@ function AssignCoachTeams({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p4Bold, Fonts.gold500]}>
-                Deja assigne
+                Déjà assigne
               </Text>
             </View>
           ) : (
@@ -293,9 +293,9 @@ function AssignCoachTeams({ navigation, route }) {
   ]);
 
   const selectedCountLabel = useMemo(() => {
-    if (!selectedTeamIds.length) return 'Aucune equipe selectionnee';
-    if (selectedTeamIds.length === 1) return '1 equipe selectionnee';
-    return `${selectedTeamIds.length} equipes selectionnees`;
+    if (!selectedTeamIds.length) return 'Aucune équipe sélectionnée';
+    if (selectedTeamIds.length === 1) return '1 équipe sélectionnée';
+    return `${selectedTeamIds.length} équipes sélectionnées`;
   }, [selectedTeamIds.length]);
 
   return (
@@ -323,13 +323,13 @@ function AssignCoachTeams({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              Assigner un entraineur
+              Assigner un entraîneur
             </Text>
             <Text style={[Fonts.p1Bold, Fonts.primary500, Spaces.marginTop[8]]}>
               {trainerName || 'Utilisateur'}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
-              Cochez une ou plusieurs equipes, puis validez.
+              Cochez une ou plusieurs équipes, puis validez.
             </Text>
           </View>
 
@@ -357,12 +357,12 @@ function AssignCoachTeams({ navigation, route }) {
             <Button
               isLoading={assignMutation.isPending}
               onPress={handleAssignSelected}
-              title="Assigner aux equipes selectionnees"
+              title="Assigner aux équipes sélectionnées"
               variant="Primary"
             />
             <Button
               onPress={handleCreateTeam}
-              title="Creer une equipe"
+              title="Créer une équipe"
               variant="Secondary"
             />
           </View>

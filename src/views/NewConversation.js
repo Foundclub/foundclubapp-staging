@@ -183,7 +183,7 @@ function NewConversation({ navigation, route }) {
       seenTeamKeys.add(dedupeKey);
       uniqueTeams.push({
         documentId: teamId,
-        name: teamName || t('common.team', 'Equipe'),
+        name: teamName || t('common.team', 'Équipe'),
       });
     });
 
@@ -250,7 +250,7 @@ function NewConversation({ navigation, route }) {
       // Map API roles to Display Sections
       if (userRoleName === 'Dirigeant' || userRoleName === 'President' || userRoleName === 'ClubAdmin') {
         sectionsObj.Dirigeant.push(u);
-      } else if (userRoleName === 'Entraineur' || userRoleName === 'Coach') {
+      } else if (userRoleName === 'Entraîneur' || userRoleName === 'Coach') {
         sectionsObj.Entraineur.push(u);
       } else if (userRoleName === 'Joueur' || userRoleName === 'Player') {
         sectionsObj.Joueur.push(u);

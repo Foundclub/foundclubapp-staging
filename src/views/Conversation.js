@@ -15,17 +15,20 @@ import {
   Alert,
   Image,
   ImageBackground,
+  Keyboard,
   Linking,
   Modal,
   PanResponder,
   PermissionsAndroid,
   Platform,
+  ScrollView,
   StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import {
   Bubble,
   Composer,
@@ -35,6 +38,7 @@ import {
 } from 'react-native-gifted-chat';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -47,6 +51,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import EventShareBubble from '@/components/molecules/eventShareBubble/EventShareBubble';
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
@@ -78,6 +83,7 @@ import { createMessageReport } from '@/services/messageReport/messageReportServi
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
 
+import useAudioPlayback from '@/hooks/useAudioPlayback';
 import { EVENTS } from '@/hooks/useSocket';
 
 const conversationLogger = createLogger('conversation');
@@ -101,7 +107,93 @@ const isVoiceNotesEnabled = isFlagEnabled(process.env.FC_CHAT_VOICE_NOTES, true)
 const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION, true);
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
-const isAttachmentDebugEnabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_DEBUG, true);
+const isAttachmentDebugEnabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_DEBUG, false);
+const VOICE_GESTURE_CANCEL_THRESHOLD = -64;
+const VOICE_GESTURE_LOCK_THRESHOLD = -64;
+const VOICE_WAVEFORM_MAX_BARS = 32;
+const VOICE_WAVEFORM_VISIBLE_BARS = 20;
+const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
+const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
+const VOICE_RECORDING_STATES = {
+  error: 'error',
+  idle: 'idle',
+  locked: 'locked',
+  recording: 'recording',
+  sending: 'sending',
+};
+
+const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const toVoiceWaveBarHeight = (metering, durationMs = 0, index = 0) => {
+  const parsedMetering = Number(metering);
+  if (Number.isFinite(parsedMetering)) {
+    // Already-rendered heights from previous drafts/messages.
+    if (parsedMetering >= 4 && parsedMetering <= 36) {
+      return clampNumber(Math.round(parsedMetering), 4, 20);
+    }
+    let ratio = 0;
+    // Most metering values are in dB scale (e.g. -160 to 0).
+    if (parsedMetering <= 10 && parsedMetering >= -200) {
+      ratio = (parsedMetering + 120) / 120;
+    } else if (parsedMetering >= 0 && parsedMetering <= 1.2) {
+      ratio = parsedMetering;
+    } else if (parsedMetering > 1.2 && parsedMetering <= 220) {
+      ratio = parsedMetering / 180;
+    }
+    ratio = clampNumber(ratio, 0, 1);
+    return Math.round(4 + (ratio * 16));
+  }
+
+  // Fallback animation when metering is unavailable on the platform/build.
+  const phase = ((Number(durationMs) || 0) / 180) + (index * 0.8);
+  const value = (Math.sin(phase) + 1) / 2;
+  return Math.round(5 + (value * 13));
+};
+const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
+  'contact_share',
+  'event_share',
+  'location_share',
+  'poll',
+  'proposal',
+  'voice_note',
+]);
+
+let clipboardModule;
+const getClipboardModule = () => {
+  if (clipboardModule !== undefined) return clipboardModule;
+  try {
+    // eslint-disable-next-line global-require
+    const maybeModule = require('@react-native-clipboard/clipboard');
+    clipboardModule = maybeModule?.default || maybeModule;
+    return clipboardModule;
+  } catch (_error) {
+    clipboardModule = null;
+    return null;
+  }
+};
+
+/**
+ *
+ * @param root0
+ * @param root0.color
+ */
+function MicrophoneGlyph({ color = '#ffffff' }) {
+  return (
+    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
+      <Rect height={11} rx={3.5} stroke={color} strokeWidth={1.8} width={7} x={8.5} y={3} />
+      <Path d="M6.5 11.5C6.5 15.0899 8.91015 17.5 12 17.5C15.0899 17.5 17.5 15.0899 17.5 11.5" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
+      <Path d="M12 17.5V21" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
+      <Path d="M9.5 21H14.5" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
+    </Svg>
+  );
+}
+const BYTES_PER_MB = 1024 * 1024;
+const MAX_ATTACHMENT_BYTES = {
+  audio: 20 * BYTES_PER_MB,
+  default: 25 * BYTES_PER_MB,
+  image: 15 * BYTES_PER_MB,
+  video: 80 * BYTES_PER_MB,
+};
 
 const toPublicApiOrigin = (rawApiUrl) => {
   const raw = String(rawApiUrl || '').trim();
@@ -161,9 +253,10 @@ function Conversation({ navigation, route }) {
     || '',
   ).trim();
   const { t } = useTranslationCompat();
-  const { allMyTeams, userData } = useAuth();
+  const { userData } = useAuth();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const uploadInFlightRef = useRef(false);
   const formatDateForGoogleCalendar = (/** @type {string | number | Date} */ dateInput) => {
     const date = new Date(dateInput);
     if (Number.isNaN(date.getTime())) return null;
@@ -184,16 +277,16 @@ function Conversation({ navigation, route }) {
     if (!startParam || !endParam) return;
 
     Alert.alert(
-      'Match confirme',
-      'Ajouter ce match a votre agenda ?',
+      'Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©',
+      'Ajouter ce match ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  votre agenda ?',
       [
         { style: 'cancel', text: 'Plus tard' },
         {
           onPress: async () => {
             const text = encodeURIComponent('Match FoundClub League');
-            const details = encodeURIComponent('Match confirme depuis la messagerie League');
+            const details = encodeURIComponent('Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© depuis la messagerie League');
             const location = encodeURIComponent(venue);
-            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tails=${details}&location=${location}`;
             try {
               await Linking.openURL(url);
             } catch (error) {
@@ -206,8 +299,9 @@ function Conversation({ navigation, route }) {
     );
   };
 
-  /* import deleteMessage from useMessaging hook */
   const {
+    deleteMessage,
+    editMessage,
     getConversationName,
     isSocketConnected,
     removeGroupMember,
@@ -224,7 +318,7 @@ function Conversation({ navigation, route }) {
 
   const logAttachmentDebug = useCallback((message, meta = undefined) => {
     if (!isAttachmentDebugEnabled) return;
-    conversationLogger.warn(`[attachment-debug] ${message}`, meta);
+    conversationLogger.debug(`[attachment-debug] ${message}`, meta);
   }, []);
 
   const describeAsset = useCallback((asset) => {
@@ -252,17 +346,108 @@ function Conversation({ navigation, route }) {
       : []
   ), []);
 
-  /**
-   * Handle message long press event to show actions modal
-   * @param {any} _
-   * @param {import('react-native-gifted-chat').IMessage
-   * & {documentId: string}} currentMessage - The message object
-   * @returns {void}
-   */
+  const isTransientNetworkUploadError = useCallback((error) => {
+    const rawErrorMessage = (
+      typeof error === 'string'
+        ? error
+        : String(error?.message || error || '')
+    ).toLowerCase();
+    const hasHttpResponse = typeof error === 'object'
+      && error !== null
+      && Boolean(error?.response);
+    const errorCode = typeof error === 'object' && error !== null
+      ? error?.code
+      : undefined;
+
+    return !hasHttpResponse
+      && (
+        rawErrorMessage.includes('network error')
+        || rawErrorMessage.includes('network request failed')
+        || rawErrorMessage.includes('failed to fetch')
+        || errorCode === 'ECONNABORTED'
+      );
+  }, []);
+
+  const buildAttachmentUploadErrorMessage = useCallback((error) => {
+    const responseStatus = Number(error?.response?.status || 0);
+    const rawErrorMessage = String(
+      error?.response?.data?.error?.message
+      || error?.response?.data?.message
+      || error?.message
+      || '',
+    ).toLowerCase();
+    if (responseStatus === 413 || rawErrorMessage.includes('too large') || rawErrorMessage.includes('payload too large')) {
+      return 'La piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe est trop volumineuse pour ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e.';
+    }
+    if (responseStatus === 401 || responseStatus === 403) {
+      return 'Session invalide. Reconnectez-vous puis rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.';
+    }
+    if (isTransientNetworkUploadError(error)) {
+      return 'Connexion instable. V?rifiez votre reseau puis rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.';
+    }
+    if (rawErrorMessage.includes('invalid attachment')) {
+      return 'Format de piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe invalide.';
+    }
+    return 'Impossible d\'envoyer cette piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe.';
+  }, [isTransientNetworkUploadError]);
+
+  const getAttachmentSizeLimit = useCallback((assetType) => {
+    const normalizedType = String(assetType || '').toLowerCase();
+    if (normalizedType.startsWith('image/')) return MAX_ATTACHMENT_BYTES.image;
+    if (normalizedType.startsWith('video/')) return MAX_ATTACHMENT_BYTES.video;
+    if (normalizedType.startsWith('audio/')) return MAX_ATTACHMENT_BYTES.audio;
+    return MAX_ATTACHMENT_BYTES.default;
+  }, []);
+
+  const validateAttachmentAsset = useCallback((asset) => {
+    const hasUri = Boolean(String(asset?.uri || '').trim());
+    const normalizedType = String(asset?.type || '').trim().toLowerCase();
+    const normalizedSize = Number(asset?.fileSize || asset?.size || 0) || 0;
+    if (!hasUri) {
+      return {
+        reason: 'missing_uri',
+        userMessage: 'Impossible de lire ce fichier.',
+      };
+    }
+
+    if (
+      normalizedType
+      && !(
+        normalizedType.startsWith('image/')
+        || normalizedType.startsWith('video/')
+        || normalizedType.startsWith('audio/')
+        || normalizedType.startsWith('application/')
+        || normalizedType.startsWith('text/')
+      )
+    ) {
+      return {
+        reason: 'unsupported_type',
+        userMessage: 'Type de fichier non pris en charge.',
+      };
+    }
+
+    const maxBytes = getAttachmentSizeLimit(normalizedType);
+    if (normalizedSize > 0 && normalizedSize > maxBytes) {
+      const maxMb = Math.round(maxBytes / BYTES_PER_MB);
+      return {
+        reason: 'file_too_large',
+        userMessage: `Fichier trop volumineux (max ${maxMb} Mo).`,
+      };
+    }
+
+    return null;
+  }, [getAttachmentSizeLimit]);
+
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [isMessageActionsVisible, setIsMessageActionsVisible] = useState(false);
+  const [isEditMessageModalVisible, setIsEditMessageModalVisible] = useState(false);
   const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [isGroupMutationLoading, setIsGroupMutationLoading] = useState(false);
+  const [isEditMessageSubmitting, setIsEditMessageSubmitting] = useState(false);
+  const [isEditMessageUploadingAttachment, setIsEditMessageUploadingAttachment] = useState(false);
+  const [editMessageText, setEditMessageText] = useState('');
+  const [editMessageAttachments, setEditMessageAttachments] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(
     /**
      * @type {import('react-native-gifted-chat').IMessage & {documentId: string} | undefined}
@@ -288,28 +473,18 @@ function Conversation({ navigation, route }) {
     setGroupNameDraft(String(chatData?.groupName || ''));
   }, [chatData?.groupName, isGroupChat]);
 
-  const myTeamIds = useMemo(
-    () => Array.from(
-      new Set(
-        (allMyTeams || [])
-          .map((team) => team?.documentId)
-          .filter(Boolean),
-      ),
-    ),
-    [allMyTeams],
-  );
-
   const {
     data: sharedEventsPages,
     isFetching: isLoadingSharedEvents,
   } = useGetEvents(
     {
-      myTeams: myTeamIds,
+      excludeType: 'R\u00E9servation',
+      myTeams: true,
       pageSize: 20,
       sort: 'date:asc',
     },
     {
-      enabled: isEventShareEnabled && myTeamIds.length > 0,
+      enabled: isEventShareEnabled,
     },
   );
 
@@ -513,6 +688,17 @@ function Conversation({ navigation, route }) {
   const [pendingMediaDraft, setPendingMediaDraft] = useState(
     /** @type {{ asset: { fileName?: string; type?: string; uri?: string | null } } | null} */ (null),
   );
+  const [pendingVoiceDraft, setPendingVoiceDraft] = useState(
+    /** @type {{
+     *  durationMs: number;
+     *  fileName: string;
+     *  mime: string;
+     *  size: number;
+     *  uri: string;
+     *  waveform: number[];
+     * } | null} */
+    (null),
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
@@ -525,15 +711,37 @@ function Conversation({ navigation, route }) {
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [didTryImageHttpsFallback, setDidTryImageHttpsFallback] = useState(false);
+  const handledSharedEventFromPickerRef = useRef('');
+  const sharedEventPreviewByIdRef = useRef(new Map());
+  const messageContainerRef = useRef(null);
+  const swipeableMessageRefs = useRef(new Map());
+  const pendingAttachmentActionRef = useRef(
+    /** @type {null | (() => Promise<void> | void)} */ (null),
+  );
 
-  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
-  const [isVoiceRecordingLocked, setIsVoiceRecordingLocked] = useState(false);
-  const [isSendingVoiceNote, setIsSendingVoiceNote] = useState(false);
+  const [voiceRecordingState, setVoiceRecordingState] = useState(VOICE_RECORDING_STATES.idle);
   const [voiceRecordingDurationMs, setVoiceRecordingDurationMs] = useState(0);
   const [voiceRecordingHint, setVoiceRecordingHint] = useState('');
+  const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState(/** @type {number[]} */ ([]));
   const loggedAttachmentShapeMessageIdsRef = useRef(new Set());
-  const isVoiceRecordingRef = useRef(false);
-  const isVoiceRecordingLockedRef = useRef(false);
+  const voiceRecordingStateRef = useRef(VOICE_RECORDING_STATES.idle);
+  const voiceWaveformTickRef = useRef(0);
+
+  const isVoiceRecording = voiceRecordingState === VOICE_RECORDING_STATES.recording
+    || voiceRecordingState === VOICE_RECORDING_STATES.locked
+    || voiceRecordingState === VOICE_RECORDING_STATES.sending;
+  const isVoiceRecordingLocked = voiceRecordingState === VOICE_RECORDING_STATES.locked;
+  const isSendingVoiceNote = voiceRecordingState === VOICE_RECORDING_STATES.sending;
+  const hasActiveVoiceSession = isVoiceRecording || isVoiceRecordingLocked || isSendingVoiceNote;
+  const {
+    durationMs: draftPlaybackDurationMs,
+    isPlaying: isDraftVoicePlaying,
+    lastError: draftPlaybackError,
+    positionMs: draftPlaybackPositionMs,
+    progress: draftPlaybackProgress,
+    stopPlayback: stopDraftVoicePlayback,
+    togglePlayback: toggleDraftVoicePlayback,
+  } = useAudioPlayback({ sourceUrl: pendingVoiceDraft?.uri || '' });
 
   // Event Participation Logic
   const queryClient = useQueryClient();
@@ -541,12 +749,8 @@ function Conversation({ navigation, route }) {
   const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
 
   useEffect(() => {
-    isVoiceRecordingRef.current = isVoiceRecording;
-  }, [isVoiceRecording]);
-
-  useEffect(() => {
-    isVoiceRecordingLockedRef.current = isVoiceRecordingLocked;
-  }, [isVoiceRecordingLocked]);
+    voiceRecordingStateRef.current = voiceRecordingState;
+  }, [voiceRecordingState]);
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
@@ -621,7 +825,7 @@ function Conversation({ navigation, route }) {
   }, [socket, chatId, userData?.documentId]);
 
   useEffect(() => () => {
-    if (isVoiceRecordingRef.current || isVoiceRecordingLockedRef.current) {
+    if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.idle) {
       cancelRecording().catch(() => {});
     }
   }, []);
@@ -718,7 +922,7 @@ function Conversation({ navigation, route }) {
     });
     const attemptUpload = async (attempt) => {
       try {
-        if (Platform.OS === 'android' && attempt === 1) {
+        if (Platform.OS === 'android' && attempt === 1 && !isAudio) {
           try {
             const androidFetchItems = await uploadAttachmentAssetWithFetch(asset);
             if (androidFetchItems.length > 0) {
@@ -757,23 +961,13 @@ function Conversation({ navigation, route }) {
             ? error
             : String(error?.message || error || '')
         );
-        const errorMessage = rawErrorMessage.toLowerCase();
-        const hasHttpResponse = typeof error === 'object'
-          && error !== null
-          && Boolean(error?.response);
         const errorCode = typeof error === 'object' && error !== null
           ? error?.code
           : undefined;
         const responseStatus = typeof error === 'object' && error !== null
           ? error?.response?.status
           : undefined;
-        const isTransientNetworkError = !hasHttpResponse
-          && (
-            errorMessage.includes('network error')
-            || errorMessage.includes('network request failed')
-            || errorMessage.includes('failed to fetch')
-            || errorCode === 'ECONNABORTED'
-          );
+        const isTransientNetworkError = isTransientNetworkUploadError(error);
         const shouldRetry = attempt < maxAttempts && isTransientNetworkError;
 
         logAttachmentDebug('uploadAttachmentAsset attempt failed', {
@@ -786,7 +980,24 @@ function Conversation({ navigation, route }) {
           shouldRetry,
         });
 
-        if (isTransientNetworkError) {
+        if (Platform.OS === 'android' && isAudio && attempt === 1) {
+          try {
+            const fallbackItems = await uploadAttachmentAssetWithFetch({
+              ...asset,
+              fileName: asset.fileName || `upload_${Date.now()}.m4a`,
+              type: asset.type || 'audio/mp4',
+            });
+            if (fallbackItems.length > 0) {
+              return fallbackItems;
+            }
+          } catch (fetchFallbackError) {
+            logAttachmentDebug('uploadAttachmentAsset audio fetch fallback failed', {
+              attempt,
+              chatId,
+              error: fetchFallbackError?.message || fetchFallbackError,
+            });
+          }
+        } else if (isTransientNetworkError && !isAudio) {
           try {
             const fallbackItems = await uploadAttachmentAssetWithFetch(asset);
             if (fallbackItems.length > 0) {
@@ -811,12 +1022,20 @@ function Conversation({ navigation, route }) {
     };
 
     return attemptUpload(1);
-  }, [chatId, describeAsset, describeUploadItems, isSocketConnected, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
+  }, [chatId, describeAsset, describeUploadItems, isSocketConnected, isTransientNetworkUploadError, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
 
   const uploadAndSendAttachment = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
     /** @type {{ caption?: string; replyTo?: { documentId?: string } | null }} */ options = {},
   ) => {
+    if (uploadInFlightRef.current) {
+      logAttachmentDebug('uploadAndSendAttachment skipped: upload already in progress', {
+        asset: describeAsset(asset),
+        chatId,
+      });
+      return false;
+    }
+
     if (!asset?.uri || !chatId) {
       logAttachmentDebug('uploadAndSendAttachment skipped: missing asset uri or chatId', {
         asset: describeAsset(asset),
@@ -826,6 +1045,7 @@ function Conversation({ navigation, route }) {
     }
 
     try {
+      uploadInFlightRef.current = true;
       setIsUploading(true);
       logAttachmentDebug('uploadAndSendAttachment begin', {
         asset: describeAsset(asset),
@@ -839,17 +1059,17 @@ function Conversation({ navigation, route }) {
           asset: describeAsset(asset),
           chatId,
         });
-        Alert.alert('Erreur', 'Aucune piece jointe n a pu etre envoyee.');
+        Alert.alert('Erreur', 'Aucune piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe n\'a pu ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e.');
         return false;
       }
 
       const uploadedMime = uploadedFiles?.[0]?.mime || asset.type || '';
-      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'piece-jointe';
+      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce-jointe';
       const isImageAttachment = typeof uploadedMime === 'string'
         && uploadedMime.startsWith('image/');
 
       const normalizedCaption = String(options?.caption || '').trim();
-      const fallbackText = isImageAttachment ? '' : `Piece jointe: ${uploadedName}`;
+      const fallbackText = isImageAttachment ? '' : `PiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe: ${uploadedName}`;
       const messageText = normalizedCaption || fallbackText;
 
       const optimisticMessageId = sendMessage(chatId, messageText, {
@@ -865,7 +1085,7 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        Alert.alert('Erreur', 'Connexion messagerie indisponible. Reessayez dans quelques secondes.');
+        Alert.alert('Erreur', 'Connexion messagerie indisponible. RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez dans quelques secondes.');
         return false;
       }
 
@@ -885,14 +1105,15 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Attachment upload failed', error);
-      Alert.alert('Erreur', 'Impossible d envoyer cette piece jointe.');
+      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
       return false;
     } finally {
+      uploadInFlightRef.current = false;
       setIsUploading(false);
     }
   };
 
-  const normalizePickedAsset = (
+  const normalizePickedAsset = useCallback((
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
   ) => {
     const rawType = String(selectedAsset?.type || '').trim().toLowerCase();
@@ -912,15 +1133,27 @@ function Conversation({ navigation, route }) {
 
     return {
       fileName: baseName || `media_${Date.now()}.${extension}`,
+      size: Number(selectedAsset?.fileSize || selectedAsset?.size || 0) || 0,
       type: safeType,
       uri: selectedAsset?.uri,
     };
-  };
+  }, []);
 
   const queueOrSendPickedAsset = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
   ) => {
     const normalizedAsset = normalizePickedAsset(selectedAsset);
+    const validationError = validateAttachmentAsset(normalizedAsset);
+    if (validationError) {
+      logAttachmentDebug('queueOrSendPickedAsset validation failed', {
+        asset: describeAsset(normalizedAsset),
+        chatId,
+        reason: validationError.reason,
+      });
+      Alert.alert('Erreur', validationError.userMessage);
+      return;
+    }
+
     if (!normalizedAsset?.uri) {
       logAttachmentDebug('queueOrSendPickedAsset skipped: normalized asset has no uri', {
         selectedAsset: describeAsset(selectedAsset),
@@ -988,11 +1221,11 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Media picker failed', error);
-      Alert.alert('Erreur', 'Impossible d ouvrir la galerie.');
+      Alert.alert('Erreur', 'Impossible d\'ouvrir la galerie.');
     }
   };
 
-  const ensureCameraPermission = async () => {
+  const ensureCameraPermission = useCallback(async () => {
     if (Platform.OS !== 'android') return true;
 
     try {
@@ -1009,7 +1242,7 @@ function Conversation({ navigation, route }) {
           buttonPositive: t('common.actions.ok', 'OK'),
           message: t(
             'permissions.camera.message',
-            'L application a besoin de la camera pour prendre une photo.',
+            'L\'application a besoin de la camera pour prendre une photo.',
           ),
           title: t('permissions.camera.title', 'Permission Camera'),
         },
@@ -1025,10 +1258,10 @@ function Conversation({ navigation, route }) {
       return true;
     } catch (error) {
       conversationLogger.warn('Camera permission request failed', error);
-      Alert.alert('Erreur', 'Impossible de verifier la permission camera.');
+      Alert.alert('Erreur', 'Impossible de vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rifier la permission camera.');
       return false;
     }
-  };
+  }, [t]);
 
   const handleTakePhoto = async () => {
     try {
@@ -1056,7 +1289,7 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        Alert.alert('Erreur', response.errorMessage || 'Impossible d ouvrir la camera');
+        Alert.alert('Erreur', response.errorMessage || 'Impossible d\'ouvrir la camera');
         return;
       }
 
@@ -1120,8 +1353,9 @@ function Conversation({ navigation, route }) {
         return;
       }
 
-      await uploadAndSendAttachment({
+      await queueOrSendPickedAsset({
         fileName: selectedFile.name || `file_${Date.now()}`,
+        size: Number(selectedFile?.size || selectedFile?.fileSize || 0) || 0,
         type: selectedFile.type || 'application/octet-stream',
         uri: selectedUri,
       });
@@ -1132,11 +1366,199 @@ function Conversation({ navigation, route }) {
     }
   };
 
+  const appendEditAttachmentsFromAsset = useCallback(async (selectedAsset) => {
+    const normalizedAsset = normalizePickedAsset(selectedAsset || {});
+    const validationError = validateAttachmentAsset(normalizedAsset);
+    if (validationError) {
+      Alert.alert('Erreur', validationError.userMessage);
+      return;
+    }
+    if (!normalizedAsset?.uri) {
+      Alert.alert('Erreur', 'Impossible de lire ce fichier.');
+      return;
+    }
+
+    setIsEditMessageUploadingAttachment(true);
+    try {
+      const uploadedFiles = await uploadAttachmentAsset(normalizedAsset);
+      if (!Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
+        Alert.alert('Erreur', 'Impossible d\'ajouter cette piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe.');
+        return;
+      }
+
+      setEditMessageAttachments((previousAttachments) => {
+        const nextAttachments = Array.isArray(previousAttachments) ? [...previousAttachments] : [];
+        uploadedFiles.forEach((uploadedFile) => {
+          const nextKey = String(uploadedFile?.documentId || uploadedFile?.id || '').trim();
+          if (!nextKey) return;
+          const alreadyExists = nextAttachments.some((attachment) => (
+            String(attachment?.documentId || attachment?.id || '').trim() === nextKey
+          ));
+          if (!alreadyExists) {
+            nextAttachments.push(uploadedFile);
+          }
+        });
+        return nextAttachments;
+      });
+    } catch (error) {
+      conversationLogger.warn('Edit attachment upload failed', error);
+      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
+    } finally {
+      setIsEditMessageUploadingAttachment(false);
+    }
+  }, [
+    buildAttachmentUploadErrorMessage,
+    normalizePickedAsset,
+    uploadAttachmentAsset,
+    validateAttachmentAsset,
+  ]);
+
+  const handleEditPickMedia = useCallback(async () => {
+    try {
+      const response = await launchImageLibrary({
+        includeBase64: false,
+        mediaType: 'mixed',
+        quality: 0.8,
+        selectionLimit: 1,
+      });
+
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la selection');
+        return;
+      }
+
+      const selectedAsset = response.assets?.[0];
+      if (!selectedAsset) return;
+      await appendEditAttachmentsFromAsset(selectedAsset);
+    } catch (error) {
+      conversationLogger.warn('Edit media picker failed', error);
+      Alert.alert('Erreur', 'Impossible d\'ouvrir la galerie.');
+    }
+  }, [appendEditAttachmentsFromAsset]);
+
+  const handleEditTakePhoto = useCallback(async () => {
+    try {
+      const hasCameraPermission = await ensureCameraPermission();
+      if (!hasCameraPermission) return;
+
+      const response = await launchCamera({
+        cameraType: 'back',
+        includeBase64: false,
+        mediaType: 'photo',
+        quality: 0.8,
+        saveToPhotos: false,
+      });
+
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert('Erreur', response.errorMessage || 'Impossible d\'ouvrir la camera');
+        return;
+      }
+
+      const selectedAsset = response.assets?.[0];
+      if (!selectedAsset) return;
+      await appendEditAttachmentsFromAsset(selectedAsset);
+    } catch (error) {
+      conversationLogger.warn('Edit camera failed', error);
+      Alert.alert('Erreur', 'Impossible de prendre la photo.');
+    }
+  }, [appendEditAttachmentsFromAsset, ensureCameraPermission]);
+
+  const handleEditPickFile = useCallback(async () => {
+    if (isDocumentPickerDisabled) {
+      Alert.alert('Fichier indisponible', 'Le selecteur de fichier est temporairement desactive sur cette build.');
+      return;
+    }
+
+    const documentPicker = getDocumentPickerModule();
+    if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
+      Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
+      return;
+    }
+
+    try {
+      const selectedResult = await documentPicker.pick();
+      const selectedFile = Array.isArray(selectedResult) ? selectedResult[0] : selectedResult;
+      if (!selectedFile) return;
+
+      let localCopyResult;
+      if (typeof documentPicker?.keepLocalCopy === 'function' && selectedFile?.uri) {
+        const [localCopy] = await documentPicker.keepLocalCopy({
+          destination: 'cachesDirectory',
+          files: [
+            {
+              fileName: selectedFile.name || `file_${Date.now()}`,
+              uri: selectedFile.uri,
+            },
+          ],
+        });
+        localCopyResult = localCopy;
+      }
+
+      const selectedUri = localCopyResult?.status === 'success'
+        ? localCopyResult.localUri
+        : selectedFile.uri;
+      if (!selectedUri) {
+        Alert.alert('Erreur', 'Impossible de recuperer ce fichier.');
+        return;
+      }
+
+      await appendEditAttachmentsFromAsset({
+        fileName: selectedFile.name || `file_${Date.now()}`,
+        size: Number(selectedFile?.size || selectedFile?.fileSize || 0) || 0,
+        type: selectedFile.type || 'application/octet-stream',
+        uri: selectedUri,
+      });
+    } catch (error) {
+      if (isDocumentPickerCancellation(documentPicker, error)) return;
+      conversationLogger.warn('Edit document picker failed', error);
+      Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
+    }
+  }, [appendEditAttachmentsFromAsset]);
+
+  const handleSubmitEditMessage = async () => {
+    if (!selectedMessageDocumentId || !canEditSelectedMessage) return;
+
+    const payloadAttachments = toEditAttachmentPayload(editMessageAttachments);
+    const normalizedMessage = String(editMessageText || '');
+    if (!normalizedMessage.trim() && payloadAttachments.length === 0) {
+      Alert.alert('Erreur', 'Le message ne peut pas ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre vide.');
+      return;
+    }
+
+    setIsEditMessageSubmitting(true);
+    try {
+      await editMessage({
+        chatId,
+        data: {
+          attachments: payloadAttachments,
+          message: normalizedMessage,
+        },
+        messageId: selectedMessageDocumentId,
+      });
+
+      setIsEditMessageModalVisible(false);
+      setIsMessageActionsVisible(false);
+      setSelectedMessage(undefined);
+      resetEditMessageState();
+    } catch (error) {
+      conversationLogger.warn('Edit message failed', error);
+      Alert.alert('Erreur', 'Impossible de modifier ce message.');
+    } finally {
+      setIsEditMessageSubmitting(false);
+    }
+  };
+
   const handleCreatePoll = () => {
     setIsPollModalVisible(true);
   };
 
-  const handleSubmitPoll = async (/** @type {{ question: string; options: string[]; allowMultipleVotes: boolean; isAnonymous: boolean }} */ payload) => {
+  const closePollModal = useCallback(() => {
+    setIsPollModalVisible(false);
+  }, []);
+
+  const handleSubmitPoll = useCallback(async (/** @type {{ question: string; options: string[]; allowMultipleVotes: boolean; isAnonymous: boolean }} */ payload) => {
     const question = payload?.question?.trim() || '';
     const options = Array.isArray(payload?.options) ? payload.options : [];
 
@@ -1170,7 +1592,7 @@ function Conversation({ navigation, route }) {
       sender: userData,
     });
     setIsPollModalVisible(false);
-  };
+  }, [chatId, sendMessage, userData]);
 
   const parseCoordinatesFromOption = (option) => {
     const rawValue = String(option?.value || '');
@@ -1185,7 +1607,7 @@ function Conversation({ navigation, route }) {
     return { lat, lng };
   };
 
-  const resolveEventLocationLabel = (event) => {
+  const resolveEventLocationLabel = useCallback((event) => {
     const fallback = event?.location?.label || event?.facility?.address || event?.facility?.name || '';
     if (!event?.locationDetails) return fallback;
 
@@ -1196,7 +1618,7 @@ function Conversation({ navigation, route }) {
     } catch (_error) {
       return fallback;
     }
-  };
+  }, []);
 
   const handleShareLocation = () => {
     if (!chatId || !selectedLocationOption) return;
@@ -1240,24 +1662,148 @@ function Conversation({ navigation, route }) {
     setIsContactShareModalVisible(false);
   };
 
-  const handleShareEvent = (event) => {
-    if (!chatId || !event?.documentId) return;
+  const handleShareEvent = useCallback((event, options = {}) => {
+    const { closeModal = true } = options;
+    const eventDocumentId = String(event?.documentId || event?.id || '').trim();
+    if (!chatId || !eventDocumentId) return;
+    const locationLabel = resolveEventLocationLabel(event);
+    const eventPreview = {
+      club: event?.club
+        ? {
+          addressDetails: event?.club?.addressDetails || null,
+          logo: event?.club?.logo || null,
+          name: event?.club?.name || '',
+        }
+        : null,
+      date: event?.date || null,
+      documentId: eventDocumentId,
+      endTime: event?.endTime || null,
+      facility: event?.facility
+        ? {
+          address: event?.facility?.address || null,
+          name: event?.facility?.name || '',
+        }
+        : null,
+      location: event?.location || null,
+      locationDetails: event?.locationDetails || locationLabel || '',
+      name: event?.name || 'Evenement',
+      startTime: event?.startTime || null,
+      team: event?.team
+        ? {
+          activities: Array.isArray(event?.team?.activities)
+            ? event.team.activities
+              .map((activity) => ({ name: activity?.name || '' }))
+              .filter((activity) => activity?.name)
+            : [],
+          category: event?.team?.category || null,
+          club: event?.team?.club
+            ? {
+              addressDetails: event?.team?.club?.addressDetails || null,
+              logo: event?.team?.club?.logo || null,
+              name: event?.team?.club?.name || '',
+            }
+            : null,
+          level: event?.team?.level || null,
+          name: event?.team?.name || '',
+          section: event?.team?.section || null,
+        }
+        : null,
+      type: event?.type && typeof event.type === 'object'
+        ? {
+          name: event?.type?.name || 'Evenement',
+        }
+        : {
+          name: 'Evenement',
+        },
+    };
+    sharedEventPreviewByIdRef.current.set(eventDocumentId, eventPreview);
 
     const composition = {
-      eventDate: event?.date || null,
-      eventDocumentId: event.documentId,
-      eventName: event?.name || 'Evenement',
-      locationLabel: resolveEventLocationLabel(event),
-      teamName: event?.team?.name || '',
+      eventDate: eventPreview.date,
+      eventDocumentId,
+      eventName: eventPreview.name,
+      eventPreview,
+      locationLabel,
+      teamName: eventPreview?.team?.name || '',
       type: 'event_share',
     };
 
-    sendMessage(chatId, '', {
+    sendMessage(chatId, 'Partage', {
       composition,
+      event: eventDocumentId,
       sender: userData,
     });
+    if (closeModal) {
+      setIsEventShareModalVisible(false);
+    }
+  }, [chatId, resolveEventLocationLabel, sendMessage, userData]);
+
+  const resolveMessageEventPayload = useCallback((message) => {
+    const eventPayload = message?.event;
+    if (eventPayload && typeof eventPayload === 'object') {
+      const eventDocumentId = String(eventPayload?.documentId || eventPayload?.id || '').trim();
+      if (eventDocumentId) {
+        sharedEventPreviewByIdRef.current.set(eventDocumentId, eventPayload);
+      }
+      return eventPayload;
+    }
+
+    const eventDocumentId = String(eventPayload || '').trim();
+    if (eventDocumentId) {
+      const cachedEvent = sharedEventPreviewByIdRef.current.get(eventDocumentId);
+      if (cachedEvent) return cachedEvent;
+    }
+
+    const composition = message?.composition;
+    if (composition?.type !== 'event_share') return null;
+
+    const compositionEventPreview = composition?.eventPreview;
+    if (compositionEventPreview && typeof compositionEventPreview === 'object') {
+      const previewDocumentId = String(
+        compositionEventPreview?.documentId
+        || composition?.eventDocumentId
+        || '',
+      ).trim();
+      if (previewDocumentId) {
+        sharedEventPreviewByIdRef.current.set(previewDocumentId, compositionEventPreview);
+      }
+      return compositionEventPreview;
+    }
+
+    const compositionEventDocumentId = String(composition?.eventDocumentId || '').trim();
+    if (!compositionEventDocumentId) return null;
+
+    const fallbackEvent = {
+      date: composition?.eventDate || null,
+      documentId: compositionEventDocumentId,
+      locationDetails: composition?.locationLabel || '',
+      name: composition?.eventName || 'Evenement',
+      team: composition?.teamName ? { name: composition?.teamName } : null,
+      type: { name: 'Evenement' },
+    };
+    sharedEventPreviewByIdRef.current.set(compositionEventDocumentId, fallbackEvent);
+    return fallbackEvent;
+  }, []);
+
+  const handleOpenPublicEventPicker = useCallback(() => {
+    if (!chatId) return;
     setIsEventShareModalVisible(false);
-  };
+    navigation.navigate(RouteNames.ConversationPublicEventPicker, { chatId });
+  }, [chatId, navigation]);
+
+  useEffect(() => {
+    const eventFromPicker = route?.params?.sharedEventFromPicker;
+    const eventDocumentId = String(eventFromPicker?.documentId || '').trim();
+    if (!eventDocumentId) {
+      handledSharedEventFromPickerRef.current = '';
+      return;
+    }
+    if (handledSharedEventFromPickerRef.current === eventDocumentId) return;
+    handledSharedEventFromPickerRef.current = eventDocumentId;
+
+    handleShareEvent(eventFromPicker, { closeModal: false });
+    navigation.setParams({ sharedEventFromPicker: undefined });
+  }, [handleShareEvent, navigation, route?.params?.sharedEventFromPicker]);
 
   const handleOpenGroupManagement = () => {
     if (!isGroupAdmin) return;
@@ -1269,7 +1815,7 @@ function Conversation({ navigation, route }) {
   const handleSaveGroupName = async () => {
     const nextGroupName = String(groupNameDraft || '').trim();
     if (!chatId || !nextGroupName) {
-      Alert.alert('Nom requis', 'Entrez un nom de groupe valide.');
+      Alert.alert('Nom requis', 'Entrez un nom de groupe validÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.');
       return;
     }
 
@@ -1279,10 +1825,10 @@ function Conversation({ navigation, route }) {
         chatId,
         data: { groupName: nextGroupName },
       });
-      Alert.alert('Succes', 'Nom du groupe mis a jour.');
+      Alert.alert('SuccÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨s', 'Nom du groupe mis ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour.');
     } catch (error) {
       conversationLogger.warn('Failed to update group name', error);
-      Alert.alert('Erreur', 'Impossible de mettre a jour le nom du groupe.');
+      Alert.alert('Erreur', 'Impossible de mettre ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour le nom du groupe.');
     } finally {
       setIsGroupMutationLoading(false);
     }
@@ -1330,43 +1876,77 @@ function Conversation({ navigation, route }) {
   };
 
   const resetVoiceRecordingState = useCallback(() => {
-    setIsVoiceRecording(false);
-    setIsVoiceRecordingLocked(false);
-    setIsSendingVoiceNote(false);
+    setVoiceRecordingState(VOICE_RECORDING_STATES.idle);
     setVoiceRecordingDurationMs(0);
     setVoiceRecordingHint('');
+    setVoiceRecordingWaveform([]);
+    voiceWaveformTickRef.current = 0;
   }, []);
 
   const handleStartVoiceRecording = useCallback(async () => {
+    if (pendingVoiceDraft?.uri) {
+      stopDraftVoicePlayback().catch(() => {});
+    }
+
     if (!canRecordVoiceNote || !chatId) {
       Alert.alert(
         t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
-        t('conversation.voice.unavailableDescription', 'Le module vocal n est pas disponible sur cette build.'),
+        t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
       );
       return;
     }
 
-    if (isVoiceRecordingRef.current) return;
+    if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.idle) return;
     try {
       setVoiceRecordingHint(t('conversation.voice.hint', 'Glisser gauche pour annuler, glisser haut pour verrouiller.'));
       setVoiceRecordingDurationMs(0);
+      setVoiceRecordingWaveform(
+        Array.from({ length: 14 }, (_, index) => toVoiceWaveBarHeight(null, 0, index)),
+      );
+      voiceWaveformTickRef.current = 0;
       await startRecording({
+        onMetering: (metering, durationMs) => {
+          const now = Date.now();
+          if (now - voiceWaveformTickRef.current < 80) return;
+          voiceWaveformTickRef.current = now;
+
+          setVoiceRecordingWaveform((previousWaveform) => {
+            const nextHeight = toVoiceWaveBarHeight(
+              metering,
+              durationMs,
+              previousWaveform.length,
+            );
+            const trimmedWaveform = previousWaveform.length >= VOICE_WAVEFORM_MAX_BARS
+              ? previousWaveform.slice(previousWaveform.length - VOICE_WAVEFORM_MAX_BARS + 1)
+              : previousWaveform;
+            return [...trimmedWaveform, nextHeight];
+          });
+        },
         onProgress: (durationMs) => setVoiceRecordingDurationMs(durationMs),
       });
-      setIsVoiceRecording(true);
-      setIsVoiceRecordingLocked(false);
+      setVoiceRecordingState(VOICE_RECORDING_STATES.recording);
     } catch (error) {
+      const code = String(error?.message || '');
+      if (code === 'VOICE_ALREADY_RECORDING') return;
       conversationLogger.warn('Failed to start voice recording', error);
-      Alert.alert(
-        t('conversation.voice.permissionTitle', 'Micro requis'),
-        t('conversation.voice.permissionDescription', 'Autorisez le micro pour envoyer des notes vocales.'),
-      );
+      setVoiceRecordingState(VOICE_RECORDING_STATES.error);
+      if (code === 'VOICE_MODULE_UNAVAILABLE') {
+        Alert.alert(
+          t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+          t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
+        );
+      } else {
+        Alert.alert(
+          t('conversation.voice.permissionTitle', 'Micro requis'),
+          t('conversation.voice.permissionDescription', 'Autorisez le micro pour envoyer des notes vocales.'),
+        );
+      }
       resetVoiceRecordingState();
     }
-  }, [canRecordVoiceNote, chatId, resetVoiceRecordingState, t]);
+  }, [canRecordVoiceNote, chatId, pendingVoiceDraft?.uri, resetVoiceRecordingState, stopDraftVoicePlayback, t]);
 
   const handleCancelVoiceRecording = useCallback(async () => {
-    if (!isVoiceRecordingRef.current && !isVoiceRecordingLockedRef.current) return;
+    if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.idle) return;
 
     try {
       await cancelRecording();
@@ -1376,82 +1956,106 @@ function Conversation({ navigation, route }) {
     resetVoiceRecordingState();
   }, [resetVoiceRecordingState]);
 
-  const handleStopVoiceRecordingAndSend = useCallback(async () => {
-    if (!chatId || !isVoiceRecordingRef.current) return;
+  const handleStopVoiceRecordingToDraft = useCallback(async () => {
+    if (!chatId || !isVoiceRecording) return;
 
     try {
-      setIsSendingVoiceNote(true);
+      setVoiceRecordingState(VOICE_RECORDING_STATES.sending);
       const draft = await stopRecording();
 
       if (!draft?.uri) {
         throw new Error('VOICE_EMPTY');
       }
       if ((draft?.durationMs || 0) < 500) {
-        await handleCancelVoiceRecording();
+        resetVoiceRecordingState();
         return;
       }
 
-      const uploadedFiles = await uploadAttachmentAsset({
-        fileName: `voice-note-${Date.now()}.m4a`,
-        type: draft.mime || 'audio/mp4',
-        uri: draft.uri,
-      });
-
-      if (!uploadedFiles.length) {
-        throw new Error('VOICE_UPLOAD_FAILED');
+      const normalizedDurationMs = Math.max(0, Number(draft?.durationMs) || 0);
+      let normalizedWaveform = Array.from(
+        { length: 14 },
+        (_, index) => toVoiceWaveBarHeight(null, normalizedDurationMs, index),
+      );
+      if (Array.isArray(draft?.waveform) && draft.waveform.length > 0) {
+        normalizedWaveform = draft.waveform
+          .map((bar, index) => toVoiceWaveBarHeight(bar, normalizedDurationMs, index))
+          .slice(-VOICE_WAVEFORM_MAX_BARS);
+      } else if (voiceRecordingWaveform.length > 0) {
+        normalizedWaveform = voiceRecordingWaveform.slice(-VOICE_WAVEFORM_MAX_BARS);
       }
 
-      sendMessage(chatId, '', {
-        attachments: uploadedFiles,
-        composition: {
-          durationMs: draft.durationMs,
-          mime: draft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
-          size: draft.size || uploadedFiles?.[0]?.size || 0,
-          type: 'voice_note',
-          version: 1,
-          waveform: draft.waveform || [],
-        },
-        replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
-        sender: userData,
+      setPendingVoiceDraft({
+        durationMs: normalizedDurationMs,
+        fileName: draft?.fileName || `voice-note-${Date.now()}.m4a`,
+        mime: draft?.mime || 'audio/mp4',
+        size: Math.max(0, Number(draft?.size) || 0),
+        uri: draft.uri,
+        waveform: normalizedWaveform,
       });
-      setReplyingTo(null);
+
+      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte. Ajoutez un message puis envoyez.'));
       resetVoiceRecordingState();
     } catch (error) {
-      conversationLogger.warn('Failed to send voice note', error);
+      conversationLogger.warn('Failed to finalize voice note draft', error);
+      setVoiceRecordingState(VOICE_RECORDING_STATES.error);
+      const code = String(error?.message || '');
+      let errorMessage = t(
+        'conversation.voice.sendErrorDescription',
+        'Impossible d\'envoyer la note vocale. Reessayez.',
+      );
+      if (code === 'VOICE_STOP_FAILED') {
+        errorMessage = t(
+          'conversation.voice.stopErrorDescription',
+          'Impossible de finaliser l\'enregistrement vocal. Reessayez.',
+        );
+      } else if (code === 'VOICE_FILE_EMPTY') {
+        errorMessage = t(
+          'conversation.voice.emptyErrorDescription',
+          'Aucun son exploitable n\'a ete capture. Reessayez.',
+        );
+      }
       Alert.alert(
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
-        t('conversation.voice.sendErrorDescription', 'Impossible d envoyer la note vocale. Reessayez.'),
+        errorMessage,
       );
       resetVoiceRecordingState();
     }
-  }, [chatId, handleCancelVoiceRecording, replyingTo, resetVoiceRecordingState, sendMessage, t, uploadAttachmentAsset, userData]);
+  }, [
+    chatId,
+    isVoiceRecording,
+    resetVoiceRecordingState,
+    t,
+    voiceRecordingWaveform,
+  ]);
 
   const microphonePanResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: () => isVoiceRecordingRef.current,
+    onMoveShouldSetPanResponder: () => (
+      voiceRecordingStateRef.current === VOICE_RECORDING_STATES.recording
+      || voiceRecordingStateRef.current === VOICE_RECORDING_STATES.locked
+    ),
     onPanResponderGrant: () => {
       handleStartVoiceRecording();
     },
     onPanResponderMove: (_event, gestureState) => {
-      if (!isVoiceRecordingRef.current || isVoiceRecordingLockedRef.current) return;
+      if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.recording) return;
 
-      if (gestureState.dx <= -60) {
+      if (gestureState.dx <= VOICE_GESTURE_CANCEL_THRESHOLD) {
         handleCancelVoiceRecording();
         return;
       }
 
-      if (gestureState.dy <= -60) {
-        setIsVoiceRecordingLocked(true);
-        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouille. Touchez envoyer ou annuler.'));
+      if (gestureState.dy <= VOICE_GESTURE_LOCK_THRESHOLD) {
+        setVoiceRecordingState(VOICE_RECORDING_STATES.locked);
+        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©. Touchez envoyer ou annuler.'));
       }
     },
     onPanResponderRelease: () => {
-      if (!isVoiceRecordingRef.current) return;
-      if (isVoiceRecordingLockedRef.current) return;
-      handleStopVoiceRecordingAndSend();
+      if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.locked) return;
+      if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.recording) return;
+      handleStopVoiceRecordingToDraft();
     },
     onPanResponderTerminate: () => {
-      if (!isVoiceRecordingRef.current) return;
-      if (!isVoiceRecordingLockedRef.current) {
+      if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.recording) {
         handleCancelVoiceRecording();
       }
     },
@@ -1459,7 +2063,7 @@ function Conversation({ navigation, route }) {
   }), [
     handleCancelVoiceRecording,
     handleStartVoiceRecording,
-    handleStopVoiceRecordingAndSend,
+    handleStopVoiceRecordingToDraft,
     t,
   ]);
 
@@ -1480,11 +2084,32 @@ function Conversation({ navigation, route }) {
   };
 
   const runAttachmentAction = (/** @type {() => Promise<void> | void} */ action) => {
+    pendingAttachmentActionRef.current = action;
     setIsAttachmentMenuVisible(false);
-    setTimeout(() => {
-      action();
-    }, 250);
   };
+
+  const handleAttachmentSheetDismissed = useCallback(() => {
+    const queuedAction = pendingAttachmentActionRef.current;
+    pendingAttachmentActionRef.current = null;
+    if (!queuedAction) return;
+    queuedAction();
+  }, []);
+
+  const handleOpenAttachmentMenu = useCallback(() => {
+    if (isAttachmentMenuVisible) return;
+
+    const openMenu = () => setIsAttachmentMenuVisible(true);
+    const visibleKeyboardHeight = Keyboard.metrics?.()?.height || 0;
+
+    Keyboard.dismiss();
+
+    if (visibleKeyboardHeight > 0) {
+      setTimeout(openMenu, Platform.OS === 'ios' ? 120 : 170);
+      return;
+    }
+
+    openMenu();
+  }, [isAttachmentMenuVisible]);
 
   const attachmentSheetActions = useMemo(() => {
     let contactReason = '';
@@ -1547,7 +2172,7 @@ function Conversation({ navigation, route }) {
         disabled: !isEventShareEnabled,
         icon: 'EV',
         key: 'event',
-        label: t('conversation.attachments.event', 'Evenement'),
+        label: t('conversation.attachments.event', 'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement'),
         unavailableReason: eventReason,
       },
     ];
@@ -1636,7 +2261,7 @@ function Conversation({ navigation, route }) {
         sender: userData,
       });
 
-      Alert.alert('Envoye', 'Votre proposition a ete envoyee !');
+      Alert.alert('EnvoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©', 'Votre proposition a ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e !');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
       Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
@@ -1649,7 +2274,7 @@ function Conversation({ navigation, route }) {
     if (!matchId && status === 'accepted') {
       // If matchId is missing in composition, try fallback to chat's match
       if (!chatData?.league_match) {
-        Alert.alert('Erreur', 'Impossible de retrouver le match associÃ©.');
+        Alert.alert('Erreur', 'Impossible de retrouver le match associÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.');
         return;
       }
     }
@@ -1681,7 +2306,7 @@ function Conversation({ navigation, route }) {
           String(message.documentId || message._id || message.id || ''),
           'accepted',
         );
-        Alert.alert('Match confirme', 'Le match est valide !');
+        Alert.alert('Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©', 'Le match est validÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© !');
         promptAddMatchToCalendar(message);
       } else {
         await respondToProposal(
@@ -1695,7 +2320,7 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la rÃ©ponse.');
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ponse.');
       // Rollback could go here
     }
   };
@@ -1720,7 +2345,7 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier votre Ã©quipe pour l'annulation.");
+      Alert.alert('Erreur', "Impossible d'identifier votre ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©quipe pour l'annulation.");
       return;
     }
 
@@ -2017,7 +2642,74 @@ function Conversation({ navigation, route }) {
     setPendingMediaDraft(null);
   };
 
+  const clearPendingVoiceDraft = () => {
+    stopDraftVoicePlayback().catch(() => {});
+    setPendingVoiceDraft(null);
+  };
+
+  const sendPendingVoiceDraft = async () => {
+    if (uploadInFlightRef.current) {
+      logAttachmentDebug('sendPendingVoiceDraft skipped: upload already in progress', { chatId });
+      return;
+    }
+
+    if (!pendingVoiceDraft?.uri || !chatId) return;
+
+    try {
+      uploadInFlightRef.current = true;
+      setIsUploading(true);
+      const uploadedFiles = await uploadAttachmentAsset({
+        fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.m4a`,
+        type: pendingVoiceDraft.mime || 'audio/mp4',
+        uri: pendingVoiceDraft.uri,
+      });
+
+      if (!uploadedFiles.length) {
+        throw new Error('VOICE_UPLOAD_FAILED');
+      }
+
+      const optimisticMessageId = sendMessage(chatId, String(composerText || '').trim(), {
+        attachments: uploadedFiles,
+        composition: {
+          durationMs: pendingVoiceDraft.durationMs || 0,
+          mime: pendingVoiceDraft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
+          size: pendingVoiceDraft.size || uploadedFiles?.[0]?.size || 0,
+          type: 'voice_note',
+          version: 1,
+          waveform: pendingVoiceDraft.waveform || [],
+        },
+        replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+        sender: userData,
+      });
+      if (!optimisticMessageId) {
+        throw new Error('VOICE_SOCKET_UNAVAILABLE');
+      }
+
+      clearPendingVoiceDraft();
+      setReplyingTo(null);
+      setComposerText('');
+      sendTypingStop(chatId);
+    } catch (error) {
+      conversationLogger.warn('Failed to send pending voice draft', error);
+      const detailedMessage = buildAttachmentUploadErrorMessage(error);
+      Alert.alert(
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+        detailedMessage || t('conversation.voice.sendErrorDescription', 'Impossible d\'envoyer la note vocale. RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.'),
+      );
+    } finally {
+      uploadInFlightRef.current = false;
+      setIsUploading(false);
+    }
+  };
+
   const sendPendingMediaDraft = async () => {
+    if (uploadInFlightRef.current) {
+      logAttachmentDebug('sendPendingMediaDraft skipped: upload already in progress', {
+        chatId,
+      });
+      return;
+    }
+
     if (!pendingMediaDraft?.asset?.uri) {
       logAttachmentDebug('sendPendingMediaDraft skipped: no pending media draft');
       return;
@@ -2062,6 +2754,10 @@ function Conversation({ navigation, route }) {
   const onSend = (msgs = /** @type {import('react-native-gifted-chat').IMessage[]} */ ([])) => {
     if (pendingMediaDraft?.asset?.uri) {
       sendPendingMediaDraft();
+      return;
+    }
+    if (pendingVoiceDraft?.uri) {
+      sendPendingVoiceDraft();
       return;
     }
 
@@ -2195,6 +2891,7 @@ function Conversation({ navigation, route }) {
   };
 
   const handleGoToUserDetails = () => {
+    setIsMessageActionsVisible(false);
     setIsReportModalVisible(false);
     if (selectedMessage) {
       handleAvatarPress(selectedMessage.user);
@@ -2202,35 +2899,232 @@ function Conversation({ navigation, route }) {
     setSelectedMessage(undefined);
   };
 
-  /**
-   * Handle message press event to show actions modal
-   * @param {any} _
-   * @param {import('react-native-gifted-chat').IMessage
-   * & {documentId: string}} currentMessage - The message object
-   * @returns {void}
-   */
-  const handleMessagePress = (_, currentMessage) => {
-    const isOwnMessage = currentMessage.user._id === userData?.documentId;
-    if (!isOwnMessage) {
-      setIsReportModalVisible(true);
-      setSelectedMessage(currentMessage);
+  const getMessageDocumentId = useCallback((message) => (
+    String(message?.documentId || message?.id || message?._id || '').trim()
+  ), []);
+
+  const getMessageTextValue = useCallback((message) => (
+    String(message?.text ?? message?.message ?? '')
+  ), []);
+
+  const isMessageOwnedByCurrentUser = useCallback((message) => (
+    String(message?.user?._id || '') === String(userData?.documentId || '')
+  ), [userData?.documentId]);
+
+  const isMessageEditable = useCallback((message) => {
+    const compositionType = String(message?.composition?.type || '').trim().toLowerCase();
+    return !compositionType || !NON_EDITABLE_MESSAGE_COMPOSITION_TYPES.has(compositionType);
+  }, []);
+
+  const selectedMessageDocumentId = useMemo(() => (
+    getMessageDocumentId(selectedMessage)
+  ), [getMessageDocumentId, selectedMessage]);
+  const selectedMessageTextValue = useMemo(() => (
+    getMessageTextValue(selectedMessage)
+  ), [getMessageTextValue, selectedMessage]);
+  const isSelectedMessageOwn = useMemo(() => (
+    isMessageOwnedByCurrentUser(selectedMessage)
+  ), [isMessageOwnedByCurrentUser, selectedMessage]);
+  const canCopySelectedMessage = useMemo(() => (
+    selectedMessageTextValue.trim().length > 0
+  ), [selectedMessageTextValue]);
+  const canEditSelectedMessage = useMemo(() => (
+    isSelectedMessageOwn && isMessageEditable(selectedMessage)
+  ), [isMessageEditable, isSelectedMessageOwn, selectedMessage]);
+
+  const messageIndexByDocumentId = useMemo(() => {
+    /** @type {Map<string, number>} */
+    const indexMap = new Map();
+    (Array.isArray(messages) ? messages : []).forEach((message, index) => {
+      const messageId = getMessageDocumentId(message);
+      if (!messageId || indexMap.has(messageId)) return;
+      indexMap.set(messageId, index);
+    });
+    return indexMap;
+  }, [getMessageDocumentId, messages]);
+
+  const closeMessageActionsModal = useCallback(() => {
+    setIsMessageActionsVisible(false);
+    setSelectedMessage(undefined);
+  }, []);
+
+  const handleMessageLongPress = useCallback((_, currentMessage) => {
+    if (!currentMessage) return;
+    setSelectedMessage(currentMessage);
+    setIsMessageActionsVisible(true);
+  }, []);
+
+  const handleReplySelectedMessage = useCallback(() => {
+    if (!selectedMessage) return;
+    setReplyingTo(selectedMessage);
+    setIsMessageActionsVisible(false);
+  }, [selectedMessage]);
+
+  const getReplyTargetDocumentId = useCallback((replyTo) => (
+    String(
+      replyTo?.documentId
+      || replyTo?.id
+      || replyTo?._id
+      || '',
+    ).trim()
+  ), []);
+
+  const scrollToMessageByDocumentId = useCallback((messageDocumentId) => {
+    const targetId = String(messageDocumentId || '').trim();
+    if (!targetId) return false;
+
+    const targetIndex = messageIndexByDocumentId.get(targetId);
+    if (!Number.isInteger(targetIndex)) return false;
+
+    const listRef = messageContainerRef.current;
+    if (!listRef || typeof listRef.scrollToIndex !== 'function') return false;
+
+    try {
+      listRef.scrollToIndex({
+        animated: true,
+        index: targetIndex,
+        viewPosition: 0.4,
+      });
+      return true;
+    } catch (_error) {
+      if (typeof listRef.scrollToOffset === 'function') {
+        listRef.scrollToOffset({
+          animated: true,
+          offset: Math.max(0, targetIndex * 96),
+        });
+        return true;
+      }
     }
-    const pressActions = /** @type {import('react-native').AlertButton[]} */ ([
-      { onPress: () => setReplyingTo(currentMessage), text: 'Repondre' },
-      !isOwnMessage ? {
-        onPress: () => {
-          setIsReportModalVisible(true);
-          setSelectedMessage(currentMessage);
+
+    return false;
+  }, [messageIndexByDocumentId]);
+
+  const handleReplyPreviewPress = useCallback((replyTo) => {
+    const targetDocumentId = getReplyTargetDocumentId(replyTo);
+    if (!targetDocumentId) return;
+    scrollToMessageByDocumentId(targetDocumentId);
+  }, [getReplyTargetDocumentId, scrollToMessageByDocumentId]);
+
+  const handleSwipeToReply = useCallback((currentMessage) => {
+    if (!currentMessage) return;
+    setReplyingTo(currentMessage);
+  }, []);
+
+  const handleCopySelectedMessage = useCallback(() => {
+    if (!canCopySelectedMessage) return;
+    const clipboard = getClipboardModule();
+    if (clipboard && typeof clipboard.setString === 'function') {
+      clipboard.setString(selectedMessageTextValue);
+      Alert.alert(
+        t('conversation.actions.copySuccess.title', 'CopiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©'),
+        t('conversation.actions.copySuccess.description', 'Le message a ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© copiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.'),
+      );
+    } else {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+      );
+    }
+    setIsMessageActionsVisible(false);
+  }, [canCopySelectedMessage, selectedMessageTextValue, t]);
+
+  const handleOpenReportForSelectedMessage = useCallback(() => {
+    if (!selectedMessageDocumentId || isSelectedMessageOwn) return;
+    setIsMessageActionsVisible(false);
+    setIsReportModalVisible(true);
+  }, [isSelectedMessageOwn, selectedMessageDocumentId]);
+
+  const resetEditMessageState = useCallback(() => {
+    setEditMessageText('');
+    setEditMessageAttachments([]);
+    setIsEditMessageSubmitting(false);
+    setIsEditMessageUploadingAttachment(false);
+  }, []);
+
+  const handleCloseEditMessageModal = useCallback(() => {
+    setIsEditMessageModalVisible(false);
+    setSelectedMessage(undefined);
+    resetEditMessageState();
+  }, [resetEditMessageState]);
+
+  const handleOpenEditForSelectedMessage = useCallback(() => {
+    if (!canEditSelectedMessage || !selectedMessage) return;
+    setIsMessageActionsVisible(false);
+    setEditMessageText(String(selectedMessage?.text ?? selectedMessage?.message ?? ''));
+    setEditMessageAttachments(normalizeMessageAttachments(selectedMessage?.attachments));
+    setIsEditMessageModalVisible(true);
+  }, [canEditSelectedMessage, normalizeMessageAttachments, selectedMessage]);
+
+  const handleRemoveEditAttachment = useCallback((attachmentToRemove) => {
+    const targetKey = String(
+      attachmentToRemove?.documentId
+      || attachmentToRemove?.id
+      || attachmentToRemove?.url
+      || attachmentToRemove?.name
+      || '',
+    );
+    if (!targetKey) return;
+
+    setEditMessageAttachments((previousAttachments) => previousAttachments.filter((attachment) => {
+      const attachmentKey = String(
+        attachment?.documentId
+        || attachment?.id
+        || attachment?.url
+        || attachment?.name
+        || '',
+      );
+      return attachmentKey !== targetKey;
+    }));
+  }, []);
+
+  const toEditAttachmentPayload = useCallback((attachments) => (
+    (Array.isArray(attachments) ? attachments : [])
+      .map((attachment) => {
+        const numericId = Number(attachment?.id);
+        if (Number.isInteger(numericId) && numericId > 0) return { id: numericId };
+        const attachmentDocumentId = String(attachment?.documentId || '').trim();
+        if (attachmentDocumentId) return { documentId: attachmentDocumentId };
+        return null;
+      })
+      .filter(Boolean)
+  ), []);
+
+  const handleDeleteSelectedMessage = useCallback(() => {
+    if (!selectedMessageDocumentId || !isSelectedMessageOwn) return;
+
+    Alert.alert(
+      t('conversation.actions.deleteConfirm.title', 'Supprimer le message'),
+      t('conversation.actions.deleteConfirm.description', 'Ce message sera supprime pour tous les participants.'),
+      [
+        {
+          style: 'cancel',
+          text: t('common.actions.cancel', 'Annuler'),
         },
-        text: 'Signaler',
-      } : null,
-      { style: 'cancel', text: 'Annuler' },
-    ].filter(Boolean));
-    Alert.alert(t('Actions'), '', pressActions);
-  };
+        {
+          onPress: async () => {
+            try {
+              await deleteMessage(selectedMessageDocumentId);
+              setIsMessageActionsVisible(false);
+              setIsEditMessageModalVisible(false);
+              setSelectedMessage(undefined);
+              resetEditMessageState();
+            } catch (error) {
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                t('conversation.actions.deleteError', 'Impossible de supprimer ce message.'),
+              );
+            }
+          },
+          style: 'destructive',
+          text: t('common.actions.delete', 'Supprimer'),
+        },
+      ],
+    );
+  }, [deleteMessage, isSelectedMessageOwn, resetEditMessageState, selectedMessageDocumentId, t]);
 
   const handleSubmitReport = () => {
     if (selectedMessage?.documentId) {
+      setIsMessageActionsVisible(false);
       reportMessage({
         message: selectedMessage.documentId,
       });
@@ -2282,6 +3176,79 @@ function Conversation({ navigation, route }) {
     );
   };
 
+  const renderReplySwipeAction = useCallback(() => (
+    <View
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
+      }}
+    >
+      <View
+        style={{
+          alignItems: 'center',
+          backgroundColor: 'rgba(1, 179, 244, 0.18)',
+          borderColor: Colors.primary500,
+          borderRadius: 16,
+          borderWidth: 1,
+          justifyContent: 'center',
+          minHeight: 32,
+          minWidth: 32,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+        }}
+      >
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>â†©</Text>
+      </View>
+    </View>
+  ), [Colors.primary500, Fonts.p3Bold]);
+
+  const wrapWithMessageInteractions = useCallback((currentMessage, children) => {
+    if (!currentMessage) return children;
+
+    const messageKey = getMessageDocumentId(currentMessage);
+    const setSwipeableRef = (instance) => {
+      if (!messageKey) return;
+      if (instance) {
+        swipeableMessageRefs.current.set(messageKey, instance);
+      } else {
+        swipeableMessageRefs.current.delete(messageKey);
+      }
+    };
+
+    const handleSwipeableOpen = () => {
+      handleSwipeToReply(currentMessage);
+      if (messageKey) {
+        const swipeableRef = swipeableMessageRefs.current.get(messageKey);
+        if (typeof swipeableRef?.close === 'function') {
+          swipeableRef.close();
+        }
+      }
+    };
+
+    return (
+      <Swipeable
+        friction={2}
+        leftThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
+        onSwipeableOpen={handleSwipeableOpen}
+        overshootLeft={false}
+        overshootRight={false}
+        ref={setSwipeableRef}
+        renderLeftActions={renderReplySwipeAction}
+        renderRightActions={renderReplySwipeAction}
+        rightThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          delayLongPress={250}
+          onLongPress={() => handleMessageLongPress(null, currentMessage)}
+        >
+          {children}
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  }, [getMessageDocumentId, handleMessageLongPress, handleSwipeToReply, renderReplySwipeAction]);
+
   /**
    * Render a custom bubble component
    * @param {import('react-native-gifted-chat').BubbleProps<any>} props - Component props
@@ -2307,209 +3274,245 @@ function Conversation({ navigation, route }) {
     const topRightRadius = !isLeft && isSameUserAsPrevious ? 4 : 12;
     const bottomRightRadius = !isLeft && isSameUserAsNext ? 4 : 12;
 
-    if (currentMessage.event) {
-      return (
-        <View style={{
-          marginBottom,
-          marginTop,
-          // Removed margins as requested
-        }}
-        >
-          <EventMessageBubble
-            event={currentMessage.event}
-            isMe={!isLeft}
-            onDecline={() => {}}
-            onJoin={() => handleJoinEvent(currentMessage.event)}
-            onParticipate={() => handleParticipateToEvent(currentMessage.event)}
-          />
-        </View>
+    const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
+    if (resolvedMessageEvent) {
+      return wrapWithMessageInteractions(
+        currentMessage, (
+          <View style={{
+            marginBottom,
+            marginTop,
+            // Removed margins as requested
+          }}
+          >
+            <EventMessageBubble
+              event={resolvedMessageEvent}
+              isMe={!isLeft}
+              onDecline={() => {}}
+              onJoin={() => handleJoinEvent(resolvedMessageEvent)}
+              onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
+            />
+          </View>
+        ),
       );
     }
 
     // Composition message
     if (currentMessage.composition) {
       if (currentMessage.composition.type === 'poll') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <PollMessageBubble
-              currentUserId={userData?.documentId || ''}
-              isMe={!isLeft}
-              onOpenDetails={() => handleOpenPollDetails(currentMessage)}
-              onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
-              poll={currentMessage.composition}
-              resolveVoterName={resolveVoterName}
-            />
-          </View>
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <PollMessageBubble
+                currentUserId={userData?.documentId || ''}
+                isMe={!isLeft}
+                onOpenDetails={() => handleOpenPollDetails(currentMessage)}
+                onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
+                poll={currentMessage.composition}
+                resolveVoterName={resolveVoterName}
+              />
+            </View>
+          ),
         );
       }
 
       if (currentMessage.composition.type === 'proposal') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <ProposalMessageBubble
-              isMe={!isLeft}
-              onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
-              onDecline={() => handleRespondProposal(currentMessage, 'declined')}
-              proposal={currentMessage.composition}
-            />
-          </View>
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <ProposalMessageBubble
+                isMe={!isLeft}
+                onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
+                onDecline={() => handleRespondProposal(currentMessage, 'declined')}
+                proposal={currentMessage.composition}
+              />
+            </View>
+          ),
         );
       }
 
       if (currentMessage.composition.type === 'location_share') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <LocationShareBubble
-              composition={currentMessage.composition}
-              isMe={!isLeft}
-            />
-          </View>
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <LocationShareBubble
+                composition={currentMessage.composition}
+                isMe={!isLeft}
+              />
+            </View>
+          ),
         );
       }
 
       if (currentMessage.composition.type === 'contact_share') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <ContactShareBubble
-              composition={currentMessage.composition}
-              isMe={!isLeft}
-              onPressContact={openSharedContact}
-            />
-          </View>
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <ContactShareBubble
+                composition={currentMessage.composition}
+                isMe={!isLeft}
+                onPressContact={openSharedContact}
+              />
+            </View>
+          ),
         );
       }
 
       if (currentMessage.composition.type === 'event_share') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <EventShareBubble
-              composition={currentMessage.composition}
-              isMe={!isLeft}
-              onPressEvent={openSharedEvent}
-            />
-          </View>
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <EventShareBubble
+                composition={currentMessage.composition}
+                isMe={!isLeft}
+                onPressEvent={openSharedEvent}
+              />
+            </View>
+          ),
         );
       }
 
       if (currentMessage.composition.type === 'voice_note') {
-        return (
-          <View style={{ marginBottom, marginTop }}>
-            <VoiceNoteBubble
-              attachments={currentMessage.attachments || []}
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <VoiceNoteBubble
+                attachments={currentMessage.attachments || []}
+                composition={currentMessage.composition}
+                isMe={!isLeft}
+              />
+            </View>
+          ),
+        );
+      }
+
+      return wrapWithMessageInteractions(
+        currentMessage, (
+          <View style={{
+            marginBottom,
+            marginTop,
+          }}
+          >
+            <CompositionMessageBubble
               composition={currentMessage.composition}
               isMe={!isLeft}
             />
           </View>
-        );
-      }
-
-      return (
-        <View style={{
-          marginBottom,
-          marginTop,
-        }}
-        >
-          <CompositionMessageBubble
-            composition={currentMessage.composition}
-            isMe={!isLeft}
-          />
-        </View>
+        ),
       );
     }
 
     const isPending = Boolean(currentMessage.pending);
     const isFailed = Boolean(currentMessage.failed);
+    const replyAuthorName = String(
+      currentMessage?.replyTo?.sender?.firstname
+      || currentMessage?.replyTo?.sender?.name
+      || currentMessage?.replyTo?.user?.name
+      || t('conversation.replyPreview.defaultAuthor', 'Membre'),
+    ).trim();
+    const replyPreviewText = String(
+      currentMessage?.replyTo?.message
+      || currentMessage?.replyTo?.text
+      || t('conversation.replyPreview.defaultText', 'Message'),
+    );
 
-    return (
-      <View style={{ opacity: isPending ? 0.5 : 1 }}>
-        {currentMessage.replyTo && ( // Render Reply Preview
-        <View style={{
-          backgroundColor: 'rgba(0,0,0,0.1)',
-          borderRadius: 8,
-          marginBottom: 4,
-          marginHorizontal: 12,
-          marginTop: marginTop + 4,
-          padding: 8,
-        }}
-        >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            Reponse a
-            {' '}
-            {currentMessage.replyTo.sender?.firstname}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-            {currentMessage.replyTo.message}
-          </Text>
-        </View>
-        )}
-        <Bubble
-          {...props}
-          onPress={() => {
-            if (Array.isArray(currentMessage?.attachments) && currentMessage.attachments.length > 0) {
-              openFirstAttachment(currentMessage);
-            }
-          }}
-          renderMessageImage={renderMessageImage}
-          renderTicks={(/** @type {any} */ bubbleMessage) => {
-            if (bubbleMessage.failed) {
-              return <Text style={{ color: Colors.error500, fontSize: 10, marginRight: 4 }}>!</Text>;
-            }
-            if (bubbleMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>...</Text>;
-            // Checkmark logic using icons or text
-            const tickColor = 'rgba(255,255,255,0.8)';
-            if (bubbleMessage.readBy && bubbleMessage.readBy.length > 0) {
-              return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>vv</Text>;
-            }
-            return <Text style={{ color: tickColor, fontSize: 10 }}>v</Text>;
-          }}
-          renderTime={renderTime}
-          textStyle={{
-            left: [Fonts.p1, { color: Colors.neutral00 }], // White text for dark bubble
-            right: [Fonts.p1, Fonts.neutral00],
-          }}
-          wrapperStyle={{
-            left: {
-              backgroundColor: '#0F1821', // Dark background for received messages to match screenshot
-              borderBottomLeftRadius: bottomLeftRadius,
-              borderBottomRightRadius: 18,
-              borderTopLeftRadius: topLeftRadius,
-              borderTopRightRadius: 18,
-              marginBottom,
-              marginTop: currentMessage.replyTo ? 2 : marginTop,
-              padding: 4,
-            },
-            right: {
-              backgroundColor: Colors.primary500,
-              borderBottomLeftRadius: 18,
-              borderBottomRightRadius: bottomRightRadius,
-              borderTopLeftRadius: 18,
-              borderTopRightRadius: topRightRadius,
-              marginBottom,
-              marginTop: currentMessage.replyTo ? 2 : marginTop,
-              padding: 4,
-            },
-          }}
-        />
-        {isChatRetryEnabled && isFailed && !isLeft ? (
-          <View style={{ alignItems: 'flex-end', marginRight: 10, marginTop: 4 }}>
+    return wrapWithMessageInteractions(
+      currentMessage,
+      (
+        <View style={{ opacity: isPending ? 0.5 : 1 }}>
+          {currentMessage.replyTo ? (
             <TouchableOpacity
-              onPress={() => retryFailedMessage(chatId, currentMessage)}
+              activeOpacity={0.85}
+              onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
               style={{
-                backgroundColor: 'rgba(0,0,0,0.25)',
-                borderColor: Colors.error500,
-                borderRadius: 12,
+                backgroundColor: 'rgba(1,179,244,0.12)',
+                borderColor: Colors.primary700,
+                borderRadius: 8,
                 borderWidth: 1,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
+                marginBottom: 4,
+                marginHorizontal: 12,
+                marginTop: marginTop + 4,
+                padding: 8,
               }}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
-                {t('common.retry', 'Reessayer')}
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('conversation.replyPreview.label', 'RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ponse a')}
+                {' '}
+                {replyAuthorName}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
+                {replyPreviewText}
               </Text>
             </TouchableOpacity>
-          </View>
-        ) : null}
-      </View>
+          ) : null}
+          <Bubble
+            {...props}
+            onPress={() => {
+              if (Array.isArray(currentMessage?.attachments) && currentMessage.attachments.length > 0) {
+                openFirstAttachment(currentMessage);
+              }
+            }}
+            renderMessageImage={renderMessageImage}
+            renderTicks={(/** @type {any} */ bubbleMessage) => {
+              if (bubbleMessage.failed) {
+                return <Text style={{ color: Colors.error500, fontSize: 10, marginRight: 4 }}>!</Text>;
+              }
+              if (bubbleMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>...</Text>;
+              // Checkmark logic using icons or text
+              const tickColor = 'rgba(255,255,255,0.8)';
+              if (bubbleMessage.readBy && bubbleMessage.readBy.length > 0) {
+                return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>vv</Text>;
+              }
+              return <Text style={{ color: tickColor, fontSize: 10 }}>v</Text>;
+            }}
+            renderTime={renderTime}
+            textStyle={{
+              left: [Fonts.p1, { color: Colors.neutral00 }], // White text for dark bubble
+              right: [Fonts.p1, Fonts.neutral00],
+            }}
+            wrapperStyle={{
+              left: {
+                backgroundColor: '#0F1821', // Dark background for received messages to match screenshot
+                borderBottomLeftRadius: bottomLeftRadius,
+                borderBottomRightRadius: 18,
+                borderTopLeftRadius: topLeftRadius,
+                borderTopRightRadius: 18,
+                marginBottom,
+                marginTop: currentMessage.replyTo ? 2 : marginTop,
+                padding: 4,
+              },
+              right: {
+                backgroundColor: Colors.primary500,
+                borderBottomLeftRadius: 18,
+                borderBottomRightRadius: bottomRightRadius,
+                borderTopLeftRadius: 18,
+                borderTopRightRadius: topRightRadius,
+                marginBottom,
+                marginTop: currentMessage.replyTo ? 2 : marginTop,
+                padding: 4,
+              },
+            }}
+          />
+          {isChatRetryEnabled && isFailed && !isLeft ? (
+            <View style={{ alignItems: 'flex-end', marginRight: 10, marginTop: 4 }}>
+              <TouchableOpacity
+                onPress={() => retryFailedMessage(chatId, currentMessage)}
+                style={{
+                  backgroundColor: 'rgba(0,0,0,0.25)',
+                  borderColor: Colors.error500,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
+                  {t('common.retry', 'R?essayer')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+      ),
     );
   };
 
@@ -2522,34 +3525,41 @@ function Conversation({ navigation, route }) {
    * @param {import('react-native-gifted-chat').ComposerProps} props - Component props
    * @returns {React.ReactNode} Rendered composer component
    */
-  const renderComposer = (props) => (
-    <Composer
-      {...props}
-      placeholder={
-        pendingMediaDraft?.asset?.uri
-          ? t('conversation.attachments.captionPlaceholder', 'Ajouter une legende')
-          : t('conversation.messagePlaceholder')
-      }
-      textInputProps={{
-        maxLength: 1000,
-        multiline: true,
-      }}
-      textInputStyle={[
-        ApplicationStyle.backgroundColor.neutral00,
-        Fonts.p2,
-        Spaces.paddingHorizontal[16],
-        Spaces.paddingVertical[8], // Sleeker vertical padding
-        {
-          borderColor: Colors.neutral200,
-          borderRadius: 20, // Manual border radius
-          borderWidth: 1,
-          color: Colors.neutral900,
-          marginBottom: 0,
-          marginTop: 0, // Reset default margins
-        },
-      ]}
-    />
-  );
+  const renderComposer = (props) => {
+    let composerPlaceholder = t('conversation.messagePlaceholder');
+    if (pendingMediaDraft?.asset?.uri) {
+      composerPlaceholder = t('conversation.attachments.captionPlaceholder', 'Ajouter une lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende');
+    } else if (pendingVoiceDraft?.uri) {
+      composerPlaceholder = t('conversation.voice.captionPlaceholder', 'Ajouter un message (optionnel)');
+    }
+
+    return (
+      <Composer
+        {...props}
+        placeholder={composerPlaceholder}
+        textInputProps={{
+          maxLength: 1000,
+          multiline: true,
+        }}
+        textInputStyle={[
+          Fonts.p2,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[8],
+          {
+            backgroundColor: 'rgba(12, 28, 37, 0.94)',
+            borderColor: Colors.primary700,
+            borderRadius: 22,
+            borderWidth: 1,
+            color: Colors.neutral00,
+            marginBottom: 0,
+            marginTop: 0,
+            minHeight: 44,
+            paddingRight: 46,
+          },
+        ]}
+      />
+    );
+  };
 
   /**
    * Render a custom input toolbar component
@@ -2603,7 +3613,7 @@ function Conversation({ navigation, route }) {
         </TouchableOpacity>
       ) : null}
       <TouchableOpacity
-        onPress={() => setIsAttachmentMenuVisible(true)}
+        onPress={handleOpenAttachmentMenu}
         style={{
           alignItems: 'center',
           backgroundColor: Colors.primary500,
@@ -2636,8 +3646,43 @@ function Conversation({ navigation, route }) {
   const renderAccessory = () => {
     const hasMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
     const hasReplyPreview = !!replyingTo;
-    const hasVoicePreview = isVoiceRecording || isSendingVoiceNote;
-    if (!hasMediaDraft && !hasReplyPreview && !hasVoicePreview) return null;
+    const hasVoiceSession = hasActiveVoiceSession;
+    const hasVoiceDraft = Boolean(pendingVoiceDraft?.uri);
+    if (!hasMediaDraft && !hasReplyPreview && !hasVoiceSession && !hasVoiceDraft) return null;
+    const fallbackWaveform = Array.from(
+      { length: 14 },
+      (_, index) => toVoiceWaveBarHeight(null, voiceRecordingDurationMs, index),
+    );
+    const liveWaveformBars = voiceRecordingWaveform.length > 0
+      ? voiceRecordingWaveform
+      : fallbackWaveform;
+    const visibleWaveformBars = liveWaveformBars.slice(-VOICE_WAVEFORM_VISIBLE_BARS);
+    const draftTotalMs = Math.max(
+      Number(pendingVoiceDraft?.durationMs) || 0,
+      Number(draftPlaybackDurationMs) || 0,
+    );
+    const rawDraftWaveform = Array.isArray(pendingVoiceDraft?.waveform)
+      ? pendingVoiceDraft.waveform
+      : [];
+    const draftWaveformBars = (rawDraftWaveform.length > 0
+      ? rawDraftWaveform
+        .slice(-VOICE_WAVEFORM_VISIBLE_BARS)
+        .map((bar, index) => toVoiceWaveBarHeight(bar, draftTotalMs, index))
+      : Array.from(
+        { length: 14 },
+        (_, index) => toVoiceWaveBarHeight(null, draftTotalMs, index),
+      ));
+    const draftActiveBarsCount = Math.max(
+      0,
+      Math.min(
+        draftWaveformBars.length,
+        Math.round((Number(draftPlaybackProgress) || 0) * draftWaveformBars.length),
+      ),
+    );
+    const draftCurrentMs = Math.min(
+      Number(draftPlaybackPositionMs) || 0,
+      draftTotalMs || Number(draftPlaybackPositionMs) || 0,
+    );
 
     return (
       <View style={Spaces.gap[8]}>
@@ -2661,15 +3706,15 @@ function Conversation({ navigation, route }) {
             />
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                {t('conversation.attachments.previewTitle', 'Photo prete a envoyer')}
+                {t('conversation.attachments.previewTitle', 'Photo prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte a envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
                 style={[Fonts.p4, { color: Colors.neutral400 }]}
               >
                 {composerText?.trim()
-                  ? t('conversation.attachments.previewWithCaption', 'La legende sera envoyee avec la photo.')
-                  : t('conversation.attachments.previewWithoutCaption', 'Ajoutez une legende puis confirmez l envoi.')}
+                  ? t('conversation.attachments.previewWithCaption', 'La lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende sera envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e avec la photo.')
+                  : t('conversation.attachments.previewWithoutCaption', 'Ajoutez une lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende puis confirmez l\'envoi.')}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -2690,7 +3735,7 @@ function Conversation({ navigation, route }) {
           </View>
         ) : null}
 
-        {hasVoicePreview ? (
+        {hasVoiceSession ? (
           <View style={[
             ApplicationStyle.backgroundColor.neutral100,
             Spaces.padding[10],
@@ -2714,6 +3759,33 @@ function Conversation({ navigation, route }) {
                   ? t('conversation.voice.sending', 'Envoi en cours...')
                   : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintenez appuye pour enregistrer')}`}
               </Text>
+              <View
+                style={{
+                  alignItems: 'flex-end',
+                  flexDirection: 'row',
+                  height: 22,
+                  marginTop: 8,
+                  maxWidth: 190,
+                  overflow: 'hidden',
+                }}
+              >
+                {visibleWaveformBars.map((barHeight, index) => (
+                  <View
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`voice-wave-${index}`}
+                    style={{
+                      backgroundColor: isSendingVoiceNote ? Colors.neutral300 : Colors.primary500,
+                      borderRadius: 2,
+                      height: barHeight,
+                      marginRight: index === visibleWaveformBars.length - 1 ? 0 : 2,
+                      opacity: isSendingVoiceNote
+                        ? (0.45 + (((index + 1) / Math.max(visibleWaveformBars.length, 1)) * 0.35))
+                        : (0.35 + (((index + 1) / Math.max(visibleWaveformBars.length, 1)) * 0.65)),
+                      width: 3,
+                    }}
+                  />
+                ))}
+              </View>
             </View>
             {isVoiceRecordingLocked ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -2725,13 +3797,113 @@ function Conversation({ navigation, route }) {
                 />
                 <Button
                   isLoading={isSendingVoiceNote}
-                  onPress={handleStopVoiceRecordingAndSend}
+                  onPress={handleStopVoiceRecordingToDraft}
                   size="sm"
                   title={t('common.send', 'Envoyer')}
                   variant="PrimaryLight"
                 />
               </View>
             ) : null}
+          </View>
+        ) : null}
+
+        {hasVoiceDraft ? (
+          <View style={[
+            ApplicationStyle.backgroundColor.neutral100,
+            Spaces.padding[10],
+            {
+              backgroundColor: 'rgba(10, 29, 40, 0.95)',
+              borderColor: Colors.primary700,
+              borderRadius: 14,
+              borderWidth: 1,
+            },
+          ]}
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+              <TouchableOpacity
+                onPress={toggleDraftVoicePlayback}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: isDraftVoicePlaying ? Colors.primary500 : 'rgba(0, 173, 239, 0.16)',
+                  borderColor: Colors.primary500,
+                  borderRadius: 11,
+                  borderWidth: 1,
+                  height: 22,
+                  justifyContent: 'center',
+                  width: 22,
+                }}
+              >
+                <Text style={[Fonts.p4Bold, { color: isDraftVoicePlaying ? Colors.neutral00 : Colors.primary500 }]}>
+                  {isDraftVoicePlaying ? '||' : '>'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {t('conversation.voice.draftReady', 'Brouillon vocal')}
+              </Text>
+              <Text style={[Fonts.p4, { color: Colors.neutral300, marginLeft: 'auto' }]}>
+                {formatDurationLabel(draftCurrentMs)}
+                {' / '}
+                {formatDurationLabel(draftTotalMs)}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                alignItems: 'flex-end',
+                flexDirection: 'row',
+                height: 24,
+                marginTop: 8,
+                overflow: 'hidden',
+                width: '100%',
+              }}
+            >
+              {draftWaveformBars
+                .map((barHeight, index, array) => (
+                  <View
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`voice-draft-wave-${index}`}
+                    style={{
+                      backgroundColor: index < draftActiveBarsCount
+                        ? Colors.primary500
+                        : 'rgba(255,255,255,0.24)',
+                      borderRadius: 2,
+                      height: clampNumber(Number(barHeight) || 4, 4, 20),
+                      marginRight: index === array.length - 1 ? 0 : 2,
+                      opacity: index < draftActiveBarsCount
+                        ? 0.85
+                        : (0.35 + (((index + 1) / Math.max(array.length, 1)) * 0.35)),
+                      width: 3,
+                    }}
+                  />
+                ))}
+            </View>
+
+            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
+              {composerText?.trim()
+                ? t('conversation.voice.draftWithText', 'Le texte sera envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© avec la note vocale.')
+                : t('conversation.voice.draftWithoutText', 'Ajoutez un message optionnel puis appuyez sur Envoyer.')}
+            </Text>
+            {draftPlaybackError ? (
+              <Text style={[Fonts.p4, { color: Colors.error500, marginTop: 4 }]}>
+                {draftPlaybackError}
+              </Text>
+            ) : null}
+
+            <View style={[Alignments.row, Alignments.justifyEnd, Spaces.marginTop[8], { gap: 8 }]}>
+              <Button
+                onPress={clearPendingVoiceDraft}
+                size="sm"
+                title={t('common.cancel', 'Annuler')}
+                variant="SecondaryLight"
+              />
+              <Button
+                isLoading={isUploading}
+                onPress={sendPendingVoiceDraft}
+                size="sm"
+                title={t('common.send', 'Envoyer')}
+                variant="PrimaryLight"
+              />
+            </View>
           </View>
         ) : null}
 
@@ -2769,8 +3941,8 @@ function Conversation({ navigation, route }) {
         .map((typingUserId) => resolveVoterName(String(typingUserId)))
         .filter(Boolean);
       const typingLabel = typingNames.length > 0
-        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'ecrivent' : 'ecrit'}...`
-        : 'Quelqu\'un ecrit...';
+        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crivent' : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crit'}...`
+        : 'Quelqu\'un ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crit...';
       return (
         <View style={[Spaces.padding[8], Spaces.marginLeft[16]]}>
           <Text style={[Fonts.p3, Fonts.neutral500]}>{typingLabel}</Text>
@@ -2798,7 +3970,7 @@ function Conversation({ navigation, route }) {
         ]}
         >
           <Text style={[Fonts.p2, Fonts.neutral500]}>
-            Ã°Å¸â€œÂ£
+            ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â£
             {' '}
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
@@ -2806,21 +3978,36 @@ function Conversation({ navigation, route }) {
       );
     }
 
+    const accessory = renderAccessory();
+    const shouldRenderAccessoryAfterToolbar = Platform.OS === 'ios';
+    const accessoryBlock = accessory ? (
+      <View style={shouldRenderAccessoryAfterToolbar ? Spaces.marginTop[8] : Spaces.marginBottom[8]}>
+        {accessory}
+      </View>
+    ) : null;
+
     return (
-      <InputToolbar
-        {...props}
-        containerStyle={[
-          ApplicationStyle.backgroundColor.primary900, // Full width dark bar (or neutral00 for light mode app)
-          ApplicationStyle.noBorderTop,
-          Spaces.paddingHorizontal[8],
-          Spaces.paddingVertical[8],
-        // Removed negative margins to fix layout issues
-        ]}
-        primaryStyle={{ alignItems: 'center' }} // Align items vertically
-        renderAccessory={renderAccessory}
-        renderActions={renderActions}
-        renderComposer={renderComposer}
-      />
+      <View style={[
+        ApplicationStyle.backgroundColor.primary900,
+        ApplicationStyle.noBorderTop,
+        Spaces.paddingHorizontal[8],
+        Spaces.paddingVertical[8],
+      ]}
+      >
+        {!shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
+        <InputToolbar
+          {...props}
+          containerStyle={[
+            ApplicationStyle.backgroundColor.primary900,
+            ApplicationStyle.noBorderTop,
+            { paddingHorizontal: 0, paddingVertical: 0 },
+          ]}
+          primaryStyle={{ alignItems: 'center' }}
+          renderActions={renderActions}
+          renderComposer={renderComposer}
+        />
+        {shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
+      </View>
     );
   };
 
@@ -2836,34 +4023,58 @@ function Conversation({ navigation, route }) {
    */
   const renderSend = (props) => {
     const hasPendingMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
+    const hasPendingVoiceDraft = Boolean(pendingVoiceDraft);
     const hasText = String(props.text || '').trim().length > 0;
-    if (!hasText && !hasPendingMediaDraft && !canRecordVoiceNote) return null;
+    const shouldShowVoiceButton = !hasText
+      && !hasPendingMediaDraft
+      && !hasPendingVoiceDraft
+      && isVoiceNotesEnabled;
+    let voiceButtonBackgroundColor = Colors.neutral700;
+    let voiceButtonBorderColor = Colors.neutral600;
+    let voiceButtonOpacity = canRecordVoiceNote ? 1 : 0.6;
+    if (canRecordVoiceNote) {
+      voiceButtonBackgroundColor = Colors.primary500;
+      voiceButtonBorderColor = Colors.primary200;
+    }
+    if (isVoiceRecording) {
+      voiceButtonBackgroundColor = Colors.error500;
+      voiceButtonBorderColor = Colors.error700;
+    }
+    if (isSendingVoiceNote) {
+      voiceButtonOpacity = 0.7;
+    }
+    if (!hasText && !hasPendingMediaDraft && !hasPendingVoiceDraft && !isVoiceNotesEnabled) return null;
 
-    if (!hasText && !hasPendingMediaDraft && canRecordVoiceNote) {
+    if (shouldShowVoiceButton) {
       return (
         <View
           {...microphonePanResponder.panHandlers}
           style={{
-            height: 44, justifyContent: 'center', marginLeft: 8, marginRight: 8,
+            alignItems: 'center',
+            height: 44,
+            justifyContent: 'center',
+            marginLeft: -44,
+            marginRight: 4,
+            width: 44,
           }}
         >
           <View
             style={{
               alignItems: 'center',
-              backgroundColor: isVoiceRecording ? Colors.error500 : Colors.primary500,
-              borderRadius: 16,
-              height: 32,
+              backgroundColor: voiceButtonBackgroundColor,
+              borderColor: voiceButtonBorderColor,
+              borderRadius: 17,
+              borderWidth: 1,
+              height: 34,
               justifyContent: 'center',
-              opacity: isSendingVoiceNote ? 0.7 : 1,
-              width: 32,
+              opacity: voiceButtonOpacity,
+              width: 34,
             }}
           >
             {isSendingVoiceNote ? (
               <ActivityIndicator color={Colors.neutral00} size="small" />
             ) : (
-              <Text style={{ color: Colors.neutral00, fontSize: 14 }}>
-                {'\uD83C\uDFA4'}
-              </Text>
+              <MicrophoneGlyph color={Colors.neutral00} />
             )}
           </View>
         </View>
@@ -2872,13 +4083,23 @@ function Conversation({ navigation, route }) {
 
     return (
       <View style={{
-        height: 44, justifyContent: 'center', marginLeft: 8, marginRight: 8,
+        alignItems: 'center',
+        height: 44,
+        justifyContent: 'center',
+        marginLeft: -44,
+        marginRight: 4,
+        width: 44,
       }}
       >
         <TouchableOpacity
+          disabled={isUploading}
           onPress={() => {
             if (hasPendingMediaDraft) {
               sendPendingMediaDraft();
+              return;
+            }
+            if (hasPendingVoiceDraft) {
+              sendPendingVoiceDraft();
               return;
             }
             if (props.onSend) {
@@ -2888,23 +4109,50 @@ function Conversation({ navigation, route }) {
           style={{
             alignItems: 'center',
             backgroundColor: Colors.primary500,
-            borderRadius: 16,
-            height: 32,
+            borderColor: Colors.primary200,
+            borderRadius: 17,
+            borderWidth: 1,
+            height: 34,
             justifyContent: 'center',
-            width: 32,
+            opacity: isUploading ? 0.7 : 1,
+            width: 34,
           }}
         >
-          {/* Simple arrow icon drawn with Views or Text if no Image available, assuming Image "send" exists but handling manually to be safe */}
-          <Text style={{
-            color: 'white', fontSize: 16, fontWeight: 'bold', marginBottom: 2,
-          }}
-          >
-            {'\u2191'}
-          </Text>
+          {isUploading ? (
+            <ActivityIndicator color={Colors.neutral00} size="small" />
+          ) : (
+            <Image
+              source={Images.send}
+              style={{
+                height: 16,
+                tintColor: Colors.neutral00,
+                width: 16,
+              }}
+            />
+          )}
         </TouchableOpacity>
       </View>
     );
   };
+
+  const handleScrollToIndexFailed = useCallback((info) => {
+    if (!info) return;
+
+    const listRef = messageContainerRef.current;
+    if (!listRef || typeof listRef.scrollToOffset !== 'function') return;
+
+    const estimatedOffset = Math.max(0, (info.averageItemLength || 88) * info.index);
+    listRef.scrollToOffset({ animated: true, offset: estimatedOffset });
+
+    setTimeout(() => {
+      if (typeof listRef.scrollToIndex !== 'function') return;
+      listRef.scrollToIndex({
+        animated: true,
+        index: info.index,
+        viewPosition: 0.4,
+      });
+    }, 120);
+  }, []);
 
   return (
     <ImageBackground
@@ -2980,7 +4228,7 @@ function Conversation({ navigation, route }) {
           dateFormat="DD MMMM"
           dateFormatCalendar={{
             lastDay: '[Hier]',
-            lastWeek: '[La semaine derniÃ¨re] dddd',
+            lastWeek: '[La semaine derniÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re] dddd',
             nextDay: '[Demain]',
             nextWeek: 'dddd',
             sameDay: '[Aujourd\'hui]',
@@ -2989,12 +4237,14 @@ function Conversation({ navigation, route }) {
           focusOnInputWhenOpeningKeyboard
           infiniteScroll
           inverted
+          listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
           loadEarlier={hasNextPage}
           locale="fr"
+          messageContainerRef={messageContainerRef}
           messages={messages}
           onInputTextChanged={handleInputTextChanged}
           onLoadEarlier={() => fetchNextPage()}
-          onPress={handleMessagePress}
+          onLongPress={handleMessageLongPress}
           onSend={onSend}
           renderBubble={renderBubble}
           renderFooter={renderFooter}
@@ -3039,7 +4289,7 @@ function Conversation({ navigation, route }) {
                 zIndex: 2,
               }}
             >
-              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>×</Text>
+              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</Text>
             </TouchableOpacity>
 
             {previewImageUrl ? (
@@ -3099,7 +4349,7 @@ function Conversation({ navigation, route }) {
             {isGroupAdmin && (
             <Button
               onPress={handleOpenGroupManagement}
-              title={t('conversation.actions.manageGroup', 'Gerer le groupe')}
+              title={t('conversation.actions.manageGroup', 'GÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rer le groupe')}
               variant="SecondaryLight"
             />
             )}
@@ -3108,7 +4358,7 @@ function Conversation({ navigation, route }) {
               onPress={() => {
                 setIsMenuVisible(false);
                 setTimeout(() => {
-                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramÃ¨tres.');
+                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨tres.');
                 }, 300);
               }}
               title={t('conversation.actions.report', 'Signaler')}
@@ -3221,6 +4471,8 @@ function Conversation({ navigation, route }) {
           contentContainerStyle={{ gap: 16, paddingBottom: 56, paddingTop: 18 }}
           hideCloseButton
           isVisible={isAttachmentMenuVisible}
+          keyboardBehavior="extend"
+          onDismissed={handleAttachmentSheetDismissed}
         >
           {isAttachmentSheetV2Enabled ? (
             <ChatAttachmentSheet
@@ -3252,7 +4504,7 @@ function Conversation({ navigation, route }) {
               />
               <Button
                 onPress={() => runAttachmentAction(handleCreatePoll)}
-                title={t('conversation.attachments.createPoll', 'Creer un sondage')}
+                title={t('conversation.attachments.createPoll', 'CrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©er un sondage')}
                 variant="SecondaryLight"
               />
               <Button
@@ -3296,7 +4548,7 @@ function Conversation({ navigation, route }) {
           }}
           isVisible={isContactShareModalVisible}
         >
-          <View style={Spaces.gap[12]}>
+          <View style={[Spaces.gap[12], { paddingBottom: 18 }]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
               {t('conversation.shareContact.title', 'Partager un contact')}
             </Text>
@@ -3342,9 +4594,9 @@ function Conversation({ navigation, route }) {
           close={() => setIsEventShareModalVisible(false)}
           isVisible={isEventShareModalVisible}
         >
-          <View style={Spaces.gap[12]}>
+          <View style={[Spaces.gap[12], { maxHeight: 560 }]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-              {t('conversation.shareEvent.title', 'Partager un evenement')}
+              {t('conversation.shareEvent.planningTitle', 'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nements de mon planning')}
             </Text>
 
             {isLoadingSharedEvents ? (
@@ -3355,38 +4607,224 @@ function Conversation({ navigation, route }) {
 
             {!isLoadingSharedEvents && shareableEvents.length === 0 ? (
               <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-                {t('conversation.shareEvent.empty', 'Aucun evenement disponible.')}
+                {t('conversation.shareEvent.empty', 'Aucun ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement disponible.')}
               </Text>
             ) : null}
 
-            {!isLoadingSharedEvents && shareableEvents.map((event) => (
-              <TouchableOpacity
-                key={`event-share-${event.documentId || event.id}`}
-                onPress={() => handleShareEvent(event)}
-                style={{
-                  borderColor: 'rgba(255,255,255,0.16)',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  paddingHorizontal: 12,
-                  paddingVertical: 11,
-                }}
-              >
-                <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                  {event?.name || 'Evenement'}
-                </Text>
-                <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                  {event?.date ? new Date(event.date).toLocaleString('fr-FR') : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {!isLoadingSharedEvents && shareableEvents.length > 0 ? (
+              <View style={{ flexGrow: 1 }}>
+                <ScrollView
+                  contentContainerStyle={{ paddingBottom: 4 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {shareableEvents.map((event, index) => (
+                    <View
+                      key={`event-share-${event.documentId || event.id}`}
+                      style={index < shareableEvents.length - 1 ? Spaces.marginBottom[12] : null}
+                    >
+                      <EventCardNew
+                        item={event}
+                        mode="share"
+                        onPress={handleShareEvent}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+
+            <Button
+              onPress={handleOpenPublicEventPicker}
+              title={t('conversation.shareEvent.sharePublicAction', 'Partager un ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement public')}
+              variant="SecondaryLight"
+            />
           </View>
         </BottomModal>
 
         <PollCreationModal
           isVisible={isPollModalVisible}
-          onClose={() => setIsPollModalVisible(false)}
+          onClose={closePollModal}
           onSubmit={handleSubmitPoll}
         />
+
+        <BottomModal
+          close={closeMessageActionsModal}
+          isVisible={isMessageActionsVisible}
+        >
+          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              {t('conversation.actions.modalTitle', 'Actions du message')}
+            </Text>
+            <Button
+              onPress={handleReplySelectedMessage}
+              title={t('conversation.actions.reply', 'Repondre')}
+              variant="SecondaryLight"
+            />
+            {canCopySelectedMessage ? (
+              <Button
+                onPress={handleCopySelectedMessage}
+                title={t('conversation.actions.copy', 'Copier')}
+                variant="SecondaryLight"
+              />
+            ) : null}
+            {canEditSelectedMessage ? (
+              <Button
+                onPress={handleOpenEditForSelectedMessage}
+                title={t('conversation.actions.edit', 'Modifier')}
+                variant="SecondaryLight"
+              />
+            ) : null}
+            {isSelectedMessageOwn ? (
+              <Button
+                onPress={handleDeleteSelectedMessage}
+                title={t('conversation.actions.delete', 'Supprimer')}
+                variant="Secondary"
+              />
+            ) : null}
+            {!isSelectedMessageOwn ? (
+              <Button
+                onPress={handleOpenReportForSelectedMessage}
+                title={t('conversation.actions.report', 'Signaler')}
+                variant="SecondaryLight"
+              />
+            ) : null}
+            <Button
+              onPress={closeMessageActionsModal}
+              title={t('common.actions.cancel', 'Annuler')}
+              variant="PrimaryLight"
+            />
+          </View>
+        </BottomModal>
+
+        <BottomModal
+          close={handleCloseEditMessageModal}
+          isVisible={isEditMessageModalVisible}
+        >
+          <View style={[Spaces.gap[12], Spaces.marginTop[20], Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              {t('conversation.actions.editModal.title', 'Modifier le message')}
+            </Text>
+
+            <TextInput
+              multiline
+              onChangeText={setEditMessageText}
+              placeholder={t('conversation.actions.editModal.placeholder', 'Modifier le texte...')}
+              placeholderTextColor={Colors.neutral300}
+              style={[
+                Fonts.p2,
+                ApplicationStyle.borderRadius16,
+                Spaces.paddingHorizontal[16],
+                Spaces.paddingVertical[12],
+                {
+                  borderColor: Colors.primary500,
+                  borderWidth: 1,
+                  color: Colors.neutral00,
+                  minHeight: 120,
+                  textAlignVertical: 'top',
+                },
+              ]}
+              value={editMessageText}
+            />
+
+            <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('conversation.actions.editModal.attachments', 'Pieces jointes')}
+              </Text>
+              {isEditMessageUploadingAttachment ? (
+                <ActivityIndicator color={Colors.primary500} size="small" />
+              ) : null}
+            </View>
+
+            {Array.isArray(editMessageAttachments) && editMessageAttachments.length > 0 ? (
+              <View style={Spaces.gap[8]}>
+                {editMessageAttachments.map((attachment, index) => {
+                  const attachmentKey = String(
+                    attachment?.documentId
+                    || attachment?.id
+                    || attachment?.url
+                    || attachment?.name
+                    || `attachment-${index}`,
+                  );
+                  const attachmentLabel = String(
+                    attachment?.name
+                    || attachment?.alternativeText
+                    || attachment?.caption
+                    || t('conversation.actions.editModal.attachmentFallback', 'PiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe'),
+                  );
+                  return (
+                    <View
+                      key={`edit-attachment-${attachmentKey}`}
+                      style={[
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifyBetween,
+                        ApplicationStyle.borderRadius12,
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[8],
+                        {
+                          borderColor: 'rgba(255,255,255,0.18)',
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral00, Alignments.fill]}>
+                        {attachmentLabel}
+                      </Text>
+                      <TouchableOpacity onPress={() => handleRemoveEditAttachment(attachment)}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.error500 || Colors.primary500 }]}>
+                          {t('common.actions.delete', 'Supprimer')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('conversation.actions.editModal.noAttachments', 'Aucune piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe')}
+              </Text>
+            )}
+
+            <View style={Spaces.gap[8]}>
+              <Button
+                disabled={isEditMessageUploadingAttachment || isEditMessageSubmitting}
+                onPress={handleEditPickMedia}
+                title={t('conversation.actions.editModal.addMedia', 'Ajouter un media')}
+                variant="SecondaryLight"
+              />
+              <Button
+                disabled={isEditMessageUploadingAttachment || isEditMessageSubmitting}
+                onPress={handleEditTakePhoto}
+                title={t('conversation.actions.editModal.takePhoto', 'Prendre une photo')}
+                variant="SecondaryLight"
+              />
+              <Button
+                disabled={isEditMessageUploadingAttachment || isEditMessageSubmitting}
+                onPress={handleEditPickFile}
+                title={t('conversation.actions.editModal.addFile', 'Ajouter un fichier')}
+                variant="SecondaryLight"
+              />
+            </View>
+
+            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[8]]}>
+              <Button
+                disabled={isEditMessageSubmitting}
+                onPress={handleCloseEditMessageModal}
+                style={Alignments.fill}
+                title={t('common.actions.cancel', 'Annuler')}
+                variant="SecondaryLight"
+              />
+              <Button
+                disabled={isEditMessageUploadingAttachment}
+                isLoading={isEditMessageSubmitting}
+                onPress={handleSubmitEditMessage}
+                style={Alignments.fill}
+                title={t('common.actions.save', 'Enregistrer')}
+                variant="PrimaryLight"
+              />
+            </View>
+          </View>
+        </BottomModal>
 
         <BottomModal
           close={() => {

@@ -28,7 +28,11 @@ import useTheme from '@/theme/themeContext';
  * @param {React.ReactNode} [props.footerComponent] - Fixed footer component
  * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
+ * @param {() => void} [props.onDismissed] - Optional callback fired when modal is fully dismissed
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
+ * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
+ * @param {boolean} [props.enableContentPanningGesture] - Enables content panning gesture
+ * @param {boolean} [props.enablePanDownToClose] - Enables pan-down-to-close gesture
  * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode]
  * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
  * @param {React.MutableRefObject<any>} [props.scrollViewRef] - Optional ref forwarded to BottomSheetScrollView
@@ -43,12 +47,16 @@ function BottomModal({
   children,
   close,
   closeIconTintColor = 'primary200',
+  closeOnBackdropPress = true,
   contentContainerStyle,
+  enableContentPanningGesture = Platform.OS === 'ios',
+  enablePanDownToClose = true,
   footerComponent,
   headerComponent,
   hideCloseButton = false,
   isVisible,
   keyboardBehavior = 'interactive',
+  onDismissed,
   scrollable = true,
   scrollViewProps,
   scrollViewRef,
@@ -70,13 +78,15 @@ function BottomModal({
   useEffect(() => {
     if (!modalRef.current) return;
     if (visibilityRef.current === isVisible) return;
-    visibilityRef.current = isVisible;
 
     if (isVisible) {
+      visibilityRef.current = true;
       modalRef.current.present();
       return;
     }
 
+    // Keep visibilityRef=true until onDismiss is actually fired.
+    // This allows handleDismiss to trigger callbacks such as onDismissed.
     modalRef.current.dismiss();
   }, [isVisible]);
 
@@ -120,7 +130,8 @@ function BottomModal({
     if (!visibilityRef.current) return;
     visibilityRef.current = false;
     close?.();
-  }, [close]);
+    onDismissed?.();
+  }, [close, onDismissed]);
 
   // renders
   const renderBackdrop = useCallback(
@@ -137,9 +148,9 @@ function BottomModal({
         {...backDropProps}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        onPress={close}
+        onPress={closeOnBackdropPress ? close : undefined}
         opacity={0.5}
-        pressBehavior="close"
+        pressBehavior={closeOnBackdropPress ? 'close' : 'none'}
         style={[backDropProps.style, {
           backgroundColor: Colors.neutral800,
         }]}
@@ -154,7 +165,7 @@ function BottomModal({
         )}
       </BottomSheetBackdrop>
     ),
-    [close, Colors, Alignments.fill],
+    [close, closeOnBackdropPress, Colors, Alignments.fill],
   );
 
   const footerBottomInset = useMemo(() => (
@@ -179,9 +190,9 @@ function BottomModal({
         ApplicationStyle.backgroundColor.primary700,
         style]}
       bottomInset={sheetBottomInset}
-      enableContentPanningGesture={Platform.OS === 'ios'}
+      enableContentPanningGesture={enableContentPanningGesture}
       enableDynamicSizing={!snapPoints}
-      enablePanDownToClose
+      enablePanDownToClose={enablePanDownToClose}
       handleComponent={null}
       index={0}
       keyboardBehavior={keyboardBehavior}

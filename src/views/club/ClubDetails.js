@@ -50,8 +50,8 @@ const getFacilityAddressLabel = (address) => {
 const getFacilityCapacityChipLabel = (maxSlots, t) => {
   const teams = Number(maxSlots || 1);
   const unit = teams > 1
-    ? t('facilityList.capacity.teamPlural', 'equipes simultanees')
-    : t('facilityList.capacity.teamSingular', 'equipe simultanee');
+    ? t('facilityList.capacity.teamPlural', 'équipes simultanees')
+    : t('facilityList.capacity.teamSingular', 'équipe simultanee');
   return `${teams} ${unit}`;
 };
 
@@ -377,7 +377,7 @@ function ClubDetails({ navigation, route }) {
 
     Alert.alert(
       `Supprimer le sport ${activityName} ?`,
-      'Etes-vous sur de vouloir continuer ?',
+      'Êtes-vous s?r de vouloir continuer ?',
       [
         {
           style: 'cancel',
@@ -780,6 +780,7 @@ function ClubDetails({ navigation, route }) {
                   imageStyle={{ borderRadius: 80 }}
                   imageUrl={club.logo.url}
                   size={80}
+                  variant="logo"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,

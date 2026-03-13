@@ -178,7 +178,7 @@ function TeamFilters({ navigation }) {
           }) => (
             <Input
               error={getFieldError({ errors: formErrors, fieldName: name })}
-              label={t('teamFilters.fields.name.label', 'Nom de l equipe')}
+              label={t('teamFilters.fields.name.label', 'Nom de l équipe')}
               onBlur={onBlur}
               onChangeText={onChange}
               placeholder={t('teamFilters.fields.name.placeholder', 'Rechercher un nom')}

@@ -55,7 +55,7 @@ function CMTeamsScreen({ navigation, route }) {
   }), [allTeams, searchQuery, selectedSection]);
 
   React.useEffect(() => {
-    navigation.setOptions({ headerTitle: `Equipes (${displayedTeams.length})` });
+    navigation.setOptions({ headerTitle: `Équipes (${displayedTeams.length})` });
   }, [navigation, displayedTeams.length]);
 
   const renderItem = ({ item }) => (
@@ -77,6 +77,7 @@ function CMTeamsScreen({ navigation, route }) {
             imageStyle={{ borderRadius: 25 }}
             imageUrl={item.logoUrl}
             size={50}
+            variant="logo"
             style={{ borderRadius: 25 }}
           />
         ) : (
@@ -116,7 +117,7 @@ function CMTeamsScreen({ navigation, route }) {
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SearchBar
           onChangeText={setSearchQuery}
-          placeholder="Rechercher une equipe..."
+          placeholder="Rechercher une équipe..."
           value={searchQuery}
           withCalendar={false}
           withFilter={false}
@@ -183,7 +184,7 @@ function CMTeamsScreen({ navigation, route }) {
           keyExtractor={(item) => item.documentId || item.id}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucune equipe trouvee.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucune équipe trouvée.</Text>
             </View>
           )}
           refreshControl={

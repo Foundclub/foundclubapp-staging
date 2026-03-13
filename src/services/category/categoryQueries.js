@@ -9,6 +9,6 @@ import { getCategories } from './categoryService';
  */
 export const useGetCategories = (options = {}) => useQuery({
   queryFn: () => getCategories(),
-  queryKey: ['categories'],
+  queryKey: ['catégories'],
   ...options,
 });

@@ -18,7 +18,7 @@ import Input from '@/components/molecules/input/Input';
  * @param {object} props
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} props.onClose - Function to call when closing the modal
- * @param {(reason: string) => void} props.onSubmit - Function to call when submitting the reason
+ * @param {(reason?: string) => void} props.onSubmit - Function to call when submitting the reason
  * @returns {import('react').ReactElement} RefuseParticipationModal component
  */
 function RefuseParticipationModal({
@@ -44,6 +44,12 @@ function RefuseParticipationModal({
   }, [isVisible, inputRef]);
 
   useEffect(() => {
+    if (!isVisible) {
+      setReason('');
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
       (e) => {
@@ -64,7 +70,8 @@ function RefuseParticipationModal({
   }, []);
 
   const handleSubmit = () => {
-    onSubmit(reason);
+    const normalizedReason = String(reason || '').trim();
+    onSubmit(normalizedReason || undefined);
     setReason('');
     onClose();
   };
@@ -72,12 +79,13 @@ function RefuseParticipationModal({
   return (
     <BottomModal
       close={onClose}
+      hideCloseButton
       isVisible={isVisible}
     >
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          { paddingBottom: keyboardHeight },
+          { paddingBottom: keyboardHeight + 24 },
         ]}
         keyboardShouldPersistTaps="handled"
         style={[Alignments.fullHeight]}
@@ -93,9 +101,18 @@ function RefuseParticipationModal({
           placeholder={t('eventDetails.modals.refuse.fields.reason.placeholder')}
           ref={inputRef}
           textAlignVertical="top"
+          value={reason}
         />
+        <Text style={[Fonts.p4, Fonts.neutral300]}>
+          {t('eventDetails.modals.refuse.fields.reason.optionalHint')}
+        </Text>
         <View style={[
-          Alignments.row, Spaces.gap[16], Alignments.fullWidth, Spaces.marginTop[24]]}
+          Alignments.row,
+          Spaces.gap[16],
+          Alignments.fullWidth,
+          Spaces.marginTop[24],
+          Spaces.marginBottom[8],
+        ]}
         >
           <Button
             onPress={onClose}
@@ -104,7 +121,6 @@ function RefuseParticipationModal({
             variant="SecondaryLight"
           />
           <Button
-            disabled={!reason.trim()}
             onPress={handleSubmit}
             style={Alignments.fill}
             title={t('eventDetails.modals.actions.confirm')}

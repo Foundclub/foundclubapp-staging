@@ -100,6 +100,7 @@ function MultisportHeroCard({
             imageStyle={{ borderRadius: 80 }}
             imageUrl={cm.logo.url}
             size={80}
+            variant="logo"
             style={[{ borderRadius: 80 }]}
           />
         ) : (

@@ -327,7 +327,7 @@ function EventWizardRecap({ navigation }) {
     <>
       <WizardStepLayout
         isNextLoading={isSubmitting}
-        nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
+        nextLabel={t('eventWizard.recap.actions.createShort', 'Créer')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
         stepCount={10}
@@ -349,7 +349,7 @@ function EventWizardRecap({ navigation }) {
           >
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('eventWizard.recap.quickOverviewTitle', 'Vue d ensemble')}
+                {t('eventWizard.recap.quickOverviewTitle', 'Vue d\'ensemble')}
               </Text>
               <View
                 style={[
@@ -366,7 +366,7 @@ function EventWizardRecap({ navigation }) {
               >
                 <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                   {isRecapReady
-                    ? t('eventWizard.recap.ready', 'Pret a creer')
+                    ? t('eventWizard.recap.ready', 'Prêt a créer')
                     : t('eventWizard.recap.incomplete', 'A completer')}
                 </Text>
               </View>
@@ -428,7 +428,7 @@ function EventWizardRecap({ navigation }) {
               </View>
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('eventWizard.recap.invitedTeamsTitle', 'Equipes invitees')}
+                  {t('eventWizard.recap.invitedTeamsTitle', 'Équipes invitees')}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {t('eventWizard.recap.invitesCount', { count: invitedCount })}

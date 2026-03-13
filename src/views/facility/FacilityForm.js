@@ -36,15 +36,15 @@ const schema = Joi.object({
     Joi.object().optional(),
   ),
   maxSlots: Joi.number().min(1).required().messages({
-    'any.required': 'La capacite est requise',
-    'number.min': 'La capacite doit etre d\'au moins 1',
+    'any.required': 'La capacité est requise',
+    'number.min': 'La capacité doit être d\'au moins 1',
   }),
   name: Joi.string().required().messages({
     'string.empty': 'Le nom est requis',
   }),
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
-    'any.only': 'Selectionnez une couleur valide',
-    'string.empty': 'Selectionnez une couleur',
+    'any.only': 'Sélectionnez une couleur validé',
+    'string.empty': 'Sélectionnez une couleur',
   }),
   type: Joi.string().required().messages({
     'string.empty': 'Le type est requis',
@@ -112,8 +112,8 @@ const normalizeAddressPayload = (address) => {
 const getCapacityLabel = (value, t) => {
   const teams = Number(value || 1);
   const unit = teams > 1
-    ? t('facilityForm.capacity.teamPlural', 'equipes simultanees')
-    : t('facilityForm.capacity.teamSingular', 'equipe simultanee');
+    ? t('facilityForm.capacity.teamPlural', 'équipes simultanees')
+    : t('facilityForm.capacity.teamSingular', 'équipe simultanee');
   return `${teams} ${unit}`;
 };
 
@@ -160,7 +160,7 @@ function FacilityForm() {
 
   const subtitle = useMemo(() => (
     isEdit
-      ? t('facilityForm.subtitle.edit', 'Mettez a jour les informations de cette installation.')
+      ? t('facilityForm.subtitle.edit', 'Mettez à jour les informations de cette installation.')
       : t('facilityForm.subtitle.create', 'Configurez une nouvelle installation pour votre club.')
   ), [isEdit, t]);
 
@@ -181,7 +181,7 @@ function FacilityForm() {
       setError('address', {
         message: t(
           'facilityForm.errors.addressGeocodeRequired',
-          'Selectionnez une adresse geolocalisee dans la liste.',
+          'Sélectionnez une adresse geolocalisee dans la liste.',
         ),
         type: 'manual',
       });
@@ -289,7 +289,7 @@ function FacilityForm() {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('facilityForm.sections.identity', 'Identite')}
+              {t('facilityForm.sections.identity', 'Identité')}
             </Text>
 
             <Controller
@@ -402,7 +402,7 @@ function FacilityForm() {
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
                         {t(
                           'facilityForm.hints.planningColor',
-                          'Cette couleur apparaitra dans le planning pour identifier rapidement l installation.',
+                          'Cette couleur apparaitra dans le planning pour identifier rapidement l\'installation.',
                         )}
                       </Text>
                     )}
@@ -422,7 +422,7 @@ function FacilityForm() {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('facilityForm.sections.location', 'Localisation et capacite')}
+              {t('facilityForm.sections.location', 'Localisation et capacité')}
             </Text>
 
             <Controller
@@ -441,7 +441,7 @@ function FacilityForm() {
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {t(
                         'facilityForm.hints.addressSelection',
-                        'Selectionnez une adresse dans la liste pour activer le GPS.',
+                        'Sélectionnez une adresse dans la liste pour activer le GPS.',
                       )}
                     </Text>
                   ) : null}
@@ -457,7 +457,7 @@ function FacilityForm() {
                 return (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t('facilityForm.fields.capacity', 'Capacite (equipes simultanees)')}
+                      {t('facilityForm.fields.capacity', 'Capacité (équipes simultanees)')}
                     </Text>
                     <View
                       style={[
@@ -558,7 +558,7 @@ function FacilityForm() {
               onPress={handleSubmit(handleSave)}
               title={isEdit
                 ? t('facilityForm.actions.save', 'Enregistrer')
-                : t('facilityForm.actions.create', 'Creer')}
+                : t('facilityForm.actions.create', 'Créer')}
               variant="Primary"
             />
             <Button

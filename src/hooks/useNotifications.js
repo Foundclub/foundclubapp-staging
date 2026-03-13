@@ -285,9 +285,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!startParam || !endParam) return;
 
     const text = encodeURIComponent(`Match FoundClub League - ${notificationData?.teamName || 'Squad'}`);
-    const details = encodeURIComponent(`Match confirme contre ${notificationData?.opponentName || 'adversaire'}`);
+    const details = encodeURIComponent(`Match confirmé contre ${notificationData?.opponentName || 'adversaire'}`);
     const location = encodeURIComponent(notificationData?.venue || notificationData?.location || '');
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&détails=${details}&location=${location}`;
     try {
       await Linking.openURL(url);
     } catch (error) {
@@ -303,8 +303,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     promptedCalendarMatchesRef.current.add(key);
 
     Alert.alert(
-      'Match confirme',
-      'Ajouter ce match a votre agenda ?',
+      'Match confirmé',
+      'Ajouter ce match à votre agenda ?',
       [
         { style: 'cancel', text: 'Plus tard' },
         {

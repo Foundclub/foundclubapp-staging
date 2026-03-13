@@ -82,7 +82,7 @@ export const getChatMessagePreview = (message) => {
     case 'contact_share':
       return 'Contact partage';
     case 'event_share':
-      return 'Evenement partage';
+      return 'Événement partage';
     case 'location_share':
       return 'Localisation';
     case 'poll':
@@ -99,7 +99,7 @@ export const getChatMessagePreview = (message) => {
     const firstMime = String(message.attachments?.[0]?.mime || '').toLowerCase();
     if (firstMime.startsWith('image/')) return 'Photo';
     if (firstMime.startsWith('audio/')) return 'Note vocale';
-    return 'Piece jointe';
+    return 'Pièce jointe';
   }
 
   return '';

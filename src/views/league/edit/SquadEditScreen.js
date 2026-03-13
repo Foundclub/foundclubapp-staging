@@ -134,7 +134,7 @@ function SquadEditScreen({ navigation, route }) {
 
       const homeBasePayload = buildHomeBasePayload(data.address, data.radius);
       if (!homeBasePayload) {
-        Alert.alert('Adresse invalide', 'Selectionnez une adresse avec des coordonnees valides.');
+        Alert.alert('Adresse invalide', 'Sélectionnez une adresse avec des coordonnées valides.');
         return;
       }
 
@@ -275,7 +275,7 @@ function SquadEditScreen({ navigation, route }) {
                 />
               )}
             />
-            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>Distance max pour vos matchs a l'extérieur</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>Distance max pour vos matchs à l'extérieur</Text>
           </View>
 
           <View style={{ marginTop: 24 }}>

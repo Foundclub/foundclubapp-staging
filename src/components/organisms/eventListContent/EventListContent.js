@@ -334,7 +334,7 @@ function EventListContent({
       eventListLogger.warn('Navigation blocked: missing event documentId');
       return;
     }
-    eventListLogger.debug('Navigating to event details', { eventDocumentId: event.documentId });
+    eventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
     /** @type {any} */ (navigation).navigate('EventStack', { params: { eventId: event.documentId }, screen: 'EventDetails' });
   }, [navigation]);
 

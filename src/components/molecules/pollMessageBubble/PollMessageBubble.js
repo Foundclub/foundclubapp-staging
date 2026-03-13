@@ -153,7 +153,7 @@ function PollMessageBubble({
 
   const isAnonymousPoll = !!poll?.isAnonymous;
   const canOpenDetails = typeof onOpenDetails === 'function';
-  const canVote = typeof onVote === 'function' && !canOpenDetails;
+  const canVote = typeof onVote === 'function';
   const totalVotes = options.reduce((sum, option) => sum + getVoteCount(option), 0);
 
   const handleOptionPress = async (/** @type {string} */ optionId) => {
@@ -325,9 +325,11 @@ function PollMessageBubble({
             return (
               <TouchableOpacity
                 activeOpacity={0.85}
-                disabled={!!loadingOptionId}
                 key={optionId}
-                onPress={() => handleOptionPress(optionId)}
+                onPress={(event) => {
+                  event?.stopPropagation?.();
+                  handleOptionPress(optionId);
+                }}
                 style={optionStyle}
               >
                 {optionBody}
@@ -344,7 +346,7 @@ function PollMessageBubble({
 
         {canOpenDetails ? (
           <Text style={[Fonts.p4, { color: Colors.neutral300 }, styles.detailsHint]}>
-            Appuie sur la carte pour ouvrir les details et voter.
+            Appuie sur une option pour voter, ou sur la carte pour les détails.
           </Text>
         ) : null}
       </View>

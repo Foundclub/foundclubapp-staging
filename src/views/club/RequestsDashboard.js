@@ -110,7 +110,7 @@ function RequestsDashboard({ navigation, route }) {
       >
         <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignStart]}>
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.h4Black, Fonts.neutral00]}>{item.type?.name || 'Evenement'}</Text>
+            <Text style={[Fonts.h4Black, Fonts.neutral00]}>{item.type?.name || 'Événement'}</Text>
             <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
               {dateStr}
               {' '}
@@ -127,8 +127,8 @@ function RequestsDashboard({ navigation, route }) {
               {item.facility?.name || item.locationDetails || 'Non defini'}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary500, Spaces.marginTop[4]]}>
-              Equipe:
-              {item.team?.name || 'Equipe inconnue'}
+              Équipe:
+              {item.team?.name || 'Équipe inconnue'}
             </Text>
           </View>
         </View>
@@ -173,7 +173,7 @@ function RequestsDashboard({ navigation, route }) {
     >
       <ScreenContainer title={t('requests.title', 'Demandes en attente')}>
         <OnboardingWrapper
-          description="Consultez puis validez ou refusez les demandes d evenements en attente."
+          description="Consultez puis validez ou refusez les demandes d événements en attente."
           id="requests-dashboard-list"
           order={1}
           spotlight={{

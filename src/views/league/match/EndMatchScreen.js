@@ -172,7 +172,7 @@ function EndMatchScreen() {
 
   const matchPhase = getMatchDerivedPhase(match);
   const isScoreSubmissionAllowed = ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase);
-  const scoreSubmissionBlockReason = "Le score ne peut pas etre saisi a ce stade. Verifiez que l'heure de debut du match est depassee.";
+  const scoreSubmissionBlockReason = "Le score ne peut pas être saisi ? ce stade. V?rifiez que l'heure de d?but du match est d?pass?e.";
   const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
   const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
@@ -222,7 +222,7 @@ function EndMatchScreen() {
     const userLocation = getLocationCoordinates(userData?.location);
     const location = homeBaseLocation || userLocation;
     if (!location) {
-      throw new Error('Aucune localisation valide trouvee. Configurez la base de votre squad.');
+      throw new Error('Aucune localisation validée trouvée. Configurez la base de votre squad.');
     }
     const homeBase = myTeam?.home_base && typeof myTeam.home_base === 'object'
       ? /** @type {{radius?: number}} */ (myTeam.home_base)
@@ -234,7 +234,7 @@ function EndMatchScreen() {
       .filter((id) => typeof id === 'string' && id.length > 0);
 
     if (selectedSlotIds.length === 0) {
-      throw new Error('Aucun creneau disponible pour relancer une recherche.');
+      throw new Error('Aucun créneau disponible pour relancer une recherche.');
     }
 
     await MatchmakingService.triggerSearch(teamId, selectedSlotIds, { location, radius });
@@ -243,7 +243,7 @@ function EndMatchScreen() {
 
   const promptForSearchRelaunch = () => {
     Alert.alert(
-      'Score valide',
+      'Score validé',
       'Le match est termine. Voulez-vous relancer une recherche pour un autre match ?',
       [
         {
@@ -255,7 +255,7 @@ function EndMatchScreen() {
           onPress: async () => {
             try {
               await relaunchSearchNow();
-              Alert.alert('Recherche relancee', 'La recherche de nouvel adversaire a ete lancee.');
+              Alert.alert('Recherche relancée', 'La recherche d\'un nouvel adversaire a été lancée.');
             } catch (error) {
               const apiError = /** @type {any} */ (error);
               const message = typeof error === 'string' ? error : apiError?.message || 'Relance impossible.';
@@ -309,11 +309,11 @@ function EndMatchScreen() {
           } else if (recoveredStatus === 'disputed') {
             Alert.alert(
               'Litige ouvert',
-              'Le score a ete enregistre mais est passe en litige.',
+              'Le score a été enregistre mais est passe en litige.',
               [{ onPress: () => navigation.goBack(), text: 'OK' }],
             );
           } else {
-            Alert.alert('Score enregistre', 'Le score a ete enregistre.', [{ onPress: () => navigation.goBack(), text: 'OK' }]);
+            Alert.alert('Score enregistre', 'Le score a été enregistre.', [{ onPress: () => navigation.goBack(), text: 'OK' }]);
           }
           return;
         }
@@ -346,7 +346,7 @@ function EndMatchScreen() {
       if (finalStatus === 'disputed') {
         Alert.alert(
           'Litige ouvert',
-          'Le score est maintenant en litige. Vous pourrez confirmer ou fournir des details si besoin.',
+          'Le score est maintenant en litige. Vous pourrez confirmer ou fournir des détails si besoin.',
           [{ onPress: () => navigation.goBack(), text: 'OK' }],
         );
         return;
@@ -354,7 +354,7 @@ function EndMatchScreen() {
 
       Alert.alert(
         'Score enregistre',
-        'Le score a bien ete envoye.',
+        'Le score a bien été envoyé.',
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );
     },
@@ -534,7 +534,7 @@ function EndMatchScreen() {
                 {`${opponentScoreA ?? '-'} - ${opponentScoreB ?? '-'}`}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                Confirmez ce score si vous etes d'accord, sinon ouvrez un litige.
+                Confirmez ce score si vous êtes d'accord, sinon ouvrez un litige.
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button

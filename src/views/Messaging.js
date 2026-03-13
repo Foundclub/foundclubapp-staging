@@ -131,6 +131,7 @@ function Messaging({ navigation, route }) {
               enablePreview={false}
               imageUrl={chat.club.logo.url}
               size={48}
+              variant="logo"
             />
           );
         }
@@ -182,6 +183,7 @@ function Messaging({ navigation, route }) {
               enablePreview={false}
               imageUrl={chat.multisportClub.logo.url}
               size={48}
+              variant="logo"
             />
           );
         }
@@ -199,6 +201,7 @@ function Messaging({ navigation, route }) {
               enablePreview={false}
               imageUrl={chat.team.logo.url}
               size={48}
+              variant="logo"
             />
           );
         }
@@ -521,7 +524,7 @@ function Messaging({ navigation, route }) {
           </View>
         </OnboardingWrapper>
 
-        {(userData?.role?.name === 'Entraineur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
+        {(userData?.role?.name === 'Entraîneur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
           <View style={{
             bottom: 20,
             left: 20,

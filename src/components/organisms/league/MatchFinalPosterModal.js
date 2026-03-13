@@ -27,7 +27,7 @@ const formatDelta = (value) => {
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
-    return { chip: 'Resultat valide', color: colors.success500 };
+    return { chip: 'Resultat validé', color: colors.success500 };
   }
   if (normalized === 'forfeit') {
     return { chip: 'Forfait', color: colors.warning500 };
@@ -35,7 +35,7 @@ const getStatusUi = (status, colors) => {
   if (normalized === 'no_show') {
     return { chip: 'No-show', color: colors.error500 };
   }
-  return { chip: 'Match annule', color: colors.error500 };
+  return { chip: 'Match annulé', color: colors.error500 };
 };
 
 /**
@@ -143,7 +143,7 @@ function MatchFinalPosterModal({
               </Text>
               <Text style={[Fonts.h4Bold, { color: Number(recap?.eloDelta) >= 0 ? Colors.success500 : Colors.error500 }]}>{delta}</Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                ELO apres:
+                ELO apr?s:
                 {eloAfter}
               </Text>
             </View>
@@ -180,7 +180,7 @@ function MatchFinalPosterModal({
           </View>
 
           <View style={styles.actions}>
-            <Button onPress={onOpenDetails} title="Voir details" variant="Primary" />
+            <Button onPress={onOpenDetails} title="Voir détails" variant="Primary" />
             <Button
               onPress={onRelaunchSearch}
               style={{ borderColor: Colors.gold500 }}

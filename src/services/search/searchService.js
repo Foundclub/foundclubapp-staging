@@ -254,13 +254,13 @@ export const mapSearchPayload = (searchResponse) => (searchResponse?.data || [])
 export const getMatchReasonLabel = (reason) => {
   switch (reason) {
     case 'ACTIVITY_MATCH':
-      return 'Correspond a l activite';
+      return 'Correspond à l\'activité';
     case 'CITY_MATCH':
-      return 'Correspond a la ville';
+      return 'Correspond à la ville';
     case 'CLUB_MATCH':
       return 'Correspond au club';
     case 'DESCRIPTION_MATCH':
-      return 'Correspond a la description';
+      return 'Correspond à la description';
     case 'GEO_NEARBY':
       return 'A proximite';
     case 'LOCATION_FUZZY':
@@ -274,7 +274,7 @@ export const getMatchReasonLabel = (reason) => {
     case 'NAME_PREFIX':
       return 'Correspondance du nom';
     case 'TEAM_MATCH':
-      return 'Correspond a l equipe';
+      return 'Correspond à l équipe';
     default:
       return '';
   }

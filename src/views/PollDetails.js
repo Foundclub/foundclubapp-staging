@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 
@@ -64,6 +65,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  optionSectionCard: {
+    backgroundColor: 'rgba(20, 39, 52, 0.78)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  optionSectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   pollWrapper: {
     marginTop: 4,
   },
@@ -78,6 +94,18 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: 8,
+  },
+  voterRow: {
+    alignItems: 'center',
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    minHeight: 46,
+    paddingVertical: 8,
+  },
+  votersSectionTitle: {
+    marginBottom: 8,
+    marginTop: 14,
   },
 });
 
@@ -128,8 +156,8 @@ function PollDetails({ navigation, route }) {
     return null;
   }, [initialPoll, pollMessage?.composition]);
 
-  const voterNameDirectory = useMemo(() => {
-    /** @type {Map<string, string>} */
+  const voterDirectory = useMemo(() => {
+    /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string }>} */
     const directory = new Map();
 
     const registerUser = (/** @type {any} */ user) => {
@@ -139,7 +167,13 @@ function PollDetails({ navigation, route }) {
       const lastname = (user?.lastname || '').trim();
       const fullName = `${firstname} ${lastname}`.trim();
       const fallbackName = (user?.username || user?.email || '').trim();
-      directory.set(String(userId), fullName || fallbackName || 'Membre');
+      const previous = directory.get(String(userId));
+      directory.set(String(userId), {
+        avatarUrl: String(user?.avatar?.url || previous?.avatarUrl || '').trim(),
+        displayName: fullName || fallbackName || previous?.displayName || 'Membre',
+        firstname: firstname || previous?.firstname || '',
+        lastname: lastname || previous?.lastname || '',
+      });
     };
 
     registerUser(userData);
@@ -160,8 +194,45 @@ function PollDetails({ navigation, route }) {
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
     if (!voterId) return 'Membre';
-    return voterNameDirectory.get(String(voterId)) || 'Membre';
+    const profile = voterDirectory.get(String(voterId));
+    if (!profile) return 'Membre';
+    return profile.displayName || 'Membre';
   };
+
+  const optionVoterSections = useMemo(() => {
+    const options = Array.isArray(poll?.options) ? poll.options : [];
+    if (options.length === 0) return [];
+
+    const resolveVoterProfile = (/** @type {string} */ voterId) => {
+      const profile = voterDirectory.get(String(voterId));
+      if (!profile) {
+        return {
+          avatarUrl: '',
+          displayName: 'Membre',
+          firstname: '',
+          lastname: '',
+        };
+      }
+
+      return profile;
+    };
+
+    return options.map((option, index) => {
+      const optionId = String(option?.id || `option-${index}`);
+      const optionLabel = String(option?.label || `Option ${index + 1}`);
+      const uniqueVoterIds = Array.from(new Set(getVoters(option)));
+      const voters = uniqueVoterIds.map((voterId) => ({
+        voterId,
+        ...resolveVoterProfile(voterId),
+      }));
+
+      return {
+        optionId,
+        optionLabel,
+        voters,
+      };
+    });
+  }, [poll?.options, voterDirectory]);
 
   const createdByName = poll?.createdBy
     ? resolveVoterName(String(poll.createdBy))
@@ -318,8 +389,8 @@ function PollDetails({ navigation, route }) {
         </View>
         <View style={styles.sectionHintCard}>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            Selectionne une option pour voter. Le detail des votants est affiche quand le sondage
-            n est pas anonyme.
+            Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage
+            n'est pas anonyme.
           </Text>
         </View>
 
@@ -342,22 +413,70 @@ function PollDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
-              Ce sondage est introuvable ou a ete supprime.
+              Ce sondage est introuvable ou a été supprimé.
             </Text>
           </View>
         ) : (
-          <View style={styles.pollWrapper}>
-            <PollMessageBubble
-              currentUserId={userData?.documentId || ''}
-              fullWidth
-              isMe={false}
-              onVote={isSubmittingVote ? undefined : handleVote}
-              poll={poll}
-              resolveVoterName={resolveVoterName}
-              showSelectedBadge
-              showVoterChips
-            />
-          </View>
+          <>
+            <View style={styles.pollWrapper}>
+              <PollMessageBubble
+                currentUserId={userData?.documentId || ''}
+                fullWidth
+                isMe={false}
+                onVote={isSubmittingVote ? undefined : handleVote}
+                poll={poll}
+                resolveVoterName={resolveVoterName}
+                showSelectedBadge
+                showVoterChips
+              />
+            </View>
+
+            <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }, styles.votersSectionTitle]}>
+              Votes par option
+            </Text>
+            {poll?.isAnonymous ? (
+              <View style={styles.sectionHintCard}>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  Ce sondage est anonyme. Les votants ne sont pas affichés.
+                </Text>
+              </View>
+            ) : optionVoterSections.map((section) => (
+              <View key={section.optionId} style={styles.optionSectionCard}>
+                <View style={styles.optionSectionHeader}>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>{section.optionLabel}</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                    {section.voters.length}
+                    {' '}
+                    vote
+                    {section.voters.length > 1 ? 's' : ''}
+                  </Text>
+                </View>
+
+                {section.voters.length === 0 ? (
+                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                    Aucun vote pour cette option.
+                  </Text>
+                ) : section.voters.map((voter) => {
+                  const fullName = `${voter.firstname} ${voter.lastname}`.trim();
+                  const displayLabel = fullName || voter.displayName || 'Membre';
+
+                  return (
+                    <View key={`${section.optionId}-${voter.voterId}`} style={styles.voterRow}>
+                      <ProfileAvatar
+                        enablePreview={false}
+                        imageUrl={voter.avatarUrl}
+                        size={34}
+                        style={{ borderRadius: 17 }}
+                      />
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00, marginLeft: 10 }]}>
+                        {displayLabel}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </>
         )}
       </ScrollView>
     </ImageBackground>

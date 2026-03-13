@@ -228,6 +228,7 @@ function Profile({ navigation, route }) {
               imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={userData.club.logo.url}
               size={clubIdentitySize}
+              variant="logo"
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.neutral00,
@@ -272,6 +273,7 @@ function Profile({ navigation, route }) {
               imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={cm.logo.url}
               size={clubIdentitySize}
+              variant="logo"
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.primary500,
@@ -336,6 +338,7 @@ function Profile({ navigation, route }) {
               imageStyle={{ borderRadius: clubIdentityRadius }}
               imageUrl={team.club.logo.url}
               size={clubIdentitySize}
+              variant="logo"
               style={[
                 ApplicationStyle.borderWidth1,
                 ApplicationStyle.borderColor.neutral00,
@@ -423,7 +426,7 @@ function Profile({ navigation, route }) {
         <TabButton
           isActive={false}
           onPress={handleOpenRequestsHub}
-          title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
+          title={t('profile.actions.manageRequests', 'Gérer mes demandes')}
         />
       ) : null}
       {userData?.role?.name === USER_ROLES.superAdmin ? (
@@ -626,7 +629,7 @@ function Profile({ navigation, route }) {
 
           {isProfileMainTutorial ? (
             <OnboardingWrapper
-              description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
+              description="Depuis cette zone, vous pouvez modifier votre profil, gérer vos demandes et changer de compte."
               id="profile-main-actions"
               order={1}
               spotlight={{
@@ -640,13 +643,13 @@ function Profile({ navigation, route }) {
 
           {isLogoutTutorial ? (
             <OnboardingWrapper
-              description="Ce bouton lance la confirmation de deconnexion de votre session."
+              description="Ce bouton lance la confirmation de déconnexion de votre session."
               id="profile-logout-action"
               order={2}
               spotlight={{
                 borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
               }}
-              title="Deconnexion"
+              title="Déconnexion"
             >
               <Button
                 onPress={handleLogout}

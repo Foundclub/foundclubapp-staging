@@ -79,11 +79,11 @@ const resolveAnswerFromAction = (pressActionId) => {
  */
 const getFeedbackCopy = (answer) => (answer === 'present'
   ? {
-    body: 'Votre presence est enregistree.',
+    body: 'Votre presence est enregistrée.',
     title: 'Presence confirmee',
   }
   : {
-    body: 'Votre absence est enregistree.',
+    body: 'Votre absence est enregistrée.',
     title: 'Absence confirmee',
   });
 
@@ -261,7 +261,7 @@ export const handleEventRsvpActionPress = async ({
       `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} eventId=${normalizedData?.eventId || 'unknown'}`,
     );
     await displayLocalNotification({
-      body: "Ouvrez l'application pour finaliser votre reponse.",
+      body: "Ouvrez l'application pour finaliser votre réponse.",
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
       data: normalizedData,
       title: 'Action non finalisee',

@@ -183,7 +183,7 @@ function PastMatchDetails() {
 
     Alert.alert(
       'Demander une revanche',
-      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette equipe'} ?`,
+      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette équipe'} ?`,
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -192,8 +192,8 @@ function PastMatchDetails() {
             try {
               const result = await requestRematch(myTeamDocId, opponentDocId, matchId);
               Alert.alert(
-                result?.matched ? 'Match cree' : 'Demande envoyee',
-                result?.message || 'Votre demande a bien ete envoyee.',
+                result?.matched ? 'Match cree' : 'Demande envoyée',
+                result?.message || 'Votre demande a bien été envoyée.',
               );
               if (result?.matched) {
                 navigation.goBack();
@@ -275,7 +275,7 @@ function PastMatchDetails() {
               <View style={styles.teamBlock}>
                 <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} isGold size={62} />
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamA?.name || 'Equipe A'}
+                  {teamA?.name || 'Équipe A'}
                 </Text>
               </View>
 
@@ -292,7 +292,7 @@ function PastMatchDetails() {
                     <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
                 )}
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamB?.name || 'Equipe B'}
+                  {teamB?.name || 'Équipe B'}
                 </Text>
               </View>
             </View>
@@ -338,7 +338,7 @@ function PastMatchDetails() {
               </View>
 
               <View style={styles.eloCol}>
-                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Apres</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Apr?s</Text>
                 <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>{eloInfo.after}</Text>
               </View>
             </View>

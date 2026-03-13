@@ -472,7 +472,7 @@ function HistoryWizardClub({ navigation, route }) {
 
                   {shouldShowNoResults ? (
                     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-                      Aucun club trouve pour cette recherche.
+                      Aucun club trouv? pour cette recherche.
                     </Text>
                   ) : null}
                   {!displayedIsLoading && hasSearchTerm && hasSearchError ? (
@@ -495,7 +495,7 @@ function HistoryWizardClub({ navigation, route }) {
 
               <TouchableOpacity onPress={handleOpenCustomInput}>
                 <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                  Club non trouve ? Saisir manuellement
+                  Club non trouv? ? Saisir manuellement
                 </Text>
               </TouchableOpacity>
             </View>
@@ -526,7 +526,7 @@ function HistoryWizardClub({ navigation, route }) {
 
               <TouchableOpacity onPress={handleBackToSearch}>
                 <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                  Revenir a la recherche
+                  Revenir à la recherche
                 </Text>
               </TouchableOpacity>
             </View>
@@ -541,7 +541,7 @@ function HistoryWizardClub({ navigation, route }) {
                 {selectedMultisport?.name}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                Selectionne ton entite de rattachement
+                Sélectionné ton entite de rattachement
               </Text>
             </View>
           )}

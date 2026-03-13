@@ -35,7 +35,7 @@ function SquadCategoryStep({
         }));
         setCategories(options);
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error('Error fetching catégories:', error);
       } finally {
         setLoading(false);
       }

@@ -150,7 +150,7 @@ function PlanningWeekTimelineView({
     if (normalizedType) {
       switch (normalizedType) {
         case 'Autre': return '#4DFFB3'; // Green
-        case 'Entrainement': return '#4D79FF'; // Blue
+        case 'Entraînement': return '#4D79FF'; // Blue
         case 'Match': return '#FF4D4D'; // Red
         case 'Reunion': return '#FFB34D'; // Orange
       }
@@ -503,7 +503,7 @@ function PlanningWeekTimelineView({
 
   const summaryText = useMemo(() => {
     const count = weekEvents.length;
-    const unit = count > 1 ? 'evenements' : 'evenement';
+    const unit = count > 1 ? 'événements' : 'événement';
     const period = mode === 'week' ? 'cette semaine' : 'sur 3 jours';
     return `${count} ${unit} ${period}`;
   }, [weekEvents.length, mode]);

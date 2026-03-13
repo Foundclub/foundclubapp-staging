@@ -213,7 +213,7 @@ function CMDashboard({ navigation, route }) {
       key: 'manage-club',
       onPress: handleOpenManageClub,
       subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et reglages du club.'),
-      title: t('multisport.actions.manageClub.title', 'Gerer mon club'),
+      title: t('multisport.actions.manageClub.title', 'Gérer mon club'),
     },
     {
       icon: 'bell',
@@ -226,8 +226,8 @@ function CMDashboard({ navigation, route }) {
       icon: 'calendar',
       key: 'add-event',
       onPress: handleAddEvent,
-      subtitle: t('multisport.actions.addEvent.subtitle', 'Creer un evenement pour une section ou une equipe.'),
-      title: t('multisport.actions.addEvent.title', 'Ajouter un evenement'),
+      subtitle: t('multisport.actions.addEvent.subtitle', 'Créer un événement pour une section ou une équipe.'),
+      title: t('multisport.actions.addEvent.title', 'Ajouter un événement'),
     },
     {
       icon: 'running',
@@ -252,7 +252,7 @@ function CMDashboard({ navigation, route }) {
     },
     {
       key: 'teams',
-      label: t('multisport.stats.teams', 'Equipes'),
+      label: t('multisport.stats.teams', 'Équipes'),
       onPress: () => navigation.navigate(RouteNames.CMTeams, { cmId }),
       value: globalStats.teams,
     },
@@ -287,7 +287,7 @@ function CMDashboard({ navigation, route }) {
         ]}
       >
         <OnboardingWrapper
-          description={t('multisport.tutorial.mainDescription', 'Gerez vos sections, vos membres et vos actions rapides depuis un seul ecran.')}
+          description={t('multisport.tutorial.mainDescription', 'G?rez vos sections, vos membres et vos actions rapides depuis un seul ?cran.')}
           id="cm-dashboard-main-content"
           order={1}
           spotlight={{
@@ -347,7 +347,7 @@ function CMDashboard({ navigation, route }) {
                   <Button
                     icon="plus"
                     onPress={handleCreateSection}
-                    title={t('multisport.actions.createSection.title', 'Creer une section')}
+                    title={t('multisport.actions.createSection.title', 'Créer une section')}
                     variant="Secondary"
                   />
                 </View>

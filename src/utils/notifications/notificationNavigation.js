@@ -23,6 +23,13 @@ import {
  *  dataType?: string,
  *  kind?: string,
  *  notificationKind?: string,
+ *  status?: string,
+ *  reason?: string,
+ *  eventDetails?: string,
+ *  createdAt?: string,
+ *  notificationTitle?: string,
+ *  notificationBody?: string,
+ *  notificationId?: string | number,
  *  matchId?: string | number,
  *  adId?: string | number,
  * }} NotificationPayload
@@ -112,6 +119,51 @@ const eventLineupDestination = (eventId) => {
       screen: RouteNames.TacticalSelectionV2,
     },
     route: RouteNames.EventStack,
+  };
+};
+
+/**
+ * @param {NotificationPayload} payload
+ */
+const notificationDetailsDestination = (payload) => {
+  const safeEventId = normalizeEntityId(payload.eventId);
+  const reason = typeof payload.reason === 'string' ? payload.reason : '';
+  const status = typeof payload.status === 'string' ? payload.status : '';
+  const createdAt = typeof payload.createdAt === 'string' ? payload.createdAt : '';
+  const eventDetails = typeof payload.eventDetails === 'string' ? payload.eventDetails : '';
+  let notificationTitle = '';
+  if (typeof payload.notificationTitle === 'string') {
+    notificationTitle = payload.notificationTitle;
+  } else if (typeof payload.title === 'string') {
+    notificationTitle = payload.title;
+  }
+
+  let notificationBody = '';
+  if (typeof payload.notificationBody === 'string') {
+    notificationBody = payload.notificationBody;
+  } else if (typeof payload.body === 'string') {
+    notificationBody = payload.body;
+  }
+  const notificationId = normalizeEntityId(payload.notificationId);
+
+  return {
+    params: {
+      notification: {
+        body: notificationBody,
+        createdAt,
+        data: {
+          eventDetails,
+          eventId: safeEventId,
+          reason,
+          status,
+          type: payload.type,
+        },
+        documentId: notificationId,
+        title: notificationTitle,
+        type: payload.type,
+      },
+    },
+    route: RouteNames.NotificationDetails,
   };
 };
 
@@ -262,6 +314,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
 
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
+    case NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER:
     case NOTIFICATION_TYPES.EVENT_PARTICIPANT_REMINDER:
     case NOTIFICATION_TYPES.EVENT_REMINDER:
@@ -278,6 +331,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       if (type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER) {
         return eventLineupDestination(payload.eventId)
           || eventDetailsDestination(payload.eventId);
+      }
+      if (type === NOTIFICATION_TYPES.PARTICIPATION_REQUEST && String(payload.status || '').toLowerCase() === 'declined') {
+        return notificationDetailsDestination(payload);
       }
       return eventDetailsDestination(payload.eventId);
     case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:

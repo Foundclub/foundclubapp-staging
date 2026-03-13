@@ -11,11 +11,11 @@ const getTypeLabel = (type, t) => {
     case 'club':
       return t('requestsHub.types.club', 'Club');
     case 'event':
-      return t('requestsHub.types.event', 'Evenement');
+      return t('requestsHub.types.event', 'Événement');
     case 'featured':
-      return t('requestsHub.types.featured', 'A la une');
+      return t('requestsHub.types.featured', 'À la une');
     case 'team':
-      return t('requestsHub.types.team', 'Equipe');
+      return t('requestsHub.types.team', 'Équipe');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }

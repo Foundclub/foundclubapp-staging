@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
 import BookingCalendar from '@/views/booking/BookingCalendar';
+import ConversationPublicEventPicker from '@/views/chat/ConversationPublicEventPicker';
 import AddSponsor from '@/views/club/AddSponsor';
 import Conversation from '@/views/Conversation';
 import EventFilters from '@/views/event/EventFilters';
@@ -24,6 +25,7 @@ import FeaturedRequestsScreen from '@/views/multisportClub/FeaturedRequestsScree
 import MultisportClubDetails from '@/views/multisportClub/MultisportClubDetails';
 import MultisportClubEditDetails from '@/views/multisportClub/MultisportClubEditDetails';
 import NewConversation from '@/views/NewConversation';
+import NotificationDetails from '@/views/notification/NotificationDetails';
 import NotificationList from '@/views/notification/NotificationList';
 import UserAddress from '@/views/onboarding/UserAddress';
 import UserAffiliationGuide from '@/views/onboarding/UserAffiliationGuide';
@@ -334,6 +336,13 @@ function PrivateNavigator() {
         }}
       />
       <Stack.Screen
+        component={ConversationPublicEventPicker}
+        name={RouteNames.ConversationPublicEventPicker}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         component={NewConversation}
         name="NewConversation"
         options={{
@@ -352,6 +361,13 @@ function PrivateNavigator() {
       <Stack.Screen
         component={NotificationList}
         name={RouteNames.NotificationList}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={NotificationDetails}
+        name={RouteNames.NotificationDetails}
         options={{
           headerShown: false,
         }}

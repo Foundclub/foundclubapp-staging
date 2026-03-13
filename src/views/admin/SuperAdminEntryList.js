@@ -201,7 +201,7 @@ function SuperAdminEntryList({ navigation, route }) {
     if (selectedCount === 0) {
       Alert.alert(
         t('superAdminContentManager.alerts.emptySelectionTitle', 'Selection vide'),
-        t('superAdminContentManager.alerts.emptySelectionMessage', 'Selectionnez au moins une entree.'),
+        t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionnez au moins une entr?e.'),
       );
       return;
     }
@@ -217,14 +217,14 @@ function SuperAdminEntryList({ navigation, route }) {
     try {
       if (typeof clipboard?.setString === 'function') {
         clipboard.setString(normalized);
-        setFeedbackMessage(t('superAdminContentManager.feedback.idCopied', 'ID copie'));
+        setFeedbackMessage(t('superAdminContentManager.feedback.idCopied', 'ID copié'));
         return;
       }
 
       Alert.alert(t('superAdminContentManager.common.id', 'ID'), normalized);
-      setFeedbackMessage(t('superAdminContentManager.feedback.clipboardUnavailable', 'Copie indisponible sur cette build'));
+      setFeedbackMessage(t('superAdminContentManager.feedback.clipboardUnavailable', 'Copié indisponible sur cette build'));
     } catch (_error) {
-      Alert.alert(t('superAdminContentManager.alerts.copyFailedTitle', 'Copie impossible'), normalized);
+      Alert.alert(t('superAdminContentManager.alerts.copyFailedTitle', 'Copié impossible'), normalized);
     }
   };
 
@@ -245,7 +245,7 @@ function SuperAdminEntryList({ navigation, route }) {
         uid,
       });
       closeDeleteModal();
-      setFeedbackMessage(t('superAdminContentManager.feedback.entryDeleted', 'Entree supprimee'));
+      setFeedbackMessage(t('superAdminContentManager.feedback.entryDeleted', 'Entr?e supprim?e'));
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
@@ -282,9 +282,9 @@ function SuperAdminEntryList({ navigation, route }) {
       clearSelection();
 
       if (failedCount > 0) {
-        setFeedbackMessage(`${succeededCount}/${selectedBeforeRequest} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliquee(s)')}`);
+        setFeedbackMessage(`${succeededCount}/${selectedBeforeRequest} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliqu?e(s)')}`);
       } else {
-        setFeedbackMessage(`${succeededCount} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliquee(s)')}`);
+        setFeedbackMessage(`${succeededCount} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliqu?e(s)')}`);
       }
     } catch (error) {
       Alert.alert(
@@ -346,11 +346,11 @@ function SuperAdminEntryList({ navigation, route }) {
         sortMode={sortMode}
         sortOptions={SUPERADMIN_SORT_OPTIONS}
         texts={{
-          create: t('superAdminContentManager.actions.createEntry', 'Creer une entree'),
+          create: t('superAdminContentManager.actions.createEntry', 'Créer une entr?e'),
           page: t('superAdminContentManager.list.page', 'Page'),
-          searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entree'),
+          searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entr?e'),
           selectAll: t('superAdminContentManager.actions.selectAll', 'Tout selectionner'),
-          selected: t('superAdminContentManager.list.selectedEntries', 'entree(s) selectionnee(s)'),
+          selected: t('superAdminContentManager.list.selectedEntries', 'entr?e(s) sélectionnée(s)'),
           selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Selection multiple'),
           selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter selection'),
           total: t('superAdminContentManager.list.total', 'Total'),
@@ -376,7 +376,7 @@ function SuperAdminEntryList({ navigation, route }) {
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {selectedCount}
             {' '}
-            {t('superAdminContentManager.list.selectedEntries', 'entree(s) selectionnee(s)')}
+            {t('superAdminContentManager.list.selectedEntries', 'entr?e(s) sélectionnée(s)')}
           </Text>
           <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
             <TouchableOpacity
@@ -444,7 +444,7 @@ function SuperAdminEntryList({ navigation, route }) {
           !isLoading ? (
             <SuperAdminEmptyState
               description={t('superAdminContentManager.empty.listDescription', 'Aucune donnee ne correspond aux filtres actifs.')}
-              title={t('superAdminContentManager.empty.listTitle', 'Aucune entree')}
+              title={t('superAdminContentManager.empty.listTitle', 'Aucune entr?e')}
             />
           ) : null
         }
@@ -583,10 +583,10 @@ function SuperAdminEntryList({ navigation, route }) {
         snapPoints={['45%']}
       >
         <Text style={[Fonts.h3, Fonts.neutral00]}>
-          {t('superAdminContentManager.deleteModal.title', 'Supprimer lentree')}
+          {t('superAdminContentManager.deleteModal.title', 'Supprimer l\'entr?e')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-          {t('superAdminContentManager.deleteModal.description', 'Cette action est definitive et necessite une raison daudit.')}
+          {t('superAdminContentManager.deleteModal.description', 'Cette action est definitive et necessite une raison d\'audit.')}
         </Text>
 
         <View style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}>
@@ -669,7 +669,7 @@ function SuperAdminEntryList({ navigation, route }) {
         <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
           {selectedCount}
           {' '}
-          {t('superAdminContentManager.bulkModal.description', 'entree(s) seront traitees. Une raison daudit est obligatoire.')}
+          {t('superAdminContentManager.bulkModal.description', 'entr?e(s) seront traitees. Une raison d\'audit est obligatoire.')}
         </Text>
 
         <TextInput

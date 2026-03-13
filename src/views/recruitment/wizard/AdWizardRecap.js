@@ -35,7 +35,7 @@ function AdWizardRecap({ navigation }) {
   const createAdMutation = useMutation({
     mutationFn: createRecruitmentAd,
     onError: (error) => {
-      console.error('[AdWizardRecap] Creation error:', error);
+      console.error('[AdWizardRecap] Cr?ation error:', error);
       Alert.alert('Erreur', 'Impossible de créer l\'annonce. Veuillez réessayer.');
     },
     onSuccess: () => {

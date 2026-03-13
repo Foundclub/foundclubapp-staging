@@ -296,6 +296,7 @@ function TeamListContent({
         <ProfileAvatar
           imageUrl={item.crest.url}
           size={80}
+          variant="logo"
           style={{ borderColor: Colors.gold500, borderRadius: 80, borderWidth: 1 }}
         />
       );
@@ -304,6 +305,7 @@ function TeamListContent({
         <ProfileAvatar
           imageUrl={item.club.logo.url}
           size={60}
+          variant="logo"
           style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.primary500, { borderRadius: 60 }]}
         />
       );
@@ -590,7 +592,7 @@ function TeamListContent({
       {myTeams.length > 0 ? (
         <View>
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], pendingTeams.length > 0 && Spaces.marginTop[24]]}>
-            Mes equipes
+            Mes équipes
           </Text>
           {myTeams.map((team) => (
             <View key={team.documentId}>
@@ -602,7 +604,7 @@ function TeamListContent({
 
       {otherTeams.length > 0 ? (
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0) && Spaces.marginTop[24]]}>
-          Autres equipes du club
+          Autres équipes du club
         </Text>
       ) : null}
     </View>
@@ -690,7 +692,7 @@ function TeamListContent({
                 width: '90%',
               }}
               textStyle={{ color: Colors.neutral900 }}
-              title="CREER UNE SQUAD"
+              title="Créer UNE SQUAD"
               variant="Primary"
             />
           </View>

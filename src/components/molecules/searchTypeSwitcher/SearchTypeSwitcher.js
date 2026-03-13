@@ -33,7 +33,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
     () => [
       {
         key: 'events',
-        label: t('homeHub.cards.search.events.title', 'Evenement'),
+        label: t('homeHub.cards.search.events.title', 'Événement'),
       },
       {
         key: 'clubs',

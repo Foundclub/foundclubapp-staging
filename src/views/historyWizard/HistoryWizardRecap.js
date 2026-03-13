@@ -120,7 +120,7 @@ function HistoryWizardRecap({ navigation }) {
 
       handleSuccess();
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible d enregistrer cette experience pour le moment.');
+      Alert.alert('Erreur', 'Impossible d\'enregistrer cette expérience pour le moment.');
     }
   };
 
@@ -130,7 +130,7 @@ function HistoryWizardRecap({ navigation }) {
       nextLabel={isEditing ? 'Enregistrer' : 'Valider'}
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
-      subtitle="Verifie les informations avant de valider"
+      subtitle="Vérifie les informations avant de valider"
       title="Recapitulatif"
     >
       <View style={[Spaces.gap[32]]}>
@@ -278,10 +278,10 @@ function HistoryWizardRecap({ navigation }) {
             <Text style={{ fontSize: 20, marginRight: 12 }}>!</Text>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, { color: '#F59E0B', marginBottom: 4 }]}>
-                Declaration sur l honneur
+                Déclaration sur l'honneur
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral00, lineHeight: 18 }]}>
-                Ces informations peuvent etre verifiees par la communaute.
+                Ces informations peuvent être v?rifi?es par la communaut?.
               </Text>
             </View>
           </View>

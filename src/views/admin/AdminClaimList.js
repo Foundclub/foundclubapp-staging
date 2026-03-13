@@ -93,7 +93,7 @@ function AdminClaimList() {
             || 'Utilisateur';
     const date = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
     const subtitle = item?.__isAffiliationHelp
-      ? `Recherche: ${item?.clubName || 'non precise'}`
+      ? `Recherche: ${item?.clubName || 'non précisé'}`
       : `Revendique: ${item?.club?.name || 'club inconnu'}`;
 
     return (
@@ -185,7 +185,7 @@ function AdminClaimList() {
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
             <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les revendications et demandes "introuvable" apparaitront ici.
+              Les revendications et demandes "introuvable" apparaîtront ici.
             </Text>
           </View>
         ) : null}

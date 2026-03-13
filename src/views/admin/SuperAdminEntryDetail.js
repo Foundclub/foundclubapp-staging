@@ -196,7 +196,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
       if (!chat?.documentId) {
         Alert.alert(
           t('common.errors.error', 'Erreur'),
-          t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+          t('messaging.errors.failedToCreateConversation', 'Impossible de créer la conversation.'),
         );
         return;
       }
@@ -204,7 +204,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
     } catch (error) {
       Alert.alert(
         t('common.errors.error', 'Erreur'),
-        error?.message || t('messaging.errors.failedToCreateConversation', 'Impossible de creer la conversation.'),
+        error?.message || t('messaging.errors.failedToCreateConversation', 'Impossible de créer la conversation.'),
       );
     } finally {
       setIsContacting(false);
@@ -473,7 +473,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
             </Text>
           ) : (
             <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
-              {t('superAdminContentManager.detail.rawJsonCollapsed', 'Vue avancee repliee pour garder lecran lisible.')}
+              {t('superAdminContentManager.detail.rawJsonCollapsed', 'Vue avancee repliee pour garder l\'?cran lisible.')}
             </Text>
           )}
         </View>
@@ -482,7 +482,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           onPress={() => setIsDeleteModalOpen(true)}
           style={[{ backgroundColor: 'rgba(255, 40, 79, 0.14)', borderColor: Colors.error500, borderWidth: 1 }]}
           textStyle={{ color: Colors.error500 }}
-          title={t('superAdminContentManager.actions.deleteEntry', 'Supprimer lentree')}
+          title={t('superAdminContentManager.actions.deleteEntry', 'Supprimer l\'entr?e')}
           variant="Secondary"
         />
       </ScrollView>
@@ -494,10 +494,10 @@ function SuperAdminEntryDetail({ navigation, route }) {
         snapPoints={['45%']}
       >
         <Text style={[Fonts.h3, Fonts.neutral00]}>
-          {t('superAdminContentManager.deleteModal.title', 'Supprimer lentree')}
+          {t('superAdminContentManager.deleteModal.title', 'Supprimer l\'entr?e')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-          {t('superAdminContentManager.deleteModal.description', 'Action definitive. Une raison daudit est obligatoire.')}
+          {t('superAdminContentManager.deleteModal.description', 'Action definitive. Une raison d\'audit est obligatoire.')}
         </Text>
 
         <View style={[ApplicationStyle.card, Spaces.padding[10], Spaces.marginTop[10]]}>

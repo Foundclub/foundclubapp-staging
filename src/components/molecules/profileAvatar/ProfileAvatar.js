@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import {
+  Image, StyleSheet, TouchableOpacity, View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -16,23 +18,39 @@ import ProfilePicturePreviewOverlay from '../profilePicturePreviewOverlay/Profil
  * @param {object} [props.style] - Additional styles for the container
  * @param {object} [props.imageStyle] - Additional styles for the image
  * @param {boolean} [props.enablePreview] - Whether to enable the full-screen preview on tap
+ * @param {'avatar' | 'logo'} [props.variant] - Rendering variant for classic avatars or logos
+ * @param {'cover' | 'contain'} [props.fitMode] - Optional explicit resize mode
+ * @param {number} [props.safeInsetRatio] - Inner inset ratio (logo mode only)
  * @returns {import('react').ReactElement}
  */
 function ProfileAvatar({
   enablePreview = true,
+  fitMode,
   imageStyle,
   imageUrl,
+  safeInsetRatio = 0.12,
   size = 40,
   style,
+  variant = 'avatar',
 }) {
-  const { ApplicationStyle, Images } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Colors, Images,
+  } = useTheme();
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   const processedUrl = getImageUrl(imageUrl);
   const hasImage = !!processedUrl;
+  const isLogoVariant = variant === 'logo';
   const flattenedStyle = StyleSheet.flatten([{ height: size, width: size }, style]) || {};
   const resolvedWidth = typeof flattenedStyle.width === 'number' ? flattenedStyle.width : size;
   const resolvedHeight = typeof flattenedStyle.height === 'number' ? flattenedStyle.height : size;
+  const sanitizedInsetRatio = Number.isFinite(safeInsetRatio)
+    ? Math.min(Math.max(safeInsetRatio, 0), 0.3)
+    : 0.12;
+  const effectiveInsetRatio = isLogoVariant ? sanitizedInsetRatio : 0;
+  const innerWidth = resolvedWidth * (1 - (2 * effectiveInsetRatio));
+  const innerHeight = resolvedHeight * (1 - (2 * effectiveInsetRatio));
+  const resolvedFitMode = fitMode || (isLogoVariant ? 'contain' : 'cover');
   const isCircular = Math.abs(resolvedWidth - resolvedHeight) < 1;
   const normalizedBorderColor = typeof flattenedStyle.borderColor === 'string'
     ? flattenedStyle.borderColor.replace(/\s/g, '').toLowerCase()
@@ -48,9 +66,12 @@ function ProfileAvatar({
     'white',
   ].includes(normalizedBorderColor);
   const shouldSuppressCircleBorder = isCircular && hasCircleBorder && isWhiteLikeBorder;
-  const resolvedRadius = isCircular
-    ? resolvedWidth / 2
-    : (typeof flattenedStyle.borderRadius === 'number' ? flattenedStyle.borderRadius : 0);
+  let resolvedRadius = 0;
+  if (isCircular) {
+    resolvedRadius = resolvedWidth / 2;
+  } else if (typeof flattenedStyle.borderRadius === 'number') {
+    resolvedRadius = flattenedStyle.borderRadius;
+  }
 
   const handlePress = () => {
     if (hasImage && enablePreview) {
@@ -79,23 +100,35 @@ function ProfileAvatar({
           },
         ]}
       >
-        <Image
-          source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
-          style={[
-            ApplicationStyle.borderRadius24,
-            {
-              backgroundColor: 'transparent',
-              borderRadius: resolvedRadius,
-              height: resolvedHeight,
-              width: resolvedWidth,
-            },
-            shouldSuppressCircleBorder && {
-              borderColor: 'transparent',
-              borderWidth: 0,
-            },
-            imageStyle,
-          ]}
-        />
+        <View style={[
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          {
+            height: resolvedHeight,
+            width: resolvedWidth,
+          },
+        ]}
+        >
+          <Image
+            resizeMode={resolvedFitMode}
+            source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
+            style={[
+              !isLogoVariant && ApplicationStyle.borderRadius24,
+              {
+                backgroundColor: isLogoVariant ? (Colors?.neutral00 || '#FFFFFF') : 'transparent',
+                borderRadius: isLogoVariant ? 0 : resolvedRadius,
+                height: isLogoVariant ? innerHeight : resolvedHeight,
+                width: isLogoVariant ? innerWidth : resolvedWidth,
+              },
+              shouldSuppressCircleBorder && {
+                borderColor: 'transparent',
+                borderWidth: 0,
+              },
+              imageStyle,
+              isLogoVariant && { borderRadius: 0 },
+            ]}
+          />
+        </View>
       </TouchableOpacity>
 
       <ProfilePicturePreviewOverlay

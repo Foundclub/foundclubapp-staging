@@ -187,6 +187,7 @@ function EventHeader({ event }) {
             imageStyle={{ borderRadius: 60 }}
             imageUrl={logoUrl}
             size={60}
+            variant="logo"
             style={[
               ApplicationStyle.borderWidth1,
               ApplicationStyle.borderColor.neutral00,
@@ -279,7 +280,7 @@ function EventHeader({ event }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              Equipes invitees
+              Équipes invitees
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}

@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
@@ -32,7 +33,10 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { updateEvent } from '@/services/event/eventService';
+import {
+  publishEventConvocation,
+  saveEventCompositionDraft,
+} from '@/services/event/eventService';
 
 import DraggableToken from './DraggableToken';
 
@@ -92,9 +96,10 @@ function TacticalBoard() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
+  const queryClient = useQueryClient();
 
   // Get params
-  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[]}} */
+  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any}} */
   const params = route.params || {};
   const {
     canEdit = false,
@@ -104,7 +109,9 @@ function TacticalBoard() {
     players = [],
     readOnly = false,
     selectedPlayers = [],
+    selectedPlayerIds: selectedPlayerIdsParam = [],
     sport = 'football',
+    teamComposition = null,
     teamId,
   } = params;
 
@@ -201,6 +208,8 @@ function TacticalBoard() {
 
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [compositionMeta, setCompositionMeta] = useState(teamComposition);
 
   // Sport specific
   const sportKey = (sport?.toLowerCase?.() || 'football');
@@ -402,57 +411,104 @@ function TacticalBoard() {
 
       runOnJS(endDrag)(e.absoluteX, e.absoluteY);
     }), [startDragFromField, updateDragPosition, endDrag]);
+  const invalidateCompositionQueries = useCallback(() => {
+    if (!eventId) return;
+    queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['eventComposition', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['eventConvocation', eventId] });
+  }, [eventId, queryClient]);
 
-  // === SAVE ===
+  const buildDraftPayload = useCallback(() => {
+    const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
+    const extractedManualPlayers = allCurrentPlayers
+      .filter((/** @type {TacticalPlayer | FieldPlayer} */ p) => p.isManual || (p.id && String(p.id).startsWith('manual_')) || (p.documentId && String(p.documentId).startsWith('manual_')))
+      .map((/** @type {TacticalPlayer | FieldPlayer} */ p) => {
+        const resolvedId = p.documentId || p.id;
+        return {
+          avatar: p.avatar || null,
+          documentId: resolvedId,
+          firstname: p.firstname,
+          id: resolvedId,
+          isManual: true,
+          lastname: p.lastname,
+          number: p.number,
+        };
+      });
+
+    const placements = fieldPlayers.map((/** @type {FieldPlayer} */ fp) => ({
+      playerId: fp.documentId || fp.id,
+      positionX: fp.x,
+      positionY: fp.y,
+    }));
+
+    const selectedPlayerIds = Array.from(
+      new Set([
+        ...allCurrentPlayers.map((p) => p.documentId || p.id).filter(Boolean),
+        ...selectedPlayerIdsParam,
+      ].map((value) => String(value))),
+    );
+
+    return {
+      manualPlayers: extractedManualPlayers,
+      placements,
+      selectedPlayerIds,
+      sportContext: sport,
+    };
+  }, [benchPlayers, fieldPlayers, selectedPlayerIdsParam, sport]);
+
   const handleSave = useCallback(async () => {
-    if (!eventId) {
-      Alert.alert('Erreur', 'ID événement manquant');
+    if (!eventId || !teamId) {
+      Alert.alert('Erreur', "ID événement ou équipe manquant");
       return;
     }
 
     setIsSaving(true);
     try {
-      // Extract manual players from all players (field + bench)
-      const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
-      const extractedManualPlayers = allCurrentPlayers
-        .filter((/** @type {TacticalPlayer | FieldPlayer} */ p) => p.isManual || (p.id && String(p.id).startsWith('manual_')) || (p.documentId && String(p.documentId).startsWith('manual_')))
-        .map((/** @type {TacticalPlayer | FieldPlayer} */ p) => ({
-          avatar: p.avatar,
-          documentId: p.documentId || p.id,
-          firstname: p.firstname,
-          id: p.id,
-          isManual: true,
-          lastname: p.lastname,
-          number: p.number,
-        }));
-
-      const compositionData = {
-        manualPlayers: extractedManualPlayers,
-        placements: fieldPlayers.map((/** @type {FieldPlayer} */ fp) => ({
-          playerId: fp.documentId || fp.id,
-          positionX: fp.x,
-          positionY: fp.y,
-        })),
-        sportContext: sport,
-      };
-
-      await updateEvent({
-        documentId: eventId,
-        eventData: {
-          composition: compositionData, // json field accepts object directly
-        },
+      const draftPayload = buildDraftPayload();
+      const response = await saveEventCompositionDraft(eventId, {
+        draft: draftPayload,
+        teamId,
       });
-
-      Alert.alert('Succès', 'Composition enregistrée !', [
-        { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
-      ]);
+      setCompositionMeta(response || null);
+      invalidateCompositionQueries();
+      Alert.alert('Succès', 'Brouillon enregistre.');
     } catch (error) {
-      console.error('Save error:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder');
+      console.error('Save draft error:', error);
+      Alert.alert('Erreur', 'Impossible de sauvegarder le brouillon');
     } finally {
       setIsSaving(false);
     }
-  }, [eventId, sport, fieldPlayers, navigation]);
+  }, [buildDraftPayload, eventId, invalidateCompositionQueries, teamId]);
+
+  const handlePublish = useCallback(async () => {
+    if (!eventId || !teamId) {
+      Alert.alert('Erreur', "ID événement ou équipe manquant");
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      const draftPayload = buildDraftPayload();
+      const latestDraft = await saveEventCompositionDraft(eventId, {
+        draft: draftPayload,
+        teamId,
+      });
+      const published = await publishEventConvocation(eventId, { teamId });
+      setCompositionMeta({
+        ...(latestDraft || {}),
+        ...(published || {}),
+      });
+      invalidateCompositionQueries();
+      Alert.alert('Succès', 'Convocation publiee.', [
+        { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
+      ]);
+    } catch (error) {
+      console.error('Publish convocation error:', error);
+      Alert.alert('Erreur', 'Impossible de publier la convocation');
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [buildDraftPayload, eventId, invalidateCompositionQueries, navigation, teamId]);
 
   // === ANIMATED STYLES ===
   const dropZoneStyle = useAnimatedStyle(() => {
@@ -565,34 +621,67 @@ function TacticalBoard() {
 
         {/* Footer */}
         <View style={[styles.footer, { backgroundColor: Colors.neutral900, borderTopColor: Colors.neutral700 }]}>
-          <View style={{ flex: 1 }}>
-            <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+          {!readOnly && (compositionMeta?.draft?.updatedAt || compositionMeta?.published?.publishedAt) ? (
+            <View style={styles.statusMetaContainer}>
+              {compositionMeta?.draft?.updatedAt ? (
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  Brouillon:
+                  {' '}
+                  {new Date(compositionMeta.draft.updatedAt).toLocaleString('fr-FR')}
+                </Text>
+              ) : null}
+              {compositionMeta?.published?.publishedAt ? (
+                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
+                  Convocation v
+                  {Number(compositionMeta?.published?.version || 1)}
+                  {' '}
+                  publiee:
+                  {' '}
+                  {new Date(compositionMeta.published.publishedAt).toLocaleString('fr-FR')}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+          <View style={styles.footerActions}>
+            <View style={{ flex: 1 }}>
+              <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+            </View>
+            {!readOnly && (
+              <>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    disabled={isSaving || isPublishing}
+                    onPress={handleSave}
+                    title={isSaving ? 'Sauvegarde...' : 'Brouillon'}
+                    variant="Primary"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    disabled={isSaving || isPublishing}
+                    onPress={handlePublish}
+                    title={isPublishing ? 'Publication...' : 'Publier'}
+                    variant="Secondary"
+                  />
+                </View>
+              </>
+            )}
+            {readOnly && canEdit && (
+              <View style={{ flex: 1 }}>
+                <Button
+                  onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TacticalSelectionV2, {
+                    eventId,
+                    existingComposition,
+                    players: poolPlayers,
+                    sport,
+                    teamId,
+                  })}
+                  title="Modifier"
+                  variant="Primary"
+                />
+              </View>
+            )}
           </View>
-          {!readOnly && (
-            <View style={{ flex: 1 }}>
-              <Button
-                disabled={isSaving}
-                onPress={handleSave}
-                title={isSaving ? 'Enregistrement...' : `Enregistrer (${fieldPlayers.length})`}
-                variant="Primary"
-              />
-            </View>
-          )}
-          {readOnly && canEdit && (
-            <View style={{ flex: 1 }}>
-              <Button
-                onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TacticalSelectionV2, {
-                  eventId,
-                  existingComposition,
-                  players: poolPlayers,
-                  sport,
-                  teamId,
-                })}
-                title="Modifier"
-                variant="Primary"
-              />
-            </View>
-          )}
         </View>
 
         {/* Ghost Token Overlay */}
@@ -681,9 +770,12 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     padding: 16,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   header: {
     alignItems: 'center',
@@ -706,6 +798,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  statusMetaContainer: {
+    gap: 4,
+    marginBottom: 8,
+  },
 });
 
 export default TacticalBoard;
+

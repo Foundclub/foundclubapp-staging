@@ -157,6 +157,7 @@ function ClubEdit({ navigation, route }) {
             <View style={[Alignments.row, Spaces.marginVertical[24]]}>
               <SelectAvatar
                 currentAvatar={logo}
+                imageResizeMode="contain"
                 onAvatarSelected={setLogo}
                 size={110}
               />
@@ -268,7 +269,7 @@ function ClubEdit({ navigation, route }) {
                   label={t('clubDetails.titles.activities') || 'Sports'}
                   onBlur={onBlur}
                   options={activityOptions}
-                  placeholder={t('clubFilters.fields.activity.placeholder') || 'Selectionner une activite'}
+                  placeholder={t('clubFilters.fields.activity.placeholder') || 'Selectionner une activité'}
                   ref={ref}
                   searchValue={activitySearch}
                   setSearchValue={setActivitySearch}

@@ -54,7 +54,7 @@ const formatRoleLabel = (roleName) => {
   const normalized = String(roleName || '').trim().toLowerCase();
   if (!normalized) return 'UTILISATEUR';
   if (normalized.includes('dirigeant')) return 'DIRIGEANT';
-  if (normalized.includes('entra') || normalized.includes('coach')) return 'ENTRAINEUR';
+  if (normalized.includes('entra') || normalized.includes('coach')) return 'Entraîneur';
   if (normalized.includes('super')) return 'SUPERADMIN';
   if (normalized.includes('authenticated') || normalized.includes('joueur')) return 'JOUEUR';
   return String(roleName).toUpperCase();
@@ -664,7 +664,7 @@ function UserDetails({ navigation, route }) {
                 Fonts={Fonts}
                 fullWidth
                 icon={Images.edit}
-                label={t('userDetails.fields.category', 'Categorie')}
+                label={t('userDetails.fields.category', 'Catégorie')}
                 Spaces={Spaces}
                 value={formatNullableValue(user?.category, fallbackValue)}
               />
@@ -781,29 +781,29 @@ function UserDetails({ navigation, route }) {
               Colors={Colors}
               Fonts={Fonts}
               Spaces={Spaces}
-              title={t('userDetails.titles.teams', 'Equipes')}
+              title={t('userDetails.titles.teams', 'Équipes')}
             >
               <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
-                  {t('userDetails.teamGroups.player', 'Equipes joueur')}
+                  {t('userDetails.teamGroups.player', 'Équipes joueur')}
                 </Text>
                 {playerTeams.length
                   ? playerTeams.map((team, index) => renderTeamCard(team, index, 'player'))
                   : (
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      {t('userDetails.empty.playerTeams', 'Aucune equipe joueur')}
+                      {t('userDetails.empty.playerTeams', 'Aucune équipe joueur')}
                     </Text>
                   )}
               </View>
               <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
-                  {t('userDetails.teamGroups.coach', 'Equipes entrainees')}
+                  {t('userDetails.teamGroups.coach', 'Équipes entraînées')}
                 </Text>
                 {coachedTeams.length
                   ? coachedTeams.map((team, index) => renderTeamCard(team, index, 'coach'))
                   : (
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      {t('userDetails.empty.coachTeams', 'Aucune equipe entrainee')}
+                      {t('userDetails.empty.coachTeams', 'Aucune équipe entraînée')}
                     </Text>
                   )}
               </View>

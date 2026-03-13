@@ -59,7 +59,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardCategory}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -67,7 +67,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardClub}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -75,7 +75,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardPeriod}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -83,7 +83,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardLevel}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
         <Stack.Screen
@@ -91,7 +91,7 @@ function ProfileStack() {
           name={RouteNames.HistoryWizardRecap}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter une experience',
+            headerTitle: 'Ajouter une expérience',
           }}
         />
       </Stack.Navigator>

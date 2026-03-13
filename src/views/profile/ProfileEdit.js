@@ -252,7 +252,7 @@ function ProfileEdit({ navigation, route }) {
             style={[Alignments.fill]}
           >
             <OnboardingWrapper
-              description="Mettez a jour vos informations personnelles, sportives et votre visibilite."
+              description="Mettez à jour vos informations personnelles, sportives et votre visibilité."
               id="profile-edit-form"
               order={1}
               spotlight={{
@@ -629,7 +629,7 @@ function ProfileEdit({ navigation, route }) {
           </ScrollView>
 
           <OnboardingWrapper
-            description="Enregistrez vos modifications pour mettre a jour votre profil."
+            description="Enregistrez vos modifications pour mettre à jour votre profil."
             id="profile-edit-save"
             order={2}
             spotlight={{

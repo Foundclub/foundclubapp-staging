@@ -201,7 +201,7 @@ function NextMatchCard({
           return;
         }
         if (!eventId) {
-          Alert.alert('Erreur', 'Evenement introuvable');
+          Alert.alert('Erreur', 'Événement introuvable');
           return;
         }
         await createEventParticipation({
@@ -226,7 +226,7 @@ function NextMatchCard({
       if (event) {
         const eventId = getEntityDocumentId(event);
         if (!eventId) {
-          Alert.alert('Erreur', 'Evenement introuvable');
+          Alert.alert('Erreur', 'Événement introuvable');
           return;
         }
         await missingEvent(eventId);
@@ -246,7 +246,7 @@ function NextMatchCard({
       if (event) {
         const eventId = getEntityDocumentId(event);
         if (!eventId) {
-          Alert.alert('Erreur', 'Evenement introuvable');
+          Alert.alert('Erreur', 'Événement introuvable');
           return;
         }
         await markEventVenueBooked(eventId);
@@ -319,7 +319,7 @@ function NextMatchCard({
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {derivedPhase === 'confirmed_upcoming' && (
             <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
-              <Text style={styles.badgeText}>A VENIR</Text>
+              <Text style={styles.badgeText}>À venir</Text>
             </View>
             )}
             {derivedPhase === 'waiting_venue' && (
@@ -463,7 +463,7 @@ function NextMatchCard({
             if (isScoreLockedByTime) {
               Alert.alert(
                 'Score indisponible',
-                "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute.",
+                "Vous pourrez saisir le score une fois l'heure de d?but du match d?pass?e de 1 minute.",
               );
               return;
             }
@@ -478,7 +478,7 @@ function NextMatchCard({
           ]}
         >
           <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
-            {isScoreLockedByTime ? 'SCORE VERROUILLE (AVANT DEBUT + 1 MIN)' : 'SAISIR LE SCORE'}
+            {isScoreLockedByTime ? 'SCORE Verrouillé (AVANT D?but + 1 MIN)' : 'SAISIR LE SCORE'}
           </Text>
         </TouchableOpacity>
         )}
@@ -494,7 +494,7 @@ function NextMatchCard({
           </Text>
           <Text style={styles.attendanceHint}>
             {isQuorumReached
-              ? 'Quorum atteint. Equipe prete.'
+              ? 'Quorum atteint. Équipe prête.'
               : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
           </Text>
           <View style={styles.gaugeBg}>

@@ -1,8 +1,10 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import {
+  getEventConvocation,
   getEventAttendance,
   getEventById,
+  getEventTeamComposition,
   getEvents,
   getEventTypes,
 } from './eventService';
@@ -66,6 +68,34 @@ export const useGetEventAttendance = (eventId, options = {}) => useQuery({
   enabled: !!eventId,
   queryFn: () => getEventAttendance(eventId),
   queryKey: ['eventAttendance', eventId],
+  ...options,
+});
+
+/**
+ * React Query hook to fetch composition draft/published data for a team event branch.
+ * @param {string} eventId
+ * @param {string | undefined} teamId
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
+ */
+export const useGetEventTeamComposition = (eventId, teamId, options = {}) => useQuery({
+  enabled: !!eventId,
+  queryFn: () => getEventTeamComposition(eventId, teamId),
+  queryKey: ['eventComposition', eventId, teamId || 'auto'],
+  ...options,
+});
+
+/**
+ * React Query hook to fetch published convocation view for a team event branch.
+ * @param {string} eventId
+ * @param {string | undefined} teamId
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
+ */
+export const useGetEventConvocation = (eventId, teamId, options = {}) => useQuery({
+  enabled: !!eventId,
+  queryFn: () => getEventConvocation(eventId, teamId),
+  queryKey: ['eventConvocation', eventId, teamId || 'auto'],
   ...options,
 });
 

@@ -228,7 +228,7 @@ function MatchCenterScreen() {
   const promptCaptainSearchRequirements = useCallback(() => {
     Alert.alert(
       'Recherche reservee au capitaine',
-      'Seul le capitaine peut lancer une recherche manuelle. La recherche demarre aussi automatiquement quand 5 membres sont prets sur un creneau.',
+      'Seul le capitaine peut lancer une recherche manuelle. La recherche demarre aussi automatiquement quand 5 membres sont prêts sur un créneau.',
       [
         {
           style: 'cancel',
@@ -326,7 +326,7 @@ function MatchCenterScreen() {
           if (lastMatchRef.current) {
             const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
             if (cancellationLikeStatuses.has(previousStatus)) {
-              Alert.alert('Match annule', 'Le match precedent a ete annule.');
+              Alert.alert('Match annulé', 'Le match précédent a été annulé.');
             }
             lastMatchRef.current = null;
           }
@@ -338,7 +338,7 @@ function MatchCenterScreen() {
           // Only show cancellation if previous status was in cancellable pre-result phases.
           const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
           if (cancellationLikeStatuses.has(previousStatus)) {
-            Alert.alert('Match annule', "Votre match a ete annule par l'adversaire ou le systeme.");
+            Alert.alert('Match annulé', "Votre match a été annulé par l'adversaire ou le système.");
           }
           lastMatchRef.current = null;
           setCurrentMatch(null);
@@ -424,8 +424,8 @@ function MatchCenterScreen() {
     }
     if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
       Alert.alert(
-        'Creneau requis',
-        'Selectionnez au moins un creneau avant de lancer la recherche.',
+        'Créneau requis',
+        'Sélectionnez au moins un créneau avant de lancer la recherche.',
       );
       return;
     }
@@ -455,7 +455,7 @@ function MatchCenterScreen() {
         if (!normalizedLocation) {
           Alert.alert(
             'Localisation requise',
-            'Ajoutez une adresse de squad valide (coordonnees GPS) avant de lancer la recherche.',
+            'Ajoutez une adresse de squad validé (coordonnées GPS) avant de lancer la recherche.',
           );
           setViewState('lobby');
           return;
@@ -465,7 +465,7 @@ function MatchCenterScreen() {
         if (!coordinates) {
           Alert.alert(
             'Localisation invalide',
-            'Impossible de lire les coordonnees de votre localisation.',
+            'Impossible de lire les coordonnées de votre localisation.',
           );
           setViewState('lobby');
           return;
@@ -491,7 +491,7 @@ function MatchCenterScreen() {
         const result = await MatchmakingService.triggerSearch(params.teamId, params.selectedSlotIds, params);
 
         if (result && 'status' in result && result.status === 'matched') {
-          Alert.alert('Match trouve !', 'Un adversaire a ete trouve instantanement !');
+          Alert.alert('Match trouve !', 'Un adversaire a été trouve instantanement !');
           setViewState('match_found');
         } else {
           setMatchRequest(result);
@@ -504,7 +504,7 @@ function MatchCenterScreen() {
         const backendCode = apiError?.response?.data?.code;
         const backendMessage = apiError?.response?.data?.message;
         if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
-          Alert.alert('Recherche deja active', 'Une recherche est deja en cours pour cette squad.');
+          Alert.alert('Recherche déjà active', 'Une recherche est déjà en cours pour cette squad.');
         } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
           promptCaptainSearchRequirements();
         } else {
@@ -545,7 +545,7 @@ function MatchCenterScreen() {
     setOpponentDetails(statusData?.opponentDetails || null);
     setViewState('match_found');
     if (shouldAlert) {
-      Alert.alert('Match trouve', 'Un adversaire a ete trouve.');
+      Alert.alert('Match trouve', 'Un adversaire a été trouve.');
     }
   }, [currentMatch, viewState]);
 
@@ -644,12 +644,12 @@ function MatchCenterScreen() {
 
       setIsAddingSearchSlot(false);
       Alert.alert(
-        'Succes',
-        slotsToCreate.length > 1 ? `${slotsToCreate.length} creneaux ajoutes a la recherche.` : 'Creneau ajoute a la recherche.',
+        'Succès',
+        slotsToCreate.length > 1 ? `${slotsToCreate.length} créneaux ajoutes à la recherche.` : 'Créneau ajoute à la recherche.',
       );
     } catch (error) {
       console.error('Add search slot error:', error);
-      Alert.alert('Erreur', "Impossible d'ajouter le creneau.");
+      Alert.alert('Erreur', "Impossible d'ajouter le créneau.");
     } finally {
       setIsSavingSearchSlot(false);
     }
@@ -778,9 +778,9 @@ function MatchCenterScreen() {
     }}
     >
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRET A L'ACTION ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l'ACTION ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Cree ton equipe pour rejoindre la competition officielle.
+          Cree ton équipe pour rejoindre la competition officielle.
         </Text>
         <Button
           icon="plus"
@@ -797,7 +797,7 @@ function MatchCenterScreen() {
             width: '100%',
           }}
           textStyle={{ color: Colors.neutral900 }}
-          title="CREER UNE SQUAD"
+          title="Créer UNE SQUAD"
           variant="Primary"
         />
       </LeagueCard>
@@ -957,7 +957,7 @@ function MatchCenterScreen() {
             {searchStatus}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16, textAlign: 'center' }]}>
-            Nous cherchons une equipe compatible dans votre zone.
+            Nous cherchons une équipe compatible dans votre zone.
           </Text>
 
           {/* Timer Countdown */}
@@ -1077,7 +1077,7 @@ function MatchCenterScreen() {
         commonSlotsSummary.push(`${dayLabel} ${startLabel}-${endLabel}`);
       });
 
-      console.log('[DEBUG] MatchCenter Opponent Details:', JSON.stringify(opponentDetails, null, 2));
+      console.log('[DEBUG] MatchCenter Opponent Détails:', JSON.stringify(opponentDetails, null, 2));
 
       return (
         <View style={{ alignItems: 'center', paddingVertical: 10 }}>
@@ -1152,7 +1152,7 @@ function MatchCenterScreen() {
               <Text style={{ color: Colors.gold500, fontSize: 18, marginBottom: 2 }}>
                 {swordsIcon}
               </Text>
-              <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>EQUIPE ADVERSE</Text>
+              <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>Équipe ADVERSE</Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16 }]}>
                 {sportLabel}
                 {' '}
@@ -1228,7 +1228,7 @@ function MatchCenterScreen() {
             }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
-                Creneaux en commun
+                Créneaux en commun
               </Text>
               {commonSlotsSummary.map((/** @type {string} */ slotLabel) => (
                 <Text key={slotLabel} style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 4 }]}>
@@ -1245,7 +1245,7 @@ function MatchCenterScreen() {
             color: Colors.neutral300, marginBottom: 28, paddingHorizontal: 10, textAlign: 'center',
           }]}
           >
-            Le match correspond a vos criteres. Discutez pour valider le terrain.
+            Le match correspond a vos crit?res. Discutez pour valider le terrain.
           </Text>
 
           <Button
@@ -1264,7 +1264,7 @@ function MatchCenterScreen() {
                   });
                 }
               } else {
-                Alert.alert('Erreur', "Le chat n'est pas encore pret. Reessayez dans quelques secondes.");
+                Alert.alert('Erreur', "Le chat n'est pas encore prêt. Réessayez dans quelques secondes.");
               }
             }}
             style={{ backgroundColor: Colors.gold500, width: '100%' }}
@@ -1279,7 +1279,7 @@ function MatchCenterScreen() {
             onPress={() => {
               Alert.alert(
                 'Annuler le match ?',
-                'Etes-vous sur de vouloir annuler ce match ? Votre equipe reviendra en mode recherche.',
+                'Êtes-vous sûr de vouloir annuler ce match ? Votre équipe reviendra en mode recherche.',
                 [
                   { style: 'cancel', text: 'Non' },
                   {
@@ -1302,7 +1302,7 @@ function MatchCenterScreen() {
                                 ? selectedSlotIds
                                 : toDocumentIdList(squadSlots);
                               if (fallbackSlotIds.length === 0) {
-                                throw new Error('Ajoutez puis selectionnez au moins un creneau pour relancer la recherche.');
+                                throw new Error('Ajoutez puis sélectionnez au moins un créneau pour relancer la recherche.');
                               }
                               await MatchmakingService.triggerSearch(
                                 getEntityDocumentId(mySquad),
@@ -1312,7 +1312,7 @@ function MatchCenterScreen() {
                               loadMatchCenter(); // Refresh state to show searching
                             } catch (e) {
                               console.error('Restart search failed', e);
-                              Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
+                              Alert.alert('Erreur', 'Match annulé mais impossible de relancer la recherche.');
                               loadMatchCenter();
                             }
                           }, 500);
@@ -1331,7 +1331,7 @@ function MatchCenterScreen() {
                         if (currentMatchId) {
                           const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                           await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                          Alert.alert('Match annule', 'Vous pouvez relancer une recherche.');
+                          Alert.alert('Match annulé', 'Vous pouvez relancer une recherche.');
                           loadMatchCenter();
                         }
                       } catch (err) {
@@ -1401,7 +1401,7 @@ function MatchCenterScreen() {
               <View style={{ width: slotCardWidth }}>
                 <View>
                   <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun creneau reserve</Text>
+                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau reserve</Text>
                 </View>
                 <View style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -1524,7 +1524,7 @@ function MatchCenterScreen() {
             {(activeSlot.rsvp_count || 0) >= 5 ? (
               <View>
                 <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
-                  Equipe complete
+                  Équipe complete
                 </Text>
                 <Button
                   onPress={handleLaunchLobby}
@@ -1542,7 +1542,7 @@ function MatchCenterScreen() {
                   {' '}
                   {5 - (activeSlot.rsvp_count || 0)}
                   {' '}
-                  joueurs pour etre au complet.
+                  joueurs pour être au complet.
                 </Text>
                 <Button
                   onPress={() => navigation.navigate('LeagueSquadTab')}
@@ -2034,7 +2034,7 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-              - Autres creneaux communs possibles :
+              - Autres créneaux communs possibles :
             </Text>
             {currentMatch.common_slots.map((/** @type {LeagueSlot} */ slot, /** @type {number} */ index) => {
               // Skip the currently selected slot
@@ -2103,7 +2103,7 @@ function MatchCenterScreen() {
           })}
           {!isAddingSearchSlot && (!squadSlots || squadSlots.length === 0) && (
           <Text style={[Fonts.p2, { color: Colors.neutral500, padding: 16, textAlign: 'center' }]}>
-            Aucun creneau defini. Ajoutez-en directement ici.
+            Aucun créneau defini. Ajoutez-en directement ici.
           </Text>
           )}
         </View>
@@ -2148,7 +2148,7 @@ function MatchCenterScreen() {
             Changer de squad
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-            Selectionne la squad active pour les matchs
+            Sélectionné la squad active pour les matchs
           </Text>
         </View>
               )}

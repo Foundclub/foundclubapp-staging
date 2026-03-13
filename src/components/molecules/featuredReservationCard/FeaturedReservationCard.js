@@ -125,6 +125,7 @@ function FeaturedReservationCard({
                 imageStyle={{ borderRadius: moderateScale(20) }}
                 imageUrl={item?.team?.club?.logo?.url || item?.club?.logo?.url}
                 size={moderateScale(40)}
+                variant="logo"
                 style={{ borderRadius: moderateScale(20) }}
               />
             ) : (

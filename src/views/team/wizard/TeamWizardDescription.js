@@ -26,7 +26,7 @@ function TeamWizardDescription({ navigation }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={2}
-      subtitle={t('teamWizard.steps.description.subtitle', 'Precise l identite et les objectifs de l equipe.')}
+      subtitle={t('teamWizard.steps.description.subtitle', 'Précise l\'identité et les objectifs de l\'équipe.')}
       title={t('teamWizard.steps.description.title', 'Description (optionnel)')}
     >
       <View>

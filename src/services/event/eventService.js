@@ -183,6 +183,63 @@ export const getEventById = async (documentId) => {
 };
 
 /**
+ * Save team composition draft for an event.
+ * @param {string} eventId
+ * @param {{ teamId?: string, draft: Record<string, any> }} payload
+ * @returns {Promise<any>}
+ */
+export const saveEventCompositionDraft = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/composition/draft`, {
+    data: {
+      draft: payload?.draft || {},
+      teamId: payload?.teamId || null,
+    },
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Publish team convocation for an event.
+ * @param {string} eventId
+ * @param {{ teamId?: string }} payload
+ * @returns {Promise<any>}
+ */
+export const publishEventConvocation = async (eventId, payload = {}) => {
+  const response = await client.post(`/events/${eventId}/composition/publish`, {
+    data: {
+      teamId: payload?.teamId || null,
+    },
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Get composition data (draft + published) for one team of an event.
+ * @param {string} eventId
+ * @param {string | undefined} teamId
+ * @returns {Promise<any>}
+ */
+export const getEventTeamComposition = async (eventId, teamId) => {
+  const response = await client.get(`/events/${eventId}/composition`, {
+    params: teamId ? { teamId } : undefined,
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Get published convocation (player/staff read view) for one team of an event.
+ * @param {string} eventId
+ * @param {string | undefined} teamId
+ * @returns {Promise<any>}
+ */
+export const getEventConvocation = async (eventId, teamId) => {
+  const response = await client.get(`/events/${eventId}/convocation`, {
+    params: teamId ? { teamId } : undefined,
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
  * Mark event venue as booked (by captain)
  * @param {string} eventDocumentId - The event ID
  * @returns {Promise<any>} Updated event

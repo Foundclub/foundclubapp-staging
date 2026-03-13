@@ -85,7 +85,7 @@ function UserAffiliationGuideContent({ navigation }) {
   const isPlayerClubSelectionStep = isClubFlow && !isStaffAffiliationFlow;
   const roleTargetLabel = isClubFlow
     ? t('onboardingAffiliation.common.roleTargetClub', 'club')
-    : t('onboardingAffiliation.common.roleTargetTeam', 'equipe');
+    : t('onboardingAffiliation.common.roleTargetTeam', 'équipe');
   const selectedClubId = selectedClub?.documentId || undefined;
   const clubFiltersCount = getClubFiltersNumber(clubFilters);
 
@@ -146,16 +146,16 @@ function UserAffiliationGuideContent({ navigation }) {
         t('common.error', 'Erreur'),
         error?.message || t(
           'onboardingAffiliation.feedback.requestError',
-          'Impossible d envoyer votre demande.',
+          'Impossible d\'envoyer votre demande.',
         ),
       );
     },
     onSuccess: () => {
       Alert.alert(
-        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyee'),
+        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyée'),
         t(
           'onboardingAffiliation.feedback.requestSentDescription',
-          'Votre demande a ete envoyee aux superadmins. Vous recevrez une notification.',
+          'Votre demande a été envoyée aux superadmins. Vous recevrez une notification.',
         ),
       );
       setIsNotFoundModalVisible(false);
@@ -232,7 +232,7 @@ function UserAffiliationGuideContent({ navigation }) {
           )
           : t(
             'onboardingAffiliation.feedback.missingInfoMessageTeam',
-            'Renseigne le nom de l equipe recherchee.',
+            'Renseigne le nom de l équipe recherchee.',
           ),
       );
       return;
@@ -321,31 +321,31 @@ function UserAffiliationGuideContent({ navigation }) {
       )
       : getTeamCardMeta(
         item,
-        t('onboardingAffiliation.results.openTeamFallback', 'Voir fiche equipe'),
+        t('onboardingAffiliation.results.openTeamFallback', 'Voir fiche équipe'),
       );
     const cardAccessibilityHint = (() => {
       if (!isClubFlow) {
         return t(
           'onboardingAffiliation.a11y.cardHintTeam',
-          'Ouvre la fiche de l equipe pour demander a rejoindre.',
+          'Ouvre la fiche de l équipe pour demander a rejoindre.',
         );
       }
       if (isPlayerClubSelectionStep) {
         return t(
           'onboardingAffiliation.a11y.cardHintClubSelect',
-          'Selectionne ce club pour voir ses equipes.',
+          'Sélectionné ce club pour voir ses équipes.',
         );
       }
       return t(
         'onboardingAffiliation.a11y.cardHintClub',
-        'Ouvre la fiche du club pour confirmer l affiliation.',
+        'Ouvre la fiche du club pour confirmer l\'affiliation.',
       );
     })();
     const cardAccessibilityLabel = (() => {
       if (!isClubFlow) {
         return t(
           'onboardingAffiliation.a11y.cardLabelTeam',
-          'Ouvrir la fiche de l equipe {{name}}',
+          'Ouvrir la fiche de l équipe {{name}}',
           { name: cardName },
         );
       }
@@ -366,13 +366,13 @@ function UserAffiliationGuideContent({ navigation }) {
       if (!isClubFlow) {
         return t(
           'onboardingAffiliation.tutorial.stepResultDescriptionTeam',
-          'Ouvre la fiche equipe pour envoyer ta demande de rejoindre.',
+          'Ouvre la fiche équipe pour envoyer ta demande de rejoindre.',
         );
       }
       if (isPlayerClubSelectionStep) {
         return t(
           'onboardingAffiliation.tutorial.stepResultDescriptionClubSelect',
-          'Selectionne ton club pour afficher ensuite ses equipes.',
+          'Sélectionné ton club pour afficher ensuite ses équipes.',
         );
       }
       return t(
@@ -382,7 +382,7 @@ function UserAffiliationGuideContent({ navigation }) {
     })();
     const resultTutorialTitle = isClubFlow
       ? t('onboardingAffiliation.tutorial.stepResultTitleClub', 'Selectionner un club')
-      : t('onboardingAffiliation.tutorial.stepResultTitleTeam', 'Selectionner une equipe');
+      : t('onboardingAffiliation.tutorial.stepResultTitleTeam', 'Selectionner une équipe');
 
     const cardButton = (
       <TouchableOpacity
@@ -403,7 +403,7 @@ function UserAffiliationGuideContent({ navigation }) {
       >
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
           {cardLogoUrl ? (
-            <ProfileAvatar imageUrl={cardLogoUrl} size={52} />
+            <ProfileAvatar imageUrl={cardLogoUrl} size={52} variant="logo" />
           ) : (
             <TeamShield
               initials={String(cardName).slice(0, 2).toUpperCase()}
@@ -519,23 +519,23 @@ function UserAffiliationGuideContent({ navigation }) {
       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
         {t(
           'onboardingAffiliation.states.errorTitle',
-          'Impossible de charger les resultats',
+          'Impossible de charger les résultats',
         )}
       </Text>
       <Text style={[Fonts.p2, Fonts.neutral200]}>
         {activeQuery?.error?.message
-          || t('onboardingAffiliation.states.errorSubtitle', 'Verifie ta connexion puis reessaie.')}
+          || t('onboardingAffiliation.states.errorSubtitle', 'Vérifie ta connexion puis réessaie.')}
       </Text>
       <View style={{ width: 140 }}>
         <Button
           accessibilityHint={t(
             'onboardingAffiliation.a11y.retryHint',
-            'Relance la recherche de resultats.',
+            'Relance la recherche de résultats.',
           )}
-          accessibilityLabel={t('onboardingAffiliation.states.retry', 'Reessayer')}
+          accessibilityLabel={t('onboardingAffiliation.states.retry', 'Réessayer')}
           onPress={handleRetry}
           size="sm"
-          title={t('onboardingAffiliation.states.retry', 'Reessayer')}
+          title={t('onboardingAffiliation.states.retry', 'Réessayer')}
           variant="Secondary"
         />
       </View>
@@ -547,37 +547,37 @@ function UserAffiliationGuideContent({ navigation }) {
       if (isClubFlow) {
         return t(
           'onboardingAffiliation.states.emptyWithQueryClub',
-          'Aucun club trouve pour "{{query}}".',
+          'Aucun club trouv? pour "{{query}}".',
           { query: debouncedSearch },
         );
       }
       return t(
         'onboardingAffiliation.states.emptyWithQueryTeam',
-        'Aucune equipe trouvee pour "{{query}}".',
+        'Aucune équipe trouvée pour "{{query}}".',
         { query: debouncedSearch },
       );
     }
     if (isClubFlow) {
-      return t('onboardingAffiliation.states.emptyWithoutQueryClub', 'Aucun club a afficher pour le moment.');
+      return t('onboardingAffiliation.states.emptyWithoutQueryClub', 'Aucun club à afficher pour le moment.');
     }
-    return t('onboardingAffiliation.states.emptyWithoutQueryTeam', 'Aucune equipe a afficher pour le moment.');
+    return t('onboardingAffiliation.states.emptyWithoutQueryTeam', 'Aucune équipe à afficher pour le moment.');
   })();
 
   const screenTitle = isClubFlow
     ? t('onboardingAffiliation.titleClub', 'Trouve ton club')
-    : t('onboardingAffiliation.titleTeam', 'Trouve ton equipe');
+    : t('onboardingAffiliation.titleTeam', 'Trouve ton équipe');
 
   const screenSubtitle = (() => {
     if (!isClubFlow) {
       return t(
         'onboardingAffiliation.subtitleTeamFromClub',
-        'Recherche ton equipe dans le club selectionne puis ouvre sa fiche pour envoyer ta demande.',
+        'Recherche ton équipe dans le club sélectionné puis ouvre sa fiche pour envoyer ta demande.',
       );
     }
     if (isPlayerClubSelectionStep) {
       return t(
         'onboardingAffiliation.subtitleClubSelection',
-        'Recherche puis selectionne ton club pour voir ses equipes.',
+        'Recherche puis sélectionné ton club pour voir ses équipes.',
       );
     }
     return t(
@@ -618,7 +618,7 @@ function UserAffiliationGuideContent({ navigation }) {
             >
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {t('onboardingAffiliation.selectedClubLabel', 'Club selectionne')}
+                  {t('onboardingAffiliation.selectedClubLabel', 'Club sélectionné')}
                 </Text>
                 <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                   {selectedClub.name || '-'}
@@ -670,16 +670,16 @@ function UserAffiliationGuideContent({ navigation }) {
                     )
                     : t(
                       'onboardingAffiliation.a11y.searchInputHintTeam',
-                      'Saisis le nom de l equipe pour filtrer la liste.',
+                      'Saisis le nom de l équipe pour filtrer la liste.',
                     )}
                   accessibilityLabel={isClubFlow
                     ? t('onboardingAffiliation.a11y.searchInputLabelClub', 'Champ nom du club')
-                    : t('onboardingAffiliation.a11y.searchInputLabelTeam', 'Champ nom de l equipe')}
+                    : t('onboardingAffiliation.a11y.searchInputLabelTeam', 'Champ nom de l équipe')}
                   icon="search"
                   onChangeText={setSearchValue}
                   placeholder={isClubFlow
                     ? t('onboardingAffiliation.search.placeholderClub', 'Nom du club')
-                    : t('onboardingAffiliation.search.placeholderTeam', 'Nom de l equipe')}
+                    : t('onboardingAffiliation.search.placeholderTeam', 'Nom de l équipe')}
                   value={searchValue}
                 />
               </OnboardingWrapper>
@@ -811,7 +811,7 @@ function UserAffiliationGuideContent({ navigation }) {
               )
               : t(
                 'onboardingAffiliation.tutorial.stepNotFoundDescriptionTeam',
-                'Si tu ne trouves pas ton equipe, envoie une demande guidee aux superadmins.',
+                'Si tu ne trouves pas ton équipe, envoie une demande guidee aux superadmins.',
               )}
             id="affiliation-not-found-action"
             order={3}
@@ -823,25 +823,25 @@ function UserAffiliationGuideContent({ navigation }) {
             }}
             title={isClubFlow
               ? t('onboardingAffiliation.tutorial.stepNotFoundTitleClub', 'Je ne trouve pas mon club')
-              : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon equipe')}
+              : t('onboardingAffiliation.tutorial.stepNotFoundTitleTeam', 'Je ne trouve pas mon équipe')}
           >
             <Button
               accessibilityHint={isClubFlow
                 ? t(
                   'onboardingAffiliation.a11y.notFoundHintClub',
-                  'Envoie une demande d aide si ton club est introuvable.',
+                  'Envoie une demande d\'aide si ton club est introuvable.',
                 )
                 : t(
                   'onboardingAffiliation.a11y.notFoundHintTeam',
-                  'Envoie une demande d aide si ton equipe est introuvable.',
+                  'Envoie une demande d\'aide si ton équipe est introuvable.',
                 )}
               accessibilityLabel={isClubFlow
                 ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-                : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon equipe')}
+                : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
               onPress={handleOpenNotFoundModal}
               title={isClubFlow
                 ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
-                : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon equipe')}
+                : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
               variant="Secondary"
             />
           </OnboardingWrapper>
@@ -849,7 +849,7 @@ function UserAffiliationGuideContent({ navigation }) {
           <Button
             accessibilityHint={t(
               'onboardingAffiliation.a11y.continueLaterHint',
-              'Passe cette etape et continue l onboarding.',
+              'Passe cette étape et continue l\'onboarding.',
             )}
             accessibilityLabel={t('common.actions.continueLater', 'Continuer plus tard')}
             onPress={handleContinueLater}
@@ -869,7 +869,7 @@ function UserAffiliationGuideContent({ navigation }) {
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {isClubFlow
               ? t('onboardingAffiliation.modal.titleClub', 'Je ne trouve pas mon club')
-              : t('onboardingAffiliation.modal.titleTeam', 'Je ne trouve pas mon equipe')}
+              : t('onboardingAffiliation.modal.titleTeam', 'Je ne trouve pas mon équipe')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
@@ -885,14 +885,14 @@ function UserAffiliationGuideContent({ navigation }) {
               )
               : t(
                 'onboardingAffiliation.a11y.modalNameHintTeam',
-                'Renseigne le nom de l equipe que tu recherches.',
+                'Renseigne le nom de l équipe que tu recherches.',
               )}
             accessibilityLabel={isClubFlow
               ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherche *')
-              : t('onboardingAffiliation.modal.nameLabelTeam', 'Nom de l equipe recherchee *')}
+              : t('onboardingAffiliation.modal.nameLabelTeam', 'Nom de l équipe recherchee *')}
             label={isClubFlow
               ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherche *')
-              : t('onboardingAffiliation.modal.nameLabelTeam', 'Nom de l equipe recherchee *')}
+              : t('onboardingAffiliation.modal.nameLabelTeam', 'Nom de l équipe recherchee *')}
             onChangeText={setRequestedName}
             placeholder={isClubFlow
               ? t('onboardingAffiliation.modal.namePlaceholderClub', 'Ex: Olympique ...')
@@ -902,7 +902,7 @@ function UserAffiliationGuideContent({ navigation }) {
           <Input
             accessibilityHint={t(
               'onboardingAffiliation.a11y.modalCommentHint',
-              'Ajoute des informations utiles a la recherche.',
+              'Ajoute des informations utiles à la recherche.',
             )}
             accessibilityLabel={t('onboardingAffiliation.modal.commentLabel', 'Commentaire (optionnel)')}
             label={t('onboardingAffiliation.modal.commentLabel', 'Commentaire (optionnel)')}
@@ -911,7 +911,7 @@ function UserAffiliationGuideContent({ navigation }) {
             onChangeText={setComment}
             placeholder={t(
               'onboardingAffiliation.modal.commentPlaceholder',
-              'Ex: ville, categorie, orthographe probable...',
+              'Ex: ville, catégorie, orthographe probable...',
             )}
             textAlignVertical="top"
             value={comment}

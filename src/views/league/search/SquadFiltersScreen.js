@@ -362,18 +362,18 @@ function SquadFiltersScreen({ navigation }) {
           name="category"
           render={({ field: { onChange, value } }) => (
             <View style={{ gap: 8 }}>
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Categorie</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Catégorie</Text>
               {isCategoriesLoading ? (
                 <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
                   <ActivityIndicator color={Colors.primary500} size="small" />
-                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>Chargement des categories...</Text>
+                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>Chargement des catégories...</Text>
                 </View>
               ) : (
                 <AutocompleteSelect
                   error={getFieldError({ errors: formErrors, fieldName: 'category' })}
                   isSearchable
                   options={categoryOptions}
-                  placeholder="Selectionner une categorie"
+                  placeholder="Selectionner une catégorie"
                   searchValue={categorySearchValue}
                   setSearchValue={setCategorySearchValue}
                   setValue={(/** @type {{label?: string, value?: string} | null} */ option) => {

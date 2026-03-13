@@ -80,6 +80,7 @@ function AdminRevenue() {
             imageStyle={{ borderRadius: 40 }}
             imageUrl={item.logo.url}
             size={40}
+            variant="logo"
             style={[
               ApplicationStyle.borderWidth1,
               ApplicationStyle.borderColor.neutral00,

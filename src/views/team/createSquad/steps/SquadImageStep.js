@@ -56,6 +56,7 @@ function SquadImageStep({
               cropHeight={500}
               cropWidth={500}
               currentAvatar={data.logo}
+              imageResizeMode="contain"
               onAvatarSelected={handleLogoSelect}
               onDelete={data.logo ? handleDeleteLogo : undefined}
               size={120}

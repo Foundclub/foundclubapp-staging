@@ -51,7 +51,7 @@ function CMMembersScreen({ navigation, route }) {
 
     { label: 'Tous', value: 'all' },
     { label: 'Dirigeants', value: 'presidents' },
-    { label: 'Entraineurs', value: 'coaches' },
+    { label: 'Entraîneurs', value: 'coaches' },
     { label: 'Joueurs', value: 'players' },
   ];
 
@@ -218,7 +218,7 @@ function CMMembersScreen({ navigation, route }) {
           keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouve.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouv?.</Text>
             </View>
           )}
           refreshControl={

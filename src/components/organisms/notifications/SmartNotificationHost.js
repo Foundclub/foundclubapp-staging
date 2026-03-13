@@ -82,7 +82,7 @@ function SmartNotificationHost() {
               {activeSnackbar.title || 'Notification League'}
             </Text>
             <Text numberOfLines={2} style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              {activeSnackbar.body || 'Nouvelle mise a jour.'}
+              {activeSnackbar.body || 'Nouvelle mise à jour.'}
             </Text>
           </Pressable>
         </View>

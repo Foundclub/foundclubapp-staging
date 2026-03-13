@@ -70,7 +70,7 @@ function EventWizardValidationMode({ navigation }) {
       key: 'manual',
       subtitle: t(
         'eventWizard.steps.validation.manualDesc',
-        'Le coach valide manuellement les participants.',
+        'Le coach validé manuellement les participants.',
       ),
       title: t('eventEdit.fields.validationMode.options.manual'),
     },
@@ -90,7 +90,7 @@ function EventWizardValidationMode({ navigation }) {
       onNext={handleNext}
       stepCount={10}
       stepIndex={8}
-      subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences a l'evenement.")}
+      subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences à l'événement.")}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >
       <View style={[Spaces.marginTop[8], Spaces.gap[16]]}>
@@ -100,8 +100,8 @@ function EventWizardValidationMode({ navigation }) {
             return (
               <TouchableOpacity
                 accessibilityHint={selected
-                  ? t('eventWizard.steps.validation.selectedHint', 'Mode actuellement selectionne.')
-                  : t('eventWizard.steps.validation.selectHint', 'Selectionne ce mode de validation.')}
+                  ? t('eventWizard.steps.validation.selectedHint', 'Mode actuellement sélectionné.')
+                  : t('eventWizard.steps.validation.selectHint', 'Sélectionné ce mode de validation.')}
                 accessibilityLabel={t(
                   'eventWizard.steps.validation.optionLabel',
                   'Mode {{title}}',
@@ -219,7 +219,7 @@ function EventWizardValidationMode({ navigation }) {
           ]}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            {t('eventWizard.steps.validation.previewTitle', 'Mode selectionne')}
+            {t('eventWizard.steps.validation.previewTitle', 'Mode sélectionné')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {validationMode === 'manual'

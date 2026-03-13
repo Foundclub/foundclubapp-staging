@@ -74,7 +74,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
           },
           onSuccess: () => {
-            Alert.alert('Succes', 'Demande traitée.');
+            Alert.alert('Succès', 'Demande traitée.');
             navigation.goBack();
           },
         },
@@ -87,7 +87,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
       },
       onSuccess: () => {
-        Alert.alert('Succes', 'Demande acceptée.');
+        Alert.alert('Succès', 'Demande acceptée.');
         navigation.goBack();
       },
     });
@@ -104,7 +104,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
           },
           onSuccess: () => {
-            Alert.alert('Succes', 'Demande refusée.');
+            Alert.alert('Succès', 'Demande refusée.');
             navigation.goBack();
           },
         },
@@ -117,7 +117,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
       },
       onSuccess: () => {
-        Alert.alert('Succes', 'Demande rejetée.');
+        Alert.alert('Succès', 'Demande rejetée.');
         navigation.goBack();
       },
     });
@@ -232,7 +232,7 @@ function AdminClaimDetail() {
               Club revendiqué
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter]}>
-              <ProfileAvatar imageUrl={request?.club?.logo?.url} size={60} />
+              <ProfileAvatar imageUrl={request?.club?.logo?.url} size={60} variant="logo" />
               <View style={Spaces.marginLeft[16]}>
                 <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{request?.club?.name}</Text>
                 <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>

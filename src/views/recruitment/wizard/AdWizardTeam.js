@@ -166,6 +166,7 @@ function AdWizardTeam({ navigation, route }) {
                     imageStyle={{ borderRadius: 28 }}
                     imageUrl={clubLogo}
                     size={56}
+                    variant="logo"
                     style={{ borderRadius: 28 }}
                   />
                 ) : (

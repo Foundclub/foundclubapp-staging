@@ -100,7 +100,7 @@ function TeamStack() {
           name={RouteNames.TeamFilters}
           options={{
             ...commonOptions,
-            headerTitle: t('teamFilters.title', 'Filtres equipes'),
+            headerTitle: t('teamFilters.title', 'Filtres équipes'),
           }}
         />
         <Stack.Screen
@@ -108,7 +108,7 @@ function TeamStack() {
           name={RouteNames.CreateSquad}
           options={{
             ...commonOptions,
-            headerTitle: 'Creer une Squad',
+            headerTitle: 'Créer une Squad',
           }}
         />
         <Stack.Screen

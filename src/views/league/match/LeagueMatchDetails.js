@@ -211,11 +211,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       const result = await confirmParticipation(matchId, teamSide);
-      Alert.alert('Confirme', result.message || 'Presence confirmee');
+      Alert.alert('Confirmé', result.message || 'Presence confirmee');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Echec confirmation');
+      Alert.alert('Erreur', '?chec confirmation');
     } finally {
       setActionLoading(false);
     }
@@ -226,11 +226,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await declineParticipation(matchId, teamSide);
-      Alert.alert('Decline', 'Votre participation a ete annulee');
+      Alert.alert('Decline', 'Votre participation a été annulée');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Echec annulation');
+      Alert.alert('Erreur', 'Échec annulation');
     } finally {
       setActionLoading(false);
     }
@@ -240,11 +240,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await markVenueBooked(matchId);
-      Alert.alert('Succes', 'Terrain marque comme reserve');
+      Alert.alert('Succès', 'Terrain marque comme reserve');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de mettre a jour le statut');
+      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
     } finally {
       setActionLoading(false);
     }
@@ -253,7 +253,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleCancelMatch = () => {
     Alert.alert(
       'Annuler le match ?',
-      'Action irreversible. Etes-vous sur ?',
+      'Action irréversible. Êtes-vous sûr ?',
       [
         { style: 'cancel', text: 'Non' },
         {
@@ -262,14 +262,14 @@ function LeagueMatchDetails({ navigation, route }) {
             try {
               const myTeamId = getEntityDocumentId(myTeam);
               if (!myTeamId) {
-                Alert.alert('Erreur', 'Equipe introuvable.');
+                Alert.alert('Erreur', 'Équipe introuvable.');
                 return;
               }
-              await cancelMatch(matchId, myTeamId, 'Annule par le capitaine');
-              Alert.alert('Match annule', 'Le match a ete annule.');
+              await cancelMatch(matchId, myTeamId, 'Annul? par le capitaine');
+              Alert.alert('Match annulé', 'Le match a été annulé.');
               navigation.goBack();
             } catch (_error) {
-              Alert.alert('Erreur', 'Echec annulation');
+              Alert.alert('Erreur', 'Échec annulation');
             } finally {
               setActionLoading(false);
             }
@@ -295,7 +295,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute.",
+        "Vous pourrez saisir le score une fois l'heure de début du match dépassée de 1 minute.",
       );
       return;
     }
@@ -330,7 +330,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Details du match</Text>
+          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Détails du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
         <View style={styles.centered}>
@@ -353,7 +353,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Details du match</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Détails du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {match.chat ? (
               <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
@@ -379,7 +379,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <View style={styles.heroSection}>
             <View style={styles.teamColumn}>
               <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={80} />
-              <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
+              <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Équipe A'}</Text>
             </View>
 
             <View style={styles.scoreColumn}>
@@ -422,7 +422,7 @@ function LeagueMatchDetails({ navigation, route }) {
               ) : (
                 <>
                   <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={80} />
-                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Equipe B'}</Text>
+                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Équipe B'}</Text>
                 </>
               )}
             </View>
@@ -549,13 +549,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       marginBottom: 12,
                     }}
                     textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                    title={isScoreLockedByTime ? 'Score verrouille (avant debut + 1 min)' : 'Saisir le score final'}
+                    title={isScoreLockedByTime ? 'Score verrouillé (avant début + 1 min)' : 'Saisir le score final'}
                     variant="Primary"
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
-                    Le score sera disponible apres l'heure de debut du match (+1 min).
+                    Le score sera disponible après l'heure de début du match (+1 min).
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (

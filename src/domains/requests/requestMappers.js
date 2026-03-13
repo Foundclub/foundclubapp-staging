@@ -85,7 +85,7 @@ const resolveRequesterAvatarUrl = (requester = {}) => {
  */
 export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(request?.team?.name) || 'Equipe';
+  const teamName = normalizeString(request?.team?.name) || 'Équipe';
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
@@ -105,7 +105,7 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     },
     status: 'pending',
     subtitle: `${requesterName} souhaite rejoindre ${teamName}.`,
-    title: 'Demande adhesion equipe',
+    title: 'Demande adhésion équipe',
     type: 'team',
   };
 };
@@ -148,8 +148,8 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
  */
 export const mapEventValidationRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const teamName = normalizeString(event?.team?.name) || 'Equipe';
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
+  const teamName = normalizeString(event?.team?.name) || 'Équipe';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Événement';
   const startDate = toIsoString(event?.date);
 
   return {
@@ -164,7 +164,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: 'Validation evenement',
+    title: 'Validation événement',
     type: 'event',
   };
 };
@@ -175,7 +175,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
  */
 export const mapFeaturedRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Événement';
   const clubName = normalizeString(event?.team?.club?.name) || 'Club';
 
   return {
@@ -189,8 +189,8 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
       raw: event,
     },
     status: 'pending',
-    subtitle: `${clubName} demande une mise a la une.`,
-    title: `Mise a la une - ${eventName}`,
+    subtitle: `${clubName} demande une mise à la une.`,
+    title: `Mise à la une - ${eventName}`,
     type: 'featured',
   };
 };

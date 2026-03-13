@@ -83,12 +83,12 @@ function TeamWizardTrainers({ navigation }) {
         onSkip={() => {}}
         stepCount={8}
         stepIndex={7}
-        subtitle={t('teamWizard.steps.trainers.subtitle', 'Selectionne au moins un entraineur pour encadrer cette equipe.')}
-        title={t('teamWizard.steps.trainers.title', 'Entraineurs')}
+        subtitle={t('teamWizard.steps.trainers.subtitle', 'Sélectionné au moins un entraîneur pour encadrer cette équipe.')}
+        title={t('teamWizard.steps.trainers.title', 'Entraîneurs')}
       >
         <View>
           <AutocompleteSelect
-            actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
+            actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraîneur')}
             isMulti
             label={t('teamEdit.fields.trainers.label')}
             onActionPress={() => setIsCreateTrainerModalVisible(true)}
