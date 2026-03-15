@@ -42,6 +42,10 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  applyOptimisticPollVote,
+  createPollComposition,
+} from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -1550,9 +1554,10 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const handleCreatePoll = () => {
+  const handleCreatePoll = useCallback(() => {
+    Keyboard.dismiss();
     setIsPollModalVisible(true);
-  };
+  }, []);
 
   const closePollModal = useCallback(() => {
     setIsPollModalVisible(false);
@@ -1563,36 +1568,35 @@ function Conversation({ navigation, route }) {
     const options = Array.isArray(payload?.options) ? payload.options : [];
 
     if (!question || options.length < 2) {
-      throw new Error('Le sondage est incomplet.');
+      throw new Error(t('conversation.poll.errors.incomplete', 'Le sondage est incomplet.'));
     }
-
-    const now = Date.now();
-    const pollComposition = {
-      allowMultipleVotes: !!payload.allowMultipleVotes,
-      createdAt: new Date(now).toISOString(),
-      createdBy: userData?.documentId || '',
-      isAnonymous: !!payload.isAnonymous,
-      options: options.map((label, index) => ({
-        id: `poll-option-${now}-${index}-${Math.random().toString(36).slice(2, 7)}`,
-        label,
-        voteCount: 0,
-        voters: [],
-      })),
-      pollId: `poll-${now}-${Math.random().toString(36).slice(2, 7)}`,
-      question,
-      type: 'poll',
-    };
 
     if (!chatId) {
-      throw new Error('Conversation introuvable.');
+      throw new Error(t('conversation.poll.errors.chatMissing', 'Conversation introuvable.'));
     }
 
-    sendMessage(chatId, '', {
+    const pollComposition = createPollComposition({
+      allowMultipleVotes: !!payload.allowMultipleVotes,
+      createdBy: userData?.documentId || '',
+      isAnonymous: !!payload.isAnonymous,
+      options,
+      question,
+    });
+
+    const optimisticMessageId = sendMessage(chatId, '', {
       composition: pollComposition,
       sender: userData,
     });
+
+    if (!optimisticMessageId) {
+      throw new Error(t(
+        'conversation.poll.errors.sendUnavailable',
+        'Connexion messagerie indisponible. Reessayez dans quelques secondes.',
+      ));
+    }
+
     setIsPollModalVisible(false);
-  }, [chatId, sendMessage, userData]);
+  }, [chatId, sendMessage, t, userData]);
 
   const parseCoordinatesFromOption = (option) => {
     const rawValue = String(option?.value || '');
@@ -2784,55 +2788,13 @@ function Conversation({ navigation, route }) {
 
     if (!chatId || !currentUserId || !messageId || !optionId || composition?.type !== 'poll') return;
 
-    const options = Array.isArray(composition.options) ? composition.options : [];
-    if (options.length === 0) return;
-
-    const allowMultipleVotes = !!composition.allowMultipleVotes;
-    const currentSelection = options
-      .filter((option) => Array.isArray(option?.voters) && option.voters.includes(currentUserId))
-      .map((option) => String(option.id));
-
-    if (!allowMultipleVotes && currentSelection.length === 1 && currentSelection[0] === optionId) {
-      return;
-    }
-
-    let hasChange = false;
-    const nextOptions = options.map((option) => {
-      const voters = Array.isArray(option?.voters)
-        ? option.voters.filter((value) => typeof value === 'string' && value.length > 0)
-        : [];
-      const isTarget = String(option.id) === optionId;
-      const hasCurrentUser = voters.includes(currentUserId);
-      let nextVoters = voters;
-
-      if (allowMultipleVotes) {
-        if (isTarget && !hasCurrentUser) {
-          nextVoters = [...voters, currentUserId];
-        }
-      } else if (isTarget && !hasCurrentUser) {
-        nextVoters = [...voters, currentUserId];
-      } else if (!isTarget && hasCurrentUser) {
-        nextVoters = voters.filter((value) => value !== currentUserId);
-      }
-
-      if (nextVoters.length !== voters.length) {
-        hasChange = true;
-      }
-
-      return {
-        ...option,
-        voteCount: nextVoters.length,
-        voters: nextVoters,
-      };
+    const { changed, nextComposition } = applyOptimisticPollVote({
+      currentUserId,
+      optionId,
+      poll: composition,
     });
 
-    if (!hasChange) return;
-
-    const nextComposition = {
-      ...composition,
-      options: nextOptions,
-      updatedAt: new Date().toISOString(),
-    };
+    if (!changed) return;
 
     queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
@@ -2856,7 +2818,10 @@ function Conversation({ navigation, route }) {
       await votePoll(String(messageId), optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
-      Alert.alert('Erreur', 'Impossible de sauvegarder ce vote.');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('conversation.poll.errors.voteSave', 'Impossible de sauvegarder ce vote.'),
+      );
     }
   };
 
@@ -3538,8 +3503,10 @@ function Conversation({ navigation, route }) {
         {...props}
         placeholder={composerPlaceholder}
         textInputProps={{
+          editable: !isPollModalVisible,
           maxLength: 1000,
           multiline: true,
+          showSoftInputOnFocus: !isPollModalVisible,
         }}
         textInputStyle={[
           Fonts.p2,
@@ -4234,7 +4201,7 @@ function Conversation({ navigation, route }) {
             sameDay: '[Aujourd\'hui]',
             sameElse: 'DD/MM/YYYY',
           }}
-          focusOnInputWhenOpeningKeyboard
+          focusOnInputWhenOpeningKeyboard={!isPollModalVisible}
           infiniteScroll
           inverted
           listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
@@ -4248,7 +4215,7 @@ function Conversation({ navigation, route }) {
           onSend={onSend}
           renderBubble={renderBubble}
           renderFooter={renderFooter}
-          renderInputToolbar={renderInputToolbar}
+          renderInputToolbar={isPollModalVisible ? () => null : renderInputToolbar}
           renderSend={renderSend}
           text={composerText}
           user={{
@@ -4504,7 +4471,7 @@ function Conversation({ navigation, route }) {
               />
               <Button
                 onPress={() => runAttachmentAction(handleCreatePoll)}
-                title={t('conversation.attachments.createPoll', 'CrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©er un sondage')}
+                title={t('conversation.attachments.createPoll', 'Créer un sondage')}
                 variant="SecondaryLight"
               />
               <Button

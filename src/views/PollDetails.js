@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +14,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import {
+  applyOptimisticPollVote,
+  getPollTotalVotes,
+  getPollVoters,
+} from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -21,15 +27,6 @@ import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMess
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
-
-const getVoters = (option) => (Array.isArray(option?.voters)
-  ? option.voters.filter((value) => typeof value === 'string' && value.length > 0)
-  : []);
-
-const getVoteCount = (option) => {
-  const fallback = getVoters(option).length;
-  return typeof option?.voteCount === 'number' ? option.voteCount : fallback;
-};
 
 const styles = StyleSheet.create({
   contentContainer: {
@@ -115,6 +112,7 @@ const styles = StyleSheet.create({
  * @returns {import('react').ReactElement}
  */
 function PollDetails({ navigation, route }) {
+  const { t } = useTranslation();
   const { chatId = '', messageId = '', poll: initialPoll = null } = route.params || {};
   const { userData } = useAuth();
   const { votePoll } = useMessaging(chatId);
@@ -193,10 +191,10 @@ function PollDetails({ navigation, route }) {
   }, [chatData?.participants, messagesPages?.pages, userData]);
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
-    if (!voterId) return 'Membre';
+    if (!voterId) return t('conversation.poll.common.member', 'Membre');
     const profile = voterDirectory.get(String(voterId));
-    if (!profile) return 'Membre';
-    return profile.displayName || 'Membre';
+    if (!profile) return t('conversation.poll.common.member', 'Membre');
+    return profile.displayName || t('conversation.poll.common.member', 'Membre');
   };
 
   const optionVoterSections = useMemo(() => {
@@ -208,7 +206,7 @@ function PollDetails({ navigation, route }) {
       if (!profile) {
         return {
           avatarUrl: '',
-          displayName: 'Membre',
+          displayName: t('conversation.poll.common.member', 'Membre'),
           firstname: '',
           lastname: '',
         };
@@ -219,9 +217,13 @@ function PollDetails({ navigation, route }) {
 
     return options.map((option, index) => {
       const optionId = String(option?.id || `option-${index}`);
-      const optionLabel = String(option?.label || `Option ${index + 1}`);
-      const uniqueVoterIds = Array.from(new Set(getVoters(option)));
-      const voters = uniqueVoterIds.map((voterId) => ({
+      const optionLabel = String(
+        option?.label || t('conversation.poll.form.optionPlaceholder', {
+          defaultValue: 'Option {{index}}',
+          index: index + 1,
+        }),
+      );
+      const voters = getPollVoters(option).map((voterId) => ({
         voterId,
         ...resolveVoterProfile(voterId),
       }));
@@ -232,11 +234,11 @@ function PollDetails({ navigation, route }) {
         voters,
       };
     });
-  }, [poll?.options, voterDirectory]);
+  }, [poll?.options, t, voterDirectory]);
 
   const createdByName = poll?.createdBy
     ? resolveVoterName(String(poll.createdBy))
-    : 'Membre';
+    : t('conversation.poll.common.member', 'Membre');
   const createdAtLabel = useMemo(() => {
     if (!poll?.createdAt) return '--';
     const parsed = new Date(poll.createdAt);
@@ -255,57 +257,23 @@ function PollDetails({ navigation, route }) {
     if (!chatId || !optionId || !poll || poll.type !== 'poll' || !currentUserId) return;
 
     if (!effectiveMessageId || String(effectiveMessageId).startsWith('temp-')) {
-      Alert.alert('Information', 'Le sondage est en cours de synchronisation.');
+      Alert.alert(
+        t('conversation.poll.details.syncTitle', 'Information'),
+        t(
+          'conversation.poll.details.syncInProgress',
+          'Le sondage est en cours de synchronisation.',
+        ),
+      );
       return;
     }
 
-    const options = Array.isArray(poll.options) ? poll.options : [];
-    if (options.length === 0) return;
-
-    const allowMultipleVotes = !!poll.allowMultipleVotes;
-    const currentSelection = options
-      .filter((option) => Array.isArray(option?.voters) && option.voters.includes(currentUserId))
-      .map((option) => String(option.id));
-
-    if (!allowMultipleVotes && currentSelection.length === 1 && currentSelection[0] === optionId) {
-      return;
-    }
-
-    let hasChange = false;
-    const nextOptions = options.map((option) => {
-      const voters = getVoters(option);
-      const isTarget = String(option.id) === optionId;
-      const hasCurrentUser = voters.includes(currentUserId);
-      let nextVoters = voters;
-
-      if (allowMultipleVotes) {
-        if (isTarget && !hasCurrentUser) {
-          nextVoters = [...voters, currentUserId];
-        }
-      } else if (isTarget && !hasCurrentUser) {
-        nextVoters = [...voters, currentUserId];
-      } else if (!isTarget && hasCurrentUser) {
-        nextVoters = voters.filter((value) => value !== currentUserId);
-      }
-
-      if (nextVoters.length !== voters.length) {
-        hasChange = true;
-      }
-
-      return {
-        ...option,
-        voteCount: nextVoters.length,
-        voters: nextVoters,
-      };
+    const { changed, nextComposition } = applyOptimisticPollVote({
+      currentUserId,
+      optionId,
+      poll,
     });
 
-    if (!hasChange) return;
-
-    const nextComposition = {
-      ...poll,
-      options: nextOptions,
-      updatedAt: new Date().toISOString(),
-    };
+    if (!changed) return;
 
     queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
@@ -329,16 +297,17 @@ function PollDetails({ navigation, route }) {
       await votePoll(String(effectiveMessageId), optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
-      Alert.alert('Erreur', 'Impossible de sauvegarder ce vote.');
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('conversation.poll.errors.voteSave', 'Impossible de sauvegarder ce vote.'),
+      );
     } finally {
       setIsSubmittingVote(false);
     }
   };
 
   const totalVotes = useMemo(
-    () => (Array.isArray(poll?.options)
-      ? poll.options.reduce((sum, option) => sum + getVoteCount(option), 0)
-      : 0),
+    () => getPollTotalVotes(Array.isArray(poll?.options) ? poll.options : []),
     [poll?.options],
   );
 
@@ -357,9 +326,13 @@ function PollDetails({ navigation, route }) {
           withDefaultMargin={false}
         />
         <View style={styles.headerContent}>
-          <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Detail du sondage</Text>
+          <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
+            {t('conversation.poll.details.title', 'Detail du sondage')}
+          </Text>
           <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            {poll?.isAnonymous ? 'Votes anonymes' : 'Votes visibles'}
+            {poll?.isAnonymous
+              ? t('conversation.poll.details.anonymousVotes', 'Votes anonymes')
+              : t('conversation.poll.details.visibleVotes', 'Votes visibles')}
           </Text>
         </View>
       </View>
@@ -369,28 +342,36 @@ function PollDetails({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }, styles.sectionTitle]}>
-          Informations du sondage
+          {t('conversation.poll.details.infoTitle', 'Informations du sondage')}
         </Text>
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Cree par</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('conversation.poll.details.createdBy', 'Cree par')}
+            </Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{createdByName}</Text>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Date</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('conversation.poll.details.date', 'Date')}
+            </Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{createdAtLabel}</Text>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Nombre de votes</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('conversation.poll.details.voteCount', 'Nombre de votes')}
+            </Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{totalVotes}</Text>
           </View>
         </View>
         <View style={styles.sectionHintCard}>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage
-            n'est pas anonyme.
+            {t(
+              'conversation.poll.details.voteHint',
+              'Selectionnez une option pour voter. Le detail des votants est affiche quand le sondage n est pas anonyme.',
+            )}
           </Text>
         </View>
 
@@ -413,7 +394,10 @@ function PollDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
-              Ce sondage est introuvable ou a été supprimé.
+              {t(
+                'conversation.poll.details.notFound',
+                'Ce sondage est introuvable ou a ete supprime.',
+              )}
             </Text>
           </View>
         ) : (
@@ -432,33 +416,40 @@ function PollDetails({ navigation, route }) {
             </View>
 
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }, styles.votersSectionTitle]}>
-              Votes par option
+              {t('conversation.poll.details.votesByOption', 'Votes par option')}
             </Text>
             {poll?.isAnonymous ? (
               <View style={styles.sectionHintCard}>
                 <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                  Ce sondage est anonyme. Les votants ne sont pas affichés.
+                  {t(
+                    'conversation.poll.details.anonymousHint',
+                    'Ce sondage est anonyme. Les votants ne sont pas affiches.',
+                  )}
                 </Text>
               </View>
             ) : optionVoterSections.map((section) => (
               <View key={section.optionId} style={styles.optionSectionCard}>
                 <View style={styles.optionSectionHeader}>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>{section.optionLabel}</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>
+                    {section.optionLabel}
+                  </Text>
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                     {section.voters.length}
                     {' '}
-                    vote
+                    {t('conversation.poll.common.vote', 'vote')}
                     {section.voters.length > 1 ? 's' : ''}
                   </Text>
                 </View>
 
                 {section.voters.length === 0 ? (
                   <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                    Aucun vote pour cette option.
+                    {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
                   </Text>
                 ) : section.voters.map((voter) => {
                   const fullName = `${voter.firstname} ${voter.lastname}`.trim();
-                  const displayLabel = fullName || voter.displayName || 'Membre';
+                  const displayLabel = fullName
+                    || voter.displayName
+                    || t('conversation.poll.common.member', 'Membre');
 
                   return (
                     <View key={`${section.optionId}-${voter.voterId}`} style={styles.voterRow}>

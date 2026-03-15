@@ -3,6 +3,13 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services'
 
+def productionGoogleServicesFile = file("src/production/google-services.json")
+def hasProductionGoogleServices = productionGoogleServicesFile.exists()
+def debuggableVariantNames = ["stagingDebug"]
+
+if (hasProductionGoogleServices) {
+    debuggableVariantNames << "productionDebug"
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -23,7 +30,7 @@ react {
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    debuggableVariants = ["stagingDebug", "productionDebug"]
+    debuggableVariants = debuggableVariantNames
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -99,6 +106,11 @@ android {
             applicationIdSuffix ".staging"
             versionNameSuffix "-staging"
             resValue "string", "app_name", "FoundClub Staging"
+        }
+    }
+    variantFilter { variant ->
+        if (variant.flavors*.name.contains("production") && !hasProductionGoogleServices) {
+            setIgnore(true)
         }
     }
     signingConfigs {

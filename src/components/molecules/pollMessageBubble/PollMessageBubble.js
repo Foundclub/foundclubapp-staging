@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,6 +8,11 @@ import {
   View,
 } from 'react-native';
 
+import {
+  getPollTotalVotes,
+  getPollVoteCount,
+  getPollVoters,
+} from '@/domains/messaging/pollUseCases';
 import useTheme from '@/theme/themeContext';
 
 const styles = StyleSheet.create({
@@ -109,15 +115,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const getVoters = (option) => (Array.isArray(option?.voters)
-  ? option.voters.filter((value) => typeof value === 'string' && value.length > 0)
-  : []);
-
-const getVoteCount = (option) => {
-  const fallback = getVoters(option).length;
-  return typeof option?.voteCount === 'number' ? option.voteCount : fallback;
-};
-
 /**
  * Bubble to display and vote on chat polls.
  * @param {object} props
@@ -143,18 +140,18 @@ function PollMessageBubble({
   showSelectedBadge = true,
   showVoterChips = false,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const [loadingOptionId, setLoadingOptionId] = useState('');
+  const options = Array.isArray(poll?.options) ? poll.options : [];
+  const totalVotes = getPollTotalVotes(options);
 
   if (!poll || poll.type !== 'poll') return null;
-
-  const options = Array.isArray(poll.options) ? poll.options : [];
   if (options.length === 0) return null;
 
   const isAnonymousPoll = !!poll?.isAnonymous;
   const canOpenDetails = typeof onOpenDetails === 'function';
   const canVote = typeof onVote === 'function';
-  const totalVotes = options.reduce((sum, option) => sum + getVoteCount(option), 0);
 
   const handleOptionPress = async (/** @type {string} */ optionId) => {
     if (!onVote || !optionId || loadingOptionId) return;
@@ -177,15 +174,19 @@ function PollMessageBubble({
     },
   ];
 
-  const modeLabel = poll.allowMultipleVotes ? 'multiple' : 'unique';
-  const visibilityLabel = isAnonymousPoll ? 'anonyme' : 'visible';
+  const modeLabel = poll.allowMultipleVotes
+    ? t('conversation.poll.modes.multiple', 'multiple')
+    : t('conversation.poll.modes.single', 'unique');
+  const visibilityLabel = isAnonymousPoll
+    ? t('conversation.poll.visibility.anonymous', 'anonyme')
+    : t('conversation.poll.visibility.visible', 'visible');
 
   const cardContent = (
     <>
       <View style={{ paddingHorizontal: 14, paddingVertical: 14 }}>
         <View style={[styles.headerRow, { marginBottom: 4 }]}>
           <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            Sondage
+            {t('conversation.attachments.poll', 'Sondage')}
           </Text>
           {isAnonymousPoll ? (
             <View
@@ -198,24 +199,31 @@ function PollMessageBubble({
                 paddingVertical: 3,
               }}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Sondage anonyme</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('conversation.poll.bubble.anonymousBadge', 'Sondage anonyme')}
+              </Text>
             </View>
           ) : null}
         </View>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-          {poll.question || 'Question'}
+          {poll.question || t('conversation.poll.bubble.questionFallback', 'Question')}
         </Text>
 
         {options.map((option, index) => {
           const optionId = String(option?.id || `option-${index}`);
-          const optionLabel = String(option?.label || `Option ${index + 1}`);
-          const voters = getVoters(option);
-          const voteCount = getVoteCount(option);
+          const optionLabel = String(
+            option?.label || t('conversation.poll.form.optionPlaceholder', {
+              defaultValue: 'Option {{index}}',
+              index: index + 1,
+            }),
+          );
+          const voters = getPollVoters(option);
+          const voteCount = getPollVoteCount(option);
           const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
           const isSelected = !!currentUserId && voters.includes(currentUserId);
           const voterEntries = isAnonymousPoll
             ? []
-            : Array.from(new Set(voters))
+            : voters
               .map((voterId) => {
                 if (typeof resolveVoterName === 'function') {
                   const voterName = resolveVoterName(voterId);
@@ -256,7 +264,9 @@ function PollMessageBubble({
                   </Text>
                   {showSelectedBadge && isSelected ? (
                     <View style={[styles.badgePill, { borderColor: Colors.primary500 }]}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Votre vote</Text>
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                        {t('conversation.poll.bubble.selectedBadge', 'Votre vote')}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -268,7 +278,7 @@ function PollMessageBubble({
                   <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
                     {voteCount}
                     {' '}
-                    vote
+                    {t('conversation.poll.common.vote', 'vote')}
                     {voteCount > 1 ? 's' : ''}
                   </Text>
                 </View>
@@ -324,6 +334,7 @@ function PollMessageBubble({
           if (canVote) {
             return (
               <TouchableOpacity
+                accessibilityRole="button"
                 activeOpacity={0.85}
                 key={optionId}
                 onPress={(event) => {
@@ -346,7 +357,10 @@ function PollMessageBubble({
 
         {canOpenDetails ? (
           <Text style={[Fonts.p4, { color: Colors.neutral300 }, styles.detailsHint]}>
-            Appuie sur une option pour voter, ou sur la carte pour les détails.
+            {t(
+              'conversation.poll.bubble.detailsHint',
+              'Appuie sur une option pour voter, ou sur la carte pour les details.',
+            )}
           </Text>
         ) : null}
       </View>
@@ -359,12 +373,12 @@ function PollMessageBubble({
           >
             {totalVotes}
             {' '}
-            vote
+            {t('conversation.poll.common.vote', 'vote')}
             {totalVotes > 1 ? 's' : ''}
             {' '}
             |
             {' '}
-            mode
+            {t('conversation.poll.footer.mode', 'mode')}
             {' '}
             {modeLabel}
             {' '}
@@ -380,6 +394,7 @@ function PollMessageBubble({
   if (canOpenDetails) {
     return (
       <TouchableOpacity
+        accessibilityRole="button"
         activeOpacity={0.95}
         onPress={onOpenDetails}
         style={cardStyle}
