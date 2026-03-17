@@ -17,7 +17,10 @@ import {
   View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
+import {
+  markOnboardingComplete,
+  USER_ROLES,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -68,6 +71,7 @@ function TeamDetails({ navigation, route }) {
   const {
     assignmentTrainerId,
     assignmentTrainerName,
+    fromOnboardingAffiliation = false,
     invite,
     teamId,
   } = route?.params ?? {};
@@ -82,6 +86,8 @@ function TeamDetails({ navigation, route }) {
     canEditClub,
     canJoinTeam,
     canManageTeam,
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
     inviteTeamPlayers,
     refetchUserData,
     userData: currentUser,
@@ -195,13 +201,48 @@ function TeamDetails({ navigation, route }) {
     [team?.club?.documentId, currentUser?.club?.documentId],
   );
 
+  const handleGoToNextOnboardingStep = useCallback(() => {
+    if (!fromOnboardingAffiliation) return;
+
+    const parentNavigation = navigation.getParent?.();
+    const onboardingNavigation = parentNavigation || navigation;
+    const nextRoute = getNextOnboardingRoute(RouteNames.UserAffiliationGuide);
+    if (nextRoute) {
+      onboardingNavigation.navigate(nextRoute);
+      return;
+    }
+
+    markOnboardingComplete(currentUser?.documentId);
+    onboardingNavigation.reset({
+      index: 0,
+      routes: [{ name: getPostOnboardingHomeRoute() }],
+    });
+  }, [
+    currentUser?.documentId,
+    fromOnboardingAffiliation,
+    getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    navigation,
+  ]);
+
   const createTeamMembershipRequestMutation = useMutation({
     mutationFn: createTeamMembershipRequest,
     onSuccess: () => {
       Alert.alert(
         t('teamDetails.alerts.joinRequest.title'),
         t('teamDetails.alerts.joinRequest.description'),
-        [{ onPress: () => navigation.goBack(), text: t('teamDetails.alerts.joinRequest.actions.ok') }],
+        [{
+          onPress: () => {
+            refetchUserData();
+            refetch();
+            if (fromOnboardingAffiliation) {
+              handleGoToNextOnboardingStep();
+              return;
+            }
+            navigation.goBack();
+          },
+          text: t('teamDetails.alerts.joinRequest.actions.ok'),
+        }],
       );
     },
   });
@@ -266,7 +307,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de reinitialiser les statistiques')),
+        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de réinitialiser les statistiques')),
       );
     },
     onSuccess: () => {
@@ -316,7 +357,7 @@ function TeamDetails({ navigation, route }) {
         setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
-          t('teamDetails.ffbb.noCandidate', 'Aucune équipe detectee depuis cette source.'),
+          t('teamDetails.ffbb.noCandidate', 'Aucune équipe détectée depuis cette source.'),
         );
         return;
       }
@@ -601,7 +642,7 @@ function TeamDetails({ navigation, route }) {
 
     Alert.alert(
       'Preselection effectuee',
-      `${assignmentTrainerName || 'L entraîneur'} est preselectionne. V?rifiez puis appuyez sur "Valider".`,
+      `${assignmentTrainerName || 'L entra?neur'} est pr?sélectionn?. Vérifiez puis appuyez sur "Valider".`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -1380,7 +1421,7 @@ function TeamDetails({ navigation, route }) {
                 {(() => {
                   const modeOptions = [
                     { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Resultats poule') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'R?sultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
 
@@ -1609,7 +1650,7 @@ function TeamDetails({ navigation, route }) {
                     )
                     : useRoundFilters
                       ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisé par journée FFBB.')
-                      : t('teamDetails.calendar.scope.fullPool', 'Resultats et calendrier de toute la poule.');
+                      : t('teamDetails.calendar.scope.fullPool', 'R?sultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
                   const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Équipe suivie');
@@ -2341,3 +2382,4 @@ function TeamDetails({ navigation, route }) {
 }
 
 export default TeamDetails;
+

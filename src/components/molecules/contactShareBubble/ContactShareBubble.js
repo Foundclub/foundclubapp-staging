@@ -58,7 +58,7 @@ function ContactShareBubble({
     >
       <View style={{ gap: 10, paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          Contact partage
+          Contact partagé
         </Text>
         <View style={{ alignItems: 'center', flexDirection: 'row' }}>
           <View

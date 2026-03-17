@@ -497,7 +497,7 @@ function EventWizardLogistics({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
                   {t(
                     'eventWizard.steps.logistics.recurrenceBaseDayHint',
-                    'Le jour de l événement est preselectionne. Tu peux ajouter d\'autres jours.',
+                    'Le jour de l événement est pr?sélectionn?. Tu peux ajouter d\'autres jours.',
                   )}
                 </Text>
               </View>

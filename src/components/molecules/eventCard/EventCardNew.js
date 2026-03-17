@@ -277,7 +277,7 @@ function EventCardNew({
               {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
               {invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={styles.invitedTeamsInline}>
-                  {`Équipes invitees: ${invitedTeamNames.join(', ')}`}
+                  {`équipes invit?es: ${invitedTeamNames.join(', ')}`}
                 </Text>
               ) : null}
             </View>
@@ -755,3 +755,4 @@ const styles = StyleSheet.create({
 });
 
 export default EventCardNew;
+

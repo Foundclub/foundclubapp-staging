@@ -212,7 +212,7 @@ function CMDashboard({ navigation, route }) {
       icon: 'users',
       key: 'manage-club',
       onPress: handleOpenManageClub,
-      subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et reglages du club.'),
+      subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et r?glages du club.'),
       title: t('multisport.actions.manageClub.title', 'Gérer mon club'),
     },
     {

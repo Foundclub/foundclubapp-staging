@@ -80,7 +80,7 @@ export const getChatMessagePreview = (message) => {
   const compositionType = String(message?.composition?.type || '').trim().toLowerCase();
   switch (compositionType) {
     case 'contact_share':
-      return 'Contact partage';
+      return 'Contact partagé';
     case 'event_share':
       return 'Événement partage';
     case 'location_share':

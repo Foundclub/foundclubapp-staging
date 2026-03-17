@@ -3,6 +3,10 @@ import { Platform } from 'react-native';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
+import {
+  dispatchAuthRuntimeAction,
+  getAuthRuntimeSnapshot,
+} from '@/store/authRuntime';
 
 // Fix for Android Emulator Localhost
 // Only use 10.0.2.2 fallback if NO environment variable is provided
@@ -43,10 +47,22 @@ const onRequest = (axiosConfig) => {
  * .AxiosResponse|import('axios').AxiosError>} The axios response or error.
  */
 const resetAuth = async (axiosError) => {
+  const requestAuthorizationHeader = axiosError?.config?.headers?.Authorization;
+  const runtimeSnapshot = getAuthRuntimeSnapshot();
+  const currentAuthorizationHeader = runtimeSnapshot?.auth?.token
+    ? `Bearer ${runtimeSnapshot.auth.token}`
+    : undefined;
   if (axiosError.response
     && axiosError.response.status === 401
+    && typeof requestAuthorizationHeader === 'string'
+    && requestAuthorizationHeader === currentAuthorizationHeader
   ) {
-    storage.delete('auth');
+    const didDispatch = dispatchAuthRuntimeAction({ type: 'LOGOUT_CURRENT_SESSION' });
+    if (!didDispatch) {
+      storage.delete('activeSessionDocumentId');
+      storage.delete('auth');
+      storage.delete('authSessions');
+    }
   }
 
   const timeoutMessage = axiosError?.code === 'ECONNABORTED'

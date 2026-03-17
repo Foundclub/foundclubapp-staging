@@ -54,7 +54,7 @@ const getClipboardModule = () => {
 const getBulkActionLabel = (action, t) => {
   if (action === 'delete') return t('superAdminContentManager.actions.delete', 'Supprimer');
   if (action === 'publish') return t('superAdminContentManager.actions.publish', 'Publier');
-  if (action === 'unpublish') return t('superAdminContentManager.actions.unpublish', 'Depublier');
+  if (action === 'unpublish') return t('superAdminContentManager.actions.unpublish', 'Dépublier');
   return t('superAdminContentManager.actions.apply', 'Appliquer');
 };
 
@@ -200,7 +200,7 @@ function SuperAdminEntryList({ navigation, route }) {
   const openBulkActionModal = (action) => {
     if (selectedCount === 0) {
       Alert.alert(
-        t('superAdminContentManager.alerts.emptySelectionTitle', 'Selection vide'),
+        t('superAdminContentManager.alerts.emptySelectionTitle', 'Sélection vide'),
         t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionnez au moins une entr?e.'),
       );
       return;
@@ -349,12 +349,12 @@ function SuperAdminEntryList({ navigation, route }) {
           create: t('superAdminContentManager.actions.createEntry', 'Créer une entr?e'),
           page: t('superAdminContentManager.list.page', 'Page'),
           searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entr?e'),
-          selectAll: t('superAdminContentManager.actions.selectAll', 'Tout selectionner'),
+          selectAll: t('superAdminContentManager.actions.selectAll', 'Tout sélectionner'),
           selected: t('superAdminContentManager.list.selectedEntries', 'entr?e(s) sélectionnée(s)'),
           selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Selection multiple'),
           selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter selection'),
           total: t('superAdminContentManager.list.total', 'Total'),
-          unselectAll: t('superAdminContentManager.actions.unselectAll', 'Tout deselectionner'),
+          unselectAll: t('superAdminContentManager.actions.unselectAll', 'Tout desélectionner'),
         }}
       />
 
@@ -411,7 +411,7 @@ function SuperAdminEntryList({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
-                {t('superAdminContentManager.actions.unpublish', 'Depublier')}
+                {t('superAdminContentManager.actions.unpublish', 'Dépublier')}
               </Text>
             </TouchableOpacity>
 
@@ -443,7 +443,7 @@ function SuperAdminEntryList({ navigation, route }) {
         ListEmptyComponent={
           !isLoading ? (
             <SuperAdminEmptyState
-              description={t('superAdminContentManager.empty.listDescription', 'Aucune donnee ne correspond aux filtres actifs.')}
+              description={t('superAdminContentManager.empty.listDescription', 'Aucune donnée ne correspond aux filtres actifs.')}
               title={t('superAdminContentManager.empty.listTitle', 'Aucune entr?e')}
             />
           ) : null

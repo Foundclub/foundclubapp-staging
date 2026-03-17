@@ -396,7 +396,7 @@ function PollDetails({ navigation, route }) {
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
               {t(
                 'conversation.poll.details.notFound',
-                'Ce sondage est introuvable ou a ete supprime.',
+                'Ce sondage est introuvable ou a été supprime.',
               )}
             </Text>
           </View>

@@ -151,7 +151,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     const details = duplicates
       .map(([order, ids]) => `order=${order} ids=[${ids.join(', ')}]`)
       .join(' | ');
-    console.warn(`[OnboardingProvider] Duplicate step orders detected in flow "${flowId}": ${details}`);
+    console.warn(`[OnboardingProvider] Duplicate step orders détectéd in flow "${flowId}": ${details}`);
   }, [flowId, orderedSteps]);
 
   const persistCompletedSteps = useCallback((nextCompletedStepIds) => {

@@ -395,7 +395,7 @@ function HistoryWizardClub({ navigation, route }) {
 
                   {!isLoading && clubResults.length === 0 ? (
                     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-                      Aucun club trouv? pour cette recherche.
+                      Aucun club trouvé pour cette recherche.
                     </Text>
                   ) : null}
                 </View>
@@ -410,7 +410,7 @@ function HistoryWizardClub({ navigation, route }) {
 
               <TouchableOpacity onPress={handleOpenCustomInput}>
                 <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                  Club non trouv? ? Saisir manuellement
+                  Club non trouvé ? Saisir manuellement
                 </Text>
               </TouchableOpacity>
             </View>

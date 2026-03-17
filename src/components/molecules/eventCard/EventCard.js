@@ -125,7 +125,7 @@ function EventCard({
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
             {sponsors.map((/** @type {any} */ sponsor) => (
               <SponsorLogoTile
-                borderRadius={8}
+                borderRadius={999}
                 height={32}
                 imageUrl={sponsor.logo?.url}
                 key={sponsor.documentId || sponsor.id}

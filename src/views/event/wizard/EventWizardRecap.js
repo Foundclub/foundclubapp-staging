@@ -367,13 +367,13 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                   {isRecapReady
                     ? t('eventWizard.recap.ready', 'Prêt a créer')
-                    : t('eventWizard.recap.incomplete', 'A completer')}
+                    : t('eventWizard.recap.incomplete', 'à compléter')}
                 </Text>
               </View>
             </View>
 
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventWizard.recap.completedCount', '{{done}}/5 infos cles completees', {
+              {t('eventWizard.recap.completedCount', '{{done}}/5 infos clés complétées', {
                 done: completedQuickOverviewCount,
               })}
             </Text>

@@ -1,4 +1,6 @@
+import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import { storage } from '@/store/appContext';
+import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -15,6 +17,11 @@ export const USER_ROLES = /** @type {const} */({
 });
 
 export const getAuthTokens = () => {
+  const runtimeSnapshot = getAuthRuntimeSnapshot();
+  if (runtimeSnapshot.ready) {
+    return runtimeSnapshot.auth || null;
+  }
+
   const storageAuthRaw = storage.getString('auth');
   let auth = null;
   try {
@@ -367,65 +374,4 @@ export const NOTIFICATION_TYPES = {
   MATCH_FOUND: 'MATCH_FOUND',
 };
 
-/**
- * Sanitize user object to prevent storage overflow while keeping essential data
- * @param {User} user
- * @returns {Partial<User> | undefined}
- */
-export const sanitizeUser = (user) => {
-  if (!user) return undefined;
-
-  const {
-    address, avatar, bestLevel, birthdate, category, club, // object
-    documentId, email, // basic
-    firstname,
-    geohash, height,
-    id,
-    isLookingForClub,
-    lastname,
-    multisportClubs, // array of CMs
-    myTeams,
-    phoneNumber,
-    position,
-    preferredSport,
-    role,
-    section,
-    teamMembershipRequests, // array of requests
-    trainedTeams, // arrays of teams
-    weight,
-  } = user;
-
-  const sanitizedRole = role ? {
-    documentId: role.documentId,
-    id: role.id,
-    name: role.name,
-    type: role.type,
-  } : role;
-
-  return {
-    address,
-    avatar,
-    bestLevel,
-    birthdate,
-    category,
-    club,
-    documentId,
-    email,
-    firstname,
-    geohash,
-    height,
-    id,
-    isLookingForClub,
-    lastname,
-    multisportClubs,
-    myTeams,
-    phoneNumber,
-    position,
-    preferredSport,
-    role: sanitizedRole,
-    section,
-    teamMembershipRequests,
-    trainedTeams,
-    weight,
-  };
-};
+export { sanitizeUser };

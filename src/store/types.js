@@ -11,7 +11,9 @@
  * @property {SquadFilters} [squadFilters] - League squad filters.
  * @property {EventFilters} [eventFilters] - The filters for events.
  * @property {AuthSession[]} [authSessions] - Stored sessions for account switch.
+ * @property {string} [activeSessionDocumentId] - Current active session documentId.
  * @property {boolean} [isAddingAccount] - Indicates add-account flow state.
+ * @property {string} [returnSessionDocumentId] - Session to restore if add-account is cancelled.
  * @property {{ type?: string } | null} [pendingNotification] - Notification waiting for navigation readiness.
  */
 
@@ -24,7 +26,8 @@
  */
 
 /**
- * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION'
+ * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION' | 'LOGOUT_CURRENT_SESSION'
+ * | 'REMOVE_SESSION_BY_DOCUMENT_ID' | 'SET_ACTIVE_SESSION'
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
  * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RESERVATION_FILTERS'
  * | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'

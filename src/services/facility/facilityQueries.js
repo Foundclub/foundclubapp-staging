@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  createBooking, getAvailability, getBookableFacilities, getFacilities, getFacility,
+  createBooking,
+  getAvailability,
+  getBookableFacilities,
+  getClubFacilityContext,
+  getFacilities,
+  getFacility,
 } from './facilityService';
 
 /**
@@ -41,6 +46,22 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
   staleTime: 1000 * 60 * 5,
   ...options,
 });
+
+/**
+ * Hook to get local + shared facilities for a club context.
+ * @param {{ clubId?: string | null, cmId?: string | null }} context
+ * @param options
+ */
+export const useClubFacilityContext = (context = {}, options = {}) => {
+  const { clubId = null, cmId = null } = context;
+  return useQuery({
+    enabled: Boolean(clubId || cmId),
+    queryFn: () => getClubFacilityContext(clubId, cmId),
+    queryKey: ['club-facility-context', clubId || 'none', cmId || 'auto'],
+    staleTime: 1000 * 60 * 5,
+    ...options,
+  });
+};
 
 /**
  * Hook to get a single facility

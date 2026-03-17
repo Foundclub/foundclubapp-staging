@@ -163,7 +163,7 @@ export const login = async ({ code, confirm }) => {
   if (isFirebaseBypassEnabled()) {
     logAuthDebug('[BYPASS] Firebase Auth bypassed - logging in directly with phone number');
     logAuthDebug('[BYPASS] confirm object received:', JSON.stringify(confirm));
-    const phoneNumber = typeof confirm?.phoneNumber === 'string' ? confirm.phoneNumber.trim() : '';
+    const phoneNumber = typeof confirmé.phoneNumber === 'string' ? confirm.phoneNumber.trim() : '';
     if (!phoneNumber) {
       throw new Error('Missing phone number in confirmation. Please restart login.');
     }

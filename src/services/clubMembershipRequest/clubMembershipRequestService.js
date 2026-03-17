@@ -10,6 +10,7 @@ const clubMembershipRequestSchema = Joi.object({
   requesterFirstname: Joi.string().allow('', null).optional(),
   requesterLastname: Joi.string().allow('', null).optional(),
   state: Joi.string().valid('processed', 'refused', 'pending').required(),
+  type: Joi.string().valid('join', 'claim').allow('', null).optional(),
   user: Joi.alternatives().try(
     Joi.object().unknown(true),
     Joi.string(),

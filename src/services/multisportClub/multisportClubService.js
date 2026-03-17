@@ -27,8 +27,20 @@ import { uploadFile } from '../club/clubService';
  * @typedef {{ data?: { name?: string; documentId?: string } }} CreateCMSectionResponse
  * @typedef {{ name?: string; geohash?: string; page?: number; pageSize?: number }} MultisportClubSearchParams
  * @typedef {{ sectionId?: string; installationId?: string; from?: string; to?: string }} CMPlanningFilters
+ * @typedef {{ installationId?: string; from?: string; to?: string }} ClubSharedPlanningFilters
  * @typedef {{ id?: string; name?: string; color?: string | null }} PlanningInstallation
- * @typedef {{ eventId?: string; title?: string; startAt?: string; endAt?: string; startTime?: string; endTime?: string; installation?: PlanningInstallation }} CMPlanningSlot
+ * @typedef {{
+ *   eventId?: string;
+ *   title?: string;
+ *   startAt?: string;
+ *   endAt?: string;
+ *   startTime?: string;
+ *   endTime?: string;
+ *   installation?: PlanningInstallation;
+ *   clubName?: string | null;
+ *   teamName?: string | null;
+ *   isSharedFacility?: boolean;
+ * }} CMPlanningSlot
  * @typedef {{ path?: string; id?: number | string; documentId?: string }} MediaRef
  * @typedef {{ logo?: MediaRef | number | string; [key: string]: any }} SponsorPayload
  * @typedef {{ logo?: MediaRef | number | string; sponsor?: SponsorPayload[]; [key: string]: any }} MultisportClubUpdatePayload
@@ -133,6 +145,25 @@ export const getCMPlanning = async (cmId, filters = {}) => {
   if (filters.to) params.append('to', filters.to);
 
   const result = await client.get(`/cm/${cmId}/planning?${params.toString()}`);
+  return result.data;
+};
+
+/**
+ * Get planning for shared multisport facilities from a child club perspective.
+ * @param {string} cmId
+ * @param {string} clubId
+ * @param {ClubSharedPlanningFilters} [filters]
+ * @returns {Promise<{ data?: CMPlanningSlot[]; meta?: object }>}
+ */
+export const getClubSharedPlanning = async (cmId, clubId, filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.installationId) params.append('installationId', filters.installationId);
+  if (filters.from) params.append('from', filters.from);
+  if (filters.to) params.append('to', filters.to);
+
+  const queryString = params.toString();
+  const suffix = queryString ? `?${queryString}` : '';
+  const result = await client.get(`/cm/${cmId}/clubs/${clubId}/shared-planning${suffix}`);
   return result.data;
 };
 
@@ -260,9 +291,7 @@ export const updateMultisportClub = async (cmId, data) => {
 
   // Handle Sponsors Uploads
   if (dataCopy.sponsor && Array.isArray(dataCopy.sponsor)) {
-    /** @type {SponsorPayload[]} */
-    const processedSponsors = [];
-    for (const sponsor of dataCopy.sponsor) {
+    const processedSponsors = await Promise.all(dataCopy.sponsor.map(async (sponsor) => {
       const newSponsor = { ...sponsor };
 
       // If logo is a new file (has path), upload it
@@ -270,20 +299,13 @@ export const updateMultisportClub = async (cmId, data) => {
         const uploadResult = /** @type {{ id?: number | string; documentId?: string }} */ (await uploadFile(newSponsor.logo));
         // For components media fields, we use the Integer ID
         newSponsor.logo = uploadResult.id || uploadResult.documentId || newSponsor.logo;
-      }
-      // If existing logo (has documentId or id)
-      else if (newSponsor.logo && typeof newSponsor.logo === 'object' && ('documentId' in newSponsor.logo || 'id' in newSponsor.logo)) {
-        // For existing, we might need ID or DocumentId. Let's try ID if available, else DocumentId
-        // Actually, if we send the object or ID?
-        // If we send just the ID (int), Strapi should handle it.
-        // If we send documentId?
-        // Let's safe bet on ID (int) if available, or just keeping what we have.
-        // Usually existing returns object with id and documentId.
+      } else if (newSponsor.logo && typeof newSponsor.logo === 'object' && ('documentId' in newSponsor.logo || 'id' in newSponsor.logo)) {
+        // Reuse existing media references when the logo is already uploaded.
         newSponsor.logo = newSponsor.logo.id || newSponsor.logo.documentId || newSponsor.logo;
       }
 
-      processedSponsors.push(newSponsor);
-    }
+      return newSponsor;
+    }));
     dataCopy.sponsor = processedSponsors;
   }
 
@@ -309,6 +331,7 @@ export default {
   approveHighlightRequest,
   createCMSection,
   createHighlightRequest,
+  getClubSharedPlanning,
   getCMClubs,
   getCMHighlightRequests,
   getCMMembers,

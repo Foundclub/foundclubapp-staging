@@ -25,6 +25,94 @@ const getCMFacilities = async (cmId) => {
   }
 };
 
+const getFacilityOwnerName = (facility, fallback = '') => {
+  if (facility?.multisportClub?.name) return facility.multisportClub.name;
+  if (facility?.club?.name) return facility.club.name;
+  return fallback;
+};
+
+const normalizeClubFacility = (facility) => ({
+  ...facility,
+  isReadOnly: false,
+  isShared: false,
+  ownerName: getFacilityOwnerName(facility, facility?.club?.name || ''),
+  ownerType: 'club',
+});
+
+const normalizeSharedFacility = (facility) => ({
+  ...facility,
+  isReadOnly: true,
+  isShared: true,
+  ownerName: getFacilityOwnerName(facility, facility?.multisportClub?.name || 'Multisport'),
+  ownerType: 'multisport',
+  source: 'Multisport',
+});
+
+const getFacilitySections = (facilities, labels = {}) => {
+  if (!Array.isArray(facilities) || facilities.length === 0) return [];
+
+  const clubTitle = labels.clubTitle || 'Installations du club';
+  const sharedTitle = labels.sharedTitle || 'Installations partagées';
+  const editableFacilities = facilities.filter((facility) => !facility?.isShared);
+  const sharedFacilities = facilities.filter((facility) => facility?.isShared);
+
+  if (editableFacilities.length > 0 && sharedFacilities.length > 0) {
+    return [
+      { data: editableFacilities, title: clubTitle },
+      { data: sharedFacilities, title: sharedTitle },
+    ];
+  }
+
+  if (sharedFacilities.length > 0) {
+    return [{ data: sharedFacilities, title: sharedTitle }];
+  }
+
+  return [{ data: editableFacilities, title: clubTitle }];
+};
+
+const resolveParentMultisportId = async (clubId) => {
+  if (!clubId) return null;
+
+  try {
+    const response = await client.get(`/clubs/${clubId}`, {
+      params: {
+        populate: {
+          parentMultisport: {
+            fields: ['documentId', 'name'],
+          },
+        },
+      },
+    });
+    return response?.data?.data?.parentMultisport?.documentId || null;
+  } catch (error) {
+    console.error('Error resolving club parent multisport:', error);
+    return null;
+  }
+};
+
+const getClubFacilityContext = async (clubId, cmId) => {
+  const resolvedCmId = cmId || await resolveParentMultisportId(clubId);
+  const [clubResponse, cmResponse] = await Promise.all([
+    clubId ? getFacilities(clubId) : Promise.resolve(null),
+    resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),
+  ]);
+  const clubFacilities = Array.isArray(clubResponse?.data)
+    ? clubResponse.data.map(normalizeClubFacility)
+    : [];
+  const sharedFacilities = Array.isArray(cmResponse?.data)
+    ? cmResponse.data.map(normalizeSharedFacility)
+    : [];
+  const allFacilities = [...clubFacilities, ...sharedFacilities];
+
+  return {
+    allFacilities,
+    clubFacilities,
+    cmId: resolvedCmId || null,
+    hasSharedFacilities: sharedFacilities.length > 0,
+    sharedFacilities,
+  };
+};
+
 const getFacility = async (id) => {
   try {
     const response = await client.get(`/facilities/${id}?populate=*`);
@@ -123,8 +211,10 @@ export {
   deleteFacility,
   getAvailability,
   getBookableFacilities,
+  getClubFacilityContext,
   getCMFacilities,
   getFacilities,
   getFacility,
+  getFacilitySections,
   updateFacility,
 };

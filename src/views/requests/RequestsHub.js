@@ -141,12 +141,24 @@ function RequestsHub({ navigation, route }) {
     const trainerName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
     const trainerId = item?.meta?.requesterId;
     const targetClubId = item?.meta?.clubId || clubId;
+    const isClaimRequest = item?.meta?.requestType === 'claim';
+
+    if (isClaimRequest) {
+      Alert.alert(
+        t('requestsHub.clubClaimAssignedTitle', 'Dirigeant ajouté'),
+        t(
+          'requestsHub.clubClaimAssignedMessage',
+          '{{name}} a été ajouté comme dirigeant du club.',
+        ).replace('{{name}}', trainerName),
+      );
+      return;
+    }
 
     Alert.alert(
       t('requestsHub.clubAssignedTitle', 'Entraîneur ajoute'),
       t(
         'requestsHub.clubAssignedMessage',
-        "{{name}} a été ajoute au club. Voulez-vous l'assigner a une équipe maintenant ?",
+        "{{name}} a été ajouté au club. Voulez-vous l'assigner ? une équipe maintenant ?",
       ).replace('{{name}}', trainerName),
       [
         { style: 'cancel', text: t('common.actions.askLater', 'Plus tard') },
@@ -420,3 +432,4 @@ function RequestsHub({ navigation, route }) {
 }
 
 export default RequestsHub;
+

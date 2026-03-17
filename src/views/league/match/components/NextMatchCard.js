@@ -182,10 +182,10 @@ function NextMatchCard({
       .includes(normalizedStatus) || ['disputed', 'pending_validation'].includes(derivedPhase);
 
     return [
-      { done: true, key: 'found', label: 'Trouve' },
-      { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain reserve' },
-      { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match joue' },
-      { done: resultSubmitted, key: 'result', label: 'Resultat' },
+      { done: true, key: 'found', label: 'Trouv?' },
+      { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain r?serv?' },
+      { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match jou?' },
+      { done: resultSubmitted, key: 'result', label: 'R?sultat' },
     ];
   }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus]);
 
@@ -463,7 +463,7 @@ function NextMatchCard({
             if (isScoreLockedByTime) {
               Alert.alert(
                 'Score indisponible',
-                "Vous pourrez saisir le score une fois l'heure de d?but du match d?pass?e de 1 minute.",
+                "Vous pourrez saisir le score une fois l'heure de début du match d?pass?e de 1 minute.",
               );
               return;
             }
@@ -784,3 +784,4 @@ const styles = StyleSheet.create({
 });
 
 export default NextMatchCard;
+

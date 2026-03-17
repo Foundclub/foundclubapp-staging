@@ -18,10 +18,11 @@ import {
 } from '@/services/auth/authService';
 
 import { createLogger } from '@/utils/logger/logger';
+import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import {
   formatBirthdateToDisplay,
   formatBirthdateToSend,
-  getAuthTokens, getOnboardingViews, profileFieldToDisplay, sanitizeUser, USER_ROLES,
+  getAuthTokens, getOnboardingViews, profileFieldToDisplay, USER_ROLES,
 } from './authUseCases';
 
 import { useAppMode } from '@/context/AppModeContext';
@@ -99,7 +100,7 @@ const useAuth = () => {
           storage.delete(key);
         }
       });
-      appDispatch({ type: 'DELETE_AUTHENTICATION' });
+      appDispatch({ type: 'LOGOUT_CURRENT_SESSION' });
     },
   });
 
@@ -112,8 +113,8 @@ const useAuth = () => {
 
     // Switch app session immediately so UI reacts on first tap.
     appDispatch({
-      payload: session,
-      type: 'SWITCH_ACCOUNT',
+      payload: session?.user?.documentId || session,
+      type: 'SET_ACTIVE_SESSION',
     });
 
     // NOTE: We intentionally skip Firebase re-auth here.
@@ -367,16 +368,8 @@ const useAuth = () => {
     authLogger.debug('Cancel add-account flow');
     setConfirm(undefined);
     queryClient.clear(); // Clear stale data from previous partial login attempts
-    // Restore the first available session from authSessions
-    const previousSession = authSessions?.[0];
-    if (previousSession) {
-      authLogger.debug('Restoring previous session', {
-        userDocumentId: previousSession?.user?.documentId || previousSession?.user?.id,
-      });
-      appDispatch({ payload: previousSession, type: 'SWITCH_ACCOUNT' });
-    }
     appDispatch({ type: 'CANCEL_ADD_ACCOUNT' });
-  }, [appDispatch, authSessions, queryClient]);
+  }, [appDispatch, queryClient]);
 
   return {
     addAccount,

@@ -338,3 +338,4 @@ function AdWizardRecap({ navigation }) {
 }
 
 export default AdWizardRecap;
+

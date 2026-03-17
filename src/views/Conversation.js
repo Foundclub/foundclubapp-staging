@@ -281,16 +281,16 @@ function Conversation({ navigation, route }) {
     if (!startParam || !endParam) return;
 
     Alert.alert(
-      'Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©',
-      'Ajouter ce match ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  votre agenda ?',
+      'Match confirmé ?',
+      'Ajouter ce match à votre agenda ?',
       [
         { style: 'cancel', text: 'Plus tard' },
         {
           onPress: async () => {
             const text = encodeURIComponent('Match FoundClub League');
-            const details = encodeURIComponent('Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© depuis la messagerie League');
+            const details = encodeURIComponent('Match confirmé depuis la messagerie League');
             const location = encodeURIComponent(venue);
-            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tails=${details}&location=${location}`;
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
             try {
               await Linking.openURL(url);
             } catch (error) {
@@ -381,18 +381,18 @@ function Conversation({ navigation, route }) {
       || '',
     ).toLowerCase();
     if (responseStatus === 413 || rawErrorMessage.includes('too large') || rawErrorMessage.includes('payload too large')) {
-      return 'La piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe est trop volumineuse pour ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e.';
+      return 'La pièce jointe est trop volumineuse pour être envoyée.';
     }
     if (responseStatus === 401 || responseStatus === 403) {
-      return 'Session invalide. Reconnectez-vous puis rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.';
+      return 'Session invalide. Reconnectez-vous puis réessayez.';
     }
     if (isTransientNetworkUploadError(error)) {
-      return 'Connexion instable. V?rifiez votre reseau puis rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.';
+      return 'Connexion instable. Vérifiez votre réseau puis réessayez.';
     }
     if (rawErrorMessage.includes('invalid attachment')) {
-      return 'Format de piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe invalide.';
+      return 'Format de pièce jointe invalide.';
     }
-    return 'Impossible d\'envoyer cette piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe.';
+    return "Impossible d'envoyer cette pièce jointe.";
   }, [isTransientNetworkUploadError]);
 
   const getAttachmentSizeLimit = useCallback((assetType) => {
@@ -541,6 +541,8 @@ function Conversation({ navigation, route }) {
   // Safe area insets (notch + home indicator)
   const { bottom, top } = useSafeAreaInsets();
   const safeBottomInset = Math.max(bottom, 10);
+  const composerBottomInset = Platform.OS === 'ios' ? Math.max(bottom, 14) : 10;
+  const giftedChatBottomOffset = Platform.OS === 'ios' ? 0 : safeBottomInset;
   const apiBaseUrl = useMemo(() => toApiBaseUrl(process.env.API_URL), []);
   const publicApiOrigin = useMemo(() => toPublicApiOrigin(process.env.API_URL), []);
   const HEADER_SIDE_WIDTH = 56;
@@ -1063,17 +1065,17 @@ function Conversation({ navigation, route }) {
           asset: describeAsset(asset),
           chatId,
         });
-        Alert.alert('Erreur', 'Aucune piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe n\'a pu ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e.');
+        Alert.alert('Erreur', "Aucune pièce jointe n'a pu être envoyée.");
         return false;
       }
 
       const uploadedMime = uploadedFiles?.[0]?.mime || asset.type || '';
-      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce-jointe';
+      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'pièce-jointe';
       const isImageAttachment = typeof uploadedMime === 'string'
         && uploadedMime.startsWith('image/');
 
       const normalizedCaption = String(options?.caption || '').trim();
-      const fallbackText = isImageAttachment ? '' : `PiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe: ${uploadedName}`;
+      const fallbackText = isImageAttachment ? '' : `Pièce jointe : ${uploadedName}`;
       const messageText = normalizedCaption || fallbackText;
 
       const optimisticMessageId = sendMessage(chatId, messageText, {
@@ -1089,7 +1091,7 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        Alert.alert('Erreur', 'Connexion messagerie indisponible. RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez dans quelques secondes.');
+        Alert.alert('Erreur', 'Connexion messagerie indisponible. R?essayez dans quelques secondes.');
         return false;
       }
 
@@ -1246,23 +1248,23 @@ function Conversation({ navigation, route }) {
           buttonPositive: t('common.actions.ok', 'OK'),
           message: t(
             'permissions.camera.message',
-            'L\'application a besoin de la camera pour prendre une photo.',
+            'L\'application a besoin de la caméra pour prendre une photo.',
           ),
-          title: t('permissions.camera.title', 'Permission Camera'),
+          title: t('permissions.camera.title', 'Permission caméra'),
         },
       );
 
       if (result !== PermissionsAndroid.RESULTS.GRANTED) {
         Alert.alert(
           t('common.error', 'Erreur'),
-          t('permissions.camera.denied', 'Permission camera refusee'),
+          t('permissions.camera.denied', 'Permission caméra refusée'),
         );
         return false;
       }
       return true;
     } catch (error) {
       conversationLogger.warn('Camera permission request failed', error);
-      Alert.alert('Erreur', 'Impossible de vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rifier la permission camera.');
+      Alert.alert('Erreur', 'Impossible de vérifier la permission caméra.');
       return false;
     }
   }, [t]);
@@ -1320,13 +1322,13 @@ function Conversation({ navigation, route }) {
 
   const handlePickFile = async () => {
     if (isDocumentPickerDisabled) {
-      Alert.alert('Fichier indisponible', 'Le selecteur de fichier est temporairement desactive sur cette build.');
+      Alert.alert('Fichier indisponible', 'Le sélecteur de fichier est temporairement desactive sur cette build.');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
+      Alert.alert('Erreur', 'Le sélecteur de fichier est indisponible sur cette build.');
       return;
     }
 
@@ -1353,7 +1355,7 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        Alert.alert('Erreur', 'Impossible de recuperer ce fichier.');
+        Alert.alert('Erreur', 'Impossible de récupérer ce fichier.');
         return;
       }
 
@@ -1366,7 +1368,7 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Document picker failed', error);
-      Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
+      Alert.alert('Erreur', 'Impossible de sélectionner un fichier.');
     }
   };
 
@@ -1386,7 +1388,7 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachmentAsset(normalizedAsset);
       if (!Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
-        Alert.alert('Erreur', 'Impossible d\'ajouter cette piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe.');
+        Alert.alert('Erreur', "Impossible d'ajouter cette pièce jointe.");
         return;
       }
 
@@ -1471,13 +1473,13 @@ function Conversation({ navigation, route }) {
 
   const handleEditPickFile = useCallback(async () => {
     if (isDocumentPickerDisabled) {
-      Alert.alert('Fichier indisponible', 'Le selecteur de fichier est temporairement desactive sur cette build.');
+      Alert.alert('Fichier indisponible', 'Le sélecteur de fichier est temporairement desactive sur cette build.');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      Alert.alert('Erreur', 'Le selecteur de fichier est indisponible sur cette build.');
+      Alert.alert('Erreur', 'Le sélecteur de fichier est indisponible sur cette build.');
       return;
     }
 
@@ -1504,7 +1506,7 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        Alert.alert('Erreur', 'Impossible de recuperer ce fichier.');
+        Alert.alert('Erreur', 'Impossible de récupérer ce fichier.');
         return;
       }
 
@@ -1517,7 +1519,7 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Edit document picker failed', error);
-      Alert.alert('Erreur', 'Impossible de selectionner un fichier.');
+      Alert.alert('Erreur', 'Impossible de sélectionner un fichier.');
     }
   }, [appendEditAttachmentsFromAsset]);
 
@@ -1527,7 +1529,7 @@ function Conversation({ navigation, route }) {
     const payloadAttachments = toEditAttachmentPayload(editMessageAttachments);
     const normalizedMessage = String(editMessageText || '');
     if (!normalizedMessage.trim() && payloadAttachments.length === 0) {
-      Alert.alert('Erreur', 'Le message ne peut pas ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªtre vide.');
+      Alert.alert('Erreur', 'Le message ne peut pas être vide.');
       return;
     }
 
@@ -1819,7 +1821,7 @@ function Conversation({ navigation, route }) {
   const handleSaveGroupName = async () => {
     const nextGroupName = String(groupNameDraft || '').trim();
     if (!chatId || !nextGroupName) {
-      Alert.alert('Nom requis', 'Entrez un nom de groupe validÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.');
+      Alert.alert('Nom requis', 'Entrez un nom de groupe valide.');
       return;
     }
 
@@ -1829,10 +1831,10 @@ function Conversation({ navigation, route }) {
         chatId,
         data: { groupName: nextGroupName },
       });
-      Alert.alert('SuccÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨s', 'Nom du groupe mis ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour.');
+      Alert.alert('Succès', 'Nom du groupe mis à jour.');
     } catch (error) {
       conversationLogger.warn('Failed to update group name', error);
-      Alert.alert('Erreur', 'Impossible de mettre ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour le nom du groupe.');
+      Alert.alert('Erreur', 'Impossible de mettre à jour le nom du groupe.');
     } finally {
       setIsGroupMutationLoading(false);
     }
@@ -1997,7 +1999,7 @@ function Conversation({ navigation, route }) {
         waveform: normalizedWaveform,
       });
 
-      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte. Ajoutez un message puis envoyez.'));
+      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prête. Ajoutez un message puis envoyez.'));
       resetVoiceRecordingState();
     } catch (error) {
       conversationLogger.warn('Failed to finalize voice note draft', error);
@@ -2005,17 +2007,17 @@ function Conversation({ navigation, route }) {
       const code = String(error?.message || '');
       let errorMessage = t(
         'conversation.voice.sendErrorDescription',
-        'Impossible d\'envoyer la note vocale. Reessayez.',
+        'Impossible d\'envoyer la note vocale. Réessayez.',
       );
       if (code === 'VOICE_STOP_FAILED') {
         errorMessage = t(
           'conversation.voice.stopErrorDescription',
-          'Impossible de finaliser l\'enregistrement vocal. Reessayez.',
+          'Impossible de finaliser l\'enregistrement vocal. Réessayez.',
         );
       } else if (code === 'VOICE_FILE_EMPTY') {
         errorMessage = t(
           'conversation.voice.emptyErrorDescription',
-          'Aucun son exploitable n\'a ete capture. Reessayez.',
+          'Aucun son exploitable n\'a été capturé. Réessayez.',
         );
       }
       Alert.alert(
@@ -2050,7 +2052,7 @@ function Conversation({ navigation, route }) {
 
       if (gestureState.dy <= VOICE_GESTURE_LOCK_THRESHOLD) {
         setVoiceRecordingState(VOICE_RECORDING_STATES.locked);
-        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©. Touchez envoyer ou annuler.'));
+        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillé. Touchez envoyer ou annuler.'));
       }
     },
     onPanResponderRelease: () => {
@@ -2176,7 +2178,7 @@ function Conversation({ navigation, route }) {
         disabled: !isEventShareEnabled,
         icon: 'EV',
         key: 'event',
-        label: t('conversation.attachments.event', 'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement'),
+        label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
       },
     ];
@@ -2265,7 +2267,7 @@ function Conversation({ navigation, route }) {
         sender: userData,
       });
 
-      Alert.alert('EnvoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©', 'Votre proposition a ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e !');
+      Alert.alert('Envoyé', 'Votre proposition a été envoyée !');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
       Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
@@ -2278,7 +2280,7 @@ function Conversation({ navigation, route }) {
     if (!matchId && status === 'accepted') {
       // If matchId is missing in composition, try fallback to chat's match
       if (!chatData?.league_match) {
-        Alert.alert('Erreur', 'Impossible de retrouver le match associÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.');
+        Alert.alert('Erreur', 'Impossible de retrouver le match associé.');
         return;
       }
     }
@@ -2310,7 +2312,7 @@ function Conversation({ navigation, route }) {
           String(message.documentId || message._id || message.id || ''),
           'accepted',
         );
-        Alert.alert('Match confirmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©', 'Le match est validÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© !');
+        Alert.alert('Match confirmé', 'Le match est validé !');
         promptAddMatchToCalendar(message);
       } else {
         await respondToProposal(
@@ -2324,7 +2326,7 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ponse.');
+      Alert.alert('Erreur', 'Une erreur est survenue lors de la réponse.');
       // Rollback could go here
     }
   };
@@ -2349,7 +2351,7 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier votre ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©quipe pour l'annulation.");
+      Alert.alert('Erreur', "Impossible d'identifier votre équipe pour l'annulation.");
       return;
     }
 
@@ -2698,7 +2700,7 @@ function Conversation({ navigation, route }) {
       const detailedMessage = buildAttachmentUploadErrorMessage(error);
       Alert.alert(
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
-        detailedMessage || t('conversation.voice.sendErrorDescription', 'Impossible d\'envoyer la note vocale. RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©essayez.'),
+        detailedMessage || t('conversation.voice.sendErrorDescription', "Impossible d'envoyer la note vocale. Réessayez."),
       );
     } finally {
       uploadInFlightRef.current = false;
@@ -2981,8 +2983,8 @@ function Conversation({ navigation, route }) {
     if (clipboard && typeof clipboard.setString === 'function') {
       clipboard.setString(selectedMessageTextValue);
       Alert.alert(
-        t('conversation.actions.copySuccess.title', 'CopiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©'),
-        t('conversation.actions.copySuccess.description', 'Le message a ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© copiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©.'),
+        t('conversation.actions.copySuccess.title', 'Copié'),
+        t('conversation.actions.copySuccess.description', 'Le message a été copié.'),
       );
     } else {
       Alert.alert(
@@ -3400,7 +3402,7 @@ function Conversation({ navigation, route }) {
               }}
             >
               <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('conversation.replyPreview.label', 'RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ponse a')}
+                {t('conversation.replyPreview.label', 'Réponse à')}
                 {' '}
                 {replyAuthorName}
               </Text>
@@ -3471,7 +3473,7 @@ function Conversation({ navigation, route }) {
                 }}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
-                  {t('common.retry', 'R?essayer')}
+                  {t('common.retry', 'Réessayer')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -3493,7 +3495,7 @@ function Conversation({ navigation, route }) {
   const renderComposer = (props) => {
     let composerPlaceholder = t('conversation.messagePlaceholder');
     if (pendingMediaDraft?.asset?.uri) {
-      composerPlaceholder = t('conversation.attachments.captionPlaceholder', 'Ajouter une lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende');
+      composerPlaceholder = t('conversation.attachments.captionPlaceholder', 'Ajouter une légende');
     } else if (pendingVoiceDraft?.uri) {
       composerPlaceholder = t('conversation.voice.captionPlaceholder', 'Ajouter un message (optionnel)');
     }
@@ -3673,15 +3675,15 @@ function Conversation({ navigation, route }) {
             />
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                {t('conversation.attachments.previewTitle', 'Photo prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªte a envoyer')}
+                {t('conversation.attachments.previewTitle', 'Photo prête à envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
                 style={[Fonts.p4, { color: Colors.neutral400 }]}
               >
                 {composerText?.trim()
-                  ? t('conversation.attachments.previewWithCaption', 'La lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende sera envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e avec la photo.')
-                  : t('conversation.attachments.previewWithoutCaption', 'Ajoutez une lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©gende puis confirmez l\'envoi.')}
+                  ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
+                  : t('conversation.attachments.previewWithoutCaption', "Ajoutez une légende puis confirmez l'envoi.")}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -3715,7 +3717,7 @@ function Conversation({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
                 {isVoiceRecordingLocked
-                  ? t('conversation.voice.locked', 'Note vocale verrouillee')
+                  ? t('conversation.voice.locked', 'Note vocale verrouillée')
                   : t('conversation.voice.recording', 'Enregistrement vocal')}
               </Text>
               <Text
@@ -3724,7 +3726,7 @@ function Conversation({ navigation, route }) {
               >
                 {isSendingVoiceNote
                   ? t('conversation.voice.sending', 'Envoi en cours...')
-                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintenez appuye pour enregistrer')}`}
+                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintenez appuyé pour enregistrer')}`}
               </Text>
               <View
                 style={{
@@ -3847,7 +3849,7 @@ function Conversation({ navigation, route }) {
 
             <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
               {composerText?.trim()
-                ? t('conversation.voice.draftWithText', 'Le texte sera envoyÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© avec la note vocale.')
+                ? t('conversation.voice.draftWithText', 'Le texte sera envoyé avec la note vocale.')
                 : t('conversation.voice.draftWithoutText', 'Ajoutez un message optionnel puis appuyez sur Envoyer.')}
             </Text>
             {draftPlaybackError ? (
@@ -3908,8 +3910,8 @@ function Conversation({ navigation, route }) {
         .map((typingUserId) => resolveVoterName(String(typingUserId)))
         .filter(Boolean);
       const typingLabel = typingNames.length > 0
-        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crivent' : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crit'}...`
-        : 'Quelqu\'un ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©crit...';
+        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'écrivent' : 'écrit'}...`
+        : "Quelqu'un écrit...";
       return (
         <View style={[Spaces.padding[8], Spaces.marginLeft[16]]}>
           <Text style={[Fonts.p3, Fonts.neutral500]}>{typingLabel}</Text>
@@ -3933,12 +3935,10 @@ function Conversation({ navigation, route }) {
           Spaces.padding[16],
           Alignments.alignCenter,
           Alignments.justifyCenter,
-          { marginBottom: safeBottomInset },
+          { marginBottom: composerBottomInset },
         ]}
         >
           <Text style={[Fonts.p2, Fonts.neutral500]}>
-            ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â£
-            {' '}
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
@@ -3958,6 +3958,7 @@ function Conversation({ navigation, route }) {
         ApplicationStyle.backgroundColor.primary900,
         ApplicationStyle.noBorderTop,
         Spaces.paddingHorizontal[8],
+        { paddingBottom: composerBottomInset },
         Spaces.paddingVertical[8],
       ]}
       >
@@ -4191,11 +4192,11 @@ function Conversation({ navigation, route }) {
 
       <View style={[Alignments.fill]}>
         <GiftedChat
-          bottomOffset={safeBottomInset}
+          bottomOffset={giftedChatBottomOffset}
           dateFormat="DD MMMM"
           dateFormatCalendar={{
             lastDay: '[Hier]',
-            lastWeek: '[La semaine derniÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨re] dddd',
+            lastWeek: '[La semaine dernière] dddd',
             nextDay: '[Demain]',
             nextWeek: 'dddd',
             sameDay: '[Aujourd\'hui]',
@@ -4256,7 +4257,7 @@ function Conversation({ navigation, route }) {
                 zIndex: 2,
               }}
             >
-              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â</Text>
+              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>X</Text>
             </TouchableOpacity>
 
             {previewImageUrl ? (
@@ -4316,7 +4317,7 @@ function Conversation({ navigation, route }) {
             {isGroupAdmin && (
             <Button
               onPress={handleOpenGroupManagement}
-              title={t('conversation.actions.manageGroup', 'GÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rer le groupe')}
+              title={t('conversation.actions.manageGroup', 'Gérer le groupe')}
               variant="SecondaryLight"
             />
             )}
@@ -4325,7 +4326,7 @@ function Conversation({ navigation, route }) {
               onPress={() => {
                 setIsMenuVisible(false);
                 setTimeout(() => {
-                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨tres.');
+                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.');
                 }, 300);
               }}
               title={t('conversation.actions.report', 'Signaler')}
@@ -4563,7 +4564,7 @@ function Conversation({ navigation, route }) {
         >
           <View style={[Spaces.gap[12], { maxHeight: 560 }]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-              {t('conversation.shareEvent.planningTitle', 'ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nements de mon planning')}
+              {t('conversation.shareEvent.planningTitle', 'Événements de mon planning')}
             </Text>
 
             {isLoadingSharedEvents ? (
@@ -4574,7 +4575,7 @@ function Conversation({ navigation, route }) {
 
             {!isLoadingSharedEvents && shareableEvents.length === 0 ? (
               <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-                {t('conversation.shareEvent.empty', 'Aucun ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement disponible.')}
+                {t('conversation.shareEvent.empty', 'Aucun événement disponible.')}
               </Text>
             ) : null}
 
@@ -4602,7 +4603,7 @@ function Conversation({ navigation, route }) {
 
             <Button
               onPress={handleOpenPublicEventPicker}
-              title={t('conversation.shareEvent.sharePublicAction', 'Partager un ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©nement public')}
+              title={t('conversation.shareEvent.sharePublicAction', 'Partager un événement public')}
               variant="SecondaryLight"
             />
           </View>
@@ -4716,7 +4717,7 @@ function Conversation({ navigation, route }) {
                     attachment?.name
                     || attachment?.alternativeText
                     || attachment?.caption
-                    || t('conversation.actions.editModal.attachmentFallback', 'PiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe'),
+                    || t('conversation.actions.editModal.attachmentFallback', 'Pièce jointe'),
                   );
                   return (
                     <View
@@ -4748,7 +4749,7 @@ function Conversation({ navigation, route }) {
               </View>
             ) : (
               <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('conversation.actions.editModal.noAttachments', 'Aucune piÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ce jointe')}
+                {t('conversation.actions.editModal.noAttachments', 'Aucune pièce jointe')}
               </Text>
             )}
 

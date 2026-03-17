@@ -1,5 +1,9 @@
 import { getAuthTokens, getOnboardingViews, USER_ROLES } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
+import {
+  resetAuthRuntimeForTests,
+  syncAuthRuntimeState,
+} from '@/store/authRuntime';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -13,6 +17,7 @@ jest.mock('../../store/appContext', () => ({
 describe('authUseCases', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetAuthRuntimeForTests();
     storage.getBoolean.mockReturnValue(false);
   });
 
@@ -26,6 +31,19 @@ describe('authUseCases', () => {
       const mockAuth = { refreshToken: 'refresh-token', token: 'test-token' };
       storage.getString.mockReturnValue(JSON.stringify(mockAuth));
       expect(getAuthTokens()).toEqual(mockAuth);
+    });
+
+    it('returns runtime auth when runtime state is ready', () => {
+      const runtimeAuth = { token: 'runtime-token' };
+      syncAuthRuntimeState({
+        activeSessionDocumentId: 'user-doc',
+        auth: runtimeAuth,
+        authSessions: [runtimeAuth],
+        isAddingAccount: false,
+      });
+      storage.getString.mockReturnValue(JSON.stringify({ token: 'storage-token' }));
+
+      expect(getAuthTokens()).toEqual(runtimeAuth);
     });
 
     it('returns null when auth data is invalid JSON', () => {

@@ -683,7 +683,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     if (!hasModernPick && !hasLegacyPick) {
       Alert.alert(
         t('superAdminContentManager.media.file', 'Fichier'),
-        t('superAdminContentManager.alerts.filePickerUnavailable', 'Le selecteur de fichiers est indisponible sur cette build.'),
+        t('superAdminContentManager.alerts.filePickerUnavailable', 'Le sélecteur de fichiers est indisponible sur cette build.'),
       );
       return;
     }
@@ -727,7 +727,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (!selectedUri) {
         Alert.alert(
           t('superAdminContentManager.media.file', 'Fichier'),
-          t('superAdminContentManager.alerts.fileResolveFailed', 'Impossible de recuperer ce fichier.'),
+          t('superAdminContentManager.alerts.fileResolveFailed', 'Impossible de récupérer ce fichier.'),
         );
         return;
       }
@@ -748,7 +748,7 @@ function SuperAdminEntryForm({ navigation, route }) {
       if (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error)) return;
       Alert.alert(
         t('superAdminContentManager.media.file', 'Fichier'),
-        error?.message || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de selectionner ce fichier.'),
+        error?.message || t('superAdminContentManager.alerts.fileSelectFailed', 'Impossible de sélectionner ce fichier.'),
       );
     }
   };
@@ -1300,7 +1300,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
             {editableAttributes.map((attribute) => attribute?.name).join(', ')
-              || t('superAdminContentManager.form.noEditableFields', 'Aucun champ detecte')}
+              || t('superAdminContentManager.form.noEditableFields', 'Aucun champ détecté')}
           </Text>
         </View>
 

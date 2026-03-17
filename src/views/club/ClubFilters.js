@@ -220,7 +220,7 @@ function ClubFiltersContent({ navigation, route }) {
         <OnboardingWrapper
           description={t(
             'onboardingAffiliation.filtersTutorial.radiusDescription',
-            'Ajuste le rayon en kilometres autour de ta localisation.',
+            'Ajuste le rayon en kilomêtres autour de ta localisation.',
           )}
           id="club-filters-radius"
           order={6}
@@ -321,7 +321,7 @@ function ClubFiltersContent({ navigation, route }) {
         <OnboardingWrapper
           description={t(
             'onboardingAffiliation.filtersTutorial.applyDescription',
-            'Applique tes filtres pour revenir à la liste avec des r?sultats plus pr?cis.',
+            'Applique tes filtres pour revenir à la liste avec des résultats plus précis.',
           )}
           id="club-filters-apply"
           order={8}

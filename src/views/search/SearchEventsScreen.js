@@ -39,22 +39,22 @@ const EVENT_TUTORIAL_STEPS = [
     title: 'Recherche événement',
   },
   {
-    description: 'Les chips en haut servent a changer rapidement de type de recherche.',
+    description: 'Les chips en haut servent à changer rapidement de type de recherche.',
     id: 'types',
     target: 'switcher',
     title: 'Types de recherche',
   },
   {
-    description: 'Utilisez la recherche texte et les filtres avances pour affiner.',
+    description: 'Utilisez la recherche texte et les filtres avancés pour affiner.',
     id: 'filters',
     target: 'filters',
     title: 'Filtres événement',
   },
   {
-    description: 'Chaque carte affiche les détails. Appuyez sur "A propos" pour ouvrir la fiche.',
+    description: 'Chaque carte affiche les détails. Appuyez sur "À propos" pour ouvrir la fiche.',
     id: 'cards',
     target: 'card',
-    title: 'Resultats',
+    title: 'R?sultats',
   },
 ];
 

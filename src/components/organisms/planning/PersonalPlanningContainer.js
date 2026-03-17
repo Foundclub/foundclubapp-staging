@@ -1,25 +1,19 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import {
-  addDays,
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
-import PlanningCalendarView from '@/components/organisms/planningCalendarView/PlanningCalendarView';
-import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView/PlanningWeekTimelineViewV2';
+import PlanningCalendarView from '@/components/organisms/planningCalendarView';
+import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 
-import { getEvents } from '@/services/event/eventService';
+import { getMyPlanning } from '@/services/event/eventService';
+
+import { getPlanningRange, normalizePlanningItems } from '@/utils/planning/planningSlots';
 
 /**
  * Personal planning content.
@@ -28,50 +22,26 @@ import { getEvents } from '@/services/event/eventService';
  */
 function PersonalPlanningContainer({ onSummaryPress }) {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('3days'); // '3days' | 'week' | 'month'
+  const [viewMode, setViewMode] = useState('3days');
 
-  const { endDate, startDate } = useMemo(() => {
-    const now = currentDate;
-    if (viewMode === 'month') {
-      return {
-        endDate: endOfMonth(now),
-        startDate: startOfMonth(now),
-      };
-    }
-    if (viewMode === '3days') {
-      return {
-        endDate: endOfDay(addDays(now, 2)),
-        startDate: startOfDay(now),
-      };
-    }
-    return {
-      endDate: endOfWeek(now, { weekStartsOn: 1 }),
-      startDate: startOfWeek(now, { weekStartsOn: 1 }),
-    };
-  }, [currentDate, viewMode]);
+  const planningRange = useMemo(
+    () => getPlanningRange(currentDate, viewMode),
+    [currentDate, viewMode],
+  );
 
   const { data: eventsData, isLoading } = useQuery({
-    queryFn: () => getEvents({
-      // @ts-ignore
-      myTeams: true,
-      pageSize: 100,
-      sort: 'date:asc',
-      startDateAfter: startDate,
-      startDateBefore: endDate,
-    }),
-    queryKey: ['events', 'personal', startDate.toISOString(), endDate.toISOString()],
+    queryFn: () => getMyPlanning(planningRange),
+    queryKey: ['planning', 'personal', planningRange.from, planningRange.to],
   });
 
-  /**
-   * @param {import('@/domains/event/types').FCEvent} event
-   */
   const handleEventPress = (event) => {
     if (!event?.documentId) return;
-    // @ts-ignore
+
     navigation.navigate('EventStack', {
       params: { eventId: event.documentId },
       screen: 'EventDetails',
@@ -84,11 +54,23 @@ function PersonalPlanningContainer({ onSummaryPress }) {
     { label: 'Mois', value: 'month' },
   ]), []);
 
+  const modeDescription = useMemo(() => {
+    if (viewMode === 'month') {
+      return t('planning.mode.monthDescription', 'Vue globale du mois');
+    }
+
+    if (viewMode === 'week') {
+      return t('planning.mode.weekDescription', 'Vue détaillée de la semaine');
+    }
+
+    return t('planning.mode.threeDaysDescription', 'Vue condensée sur 3 jours');
+  }, [t, viewMode]);
+
   if (isLoading) {
     return <Loader />;
   }
 
-  const events = eventsData?.data || [];
+  const events = normalizePlanningItems(eventsData?.data || []);
 
   return (
     <View style={{ width: '100%' }}>
@@ -100,19 +82,13 @@ function PersonalPlanningContainer({ onSummaryPress }) {
           value={viewMode}
         />
         <Text style={[Fonts.p3, Fonts.primary100, Fonts.textCenter, Spaces.marginTop[8]]}>
-          {viewMode === 'month'
-            ? 'Vue globale du mois'
-            : viewMode === 'week'
-              ? 'Vue detaillee de la semaine'
-              : 'Vue condensee sur 3 jours'}
+          {modeDescription}
         </Text>
       </View>
 
       {viewMode === 'month' ? (
         <PlanningCalendarView
-          compact
           currentDate={currentDate}
-          // @ts-ignore
           events={events}
           onDateSelect={setCurrentDate}
           onEventPress={handleEventPress}
@@ -120,7 +96,6 @@ function PersonalPlanningContainer({ onSummaryPress }) {
       ) : (
         <PlanningWeekTimelineView
           currentDate={currentDate}
-          // @ts-ignore
           events={events}
           mode={viewMode}
           onDateChange={setCurrentDate}

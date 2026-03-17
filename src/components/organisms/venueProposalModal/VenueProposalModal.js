@@ -445,7 +445,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-              Passer et acceder au chat
+              Passer et acc?der au chat
             </Text>
           </TouchableOpacity>
         )}

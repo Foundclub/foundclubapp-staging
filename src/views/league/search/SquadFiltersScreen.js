@@ -373,7 +373,7 @@ function SquadFiltersScreen({ navigation }) {
                   error={getFieldError({ errors: formErrors, fieldName: 'category' })}
                   isSearchable
                   options={categoryOptions}
-                  placeholder="Selectionner une catégorie"
+                  placeholder="Sélectionner une catégorie"
                   searchValue={categorySearchValue}
                   setSearchValue={setCategorySearchValue}
                   setValue={(/** @type {{label?: string, value?: string} | null} */ option) => {

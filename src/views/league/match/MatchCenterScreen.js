@@ -645,7 +645,7 @@ function MatchCenterScreen() {
       setIsAddingSearchSlot(false);
       Alert.alert(
         'Succès',
-        slotsToCreate.length > 1 ? `${slotsToCreate.length} créneaux ajoutes à la recherche.` : 'Créneau ajoute à la recherche.',
+        slotsToCreate.length > 1 ? `${slotsToCreate.length} créneaux ajoutés à la recherche.` : 'Créneau ajouté à la recherche.',
       );
     } catch (error) {
       console.error('Add search slot error:', error);
@@ -780,7 +780,7 @@ function MatchCenterScreen() {
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
         <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l'ACTION ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Cree ton équipe pour rejoindre la competition officielle.
+          Cr?e ton équipe pour rejoindre la comp?tition officielle.
         </Text>
         <Button
           icon="plus"
@@ -1245,7 +1245,7 @@ function MatchCenterScreen() {
             color: Colors.neutral300, marginBottom: 28, paddingHorizontal: 10, textAlign: 'center',
           }]}
           >
-            Le match correspond a vos crit?res. Discutez pour valider le terrain.
+            Le match correspond ? vos crit?res. Discutez pour valider le terrain.
           </Text>
 
           <Button
@@ -1958,7 +1958,7 @@ function MatchCenterScreen() {
           </View>
         </View>
 
-        {/* SECTION: Selection des creneaux recurrents */}
+        {/* SECTION: Selection des creneaux récurrents */}
         <View style={{ marginBottom: 24 }}>
           <View style={{
             alignItems: 'center', flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginBottom: 8,
@@ -2021,8 +2021,8 @@ function MatchCenterScreen() {
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
               {selectedSlotIds.length === (squadSlots || []).length && selectedSlotIds.length > 0
-                ? 'Tout deselectionner'
-                : 'Tout selectionner'}
+                ? 'Tout d?sélectionner'
+                : 'Tout sélectionner'}
             </Text>
           </TouchableOpacity>
           )}

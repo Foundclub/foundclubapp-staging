@@ -112,8 +112,8 @@ const normalizeAddressPayload = (address) => {
 const getCapacityLabel = (value, t) => {
   const teams = Number(value || 1);
   const unit = teams > 1
-    ? t('facilityForm.capacity.teamPlural', 'équipes simultanees')
-    : t('facilityForm.capacity.teamSingular', 'équipe simultanee');
+    ? t('facilityForm.capacity.teamPlural', 'équipes simultan?es')
+    : t('facilityForm.capacity.teamSingular', 'équipe simultan?e');
   return `${teams} ${unit}`;
 };
 
@@ -171,7 +171,7 @@ function FacilityForm() {
     if (!clubId && !cmId) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('facilityForm.errors.contextMissing', 'Impossible de recuperer les informations du club.'),
+        t('facilityForm.errors.contextMissing', 'Impossible de récupérer les informations du club.'),
       );
       return;
     }
@@ -457,7 +457,7 @@ function FacilityForm() {
                 return (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t('facilityForm.fields.capacity', 'Capacité (équipes simultanees)')}
+                      {t('facilityForm.fields.capacity', 'Capacité (équipes simultan?es)')}
                     </Text>
                     <View
                       style={[

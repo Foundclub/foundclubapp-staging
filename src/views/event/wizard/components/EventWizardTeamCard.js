@@ -10,9 +10,9 @@ import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import StrapiImage from '@/components/atoms/strapiImage/StrapiImage';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
  * @param {object} props
@@ -71,21 +71,35 @@ function EventWizardTeamCard({
 
   const allSponsors = Array.isArray(team?.club?.sponsor) ? team.club.sponsor.filter(Boolean) : [];
   const sponsors = allSponsors.slice(0, 2);
+  const logoFrameSize = 60;
+  const logoImageSize = 48;
+  const logoFrameStyle = {
+    alignItems: 'center',
+    backgroundColor: Colors.neutral00,
+    borderColor: Colors.primary500,
+    borderRadius: logoFrameSize / 2,
+    borderWidth: 1.5,
+    height: logoFrameSize,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: logoFrameSize,
+  };
 
   const identityAvatar = team?.club?.logo?.url ? (
-    <ProfileAvatar
-      imageUrl={team.club.logo.url}
-      size={60}
-      variant="logo"
-      style={[
-        ApplicationStyle.borderWidth1,
-        ApplicationStyle.borderColor.primary500,
-        { borderRadius: 60 },
-      ]}
-    />
+    <View style={logoFrameStyle}>
+      <StrapiImage
+        resizeMode="contain"
+        source={{ uri: team.club.logo.url }}
+        style={{
+          backgroundColor: Colors.neutral00,
+          height: logoImageSize,
+          width: logoImageSize,
+        }}
+      />
+    </View>
   ) : (
     <TeamShield
-      initials={getClubInitials(team?.name || '')}
+      initials={getClubInitials(team?.club?.name || team?.name || '')}
       isSmall
     />
   );

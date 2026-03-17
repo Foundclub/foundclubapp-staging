@@ -1,4 +1,46 @@
-import { sanitizeUser } from '@/domains/auth/authUseCases';
+import { sanitizeUser } from '@/domains/auth/authSanitizer';
+
+const normalizeDocumentId = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getSessionDocumentId = (session) => normalizeDocumentId(session?.user?.documentId);
+
+const orderSessionsByActive = (sessions, activeSessionDocumentId) => {
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const normalizedActiveDocumentId = normalizeDocumentId(activeSessionDocumentId);
+  if (!normalizedActiveDocumentId) {
+    return [...safeSessions];
+  }
+
+  const matchingSession = safeSessions.find(
+    (session) => getSessionDocumentId(session) === normalizedActiveDocumentId,
+  );
+  if (!matchingSession) {
+    return [...safeSessions];
+  }
+
+  return [
+    matchingSession,
+    ...safeSessions.filter((session) => getSessionDocumentId(session) !== normalizedActiveDocumentId),
+  ];
+};
+
+const buildSessionState = (state, sessions, activeSessionDocumentId, overrides = {}) => {
+  const orderedSessions = orderSessionsByActive(sessions, activeSessionDocumentId);
+  const resolvedActiveSession = orderedSessions[0];
+  const resolvedActiveDocumentId = getSessionDocumentId(resolvedActiveSession);
+
+  return {
+    ...state,
+    ...overrides,
+    activeSessionDocumentId: resolvedActiveDocumentId,
+    auth: resolvedActiveSession,
+    authSessions: orderedSessions,
+  };
+};
 
 /**
  * Reducer for the global application context.
@@ -7,30 +49,106 @@ import { sanitizeUser } from '@/domains/auth/authUseCases';
 export default function appReducer(state, action) {
   switch (action.type) {
     case 'CANCEL_ADD_ACCOUNT': {
+      const targetDocumentId = normalizeDocumentId(state.returnSessionDocumentId)
+        || normalizeDocumentId(state.activeSessionDocumentId)
+        || getSessionDocumentId(state.auth);
+      const matchingSession = (state.authSessions || []).find(
+        (session) => getSessionDocumentId(session) === targetDocumentId,
+      );
+
+      if (!matchingSession) {
+        return {
+          ...state,
+          isAddingAccount: false,
+          returnSessionDocumentId: undefined,
+        };
+      }
+
       return {
         ...state,
+        activeSessionDocumentId: getSessionDocumentId(matchingSession),
+        auth: matchingSession,
+        authSessions: orderSessionsByActive(state.authSessions || [], getSessionDocumentId(matchingSession)),
         isAddingAccount: false,
+        returnSessionDocumentId: undefined,
       };
     }
     case 'DELETE_AUTHENTICATION': {
-      // Remove current session from sessions list
-      const currentAuth = state.auth;
-      const newSessions = (state.authSessions || []).filter((s) => s?.user?.documentId && s.user.documentId !== currentAuth?.user?.documentId);
+      const currentDocumentId = normalizeDocumentId(state.activeSessionDocumentId)
+        || getSessionDocumentId(state.auth);
+      const remainingSessions = (state.authSessions || []).filter(
+        (session) => getSessionDocumentId(session) !== currentDocumentId,
+      );
 
-      // If there are other sessions, switch to the next one, otherwise logout completely
-      const nextSession = newSessions.length > 0 ? newSessions[0] : undefined;
+      return buildSessionState(state, remainingSessions, getSessionDocumentId(remainingSessions[0]), {
+        isAddingAccount: false,
+        returnSessionDocumentId: undefined,
+      });
+    }
+    case 'LOGOUT_CURRENT_SESSION': {
+      const currentDocumentId = normalizeDocumentId(state.activeSessionDocumentId)
+        || getSessionDocumentId(state.auth);
+      const remainingSessions = (state.authSessions || []).filter(
+        (session) => getSessionDocumentId(session) !== currentDocumentId,
+      );
 
-      return {
-        ...state,
-        auth: nextSession,
-        authSessions: newSessions,
-      };
+      return buildSessionState(state, remainingSessions, getSessionDocumentId(remainingSessions[0]), {
+        isAddingAccount: false,
+        returnSessionDocumentId: undefined,
+      });
     }
     case 'PREPARE_ADD_ACCOUNT': {
       return {
         ...state,
-        auth: undefined, // Clear auth so PublicNavigator shows
         isAddingAccount: true,
+        returnSessionDocumentId: normalizeDocumentId(state.activeSessionDocumentId)
+          || getSessionDocumentId(state.auth),
+      };
+    }
+    case 'REMOVE_SESSION_BY_DOCUMENT_ID': {
+      const targetDocumentId = normalizeDocumentId(
+        typeof action.payload === 'string' ? action.payload : action.payload?.documentId,
+      );
+      if (!targetDocumentId) {
+        return state;
+      }
+
+      const remainingSessions = (state.authSessions || []).filter(
+        (session) => getSessionDocumentId(session) !== targetDocumentId,
+      );
+      const nextActiveDocumentId = targetDocumentId === normalizeDocumentId(state.activeSessionDocumentId)
+        ? getSessionDocumentId(remainingSessions[0])
+        : normalizeDocumentId(state.activeSessionDocumentId);
+
+      return buildSessionState(state, remainingSessions, nextActiveDocumentId, {
+        returnSessionDocumentId: targetDocumentId === normalizeDocumentId(state.returnSessionDocumentId)
+          ? undefined
+          : state.returnSessionDocumentId,
+      });
+    }
+    case 'SET_ACTIVE_SESSION':
+    case 'SWITCH_ACCOUNT': {
+      const targetDocumentId = normalizeDocumentId(
+        typeof action.payload === 'string'
+          ? action.payload
+          : action.payload?.documentId || action.payload?.user?.documentId,
+      );
+      if (!targetDocumentId) {
+        return state;
+      }
+
+      const targetSession = (state.authSessions || []).find(
+        (session) => getSessionDocumentId(session) === targetDocumentId,
+      );
+      if (!targetSession) {
+        return state;
+      }
+
+      return {
+        ...state,
+        activeSessionDocumentId: targetDocumentId,
+        auth: targetSession,
+        authSessions: orderSessionsByActive(state.authSessions || [], targetDocumentId),
       };
     }
     case 'SET_AUTHENTICATION': {
@@ -50,9 +168,21 @@ export default function appReducer(state, action) {
 
       // When logging in, add to sessions if not already present, or update if present
       const newSessions = [...(state.authSessions || [])];
+      const nextActiveDocumentId = getSessionDocumentId(sanitizedAuth);
+
+      if (!nextActiveDocumentId) {
+        return {
+          ...state,
+          auth: sanitizedAuth,
+          isAddingAccount: false,
+          returnSessionDocumentId: undefined,
+        };
+      }
 
       // Check if session already exists for this user
-      const existingIndex = newSessions.findIndex((s) => s.user?.documentId === sanitizedAuth?.user?.documentId);
+      const existingIndex = newSessions.findIndex(
+        (session) => getSessionDocumentId(session) === nextActiveDocumentId,
+      );
 
       if (existingIndex >= 0) {
         newSessions[existingIndex] = sanitizedAuth;
@@ -60,12 +190,10 @@ export default function appReducer(state, action) {
         newSessions.push(sanitizedAuth);
       }
 
-      return {
-        ...state,
-        auth: sanitizedAuth,
-        authSessions: newSessions,
+      return buildSessionState(state, newSessions, nextActiveDocumentId, {
         isAddingAccount: false,
-      };
+        returnSessionDocumentId: undefined,
+      });
     }
     case 'SET_CLUB_FILTERS': {
       return { ...state, clubFilters: action.payload };
@@ -99,13 +227,6 @@ export default function appReducer(state, action) {
     case 'SET_THEME': {
       return { ...state, theme: action.payload };
     }
-    case 'SWITCH_ACCOUNT': {
-      const targetSession = action.payload;
-      return {
-        ...state,
-        auth: targetSession,
-      };
-    }
     case 'UPDATE_USER_DATA': {
       const updatedUserData = action.payload;
       if (!updatedUserData?.documentId) return state;
@@ -135,6 +256,8 @@ export default function appReducer(state, action) {
 
       return {
         ...state,
+        activeSessionDocumentId: normalizeDocumentId(state.activeSessionDocumentId)
+          || getSessionDocumentId(newAuth),
         auth: newAuth,
         authSessions: newSessions,
       };

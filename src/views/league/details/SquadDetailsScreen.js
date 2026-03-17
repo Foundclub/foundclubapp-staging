@@ -360,9 +360,9 @@ function SquadDetailsScreen({ navigation, route }) {
   const handleDeleteTeam = useCallback(() => {
     const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Équipe');
     Alert.alert(
-      t('squadDetails.delete.title', 'Supprimer l\'équipe'),
+      t('squadDetails.delete.title', "Supprimer l'équipe"),
       t('squadDetails.delete.confirmationWithName', {
-        defaultValue: `Êtes-vous s?r de vouloir supprimer l'équipe "${teamDisplayName}" ? Cette action est irr?versible.`,
+        defaultValue: `Êtes-vous sûr de vouloir supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
         teamName: teamDisplayName,
       }),
       [
@@ -535,7 +535,7 @@ function SquadDetailsScreen({ navigation, route }) {
               style={{
                 alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%',
               }}
-              title={t('squadDetails.join.request', 'Demander a rejoindre')}
+              title={t('squadDetails.join.request', 'Demander ? rejoindre')}
               variant="Primary"
             />
           )}

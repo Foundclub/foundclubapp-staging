@@ -27,7 +27,7 @@ const formatDelta = (value) => {
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
-    return { chip: 'Resultat validé', color: colors.success500 };
+    return { chip: 'R?sultat validé', color: colors.success500 };
   }
   if (normalized === 'forfeit') {
     return { chip: 'Forfait', color: colors.warning500 };
@@ -124,7 +124,7 @@ function MatchFinalPosterModal({
 
           <Text style={[Fonts.h1Bold, { color: Colors.gold500, marginTop: 8, textAlign: 'center' }]}>{scoreLabel}</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
-            {recap?.resultLabel || recap?.result || 'Resultat enregistre'}
+            {recap?.resultLabel || recap?.result || 'R?sultat enregistre'}
           </Text>
 
           <View
@@ -143,7 +143,7 @@ function MatchFinalPosterModal({
               </Text>
               <Text style={[Fonts.h4Bold, { color: Number(recap?.eloDelta) >= 0 ? Colors.success500 : Colors.error500 }]}>{delta}</Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                ELO apr?s:
+                ELO après:
                 {eloAfter}
               </Text>
             </View>
@@ -252,3 +252,4 @@ const styles = StyleSheet.create({
 });
 
 export default MatchFinalPosterModal;
+

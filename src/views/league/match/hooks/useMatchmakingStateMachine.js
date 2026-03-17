@@ -133,13 +133,13 @@ const buildSearchStatusLabel = ({
     : Number(searchInsights?.nextExpansionInSec || 0);
 
   const zoneLine = formatZoneLine(cityLabel || null, radiusKm);
-  const criteriaLine = `Crit?re prioritaire: ${divisionLabel} avec un ELO similaire.`;
+  const criteriaLine = `Critère prioritaire: ${divisionLabel} avec un ELO similaire.`;
 
   if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
-      return `Statut: adversaire potentiel trouv?.\n${criteriaLine}\n${zoneLine}\nSuite: match auto dans ${formatSecondsCompact(nextExpansion)} si aucun meilleur profil.`;
+      return `Statut: adversaire potentiel trouvé.\n${criteriaLine}\n${zoneLine}\nSuite: match auto dans ${formatSecondsCompact(nextExpansion)} si aucun meilleur profil.`;
     }
-    return `Statut: adversaire potentiel trouv?.\n${criteriaLine}\n${zoneLine}\nSuite: recherche ?largie en cours.`;
+    return `Statut: adversaire potentiel trouvé.\n${criteriaLine}\n${zoneLine}\nSuite: recherche élargie en cours.`;
   }
 
   if (tier <= 1) {

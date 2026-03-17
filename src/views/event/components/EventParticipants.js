@@ -291,7 +291,7 @@ function EventParticipants({
             <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
               {section.isExternal
                 ? t('eventDetails.invitedTeams.externalHistoricalTitle', 'Historique participants externes')
-                : t('eventDetails.invitedTeams.historicalTitle', 'Historique équipe retiree')}
+                : t('eventDetails.invitedTeams.historicalTitle', 'Historique équipe retirée')}
             </Text>
             {historicalPending.length > 0 ? (
               <Text style={[Fonts.p4, Fonts.neutral300]}>

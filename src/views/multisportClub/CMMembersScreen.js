@@ -218,7 +218,7 @@ function CMMembersScreen({ navigation, route }) {
           keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouv?.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouvé.</Text>
             </View>
           )}
           refreshControl={
@@ -232,3 +232,4 @@ function CMMembersScreen({ navigation, route }) {
 }
 
 export default CMMembersScreen;
+

@@ -83,6 +83,29 @@ const uniqueUsers = (users = []) => {
   return Array.from(map.values());
 };
 
+const getTrainerKeySet = (team) => new Set(
+  (team?.trainers || [])
+    .map((trainer) => getUserKey(trainer))
+    .filter(Boolean),
+);
+
+const getEligibleTeamPlayers = (team) => {
+  const trainerKeys = getTrainerKeySet(team);
+  return uniqueUsers(
+    (team?.players || []).filter((player) => {
+      const playerKey = getUserKey(player);
+      return Boolean(playerKey) && !trainerKeys.has(playerKey);
+    }),
+  );
+};
+
+const filterUsersByExcludedKeys = (users = [], excludedKeys = new Set()) => uniqueUsers(
+  users.filter((user) => {
+    const key = getUserKey(user);
+    return Boolean(key) && !excludedKeys.has(key);
+  }),
+);
+
 /**
  * @param {FCEvent | null | undefined} event
  * @returns {Date | null}
@@ -171,13 +194,24 @@ function EventDetails({ navigation, route }) {
       || trainers.some((trainer) => trainer?.documentId === userDocId);
   }, [event?.invitedTeams, event?.team, userData?.documentId]);
 
+  const trainerKeysForEvent = useMemo(() => {
+    const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
+    return new Set(
+      teams
+        .flatMap((team) => team?.trainers || [])
+        .map((trainer) => getUserKey(trainer))
+        .filter(Boolean),
+    );
+  }, [event?.invitedTeams, event?.team]);
+
   const isCurrentUserParticipating = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return false;
     return (event?.participations || []).some(
-      (/** @type {User} */ participant) => participant?.documentId === currentUserId,
+      (/** @type {User} */ participant) => participant?.documentId === currentUserId
+        && !trainerKeysForEvent.has(getUserKey(participant)),
     );
-  }, [event?.participations, userData?.documentId]);
+  }, [event?.participations, trainerKeysForEvent, userData?.documentId]);
 
   const { canAccessAttendance, canSelfMarkArrival } = useMemo(
     () => resolveEventAttendanceGate({
@@ -387,13 +421,13 @@ function EventDetails({ navigation, route }) {
       event?.team ? {
         isHome: true,
         key: event.team.documentId || 'home-team',
-        players: uniqueUsers(event.team.players || []),
+        players: getEligibleTeamPlayers(event.team),
         teamName: event.team.name || 'Équipe organisatrice',
       } : null,
       ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
-        players: uniqueUsers(team?.players || []),
+        players: getEligibleTeamPlayers(team),
         teamName: team?.name || 'Équipe invitee',
       }))),
     ].filter(Boolean);
@@ -416,15 +450,15 @@ function EventDetails({ navigation, route }) {
       });
     });
 
-    const participatingUsers = event?.participations || [];
-    const missingUsers = event?.missings || [];
+    const participatingUsers = filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent);
+    const missingUsers = filterUsersByExcludedKeys(event?.missings || [], trainerKeysForEvent);
     const participatingKeys = new Set(participatingUsers.map((/** @type {User} */ participant) => getUserKey(participant)).filter(Boolean));
     const missingKeys = new Set(missingUsers.map((/** @type {User} */ missing) => getUserKey(missing)).filter(Boolean));
 
     const pendingByUserKey = new Map();
     pendingParticipations.forEach((participation) => {
       const key = getUserKey(participation?.user);
-      if (!key) return;
+      if (!key || trainerKeysForEvent.has(key)) return;
       pendingByUserKey.set(key, participation);
     });
 
@@ -439,6 +473,7 @@ function EventDetails({ navigation, route }) {
       .filter((participation) => participation?.user)
       .forEach((participation) => {
         const userKey = getUserKey(participation?.user);
+        if (!userKey || trainerKeysForEvent.has(userKey)) return;
         const sourceTeamId = participation?.sourceTeam?.documentId;
         const sourceTeamKnown = Boolean(
           sourceTeamId && knownTeamSectionKeys.has(sourceTeamId),
@@ -465,7 +500,7 @@ function EventDetails({ navigation, route }) {
         }
 
         const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || 'Équipe retiree';
+        const teamName = resolvedTeamName || 'Équipe retirée';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -584,20 +619,28 @@ function EventDetails({ navigation, route }) {
       },
       teamParticipationSections: sections,
     };
-  }, [canEdit, event, inactiveEventParticipations, pendingParticipations]);
+  }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent]);
 
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
-      return { missing: [], notAnswered: [], participating: event?.participations || [] };
+      return {
+        missing: [],
+        notAnswered: [],
+        participating: filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent),
+      };
     }
 
     const teamPlayers = uniqueUsers([
-      ...(event?.team?.players || []),
-      ...((event?.invitedTeams || []).flatMap((/** @type {any} */ team) => team?.players || [])),
+      ...getEligibleTeamPlayers(event?.team),
+      ...((event?.invitedTeams || []).flatMap((/** @type {any} */ team) => getEligibleTeamPlayers(team))),
     ]);
-    const participatingPlayers = event?.participations || [];
-    const missingPlayers = event?.missings || [];
-    const pendingKeys = new Set((pendingParticipations || []).map((participation) => getUserKey(participation?.user)).filter(Boolean));
+    const participatingPlayers = filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent);
+    const missingPlayers = filterUsersByExcludedKeys(event?.missings || [], trainerKeysForEvent);
+    const pendingKeys = new Set(
+      (pendingParticipations || [])
+        .map((participation) => getUserKey(participation?.user))
+        .filter((key) => Boolean(key) && !trainerKeysForEvent.has(key)),
+    );
 
     const notAnsweredPlayers = teamPlayers.filter((player) => {
       const key = getUserKey(player);
@@ -611,7 +654,7 @@ function EventDetails({ navigation, route }) {
       notAnswered: notAnsweredPlayers,
       participating: participatingPlayers,
     };
-  }, [canEdit, event, pendingParticipations]);
+  }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
 
   const canRequestFeatured = useMemo(() => {
     const hasParentMultisport = Boolean(event?.team?.club?.parentMultisport);

@@ -332,7 +332,7 @@ function UserDetails({ navigation, route }) {
   const age = birthdate ? differenceInYears(new Date(), birthdate) : null;
   const roleLabel = formatRoleLabel(user?.role?.name);
   const sectionLabel = formatSectionLabel(user?.section?.name);
-  const fallbackValue = t('userDetails.notSet', 'Non renseigne');
+  const fallbackValue = t('userDetails.notSet', 'Non renseigné');
   const preferredSportValue = toTextLabel(user?.preferredSport);
   const bestLevelValue = toTextLabel(user?.bestLevel);
 
@@ -739,7 +739,7 @@ function UserDetails({ navigation, route }) {
                 value={
                   isSelfProfile
                     ? formatNullableValue(user?.phoneNumber, fallbackValue)
-                    : t('userDetails.private', 'Prive')
+                    : t('userDetails.private', 'Privé')
                 }
               />
               <InfoItem
@@ -754,7 +754,7 @@ function UserDetails({ navigation, route }) {
                 value={
                   isSelfProfile
                     ? formatNullableValue(user?.email, fallbackValue)
-                    : t('userDetails.private', 'Prive')
+                    : t('userDetails.private', 'Privé')
                 }
               />
               <InfoItem
@@ -769,7 +769,7 @@ function UserDetails({ navigation, route }) {
                 value={
                   isSelfProfile
                     ? formatNullableValue(addressLabel, fallbackValue)
-                    : t('userDetails.private', 'Prive')
+                    : t('userDetails.private', 'Privé')
                 }
               />
             </View>

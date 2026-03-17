@@ -10,103 +10,121 @@ import {
   subDays,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  useEffect, useMemo, useRef, useState,
+} from 'react';
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
 import { images as Images } from '@/theme/images';
 import useTheme from '@/theme/themeContext';
+
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import {
+  getPlanningDisplayTitle,
+  getPlanningItemDate,
+  getPlanningItemSecondaryLabel,
+  getPlanningTypeLabel,
+} from '@/utils/planning/planningSlots';
 
-// Constants
 const HOUR_HEIGHT = 60;
-const COLLAPSED_HEIGHT = 15; // Height for empty blocks
-const MIN_EVENT_HEIGHT = 24;
-const TIME_COLUMN_WIDTH = 44;
+const COLLAPSED_HEIGHT = 18;
+const MIN_EVENT_HEIGHT = 28;
+const TIME_COLUMN_WIDTH = 56;
+const PALETTE = ['#FF4D4D', '#4D79FF', '#FFB34D', '#4DFFB3', '#9D4DFF', '#FF4D94'];
 
-/**
- * @param {TimelineEvent} event
- * @returns {{ startH: number; startM: number; endH: number; endM: number }}
- */
-const extractEventHours = (event) => {
+const hexToRgba = (hex, alpha) => {
+  if (!hex || !hex.startsWith('#') || hex.length !== 7) {
+    return `rgba(1, 179, 244, ${alpha})`;
+  }
+
+  const red = Number.parseInt(hex.slice(1, 3), 16);
+  const green = Number.parseInt(hex.slice(3, 5), 16);
+  const blue = Number.parseInt(hex.slice(5, 7), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const getDayKey = (day) => format(day, 'yyyy-MM-dd');
+const formatClock = (value) => String(value || '').split(':').slice(0, 2).join(':');
+
+const extractTime = (event) => {
   const startParts = String(event?.startTime || '').split(':');
   const endParts = String(event?.endTime || '').split(':');
-
-  const startH = Number.parseInt(startParts[0] || '0', 10);
-  const startM = Number.parseInt(startParts[1] || '0', 10);
-  const endH = Number.parseInt(endParts[0] || '0', 10);
-  const endM = Number.parseInt(endParts[1] || '0', 10);
-
-  const safeStartH = Number.isFinite(startH) ? Math.max(0, Math.min(23, startH)) : 0;
-  const safeStartM = Number.isFinite(startM) ? Math.max(0, Math.min(59, startM)) : 0;
-  const safeEndH = Number.isFinite(endH) ? Math.max(0, Math.min(23, endH)) : 1;
-  const safeEndM = Number.isFinite(endM) ? Math.max(0, Math.min(59, endM)) : 0;
-
   return {
-    endH: safeEndH,
-    endM: safeEndM,
-    startH: safeStartH,
-    startM: safeStartM,
+    endHour: Number.parseInt(endParts[0] || '0', 10) || 0,
+    endMinute: Number.parseInt(endParts[1] || '0', 10) || 0,
+    startHour: Number.parseInt(startParts[0] || '0', 10) || 0,
+    startMinute: Number.parseInt(startParts[1] || '0', 10) || 0,
   };
 };
 
-/**
- * @typedef {{
- *   id?: string | number;
- *   date?: string | Date;
- *   startTime?: string;
- *   endTime?: string;
- *   type?: string | { name?: string };
- *   team?: { name?: string };
- *   category?: { name?: string };
- *   facility?: { name?: string; planningColor?: string; color?: string };
- *   title?: string;
- *   name?: string;
- *   league_match?: unknown;
- * }} TimelineEvent
- */
+const getEventColor = (event, fallbackColor) => {
+  const facilityColor = resolveFacilityPlanningColor(event?.facility);
+  if (facilityColor) return facilityColor;
+
+  const typeLabel = getPlanningTypeLabel(event)
+    ?.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (typeLabel?.includes('match')) return '#FF4D4D';
+  if (typeLabel?.includes('reservation') || typeLabel?.includes('reunion')) return '#FFB34D';
+  if (typeLabel?.includes('entrainement')) return '#4D79FF';
+
+  const seed = event?.team?.name || getPlanningDisplayTitle(event) || 'planning';
+  const hash = Array.from(seed).reduce(
+    (value, character) => value * 31 + character.charCodeAt(0),
+    11,
+  );
+
+  return PALETTE[Math.abs(hash) % PALETTE.length] || fallbackColor;
+};
+
+const getPrimaryPlanningLabel = (event) => (
+  getPlanningTypeLabel(event)
+  || getPlanningDisplayTitle(event)
+  || 'Evenement'
+);
+
+const getPlanningContextLabel = (event) => {
+  const primaryLabel = getPrimaryPlanningLabel(event);
+  const secondaryLabel = getPlanningItemSecondaryLabel(event);
+  const titleLabel = getPlanningDisplayTitle(event);
+
+  if (secondaryLabel && secondaryLabel !== primaryLabel) {
+    return secondaryLabel;
+  }
+
+  if (titleLabel && titleLabel !== primaryLabel) {
+    return titleLabel;
+  }
+
+  return null;
+};
 
 /**
- * @typedef {{ type: 'hour'; value: number } | { type: 'collapsed'; start: number; end: number; id: string }} TimelineBlock
- */
-
-/**
- * @typedef {TimelineEvent & {
- *   dayIndex: number;
- *   top: number;
- *   height: number;
- *   color: string;
- *   colIndex?: number;
- *   widthPercent?: number;
- *   leftPercent?: number;
- *   concurrentCount?: number;
- * }} PositionedEvent
- */
-
-/**
- * @typedef {{
- *   events?: TimelineEvent[];
- *   onEventPress?: (event: PositionedEvent) => void;
- *   onSummaryPress?: () => void;
- *   scrollEnabled?: boolean;
- *   currentDate?: Date;
- *   onDateChange?: (date: Date) => void;
- *   mode?: '3days' | 'week';
- *   isInfiniteScroll?: boolean;
- *   maxSlots?: number;
- * }} PlanningWeekTimelineViewProps
- */
-
-/**
- * @param {PlanningWeekTimelineViewProps} props
+ *
+ * @param root0
+ * @param root0.currentDate
+ * @param root0.events
+ * @param root0.mode
+ * @param root0.onDateChange
+ * @param root0.onEventPress
+ * @param root0.onSummaryPress
+ * @param root0.scrollEnabled
  */
 function PlanningWeekTimelineView({
   currentDate: propDate,
   events = [],
-  mode = '3days', // '3days' or 'week'
+  mode = '3days',
   onDateChange,
   onEventPress,
   onSummaryPress,
@@ -115,370 +133,297 @@ function PlanningWeekTimelineView({
   const { Colors, Fonts } = useTheme();
   const [internalDate, setInternalDate] = useState(new Date());
   const currentDate = propDate || internalDate;
-  const scrollViewRef = React.useRef(/** @type {any} */ (null));
+  const scrollViewRef = useRef(null);
 
-  // Helpers
-  /**
-   * @param {string | undefined} t
-   * @returns {string | undefined}
-   */
-  const formatTime = (t) => t?.split(':').slice(0, 2).join(':');
-
-  const PALETTE = [
-    '#FF4D4D', // Red
-    '#4D79FF', // Blue
-    '#FFB34D', // Orange
-    '#4DFFB3', // Green
-    '#9D4DFF', // Purple
-    '#FF4D94', // Pink
-    '#4DB3FF', // Light Blue
-    '#FFD94D', // Yellow
-  ];
-
-  /**
-   * @param {TimelineEvent} event
-   * @returns {string}
-   */
-  const getEventColor = (event) => {
-    const facilityColor = resolveFacilityPlanningColor(event?.facility);
-    if (facilityColor) {
-      return facilityColor;
-    }
-
-    const rawType = typeof event.type === 'string' ? event.type : event.type?.name;
-    const normalizedType = rawType?.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (normalizedType) {
-      switch (normalizedType) {
-        case 'Autre': return '#4DFFB3'; // Green
-        case 'Entraînement': return '#4D79FF'; // Blue
-        case 'Match': return '#FF4D4D'; // Red
-        case 'Reunion': return '#FFB34D'; // Orange
-      }
-    }
-    // Fallback to team name or category
-    const seed = event.team?.name || event.category?.name || event.title || 'default';
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % PALETTE.length;
-    return PALETTE[index];
-  };
-
-  // 1. Calculate Week Days based on Mode
   const weekDays = useMemo(() => {
     if (mode === 'week') {
-      const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
-      return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
+      const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+      return Array.from({ length: 7 }, (_, index) => addDays(start, index));
     }
-    // Default '3days'
-    return [
-      currentDate,
-      addDays(currentDate, 1),
-      addDays(currentDate, 2),
-    ];
+
+    return [currentDate, addDays(currentDate, 1), addDays(currentDate, 2)];
   }, [currentDate, mode]);
 
-  // 2. Filter Events for the Current Interval
   const weekEvents = useMemo(() => {
-    if (!events || events.length === 0) return [];
+    if (!events.length) return [];
 
     const start = startOfDay(weekDays[0]);
     const end = endOfDay(weekDays[weekDays.length - 1]);
-
-    return events.filter((/** @type {TimelineEvent} */ event) => {
-      if (!event || !event.date) return false;
-      const eventDate = new Date(event.date);
-      return isWithinInterval(eventDate, { end, start });
+    return events.filter((event) => {
+      const eventDate = getPlanningItemDate(event);
+      return eventDate ? isWithinInterval(eventDate, { end, start }) : false;
     });
   }, [events, weekDays]);
 
-  // Only events with an explicit hour range are rendered in the timeline.
-  const timedWeekEvents = useMemo(
-    () => weekEvents.filter((/** @type {TimelineEvent} */ event) => Boolean(event?.startTime && event?.endTime)),
+  const untimedEvents = useMemo(
+    () => weekEvents.filter((event) => !event?.hasExplicitTime),
+    [weekEvents],
+  );
+  const timedEvents = useMemo(
+    () => weekEvents.filter((event) => event?.hasExplicitTime),
     [weekEvents],
   );
 
-  // 2bis. Start display from the first visible event hour (mode-aware via weekEvents).
   const displayStartHour = useMemo(() => {
-    if (!timedWeekEvents || timedWeekEvents.length === 0) return 8;
+    if (!timedEvents.length) return 8;
+    return timedEvents.reduce((hour, event) => Math.min(hour, extractTime(event).startHour), 23);
+  }, [timedEvents]);
 
-    let minHour = 24;
-    timedWeekEvents.forEach((/** @type {TimelineEvent} */ event) => {
-      const { startH } = extractEventHours(event);
-      if (startH < minHour) minHour = startH;
-    });
-
-    return minHour === 24 ? 8 : minHour;
-  }, [timedWeekEvents]);
-
-  // 3. Calculate Active Hours (Accordion Logic)
-  // STRICT: Only hours that actually have events are active. No padding.
   const activeHours = useMemo(() => {
-    const active = new Set();
-    if (!timedWeekEvents || timedWeekEvents.length === 0) return active;
+    const values = new Set();
 
-    timedWeekEvents.forEach((/** @type {TimelineEvent} */ event) => {
-      const {
-        endH, endM, startH,
-      } = extractEventHours(event);
-
-      // Handle midnight crossing (rare but possible)
-      if (endH < startH) {
-        for (let h = startH; h <= 23; h++) active.add(h);
-
-        // Only add next day hours if it goes BEYOND 00:00
-        // If endH is 0 and endM is 0, it stops exactly at midnight. Don't add 0.
-        const effectiveEndH = endM > 0 ? endH : endH - 1;
-        if (effectiveEndH >= 0) {
-          for (let h = 0; h <= effectiveEndH; h++) active.add(h);
-        }
-      } else {
-        // If end minute is 0, the event ends exactly at the start of endH, so endH is NOT occupied
-        const effectiveEndH = endM > 0 ? endH : endH - 1;
-        for (let h = startH; h <= effectiveEndH; h++) {
-          active.add(h);
-        }
+    timedEvents.forEach((event) => {
+      const { endHour, endMinute, startHour } = extractTime(event);
+      if (endHour < startHour) {
+        for (let hour = startHour; hour <= 23; hour += 1) values.add(hour);
+        const inclusiveEnd = endMinute > 0 ? endHour : endHour - 1;
+        for (let hour = 0; hour <= inclusiveEnd; hour += 1) values.add(hour);
+        return;
       }
+
+      const inclusiveEnd = endMinute > 0 ? endHour : endHour - 1;
+      for (let hour = startHour; hour <= inclusiveEnd; hour += 1) values.add(hour);
     });
-    return active;
-  }, [timedWeekEvents]);
 
-  // Calculate minStartHour for Smart Scroll
-  const minStartHour = useMemo(() => {
-    return displayStartHour;
-  }, [displayStartHour]);
+    return values;
+  }, [timedEvents]);
 
-  // 4. Build Timeline Structure (The "Map" of the vertical axis)
-  const timelineStructure = useMemo(() => {
-    /** @type {TimelineBlock[]} */
-    const structure = [];
-    /** @type {{ start: number; end: number; id: string } | null} */
-    let currentEmptyBlock = null;
+  const timelineBlocks = useMemo(() => {
+    const blocks = [];
+    let emptyStart = null;
 
-    for (let h = displayStartHour; h <= 23; h++) {
-      const isActive = activeHours.has(h);
-
-      if (isActive) {
-        // If we were tracking an empty block, push it now
-        if (currentEmptyBlock) {
-          structure.push({ type: 'collapsed', ...currentEmptyBlock });
-          currentEmptyBlock = null;
+    for (let hour = displayStartHour; hour <= 23; hour += 1) {
+      if (activeHours.has(hour)) {
+        if (emptyStart !== null) {
+          blocks.push({
+            end: hour - 1, id: `collapsed-${emptyStart}`, start: emptyStart, type: 'collapsed',
+          });
+          emptyStart = null;
         }
-        structure.push({ type: 'hour', value: h });
-      } else {
-        // Empty hour
-        if (!currentEmptyBlock) {
-          currentEmptyBlock = { end: h, id: `empty-${h}`, start: h };
-        } else {
-          currentEmptyBlock.end = h;
-        }
+        blocks.push({ type: 'hour', value: hour });
+      } else if (emptyStart === null) {
+        emptyStart = hour;
       }
     }
-    // Push remaining empty block
-    if (currentEmptyBlock) {
-      structure.push({ type: 'collapsed', ...currentEmptyBlock });
+
+    if (emptyStart !== null) {
+      blocks.push({
+        end: 23, id: `collapsed-${emptyStart}-23`, start: emptyStart, type: 'collapsed',
+      });
     }
-    return structure;
+
+    return blocks;
   }, [activeHours, displayStartHour]);
 
-  // 5. Calculate Y-Positions (Top) for each hour
-  const hourPositions = useMemo(() => {
-    /** @type {Record<number, number>} */
+  const { hourPositions, totalHeight } = useMemo(() => {
     const positions = {};
-    let currentY = 0;
-    timelineStructure.forEach((/** @type {TimelineBlock} */ block) => {
+    let y = 0;
+
+    timelineBlocks.forEach((block) => {
       if (block.type === 'hour') {
-        positions[block.value] = currentY;
-        currentY += HOUR_HEIGHT;
-      } else {
-        // Collapsed block
-        // Map all hours in this block to the same collapsed Y start
-        for (let h = block.start; h <= block.end; h++) {
-          positions[h] = currentY; // Simplified: they all map to the start of the collapsed block
-        }
-        currentY += COLLAPSED_HEIGHT;
+        positions[block.value] = y;
+        y += HOUR_HEIGHT;
+        return;
       }
+
+      for (let hour = block.start; hour <= block.end; hour += 1) {
+        positions[hour] = y;
+      }
+      y += COLLAPSED_HEIGHT;
     });
-    return positions;
-  }, [timelineStructure]);
 
-  // Scroll to minStartHour on mount or week change
+    return { hourPositions: positions, totalHeight: y };
+  }, [timelineBlocks]);
+
   useEffect(() => {
-    if (scrollViewRef.current && hourPositions[minStartHour] !== undefined) {
-      // Small timeout to ensure layout is ready
-      setTimeout(() => {
-        const scroll = scrollViewRef.current;
-        if (scroll && typeof scroll.scrollTo === 'function') {
-          scroll.scrollTo({
-            animated: true,
-            y: hourPositions[minStartHour],
-          });
-        }
-      }, 100);
-    }
-  }, [minStartHour, hourPositions, weekDays]);
+    if (!scrollViewRef.current || hourPositions[displayStartHour] === undefined) return undefined;
 
-  // 6. Process Events for Layout (Calculate Top, Height, DayIndex)
-  const processedEvents = useMemo(() => {
-    const mapped = timedWeekEvents.map((/** @type {TimelineEvent} */ event) => {
-      if (!event.date) return null;
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, hourPositions[displayStartHour] - 12) });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [displayStartHour, hourPositions, weekDays]);
+
+  const layoutEvents = useMemo(() => {
+    const overflowLimit = mode === 'week' ? 2 : 3;
+    const byDay = weekDays.map(() => []);
+
+    timedEvents.forEach((event) => {
+      const date = getPlanningItemDate(event);
+      if (!date) return;
+
+      const dayIndex = differenceInCalendarDays(date, weekDays[0]);
+      if (dayIndex < 0 || dayIndex >= weekDays.length) return;
+
       const {
-        endH, endM, startH, startM,
-      } = extractEventHours(event);
+        endHour,
+        endMinute,
+        startHour,
+        startMinute,
+      } = extractTime(event);
 
-      const eventDate = new Date(event.date);
-      const dayIndex = differenceInCalendarDays(eventDate, weekDays[0]);
+      const startBase = hourPositions[startHour] ?? 0;
+      const endBase = hourPositions[endHour] ?? totalHeight;
+      const top = startBase + (
+        activeHours.has(startHour) ? (startMinute / 60) * HOUR_HEIGHT : (startMinute / 60) * COLLAPSED_HEIGHT
+      );
 
-      // Calculate Top
-      // If start hour is collapsed, it starts at the collapsed block's Y
-      // If start hour is active, it starts at hourPositions[startH] + (startM / 60) * HOUR_HEIGHT
-      const startY = hourPositions[startH] !== undefined ? hourPositions[startH] : 0;
-      const top = activeHours.has(startH)
-        ? startY + (startM / 60) * HOUR_HEIGHT
-        : startY;
-
-      // Calculate Bottom
-      // Similar logic for end time
-      const endYBase = hourPositions[endH] !== undefined ? hourPositions[endH] : 0;
-      const bottom = activeHours.has(endH)
-        ? endYBase + (endM / 60) * HOUR_HEIGHT
-        : endYBase; // If end hour is collapsed, it ends at the start of that block (effectively 0 height in that block)
-
-      // Adjust for collapsed blocks in between?
-      // The simple logic above works if start and end are in the same or adjacent blocks.
-      // For robust calculation across mixed blocks:
-      // Height = Sum of heights of all covered segments.
-      // Simplified approach: Use the Y difference from our pre-calculated positions.
-
-      // Correction: If endH is active, endYBase is the top of that hour.
-      // If endH is collapsed, endYBase is the top of that collapsed block.
-
-      // Let's refine height calculation:
-      const calculatedHeight = 0;
-      // This is complex with variable row heights.
-      // Easier: We have Y coordinates for every hour start.
-      // We just need to handle the minutes offset.
-
-      // Re-evaluating Top/Bottom strategy:
-      // Top is correct.
-      // Bottom needs to be: Position of (EndHour) + Minutes offset.
-      // If EndHour is collapsed, Minutes offset is ignored (or scaled to collapsed height).
-
-      // Handle day crossing (endH < startH) or midnight (00:00)
-      // If endH < startH, it means it ends the next day (e.g. 22:00 -> 00:00 or 22:00 -> 01:00)
-      // For this view, we clamp to the end of the current day's timeline.
-
-      let realBottom = 0;
-
-      if (endH < startH) {
-        // It crosses midnight.
-        // We want to extend it to the bottom of the last active block of the day.
-        // Or simpler: just calculate height until 24:00?
-        // But 24:00 isn't in hourPositions.
-        // We need to find the Y position of the "end" of the timeline.
-
-        const lastBlock = timelineStructure[timelineStructure.length - 1];
-        if (!lastBlock) {
-          realBottom = top + MIN_EVENT_HEIGHT;
-        } else {
-          const lastBlockEndY = lastBlock.type === 'hour'
-            ? (hourPositions[lastBlock.value] ?? 0) + HOUR_HEIGHT
-            : (hourPositions[lastBlock.end] ?? 0) + COLLAPSED_HEIGHT;
-
-          realBottom = lastBlockEndY;
-        }
-      } else {
-        // Normal case
-        const endYBase = hourPositions[endH] !== undefined ? hourPositions[endH] : 0;
-
-        if (activeHours.has(endH)) {
-          realBottom = endYBase + (endM / 60) * HOUR_HEIGHT;
-        } else {
-          // If it ends in a collapsed block
-          realBottom = endYBase + (endM / 60) * COLLAPSED_HEIGHT;
-        }
+      let bottom = totalHeight;
+      if (endHour >= startHour) {
+        bottom = endBase + (
+          activeHours.has(endHour) ? (endMinute / 60) * HOUR_HEIGHT : (endMinute / 60) * COLLAPSED_HEIGHT
+        );
       }
 
-      let height = realBottom - top;
-      height = Math.max(height, MIN_EVENT_HEIGHT);
-
-      return {
+      const positionedEvent = {
         ...event,
-        color: getEventColor(event),
+        bottom: Math.max(top + MIN_EVENT_HEIGHT, bottom),
+        color: getEventColor(event, Colors.primary500),
         dayIndex,
-        height,
         top,
       };
-    }).filter((event) => event !== null);
-    return /** @type {PositionedEvent[]} */ (mapped);
-  }, [timedWeekEvents, hourPositions, activeHours, weekDays, timelineStructure]);
 
-  // 7. Handle Overlaps (Columns)
-  const eventsWithLayout = useMemo(() => {
-    const daysCount = mode === 'week' ? 7 : 3;
-    const eventsByDay = Array.from({ length: daysCount }, () => /** @type {PositionedEvent[]} */ ([]));
-
-    processedEvents.forEach((event) => {
-      if (event.dayIndex >= 0 && event.dayIndex < daysCount) {
-        eventsByDay[event.dayIndex].push(event);
-      }
+      byDay[dayIndex].push(positionedEvent);
     });
 
-    /** @type {PositionedEvent[]} */
-    const result = [];
-    eventsByDay.forEach((dayEvents) => {
-      dayEvents.sort((a, b) => a.top - b.top);
+    return byDay.flatMap((dayEvents, dayIndex) => {
+      const sortedEvents = dayEvents.sort((left, right) => {
+        if (left.top === right.top) return left.bottom - right.bottom;
+        return left.top - right.top;
+      });
 
-      /** @type {PositionedEvent[][]} */
-      const columns = [];
-      dayEvents.forEach((event) => {
-        let placed = false;
-        for (let i = 0; i < columns.length; i++) {
-          const lastEventInColumn = columns[i][columns[i].length - 1];
-          if (lastEventInColumn.top + lastEventInColumn.height <= event.top) {
-            columns[i].push(event);
-            event.colIndex = i;
-            placed = true;
-            break;
+      const clusters = [];
+      sortedEvents.forEach((event) => {
+        const currentCluster = clusters[clusters.length - 1];
+        if (currentCluster && event.top < currentCluster.end) {
+          currentCluster.end = Math.max(currentCluster.end, event.bottom);
+          currentCluster.events.push(event);
+        } else {
+          clusters.push({ end: event.bottom, events: [event], start: event.top });
+        }
+      });
+
+      return clusters.flatMap((cluster) => {
+        const columns = [];
+        const laidOutEvents = [];
+
+        cluster.events.forEach((event) => {
+          let columnIndex = columns.findIndex((column) => (column[column.length - 1]?.bottom || 0) <= event.top);
+          if (columnIndex === -1) {
+            columnIndex = columns.length;
+            columns.push([]);
           }
-        }
-        if (!placed) {
-          columns.push([event]);
-          event.colIndex = columns.length - 1;
-        }
-      });
 
-      const totalColumns = columns.length;
-      dayEvents.forEach((event) => {
-        event.widthPercent = 100 / totalColumns;
-        const colIndex = event.colIndex ?? 0;
-        event.leftPercent = colIndex * event.widthPercent;
-        event.concurrentCount = totalColumns;
-        result.push(event);
+          const nextEvent = { ...event, colIndex: columnIndex };
+          columns[columnIndex].push(nextEvent);
+          laidOutEvents.push(nextEvent);
+        });
+
+        const hiddenEvents = laidOutEvents.filter((event) => event.colIndex >= overflowLimit);
+        const visibleEvents = laidOutEvents.filter((event) => event.colIndex < overflowLimit);
+        const columnsToRender = hiddenEvents.length > 0 ? overflowLimit + 1 : Math.max(columns.length, 1);
+
+        const visibleLayout = visibleEvents.map((event) => ({
+          ...event,
+          displayType: 'event',
+          height: event.bottom - event.top,
+          leftPercent: event.colIndex * (100 / columnsToRender),
+          widthPercent: 100 / columnsToRender,
+        }));
+
+        if (!hiddenEvents.length) {
+          return visibleLayout;
+        }
+
+        return [
+          ...visibleLayout,
+          {
+            count: hiddenEvents.length,
+            dayDate: weekDays[dayIndex],
+            dayIndex,
+            displayType: 'overflow',
+            height: Math.max(cluster.end - cluster.start, MIN_EVENT_HEIGHT),
+            key: `overflow-${getDayKey(weekDays[dayIndex])}-${Math.round(cluster.start)}`,
+            leftPercent: overflowLimit * (100 / columnsToRender),
+            top: cluster.start,
+            widthPercent: 100 / columnsToRender,
+          },
+        ];
       });
     });
+  }, [Colors.primary500, activeHours, hourPositions, mode, timedEvents, totalHeight, weekDays]);
 
-    return result;
-  }, [processedEvents, mode]);
+  const untimedByDay = useMemo(() => weekDays.map((day) => (
+    untimedEvents.filter((event) => {
+      const eventDate = getPlanningItemDate(event);
+      return eventDate ? isSameDay(eventDate, day) : false;
+    })
+  )), [untimedEvents, weekDays]);
 
-  // Helpers
-  /**
-   * @param {Date} newDate
-   */
-  const handleDateUpdate = (newDate) => {
-    if (onDateChange) onDateChange(newDate);
-    else setInternalDate(newDate);
+  const dayEventCounts = useMemo(() => {
+    const counts = new Map();
+    weekDays.forEach((day) => counts.set(getDayKey(day), 0));
+
+    weekEvents.forEach((event) => {
+      const eventDate = getPlanningItemDate(event);
+      if (!eventDate) return;
+      const key = getDayKey(eventDate);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    return counts;
+  }, [weekDays, weekEvents]);
+
+  const dateRangeText = useMemo(() => {
+    const start = format(weekDays[0], 'd MMM', { locale: fr });
+    const end = format(weekDays[weekDays.length - 1], 'd MMM yyyy', { locale: fr });
+    return `${start} - ${end}`;
+  }, [weekDays]);
+
+  const summaryText = useMemo(() => {
+    if (weekEvents.length === 0) {
+      return mode === 'week'
+        ? 'Aucun événement sur cette semaine'
+        : 'Aucun événement sur ces 3 jours';
+    }
+
+    const label = weekEvents.length > 1 ? 'événements' : 'événement';
+    return `${weekEvents.length} ${label} sur ${weekDays.length} jours`;
+  }, [mode, weekDays.length, weekEvents.length]);
+
+  const nowLine = useMemo(() => {
+    if (!timedEvents.length) return null;
+
+    const todayIndex = weekDays.findIndex((day) => isSameDay(day, new Date()));
+    if (todayIndex === -1) return null;
+
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const base = hourPositions[hour];
+    if (base === undefined) return null;
+
+    return {
+      dayIndex: todayIndex,
+      top: base + (activeHours.has(hour) ? (minute / 60) * HOUR_HEIGHT : (minute / 60) * COLLAPSED_HEIGHT),
+    };
+  }, [activeHours, hourPositions, timedEvents.length, weekDays]);
+
+  const handleDateUpdate = (nextDate) => {
+    if (onDateChange) {
+      onDateChange(nextDate);
+      return;
+    }
+
+    setInternalDate(nextDate);
   };
 
-  const handlePrevPage = () => {
-    const days = mode === 'week' ? 7 : 3;
-    handleDateUpdate(subDays(currentDate, days));
-  };
-
-  const handleNextPage = () => {
-    const days = mode === 'week' ? 7 : 3;
-    handleDateUpdate(addDays(currentDate, days));
+  const handlePrevPage = () => handleDateUpdate(subDays(currentDate, mode === 'week' ? 7 : 3));
+  const handleNextPage = () => handleDateUpdate(addDays(currentDate, mode === 'week' ? 7 : 3));
+  const handleOverflowPress = (date) => {
+    handleDateUpdate(date);
+    onSummaryPress?.();
   };
 
   const flingLeft = Gesture.Fling().direction(Directions.LEFT).onEnd(() => {
@@ -486,441 +431,394 @@ function PlanningWeekTimelineView({
 
     runOnJS(handleNextPage)();
   });
+
   const flingRight = Gesture.Fling().direction(Directions.RIGHT).onEnd(() => {
     'worklet';
 
     runOnJS(handlePrevPage)();
   });
 
-  const dateRangeText = useMemo(() => {
-    if (!weekDays.length) return '';
-    const start = weekDays[0];
-    const end = weekDays[weekDays.length - 1];
-    const startStr = format(start, 'd MMM', { locale: fr });
-    const endStr = format(end, 'd MMM yyyy', { locale: fr });
-    return `${startStr} - ${endStr}`;
-  }, [weekDays]);
+  const emptyTitle = weekEvents.length === 0
+    ? 'Aucun événement sur cette période'
+    : 'Aucun événement avec horaire';
+  const emptyDescription = weekEvents.length === 0
+    ? "Changez de période pour voir d'autres créneaux."
+    : 'Les événements de cette période sont uniquement dans la section « Sans horaire ».';
 
-  const summaryText = useMemo(() => {
-    const count = weekEvents.length;
-    const unit = count > 1 ? 'événements' : 'événement';
-    const period = mode === 'week' ? 'cette semaine' : 'sur 3 jours';
-    return `${count} ${unit} ${period}`;
-  }, [weekEvents.length, mode]);
-
-  // Render
   return (
     <GestureDetector gesture={Gesture.Simultaneous(flingLeft, flingRight)}>
-      <View style={{ backgroundColor: 'transparent', flex: 1 }}>
-
-        {/* 1. HEADER & NAVIGATION (Date Selector) */}
-        <View style={{ paddingBottom: 12, paddingTop: 8 }}>
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.primary700,
-            borderColor: `${Colors.primary500}33`,
-            borderRadius: 22,
-            borderWidth: 1,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-          }}
-          >
-            <TouchableOpacity
-              hitSlop={{
-                bottom: 10, left: 10, right: 10, top: 10,
-              }}
-              onPress={handlePrevPage}
-            >
-              <Image
-                resizeMode="contain"
-                source={/** @type {any} */ (Images.arrowLeft)}
-                style={{ height: 18, tintColor: Colors.primary500, width: 18 }}
-              />
+      <View style={styles.container}>
+        <View style={styles.headerSpacing}>
+          <View style={[styles.headerCard, { backgroundColor: Colors.primary700, borderColor: `${Colors.primary500}33` }]}>
+            <TouchableOpacity hitSlop={styles.hitSlop} onPress={handlePrevPage}>
+              <Image resizeMode="contain" source={Images.arrowLeft} style={[styles.headerArrow, { tintColor: Colors.primary500 }]} />
             </TouchableOpacity>
 
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{
-                color: Colors.primary200,
-                fontSize: 13,
-                fontWeight: '700',
-                letterSpacing: 1,
-                marginBottom: 2,
-                textTransform: 'uppercase',
-              }}
-              >
-                      PLANNING
-              </Text>
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {dateRangeText}
-              </Text>
+            <View style={styles.headerCenter}>
+              <Text style={[styles.headerTitle, { color: Colors.primary200 }]}>Planning</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{dateRangeText}</Text>
             </View>
 
-            <TouchableOpacity
-              hitSlop={{
-                bottom: 10, left: 10, right: 10, top: 10,
-              }}
-              onPress={handleNextPage}
-            >
-              <Image
-                resizeMode="contain"
-                source={/** @type {any} */ (Images.arrowRight)}
-                style={{ height: 18, tintColor: Colors.primary500, width: 18 }}
-              />
+            <TouchableOpacity hitSlop={styles.hitSlop} onPress={handleNextPage}>
+              <Image resizeMode="contain" source={Images.arrowRight} style={[styles.headerArrow, { tintColor: Colors.primary500 }]} />
             </TouchableOpacity>
           </View>
         </View>
 
-        <View>
-          <View style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            borderColor: 'rgba(255,255,255,0.10)',
-            borderRadius: 18,
-            borderWidth: 1,
-            overflow: 'hidden',
-            paddingHorizontal: 8,
-          }}
-          >
-            {/* Summary Button */}
-            {weekEvents.length > 0 && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={onSummaryPress}
-              style={{
-                    alignItems: 'center',
-                    backgroundColor: 'transparent',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    paddingBottom: 6,
-                    paddingTop: 8,
-                  }}
-            >
-              <View style={{
-                    backgroundColor: Colors.primary500,
-                    borderRadius: 999,
-                    height: 6,
-                    marginRight: 8,
-                    width: 6,
-                  }}
-                  />
-              <Text style={[Fonts.p3, { color: Colors.neutral00, fontWeight: '700' }]}>
-                    {summaryText}
-                  </Text>
-              <Image
-                    resizeMode="contain"
-                    source={/** @type {any} */ (Images.arrowRight)}
-                    style={{
-                      height: 12,
-                      marginLeft: 8,
-                      tintColor: Colors.neutral00,
-                      width: 12,
-                    }}
-                  />
+        <View style={[styles.panel, { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.10)' }]}>
+          {onSummaryPress ? (
+            <TouchableOpacity activeOpacity={0.75} onPress={onSummaryPress} style={styles.summaryRow}>
+              <View style={[styles.summaryDot, { backgroundColor: Colors.primary500 }]} />
+              <Text style={[Fonts.p3, styles.summaryText, { color: Colors.neutral00 }]}>{summaryText}</Text>
+              <Image resizeMode="contain" source={Images.arrowRight} style={styles.summaryArrow} />
             </TouchableOpacity>
-            )}
-
-            {/* Days Row */}
-            <View style={{
-              alignItems: 'flex-end',
-              borderBottomColor: 'rgba(255,255,255,0.12)',
-              borderBottomWidth: 1,
-              flexDirection: 'row',
-              marginBottom: 8,
-              paddingBottom: 8,
-            }}
-            >
-              <View style={{ width: TIME_COLUMN_WIDTH }} />
-              {weekDays.map((day, index) => {
-                const isToday = isSameDay(day, new Date());
-                const dayEventsCount = weekEvents.filter((e) => {
-                  if (!e.date) return false;
-                  return isSameDay(new Date(e.date), day);
-                }).length;
-
-                const hasEvents = dayEventsCount > 0;
-
-                return (
-                    <View key={index} style={{ alignItems: 'center', flex: 1 }}>
-                        <Text style={[Fonts.p3, {
-                            color: isToday ? Colors.primary500 : Colors.neutral300,
-                            fontSize: 11,
-                            fontWeight: isToday ? 'bold' : 'normal',
-                            marginBottom: 6,
-                            textTransform: 'uppercase',
-                          }]}
-                          >
-                            {format(day, 'EEE', { locale: fr }).replace('.', '')}
-                          </Text>
-
-                        <View style={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minHeight: 32,
-                          }}
-                          >
-                            <View style={{
-                                alignItems: 'center',
-                                backgroundColor: isToday ? Colors.primary500 : (hasEvents ? Colors.neutral800 : 'transparent'),
-                                borderRadius: 999,
-                                height: 32,
-                                justifyContent: 'center',
-                                position: 'relative',
-                                width: 32,
-                              }}
-                              >
-                                <Text style={[Fonts.h3, {
-                                  color: Colors.neutral00,
-                                  fontWeight: 'bold',
-                                  fontSize: 14,
-                                }]}
-                                >
-                                  {format(day, 'd')}
-                                </Text>
-
-                                {dayEventsCount > 0 && !isToday && (
-                                <View style={{
-                                      alignItems: 'center',
-                                      backgroundColor: Colors.primary500,
-                                      borderColor: Colors.neutral700,
-                                      borderRadius: 6,
-                                      borderWidth: 1,
-                                      height: 14,
-                                      justifyContent: 'center',
-                                      position: 'absolute',
-                                      right: -4,
-                                      top: -4,
-                                      width: 14,
-                                    }}
-                                    >
-                                      <Text style={{ color: Colors.neutral00, fontSize: 8, fontWeight: 'bold' }}>
-                                        {dayEventsCount}
-                                      </Text>
-                                    </View>
-                                )}
-                              </View>
-                          </View>
-                      </View>
-                );
-              })}
+          ) : (
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryDot, { backgroundColor: Colors.primary500 }]} />
+              <Text style={[Fonts.p3, styles.summaryText, { color: Colors.neutral00 }]}>{summaryText}</Text>
             </View>
+          )}
 
-            {/* Timeline ScrollView */}
-            <ScrollView
-              contentContainerStyle={{ paddingBottom: 50, paddingTop: 6 }}
-              ref={scrollViewRef}
-              scrollEnabled={scrollEnabled}
-            >
-              <View style={{ flexDirection: 'row' }}>
-                {/* Time Column */}
-                <View style={{ width: TIME_COLUMN_WIDTH }}>
-                    {timelineStructure.map((block, index) => (
-                        <View
-                            key={index}
-                            style={{
-  alignItems: 'center',
-  borderBottomWidth: 0,
-  height: block.type === 'hour' ? HOUR_HEIGHT : COLLAPSED_HEIGHT,
-  justifyContent: 'flex-start',
-}}
+          <View style={[styles.daysRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
+            <View style={{ width: TIME_COLUMN_WIDTH }} />
+            {weekDays.map((day) => {
+              const dayKey = getDayKey(day);
+              const isTodayColumn = isSameDay(day, new Date());
+              const eventCount = dayEventCounts.get(dayKey) || 0;
+              let badgeBackground = 'transparent';
+
+              if (isTodayColumn) {
+                badgeBackground = Colors.primary500;
+              } else if (eventCount > 0) {
+                badgeBackground = Colors.neutral800;
+              }
+
+              return (
+                <View key={dayKey} style={styles.dayColumnHeader}>
+                  <Text style={[Fonts.p3, styles.dayLabel, { color: isTodayColumn ? Colors.primary500 : Colors.neutral300, fontWeight: isTodayColumn ? '700' : '400' }]}>
+                    {format(day, 'EEE', { locale: fr }).replace('.', '')}
+                  </Text>
+                  <View style={styles.dayBadgeWrapper}>
+                    <View style={[styles.dayBadge, { backgroundColor: badgeBackground }]}>
+                      <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>{format(day, 'd')}</Text>
+                      {eventCount > 0 && !isTodayColumn ? (
+                        <View style={[styles.dayCountBadge, { backgroundColor: Colors.primary500, borderColor: Colors.neutral700 }]}>
+                          <Text style={styles.dayCountText}>{eventCount}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {untimedEvents.length > 0 ? (
+            <View style={[styles.untimedSection, { borderBottomColor: 'rgba(255,255,255,0.10)' }]}>
+              <View style={styles.untimedLabelColumn}>
+                <Text style={[Fonts.p3Bold, styles.untimedLabel, { color: Colors.neutral200 }]}>Sans horaire</Text>
+              </View>
+              <View style={styles.untimedColumns}>
+                {untimedByDay.map((dayEvents, index) => (
+                  <View key={getDayKey(weekDays[index])} style={styles.untimedDayColumn}>
+                    {dayEvents.slice(0, 2).map((event) => {
+                      const color = getEventColor(event, Colors.primary500);
+                      const primaryLabel = getPrimaryPlanningLabel(event);
+                      const contextLabel = getPlanningContextLabel(event);
+                      return (
+                        <TouchableOpacity
+                          key={event.documentId || `${getDayKey(weekDays[index])}-${getPlanningDisplayTitle(event)}`}
+                          onPress={() => onEventPress?.(event)}
+                          style={[styles.untimedCard, { backgroundColor: hexToRgba(color, 0.18), borderColor: hexToRgba(color, 0.32), borderLeftColor: color }]}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={[Fonts.p4Bold, {
+                              color,
+                              fontSize: 10,
+                              letterSpacing: 0.35,
+                              marginBottom: contextLabel ? 2 : 0,
+                              textTransform: getPlanningTypeLabel(event) ? 'uppercase' : 'none',
+                            }]}
                           >
-                            {block.type === 'hour' && (
-                              <Text style={[Fonts.p3, {
-                                backgroundColor: 'transparent',
-                                color: Colors.neutral300,
-                                fontSize: 11,
-                                fontWeight: 'bold',
-                                marginTop: -8,
-                              }]}
-                              >
-                                {`${block.value}:00`}
-                              </Text>
-                              )}
-                            {block.type === 'collapsed' && (
-                              <Text style={{ color: Colors.neutral700, fontSize: 10 }}>...</Text>
-                              )}
-                          </View>
-                      ))}
+                            {primaryLabel}
+                          </Text>
+                          {contextLabel ? (
+                            <Text numberOfLines={2} style={[Fonts.p3Bold, styles.untimedCardText, { color: Colors.neutral00 }]}>
+                              {contextLabel}
+                            </Text>
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {dayEvents.length > 2 ? (
+                      <TouchableOpacity onPress={() => handleOverflowPress(weekDays[index])} style={styles.untimedMoreButton}>
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary500, fontSize: 11 }]}>
+                          +
+                          {dayEvents.length - 2}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {timedEvents.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6 }]}>{emptyTitle}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>{emptyDescription}</Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.scrollContent} ref={scrollViewRef} scrollEnabled={scrollEnabled} showsVerticalScrollIndicator={false}>
+              <View style={styles.timelineRow}>
+                <View style={{ width: TIME_COLUMN_WIDTH }}>
+                  {timelineBlocks.map((block) => (
+                    <View key={block.type === 'hour' ? `hour-${block.value}` : block.id} style={[styles.timeCell, { height: block.type === 'hour' ? HOUR_HEIGHT : COLLAPSED_HEIGHT }]}>
+                      {block.type === 'hour' ? (
+                        <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{`${block.value}:00`}</Text>
+                      ) : (
+                        <Text style={styles.collapsedText}>ââ‚¬¦</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+
+                <View style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]}>
+                  <View style={[StyleSheet.absoluteFillObject, styles.dayBackgroundRow]}>
+                    {weekDays.map((day) => (
+                      <View
+                        key={`bg-${getDayKey(day)}`}
+                        style={[styles.dayBackgroundColumn, {
+                          backgroundColor: isSameDay(day, new Date()) ? hexToRgba(Colors.primary500, 0.05) : 'transparent',
+                          borderLeftColor: 'rgba(255,255,255,0.10)',
+                        }]}
+                      />
+                    ))}
                   </View>
 
-                {/* Events Grid */}
-                <View style={{
-                    borderRightColor: 'rgba(255,255,255, 0.1)',
-                    borderRightWidth: 1,
-                    borderTopColor: 'rgba(255,255,255, 0.1)',
-                    borderTopWidth: 1,
-                    flex: 1,
-                    position: 'relative',
-                  }}
-                  >
-                    {/* Grid Lines & Day Columns Background */}
-                    <View style={{ ...StyleSheet.absoluteFillObject, flexDirection: 'row' }}>
-                        {weekDays.map((day, i) => {
-                            const isToday = isSameDay(day, new Date());
-                            return (
-                                <View
-                                  key={`bg-col-${i}`} style={{
-                                      backgroundColor: isToday ? `rgba(${parseInt(Colors.primary500.slice(1, 3), 16)}, ${parseInt(Colors.primary500.slice(3, 5), 16)}, ${parseInt(Colors.primary500.slice(5, 7), 16)}, 0.05)` : 'transparent',
-                                      borderLeftColor: 'rgba(255,255,255, 0.1)',
-                                      borderLeftWidth: 1,
-                                      flex: 1,
-                                    }}
-                                />
-                            );
-                          })}
+                  {timelineBlocks.map((block) => (
+                    <View
+                      key={`grid-${block.type === 'hour' ? block.value : block.id}`}
+                      style={[styles.gridLine, {
+                        backgroundColor: block.type === 'collapsed' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        borderBottomColor: 'rgba(255,255,255,0.10)',
+                        height: block.type === 'hour' ? HOUR_HEIGHT : COLLAPSED_HEIGHT,
+                      }]}
+                    />
+                  ))}
+
+                  {nowLine ? (
+                    <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
+                      <View style={styles.nowLineTrack}>
+                        <View style={[styles.nowDot, { backgroundColor: Colors.primary500 }]} />
+                        <View style={[styles.nowLine, { backgroundColor: Colors.primary500 }]} />
                       </View>
+                    </View>
+                  ) : null}
 
-                    {/* Horizontal Grid Lines */}
-                    {timelineStructure.map((block, index) => (
-                        <View
-                            key={`grid-${index}`}
-                            style={{
-  backgroundColor: block.type === 'collapsed' ? 'rgba(255,255,255, 0.05)' : 'transparent',
-  borderBottomColor: 'rgba(255,255,255, 0.1)',
-  borderBottomWidth: 1,
-  height: block.type === 'hour' ? HOUR_HEIGHT : COLLAPSED_HEIGHT,
-}}
-                          />
-                      ))}
+                  {layoutEvents.map((event) => {
+                    const dayWidth = 100 / weekDays.length;
+                    const left = (event.dayIndex * dayWidth) + ((event.leftPercent || 0) * (dayWidth / 100));
+                    const width = (event.widthPercent || 100) * (dayWidth / 100);
 
-                    {/* Events */}
-                    {eventsWithLayout.map((event) => {
-                        const dayWidth = 100 / weekDays.length;
-                        const leftPercent = event.leftPercent ?? 0;
-                        const widthPercent = event.widthPercent ?? 100;
-                        const left = (event.dayIndex * dayWidth) + (leftPercent * (dayWidth / 100));
-                        const width = widthPercent * (dayWidth / 100);
+                    if (event.displayType === 'overflow') {
+                      return (
+                        <TouchableOpacity
+                          key={event.key}
+                          onPress={() => handleOverflowPress(event.dayDate)}
+                          style={[styles.overflowCard, {
+                            borderColor: 'rgba(255,255,255,0.12)', height: Math.max(event.height - 2, MIN_EVENT_HEIGHT), left: `${left}%`, top: event.top + 1, width: `${width}%`,
+                          }]}
+                        >
+                          <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontSize: mode === 'week' ? 10 : 11 }]}>
+                            +
+                            {event.count}
+                          </Text>
+                          <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>plus</Text>
+                        </TouchableOpacity>
+                      );
+                    }
 
-                        const eventColor = event.color || Colors.primary500;
-                        const isHex = eventColor.startsWith('#');
-                        const bgOpacity = isHex ? `${eventColor}40` : 'rgba(1, 179, 244, 0.25)';
-                        const borderOpacity = isHex ? `${eventColor}4D` : 'rgba(1, 179, 244, 0.3)';
+                    const color = event.color || Colors.primary500;
+                    const isCompact = event.height < 62;
+                    const isTiny = event.height < 38;
+                    const title = getPlanningDisplayTitle(event);
+                    const primaryLabel = getPrimaryPlanningLabel(event);
+                    const contextLabel = getPlanningContextLabel(event);
+                    const facilityName = event.facility?.name || null;
+                    const typeLabel = getPlanningTypeLabel(event);
+                    const metaLabel = [title]
+                      .filter((value) => value && value !== primaryLabel && value !== contextLabel && value !== facilityName)
+                      .join(' - ');
+                    const timeLabel = `${formatClock(event.startTime)} - ${formatClock(event.endTime)}`;
+                    let primaryFontSize = 10;
+                    if (mode === 'week') {
+                      primaryFontSize = isTiny ? 8 : 9;
+                    } else if (isTiny) {
+                      primaryFontSize = 9;
+                    }
 
-                        // Content Data
-                        const mainTitle = event.team?.name || event.category?.name || event.title || event.name || 'Event';
-                        const eventType = typeof event.type === 'string' ? event.type : event.type?.name;
-                        const facilityName = event.facility?.name;
+                    const contextFontSize = mode === 'week' ? 10 : 11;
+                    const showPrimaryAsType = Boolean(typeLabel);
 
-                        // Layout Constraints
-                        const isWeekMode = mode === 'week';
-                        const isTinyEvent = event.height < 32;
-                        const isSmallEvent = event.height < 56;
-
-                        // In Week Mode, we have very narrow columns.
-                        // Strategy: Wrap text, smaller fonts, hide time if needed.
-                        const titleLines = isWeekMode && !isTinyEvent ? 2 : 1;
-                        const showType = !isSmallEvent && eventType;
-                        const showFacility = !isSmallEvent && facilityName;
-                        const showTime = !isTinyEvent && (!isWeekMode || event.height > 52);
-                        const showLeagueBadge = !!event.league_match;
-
-                        return (
-                            <TouchableOpacity
-                                key={event.id}
-                                onPress={() => onEventPress?.(event)}
-                                style={{
-                                  backgroundColor: bgOpacity,
-                                  borderColor: borderOpacity,
-                                  borderLeftColor: eventColor,
-                                  borderLeftWidth: isWeekMode ? 2 : 3, // Save 1px in week mode
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  height: event.height - 2,
-                                  justifyContent: isTinyEvent ? 'center' : 'flex-start',
-                                  left: `${left}%`,
-                                  overflow: 'hidden',
-                                  padding: isWeekMode ? 3 : 4,
-                                  position: 'absolute',
-                                  top: event.top + 1,
-                                  width: `${width}%`,
-                                }}
-                              >
-                                {/* Main Title (Team Name) */}
-                                <Text
-                                  numberOfLines={titleLines}
-                                  style={[Fonts.p3Bold, {
-                                      color: Colors.neutral00,
-                                      fontSize: isWeekMode ? (isTinyEvent ? 9 : 10) : (isTinyEvent ? 10 : 11),
-                                      lineHeight: isWeekMode ? 12 : 13,
-                                      marginBottom: 1,
-                                    }]}
-                                >
-                                  {mainTitle}
-                                </Text>
-
-                                {/* Event Type (e.g. Match, Entrainement) */}
-                                {showType && (
-                                <Text
-                                      numberOfLines={1}
-                                      style={[Fonts.p3, {
-                                        color: Colors.neutral300,
-                                        fontSize: isWeekMode ? 8 : 9,
-                                        marginBottom: 1,
-                                        marginTop: isWeekMode ? 1 : 0,
-                                      }]}
-                                    >
-                                      {eventType}
-                                    </Text>
-                                )}
-
-                                {/* Facility Name */}
-                                {showFacility && (
-                                <Text
-                                      numberOfLines={1}
-                                      style={[Fonts.p3, {
-                                        color: Colors.primary500,
-                                        fontSize: isWeekMode ? 8 : 9,
-                                        fontWeight: 'bold',
-                                        marginTop: 0,
-                                      }]}
-                                    >
-                                      {facilityName}
-                                    </Text>
-                                )}
-
-                                {/* Time Range */}
-                                {showTime && (
-                                <Text
-                                      numberOfLines={1}
-                                      style={[Fonts.p3, {
-                                        color: Colors.neutral300,
-                                        fontSize: isWeekMode ? 8 : 9,
-                                        marginTop: 0,
-                                      }]}
-                                    >
-                                      {formatTime(event.startTime)}
-                                      {' '}
-                                      -
-                                      {formatTime(event.endTime)}
-                                    </Text>
-                                )}
-
-                                {showLeagueBadge ? (
-                                  <View
-                                    style={{
-                                      backgroundColor: Colors.gold500,
-                                      borderColor: 'rgba(0,18,24,0.8)',
-                                      borderRadius: 999,
-                                      borderWidth: 1,
-                                      height: isWeekMode ? 8 : 10,
-                                      position: 'absolute',
-                                      right: 3,
-                                      top: 3,
-                                      width: isWeekMode ? 8 : 10,
-                                    }}
-                                  />
-                                ) : null}
-                              </TouchableOpacity>
-                        );
-                      })}
-                  </View>
+                    return (
+                      <TouchableOpacity
+                        key={event.documentId || `${event.dayIndex}-${event.top}`}
+                        onPress={() => onEventPress?.(event)}
+                        style={[styles.eventCard, {
+                          backgroundColor: hexToRgba(color, 0.15),
+                          borderColor: hexToRgba(color, 0.28),
+                          borderLeftColor: color,
+                          borderLeftWidth: mode === 'week' ? 2 : 3,
+                          height: event.height - 2,
+                          justifyContent: isTiny ? 'center' : 'flex-start',
+                          left: `${left}%`,
+                          padding: mode === 'week' ? 4 : 6,
+                          top: event.top + 1,
+                          width: `${width}%`,
+                        }]}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[Fonts.p3Bold, {
+                            color: showPrimaryAsType ? color : Colors.neutral00,
+                            fontSize: primaryFontSize,
+                            letterSpacing: showPrimaryAsType ? 0.35 : 0,
+                            lineHeight: mode === 'week' ? 10 : 11,
+                            marginBottom: !isCompact && contextLabel ? 2 : 0,
+                            textTransform: showPrimaryAsType ? 'uppercase' : 'none',
+                          }]}
+                        >
+                          {primaryLabel}
+                        </Text>
+                        {!isCompact && contextLabel ? (
+                          <Text
+                            numberOfLines={mode === 'week' ? 1 : 2}
+                            style={[Fonts.p3Bold, {
+                              color: Colors.neutral00,
+                              fontSize: contextFontSize,
+                              lineHeight: mode === 'week' ? 12 : 13,
+                              marginTop: 2,
+                            }]}
+                          >
+                            {contextLabel}
+                          </Text>
+                        ) : null}
+                        {!isCompact && facilityName && facilityName !== contextLabel && facilityName !== primaryLabel ? (
+                          <Text numberOfLines={1} style={[Fonts.p3Bold, { color, fontSize: 9, marginTop: 2 }]}>
+                            {facilityName}
+                          </Text>
+                        ) : null}
+                        {!isTiny ? (
+                          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
+                            {timeLabel}
+                          </Text>
+                        ) : null}
+                        {!isCompact && metaLabel ? (
+                          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
+                            {metaLabel}
+                          </Text>
+                        ) : null}
+                        {event.leagueMatch || event.league_match ? (
+                          <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </ScrollView>
-          </View>
+          )}
         </View>
       </View>
     </GestureDetector>
   );
 }
+
+const styles = StyleSheet.create({
+  collapsedText: { color: '#6E7C84', fontSize: 10 },
+  container: { backgroundColor: 'transparent', flex: 1 },
+  dayBackgroundColumn: { borderLeftWidth: 1, flex: 1 },
+  dayBackgroundRow: { flexDirection: 'row' },
+  dayBadge: {
+    alignItems: 'center', borderRadius: 999, height: 32, justifyContent: 'center', minWidth: 32, position: 'relative', width: 32,
+  },
+  dayBadgeText: { fontSize: 14, fontWeight: '700' },
+  dayBadgeWrapper: { alignItems: 'center', justifyContent: 'center', minHeight: 32 },
+  dayColumnHeader: { alignItems: 'center', flex: 1 },
+  dayCountBadge: {
+    alignItems: 'center', borderRadius: 6, borderWidth: 1, height: 14, justifyContent: 'center', position: 'absolute', right: -4, top: -4, width: 14,
+  },
+  dayCountText: { color: '#FFFFFF', fontSize: 8, fontWeight: '700' },
+  dayLabel: { fontSize: 11, marginBottom: 6, textTransform: 'uppercase' },
+  daysRow: {
+    alignItems: 'flex-end', borderBottomWidth: 1, flexDirection: 'row', marginBottom: 8, paddingBottom: 8,
+  },
+  emptyState: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 28 },
+  eventCard: {
+    borderRadius: 8, borderWidth: 1, overflow: 'hidden', position: 'absolute',
+  },
+  gridContainer: {
+    borderRightWidth: 1, borderTopWidth: 1, flex: 1, position: 'relative',
+  },
+  gridLine: { borderBottomWidth: 1 },
+  headerArrow: { height: 18, width: 18 },
+  headerCard: {
+    alignItems: 'center', borderRadius: 22, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8,
+  },
+  headerCenter: { alignItems: 'center' },
+  headerSpacing: { paddingBottom: 12, paddingTop: 8 },
+  headerTitle: {
+    fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 2, textTransform: 'uppercase',
+  },
+  hitSlop: {
+    bottom: 10, left: 10, right: 10, top: 10,
+  },
+  hourText: { fontSize: 11, fontWeight: '700', marginTop: -8 },
+  leagueDot: {
+    borderColor: 'rgba(0,18,24,0.8)', borderRadius: 999, borderWidth: 1, height: 10, position: 'absolute', right: 3, top: 3, width: 10,
+  },
+  nowDot: {
+    borderRadius: 999, height: 8, marginRight: 4, width: 8,
+  },
+  nowLine: { flex: 1, height: 2 },
+  nowLineContainer: { position: 'absolute' },
+  nowLineTrack: { alignItems: 'center', flexDirection: 'row', paddingHorizontal: 2 },
+  overflowCard: {
+    alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 8, borderStyle: 'dashed', borderWidth: 1, justifyContent: 'center', paddingHorizontal: 4, position: 'absolute',
+  },
+  panel: {
+    borderRadius: 18, borderWidth: 1, overflow: 'hidden', paddingHorizontal: 8,
+  },
+  scrollContent: { paddingBottom: 50, paddingTop: 6 },
+  summaryArrow: {
+    height: 12, marginLeft: 8, tintColor: '#FFFFFF', width: 12,
+  },
+  summaryDot: {
+    borderRadius: 999, height: 6, marginRight: 8, width: 6,
+  },
+  summaryRow: {
+    alignItems: 'center', flexDirection: 'row', justifyContent: 'center', paddingBottom: 6, paddingTop: 8,
+  },
+  summaryText: { fontWeight: '700' },
+  timeCell: { alignItems: 'center', justifyContent: 'flex-start' },
+  timelineRow: { flexDirection: 'row' },
+  untimedCard: {
+    borderLeftWidth: 3, borderRadius: 10, borderWidth: 1, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 6,
+  },
+  untimedCardText: { fontSize: 11 },
+  untimedColumns: { flex: 1, flexDirection: 'row' },
+  untimedDayColumn: { flex: 1, paddingHorizontal: 4 },
+  untimedLabel: { fontSize: 11 },
+  untimedLabelColumn: { justifyContent: 'flex-start', paddingRight: 8, width: TIME_COLUMN_WIDTH },
+  untimedMoreButton: {
+    alignItems: 'center', borderColor: 'rgba(1,179,244,0.35)', borderRadius: 10, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 6,
+  },
+  untimedSection: {
+    borderBottomWidth: 1, flexDirection: 'row', marginBottom: 8, paddingBottom: 8, paddingTop: 4,
+  },
+});
 
 export default PlanningWeekTimelineView;

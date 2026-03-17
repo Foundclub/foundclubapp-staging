@@ -316,7 +316,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           style={sectionCardStyle}
         >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
-            {t('superAdminContentManager.detail.sections.keyFields', 'Champs cles')}
+            {t('superAdminContentManager.detail.sections.keyFields', 'Champs clés')}
           </Text>
           {isLoading ? (
             <ActivityIndicator color={Colors.primary500} />
@@ -345,7 +345,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
                 </View>
               )) : (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  {t('superAdminContentManager.detail.noKeyFields', 'Aucun champ cle detecte.')}
+                  {t('superAdminContentManager.detail.noKeyFields', 'Aucun champ cle détecté.')}
                 </Text>
               )}
             </View>

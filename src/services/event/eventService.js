@@ -101,7 +101,7 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
 
 /**
  * Create multiple events sequentially.
- * Useful for recurrent creation to collect partial failures.
+ * Useful for récurrent creation to collect partial failures.
  * @param {FCEventForm[]} payloads
  * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
  */
@@ -712,6 +712,38 @@ export const getClubEvents = async (clubId) => getEvents({
   club: { label: '', value: clubId },
   // validationMode: 'auto' // REMOVED: We want to see ALL events (manual & auto) for the club planning
 });
+
+/**
+ * Get lightweight planning slots for the connected user.
+ * @param {{ from?: string, to?: string }} [filters]
+ * @returns {Promise<any>}
+ */
+export const getMyPlanning = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.from) params.append('from', filters.from);
+  if (filters.to) params.append('to', filters.to);
+
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  const response = await client.get(`/users/me/planning${suffix}`);
+  return response.data;
+};
+
+/**
+ * Get lightweight planning slots for a club.
+ * @param {string} clubId
+ * @param {{ facilityId?: string, from?: string, to?: string }} [filters]
+ * @returns {Promise<any>}
+ */
+export const getClubPlanning = async (clubId, filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.facilityId) params.append('facilityId', filters.facilityId);
+  if (filters.from) params.append('from', filters.from);
+  if (filters.to) params.append('to', filters.to);
+
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  const response = await client.get(`/clubs/${clubId}/planning${suffix}`);
+  return response.data;
+};
 
 /**
  * Get events for the connected user (My Planning)

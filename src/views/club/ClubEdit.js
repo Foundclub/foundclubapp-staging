@@ -269,7 +269,7 @@ function ClubEdit({ navigation, route }) {
                   label={t('clubDetails.titles.activities') || 'Sports'}
                   onBlur={onBlur}
                   options={activityOptions}
-                  placeholder={t('clubFilters.fields.activity.placeholder') || 'Selectionner une activité'}
+                  placeholder={t('clubFilters.fields.activity.placeholder') || 'Sélectionner une activité'}
                   ref={ref}
                   searchValue={activitySearch}
                   setSearchValue={setActivitySearch}

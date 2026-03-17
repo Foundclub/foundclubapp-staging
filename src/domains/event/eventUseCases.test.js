@@ -233,7 +233,7 @@ describe('Event Use Cases', () => {
   });
 
   describe('createReccurrentEventPayload', () => {
-    test('should create single event when not recurrent', () => {
+    test('should create single event when not récurrent', () => {
       const mockEvent = {
         capacity: 10,
         date: '15/05/2025',

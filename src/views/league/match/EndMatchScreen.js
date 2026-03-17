@@ -172,7 +172,7 @@ function EndMatchScreen() {
 
   const matchPhase = getMatchDerivedPhase(match);
   const isScoreSubmissionAllowed = ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase);
-  const scoreSubmissionBlockReason = "Le score ne peut pas être saisi ? ce stade. V?rifiez que l'heure de d?but du match est d?pass?e.";
+  const scoreSubmissionBlockReason = "Le score ne peut pas être saisi ? ce stade. Vérifiez que l'heure de début du match est d?pass?e.";
   const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
   const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
@@ -375,7 +375,7 @@ function EndMatchScreen() {
         console.log('User cancelled image picker');
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
-        Alert.alert('Erreur', 'Impossible de selectionner une image');
+        Alert.alert('Erreur', 'Impossible de sélectionner une image');
       } else if (response.assets && response.assets.length > 0) {
         const asset = response.assets[0];
         const nextProof = buildProofPayloadFromAsset(asset, 'gallery');
@@ -870,3 +870,4 @@ const styles = StyleSheet.create({
 });
 
 export default EndMatchScreen;
+

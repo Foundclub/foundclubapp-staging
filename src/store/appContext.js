@@ -3,10 +3,16 @@ import { Platform } from 'react-native';
 import { MMKV } from 'react-native-mmkv';
 
 import appReducer from '@/store/appReducer';
+import {
+  registerAuthRuntimeDispatch,
+  syncAuthRuntimeState,
+} from '@/store/authRuntime';
 
 const AppStateContext = React.createContext(/** @type {Store} */({}));
 const AppDispatchContext = React
   .createContext(/** @type {React.Dispatch<{ type: AppContextTypes; payload?: any; }>} */({}));
+
+const isLocalAppEnvironment = () => String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase() === 'local';
 
 let storageInstance = null;
 let storageBackend = 'mmkv';
@@ -130,6 +136,34 @@ const safeJsonStringify = (key, value) => {
   }
 };
 
+const normalizeDocumentId = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getSessionDocumentId = (session) => normalizeDocumentId(session?.user?.documentId);
+
+const orderSessionsByActive = (sessions, activeSessionDocumentId) => {
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
+  const normalizedActiveDocumentId = normalizeDocumentId(activeSessionDocumentId);
+  if (!normalizedActiveDocumentId) {
+    return [...safeSessions];
+  }
+
+  const matchingSession = safeSessions.find(
+    (session) => getSessionDocumentId(session) === normalizedActiveDocumentId,
+  );
+  if (!matchingSession) {
+    return [...safeSessions];
+  }
+
+  return [
+    matchingSession,
+    ...safeSessions.filter((session) => getSessionDocumentId(session) !== normalizedActiveDocumentId),
+  ];
+};
+
 /**
  * Normalize a persisted fcmToken value from legacy formats.
  * @param {string | undefined} rawValue
@@ -159,24 +193,62 @@ const normalizeStoredFcmToken = (rawValue) => {
 const storedAuth = getStoredJson('auth', undefined);
 const storedAuthSessionsRaw = getStoredJson('authSessions', []);
 const storedAuthSessions = Array.isArray(storedAuthSessionsRaw) ? storedAuthSessionsRaw : [];
+const storedActiveSessionDocumentId = normalizeDocumentId(
+  storage.contains('activeSessionDocumentId') ? storage.getString('activeSessionDocumentId') : undefined,
+);
 const rawStoredFcmToken = storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined;
 const storedFcmToken = normalizeStoredFcmToken(rawStoredFcmToken);
 if (storage.contains('fcmToken') && !storedFcmToken) {
   storage.delete('fcmToken');
 }
 
+const initialAuthSessions = (() => {
+  const sessions = [];
+  const seenDocumentIds = new Set();
+
+  const pushSession = (session) => {
+    const documentId = getSessionDocumentId(session);
+    if (!documentId || seenDocumentIds.has(documentId)) {
+      return;
+    }
+    seenDocumentIds.add(documentId);
+    sessions.push(session);
+  };
+
+  storedAuthSessions.forEach(pushSession);
+  pushSession(storedAuth);
+
+  return sessions;
+})();
+
+const resolvedInitialActiveSessionDocumentId = (() => {
+  if (storedActiveSessionDocumentId) {
+    return storedActiveSessionDocumentId;
+  }
+
+  const storedAuthDocumentId = getSessionDocumentId(storedAuth);
+  if (storedAuthDocumentId) {
+    return storedAuthDocumentId;
+  }
+
+  return getSessionDocumentId(initialAuthSessions[0]);
+})();
+
+const orderedInitialAuthSessions = orderSessionsByActive(
+  initialAuthSessions,
+  resolvedInitialActiveSessionDocumentId,
+);
+const initialAuth = orderedInitialAuthSessions[0];
+const initialActiveSessionDocumentId = getSessionDocumentId(initialAuth);
+
 /**
  * Initial state for the global application context.
  * @type {Store}
  */
 const initStore = {
-  auth: storedAuth,
-  authSessions: (() => {
-    if (storedAuthSessions.length === 0 && storedAuth) {
-      return [storedAuth];
-    }
-    return storedAuthSessions;
-  })(),
+  activeSessionDocumentId: initialActiveSessionDocumentId,
+  auth: initialAuth,
+  authSessions: orderedInitialAuthSessions,
   clubFilters: undefined,
   eventFilters: undefined,
   fcmToken: storedFcmToken,
@@ -185,6 +257,7 @@ const initStore = {
   onboardingViews: undefined,
   pendingNotification: null,
   reservationFilters: undefined,
+  returnSessionDocumentId: undefined,
   squadFilters: undefined,
   teamFilters: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,
@@ -213,9 +286,11 @@ const setPersistantState = (key, newValue) => {
  */
 function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initStore);
+  syncAuthRuntimeState(state);
 
   useEffect(() => {
     console.info('[BOOT] BOOT_STORE_READY', {
+      activeSessionDocumentId: state.activeSessionDocumentId,
       hasAuth: Boolean(state.auth),
       sessionCount: Array.isArray(state.authSessions) ? state.authSessions.length : 0,
       storageBackend,
@@ -226,6 +301,10 @@ function AppProvider({ children }) {
 
   useEffect(() => {
     setPersistantState('auth', safeJsonStringify('auth', state.auth));
+    setPersistantState(
+      'activeSessionDocumentId',
+      normalizeDocumentId(state.activeSessionDocumentId),
+    );
     setPersistantState('authSessions', safeJsonStringify('authSessions', state.authSessions));
     setPersistantState(
       'fcmToken',
@@ -235,16 +314,27 @@ function AppProvider({ children }) {
   }, [state]);
 
   useEffect(() => {
-    const listener = storage.addOnValueChangedListener((changedKey) => {
-      if (changedKey === 'auth') {
-        const newValue = storage.getString(changedKey);
-        if (!newValue) {
-          dispatch({ type: 'DELETE_AUTHENTICATION' });
-        }
-      }
+    const unregister = registerAuthRuntimeDispatch(dispatch);
+    return () => unregister();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!isLocalAppEnvironment()) {
+      return;
+    }
+
+    console.info('[AUTH] APP_CONTEXT_SYNC', {
+      activeSessionDocumentId: state.activeSessionDocumentId,
+      hasAuthToken: Boolean(state.auth?.token),
+      isAddingAccount: state.isAddingAccount,
+      sessionCount: Array.isArray(state.authSessions) ? state.authSessions.length : 0,
     });
-    return () => listener.remove();
-  });
+  }, [
+    state.activeSessionDocumentId,
+    state.auth?.token,
+    state.authSessions,
+    state.isAddingAccount,
+  ]);
 
   const contextValue = React.useMemo(() => state, [state]);
   const dispatchValue = React.useMemo(() => dispatch, []);

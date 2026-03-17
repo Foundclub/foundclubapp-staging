@@ -121,6 +121,13 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
     || resolveRequesterAvatarUrl(request?.user || {});
+  const requestType = normalizeString(request?.type) === 'claim' ? 'claim' : 'join';
+  const title = requestType === 'claim'
+    ? 'Revendication club'
+    : 'Demande affiliation club';
+  const subtitle = requestType === 'claim'
+    ? `${requesterName} veut revendiquer la gestion du club ${clubName}.`
+    : `${requesterName} demande une affiliation au club ${clubName}.`;
 
   return {
     actions: { primary: 'accept', secondary: 'reject' },
@@ -134,10 +141,11 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
       requesterId: normalizeString(requester?.documentId || request?.user?.documentId),
       requesterName,
       requestId,
+      requestType,
     },
     status: 'pending',
-    subtitle: `${requesterName} demande une affiliation au club ${clubName}.`,
-    title: 'Demande affiliation club',
+    subtitle,
+    title,
     type: 'club',
   };
 };

@@ -1,22 +1,29 @@
 import { FlashList } from '@shopify/flash-list';
-import { format, isSameDay, parseISO } from 'date-fns';
+import {
+  format,
+  isToday,
+  parseISO,
+} from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  StyleSheet, Text, View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
-import useAuth from '@/domains/auth/useAuth';
-import { horizontalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
 
-import EventCard from '@/components/molecules/eventCard/EventCard';
-import FeaturedReservationCard from '@/components/molecules/featuredReservationCard/FeaturedReservationCard';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import {
+  getPlanningDisplayTitle,
+  getPlanningItemDate,
+  getPlanningTypeLabel,
+} from '@/utils/planning/planningSlots';
 
-// Configure locale for French
 LocaleConfig.locales.fr = {
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'],
@@ -34,35 +41,143 @@ LocaleConfig.locales.fr = {
     'Novembre',
     'Décembre',
   ],
-  monthNamesShort: ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'],
+  monthNamesShort: [
+    'Janv.',
+    'Févr.',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juil.',
+    'Août',
+    'Sept.',
+    'Oct.',
+    'Nov.',
+    'Déc.',
+  ],
   today: "Aujourd'hui",
 };
 LocaleConfig.defaultLocale = 'fr';
 
+const hexToRgba = (hex, alpha) => {
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#') || hex.length !== 7) {
+    return `rgba(1, 179, 244, ${alpha})`;
+  }
+
+  const red = Number.parseInt(hex.slice(1, 3), 16);
+  const green = Number.parseInt(hex.slice(3, 5), 16);
+  const blue = Number.parseInt(hex.slice(5, 7), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
 /**
- * @typedef {{
- *   id?: string | number;
- *   documentId?: string;
- *   date?: string;
- *   type?: { name?: string };
- * }} PlanningEvent
+ *
+ * @param root0
+ * @param root0.colors
+ * @param root0.date
+ * @param root0.eventsByDate
+ * @param root0.fonts
+ * @param root0.onPress
+ * @param root0.selectedDate
+ * @param root0.state
  */
+function PlanningCalendarDay({
+  colors,
+  date,
+  eventsByDate,
+  fonts,
+  onPress,
+  selectedDate,
+  state,
+}) {
+  const dateString = date?.dateString;
+  if (!dateString) return null;
+
+  const dayEvents = eventsByDate.get(dateString) || [];
+  const uniqueColors = [...new Set(
+    dayEvents
+      .map((event) => resolveFacilityPlanningColor(event?.facility) || colors.primary500)
+      .filter(Boolean),
+  )].slice(0, 3);
+  const extraCount = Math.max(0, dayEvents.length - 3);
+  const isSelected = dateString === selectedDate;
+  const isCurrentDay = isToday(parseISO(dateString));
+  const isDisabled = state === 'disabled';
+
+  let dayColor = colors.neutral00;
+  if (isSelected) {
+    dayColor = colors.neutral00;
+  } else if (isCurrentDay) {
+    dayColor = colors.primary500;
+  }
+
+  return (
+    <TouchableOpacity onPress={() => onPress(dateString)} style={styles.dayCellTouch}>
+      <View
+        style={[
+          styles.dayCell,
+          {
+            backgroundColor: isSelected ? colors.primary500 : 'transparent',
+            borderColor: isCurrentDay ? colors.primary500 : 'transparent',
+            opacity: isDisabled ? 0.4 : 1,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            fonts.p3Bold,
+            {
+              color: dayColor,
+              fontSize: 13,
+            },
+          ]}
+        >
+          {date.day}
+        </Text>
+
+        <View style={styles.dayMarkersRow}>
+          {uniqueColors.map((color) => (
+            <View
+              key={`${dateString}-${color}`}
+              style={[styles.dayMarker, { backgroundColor: color }]}
+            />
+          ))}
+          {extraCount > 0 ? (
+            <Text
+              style={[
+                fonts.p3Bold,
+                {
+                  color: isSelected ? colors.neutral00 : colors.primary500,
+                  fontSize: 9,
+                },
+              ]}
+            >
+              +
+              {extraCount}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 /**
- * PlanningCalendarView component
- * @param {object} props
- * @param {PlanningEvent[]} [props.events] - List of events to display
- * @param {(event: PlanningEvent) => void} [props.onEventPress] - Callback when an event is pressed
- * @param {(event: PlanningEvent) => void} [props.onParticipate] - Callback for participation
- * @param {Date} [props.currentDate] - Current selected date (controlled)
- * @param {(date: Date) => void} [props.onDateSelect] - Callback when date changes
- * @returns {React.ReactElement} PlanningCalendarView component
+ * Monthly planning view with colored day markers and a daily event list.
+ * @param {{
+ *   currentDate?: Date;
+ *   events?: Array<any>;
+ *   onDateSelect?: (date: Date) => void;
+ *   onEventPress?: (event: any) => void;
+ * }} props
+ * @returns {import('react').ReactElement}
  */
 function PlanningCalendarView({
   currentDate: propDate,
   events = [],
   onDateSelect,
   onEventPress,
-  onParticipate,
 }) {
   const {
     Alignments,
@@ -72,152 +187,169 @@ function PlanningCalendarView({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { userData } = useAuth();
-
-  // Use prop date if available, otherwise internal state (although parent should control it)
   const [internalDate, setInternalDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const selectedDate = useMemo(() => {
     if (propDate) return format(propDate, 'yyyy-MM-dd');
     return internalDate;
-  }, [propDate, internalDate]);
+  }, [internalDate, propDate]);
 
-  const handleDateChange = (/** @type {string} */ dateString) => {
+  const handleDateChange = useCallback((dateString) => {
     if (onDateSelect) {
       onDateSelect(parseISO(dateString));
-    } else {
-      setInternalDate(dateString);
+      return;
     }
-  };
 
-  // Group events by date for the calendar markers
-  const markedDates = useMemo(() => {
-    const markers = /** @type {Record<string, any>} */ ({});
+    setInternalDate(dateString);
+  }, [onDateSelect]);
 
-    // Mark today
-    const today = format(new Date(), 'yyyy-MM-dd');
-    markers[today] = {
-      customStyles: {
-        container: {
-          borderColor: Colors.primary500,
-          borderWidth: 1,
-        },
-        text: {
-          color: Colors.neutral00,
-          fontWeight: 'bold',
-        },
-      },
-    };
+  const eventsByDate = useMemo(() => {
+    const map = new Map();
 
-    // Mark event days
-    events.forEach((/** @type {PlanningEvent} */ event) => {
-      if (!event.date) return;
+    events.forEach((event) => {
+      const eventDate = getPlanningItemDate(event);
+      if (!eventDate) return;
 
-      const dateStr = format(new Date(event.date), 'yyyy-MM-dd');
-
-      // Don't overwrite today's custom style completely, just add the dot
-      if (markers[dateStr]) {
-        markers[dateStr] = {
-          ...markers[dateStr],
-          dotColor: Colors.primary500,
-          marked: true,
-        };
-      } else {
-        markers[dateStr] = {
-          customStyles: {
-            text: {
-              color: Colors.neutral00,
-            },
-          },
-          dotColor: Colors.primary500,
-          marked: true,
-        };
-      }
+      const key = format(eventDate, 'yyyy-MM-dd');
+      const currentItems = map.get(key) || [];
+      map.set(key, [...currentItems, event]);
     });
 
-    // Mark selected date
-    if (markers[selectedDate]) {
-      markers[selectedDate] = {
-        ...markers[selectedDate],
-        selected: true,
-        selectedColor: Colors.primary500,
-        selectedTextColor: Colors.neutral00,
-      };
-    } else {
-      markers[selectedDate] = {
-        customStyles: {
-          text: {
-            color: Colors.neutral00,
-            fontWeight: 'bold',
-          },
-        },
-        selected: true,
-        selectedColor: Colors.primary500,
-        selectedTextColor: Colors.neutral00,
-      };
-    }
+    return map;
+  }, [events]);
 
-    return markers;
-  }, [events, selectedDate, Colors]);
-
-  // Filter events for the selected date
-  const selectedEvents = useMemo(() => events.filter((/** @type {PlanningEvent} */ event) => {
-    if (!event.date) return false;
-    return isSameDay(new Date(event.date), parseISO(selectedDate));
-  }), [events, selectedDate]);
-
-  const renderItem = (/** @type {{ item: PlanningEvent }} */ { item }) => {
-    const isReservation = item?.type?.name === 'Réservation';
-    const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
-    // Always allow seeing details/about in planning view
-    const showAbout = true;
-
-    if (isReservation) {
-      return (
-        <FeaturedReservationCard
-          actionLabel={showAbout ? t('eventList.actions.about') : undefined}
-          item={item}
-          onParticipate={() => (showAbout ? onEventPress?.(item) : onParticipate?.(item))}
-          onPress={() => onEventPress?.(item)}
-          style={{ marginRight: 0, marginVertical: 12, width: '100%' }}
-        />
-      );
-    }
-
-    return (
-      <EventCard
-        item={item}
-        onDecline={() => {}}
-        onJoin={() => {}}
-        onLogin={() => {}}
-        onParticipate={() => onParticipate?.(item)}
-        onPress={() => onEventPress?.(item)}
-      />
-    );
-  };
-
-  const renderEmptyList = () => (
-    <View style={[
-      ApplicationStyle.backgroundColor.primary900,
-      ApplicationStyle.borderRadius16,
-      Alignments.alignCenter,
-      Spaces.gap[16],
-      Spaces.padding[24],
-      Spaces.marginVertical[24]]}
-    >
-      <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {t('planning.noEventsForDate', 'Aucun évènement ce jour-là')}
-      </Text>
-    </View>
+  const selectedEvents = useMemo(
+    () => eventsByDate.get(selectedDate) || [],
+    [eventsByDate, selectedDate],
   );
 
+  const renderPlanningListCard = useCallback(({ item }) => {
+    const accentColor = resolveFacilityPlanningColor(item?.facility) || Colors.primary500;
+    const typeLabel = getPlanningTypeLabel(item);
+    const facilityName = item?.facility?.name || null;
+    const timeLabel = item?.startTime && item?.endTime
+      ? `${String(item.startTime).slice(0, 5)} - ${String(item.endTime).slice(0, 5)}`
+      : t('planning.labels.noTime', 'Sans horaire');
+
+    return (
+      <TouchableOpacity
+        onPress={() => onEventPress?.(item)}
+        style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Spaces.marginBottom[12],
+          Spaces.padding[16],
+          {
+            borderColor: hexToRgba(accentColor, 0.45),
+            borderLeftColor: accentColor,
+            borderLeftWidth: 4,
+            borderWidth: 1,
+          },
+        ]}
+      >
+        <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {getPlanningDisplayTitle(item)}
+        </Text>
+
+        {typeLabel ? (
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+            {typeLabel}
+          </Text>
+        ) : null}
+
+        {facilityName ? (
+          <Text numberOfLines={1} style={[Fonts.p3Bold, { color: accentColor, marginTop: 6 }]}>
+            {facilityName}
+          </Text>
+        ) : null}
+
+        <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
+          {timeLabel}
+        </Text>
+      </TouchableOpacity>
+    );
+  }, [
+    ApplicationStyle.backgroundColor.primary700,
+    ApplicationStyle.borderRadius24,
+    Colors.neutral300,
+    Colors.primary500,
+    Fonts.neutral00,
+    Fonts.p1Bold,
+    Fonts.p3,
+    Fonts.p3Bold,
+    Spaces.marginBottom,
+    Spaces.padding,
+    onEventPress,
+    t,
+  ]);
+
+  const renderEmptyList = useCallback(() => (
+    <View
+      style={[
+        ApplicationStyle.backgroundColor.primary900,
+        ApplicationStyle.borderRadius16,
+        Alignments.alignCenter,
+        Spaces.padding[24],
+        Spaces.marginVertical[24],
+      ]}
+    >
+      <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
+        {t('planning.noEventsForDate', 'Aucun événement ce jour-là')}
+      </Text>
+    </View>
+  ), [
+    Alignments.alignCenter,
+    ApplicationStyle.backgroundColor.primary900,
+    ApplicationStyle.borderRadius16,
+    Fonts.neutral00,
+    Fonts.p1Bold,
+    Fonts.textCenter,
+    Spaces.marginVertical,
+    Spaces.padding,
+    t,
+  ]);
+
+  const renderDayComponent = useCallback(({ date, state }) => (
+    <PlanningCalendarDay
+      colors={Colors}
+      date={date}
+      eventsByDate={eventsByDate}
+      fonts={Fonts}
+      onPress={handleDateChange}
+      selectedDate={selectedDate}
+      state={state}
+    />
+  ), [Colors, Fonts, eventsByDate, handleDateChange, selectedDate]);
+
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
+
   return (
-    <View style={[Alignments.fill]}>
+    <View style={Alignments.fill}>
+      <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[12], Alignments.alignEnd]}>
+        <TouchableOpacity
+          onPress={() => handleDateChange(todayKey)}
+          style={[
+            ApplicationStyle.borderRadius16,
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: ApplicationStyle.backgroundColor.primary700.backgroundColor,
+              borderColor: Colors.primary500,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+            {t('planning.actions.today', "Aujourd'hui")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <Calendar
         current={selectedDate}
+        dayComponent={renderDayComponent}
         enableSwipeMonths
-        firstDay={1} // Monday
-        markedDates={markedDates}
+        firstDay={1}
         markingType="custom"
         onDayPress={(day) => handleDateChange(day.dateString)}
         onMonthChange={(month) => handleDateChange(month.dateString)}
@@ -225,12 +357,8 @@ function PlanningCalendarView({
           arrowColor: Colors.primary500,
           calendarBackground: 'transparent',
           dayTextColor: Colors.neutral00,
-          dotColor: Colors.primary500,
           indicatorColor: Colors.primary500,
           monthTextColor: Colors.neutral00,
-          selectedDayBackgroundColor: Colors.primary500,
-          selectedDayTextColor: Colors.neutral00,
-          selectedDotColor: Colors.neutral00,
           textDayFontFamily: 'Montserrat-Regular',
           textDayFontSize: 14,
           textDayHeaderFontFamily: 'Montserrat-Regular',
@@ -248,14 +376,14 @@ function PlanningCalendarView({
           {format(parseISO(selectedDate), 'EEEE d MMMM yyyy', { locale: fr })}
         </Text>
 
-        <View style={[Alignments.fill]}>
+        <View style={Alignments.fill}>
           <FlashList
             contentContainerStyle={{ paddingBottom: 100 }}
             data={selectedEvents}
-            estimatedItemSize={200}
+            estimatedItemSize={120}
             keyExtractor={(item, index) => item?.documentId || String(item?.id || index)}
             ListEmptyComponent={renderEmptyList}
-            renderItem={renderItem}
+            renderItem={renderPlanningListCard}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -263,5 +391,34 @@ function PlanningCalendarView({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  dayCell: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 38,
+    paddingHorizontal: 2,
+    paddingTop: 4,
+  },
+  dayCellTouch: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 32,
+  },
+  dayMarker: {
+    borderRadius: 999,
+    height: 4,
+    marginHorizontal: 1.5,
+    width: 4,
+  },
+  dayMarkersRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 3,
+    minHeight: 10,
+  },
+});
 
 export default PlanningCalendarView;

@@ -136,7 +136,7 @@ function SuperAdminContentExplorer({ navigation }) {
             {contentTypes.length}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary200]}>
-            {t('superAdminContentManager.explorer.results', 'Resultats')}
+            {t('superAdminContentManager.explorer.results', 'R?sultats')}
             {': '}
             {filtered.length}
           </Text>
@@ -202,8 +202,8 @@ function SuperAdminContentExplorer({ navigation }) {
           !isLoading ? (
             <View style={{ width: '100%' }}>
               <SuperAdminEmptyState
-                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou v?rifiez les permissions Super Admin.')}
-                title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouv?')}
+                description={t('superAdminContentManager.empty.explorerDescription', 'Ajustez la recherche ou vérifiez les permissions Super Admin.')}
+                title={t('superAdminContentManager.empty.explorerTitle', 'Aucun content-type trouvé')}
               />
             </View>
           ) : null
@@ -251,3 +251,4 @@ function SuperAdminContentExplorer({ navigation }) {
 }
 
 export default SuperAdminContentExplorer;
+

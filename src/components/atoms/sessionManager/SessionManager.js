@@ -18,47 +18,50 @@ const sessionLogger = createLogger('session-manager');
  * This should be placed at the root of the app, inside Providers but outside Navigation.
  */
 function SessionManager() {
-  const [{ auth, isAddingAccount }, appDispatch] = useAppContext();
+  const [{ activeSessionDocumentId, auth, isAddingAccount }, appDispatch] = useAppContext();
   const queryClient = useQueryClient();
 
   // Use ref to track adding account state and prevent race conditions
-  // This prevents the subscription from firing when isAddingAccount changes from true to false
   const isAddingAccountRef = useRef(isAddingAccount);
-  const hasRestoredRef = useRef(false);
+  const activeSessionDocumentIdRef = useRef(activeSessionDocumentId);
+  const authTokenRef = useRef(auth?.token);
+  const hasRestoredRef = useRef(Boolean(activeSessionDocumentId || auth?.token));
 
   // Keep ref in sync with state
   useEffect(() => {
     isAddingAccountRef.current = isAddingAccount;
-    // When adding account is completed (goes from true to false), mark as restored
-    // to prevent the subscription from overwriting the new session
-    if (!isAddingAccount && hasRestoredRef.current === false && auth?.token) {
+    activeSessionDocumentIdRef.current = activeSessionDocumentId;
+    authTokenRef.current = auth?.token;
+
+    if (activeSessionDocumentId || auth?.token) {
       hasRestoredRef.current = true;
     }
-  }, [isAddingAccount, auth]);
+  }, [activeSessionDocumentId, auth?.token, isAddingAccount]);
 
   useEffect(() => {
-    // Skip session restoration via API in these cases:
-    // - Bypass mode: session is already loaded from MMKV storage, no Firebase to subscribe to
     if (isFirebaseBypassEnabled()) {
       sessionLogger.debug('Bypass mode enabled, skipping session restoration');
       return undefined;
     }
 
     const unsubscribe = subscribeToAuthState(async (user) => {
-      // Skip if we're adding an account or already have a session
       if (isAddingAccountRef.current) {
         sessionLogger.debug('Skipping auth subscription callback (adding account mode)');
         return;
       }
-      if (hasRestoredRef.current) {
-        sessionLogger.debug('Skipping auth subscription callback (session already restored)');
+      if (activeSessionDocumentIdRef.current || authTokenRef.current || hasRestoredRef.current) {
+        sessionLogger.debug('Skipping auth subscription callback (app session already resolved)', {
+          activeSessionDocumentId: activeSessionDocumentIdRef.current,
+          hasAuthToken: Boolean(authTokenRef.current),
+        });
         return;
       }
 
       if (user) {
-        // User is authenticated in Firebase, restore Strapi session
         try {
-          sessionLogger.debug('Restoring session from Firebase auth state');
+          sessionLogger.debug('Restoring session from Firebase auth state', {
+            firebaseUid: user?.uid,
+          });
           const data = await login({});
 
           queryClient.clear();
@@ -69,13 +72,12 @@ function SessionManager() {
           hasRestoredRef.current = true;
         } catch (error) {
           sessionLogger.warn('Session restoration failed', error);
-          appDispatch({ type: 'DELETE_AUTHENTICATION' });
         }
       }
     });
 
     return () => unsubscribe();
-  }, [appDispatch, queryClient]); // Removed isAddingAccount to prevent re-subscription
+  }, [appDispatch, queryClient]);
 
   return null;
 }

@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -23,7 +23,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { deleteFacility, getCMFacilities, getFacilities } from '@/services/facility/facilityService';
+import { useClubFacilityContext } from '@/services/facility/facilityQueries';
+import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
@@ -48,63 +49,6 @@ const getAddressCoordinates = (address) => {
   return { lat, lng };
 };
 
-const fetchContextFacilities = async (clubId, cmId) => {
-  const promises = [];
-  if (clubId) promises.push(getFacilities(clubId));
-  if (cmId) promises.push(getCMFacilities(cmId));
-
-  const results = await Promise.all(promises);
-
-  if (clubId && cmId) {
-    const clubData = results[0]?.data || [];
-    const cmData = results[1]?.data || [];
-    const taggedCM = cmData.map((facility) => ({
-      ...facility,
-      isReadOnly: true,
-      source: 'Multisport',
-    }));
-    return [...clubData, ...taggedCM];
-  }
-
-  return results[0]?.data || [];
-};
-
-const getSections = (facilities, t) => {
-  if (!facilities.length) return [];
-
-  const editableFacilities = facilities.filter((facility) => !facility.isReadOnly);
-  const sharedFacilities = facilities.filter((facility) => facility.isReadOnly);
-
-  if (editableFacilities.length && sharedFacilities.length) {
-    return [
-      {
-        data: editableFacilities,
-        title: t('facilityList.sections.club', 'Installations du club'),
-      },
-      {
-        data: sharedFacilities,
-        title: t('facilityList.sections.shared', 'Installations partagées'),
-      },
-    ];
-  }
-
-  if (sharedFacilities.length) {
-    return [
-      {
-        data: sharedFacilities,
-        title: t('facilityList.sections.sharedOnly', 'Installations partagées'),
-      },
-    ];
-  }
-
-  return [
-    {
-      data: editableFacilities,
-      title: t('facilityList.sections.clubOnly', 'Installations du club'),
-    },
-  ];
-};
-
 const getListSubtitle = (count) => `${count} ${(count === 0 || count > 1) ? 'installations' : 'installation'}`;
 
 const getFacilityKey = (item, index) => (item.documentId || item.id?.toString() || `${item?.name || 'facility'}-${index}`);
@@ -123,45 +67,29 @@ function FacilityList() {
   const { userData } = useAuth();
 
   const contextClubId = route.params?.clubId || userData?.club?.documentId || userData?.club?.id;
-  const contextCmId = route.params?.cmId;
-
-  const [facilities, setFacilities] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchFacilities = useCallback(async () => {
-    if (!contextClubId && !contextCmId) return;
-
-    setLoading(true);
-    try {
-      const combinedData = await fetchContextFacilities(contextClubId, contextCmId);
-      setFacilities(combinedData);
-    } catch (error) {
-      // no-op: keep previous list on fetch error
-    } finally {
-      setLoading(false);
-    }
-  }, [contextClubId, contextCmId]);
-
-  const onRefresh = useCallback(async () => {
-    if (!contextClubId && !contextCmId) return;
-
-    setRefreshing(true);
-    try {
-      const combinedData = await fetchContextFacilities(contextClubId, contextCmId);
-      setFacilities(combinedData);
-    } catch (error) {
-      // no-op: keep previous list on refresh error
-    } finally {
-      setRefreshing(false);
-    }
-  }, [contextClubId, contextCmId]);
+  const contextCmId = route.params?.cmId
+    || (!route.params?.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
+  const {
+    data: facilityContext,
+    isLoading: loading,
+    isRefetching: refreshing,
+    refetch: refetchFacilities,
+  } = useClubFacilityContext({
+    clubId: contextClubId,
+    cmId: contextCmId,
+  });
+  const facilities = useMemo(() => facilityContext?.allFacilities || [], [facilityContext?.allFacilities]);
+  const resolvedCmId = facilityContext?.cmId || contextCmId || null;
 
   useFocusEffect(
     useCallback(() => {
-      fetchFacilities();
-    }, [fetchFacilities]),
+      refetchFacilities();
+    }, [refetchFacilities]),
   );
+
+  const onRefresh = useCallback(() => {
+    refetchFacilities();
+  }, [refetchFacilities]);
 
   const handleDelete = useCallback((id, name) => {
     if (!id) return;
@@ -181,7 +109,7 @@ function FacilityList() {
           onPress: async () => {
             try {
               await deleteFacility(id);
-              fetchFacilities();
+              refetchFacilities();
             } catch (error) {
               // no-op: alert flow already handled
             }
@@ -191,22 +119,22 @@ function FacilityList() {
         },
       ],
     );
-  }, [fetchFacilities, t]);
+  }, [refetchFacilities, t]);
 
   const handleEdit = useCallback((facility) => {
     navigation.navigate(RouteNames.FacilityForm, {
       clubId: contextClubId,
-      cmId: contextCmId,
+      cmId: resolvedCmId,
       facility,
     });
-  }, [contextClubId, contextCmId, navigation]);
+  }, [contextClubId, navigation, resolvedCmId]);
 
   const handleCreate = useCallback(() => {
     navigation.navigate(RouteNames.FacilityForm, {
       clubId: contextClubId,
-      cmId: contextCmId,
+      cmId: resolvedCmId,
     });
-  }, [contextClubId, contextCmId, navigation]);
+  }, [contextClubId, navigation, resolvedCmId]);
 
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
@@ -245,7 +173,10 @@ function FacilityList() {
       });
   }, []);
 
-  const sections = useMemo(() => getSections(facilities, t), [facilities, t]);
+  const sections = useMemo(() => getFacilitySections(facilityContext?.allFacilities || [], {
+    clubTitle: t('facilityList.sections.club', 'Installations du club'),
+    sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
+  }), [facilityContext?.allFacilities, t]);
   const hasMultipleSections = sections.length > 1;
 
   const renderMetaChip = useCallback((label, tone = 'primary') => {
@@ -305,8 +236,8 @@ function FacilityList() {
     const facilityId = item?.documentId || item?.id;
     const teams = Number(item?.maxSlots || 1);
     const capacityLabel = `${teams} ${teams > 1
-      ? t('facilityList.capacity.teamPlural', 'équipes simultanees')
-      : t('facilityList.capacity.teamSingular', 'équipe simultanee')}`;
+      ? t('facilityList.capacity.teamPlural', 'équipes simultan?es')
+      : t('facilityList.capacity.teamSingular', 'équipe simultan?e')}`;
     const addressLabel = getAddressLabel(
       item?.address,
       t('facilityList.defaults.addressMissing', 'Adresse non renseignee'),
@@ -315,6 +246,7 @@ function FacilityList() {
     const planningColor = resolveFacilityPlanningColor(item);
     const cardTintColor = `${planningColor}22`;
     const isEditable = !item?.isReadOnly;
+    const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
     const accessibilityEditLabel = t(
       'facilityList.accessibility.editCard',
       `Modifier l'installation ${item?.name || ''}`.trim(),
@@ -374,12 +306,13 @@ function FacilityList() {
             >
               {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
             </Text>
-            {item?.isReadOnly ? renderMetaChip('Multisport', 'warning') : null}
+            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.multisport', 'Multisport'), 'warning') : null}
           </View>
 
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
             {renderMetaChip(capacityLabel, 'primary')}
             {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
+            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagee'), 'primary') : null}
           </View>
 
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
@@ -430,9 +363,18 @@ function FacilityList() {
         </TouchableOpacity>
 
         {item?.isReadOnly ? (
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('facilityList.readOnlyHint', 'Installation partagée, modification depuis le multisport uniquement.')}
-          </Text>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t(
+                'facilityList.sharedOwnerHint',
+                'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
+                { ownerName: sharedOwnerLabel },
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('facilityList.readOnlyHint', 'Installation partagée, modification depuis le multisport uniquement.')}
+            </Text>
+          </View>
         ) : (
           <View style={[Alignments.row, Alignments.justifyEnd, Alignments.wrap, Spaces.gap[8]]}>
             <Button

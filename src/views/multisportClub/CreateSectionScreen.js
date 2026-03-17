@@ -252,7 +252,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant à la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce num?ro sera utilise pour rattacher le dirigeant à la section.')}
               </Text>
             </View>
           </View>
@@ -288,3 +288,4 @@ function CreateSectionScreen({ navigation, route }) {
 }
 
 export default CreateSectionScreen;
+

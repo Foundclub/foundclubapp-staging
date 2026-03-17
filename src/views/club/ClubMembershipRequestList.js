@@ -147,12 +147,25 @@ function ClubMembershipRequestList({ navigation, route }) {
       const trainerId = acceptedRequest?.requester?.documentId
         || acceptedRequest?.user?.documentId
         || undefined;
+      const isClaimRequest = acceptedRequest?.type === 'claim';
 
       refetch();
 
+      if (isClaimRequest) {
+        Alert.alert(
+          t('clubMembershipRequestList.fields.claimAcceptedTitle', 'Dirigeant ajouté'),
+          t(
+            'clubMembershipRequestList.fields.claimAccepted',
+            '{{firstname}} a bien été ajouté comme dirigeant du club.',
+            { firstname: trainerLabel },
+          ),
+        );
+        return;
+      }
+
       Alert.alert(
-        'Entraîneur ajoute',
-        `${trainerLabel} a bien été ajoute à votre club.\n\nVoulez-vous l'assigner a une équipe maintenant ?`,
+        'Entra?neur ajouté',
+        `${trainerLabel} a bien été ajouté ? votre club.\n\nVoulez-vous l'assigner ? une équipe maintenant ?`,
         [
           {
             style: 'cancel',
@@ -233,6 +246,7 @@ function ClubMembershipRequestList({ navigation, route }) {
   const renderItem = ({ item }) => (
     (() => {
       const { pendingName, title } = resolveRequesterDisplay(item, t);
+      const isClaimRequest = item?.type === 'claim';
       return (
         <View
           style={[
@@ -307,9 +321,13 @@ function ClubMembershipRequestList({ navigation, route }) {
                   Fonts.p2,
                   Fonts.neutral100]}
               >
-                {t('clubMembershipRequestList.fields.pending', {
-                  firstname: pendingName,
-                })}
+                {isClaimRequest
+                  ? t('clubMembershipRequestList.fields.pendingClaim', {
+                    firstname: pendingName,
+                  })
+                  : t('clubMembershipRequestList.fields.pending', {
+                    firstname: pendingName,
+                  })}
               </Text>
             </View>
           </View>
@@ -451,3 +469,4 @@ function ClubMembershipRequestList({ navigation, route }) {
 }
 
 export default ClubMembershipRequestList;
+

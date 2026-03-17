@@ -24,7 +24,7 @@ const normalizeCategoryName = (value) => (value || '')
  * @param {string} value
  * @returns {{group: number, rank: number, label: string}}
  */
-const getCategorySortKey = (value) => {
+export const getCategorySortKey = (value) => {
   const label = normalizeCategoryName(value);
   const uMatch = label.match(/(?:^|[^A-Z0-9])U\s*[- ]?\s*(\d{1,2})(?:[^0-9]|$)/) || label.match(/^U\s*[- ]?\s*(\d{1,2})$/);
   if (uMatch) {
@@ -48,7 +48,7 @@ const getCategorySortKey = (value) => {
  * @param {{name: string}} b
  * @returns {number}
  */
-const compareCategories = (a, b) => {
+export const compareCategories = (a, b) => {
   const keyA = getCategorySortKey(a?.name || '');
   const keyB = getCategorySortKey(b?.name || '');
 

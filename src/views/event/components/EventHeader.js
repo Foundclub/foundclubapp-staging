@@ -280,7 +280,7 @@ function EventHeader({ event }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              Équipes invitees
+              équipes invit?es
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}
@@ -293,3 +293,4 @@ function EventHeader({ event }) {
 }
 
 export default EventHeader;
+

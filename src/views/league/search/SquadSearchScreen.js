@@ -233,7 +233,7 @@ function SquadSearchScreen() {
             withDefaultMargin={false}
           />
           <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
-            {t('squad.search.title', 'Trouver une Squad')}
+            {t('squad.search.title', 'Trouv?r une Squad')}
           </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate(RouteNames.SquadFilters)}
@@ -353,7 +353,7 @@ function SquadSearchScreen() {
               }}
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  Aucune squad trouv?e
+                  Aucune squad trouvée
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
                   Essaie avec d'autres filtres ou un autre nom de squad.

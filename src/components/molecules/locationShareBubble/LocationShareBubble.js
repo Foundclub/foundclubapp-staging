@@ -78,7 +78,7 @@ function LocationShareBubble({ composition, isMe = false }) {
     >
       <View style={{ gap: 8, paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          Position partagee
+          Position partagée
         </Text>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{label || 'Position'}</Text>
         {coordinates ? (

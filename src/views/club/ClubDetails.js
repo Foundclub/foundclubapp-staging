@@ -28,10 +28,12 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { removeTrainerFromClub } from '@/services/auth/authService';
+import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { useGetFacilities } from '@/services/facility/facilityQueries';
+import { useClubFacilityContext } from '@/services/facility/facilityQueries';
+import { getFacilitySections } from '@/services/facility/facilityService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -50,8 +52,8 @@ const getFacilityAddressLabel = (address) => {
 const getFacilityCapacityChipLabel = (maxSlots, t) => {
   const teams = Number(maxSlots || 1);
   const unit = teams > 1
-    ? t('facilityList.capacity.teamPlural', 'équipes simultanees')
-    : t('facilityList.capacity.teamSingular', 'équipe simultanee');
+    ? t('facilityList.capacity.teamPlural', 'équipes simultan?es')
+    : t('facilityList.capacity.teamSingular', 'équipe simultan?e');
   return `${teams} ${unit}`;
 };
 
@@ -65,6 +67,46 @@ const getFacilityCoordinates = (address) => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
   return { lat, lng };
+};
+
+const getTeamMetaValue = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    return String(value?.name || value?.label || '').trim();
+  }
+  return '';
+};
+
+const getTeamMetaSummary = (team) => (
+  [
+    getTeamMetaValue(team?.section),
+    getTeamMetaValue(team?.category),
+    getTeamMetaValue(team?.level),
+  ]
+    .filter(Boolean)
+    .join(' | ')
+);
+
+const compareTeamsByAgeCategoryDesc = (teamA, teamB) => {
+  const categoryA = getTeamMetaValue(teamA?.category);
+  const categoryB = getTeamMetaValue(teamB?.category);
+  const keyA = getCategorySortKey(categoryA);
+  const keyB = getCategorySortKey(categoryB);
+
+  const getAgePriority = (key) => {
+    if (key.group === 2) return 400;
+    if (key.group === 1) return 300;
+    if (key.group === 0) return key.rank;
+    return -1;
+  };
+
+  const agePriorityDiff = getAgePriority(keyB) - getAgePriority(keyA);
+  if (agePriorityDiff !== 0) return agePriorityDiff;
+
+  const nameA = String(teamA?.name || '').trim();
+  const nameB = String(teamB?.name || '').trim();
+  return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
 };
 
 /**
@@ -102,6 +144,11 @@ function ClubDetails({ navigation, route }) {
     /** @type {string[]} */
     ([]),
   );
+  const [planningSelection, setPlanningSelection] = useState({
+    facilityId: null,
+    nonce: 0,
+    scope: 'club',
+  });
 
   const handleGoToNextOnboardingStep = useCallback(() => {
     if (!fromOnboardingAffiliation) return;
@@ -134,14 +181,19 @@ function ClubDetails({ navigation, route }) {
     refetch,
   } = useGetClub(clubId ?? '');
   const {
-    data: facilitiesResponse,
+    data: facilityContext,
     isLoading: facilitiesLoading,
     refetch: refetchFacilities,
-  } = useGetFacilities(clubId ?? '');
+  } = useClubFacilityContext({ clubId: clubId ?? '', cmId: club?.parentMultisport?.documentId || null });
   const {
     data: allActivities,
     isLoading: activitiesLoading,
   } = useGetActivities();
+
+  const sortedClubTeams = useMemo(
+    () => [...(club?.teams || [])].sort(compareTeamsByAgeCategoryDesc),
+    [club?.teams],
+  );
 
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
@@ -157,7 +209,7 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
-  const hasPendingJoinRequest = useMemo(() => (
+  const hasPendingClubRequest = useMemo(() => (
     (userData?.clubMembershipRequests || [])
       .some((r) => (r.club?.documentId === clubId || r.club?.id === clubId) && r.state === 'pending')
   ), [userData?.clubMembershipRequests, clubId]);
@@ -264,9 +316,14 @@ function ClubDetails({ navigation, route }) {
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
   const facilities = useMemo(
-    () => (Array.isArray(facilitiesResponse?.data) ? facilitiesResponse.data : []),
-    [facilitiesResponse?.data],
+    () => (Array.isArray(facilityContext?.allFacilities) ? facilityContext.allFacilities : []),
+    [facilityContext?.allFacilities],
   );
+  const facilitySections = useMemo(() => getFacilitySections(facilities, {
+    clubTitle: t('facilityList.sections.club', 'Installations du club'),
+    sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
+  }), [facilities, t]);
+  const resolvedFacilityCmId = facilityContext?.cmId || club?.parentMultisport?.documentId || null;
 
   // handlers
   const handleStartChat = async () => {
@@ -335,6 +392,18 @@ function ClubDetails({ navigation, route }) {
       });
   }, []);
 
+  const handleOpenFacilityPlanning = useCallback((facility, scope = 'club') => {
+    const facilityId = facility?.documentId || facility?.id || null;
+    if (!facilityId) return;
+
+    setPlanningSelection({
+      facilityId,
+      nonce: Date.now(),
+      scope,
+    });
+    setSelectedTab('planning');
+  }, []);
+
   /**
    * Handle delete sponsor action
    * @param {Sponsor} sponsor
@@ -377,7 +446,7 @@ function ClubDetails({ navigation, route }) {
 
     Alert.alert(
       `Supprimer le sport ${activityName} ?`,
-      'Êtes-vous s?r de vouloir continuer ?',
+      'Êtes-vous sûr de vouloir continuer ?',
       [
         {
           style: 'cancel',
@@ -400,27 +469,6 @@ function ClubDetails({ navigation, route }) {
             updateClubMutation.mutate(newClub);
           },
           text: t('common.actions.delete', 'Supprimer'),
-        },
-      ],
-    );
-  };
-
-  const handleContactFoundClub = () => {
-    const contactUrl = process.env.CONTACT_URL;
-
-    Alert.alert(
-      t('clubDetails.alerts.myClub.title'),
-      t('clubDetails.alerts.myClub.description'),
-      [
-        {
-          style: 'cancel',
-          text: t('clubDetails.alerts.myClub.actions.cancel'),
-        },
-        {
-          onPress: async () => {
-            await Linking.openURL(contactUrl || '');
-          },
-          text: t('clubDetails.alerts.myClub.actions.confirm'),
         },
       ],
     );
@@ -452,7 +500,7 @@ function ClubDetails({ navigation, route }) {
   };
 
   const handleAskToJoinClub = () => {
-    if (hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
+    if (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
       return;
     }
     if (canJoinClub && clubId && userData?.documentId) {
@@ -528,6 +576,30 @@ function ClubDetails({ navigation, route }) {
     // Check if IDs match
     return userClubId === parentId;
   }, [userData, club]);
+
+  const isPresidentOfViewedClub = useMemo(() => (
+    userData?.role?.name === USER_ROLES.president
+    && (userData?.club?.documentId || userData?.club?.id) === clubId
+  ), [USER_ROLES.president, clubId, userData]);
+
+  const isCoachOfViewedClub = useMemo(() => (
+    (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
+  ), [clubId, userData?.trainedTeams]);
+
+  const isMultisportAdmin = useMemo(() => (
+    (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
+  ), [resolvedFacilityCmId, userData?.multisportClubs]);
+
+  const canAccessSharedPlanning = useMemo(() => (
+    Boolean(resolvedFacilityCmId)
+    && (isParentClubAdmin || isPresidentOfViewedClub || isCoachOfViewedClub || isMultisportAdmin)
+  ), [
+    isCoachOfViewedClub,
+    isMultisportAdmin,
+    isParentClubAdmin,
+    isPresidentOfViewedClub,
+    resolvedFacilityCmId,
+  ]);
 
   const tabs = useMemo(() => {
     const options = [{ label: 'Informations', value: 'infos' }];
@@ -687,7 +759,7 @@ function ClubDetails({ navigation, route }) {
 
       return (
         <Text style={[Fonts.p1, Fonts.neutral00]}>
-          {t('common.messages.noData', 'Aucune donnee disponible')}
+          {t('common.messages.noData', 'Aucune donnée disponible')}
         </Text>
       );
     }
@@ -696,7 +768,7 @@ function ClubDetails({ navigation, route }) {
       <Text numberOfLines={3} style={[Fonts.p1, Fonts.neutral00]}>
         {club?.activites?.length
           ? club.activites.map(({ name }) => name).join(', ')
-          : t('common.messages.noData', 'Aucune donnee disponible')}
+          : t('common.messages.noData', 'Aucune donnée disponible')}
       </Text>
     );
   })();
@@ -780,12 +852,12 @@ function ClubDetails({ navigation, route }) {
                   imageStyle={{ borderRadius: 80 }}
                   imageUrl={club.logo.url}
                   size={80}
-                  variant="logo"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,
                     { borderRadius: 80 },
                   ]}
+                  variant="logo"
                 />
               ) : (
                 <TeamShield
@@ -853,7 +925,14 @@ function ClubDetails({ navigation, route }) {
           </View>
 
           {selectedTab === 'planning' ? (
-            <ClubPlanning clubId={clubId} />
+            <ClubPlanning
+              allowSharedPlanning={canAccessSharedPlanning}
+              clubId={clubId}
+              cmId={resolvedFacilityCmId}
+              initialFacilityId={planningSelection.facilityId}
+              initialScope={planningSelection.scope}
+              initialSelectionKey={planningSelection.nonce}
+            />
           ) : (
             <>
               {/* Facilities */}
@@ -868,7 +947,7 @@ function ClubDetails({ navigation, route }) {
                       isOption
                       onPress={() => navigation.navigate(RouteNames.FacilityList, {
                         clubId,
-                        cmId: club?.parentMultisport?.documentId,
+                        cmId: resolvedFacilityCmId,
                       })}
                       variant="Primary"
                     />
@@ -887,153 +966,225 @@ function ClubDetails({ navigation, route }) {
                   </Text>
                 ) : null}
 
-                {facilities.map((/** @type {any} */ facility) => {
-                  const facilityId = facility?.documentId || facility?.id;
-                  const capacityChipLabel = getFacilityCapacityChipLabel(facility?.maxSlots, t);
-                  const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
-                  const addressLabel = getFacilityAddressLabel(facility?.address);
-                  const planningColor = resolveFacilityPlanningColor(facility);
-                  const canOpenFacilityEdit = Boolean(canEdit && facilityId);
-                  const handleOpenFacilityEdit = () => {
-                    navigation.navigate(RouteNames.FacilityForm, {
-                      clubId,
-                      cmId: club?.parentMultisport?.documentId,
-                      facility,
-                    });
-                  };
-                  return (
-                    <TouchableOpacity
-                      accessibilityLabel={canOpenFacilityEdit ? t(
-                        'facilityList.accessibility.editCard',
-                        `Modifier l'installation ${facility?.name || ''}`.trim(),
-                      ) : undefined}
-                      accessibilityRole={canOpenFacilityEdit ? 'button' : undefined}
-                      activeOpacity={canOpenFacilityEdit ? 0.9 : 1}
-                      disabled={!canOpenFacilityEdit}
-                      key={String(facilityId || facility?.name)}
-                      onPress={canOpenFacilityEdit ? handleOpenFacilityEdit : undefined}
-                      style={[
-                        ApplicationStyle.borderRadius24,
-                        { paddingHorizontal: 18, paddingVertical: 18 },
-                        Spaces.gap[12],
-                        {
-                          backgroundColor: `${planningColor}22`,
-                          borderColor: planningColor,
-                          borderWidth: 1,
-                          overflow: 'hidden',
-                          position: 'relative',
-                        },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          backgroundColor: planningColor,
-                          borderBottomRightRadius: 8,
-                          borderTopRightRadius: 8,
-                          height: '100%',
-                          left: 0,
-                          position: 'absolute',
-                          top: 0,
-                          width: 4,
-                        }}
-                      />
-                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {facility?.name || 'Installation'}
+                {facilitySections.map((section) => (
+                  <View key={section.title} style={[Spaces.gap[12]]}>
+                    {facilitySections.length > 1 ? (
+                      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                        {section.title}
                       </Text>
-                      <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                        <View
+                    ) : null}
+                    {section.data.map((/** @type {any} */ facility) => {
+                      const facilityId = facility?.documentId || facility?.id;
+                      const capacityChipLabel = getFacilityCapacityChipLabel(facility?.maxSlots, t);
+                      const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
+                      const addressLabel = getFacilityAddressLabel(facility?.address);
+                      const planningColor = resolveFacilityPlanningColor(facility);
+                      const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
+                      const canOpenPlanning = Boolean(
+                        facilityId
+                        && (facility?.isShared ? canAccessSharedPlanning : isMember),
+                      );
+                      const handleOpenFacilityEdit = () => {
+                        navigation.navigate(RouteNames.FacilityForm, {
+                          clubId,
+                          cmId: resolvedFacilityCmId,
+                          facility,
+                        });
+                      };
+                      const handleOpenPlanning = () => {
+                        handleOpenFacilityPlanning(facility, facility?.isShared ? 'shared' : 'club');
+                      };
+
+                      return (
+                        <TouchableOpacity
+                          accessibilityLabel={canOpenFacilityEdit ? t(
+                            'facilityList.accessibility.editCard',
+                            `Modifier l'installation ${facility?.name || ''}`.trim(),
+                          ) : undefined}
+                          accessibilityRole={canOpenFacilityEdit ? 'button' : undefined}
+                          activeOpacity={canOpenFacilityEdit ? 0.9 : 1}
+                          disabled={!canOpenFacilityEdit}
+                          key={String(facilityId || facility?.name)}
+                          onPress={canOpenFacilityEdit ? handleOpenFacilityEdit : undefined}
                           style={[
-                            ApplicationStyle.borderRadius12,
-                            Spaces.paddingHorizontal[8],
-                            Spaces.paddingVertical[4],
+                            ApplicationStyle.borderRadius24,
+                            { paddingHorizontal: 18, paddingVertical: 18 },
+                            Spaces.gap[12],
                             {
-                              alignSelf: 'flex-start',
-                              backgroundColor: `${planningColor}1F`,
+                              backgroundColor: `${planningColor}22`,
                               borderColor: planningColor,
                               borderWidth: 1,
+                              overflow: 'hidden',
+                              position: 'relative',
                             },
                           ]}
                         >
-                          <Text style={[Fonts.p3Bold, { color: planningColor }]}>
-                            {capacityChipLabel}
+                          <View
+                            style={{
+                              backgroundColor: planningColor,
+                              borderBottomRightRadius: 8,
+                              borderTopRightRadius: 8,
+                              height: '100%',
+                              left: 0,
+                              position: 'absolute',
+                              top: 0,
+                              width: 4,
+                            }}
+                          />
+                          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                            {facility?.name || 'Installation'}
                           </Text>
-                        </View>
-                        <View
-                          style={[
-                            ApplicationStyle.borderRadius12,
-                            Spaces.paddingHorizontal[8],
-                            Spaces.paddingVertical[4],
-                            {
-                              alignSelf: 'flex-start',
-                              backgroundColor: Colors.neutral800,
-                              borderColor: Colors.neutral500,
-                              borderWidth: 1,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                            {typeLabel}
-                          </Text>
-                        </View>
-                      </View>
-                      {addressLabel ? (
-                        <View
-                          style={[
-                            ApplicationStyle.borderRadius16,
-                            Spaces.padding[12],
-                            Spaces.gap[8],
-                            {
-                              backgroundColor: `${Colors.primary900}BB`,
-                              borderColor: `${Colors.primary500}2E`,
-                              borderWidth: 1,
-                            },
-                          ]}
-                        >
-                          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                            <Image
-                              source={Images.pin}
+                          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                            <View
                               style={[
-                                ApplicationStyle.icon16,
-                                ApplicationStyle.tintColor.primary200,
-                                { marginTop: 1 },
+                                ApplicationStyle.borderRadius12,
+                                Spaces.paddingHorizontal[8],
+                                Spaces.paddingVertical[4],
+                                {
+                                  alignSelf: 'flex-start',
+                                  backgroundColor: `${planningColor}1F`,
+                                  borderColor: planningColor,
+                                  borderWidth: 1,
+                                },
                               ]}
-                            />
-                            <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
-                              {addressLabel}
-                            </Text>
+                            >
+                              <Text style={[Fonts.p3Bold, { color: planningColor }]}>
+                                {capacityChipLabel}
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                ApplicationStyle.borderRadius12,
+                                Spaces.paddingHorizontal[8],
+                                Spaces.paddingVertical[4],
+                                {
+                                  alignSelf: 'flex-start',
+                                  backgroundColor: Colors.neutral800,
+                                  borderColor: Colors.neutral500,
+                                  borderWidth: 1,
+                                },
+                              ]}
+                            >
+                              <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                                {typeLabel}
+                              </Text>
+                            </View>
+                            {facility?.isShared ? (
+                              <>
+                                <View
+                                  style={[
+                                    ApplicationStyle.borderRadius12,
+                                    Spaces.paddingHorizontal[8],
+                                    Spaces.paddingVertical[4],
+                                    {
+                                      alignSelf: 'flex-start',
+                                      backgroundColor: `${Colors.primary500}1F`,
+                                      borderColor: Colors.primary500,
+                                      borderWidth: 1,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                                    {t('facilityList.badges.shared', 'Partagee')}
+                                  </Text>
+                                </View>
+                                <View
+                                  style={[
+                                    ApplicationStyle.borderRadius12,
+                                    Spaces.paddingHorizontal[8],
+                                    Spaces.paddingVertical[4],
+                                    {
+                                      alignSelf: 'flex-start',
+                                      backgroundColor: `${Colors.warning500}1F`,
+                                      borderColor: Colors.warning500,
+                                      borderWidth: 1,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                                    {t('facilityList.badges.multisport', 'Multisport')}
+                                  </Text>
+                                </View>
+                              </>
+                            ) : null}
                           </View>
-                        </View>
-                      ) : (
-                        <Text style={[Fonts.p2, Fonts.neutral300]}>
-                          {t('facilityList.defaults.addressMissing', 'Adresse non renseignee')}
-                        </Text>
-                      )}
-                      {addressLabel || (canEdit && facilityId) ? (
-                        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { marginTop: 2 }]}>
-                          {addressLabel ? (
-                            <Button
-                              onPress={() => handleOpenFacilityMap(facility)}
-                              size="small"
-                              title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-                              variant="Secondary"
-                            />
+                          {facility?.isShared ? (
+                            <Text style={[Fonts.p3, Fonts.neutral300]}>
+                              {t(
+                                'facilityList.sharedOwnerHint',
+                                'Installation partagée du multisport {{ownerName}}. Lecture seule cété club.',
+                                { ownerName: facility?.ownerName || t('facilityList.badges.multisport', 'Multisport') },
+                              )}
+                            </Text>
                           ) : null}
-                          {canOpenFacilityEdit ? (
-                            <View style={{ marginLeft: 'auto' }}>
-                              <Button
-                                icon="edit"
-                                onPress={handleOpenFacilityEdit}
-                                size="small"
-                                title={t('common.edit', 'Modifier')}
-                                variant="Secondary"
-                              />
+                          {addressLabel ? (
+                            <View
+                              style={[
+                                ApplicationStyle.borderRadius16,
+                                Spaces.padding[12],
+                                Spaces.gap[8],
+                                {
+                                  backgroundColor: `${Colors.primary900}BB`,
+                                  borderColor: `${Colors.primary500}2E`,
+                                  borderWidth: 1,
+                                },
+                              ]}
+                            >
+                              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                                <Image
+                                  source={Images.pin}
+                                  style={[
+                                    ApplicationStyle.icon16,
+                                    ApplicationStyle.tintColor.primary200,
+                                    { marginTop: 1 },
+                                  ]}
+                                />
+                                <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
+                                  {addressLabel}
+                                </Text>
+                              </View>
+                            </View>
+                          ) : (
+                            <Text style={[Fonts.p2, Fonts.neutral300]}>
+                              {t('facilityList.defaults.addressMissing', 'Adresse non renseignee')}
+                            </Text>
+                          )}
+                          {(addressLabel || canOpenPlanning || canOpenFacilityEdit) ? (
+                            <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8], { marginTop: 2 }]}>
+                              {addressLabel ? (
+                                <Button
+                                  onPress={() => handleOpenFacilityMap(facility)}
+                                  size="small"
+                                  title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
+                                  variant="Secondary"
+                                />
+                              ) : null}
+                              {canOpenPlanning ? (
+                                <Button
+                                  onPress={handleOpenPlanning}
+                                  size="small"
+                                  title={t('facilityList.actions.viewPlanning', 'Voir planning')}
+                                  variant={facility?.isShared ? 'Primary' : 'Secondary'}
+                                />
+                              ) : null}
+                              {canOpenFacilityEdit ? (
+                                <View style={{ marginLeft: 'auto' }}>
+                                  <Button
+                                    icon="edit"
+                                    onPress={handleOpenFacilityEdit}
+                                    size="small"
+                                    title={t('common.edit', 'Modifier')}
+                                    variant="Secondary"
+                                  />
+                                </View>
+                              ) : null}
                             </View>
                           ) : null}
-                        </View>
-                      ) : null}
-                    </TouchableOpacity>
-                  );
-                })}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
               </View>
 
               {/* Activities */}
@@ -1106,7 +1257,7 @@ function ClubDetails({ navigation, route }) {
               )}
 
               {/* teams */}
-              {club?.teams?.length ? (
+              {sortedClubTeams.length ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -1117,7 +1268,7 @@ function ClubDetails({ navigation, route }) {
                     style={[Spaces.gap[16]]}
                   >
                     {
-                      club?.teams?.map((/** @type {Team} */ team) => (
+                      sortedClubTeams.map((/** @type {Team} */ team) => (
                         <TouchableOpacity
                           key={team.documentId}
                           onPress={() => handleTeamPress(team)}
@@ -1136,9 +1287,19 @@ function ClubDetails({ navigation, route }) {
                               isNeutral
                               isSmall
                             />
-                            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                              {team.name}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                                {team.name}
+                              </Text>
+                              {getTeamMetaSummary(team) ? (
+                                <Text
+                                  numberOfLines={1}
+                                  style={[Fonts.p3, Fonts.neutral300, { marginTop: 4 }]}
+                                >
+                                  {getTeamMetaSummary(team)}
+                                </Text>
+                              ) : null}
+                            </View>
                           </View>
 
                         </TouchableOpacity>
@@ -1283,16 +1444,16 @@ function ClubDetails({ navigation, route }) {
       {
         canJoinClub && !isParentClubAdmin ? (
           <Button
-            disabled={hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
+            disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
             onPress={handleAskToJoinClub}
             style={[
               Spaces.marginTop[12],
-              (hasPendingJoinRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
+              (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
                 ? { opacity: 0.7 }
                 : null,
             ]}
             title={
-              (hasPendingJoinRequest || joinRequestPending)
+              (hasPendingClubRequest || joinRequestPending)
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
                 : t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club')
             }
@@ -1303,9 +1464,14 @@ function ClubDetails({ navigation, route }) {
       {
         canContactAdmin && !club?.parentMultisport && owners?.length > 0 ? (
           <Button
-            onPress={handleContactFoundClub}
-            style={Spaces.marginTop[12]}
-            title={t('clubDetails.actions.join')}
+            disabled={hasPendingClubRequest}
+            onPress={handleClaimClub}
+            style={[Spaces.marginTop[12], hasPendingClubRequest ? { opacity: 0.6 } : null]}
+            title={
+              hasPendingClubRequest
+                ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                : t('clubDetails.actions.join')
+            }
             variant="Primary"
           />
         ) : null
@@ -1387,7 +1553,7 @@ function ClubDetails({ navigation, route }) {
 
             {!activitiesLoading && addableActivities.length === 0 ? (
               <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
-                {t('common.messages.noData', 'Aucune donnee disponible')}
+                {t('common.messages.noData', 'Aucune donnée disponible')}
               </Text>
             ) : null}
           </View>
@@ -1397,9 +1563,6 @@ function ClubDetails({ navigation, route }) {
         /* Claim Club Button - Show if not member, not admin, and club has no owners */
         !isMember && !canEdit && !canJoinClub && owners?.length === 0 && userData ? (
           (() => {
-            const hasPendingClubRequest = (userData.clubMembershipRequests || [])
-              .some((r) => (r.club?.documentId === clubId || r.club?.id === clubId) && r.state === 'pending');
-
             if (hasPendingClubRequest) {
               return (
                 <Button
@@ -1427,3 +1590,4 @@ function ClubDetails({ navigation, route }) {
 }
 
 export default ClubDetails;
+

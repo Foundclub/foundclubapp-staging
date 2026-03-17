@@ -192,7 +192,7 @@ function DateTimeSelector({
   const year = tempDate.getFullYear();
 
   const getFormattedValue = () => {
-    if (!value) return 'Selectionner';
+    if (!value) return 'Sélectionner';
     if (mode === 'date') {
       return value.toLocaleDateString('fr-FR', {
         day: 'numeric',

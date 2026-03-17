@@ -54,7 +54,7 @@ function HistoryWizardRecap({ navigation }) {
   };
 
   const buildPayloads = () => {
-    const baseData = {
+    const basePayload = {
       club: state.club?.documentId || null,
       customClubName: state.useCustomClub ? state.customClubName : null,
       endYear: state.isCurrentlyActive ? null : state.endYear,
@@ -70,20 +70,20 @@ function HistoryWizardRecap({ navigation }) {
 
     if (isEditing) {
       return [{
-        ...baseData,
+        ...basePayload,
         category: categoryIds[0] || null,
       }];
     }
 
     if (categoryIds.length === 0) {
       return [{
-        ...baseData,
+        ...basePayload,
         category: null,
       }];
     }
 
     return categoryIds.map((categoryId) => ({
-      ...baseData,
+      ...basePayload,
       category: categoryId,
     }));
   };
@@ -190,7 +190,6 @@ function HistoryWizardRecap({ navigation }) {
 
           <View
             style={{
-              flexDirection: 'row',
               flexWrap: 'wrap',
               gap: 8,
               justifyContent: 'center',
@@ -231,7 +230,6 @@ function HistoryWizardRecap({ navigation }) {
               alignItems: 'center',
               backgroundColor: Colors.neutral900,
               borderRadius: 12,
-              flexDirection: 'row',
               justifyContent: 'center',
               paddingHorizontal: 20,
               paddingVertical: 12,
@@ -278,10 +276,10 @@ function HistoryWizardRecap({ navigation }) {
             <Text style={{ fontSize: 20, marginRight: 12 }}>!</Text>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, { color: '#F59E0B', marginBottom: 4 }]}>
-                Déclaration sur l'honneur
+                Déclaration sur l&apos;honneur
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral00, lineHeight: 18 }]}>
-                Ces informations peuvent être v?rifi?es par la communaut?.
+                Ces informations peuvent être vérifiées par la communauté.
               </Text>
             </View>
           </View>

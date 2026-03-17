@@ -349,11 +349,11 @@ function TeamEdit({ navigation, route }) {
 
     const teamDisplayName = String(teamData?.name || '').trim() || t('teamDetails.title', 'Équipe');
     Alert.alert(
-      t('teamEdit.actions.deleteTitle', 'Supprimer l\'équipe'),
+      t('teamEdit.actions.deleteTitle', "Supprimer l'équipe"),
       t(
         'teamEdit.actions.deleteConfirmWithName',
         {
-          defaultValue: `Voulez-vous vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irr?versible.`,
+          defaultValue: `Voulez-vous vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
           teamName: teamDisplayName,
         },
       ),

@@ -837,7 +837,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const handleLogout = useCallback(() => {
     Alert.alert(
       t('homeHub.account.logoutTitle', 'Déconnexion'),
-      t('homeHub.account.logoutDescription', 'Voulez-vous vous deconnecter de votre compte ?'),
+      t('homeHub.account.logoutDescription', 'Voulez-vous vous déconnecter de votre compte ?'),
       [
         { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
         {
@@ -1043,7 +1043,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: () => navigation.navigate(RouteNames.SearchEvents),
       subtitle: t('homeHub.cards.search.events.subtitle'),
       title: t('homeHub.cards.search.events.title'),
-      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouvez des événements sportifs en utilisant les filtres de recherche.'),
+      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouv?z des événements sportifs en utilisant les filtres de recherche.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1098,7 +1098,7 @@ function HomeHubContent({ auth, navigation, route }) {
         'league',
         20,
         'FoundClub League',
-        'Basculez vers FoundClub League pour les fonctionnalites competitives.',
+        'Basculez vers FoundClub League pour les fonctionnalit?s competitives.',
         {
           nextAction: 'scrollDown',
           nextLabel: scrollDownLabel,
@@ -1244,7 +1244,7 @@ function HomeHubContent({ auth, navigation, route }) {
       icon: 'search',
       key: 'account-tutorial-center',
       onPress: openTutorialCenterModal,
-      subtitle: t('homeHub.cards.account.tutorial.subtitle', 'Relancer un tutoriel ou reinitialiser les guides.'),
+      subtitle: t('homeHub.cards.account.tutorial.subtitle', 'Relancer un tutoriel ou réinitialiser les guides.'),
       title: t('homeHub.cards.account.tutorial.title', 'Tutoriels et aide'),
       tutorial: makeTutorial('tutorialCenter', 52, 'Tutoriels et aide', 'Relancez un tutoriel quand vous voulez, ou remettez tout a zero.'),
     },
@@ -1278,7 +1278,7 @@ function HomeHubContent({ auth, navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <OnboardingWrapper
-          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un accès rapide a toutes les fonctionnalites principales.')}
+          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un accès rapide a toutes les fonctionnalit?s principales.')}
           id="homehub-header"
           nextAction={!hasManageSection ? 'scrollDown' : undefined}
           nextLabel={!hasManageSection ? scrollDownLabel : undefined}

@@ -19,7 +19,7 @@ function SquadImageStep({
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
 
-  // Validate that we can proceed (images are optional, so always valid?)
+  // Validate that we can proceed (images are optional, so always validé)
   // User said "s'il y en a qui veulent", so optional.
   const isValid = true;
 

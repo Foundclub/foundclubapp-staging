@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image, Linking, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -33,7 +34,7 @@ import { getImageUrl } from '@/utils/imageUrl';
 function SponsorLogoTile({
   backgroundColor = 'rgba(255,255,255,0.96)',
   borderColor = 'rgba(255,255,255,0.72)',
-  borderRadius = 8,
+  borderRadius = 999,
   containerStyle,
   height = 55,
   imageStyle,
@@ -49,11 +50,71 @@ function SponsorLogoTile({
 }) {
   const { Fonts } = useTheme();
   const uri = imageUrl ? getImageUrl(imageUrl) : '';
+  const [imageNaturalSize, setImageNaturalSize] = useState(null);
   const hasImage = !!uri;
   const canPress = typeof onPress === 'function' || !!link;
   const effectiveBackgroundColor = hasImage ? 'transparent' : backgroundColor;
   const effectiveBorderColor = hasImage ? 'transparent' : borderColor;
   const effectiveBorderWidth = hasImage ? 0 : 1;
+  const effectiveTileBorderRadius = Math.min(borderRadius, Math.floor(Math.min(width, height) / 2));
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!uri) {
+      setImageNaturalSize(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    Image.getSize(
+      uri,
+      (naturalWidth, naturalHeight) => {
+        if (isMounted && naturalWidth > 0 && naturalHeight > 0) {
+          setImageNaturalSize({ height: naturalHeight, width: naturalWidth });
+        }
+      },
+      () => {
+        if (isMounted) {
+          setImageNaturalSize(null);
+        }
+      },
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, [uri]);
+
+  const renderedImageSize = useMemo(() => {
+    if (!imageNaturalSize?.width || !imageNaturalSize?.height) {
+      return { height, width };
+    }
+
+    const containerAspectRatio = width / height;
+    const imageAspectRatio = imageNaturalSize.width / imageNaturalSize.height;
+
+    if (imageAspectRatio > containerAspectRatio) {
+      return {
+        height: width / imageAspectRatio,
+        width,
+      };
+    }
+
+    return {
+      height,
+      width: height * imageAspectRatio,
+    };
+  }, [height, imageNaturalSize, width]);
+
+  const effectiveImageBorderRadius = Math.max(
+    Math.min(
+      effectiveTileBorderRadius,
+      Math.floor(Math.min(renderedImageSize.width, renderedImageSize.height) / 2),
+    ) - 1,
+    0,
+  );
 
   const handlePress = () => {
     if (typeof onPress === 'function') {
@@ -79,7 +140,7 @@ function SponsorLogoTile({
           {
             backgroundColor: effectiveBackgroundColor,
             borderColor: effectiveBorderColor,
-            borderRadius,
+            borderRadius: effectiveTileBorderRadius,
             borderWidth: effectiveBorderWidth,
             height,
             width,
@@ -88,11 +149,26 @@ function SponsorLogoTile({
         ]}
       >
         {hasImage ? (
-          <Image
-            resizeMode="contain"
-            source={{ uri }}
-            style={[styles.image, imageStyle]}
-          />
+          <View
+            style={[
+              styles.imageFrame,
+              {
+                borderRadius: effectiveImageBorderRadius,
+                height: renderedImageSize.height,
+                width: renderedImageSize.width,
+              },
+            ]}
+          >
+            <Image
+              resizeMode="contain"
+              source={{ uri }}
+              style={[
+                styles.image,
+                { borderRadius: effectiveImageBorderRadius },
+                imageStyle,
+              ]}
+            />
+          </View>
         ) : (
           <Text style={styles.fallbackText}>{fallbackLabel}</Text>
         )}
@@ -126,6 +202,12 @@ const styles = StyleSheet.create({
   },
   image: {
     height: '100%',
+    width: '100%',
+  },
+  imageFrame: {
+    borderRadius: 8,
+    height: '100%',
+    overflow: 'hidden',
     width: '100%',
   },
   tile: {

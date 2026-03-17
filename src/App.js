@@ -134,7 +134,7 @@ function App() {
     ].filter(Boolean).join('\n');
 
     Alert.alert(
-      'Crash precedent detecte',
+      'Crash precedent détecté',
       summary.slice(0, 500),
     );
     clearPersistedBootError();

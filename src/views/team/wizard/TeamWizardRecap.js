@@ -151,27 +151,27 @@ function TeamWizardRecap({ navigation }) {
    * @returns {string}
    */
   const getLabelFromCollection = (collection, value) => (
-    collection?.find((item) => item?.documentId === value)?.name || value || t('eventWizard.recap.notSet', 'Non renseigne')
+    collection?.find((item) => item?.documentId === value)?.name || value || t('eventWizard.recap.notSet', 'Non renseigné')
   );
 
   const activityLabel = getLabelFromCollection(activities, selectedOverview.activity);
   const sectionLabel = getLabelFromCollection(sections, selectedOverview.section);
   const categoryLabel = getLabelFromCollection(categories, selectedOverview.category);
   const levelLabel = getLabelFromCollection(levels, selectedOverview.level);
-  const clubLabel = clubData?.name || t('eventWizard.recap.notSet', 'Non renseigne');
+  const clubLabel = clubData?.name || t('eventWizard.recap.notSet', 'Non renseigné');
 
   return (
     <WizardStepLayout
       isNextDisabled={!isRecapReady}
       isNextLoading={createTeamMutation.isPending}
-      nextLabel={t('teamWizard.actions.create', 'Créer l équipe')}
+      nextLabel={t('teamWizard.actions.create', "Creer l'equipe")}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
       onClose={handleExitWizard}
       onNext={handleSubmit}
       onSkip={() => {}}
       stepCount={8}
       stepIndex={8}
-      subtitle={t('teamWizard.steps.recap.subtitle', 'Vérifie les informations avant de créer l équipe.')}
+      subtitle={t('teamWizard.steps.recap.subtitle', "Verifie les informations avant de creer l'equipe.")}
       title={t('teamWizard.steps.recap.title', 'Recapitulatif')}
     >
       <View style={[Spaces.gap[16]]}>
@@ -205,7 +205,7 @@ function TeamWizardRecap({ navigation }) {
             >
               <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                 {isRecapReady
-                  ? t('teamWizard.recap.ready', 'Prêt a créer')
+                  ? t('teamWizard.recap.ready', 'Prêt ? cr?er')
                   : t('teamWizard.recap.incomplete', 'Champs manquants')}
               </Text>
             </View>
@@ -226,7 +226,7 @@ function TeamWizardRecap({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigne')}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedOverview.name || t('eventWizard.recap.notSet', 'Non renseigné')}</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>{clubLabel}</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>{selectedOverview.description || t('eventWizard.recap.noDescription', 'Aucune description')}</Text>
           </View>

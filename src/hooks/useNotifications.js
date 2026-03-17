@@ -483,7 +483,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         }
 
         if (Platform.OS === 'ios') {
-          notificationsLogger.debug('[FCM] iOS detected - requesting permissions...');
+          notificationsLogger.debug('[FCM] iOS détectéd - requesting permissions...');
           // Ensure device is registered and has permissions
           const permResult = await requestUserPermission();
           notificationsLogger.debug('[FCM] Permission result:', permResult);
