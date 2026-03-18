@@ -59,11 +59,11 @@ function EventWizardValidationMode({ navigation }) {
     {
       detailOne: t(
         'eventWizard.steps.validation.manualRuleOne',
-        'Controle total par le staff',
+        'Contrôle total par le staff',
       ),
       detailTwo: t(
         'eventWizard.steps.validation.manualRuleTwo',
-        'Recommande pour groupes fermes',
+        'Recommandé pour les groupes fermés',
       ),
       icon: 'M',
       isRecommended: false,
@@ -90,7 +90,7 @@ function EventWizardValidationMode({ navigation }) {
       onNext={handleNext}
       stepCount={10}
       stepIndex={8}
-      subtitle={t('eventWizard.steps.validation.subtitle', "Definis comment valider les presences à l'événement.")}
+      subtitle={t('eventWizard.steps.validation.subtitle', "Définis comment valider les présences à l'événement.")}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >
       <View style={[Spaces.marginTop[8], Spaces.gap[16]]}>
@@ -159,7 +159,7 @@ function EventWizardValidationMode({ navigation }) {
                             ]}
                           >
                             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                              {t('eventWizard.steps.validation.recommended', 'Recommande')}
+                              {t('eventWizard.steps.validation.recommended', 'Recommandé')}
                             </Text>
                           </View>
                         ) : null}

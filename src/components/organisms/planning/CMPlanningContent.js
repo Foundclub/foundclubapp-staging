@@ -9,8 +9,11 @@ import useTheme from '@/theme/themeContext';
 
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFullscreenButton';
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { getCMFacilities } from '@/services/facility/facilityService';
 import { getCMClubs, getCMPlanning } from '@/services/multisportClub/multisportClubService';
@@ -82,21 +85,48 @@ function CMPlanningContent({ cmId, navigation }) {
 
   const handleEventPress = (event) => {
     if (!event?.documentId) return;
-    navigation.navigate('EventStack', {
+    navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
-      screen: 'EventDetails',
+      screen: RouteNames.EventDetails,
+    });
+  };
+
+  const handleOpenFullscreen = () => {
+    const selectedSection = sections.find((section) => section.documentId === selectedSectionId);
+    const selectedFacility = facilities.find((facility) => facility.documentId === selectedFacilityId);
+    const contextDetailParts = [
+      selectedSection?.name || null,
+      selectedFacility?.name || null,
+    ].filter(Boolean);
+
+    navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+      cmId,
+      contextDetailLabel: contextDetailParts.join(' - ') || null,
+      contextLabel: t('planning.fullscreen.cm', 'Planning omnisport'),
+      date: currentDate.toISOString(),
+      facilityId: selectedFacilityId,
+      sectionId: selectedSectionId,
+      sourceType: 'cm',
     });
   };
 
   return (
     <View style={[Alignments.fill, Spaces.paddingVertical[24]]}>
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16], Spaces.gap[12]]}>
-        <SegmentedControl
-          centerContent
-          onChange={setViewMode}
-          options={viewOptions}
-          value={viewMode}
-        />
+        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <SegmentedControl
+              centerContent
+              onChange={setViewMode}
+              options={viewOptions}
+              value={viewMode}
+            />
+          </View>
+          <PlanningFullscreenButton
+            borderColor={`${Colors.primary500}66`}
+            onPress={handleOpenFullscreen}
+          />
+        </View>
 
         <ScrollView contentContainerStyle={[Spaces.gap[8]]} horizontal showsHorizontalScrollIndicator={false}>
           <PlanningFilterChip

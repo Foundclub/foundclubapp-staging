@@ -159,6 +159,8 @@ export const RouteNames = /** @type {const} */ ({
   LeagueStandingsTab: 'LeagueStandingsTab',
   MatchDetails: 'MatchDetails',
   PastMatchDetails: 'PastMatchDetails', // Completed match details with ELO delta
+  PersonalPlanningWeekFullscreen: 'PersonalPlanningWeekFullscreen',
+  PlanningWeekFullscreen: 'PlanningWeekFullscreen',
   SquadFilters: 'SquadFilters',
   SquadRequests: 'SquadRequests',
   SquadSearch: 'SquadSearch',

@@ -849,13 +849,14 @@ function ClubDetails({ navigation, route }) {
             <View style={{ marginTop: -24, zIndex: 1 }}>
               {club?.logo?.url ? (
                 <ProfileAvatar
-                  imageStyle={{ borderRadius: 80 }}
                   imageUrl={club.logo.url}
                   size={80}
+                  shape="rounded"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,
-                    { borderRadius: 80 },
+                    ApplicationStyle.backgroundColor.neutral00,
+                    { borderRadius: 20 },
                   ]}
                   variant="logo"
                 />
@@ -1590,4 +1591,3 @@ function ClubDetails({ navigation, route }) {
 }
 
 export default ClubDetails;
-

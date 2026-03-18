@@ -874,7 +874,7 @@ function SuperAdminEntryForm({ navigation, route }) {
             <TextInput
               autoCapitalize="none"
               onChangeText={(value) => setRelationManualId((previous) => ({ ...previous, [fieldName]: value }))}
-              placeholder={t('superAdminContentManager.form.documentIdToAdd', 'documentId a ajouter')}
+              placeholder={t('superAdminContentManager.form.documentIdToAdd', 'documentId ? ajouter')}
               placeholderTextColor={Colors.neutral300}
               style={[
                 ApplicationStyle.backgroundColor.neutral700,
@@ -1324,7 +1324,7 @@ function SuperAdminEntryForm({ navigation, route }) {
 
         {renderSection(
           'media',
-          t('superAdminContentManager.form.sections.media', 'Medias'),
+          t('superAdminContentManager.form.sections.media', 'M?dias'),
           t('superAdminContentManager.form.sections.mediaHint', 'Ajoutez images ou fichiers.'),
         )}
 

@@ -97,11 +97,11 @@ function MultisportHeroCard({
       <View style={[Spaces.marginTop[16]]}>
         {cm?.logo?.url ? (
           <ProfileAvatar
-            imageStyle={{ borderRadius: 80 }}
             imageUrl={cm.logo.url}
+            shape="rounded"
             size={80}
+            style={[ApplicationStyle.backgroundColor.neutral00, { borderRadius: 20 }]}
             variant="logo"
-            style={[{ borderRadius: 80 }]}
           />
         ) : (
           <TeamShield initials={getClubInitials(cm?.name || '')} />

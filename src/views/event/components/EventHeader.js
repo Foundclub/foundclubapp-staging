@@ -12,6 +12,10 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import {
+  resolveExternalMatchDisplay,
+  resolveExternalMatchLocation,
+} from '@/utils/externalMatchDisplay';
+import {
   normalizeLocationInput,
   getLocationCoordinates as resolveLocationCoordinates,
 } from '@/utils/location';
@@ -59,6 +63,9 @@ const toDisplayText = (value) => {
   if (typeof value.label === 'string') {
     return value.label.trim();
   }
+  if (value.label && typeof value.label === 'object') {
+    return toDisplayText(value.label);
+  }
   if (typeof value.address === 'string') {
     return value.address.trim();
   }
@@ -84,10 +91,31 @@ function EventHeader({ event }) {
   const { getClubInitials } = useClub();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
+  const normalizedTypeName = String(event?.type?.name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
   const clubName = toDisplayText(event?.team?.club?.name);
+  const matchDisplay = resolveExternalMatchDisplay(event);
+  const externalMatchLocation = resolveExternalMatchLocation(event);
+  const eventTitle = matchDisplay.title;
   const sectionName = toDisplayText(event?.team?.section?.name);
   const logoUrl = event?.team?.club?.logo?.url;
   const locationDetails = event?.locationDetails;
+  const isImportedExternalMatch = (
+    event?.externalAutoSource === 'external_competition'
+    || Array.isArray(event?.team?.externalCalendarData)
+  );
+  const showMatchTitle = Boolean(eventTitle && (
+    normalizedTypeName.includes('match')
+    || normalizedTypeName.includes('competition')
+    || normalizedTypeName.includes('tournoi')
+  ));
+  const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
+  const headerPrimaryTitle = showMatchTitle ? eventTitle : clubName;
+  const headerSecondaryTitle = showMatchTitle
+    ? [matchContextLabel, clubName].filter(Boolean).join(' - ')
+    : '';
   const invitedTeamNames = (event?.invitedTeams || [])
     .map((team) => toDisplayText(team?.name))
     .filter(Boolean);
@@ -112,7 +140,10 @@ function EventHeader({ event }) {
     const fromDetails = toDisplayText(parsed?.address);
     const fromEventLocation = toDisplayText(event?.location);
     const normalized = normalizeLocationInput(parsed?.address || event?.location || parsed);
-    return fromDetails || fromEventLocation || normalized?.label || normalized?.address || '';
+    if (isImportedExternalMatch && externalMatchLocation) {
+      return externalMatchLocation;
+    }
+    return fromDetails || fromEventLocation || normalized?.label || normalized?.address || externalMatchLocation || '';
   };
 
   const getLocationCoordinates = () => {
@@ -173,7 +204,7 @@ function EventHeader({ event }) {
         Spaces.paddingVertical[32],
       ]}
     >
-      {/* Header: Logo + Club Name */}
+      {/* Header: Logo + Main label */}
       <View
         style={[
           Spaces.gap[4],
@@ -187,12 +218,12 @@ function EventHeader({ event }) {
             imageStyle={{ borderRadius: 60 }}
             imageUrl={logoUrl}
             size={60}
-            variant="logo"
             style={[
               ApplicationStyle.borderWidth1,
               ApplicationStyle.borderColor.neutral00,
               { borderRadius: 60 },
             ]}
+            variant="logo"
           />
         ) : (
           <TeamShield
@@ -200,9 +231,16 @@ function EventHeader({ event }) {
             isSmall
           />
         )}
-        <Text style={[Fonts.p1Bold, Fonts.neutral00, { maxWidth: '75%' }]}>
-          {clubName}
-        </Text>
+        <View style={[Spaces.gap[4], { maxWidth: '75%' }]}>
+          <Text style={[showMatchTitle ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}>
+            {headerPrimaryTitle}
+          </Text>
+          {headerSecondaryTitle ? (
+            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {headerSecondaryTitle}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
       {/* Section Name */}
@@ -293,4 +331,3 @@ function EventHeader({ event }) {
 }
 
 export default EventHeader;
-

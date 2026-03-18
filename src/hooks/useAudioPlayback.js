@@ -12,6 +12,7 @@ import { createLogger } from '@/utils/logger/logger';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 const playbackLogger = createLogger('audio-playback');
+const isPlaybackDiagnosticsEnabled = __DEV__;
 
 /** @type {any | null | undefined} */
 let cachedAudioModule;
@@ -120,6 +121,26 @@ const hashString = (value) => {
   return String(Math.abs(hash));
 };
 
+const extractAudioFileExtension = (value) => {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return 'm4a';
+
+  let pathname = rawValue;
+  if (/^https?:\/\//i.test(rawValue)) {
+    try {
+      pathname = new URL(rawValue).pathname || '';
+    } catch (_error) {
+      pathname = rawValue;
+    }
+  } else if (rawValue.startsWith('file://')) {
+    pathname = rawValue.replace(/^file:\/\//i, '');
+  }
+
+  const sanitizedPath = String(pathname || '').split(/[?#]/)[0];
+  const match = sanitizedPath.match(/\.([a-z0-9]{2,5})$/i);
+  return match?.[1]?.toLowerCase() || 'm4a';
+};
+
 const buildPlaybackSourceCandidates = (rawSourceUrl) => {
   const source = String(rawSourceUrl || '').trim();
   if (!source) return [];
@@ -145,6 +166,26 @@ const buildPlaybackSourceCandidates = (rawSourceUrl) => {
 const waitFor = (delayMs) => new Promise((resolve) => {
   setTimeout(resolve, Math.max(0, Number(delayMs) || 0));
 });
+
+const getPlaybackErrorCode = (error) => String(error?.message || error || '').trim().toUpperCase();
+
+const toPlaybackErrorMessage = (error) => {
+  const errorCode = getPlaybackErrorCode(error);
+
+  if (errorCode === 'AUDIO_HTTP_401') return 'Audio refuse (401)';
+  if (errorCode === 'AUDIO_HTTP_403') return 'Audio refuse (403)';
+  if (errorCode === 'AUDIO_HTTP_404') return 'Audio introuvable (404)';
+  if (errorCode.startsWith('AUDIO_HTTP_')) return `Erreur HTTP audio (${errorCode.replace('AUDIO_HTTP_', '')})`;
+  if (errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT') return 'Reponse audio invalide';
+  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_FILE') return 'Fichier audio vide';
+  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_PATH') return 'Cache audio introuvable';
+  if (errorCode === 'PLAYER_SOURCE_EMPTY') return 'Source audio vide';
+  if (errorCode === 'PLAYER_START_FAILED') return 'Lecture native impossible';
+
+  const rawMessage = String(error?.message || '').trim();
+  if (rawMessage) return `Lecture audio indisponible (${rawMessage})`;
+  return 'Lecture audio indisponible';
+};
 
 const claimPlaybackSlot = async (ownerId, stopCurrentOwner) => {
   if (
@@ -271,8 +312,18 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       || ReactNativeBlobUtil?.fs?.dirs?.DocumentDir;
     if (!cacheDir) return rawSource;
 
-    const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(rawSource)}.m4a`;
+    const targetExtension = extractAudioFileExtension(rawSource);
+    const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(rawSource)}.${targetExtension}`;
     const safeHeaders = headers && typeof headers === 'object' ? headers : {};
+
+    if (isPlaybackDiagnosticsEnabled) {
+      playbackLogger.warn('[voice-diag] playback-download-start', {
+        hasHeaders: Object.keys(safeHeaders).length > 0,
+        sourceUrl: rawSource,
+        targetExtension,
+        targetPath,
+      });
+    }
 
     const response = await ReactNativeBlobUtil
       .config({
@@ -311,6 +362,15 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     const fileSize = Number(stat?.size || 0);
     if (!Number.isFinite(fileSize) || fileSize < 512) {
       throw new Error('AUDIO_DOWNLOAD_EMPTY_FILE');
+    }
+
+    if (isPlaybackDiagnosticsEnabled) {
+      playbackLogger.warn('[voice-diag] playback-download-success', {
+        contentType: responseContentType,
+        fileSize,
+        sourceUrl: rawSource,
+        targetPath: downloadedPath,
+      });
     }
 
     downloadedSourceRef.current = rawSource;
@@ -374,6 +434,15 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
     const player = ensurePlayer();
     if (!player) {
+      if (isPlaybackDiagnosticsEnabled) {
+        playbackLogger.warn('[voice-diag] playback-player-unavailable', {
+          sourceUrl: rawSource,
+        });
+      }
+      if (!allowExternalFallback) {
+        safeSetState(setLastError, 'Module audio indisponible');
+        return;
+      }
       await openExternalFallback();
       return;
     }
@@ -400,10 +469,17 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
           const candidate = sourceCandidates[index];
           const requestHeaders = isHttpUrl(candidate) ? (headers || undefined) : undefined;
 
+          if (isPlaybackDiagnosticsEnabled) {
+            playbackLogger.warn('[voice-diag] playback-native-start-attempt', {
+              candidate,
+              isRemote: isHttpUrl(candidate),
+            });
+          }
+
           try {
             // eslint-disable-next-line no-await-in-loop
             await player.startPlayer(candidate, requestHeaders);
-            return true;
+            return candidate;
           } catch (error) {
             lastStartError = error;
           }
@@ -412,8 +488,11 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         throw lastStartError || new Error('PLAYER_START_FAILED');
       };
 
+      /** @type {string} */
+      let selectedCandidate = '';
+
       try {
-        await startPlayerWithCandidates();
+        selectedCandidate = await startPlayerWithCandidates();
       } catch (firstStartError) {
         const shouldRetryStart = sourceCandidates.some((candidate) => !isHttpUrl(candidate));
         if (!shouldRetryStart) {
@@ -421,16 +500,26 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         }
 
         await waitFor(180);
-        await startPlayerWithCandidates();
+        selectedCandidate = await startPlayerWithCandidates();
       }
 
       await player.setVolume?.(1);
       setPlayerSpeed(player, speed);
 
       removePlaybackListeners(player);
+      let hasLoggedProgress = false;
       addPlaybackListener(player, (event) => {
         const nextPosition = toMs(event?.currentPosition ?? event?.position ?? event?.current_position);
         const nextDuration = toMs(event?.duration ?? event?.durationMs ?? event?.duration_ms);
+
+        if (isPlaybackDiagnosticsEnabled && !hasLoggedProgress && nextPosition > 0) {
+          hasLoggedProgress = true;
+          playbackLogger.warn('[voice-diag] playback-progress-first', {
+            durationMs: nextDuration,
+            positionMs: nextPosition,
+            sourceUrl: rawSource,
+          });
+        }
 
         if (nextDuration > 0) {
           safeSetState(setDurationMs, nextDuration);
@@ -442,13 +531,34 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         safeSetState(setIsPlaying, false);
         safeSetState(setPositionMs, 0);
         releasePlaybackSlot(ownerIdRef.current);
+        if (isPlaybackDiagnosticsEnabled) {
+          playbackLogger.warn('[voice-diag] playback-ended', {
+            sourceUrl: rawSource,
+          });
+        }
       });
 
       safeSetState(setLastError, '');
       safeSetState(setIsPlaying, true);
+      if (isPlaybackDiagnosticsEnabled) {
+        playbackLogger.warn('[voice-diag] playback-start-succeeded', {
+          candidate: selectedCandidate,
+          sourceUrl: rawSource,
+        });
+      }
     } catch (error) {
-      playbackLogger.warn('Failed to start playback', { message: error?.message });
-      safeSetState(setLastError, 'Lecture audio indisponible');
+      playbackLogger.warn('Failed to start playback', {
+        message: error?.message,
+        normalizedSourceUrl: rawSource,
+      });
+      if (isPlaybackDiagnosticsEnabled) {
+        playbackLogger.warn('[voice-diag] playback-start-failed', {
+          errorCode: getPlaybackErrorCode(error),
+          message: error?.message,
+          normalizedSourceUrl: rawSource,
+        });
+      }
+      safeSetState(setLastError, toPlaybackErrorMessage(error));
       await stopPlayback();
       if (allowExternalFallback && isHttpUrl(rawSource)) {
         await openExternalFallback();
@@ -473,10 +583,11 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
     const player = ensurePlayer();
     if (!player) {
-      safeSetState(setLastError, 'Lecture audio indisponible');
-      if (allowExternalFallback) {
-        await openExternalFallback();
+      if (!allowExternalFallback) {
+        safeSetState(setLastError, 'Module audio indisponible');
+        return;
       }
+      await openExternalFallback();
       return;
     }
 

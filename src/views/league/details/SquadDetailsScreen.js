@@ -243,7 +243,7 @@ function SquadDetailsScreen({ navigation, route }) {
         await updateTeamSlot(editingSlotId, payload);
         Alert.alert(
           t('common.success', 'Succès'),
-          t('squadDetails.slots.updated', 'Créneau modifie'),
+          t('squadDetails.slots.updated', 'Créneau modifié'),
         );
       } else {
         await Promise.all(
@@ -263,7 +263,7 @@ function SquadDetailsScreen({ navigation, route }) {
           t('common.success', 'Succès'),
           slotsToSave.length > 1
             ? t('squadDetails.slots.multipleAdded', '{{count}} créneaux ajoutes', { count: slotsToSave.length })
-            : t('squadDetails.slots.added', 'Créneau ajoute'),
+            : t('squadDetails.slots.added', 'Créneau ajouté'),
         );
       }
 
@@ -295,7 +295,7 @@ function SquadDetailsScreen({ navigation, route }) {
       setIsUpdating(false);
       Alert.alert(
         t('common.success', 'Succès'),
-        t('squadDetails.slots.deleted', 'Créneau supprime'),
+        t('squadDetails.slots.deleted', 'Créneau supprimé'),
       );
     } catch (e) {
       console.error(e);
@@ -535,7 +535,7 @@ function SquadDetailsScreen({ navigation, route }) {
               style={{
                 alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%',
               }}
-              title={t('squadDetails.join.request', 'Demander ? rejoindre')}
+              title={t('squadDetails.join.request', 'Demander à rejoindre')}
               variant="Primary"
             />
           )}

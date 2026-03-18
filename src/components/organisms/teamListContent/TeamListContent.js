@@ -295,18 +295,30 @@ function TeamListContent({
       identityAvatar = (
         <ProfileAvatar
           imageUrl={item.crest.url}
+          shape="rounded"
           size={80}
           variant="logo"
-          style={{ borderColor: Colors.gold500, borderRadius: 80, borderWidth: 1 }}
+          style={{
+            backgroundColor: Colors.neutral00,
+            borderColor: Colors.gold500,
+            borderRadius: 20,
+            borderWidth: 1,
+          }}
         />
       );
     } else if (item?.club?.logo?.url) {
       identityAvatar = (
         <ProfileAvatar
           imageUrl={item.club.logo.url}
+          shape="rounded"
           size={60}
           variant="logo"
-          style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.primary500, { borderRadius: 60 }]}
+          style={[
+            ApplicationStyle.borderWidth1,
+            ApplicationStyle.borderColor.primary500,
+            ApplicationStyle.backgroundColor.neutral00,
+            { borderRadius: 16 },
+          ]}
         />
       );
     }

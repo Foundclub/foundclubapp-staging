@@ -1,6 +1,12 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   Dimensions,
@@ -16,7 +22,6 @@ import {
   Gesture, GestureDetector, GestureHandlerRootView, ScrollView,
 } from 'react-native-gesture-handler';
 import Animated, {
-  measure,
   runOnJS,
   useAnimatedRef,
   useAnimatedStyle,
@@ -37,6 +42,10 @@ import {
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
+import {
+  deleteTeamDefaultComposition,
+  saveTeamDefaultComposition,
+} from '@/services/team/teamService';
 
 import DraggableToken from './DraggableToken';
 
@@ -80,6 +89,65 @@ const GHOST_TOKEN_WIDTH = 70;
 const GHOST_TOKEN_HEIGHT = 88;
 const FIELD_TOKEN_WIDTH = 58;
 const FIELD_TOKEN_HEIGHT = 72;
+const PANEL_COLLAPSED_HEIGHT = 64;
+const PANEL_BENCH_HEIGHT = 276;
+
+const normalizeMatchLabel = (value) => {
+  const label = String(value || '').trim();
+  if (!label) return '';
+
+  const vsMatch = label.match(/\bVS\b.*$/i);
+  if (vsMatch?.[0]) {
+    return `Match ${vsMatch[0].trim()}`;
+  }
+
+  return label.replace(/^Match externe synchronisé.*?-\s*/i, 'Match ');
+};
+
+const serializeCompositionState = (payload, mode = 'event') => {
+  const safePayload = payload || {};
+  const placements = (Array.isArray(safePayload.placements) ? safePayload.placements : [])
+    .map((placement) => ({
+      playerId: String(placement?.playerId || '').trim(),
+      positionX: Number(placement?.positionX ?? 0),
+      positionY: Number(placement?.positionY ?? 0),
+    }))
+    .filter((placement) => placement.playerId)
+    .sort((a, b) => a.playerId.localeCompare(b.playerId, 'fr'));
+
+  const selectedPlayerIds = Array.from(
+    new Set(
+      (Array.isArray(safePayload.selectedPlayerIds) ? safePayload.selectedPlayerIds : [])
+        .map((value) => String(value || '').trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+
+  if (mode === 'team-default') {
+    return JSON.stringify({
+      placements,
+      selectedPlayerIds,
+      sportContext: String(safePayload.sportContext || ''),
+    });
+  }
+
+  const manualPlayers = (Array.isArray(safePayload.manualPlayers) ? safePayload.manualPlayers : [])
+    .map((player) => ({
+      firstname: String(player?.firstname || '').trim(),
+      id: String(player?.documentId || player?.id || '').trim(),
+      lastname: String(player?.lastname || '').trim(),
+      number: String(player?.number || '').trim(),
+    }))
+    .filter((player) => player.id)
+    .sort((a, b) => a.id.localeCompare(b.id, 'fr'));
+
+  return JSON.stringify({
+    manualPlayers,
+    placements,
+    selectedPlayerIds,
+    sportContext: String(safePayload.sportContext || ''),
+  });
+};
 
 /**
  * @typedef {import('./types').TacticalPlayer} TacticalPlayer
@@ -97,13 +165,18 @@ function TacticalBoard() {
   const navigation = useNavigation();
   const route = useRoute();
   const queryClient = useQueryClient();
+  const skipUnsavedPromptRef = useRef(false);
 
   // Get params
-  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any}} */
+  /** @type {{selectedPlayers?: TacticalPlayer[], players?: any[], eventId?: string, eventName?: string, sport?: string, existingComposition?: any, teamId?: string, teamName?: string, readOnly?: boolean, canEdit?: boolean, manualPlayers?: any[], selectedPlayerIds?: string[], teamComposition?: any, teamDefaultComposition?: any, editorMode?: 'event' | 'team-default', editorSource?: string, editorSourceLabel?: string}} */
   const params = route.params || {};
   const {
     canEdit = false,
+    editorMode = 'event',
+    editorSource = null,
+    editorSourceLabel = null,
     eventId,
+    eventName = '',
     existingComposition,
     manualPlayers = [],
     players = [],
@@ -111,9 +184,12 @@ function TacticalBoard() {
     selectedPlayers = [],
     selectedPlayerIds: selectedPlayerIdsParam = [],
     sport = 'football',
+    teamDefaultComposition = null,
     teamComposition = null,
     teamId,
+    teamName = '',
   } = params;
+  const isTeamDefaultMode = editorMode === 'team-default';
 
   // Use poolPlayers for reconstruction (selectedPlayers from editor, players from viewer)
   const poolPlayers = useMemo(() => {
@@ -126,14 +202,6 @@ function TacticalBoard() {
   }, [selectedPlayers, players, existingComposition, manualPlayers]);
 
   // DEBUG: Log reconstruction data
-  console.log('[TacticalBoard] Params:', {
-    existingComposition,
-    manualPlayersParam: manualPlayers,
-    playersCount: players.length,
-    poolPlayersCount: poolPlayers.length,
-    selectedPlayersCount: selectedPlayers.length,
-  });
-
   // Initialize players from existing composition
   const { initialBenchPlayers, initialFieldPlayers } = useMemo(() => {
     if (existingComposition?.placements?.length) {
@@ -209,7 +277,11 @@ function TacticalBoard() {
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [compositionMeta, setCompositionMeta] = useState(teamComposition);
+  const [compositionMeta, setCompositionMeta] = useState(isTeamDefaultMode ? teamDefaultComposition : teamComposition);
+  const [activePanel, setActivePanel] = useState(/** @type {'bench' | 'actions'} */ ('bench'));
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const panelHeight = useSharedValue(PANEL_COLLAPSED_HEIGHT);
+  const panelDragStartHeight = useSharedValue(PANEL_COLLAPSED_HEIGHT);
 
   // Sport specific
   const sportKey = (sport?.toLowerCase?.() || 'football');
@@ -217,8 +289,149 @@ function TacticalBoard() {
   const fieldImage = FIELD_IMAGES[sportKey] || FIELD_IMAGES.generic;
 
   // Calculate field dimensions - maximize space
-  const fieldWidth = SCREEN_WIDTH - 16; // Minimal padding
-  const fieldHeight = Math.min(fieldWidth * aspectRatio, SCREEN_HEIGHT * 0.65); // Use more vertical space
+  const fieldWidth = SCREEN_WIDTH - 28;
+  let fieldHeightRatio = 0.76;
+  if (readOnly) {
+    fieldHeightRatio = 0.79;
+  } else if (isTeamDefaultMode) {
+    fieldHeightRatio = 0.77;
+  }
+  const fieldHeight = Math.min(
+    fieldWidth * aspectRatio,
+    SCREEN_HEIGHT * fieldHeightRatio,
+  );
+
+  const formatDateTime = useCallback(
+    (value) => (value ? new Date(value).toLocaleString('fr-FR') : null),
+    [],
+  );
+
+  let headerTitle = "Composition d'équipe";
+  if (isTeamDefaultMode) {
+    headerTitle = "Favori d'équipe";
+  } else if (readOnly) {
+    headerTitle = 'Composition publiée';
+  }
+
+  let headerModeLabel = 'Édition';
+  if (isTeamDefaultMode) {
+    headerModeLabel = "Favori d'équipe";
+  } else if (readOnly) {
+    headerModeLabel = 'Lecture seule';
+  }
+
+  const readableEventName = useMemo(() => normalizeMatchLabel(eventName), [eventName]);
+  const contextTitle = teamName || readableEventName || 'Match';
+  const contextSubtitle = teamName && readableEventName && teamName !== readableEventName
+    ? readableEventName
+    : null;
+
+  const playersPlacedCount = fieldPlayers.length;
+  const totalPlayersCount = fieldPlayers.length + benchPlayers.length;
+  let primaryActionTitle = 'Publier la convocation';
+  if (isTeamDefaultMode) {
+    primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer le favori';
+  } else if (isPublishing) {
+    primaryActionTitle = 'Publication...';
+  }
+
+  let actionsPanelHeight = 452;
+  if (readOnly) {
+    actionsPanelHeight = 222;
+  } else if (isTeamDefaultMode) {
+    actionsPanelHeight = 346;
+  }
+
+  const selectionSource = isTeamDefaultMode ? 'default_composition' : 'draft';
+  const selectionSourceLabel = isTeamDefaultMode ? "Favori d'équipe" : 'Brouillon';
+  const saveDraftLabel = isSaving ? 'Sauvegarde...' : 'Sauvegarder ce brouillon';
+  const teamModelLabel = isTeamDefaultMode ? 'Enregistrer le favori' : 'Mettre cette composition en favori';
+
+  const statusCard = useMemo(() => {
+    if (isTeamDefaultMode) {
+      if (compositionMeta?.composition?.updatedAt) {
+        return {
+          accent: Colors.primary500,
+          eyebrow: 'Favori actif',
+          lines: [
+            `Dernière mise à jour le ${formatDateTime(compositionMeta.composition.updatedAt)}`,
+            'Tu peux le réutiliser comme base sur les prochains matchs.',
+          ],
+          title: 'Composition favorite enregistrée',
+        };
+      }
+
+      return {
+        accent: Colors.primary300,
+        eyebrow: 'Favori',
+        lines: [
+          'Place les joueurs sur le terrain puis enregistre ce favori pour repartir plus vite ensuite.',
+        ],
+        title: "Prépare un favori pour l'équipe",
+      };
+    }
+
+    if (readOnly) {
+      return {
+        accent: Colors.primary500,
+        eyebrow: `Publiée v${Number(compositionMeta?.published?.version || 1)}`,
+        lines: [
+          compositionMeta?.published?.publishedAt
+            ? `Publication le ${formatDateTime(compositionMeta.published.publishedAt)}`
+            : 'Cette version est celle visible par les joueurs.',
+          canEdit
+            ? 'Tu peux la modifier pour préparer une nouvelle version sans écraser immédiatement la version publiée.'
+            : 'Les joueurs ne voient jamais les brouillons intermédiaires.',
+        ].filter(Boolean),
+        title: 'Composition actuellement publiée',
+      };
+    }
+
+    if (compositionMeta?.draft?.updatedAt && compositionMeta?.published?.publishedAt) {
+      return {
+        accent: Colors.primary500,
+        eyebrow: 'Brouillon en cours',
+        lines: [
+          `Dernière sauvegarde le ${formatDateTime(compositionMeta.draft.updatedAt)}`,
+          `Version visible: v${Number(compositionMeta?.published?.version || 1)} publiée le ${formatDateTime(compositionMeta.published.publishedAt)}`,
+        ],
+        title: "Des changements attendent d'être publiés",
+      };
+    }
+
+    if (compositionMeta?.draft?.updatedAt) {
+      return {
+        accent: Colors.primary300,
+        eyebrow: 'Brouillon',
+        lines: [
+          `Dernière sauvegarde le ${formatDateTime(compositionMeta.draft.updatedAt)}`,
+          "Publie quand la composition est prête pour l'équipe.",
+        ],
+        title: 'Brouillon enregistré',
+      };
+    }
+
+    if (compositionMeta?.published?.publishedAt) {
+      return {
+        accent: Colors.primary500,
+        eyebrow: `Publiée v${Number(compositionMeta?.published?.version || 1)}`,
+        lines: [
+          `Publication le ${formatDateTime(compositionMeta.published.publishedAt)}`,
+          'Tu peux repartir de cette version pour préparer la suite.',
+        ],
+        title: 'Une version est déjà publiée',
+      };
+    }
+
+    return {
+      accent: Colors.primary300,
+      eyebrow: 'Nouvelle composition',
+      lines: [
+        'Place les joueurs sur le terrain, complète le banc puis enregistre ou publie quand tout est prêt.',
+      ],
+      title: 'Commence par organiser ton équipe',
+    };
+  }, [Colors.primary300, Colors.primary500, canEdit, compositionMeta, formatDateTime, isTeamDefaultMode, readOnly]);
 
   // Measure field on layout - updates both SharedValues and React state
   const measureField = useCallback(() => {
@@ -306,11 +519,6 @@ function TacticalBoard() {
     const fw = fieldW.value;
     const fh = fieldH.value;
 
-    console.log('[TacticalBoard] Drop at:', { pageX, pageY });
-    console.log('[TacticalBoard] Field rect (SharedValues):', {
-      height: fh, width: fw, x: fx, y: fy,
-    });
-
     // Check if dropped on field
     const isOnField = (
       pageX >= fx
@@ -318,8 +526,6 @@ function TacticalBoard() {
       && pageY >= fy
       && pageY <= fy + fh
     );
-
-    console.log('[TacticalBoard] Is on field:', isOnField);
 
     if (isOnField) {
       // Simple: store finger position as percentage (no offsets)
@@ -329,8 +535,6 @@ function TacticalBoard() {
       // Clamp to valid range
       const clampedX = Math.max(5, Math.min(95, posX));
       const clampedY = Math.max(5, Math.min(95, posY));
-
-      console.log('[TacticalBoard] Storing position:', { clampedX, clampedY });
 
       // Update field players - store full player data with coordinates
       setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => {
@@ -347,18 +551,16 @@ function TacticalBoard() {
       if (dragSource === 'bench') {
         setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => prev.filter((p) => (p.id || p.documentId) !== playerId));
       }
-    } else {
+    } else if (dragSource === 'field') {
       // Dropped outside field - return to bench
-      if (dragSource === 'field') {
-        setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => prev.filter((p) => p.id !== playerId));
-        setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => {
-          // Check if already in bench
-          const exists = prev.some((p) => (p.id || p.documentId) === playerId);
-          if (exists) return prev;
-          const player = getPlayerById(playerId);
-          return player ? [...prev, player] : prev;
-        });
-      }
+      setFieldPlayers((/** @type {FieldPlayer[]} */ prev) => prev.filter((p) => p.id !== playerId));
+      setBenchPlayers((/** @type {TacticalPlayer[]} */ prev) => {
+        // Check if already in bench
+        const exists = prev.some((p) => (p.id || p.documentId) === playerId);
+        if (exists) return prev;
+        const player = getPlayerById(playerId);
+        return player ? [...prev, player] : prev;
+      });
       // If from bench and dropped outside, do nothing (player stays in bench)
     }
 
@@ -418,6 +620,23 @@ function TacticalBoard() {
     queryClient.invalidateQueries({ queryKey: ['eventConvocation', eventId] });
   }, [eventId, queryClient]);
 
+  const getCompositionErrorMessage = useCallback((error, fallbackMessage) => {
+    const status = error?.response?.status || error?.status;
+    const apiMessage = error?.response?.data?.error?.message
+      || error?.response?.data?.message
+      || error?.message;
+
+    if (status === 403) {
+      return "Vous n'êtes pas autorisé à gérer la composition pour cette équipe.";
+    }
+
+    if (typeof apiMessage === 'string' && apiMessage.trim()) {
+      return apiMessage.trim();
+    }
+
+    return fallbackMessage;
+  }, []);
+
   const buildDraftPayload = useCallback(() => {
     const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
     const extractedManualPlayers = allCurrentPlayers
@@ -456,14 +675,160 @@ function TacticalBoard() {
     };
   }, [benchPlayers, fieldPlayers, selectedPlayerIdsParam, sport]);
 
-  const handleSave = useCallback(async () => {
-    if (!eventId || !teamId) {
-      Alert.alert('Erreur', "ID événement ou équipe manquant");
-      return;
+  const buildTemplatePayload = useCallback(() => {
+    const teamPlayerIds = new Set(
+      poolPlayers
+        .filter((player) => !(player?.isManual || String(player?.id || player?.documentId || '').startsWith('manual_')))
+        .map((player) => String(player?.documentId || player?.id || '').trim())
+        .filter(Boolean),
+    );
+
+    const placements = fieldPlayers
+      .filter((player) => teamPlayerIds.has(String(player?.documentId || player?.id || '').trim()))
+      .map((player) => ({
+        playerId: player.documentId || player.id,
+        positionX: player.x,
+        positionY: player.y,
+      }));
+
+    const selectedPlayerIds = Array.from(new Set([
+      ...benchPlayers
+        .filter((player) => teamPlayerIds.has(String(player?.documentId || player?.id || '').trim()))
+        .map((player) => String(player.documentId || player.id)),
+      ...placements.map((placement) => String(placement.playerId || '')),
+    ].filter(Boolean)));
+
+    return {
+      placements,
+      selectedPlayerIds,
+      sportContext: sport,
+    };
+  }, [benchPlayers, fieldPlayers, poolPlayers, sport]);
+
+  const savedComparableState = useMemo(() => {
+    if (readOnly) return null;
+
+    if (isTeamDefaultMode) {
+      return serializeCompositionState(
+        compositionMeta?.composition || teamDefaultComposition?.composition || existingComposition || null,
+        'team-default',
+      );
     }
+
+    return serializeCompositionState(
+      compositionMeta?.draft || existingComposition || null,
+      'event',
+    );
+  }, [
+    compositionMeta?.composition,
+    compositionMeta?.draft,
+    existingComposition,
+    isTeamDefaultMode,
+    readOnly,
+    teamDefaultComposition?.composition,
+  ]);
+
+  const currentComparableState = useMemo(
+    () => serializeCompositionState(
+      isTeamDefaultMode ? buildTemplatePayload() : buildDraftPayload(),
+      isTeamDefaultMode ? 'team-default' : 'event',
+    ),
+    [buildDraftPayload, buildTemplatePayload, isTeamDefaultMode],
+  );
+
+  const hasUnsavedChanges = useMemo(
+    () => !readOnly && currentComparableState !== savedComparableState,
+    [currentComparableState, readOnly, savedComparableState],
+  );
+
+  const openSelectionEditor = useCallback((source = editorSource, sourceLabel = editorSourceLabel) => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.TacticalSelectionV2, {
+      bootstrapComposition: null,
+      editorMode,
+      editorSource: source || null,
+      editorSourceLabel: sourceLabel || null,
+      eventId,
+      eventName,
+      existingComposition: buildDraftPayload(),
+      players: poolPlayers,
+      sport,
+      teamId,
+      teamName,
+    });
+  }, [
+    buildDraftPayload,
+    editorMode,
+    editorSource,
+    editorSourceLabel,
+    eventId,
+    eventName,
+    navigation,
+    poolPlayers,
+    sport,
+    teamId,
+    teamName,
+  ]);
+
+  const openBoardEditorFromCurrentState = useCallback((source = 'draft', sourceLabel = 'Brouillon') => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.TacticalBoardV2, {
+      canEdit: false,
+      editorMode,
+      editorSource: source,
+      editorSourceLabel: sourceLabel,
+      eventId,
+      eventName,
+      existingComposition: buildDraftPayload(),
+      players: poolPlayers,
+      readOnly: false,
+      sport,
+      teamComposition: compositionMeta || null,
+      teamId,
+      teamName,
+    });
+  }, [
+    buildDraftPayload,
+    compositionMeta,
+    editorMode,
+    eventId,
+    eventName,
+    navigation,
+    poolPlayers,
+    sport,
+    teamId,
+    teamName,
+  ]);
+
+  const handleSave = useCallback(async (options = {}) => {
+    const normalizedOptions = options && typeof options === 'object' && !('nativeEvent' in options) ? options : {};
+    const { showSuccess = true } = normalizedOptions;
 
     setIsSaving(true);
     try {
+      if (isTeamDefaultMode) {
+        if (!teamId) {
+          Alert.alert('Erreur', "Impossible d'identifier l'équipe concernée.");
+          return false;
+        }
+
+        const response = await saveTeamDefaultComposition(teamId, {
+          composition: buildTemplatePayload(),
+        });
+        setCompositionMeta(response || null);
+        queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
+        queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+        if (showSuccess) {
+          Alert.alert('Succès', 'Composition favorite enregistrée.');
+        }
+        return true;
+      }
+
+      if (!eventId || !teamId) {
+        Alert.alert('Erreur', "Impossible d'identifier l'équipe ou l'événement concerné.");
+        return false;
+      }
+
       const draftPayload = buildDraftPayload();
       const response = await saveEventCompositionDraft(eventId, {
         draft: draftPayload,
@@ -471,18 +836,69 @@ function TacticalBoard() {
       });
       setCompositionMeta(response || null);
       invalidateCompositionQueries();
-      Alert.alert('Succès', 'Brouillon enregistré.');
+      if (showSuccess) {
+        Alert.alert('Succès', 'Brouillon enregistré.');
+      }
+      return true;
     } catch (error) {
       console.error('Save draft error:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le brouillon');
+      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer le brouillon."));
+      return false;
     } finally {
       setIsSaving(false);
     }
-  }, [buildDraftPayload, eventId, invalidateCompositionQueries, teamId]);
+  }, [
+    buildDraftPayload,
+    buildTemplatePayload,
+    eventId,
+    getCompositionErrorMessage,
+    invalidateCompositionQueries,
+    isTeamDefaultMode,
+    queryClient,
+    teamId,
+  ]);
+
+  const confirmExitWithUnsavedChanges = useCallback((onDiscard) => {
+    const saveLabel = isTeamDefaultMode ? 'Enregistrer le favori' : 'Sauvegarder le brouillon';
+    const message = isTeamDefaultMode
+      ? "Tu as des modifications non enregistrées sur le favori d'équipe. Tu peux l'enregistrer avant de quitter, ou fermer sans enregistrer."
+      : 'Tu as des modifications non enregistrées sur cette composition. Tu peux sauvegarder le brouillon avant de quitter, ou fermer sans enregistrer.';
+
+    Alert.alert(
+      'Quitter sans enregistrer ?',
+      message,
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: onDiscard,
+          style: 'destructive',
+          text: 'Quitter sans enregistrer',
+        },
+        {
+          onPress: async () => {
+            const didSave = await handleSave({ showSuccess: false });
+            if (didSave) {
+              onDiscard();
+            }
+          },
+          text: saveLabel,
+        },
+      ],
+    );
+  }, [handleSave, isTeamDefaultMode]);
+
+  const leaveWithoutUnsavedPrompt = useCallback((action) => {
+    skipUnsavedPromptRef.current = true;
+    navigation.dispatch(action);
+  }, [navigation]);
 
   const handlePublish = useCallback(async () => {
+    if (isTeamDefaultMode) {
+      return;
+    }
+
     if (!eventId || !teamId) {
-      Alert.alert('Erreur', "ID événement ou équipe manquant");
+      Alert.alert('Erreur', "Impossible d'identifier l'équipe ou l'événement concerné.");
       return;
     }
 
@@ -504,11 +920,67 @@ function TacticalBoard() {
       ]);
     } catch (error) {
       console.error('Publish convocation error:', error);
-      Alert.alert('Erreur', 'Impossible de publier la convocation');
+      Alert.alert('Erreur', getCompositionErrorMessage(error, 'Impossible de publier la convocation.'));
     } finally {
       setIsPublishing(false);
     }
-  }, [buildDraftPayload, eventId, invalidateCompositionQueries, navigation, teamId]);
+  }, [buildDraftPayload, eventId, getCompositionErrorMessage, invalidateCompositionQueries, isTeamDefaultMode, navigation, teamId]);
+
+  const handleSaveAsTeamDefault = useCallback(async () => {
+    if (!teamId) {
+      Alert.alert('Erreur', "Impossible d'identifier l'équipe.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await saveTeamDefaultComposition(teamId, {
+        composition: buildTemplatePayload(),
+      });
+      if (isTeamDefaultMode) {
+        setCompositionMeta(response || null);
+      }
+      queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+      Alert.alert('Succès', "Cette composition a été enregistrée comme favori d'équipe.");
+    } catch (error) {
+      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer le favori d'équipe."));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [buildTemplatePayload, getCompositionErrorMessage, isTeamDefaultMode, queryClient, teamId]);
+
+  const handleDeleteTeamDefault = useCallback(async () => {
+    if (!teamId) {
+      Alert.alert('Erreur', "Impossible d'identifier l'équipe.");
+      return;
+    }
+
+    Alert.alert(
+      'Retirer le favori',
+      "Cette action retire le favori d'équipe.",
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: async () => {
+            try {
+              const response = await deleteTeamDefaultComposition(teamId);
+              setCompositionMeta(response || null);
+              setFieldPlayers([]);
+              setBenchPlayers(poolPlayers.filter((player) => !(player?.isManual || String(player?.id || player?.documentId || '').startsWith('manual_'))));
+              queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
+              queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+              Alert.alert('Succès', "Favori d'équipe supprimé.");
+            } catch (error) {
+              Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de supprimer le favori d'équipe."));
+            }
+          },
+          style: 'destructive',
+          text: 'Supprimer',
+        },
+      ],
+    );
+  }, [getCompositionErrorMessage, poolPlayers, queryClient, teamId]);
 
   // === ANIMATED STYLES ===
   const dropZoneStyle = useAnimatedStyle(() => {
@@ -519,6 +991,91 @@ function TacticalBoard() {
     };
   });
 
+  useEffect(() => {
+    let nextHeight = PANEL_COLLAPSED_HEIGHT;
+    if (isPanelOpen && activePanel === 'bench') {
+      nextHeight = PANEL_BENCH_HEIGHT;
+    } else if (isPanelOpen && activePanel === 'actions') {
+      nextHeight = actionsPanelHeight;
+    }
+
+    panelHeight.value = withTiming(nextHeight, { duration: 220 });
+  }, [activePanel, actionsPanelHeight, isPanelOpen, panelHeight]);
+
+  const panelAnimatedStyle = useAnimatedStyle(() => ({
+    height: panelHeight.value,
+  }));
+
+  const openPanel = useCallback((panel) => {
+    setActivePanel(panel);
+    setIsPanelOpen(true);
+  }, []);
+
+  const togglePanel = useCallback((panel) => {
+    setActivePanel((current) => {
+      if (current === panel) {
+        setIsPanelOpen((wasOpen) => !wasOpen);
+        return current;
+      }
+
+      setIsPanelOpen(true);
+      return panel;
+    });
+  }, []);
+
+  const closePanel = useCallback(() => {
+    setIsPanelOpen(false);
+  }, []);
+
+  useEffect(() => navigation.addListener('beforeRemove', (event) => {
+    if (skipUnsavedPromptRef.current || !hasUnsavedChanges || isSaving || isPublishing) {
+      return;
+    }
+
+    event.preventDefault();
+    confirmExitWithUnsavedChanges(() => leaveWithoutUnsavedPrompt(event.data.action));
+  }), [confirmExitWithUnsavedChanges, hasUnsavedChanges, isPublishing, isSaving, leaveWithoutUnsavedPrompt, navigation]);
+
+  const panelPanGesture = useMemo(
+    () => Gesture.Pan()
+      .activeOffsetY([-8, 8])
+      .failOffsetX([-24, 24])
+      .onBegin(() => {
+        panelDragStartHeight.value = panelHeight.value;
+      })
+      .onUpdate((gestureEvent) => {
+        const maxHeight = Math.max(PANEL_BENCH_HEIGHT, actionsPanelHeight);
+        const nextHeight = panelDragStartHeight.value - gestureEvent.translationY;
+        const clampedHeight = Math.max(PANEL_COLLAPSED_HEIGHT, Math.min(maxHeight, nextHeight));
+        panelHeight.value = clampedHeight;
+      })
+      .onEnd(() => {
+        const currentHeight = panelHeight.value;
+        const collapsedDistance = Math.abs(currentHeight - PANEL_COLLAPSED_HEIGHT);
+        const benchDistance = Math.abs(currentHeight - PANEL_BENCH_HEIGHT);
+        const actionsDistance = Math.abs(currentHeight - actionsPanelHeight);
+
+        let nextPanel = activePanel;
+        let targetHeight = PANEL_COLLAPSED_HEIGHT;
+        let shouldOpen = false;
+
+        if (benchDistance <= collapsedDistance && benchDistance <= actionsDistance) {
+          nextPanel = 'bench';
+          targetHeight = PANEL_BENCH_HEIGHT;
+          shouldOpen = true;
+        } else if (actionsDistance <= collapsedDistance && actionsDistance <= benchDistance) {
+          nextPanel = 'actions';
+          targetHeight = actionsPanelHeight;
+          shouldOpen = true;
+        }
+
+        panelHeight.value = withSpring(targetHeight, SPRING_CONFIG);
+        runOnJS(setActivePanel)(nextPanel);
+        runOnJS(setIsPanelOpen)(shouldOpen);
+      }),
+    [activePanel, actionsPanelHeight, panelDragStartHeight, panelHeight],
+  );
+
   return (
     <GestureHandlerRootView style={Alignments.fill}>
       <ImageBackground
@@ -526,6 +1083,47 @@ function TacticalBoard() {
         source={Images.bg1}
         style={[Alignments.fill, { paddingTop: insets.top + 8 }]}
       >
+        <View style={[styles.header, Spaces.paddingHorizontal[16]]}>
+          <View style={styles.headerBackButtonContainer}>
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+          </View>
+          <View style={styles.headerCenter}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.headerTitle]}>
+              {headerTitle}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, styles.headerSubtitle]}>
+              {contextTitle}
+            </Text>
+            {contextSubtitle ? (
+              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }, styles.headerCaption]}>
+                {contextSubtitle}
+              </Text>
+            ) : null}
+            <View style={styles.headerMetaRow}>
+              <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                  {headerModeLabel}
+                </Text>
+              </View>
+              <View style={[styles.headerPill, { backgroundColor: `${Colors.primary300}16`, borderColor: `${Colors.primary300}40` }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                  {playersPlacedCount}
+                  /
+                  {totalPlayersCount}
+                  {' '}
+                  placés
+                </Text>
+              </View>
+              {editorSourceLabel ? (
+                <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {editorSourceLabel}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </View>
 
         {/* Field Area */}
         <View style={styles.fieldContainer}>
@@ -542,26 +1140,20 @@ function TacticalBoard() {
             ]}
           >
             <Image resizeMode="cover" source={fieldImage} style={styles.fieldImage} />
+            <View style={[styles.fieldTint, { backgroundColor: `${Colors.primary500}10` }]} />
 
             {/* Drop zone indicator */}
             <Animated.View style={[styles.dropZoneIndicator, { borderColor: Colors.primary500 }, dropZoneStyle]} />
 
             {/* Placed players */}
             {fieldPlayers.map((/** @type {FieldPlayer} */ fp) => {
-              // fp already has full player data from reconstruction
               if (!fp.firstname && !fp.lastname && !fp.id) return null;
 
-              // Use React state for consistent display
-              // fp.x/y are percentages where the finger was (center of ghost)
-              // We need to center the field token on that same point
               const pixelX = (fp.x / 100) * fieldRect.width;
               const pixelY = (fp.y / 100) * fieldRect.height;
-
-              // Center the token on the stored position
               const left = pixelX - FIELD_TOKEN_WIDTH / 2;
               const top = pixelY - FIELD_TOKEN_HEIGHT / 2;
 
-              // Hide if currently being dragged
               const playerId = fp.id || fp.documentId;
               if (!playerId) return null;
               const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
@@ -576,113 +1168,232 @@ function TacticalBoard() {
                 </GestureDetector>
               );
             })}
+
+            {fieldPlayers.length === 0 ? (
+              <View style={[styles.fieldEmptyState, { backgroundColor: `${Colors.primary900}88`, borderColor: `${Colors.primary500}44` }]}>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>Place tes titulaires sur le terrain</Text>
+                <Text style={[Fonts.p4, { color: Colors.primary100, textAlign: 'center' }]}>
+                  Maintiens un joueur du banc puis glisse-le vers sa position.
+                </Text>
+              </View>
+            ) : null}
           </Animated.View>
         </View>
 
-        {/* Bench */}
-        <View style={[styles.benchContainer, { backgroundColor: Colors.neutral800 }]}>
-          <View style={styles.benchHeader}>
-            <Text style={[Fonts.p2, { color: Colors.neutral00, fontWeight: '700' }]}>
-              🪑 Banc (
-              {benchPlayers.length}
-              )
-            </Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              Maintenir + glisser
-            </Text>
+        {/* Bottom Control Panel */}
+        <Animated.View
+          style={[
+            styles.panelSheet,
+            panelAnimatedStyle,
+            {
+              backgroundColor: Colors.primary900,
+              borderColor: `${Colors.primary500}44`,
+              paddingBottom: Math.max(insets.bottom, 12),
+            },
+          ]}
+        >
+          <GestureDetector gesture={panelPanGesture}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => (isPanelOpen ? closePanel() : openPanel(activePanel || 'bench'))}
+              style={styles.panelHandleTouch}
+            >
+              <View style={[styles.panelHandle, { backgroundColor: `${Colors.neutral00}55` }]} />
+            </TouchableOpacity>
+          </GestureDetector>
+
+          <View style={styles.panelHeader}>
+            <View style={styles.panelTabsRow}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => togglePanel('bench')}
+                style={[
+                  styles.panelTab,
+                  isPanelOpen && activePanel === 'bench' && { backgroundColor: `${Colors.primary500}20`, borderColor: `${Colors.primary500}55` },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: isPanelOpen && activePanel === 'bench' ? Colors.primary500 : Colors.neutral00 }]}>
+                  Banc
+                </Text>
+                <View style={[styles.panelTabCount, { backgroundColor: `${Colors.primary500}22` }]}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>{benchPlayers.length}</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => togglePanel('actions')}
+                style={[
+                  styles.panelTab,
+                  isPanelOpen && activePanel === 'actions' && { backgroundColor: `${Colors.primary500}20`, borderColor: `${Colors.primary500}55` },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: isPanelOpen && activePanel === 'actions' ? Colors.primary500 : Colors.neutral00 }]}>
+                  Actions
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={isPanelOpen ? closePanel : () => openPanel('actions')}
+              style={styles.panelCloseButton}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                {isPanelOpen ? 'Fermer' : 'Ouvrir'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.benchScroll}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-          >
-            {benchPlayers.map((/** @type {TacticalPlayer} */ player) => {
-              const playerId = player.id || player.documentId || '';
-              const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
-              const panGesture = createBenchPanGesture(player);
+          {isPanelOpen && activePanel === 'bench' ? (
+            <View style={styles.panelContent}>
+              <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                Maintiens un joueur puis glisse-le sur le terrain.
+              </Text>
 
-              return (
-                <GestureDetector gesture={panGesture} key={playerId}>
-                  <View style={{ opacity: isDragging ? 0.3 : 1 }}>
-                    <DraggableToken player={player} />
-                  </View>
-                </GestureDetector>
-              );
-            })}
+              {benchPlayers.length > 0 ? (
+                <ScrollView
+                  contentContainerStyle={styles.benchScroll}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {benchPlayers.map((/** @type {TacticalPlayer} */ player) => {
+                    const playerId = player.id || player.documentId || '';
+                    const isDragging = activeDragPlayer && (activeDragPlayer.id || activeDragPlayer.documentId) === playerId;
+                    const panGesture = createBenchPanGesture(player);
 
-            {benchPlayers.length === 0 && (
-              <View style={styles.emptyBench}>
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>✓ Tous les joueurs sont placés !</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Footer */}
-        <View style={[styles.footer, { backgroundColor: Colors.neutral900, borderTopColor: Colors.neutral700 }]}>
-          {!readOnly && (compositionMeta?.draft?.updatedAt || compositionMeta?.published?.publishedAt) ? (
-            <View style={styles.statusMetaContainer}>
-              {compositionMeta?.draft?.updatedAt ? (
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                  Brouillon:
-                  {' '}
-                  {new Date(compositionMeta.draft.updatedAt).toLocaleString('fr-FR')}
-                </Text>
-              ) : null}
-              {compositionMeta?.published?.publishedAt ? (
-                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                  Convocation v
-                  {Number(compositionMeta?.published?.version || 1)}
-                  {' '}
-                  publiée:
-                  {' '}
-                  {new Date(compositionMeta.published.publishedAt).toLocaleString('fr-FR')}
-                </Text>
-              ) : null}
+                    return (
+                      <GestureDetector gesture={panGesture} key={playerId}>
+                        <View style={{ opacity: isDragging ? 0.3 : 1 }}>
+                          <DraggableToken player={player} />
+                        </View>
+                      </GestureDetector>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <View style={[styles.emptyBench, { backgroundColor: `${Colors.primary700}55`, borderColor: `${Colors.primary500}22` }]}>
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>Tous les joueurs sélectionnés sont déjà placés.</Text>
+                  <Text style={[Fonts.p4, { color: Colors.primary100, textAlign: 'center' }]}>
+                    Appuie sur + Ajouter si tu veux compléter la sélection sans revenir en arrière.
+                  </Text>
+                  {!readOnly ? (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => openSelectionEditor(selectionSource, selectionSourceLabel)}
+                      style={[styles.emptyBenchAddButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>+ Ajouter un joueur</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
             </View>
           ) : null}
-          <View style={styles.footerActions}>
-            <View style={{ flex: 1 }}>
-              <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
-            </View>
-            {!readOnly && (
-              <>
-                <View style={{ flex: 1 }}>
+
+          {isPanelOpen && activePanel === 'actions' ? (
+            <ScrollView
+              contentContainerStyle={styles.actionsScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.statusCard, { backgroundColor: `${Colors.primary700}45`, borderColor: `${statusCard.accent}33` }]}>
+                <View style={styles.statusCardHeader}>
+                  <Text style={[Fonts.p4Bold, { color: statusCard.accent }]}>
+                    {statusCard.eyebrow}
+                  </Text>
+                  <View style={[styles.statusDot, { backgroundColor: statusCard.accent }]} />
+                </View>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }, styles.statusCardTitle]}>
+                  {statusCard.title}
+                </Text>
+                <View style={styles.statusMetaContainer}>
+                  {statusCard.lines.map((line) => (
+                    <Text key={`${statusCard.eyebrow}-${line}`} style={[Fonts.p4, { color: Colors.primary100 }]}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+
+              {readOnly && canEdit ? (
+                <View style={styles.footerPrimaryAction}>
                   <Button
-                    disabled={isSaving || isPublishing}
-                    onPress={handleSave}
-                    title={isSaving ? 'Sauvegarde...' : 'Brouillon'}
+                    onPress={() => openBoardEditorFromCurrentState('published', 'Composition publiée')}
+                    title="Modifier la composition"
                     variant="Primary"
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Button
-                    disabled={isSaving || isPublishing}
-                    onPress={handlePublish}
-                    title={isPublishing ? 'Publication...' : 'Publier'}
-                    variant="Secondary"
-                  />
-                </View>
-              </>
-            )}
-            {readOnly && canEdit && (
-              <View style={{ flex: 1 }}>
-                <Button
-                  onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TacticalSelectionV2, {
-                    eventId,
-                    existingComposition,
-                    players: poolPlayers,
-                    sport,
-                    teamId,
-                  })}
-                  title="Modifier"
-                  variant="Primary"
-                />
-              </View>
-            )}
-          </View>
-        </View>
+              ) : null}
+
+              {!readOnly ? (
+                <>
+                  <View style={styles.footerPrimaryAction}>
+                    <Button
+                      disabled={isSaving || isPublishing}
+                      onPress={isTeamDefaultMode ? handleSave : handlePublish}
+                      title={primaryActionTitle}
+                      variant="Primary"
+                    />
+                  </View>
+
+                  <View style={styles.footerTertiaryAction}>
+                    <Button
+                      disabled={isSaving || isPublishing}
+                      onPress={() => openSelectionEditor(editorSource || 'draft', editorSourceLabel || 'Brouillon')}
+                      title="Modifier les joueurs"
+                      variant="Secondary"
+                    />
+                  </View>
+
+                  {!isTeamDefaultMode ? (
+                    <View style={styles.footerTertiaryAction}>
+                      <Button
+                        disabled={isSaving || isPublishing}
+                        onPress={handleSave}
+                        title={saveDraftLabel}
+                        variant="Secondary"
+                      />
+                    </View>
+                  ) : null}
+
+                  {!isTeamDefaultMode ? (
+                    <View style={styles.footerTertiaryAction}>
+                      <Button
+                        disabled={isSaving || isPublishing || !teamId}
+                        onPress={handleSaveAsTeamDefault}
+                        title={teamModelLabel}
+                        variant="Secondary"
+                      />
+                    </View>
+                  ) : null}
+
+                  {isTeamDefaultMode && compositionMeta?.composition ? (
+                    <View style={styles.footerTertiaryAction}>
+                      <Button
+                        disabled={isSaving || isPublishing}
+                        onPress={handleDeleteTeamDefault}
+                        title="Retirer le favori"
+                        variant="Secondary"
+                      />
+                    </View>
+                  ) : null}
+
+                  {!isTeamDefaultMode ? (
+                    <View style={[styles.actionsHintCard, { backgroundColor: `${Colors.primary700}30`, borderColor: `${Colors.primary500}22` }]}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>À quoi servent ces deux sauvegardes ?</Text>
+                      <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                        Brouillon : garde tes changements privés pour ce match, sans les publier.
+                      </Text>
+                      <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                        Favori d'équipe : réutilise cette composition comme base de départ sur les prochains matchs.
+                      </Text>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </ScrollView>
+          ) : null}
+        </Animated.View>
 
         {/* Ghost Token Overlay */}
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -703,63 +1414,77 @@ function TacticalBoard() {
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
+  actionsHintCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  benchContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 8,
-    paddingTop: 12,
-  },
-  benchHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingHorizontal: 16,
+  actionsScroll: {
+    gap: 10,
+    paddingBottom: 2,
   },
   benchScroll: {
     alignItems: 'center',
-    minHeight: 90,
-    paddingHorizontal: 12,
-  },
-  container: {
-    flex: 1,
-  },
-  countBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  countText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '700',
+    minHeight: 104,
+    paddingBottom: 6,
+    paddingHorizontal: 0,
   },
   dropZoneIndicator: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 14,
+    borderRadius: 20,
     borderStyle: 'dashed',
     borderWidth: 3,
-    margin: 4,
+    margin: 6,
   },
   emptyBench: {
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
     justifyContent: 'center',
+    minHeight: 108,
     paddingHorizontal: 20,
+    paddingVertical: 16,
+    width: '100%',
+  },
+  emptyBenchAddButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   field: {
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    elevation: 8,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   fieldContainer: {
     alignItems: 'center',
     flex: 1,
-    justifyContent: 'flex-end', // Push field to bottom, against bench
-    paddingBottom: 0, // No gap with bench
-    paddingHorizontal: 8,
-    paddingTop: 4,
+    justifyContent: 'flex-start',
+    paddingBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 0,
+  },
+  fieldEmptyState: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 20,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    position: 'absolute',
+    width: '78%',
   },
   fieldImage: {
     height: '100%',
@@ -768,21 +1493,33 @@ const styles = StyleSheet.create({
   fieldPlayerWrapper: {
     position: 'absolute',
   },
-  footer: {
-    borderTopWidth: 1,
-    gap: 8,
-    padding: 16,
+  fieldTint: {
+    ...StyleSheet.absoluteFillObject,
   },
-  footerActions: {
+  footer: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 10,
+    marginHorizontal: 12,
+    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  footerPrimaryAction: {
+    marginTop: 2,
+  },
+  footerSecondaryRow: {
     flexDirection: 'row',
     gap: 8,
+  },
+  footerTertiaryAction: {
+    marginTop: 2,
   },
   header: {
     alignItems: 'center',
-    flexDirection: 'row',
     justifyContent: 'center',
-    minHeight: 48,
-    paddingVertical: 8,
+    minHeight: 82,
+    paddingVertical: 6,
     position: 'relative',
   },
   headerBackButtonContainer: {
@@ -793,14 +1530,112 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 10,
   },
+  headerCaption: {
+    textAlign: 'center',
+  },
   headerCenter: {
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 60,
+  },
+  headerMetaRow: {
+    alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  headerPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  headerSubtitle: {
+    textAlign: 'center',
+  },
+  headerTitle: {
+    textAlign: 'center',
+  },
+  panelCloseButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  panelContent: {
     gap: 10,
+    paddingTop: 10,
+  },
+  panelHandle: {
+    borderRadius: 999,
+    height: 4,
+    width: 44,
+  },
+  panelHandleTouch: {
+    alignItems: 'center',
+    paddingBottom: 6,
+    paddingTop: 2,
+  },
+  panelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  panelSheet: {
+    borderRadius: 24,
+    borderWidth: 1,
+    bottom: 10,
+    left: 12,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    position: 'absolute',
+    right: 12,
+  },
+  panelTab: {
+    alignItems: 'center',
+    borderColor: 'transparent',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  panelTabCount: {
+    alignItems: 'center',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  panelTabsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  statusCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statusCardTitle: {
+    lineHeight: 24,
+  },
+  statusDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
   statusMetaContainer: {
     gap: 4,
-    marginBottom: 8,
   },
 });
 

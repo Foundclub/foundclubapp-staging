@@ -541,7 +541,7 @@ function HistoryWizardClub({ navigation, route }) {
                 {selectedMultisport?.name}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                Sélectionné ton entite de rattachement
+                Sélectionne ton entité de rattachement
               </Text>
             </View>
           )}

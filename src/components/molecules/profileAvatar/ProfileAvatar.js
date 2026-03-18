@@ -21,6 +21,7 @@ import ProfilePicturePreviewOverlay from '../profilePicturePreviewOverlay/Profil
  * @param {'avatar' | 'logo'} [props.variant] - Rendering variant for classic avatars or logos
  * @param {'cover' | 'contain'} [props.fitMode] - Optional explicit resize mode
  * @param {number} [props.safeInsetRatio] - Inner inset ratio (logo mode only)
+ * @param {'auto' | 'circle' | 'rounded'} [props.shape] - Optional outer frame shape
  * @returns {import('react').ReactElement}
  */
 function ProfileAvatar({
@@ -28,7 +29,8 @@ function ProfileAvatar({
   fitMode,
   imageStyle,
   imageUrl,
-  safeInsetRatio = 0.12,
+  safeInsetRatio,
+  shape = 'auto',
   size = 40,
   style,
   variant = 'avatar',
@@ -44,14 +46,19 @@ function ProfileAvatar({
   const flattenedStyle = StyleSheet.flatten([{ height: size, width: size }, style]) || {};
   const resolvedWidth = typeof flattenedStyle.width === 'number' ? flattenedStyle.width : size;
   const resolvedHeight = typeof flattenedStyle.height === 'number' ? flattenedStyle.height : size;
-  const sanitizedInsetRatio = Number.isFinite(safeInsetRatio)
-    ? Math.min(Math.max(safeInsetRatio, 0), 0.3)
-    : 0.12;
+  const defaultInsetRatio = isLogoVariant ? 0.04 : 0;
+  const rawInsetRatio = Number.isFinite(safeInsetRatio) ? safeInsetRatio : defaultInsetRatio;
+  const sanitizedInsetRatio = Number.isFinite(rawInsetRatio)
+    ? Math.min(Math.max(rawInsetRatio, 0), 0.3)
+    : defaultInsetRatio;
   const effectiveInsetRatio = isLogoVariant ? sanitizedInsetRatio : 0;
   const innerWidth = resolvedWidth * (1 - (2 * effectiveInsetRatio));
   const innerHeight = resolvedHeight * (1 - (2 * effectiveInsetRatio));
   const resolvedFitMode = fitMode || (isLogoVariant ? 'contain' : 'cover');
   const isCircular = Math.abs(resolvedWidth - resolvedHeight) < 1;
+  const resolvedShape = shape === 'auto'
+    ? (isLogoVariant ? 'auto' : (isCircular ? 'circle' : 'rounded'))
+    : shape;
   const normalizedBorderColor = typeof flattenedStyle.borderColor === 'string'
     ? flattenedStyle.borderColor.replace(/\s/g, '').toLowerCase()
     : '';
@@ -65,12 +72,21 @@ function ProfileAvatar({
     'rgba(255,255,255,1)',
     'white',
   ].includes(normalizedBorderColor);
-  const shouldSuppressCircleBorder = isCircular && hasCircleBorder && isWhiteLikeBorder;
+  const shouldSuppressCircleBorder = resolvedShape === 'circle'
+    && isCircular
+    && hasCircleBorder
+    && isWhiteLikeBorder;
   let resolvedRadius = 0;
-  if (isCircular) {
+  if (resolvedShape === 'circle' && isCircular) {
     resolvedRadius = resolvedWidth / 2;
+  } else if (resolvedShape === 'rounded') {
+    resolvedRadius = typeof flattenedStyle.borderRadius === 'number'
+      ? flattenedStyle.borderRadius
+      : Math.min(Math.round(Math.min(resolvedWidth, resolvedHeight) * 0.22), 24);
   } else if (typeof flattenedStyle.borderRadius === 'number') {
     resolvedRadius = flattenedStyle.borderRadius;
+  } else if (isCircular) {
+    resolvedRadius = resolvedWidth / 2;
   }
 
   const handlePress = () => {

@@ -567,7 +567,7 @@ function HomeHubContent({ auth, navigation, route }) {
         if (!clubId) {
           Alert.alert(
             t('homeHub.alerts.noClub.title', 'Club introuvable'),
-            t('homeHub.alerts.noClub.description', 'Votre compte doit être rattache a un club pour gérer ces demandes.'),
+            t('homeHub.alerts.noClub.description', 'Votre compte doit être rattaché à un club pour gérer ces demandes.'),
           );
           return;
         }

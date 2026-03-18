@@ -109,6 +109,7 @@ const isAttachmentSheetV2Enabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_
 const isChatRetryEnabled = isFlagEnabled(process.env.FC_CHAT_MESSAGE_RETRY_V1, true);
 const isSocketReadTypingEnabled = isFlagEnabled(process.env.FC_CHAT_SOCKET_READ_TYPING_V1, true);
 const isVoiceNotesEnabled = isFlagEnabled(process.env.FC_CHAT_VOICE_NOTES, true);
+const isVoiceDiagnosticsEnabled = __DEV__ || isFlagEnabled(process.env.FC_CHAT_VOICE_DEBUG, false);
 const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION, true);
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
@@ -326,6 +327,11 @@ function Conversation({ navigation, route }) {
     conversationLogger.debug(`[attachment-debug] ${message}`, meta);
   }, []);
 
+  const logVoiceDiagnostic = useCallback((stage, meta = undefined) => {
+    if (!isVoiceDiagnosticsEnabled) return;
+    conversationLogger.warn(`[voice-diag] ${stage}`, meta);
+  }, []);
+
   const describeAsset = useCallback((asset) => {
     const uri = String(asset?.uri || '');
     const uriScheme = uri.includes(':') ? uri.split(':')[0] : 'unknown';
@@ -381,6 +387,18 @@ function Conversation({ navigation, route }) {
       || error?.message
       || '',
     ).toLowerCase();
+    if (rawErrorMessage.includes('voice_socket_unavailable')) {
+      return 'Socket chat indisponible avant la creation du message.';
+    }
+    if (rawErrorMessage.includes('voice_upload_failed')) {
+      return 'Upload audio incomplet. Aucun fichier exploitable recu.';
+    }
+    if (rawErrorMessage.includes('voice_file_empty')) {
+      return 'Le fichier audio local est vide.';
+    }
+    if (rawErrorMessage.includes('voice_module_unavailable')) {
+      return 'Le module vocal n est pas disponible sur cette build.';
+    }
     if (responseStatus === 413 || rawErrorMessage.includes('too large') || rawErrorMessage.includes('payload too large')) {
       return 'La pièce jointe est trop volumineuse pour être envoyée.';
     }
@@ -699,6 +717,13 @@ function Conversation({ navigation, route }) {
     /** @type {{
      *  durationMs: number;
      *  fileName: string;
+     *  diagnostics?: {
+     *    maxDb: number | null;
+     *    minDb: number | null;
+     *    rangeDb: number;
+     *    sampleCount: number;
+     *    waveformSource: 'metering' | 'fallback';
+     *  };
      *  mime: string;
      *  size: number;
      *  uri: string;
@@ -1911,6 +1936,10 @@ function Conversation({ navigation, route }) {
     }
 
     if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.idle) return;
+    logVoiceDiagnostic('record-start-requested', {
+      chatId,
+      hasPendingDraft: Boolean(pendingVoiceDraft?.uri),
+    });
     try {
       setVoiceRecordingHint(t('conversation.voice.hint', 'Glisser gauche pour annuler, glisser haut pour verrouiller.'));
       setVoiceRecordingDurationMs(0);
@@ -1939,8 +1968,14 @@ function Conversation({ navigation, route }) {
         onProgress: (durationMs) => setVoiceRecordingDurationMs(durationMs),
       });
       setVoiceRecordingState(VOICE_RECORDING_STATES.recording);
+      logVoiceDiagnostic('record-start-succeeded', { chatId });
     } catch (error) {
       const code = String(error?.message || '');
+      logVoiceDiagnostic('record-start-failed', {
+        chatId,
+        code,
+        message: error?.message || error,
+      });
       if (code === 'VOICE_ALREADY_RECORDING') return;
       conversationLogger.warn('Failed to start voice recording', error);
       setVoiceRecordingState(VOICE_RECORDING_STATES.error);
@@ -1957,7 +1992,7 @@ function Conversation({ navigation, route }) {
       }
       resetVoiceRecordingState();
     }
-  }, [canRecordVoiceNote, chatId, pendingVoiceDraft?.uri, resetVoiceRecordingState, stopDraftVoicePlayback, t]);
+  }, [canRecordVoiceNote, chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, resetVoiceRecordingState, stopDraftVoicePlayback, t]);
 
   const handleCancelVoiceRecording = useCallback(async () => {
     if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.idle) return;
@@ -1967,8 +2002,9 @@ function Conversation({ navigation, route }) {
     } catch (_error) {
       // No-op cleanup.
     }
+    logVoiceDiagnostic('record-cancelled', { chatId });
     resetVoiceRecordingState();
-  }, [resetVoiceRecordingState]);
+  }, [chatId, logVoiceDiagnostic, resetVoiceRecordingState]);
 
   const handleStopVoiceRecordingToDraft = useCallback(async () => {
     if (!chatId || !isVoiceRecording) return;
@@ -1976,11 +2012,23 @@ function Conversation({ navigation, route }) {
     try {
       setVoiceRecordingState(VOICE_RECORDING_STATES.sending);
       const draft = await stopRecording();
+      logVoiceDiagnostic('record-stop-succeeded', {
+        chatId,
+        durationMs: Number(draft?.durationMs || 0) || 0,
+        fileName: draft?.fileName || '',
+        mime: draft?.mime || '',
+        size: Number(draft?.size || 0) || 0,
+        uri: draft?.uri || '',
+      });
 
       if (!draft?.uri) {
         throw new Error('VOICE_EMPTY');
       }
       if ((draft?.durationMs || 0) < 500) {
+        logVoiceDiagnostic('record-too-short-discarded', {
+          chatId,
+          durationMs: Number(draft?.durationMs || 0) || 0,
+        });
         await deleteVoiceNoteFile(draft.uri);
         resetVoiceRecordingState();
         return;
@@ -2000,6 +2048,7 @@ function Conversation({ navigation, route }) {
       }
 
       setPendingVoiceDraft({
+        diagnostics: draft?.diagnostics,
         durationMs: normalizedDurationMs,
         fileName: draft?.fileName || `voice-note-${Date.now()}.m4a`,
         mime: draft?.mime || 'audio/mp4',
@@ -2009,9 +2058,22 @@ function Conversation({ navigation, route }) {
       });
 
       setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prête. Ajoutez un message puis envoyez.'));
+      logVoiceDiagnostic('draft-created', {
+        chatId,
+        diagnostics: draft?.diagnostics || null,
+        durationMs: normalizedDurationMs,
+        mime: draft?.mime || 'audio/mp4',
+        size: Math.max(0, Number(draft?.size) || 0),
+        uriScheme: String(draft?.uri || '').split(':')[0] || 'unknown',
+      });
       resetVoiceRecordingState();
     } catch (error) {
       conversationLogger.warn('Failed to finalize voice note draft', error);
+      logVoiceDiagnostic('record-stop-failed', {
+        chatId,
+        code: String(error?.message || ''),
+        message: error?.message || error,
+      });
       setVoiceRecordingState(VOICE_RECORDING_STATES.error);
       const code = String(error?.message || '');
       let errorMessage = t(
@@ -2038,6 +2100,7 @@ function Conversation({ navigation, route }) {
   }, [
     chatId,
     isVoiceRecording,
+    logVoiceDiagnostic,
     resetVoiceRecordingState,
     t,
     voiceRecordingWaveform,
@@ -2661,6 +2724,10 @@ function Conversation({ navigation, route }) {
     const currentDraftUri = String(pendingVoiceDraft?.uri || '').trim();
     stopDraftVoicePlayback().catch(() => {});
     setPendingVoiceDraft(null);
+    logVoiceDiagnostic('draft-cleared', {
+      chatId,
+      hadUri: Boolean(currentDraftUri),
+    });
     if (!currentDraftUri) return;
     try {
       await deleteVoiceNoteFile(currentDraftUri);
@@ -2670,7 +2737,7 @@ function Conversation({ navigation, route }) {
         uri: currentDraftUri,
       });
     }
-  }, [pendingVoiceDraft?.uri, stopDraftVoicePlayback]);
+  }, [chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, stopDraftVoicePlayback]);
 
   const sendPendingVoiceDraft = async () => {
     if (uploadInFlightRef.current) {
@@ -2678,8 +2745,18 @@ function Conversation({ navigation, route }) {
       return;
     }
 
-    if (!pendingVoiceDraft?.uri || !chatId) return;
+    if (!pendingVoiceDraft?.uri || !chatId) {
+      logVoiceDiagnostic('send-skipped-missing-draft', {
+        chatId,
+        hasDraftUri: Boolean(pendingVoiceDraft?.uri),
+      });
+      return;
+    }
     if (!isSocketConnected || !socket) {
+      logVoiceDiagnostic('send-socket-unavailable', {
+        chatId,
+        socketConnected: Boolean(isSocketConnected && socket),
+      });
       Alert.alert(
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
         'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
@@ -2693,11 +2770,23 @@ function Conversation({ navigation, route }) {
       type: pendingVoiceDraft.mime || 'audio/mp4',
       uri: pendingVoiceDraft.uri,
     };
+    logVoiceDiagnostic('send-start', {
+      asset: describeAsset(normalizedVoiceAsset),
+      chatId,
+      hasReplyTo: Boolean(replyingTo?.documentId),
+      messageLength: String(composerText || '').trim().length,
+      socketConnected: Boolean(isSocketConnected && socket),
+    });
     const voiceValidationError = validateAttachmentAsset(normalizedVoiceAsset);
     if (voiceValidationError) {
+      logVoiceDiagnostic('send-validation-failed', {
+        chatId,
+        reason: voiceValidationError?.reason,
+        userMessage: voiceValidationError?.userMessage,
+      });
       Alert.alert(
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
-        voiceValidationError,
+        voiceValidationError?.userMessage || 'Validation audio impossible.',
       );
       return;
     }
@@ -2710,6 +2799,10 @@ function Conversation({ navigation, route }) {
       if (!uploadedFiles.length) {
         throw new Error('VOICE_UPLOAD_FAILED');
       }
+      logVoiceDiagnostic('send-upload-succeeded', {
+        chatId,
+        uploadedFiles: describeUploadItems(uploadedFiles),
+      });
 
       const optimisticMessageId = sendMessage(chatId, String(composerText || '').trim(), {
         attachments: uploadedFiles,
@@ -2727,6 +2820,10 @@ function Conversation({ navigation, route }) {
       if (!optimisticMessageId) {
         throw new Error('VOICE_SOCKET_UNAVAILABLE');
       }
+      logVoiceDiagnostic('send-socket-queued', {
+        chatId,
+        optimisticMessageId,
+      });
 
       await clearPendingVoiceDraft();
       setReplyingTo(null);
@@ -2734,6 +2831,11 @@ function Conversation({ navigation, route }) {
       sendTypingStop(chatId);
     } catch (error) {
       conversationLogger.warn('Failed to send pending voice draft', error);
+      logVoiceDiagnostic('send-failed', {
+        chatId,
+        message: error?.message || error,
+        responseStatus: Number(error?.response?.status || 0) || 0,
+      });
       const detailedMessage = buildAttachmentUploadErrorMessage(error);
       Alert.alert(
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
@@ -3098,7 +3200,7 @@ function Conversation({ navigation, route }) {
 
     Alert.alert(
       t('conversation.actions.deleteConfirm.title', 'Supprimer le message'),
-      t('conversation.actions.deleteConfirm.description', 'Ce message sera supprime pour tous les participants.'),
+      t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim? pour tous les participants.'),
       [
         {
           style: 'cancel',
@@ -3202,7 +3304,7 @@ function Conversation({ navigation, route }) {
           paddingVertical: 4,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>â†©</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>↩</Text>
       </View>
     </View>
   ), [Colors.primary500, Fonts.p3Bold]);

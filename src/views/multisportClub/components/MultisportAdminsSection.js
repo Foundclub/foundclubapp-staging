@@ -44,7 +44,7 @@ function MultisportAdminsSection({ admins, onAdminPress }) {
           ]}
         >
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('multisport.empty.admins', 'Aucun dirigeant rattache.')}
+            {t('multisport.empty.admins', 'Aucun dirigeant rattach?.')}
           </Text>
         </View>
       ) : (

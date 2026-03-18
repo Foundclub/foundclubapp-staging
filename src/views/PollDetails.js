@@ -370,7 +370,7 @@ function PollDetails({ navigation, route }) {
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {t(
               'conversation.poll.details.voteHint',
-              'Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage n’est pas anonyme.',
+              "Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage n'est pas anonyme.",
             )}
           </Text>
         </View>
@@ -396,7 +396,7 @@ function PollDetails({ navigation, route }) {
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
               {t(
                 'conversation.poll.details.notFound',
-                'Ce sondage est introuvable ou a été supprime.',
+                'Ce sondage est introuvable ou a été supprimé.',
               )}
             </Text>
           </View>

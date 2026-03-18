@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFullscreenButton';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -169,6 +170,31 @@ function ClubFacilityPlanningContainer({
     }
   };
 
+  const handleOpenFullscreen = () => {
+    const selectedFacility = displayedFacilities.find(
+      (facility) => getFacilityId(facility) === selectedFacilityId,
+    );
+    let selectedFacilityLabel = null;
+    if (selectedFacility) {
+      selectedFacilityLabel = selectedFacility?.isShared
+        ? `${selectedFacility.name} - MS`
+        : selectedFacility.name;
+    }
+    const fullscreenContextLabel = planningScope === 'shared'
+      ? t('planning.fullscreen.clubShared', 'Planning partage')
+      : t('planning.fullscreen.club', 'Planning club');
+
+    navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+      clubId,
+      cmId: resolvedCmId,
+      contextDetailLabel: selectedFacilityLabel || null,
+      contextLabel: fullscreenContextLabel,
+      date: currentDate.toISOString(),
+      facilityId: selectedFacilityId,
+      sourceType: planningScope === 'shared' ? 'clubShared' : 'club',
+    });
+  };
+
   return (
     <View style={{ flex: 1 }}>
       {hasSharedScope ? (
@@ -186,12 +212,20 @@ function ClubFacilityPlanningContainer({
       ) : null}
 
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[12]]}>
-        <SegmentedControl
-          centerContent
-          onChange={setViewMode}
-          options={viewOptions}
-          value={viewMode}
-        />
+        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <SegmentedControl
+              centerContent
+              onChange={setViewMode}
+              options={viewOptions}
+              value={viewMode}
+            />
+          </View>
+          <PlanningFullscreenButton
+            borderColor={`${Colors.primary500}66`}
+            onPress={handleOpenFullscreen}
+          />
+        </View>
       </View>
 
       <View style={{ marginBottom: 16 }}>

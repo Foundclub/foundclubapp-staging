@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -8,9 +8,12 @@ import {
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
 
+import { createLogger } from '@/utils/logger/logger';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import useAudioPlayback from '@/hooks/useAudioPlayback';
+
+const voiceBubbleLogger = createLogger('voice-bubble');
 
 const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -126,6 +129,26 @@ function VoiceNoteBubble({
     headers: playbackHeaders,
     sourceUrl: audioUrl,
   });
+
+  useEffect(() => {
+    if (!__DEV__) return;
+    if (audioUrl || attachments.length === 0) return;
+
+    voiceBubbleLogger.warn('[voice-diag] bubble-no-audio-url', {
+      attachmentCount: attachments.length,
+      attachmentMimes: attachments.map((attachment) => String(attachment?.mime || '')),
+      compositionType: composition?.type || '',
+    });
+  }, [attachments, audioUrl, composition?.type]);
+
+  useEffect(() => {
+    if (!__DEV__ || !lastError) return;
+
+    voiceBubbleLogger.warn('[voice-diag] bubble-playback-error', {
+      audioUrl,
+      error: lastError,
+    });
+  }, [audioUrl, lastError]);
 
   const displayedDuration = durationMs || fallbackDuration;
   const waveformBars = useMemo(

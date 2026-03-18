@@ -1,6 +1,10 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { getTeamById, getTeams } from './teamService';
+import {
+  getTeamById,
+  getTeamDefaultComposition,
+  getTeams,
+} from './teamService';
 
 /**
  * React Query hook to fetch teams
@@ -35,5 +39,18 @@ export const useGetTeam = (teamId, options) => useQuery({
   enabled: !!teamId,
   queryFn: () => getTeamById(teamId),
   queryKey: ['team', teamId],
+  ...options,
+});
+
+/**
+ * React Query hook to fetch a team's default composition template.
+ * @param {string} teamId
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options]
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>}
+ */
+export const useGetTeamDefaultComposition = (teamId, options) => useQuery({
+  enabled: !!teamId,
+  queryFn: () => getTeamDefaultComposition(teamId),
+  queryKey: ['teamDefaultComposition', teamId],
   ...options,
 });

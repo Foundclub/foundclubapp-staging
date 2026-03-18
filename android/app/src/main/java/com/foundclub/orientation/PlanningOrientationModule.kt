@@ -1,6 +1,7 @@
 package com.foundclub.orientation
 
 import android.content.pm.ActivityInfo
+import android.view.Surface
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -19,7 +20,14 @@ class PlanningOrientationModule(
 
   @ReactMethod
   fun lockToLandscape() {
-    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
+    val currentRotation = currentActivity?.display?.rotation ?: Surface.ROTATION_0
+    val requestedOrientation = if (currentRotation == Surface.ROTATION_270) {
+      ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+    } else {
+      ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+    }
+
+    setRequestedOrientation(requestedOrientation)
   }
 
   @ReactMethod

@@ -155,7 +155,7 @@ function RequestsHub({ navigation, route }) {
     }
 
     Alert.alert(
-      t('requestsHub.clubAssignedTitle', 'Entraîneur ajoute'),
+      t('requestsHub.clubAssignedTitle', 'Entra?neur ajout?'),
       t(
         'requestsHub.clubAssignedMessage',
         "{{name}} a été ajouté au club. Voulez-vous l'assigner ? une équipe maintenant ?",

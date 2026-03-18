@@ -78,7 +78,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
       onClose();
       Alert.alert(
         t('common.success', 'Succès'),
-        t('addCoach.alerts.success.title', 'Entraîneur ajoute avec succès'),
+        t('addCoach.alerts.success.title', 'Entra?neur ajout? avec succ?s'),
       );
     },
   });
@@ -143,7 +143,7 @@ function CreateTrainerModal({ isVisible, onClose, onTrainerCreated }) {
                     error={getFieldError({ errors: formErrors, fieldName: name })}
                     inputMode="tel"
                     keyboardType="phone-pad"
-                    label={`${t('profile.fields.phoneNumber.label', 'Telephone')} *`}
+                    label={`${t('profile.fields.phoneNumber.label', 'T?l?phone')} *`}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     placeholder={t('login.fields.phoneNumber.placeholder', '06 00 00 00 00')}

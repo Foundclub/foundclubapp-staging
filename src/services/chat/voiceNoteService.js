@@ -195,6 +195,32 @@ const normalizeWaveformToHeights = (samples) => {
   });
 };
 
+const buildMeteringDiagnostics = (samples, waveformSource) => {
+  const numericSamples = Array.isArray(samples)
+    ? samples.map((sample) => Number(sample)).filter((sample) => Number.isFinite(sample))
+    : [];
+
+  if (numericSamples.length === 0) {
+    return {
+      maxDb: null,
+      minDb: null,
+      rangeDb: 0,
+      sampleCount: 0,
+      waveformSource,
+    };
+  }
+
+  const minDb = Math.min(...numericSamples);
+  const maxDb = Math.max(...numericSamples);
+  return {
+    maxDb,
+    minDb,
+    rangeDb: maxDb - minDb,
+    sampleCount: numericSamples.length,
+    waveformSource,
+  };
+};
+
 const buildFallbackWaveform = (durationMs) => {
   const safeDuration = Math.max(1, Number(durationMs) || 0);
   return Array.from({ length: WAVEFORM_POINTS }, (_, index) => {
@@ -283,6 +309,13 @@ export const startRecording = async (params = {}) => {
  *   size: number;
  *   durationMs: number;
  *   waveform: number[];
+ *   diagnostics?: {
+ *     maxDb: number | null;
+ *     minDb: number | null;
+ *     rangeDb: number;
+ *     sampleCount: number;
+ *     waveformSource: 'metering' | 'fallback';
+ *   };
  * }>}
  */
 export const stopRecording = async () => {
@@ -326,7 +359,9 @@ export const stopRecording = async () => {
   const durationMs = Math.max(0, recordingSession.durationMs || 0);
   const compactWaveform = downsampleWaveform(recordingSession.meteringSamples, WAVEFORM_POINTS);
   const normalizedWaveform = normalizeWaveformToHeights(compactWaveform);
+  const waveformSource = normalizedWaveform.length > 0 ? 'metering' : 'fallback';
   const response = {
+    diagnostics: buildMeteringDiagnostics(recordingSession.meteringSamples, waveformSource),
     durationMs,
     fileName: extractFileName(finalPath) || `voice-note-${Date.now()}.m4a`,
     mime: 'audio/mp4',

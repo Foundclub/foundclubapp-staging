@@ -25,7 +25,6 @@ import {
   clearPersistedBootError,
   readPersistedBootError,
 } from '@/utils/bootDiagnostics';
-import { lockToPortrait } from '@/utils/device/orientation';
 import { displayErrorAlert } from '@/utils/errors/displayError';
 
 import { AppModeProvider } from '@/context/AppModeContext';
@@ -122,10 +121,6 @@ const queryClient = new QueryClient({
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
-  useEffect(() => {
-    lockToPortrait();
-  }, []);
-
   useEffect(() => {
     const previousBootError = readPersistedBootError();
     if (!previousBootError) return;

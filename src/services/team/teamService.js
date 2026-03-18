@@ -1,9 +1,6 @@
 import Joi from 'joi';
 
-import { categorySchema } from '../category/categoryService';
 import client from '../client';
-import { levelSchema } from '../level/levelService';
-import { sectionSchema } from '../section/sectionService';
 
 const teamSchema = Joi.object({
   activities: Joi.any().allow(null).optional(), // Relaxed validation for Strapi v5 connect syntax
@@ -186,6 +183,41 @@ export const getTeamById = async (teamId) => {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch team: ${errorToDisplay}`);
   }
+};
+
+/**
+ * Get the default composition template for a team.
+ * @param {string} teamId
+ * @returns {Promise<{composition: Record<string, any> | null, team?: {documentId?: string, name?: string}}>}
+ */
+export const getTeamDefaultComposition = async (teamId) => {
+  const response = await client.get(`/teams/${teamId}/default-composition`);
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Save the default composition template for a team.
+ * @param {string} teamId
+ * @param {{ composition: Record<string, any> }} payload
+ * @returns {Promise<{composition: Record<string, any> | null, team?: {documentId?: string, name?: string}}>}
+ */
+export const saveTeamDefaultComposition = async (teamId, payload) => {
+  const response = await client.put(`/teams/${teamId}/default-composition`, {
+    data: {
+      composition: payload?.composition || {},
+    },
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Delete the default composition template for a team.
+ * @param {string} teamId
+ * @returns {Promise<{composition: null, team?: {documentId?: string, name?: string}}>}
+ */
+export const deleteTeamDefaultComposition = async (teamId) => {
+  const response = await client.delete(`/teams/${teamId}/default-composition`);
+  return response?.data?.data || response?.data;
 };
 
 /**

@@ -55,7 +55,7 @@ function MultisportSponsorsSection({
       {sponsors.length === 0 ? (
         <View style={[Spaces.paddingVertical[8]]}>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t('multisport.empty.partners', 'Aucun partenaire ajoute.')}
+            {t('multisport.empty.partners', 'Aucun partenaire ajout?.')}
           </Text>
         </View>
       ) : (

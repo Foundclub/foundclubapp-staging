@@ -681,7 +681,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
     }
 
     if (hasProfileSignals) {
-      return 'Aucune annonce ne correspond exactement à ton profil pour l’instant, mais toutes les autres restent visibles.';
+      return "Aucune annonce ne correspond exactement à ton profil pour l'instant, mais toutes les autres restent visibles.";
     }
 
     return 'Complète ton profil pour mettre en avant les annonces qui te correspondent.';
@@ -707,7 +707,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
               ? 'Désactive le filtre pour afficher toutes les annonces disponibles.'
-              : 'Tu peux déjà consulter toutes les annonces publiées sur l’application.'}
+              : "Tu peux déjà consulter toutes les annonces publiées sur l'application."}
           </Text>
         </View>
       );
@@ -844,7 +844,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
               </Text>
               <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
                 {hasProfileSignals
-                  ? 'Les annonces compatibles restent déjà en tête. Active le filtre pour n’afficher que celles-ci.'
+                  ? "Les annonces compatibles restent d?j? en t?te. Active le filtre pour n'afficher que celles-ci."
                   : 'Ajoute tes infos sportives pour faire remonter automatiquement les meilleures annonces.'}
               </Text>
             </View>

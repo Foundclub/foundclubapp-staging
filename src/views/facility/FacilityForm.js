@@ -181,7 +181,7 @@ function FacilityForm() {
       setError('address', {
         message: t(
           'facilityForm.errors.addressGeocodeRequired',
-          'Sélectionnez une adresse geolocalisee dans la liste.',
+          'S?lectionnez une adresse g?olocalis?e dans la liste.',
         ),
         type: 'manual',
       });
@@ -402,7 +402,7 @@ function FacilityForm() {
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
                         {t(
                           'facilityForm.hints.planningColor',
-                          'Cette couleur apparaitra dans le planning pour identifier rapidement l\'installation.',
+                          "Cette couleur apparaîtra dans le planning pour identifier rapidement l'installation.",
                         )}
                       </Text>
                     )}

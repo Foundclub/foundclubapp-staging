@@ -10,11 +10,12 @@
  */
 export function getShortAddress(addressDetails) {
   if (!addressDetails) return '';
+  if (typeof addressDetails === 'string' && addressDetails.trim() === '[object Object]') return '';
 
   let raw = '';
   let parsed = null;
 
-  // 1. Normaliser : récupérer la vraie chaîne d’adresse ou l'objet
+  // 1. Normaliser : récupérer la vraie chaîne d'adresse ou l'objet
   if (typeof addressDetails === 'string') {
     try {
       parsed = JSON.parse(addressDetails);
@@ -25,6 +26,17 @@ export function getShortAddress(addressDetails) {
   } else {
     parsed = addressDetails;
     raw = addressDetails?.address || '';
+  }
+
+  const normalized = normalizeLocationInput(parsed || raw || addressDetails);
+  if (normalized?.postcode && normalized?.city) {
+    return `${normalized.postcode} ${normalized.city}`;
+  }
+  if (normalized?.label) {
+    return normalized.label;
+  }
+  if (normalized?.address) {
+    return normalized.address;
   }
 
   // Priority 0: Structured data (Clubs format preservation)
@@ -39,6 +51,7 @@ export function getShortAddress(addressDetails) {
   if (!raw || typeof raw !== 'string') return '';
 
   const cleanRaw = raw.trim();
+  if (!cleanRaw || cleanRaw === '[object Object]') return '';
 
   // Priority 1: "Zip City" pattern (e.g. "75015 Paris", "13002 Marseille")
   // Matches 5 digits followed by words (City).
@@ -93,15 +106,31 @@ const parseLngLatFromValue = (value) => {
   return { lat, lng };
 };
 
-const pickFirstText = (...candidates) => {
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string') {
-      const trimmed = candidate.trim();
-      if (trimmed.length > 0) return trimmed;
-    }
+const pickFirstText = (...candidates) => candidates.reduce((found, candidate) => {
+  if (found) return found;
+  if (typeof candidate === 'string') {
+    const trimmed = candidate.trim();
+    return trimmed.length > 0 ? trimmed : found;
   }
-  return null;
-};
+  if (typeof candidate === 'number') {
+    return String(candidate);
+  }
+  if (candidate && typeof candidate === 'object') {
+    return pickFirstText(
+      candidate.label,
+      candidate.description,
+      candidate.address_line,
+      candidate.address,
+      candidate.name,
+      candidate.city,
+      candidate.context,
+      candidate.properties?.label,
+      candidate.properties?.city,
+      candidate.properties?.context,
+    );
+  }
+  return found;
+}, null);
 
 const extractCoordinates = (input) => {
   if (!input || typeof input !== 'object') return null;

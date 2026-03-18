@@ -24,12 +24,25 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetEvent, useGetEventTeamComposition } from '@/services/event/eventQueries';
+import { useGetTeamDefaultComposition } from '@/services/team/teamQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {import('./types').TacticalPlayer} TacticalPlayer
  */
+
+const normalizeMatchLabel = (value) => {
+  const label = String(value || '').trim();
+  if (!label) return '';
+
+  const vsMatch = label.match(/\bVS\b.*$/i);
+  if (vsMatch?.[0]) {
+    return `Match ${vsMatch[0].trim()}`;
+  }
+
+  return label.replace(/^Match externe synchronisé.*?-\s*/i, 'Match ');
+};
 
 /**
  * TacticalSelection - Step 1: Select players for the composition
@@ -43,41 +56,80 @@ function TacticalSelection() {
   const route = useRoute();
 
   // Get players from navigation params
-  /** @type {{players?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string}} */
+  /** @type {{players?: TacticalPlayer[], eventId?: string, sport?: string, existingComposition?: any, teamId?: string, editorMode?: 'event' | 'team-default', bootstrapComposition?: any, editorSource?: string, editorSourceLabel?: string, teamName?: string, eventName?: string}} */
   const params = route.params || {};
   const {
+    bootstrapComposition: bootstrapCompositionParam = null,
+    editorMode = 'event',
+    editorSource = null,
+    editorSourceLabel = null,
+    eventName = '',
     eventId,
     existingComposition: existingCompositionParam,
     players: teamPlayersParam = [],
     sport: sportParam = 'football',
     teamId: teamIdParam,
+    teamName = '',
   } = params;
+  const isTeamDefaultMode = editorMode === 'team-default';
 
-  const shouldHydrateFromEvent = Boolean(eventId) && (!Array.isArray(teamPlayersParam) || teamPlayersParam.length === 0);
+  const shouldHydrateFromEvent = !isTeamDefaultMode
+    && Boolean(eventId)
+    && (!Array.isArray(teamPlayersParam) || teamPlayersParam.length === 0);
 
-  const { data: eventFromApi } = useGetEvent(eventId || '', {
+  const {
+    data: eventFromApi,
+    isFetching: isEventFetching,
+  } = useGetEvent(eventId || '', {
     enabled: shouldHydrateFromEvent,
   });
 
-  const { data: teamCompositionPayload } = useGetEventTeamComposition(
+  const {
+    data: teamCompositionPayload,
+    isFetching: isCompositionFetching,
+  } = useGetEventTeamComposition(
     eventId || '',
     teamIdParam || undefined,
     {
-      enabled: Boolean(eventId),
+      enabled: Boolean(eventId) && !isTeamDefaultMode,
+    },
+  );
+
+  const {
+    data: teamDefaultCompositionPayload,
+    isFetching: isDefaultCompositionFetching,
+  } = useGetTeamDefaultComposition(
+    teamIdParam || '',
+    {
+      enabled: Boolean(teamIdParam) && isTeamDefaultMode,
     },
   );
 
   const resolvedTeamId = useMemo(
-    () => teamCompositionPayload?.team?.documentId
+    () => teamDefaultCompositionPayload?.team?.documentId
+      || teamCompositionPayload?.team?.documentId
       || teamIdParam
       || eventFromApi?.team?.documentId
       || undefined,
-    [teamCompositionPayload?.team?.documentId, teamIdParam, eventFromApi?.team?.documentId],
+    [
+      eventFromApi?.team?.documentId,
+      teamCompositionPayload?.team?.documentId,
+      teamDefaultCompositionPayload?.team?.documentId,
+      teamIdParam,
+    ],
   );
 
   const existingComposition = useMemo(() => {
+    if (isTeamDefaultMode) {
+      return teamDefaultCompositionPayload?.composition || bootstrapCompositionParam || null;
+    }
+
     if (teamCompositionPayload?.draft && typeof teamCompositionPayload.draft === 'object') {
       return teamCompositionPayload.draft;
+    }
+
+    if (bootstrapCompositionParam && typeof bootstrapCompositionParam === 'object') {
+      return bootstrapCompositionParam;
     }
 
     if (existingCompositionParam && typeof existingCompositionParam === 'object') {
@@ -101,7 +153,14 @@ function TacticalSelection() {
     }
 
     return null;
-  }, [teamCompositionPayload?.draft, existingCompositionParam, resolvedTeamId]);
+  }, [
+    bootstrapCompositionParam,
+    existingCompositionParam,
+    isTeamDefaultMode,
+    resolvedTeamId,
+    teamCompositionPayload?.draft,
+    teamDefaultCompositionPayload?.composition,
+  ]);
 
   const teamPlayers = useMemo(() => {
     if (Array.isArray(teamPlayersParam) && teamPlayersParam.length > 0) {
@@ -133,6 +192,22 @@ function TacticalSelection() {
 
   const sport = sportParam || 'football';
   const teamId = resolvedTeamId;
+  const readableEventName = useMemo(() => normalizeMatchLabel(eventName), [eventName]);
+  const isResolvingTeam = !isTeamDefaultMode
+    && Boolean(eventId)
+    && !teamId
+    && (isEventFetching || isCompositionFetching);
+  const isTeamResolutionBlocked = !isTeamDefaultMode && Boolean(eventId) && !teamId && !isResolvingTeam;
+  const sourceLabel = useMemo(() => {
+    if (isTeamDefaultMode) return "Favori d'équipe";
+    if (teamCompositionPayload?.draft) return 'Brouillon';
+    return editorSourceLabel
+      || (editorSource === 'default_composition'
+        ? "Favori d'équipe"
+        : editorSource === 'last_match'
+          ? 'Dernier match'
+          : null);
+  }, [editorSource, editorSourceLabel, isTeamDefaultMode, teamCompositionPayload?.draft]);
 
   // State
   /** @type {[Set<string>, React.Dispatch<React.SetStateAction<Set<string>>>]} */
@@ -245,6 +320,11 @@ function TacticalSelection() {
 
   // Add manual player
   const handleAddManualPlayer = useCallback(() => {
+    if (isTeamDefaultMode) {
+      Alert.alert('Indisponible', "Le favori d'équipe ne peut contenir que les joueurs de l'équipe.");
+      return;
+    }
+
     if (!manualFirstname.trim() || !manualLastname.trim()) {
       Alert.alert('Erreur', 'Prénom et nom requis');
       return;
@@ -266,7 +346,7 @@ function TacticalSelection() {
     setManualLastname('');
     setManualNumber('');
     setModalVisible(false);
-  }, [manualFirstname, manualLastname, manualNumber]);
+  }, [isTeamDefaultMode, manualFirstname, manualLastname, manualNumber]);
 
   // Open edit modal
   const handleEditPlayer = useCallback((/** @type {TacticalPlayer} */ player) => {
@@ -341,6 +421,16 @@ function TacticalSelection() {
 
   // Navigate to Board
   const handleValidate = useCallback(() => {
+    if (isResolvingTeam) {
+      Alert.alert('Patiente', "On termine d'identifier l'équipe concernée.");
+      return;
+    }
+
+    if (!teamId) {
+      Alert.alert('Erreur', "Impossible d'identifier l'équipe pour cette composition.");
+      return;
+    }
+
     if (selectedIds.size === 0) {
       Alert.alert('Attention', 'Sélectionnez au moins un joueur');
       return;
@@ -350,14 +440,37 @@ function TacticalSelection() {
 
     // @ts-ignore
     navigation.navigate('TacticalBoardV2', {
+      editorMode,
+      editorSource,
+      editorSourceLabel: sourceLabel,
       eventId,
+      eventName: readableEventName || eventName,
       existingComposition, // Pass through for loading positions
       selectedPlayers,
       sport,
+      teamDefaultComposition: teamDefaultCompositionPayload || null,
       teamComposition: teamCompositionPayload || null,
-      teamId, // Pass through for future team default composition
+      teamId,
+      teamName,
     });
-  }, [selectedIds, allPlayers, eventId, sport, existingComposition, teamCompositionPayload, teamId, navigation]);
+  }, [
+    editorMode,
+    editorSource,
+    selectedIds,
+    allPlayers,
+    eventId,
+    eventName,
+    sport,
+    existingComposition,
+    sourceLabel,
+    readableEventName,
+    teamDefaultCompositionPayload,
+    teamCompositionPayload,
+    teamId,
+    teamName,
+    navigation,
+    isResolvingTeam,
+  ]);
 
   // Render player item
   const renderPlayer = useCallback((/** @type {{ item: TacticalPlayer }} */ { item }) => {
@@ -442,7 +555,7 @@ function TacticalSelection() {
           onPress={() => handleEditPlayer(item)}
           style={[styles.editBtn, { backgroundColor: Colors.neutral700 }]}
         >
-          <Text style={{ color: Colors.neutral00, fontSize: 12 }}>✏️</Text>
+          <Text style={{ color: Colors.neutral00, fontSize: 13 }}>✎</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -453,7 +566,9 @@ function TacticalSelection() {
       {/* Header */}
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
-        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Sélection des joueurs</Text>
+        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+          {isTeamDefaultMode ? "Favori d'équipe" : 'Sélection des joueurs'}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -470,15 +585,17 @@ function TacticalSelection() {
 
       {/* Quick Actions */}
       <View style={[styles.actionsRow, Spaces.paddingHorizontal[24]]}>
-        <TouchableOpacity onPress={selectAll} style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]}>
+        <TouchableOpacity onPress={selectAll} style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}>
           <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>Tout sélectionner</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={clearSelection} style={[styles.actionBtn, { backgroundColor: Colors.neutral800 }]}>
-          <Text style={[Fonts.p3, { color: Colors.neutral300, fontWeight: '600' }]}>Effacer</Text>
+        <TouchableOpacity onPress={clearSelection} style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}>
+          <Text style={[Fonts.p3, { color: Colors.primary100, fontWeight: '600' }]}>Effacer</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}>
-          <Text style={[Fonts.p3, { color: '#FFF', fontWeight: '600' }]}>+ Ajouter</Text>
-        </TouchableOpacity>
+        {!isTeamDefaultMode ? (
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}>
+            <Text style={[Fonts.p3, { color: '#FFF', fontWeight: '600' }]}>+ Ajouter</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Selection Count */}
@@ -492,6 +609,21 @@ function TacticalSelection() {
           sélectionné
           {selectedIds.size > 1 ? 's' : ''}
         </Text>
+        {teamName ? (
+          <Text style={[Fonts.p3, { color: Colors.primary100, marginTop: 6 }]}>
+            Équipe : {teamName}
+          </Text>
+        ) : null}
+        {readableEventName ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+            {readableEventName}
+          </Text>
+        ) : null}
+        {sourceLabel ? (
+          <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 4 }]}>
+            Base : {sourceLabel}
+          </Text>
+        ) : null}
         {teamCompositionPayload?.draft?.updatedAt ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
             Brouillon mis à jour le
@@ -508,6 +640,21 @@ function TacticalSelection() {
             {new Date(teamCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}
           </Text>
         ) : null}
+        {isTeamDefaultMode && isDefaultCompositionFetching ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+            Chargement du favori d'équipe...
+          </Text>
+        ) : null}
+        {isResolvingTeam ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+            Chargement de l'équipe concernée...
+          </Text>
+        ) : null}
+        {isTeamResolutionBlocked ? (
+          <Text style={[Fonts.p3, { color: Colors.danger500, marginTop: 4 }]}>
+            Impossible d'identifier l'équipe de ce match.
+          </Text>
+        ) : null}
       </View>
 
       {/* Player List */}
@@ -518,7 +665,7 @@ function TacticalSelection() {
         ListEmptyComponent={(
           <View style={styles.emptyState}>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-              {searchQuery ? 'Aucun résultat' : 'Aucun joueur dans l\'équipe'}
+              {searchQuery ? 'Aucun résultat' : "Aucun joueur dans l'équipe"}
             </Text>
           </View>
         )}
@@ -529,15 +676,19 @@ function TacticalSelection() {
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: Colors.neutral900, borderTopColor: Colors.neutral700 }]}>
         <Button
-          disabled={selectedIds.size === 0}
+          disabled={selectedIds.size === 0 || isResolvingTeam || isTeamResolutionBlocked}
           onPress={handleValidate}
-          title={`Valider (${selectedIds.size})`}
+          title={isResolvingTeam
+            ? "Chargement de l'équipe..."
+            : isTeamDefaultMode
+              ? `Continuer (${selectedIds.size})`
+              : `Valider (${selectedIds.size})`}
           variant="Primary"
         />
       </View>
 
       {/* Add Manual Player Modal */}
-      <Modal animationType="fade" onRequestClose={() => setModalVisible(false)} transparent visible={modalVisible}>
+      <Modal animationType="fade" onRequestClose={() => setModalVisible(false)} transparent visible={modalVisible && !isTeamDefaultMode}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
             <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>

@@ -42,6 +42,7 @@ import UserSection from '@/views/onboarding/UserSection';
 import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import Welcome from '@/views/onboarding/Welcome';
+import PlanningWeekFullscreen from '@/views/planning/PersonalPlanningWeekFullscreen';
 import PollDetails from '@/views/PollDetails';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
@@ -63,6 +64,7 @@ import ClubStack from './stacks/ClubStack';
 import EventStack from './stacks/EventStack';
 import ProfileStack from './stacks/ProfileStack';
 import TeamStack from './stacks/TeamStack';
+/* eslint-disable-next-line import/order */
 import { useAppMode } from '@/context/AppModeContext';
 
 const Stack = createStackNavigator();
@@ -338,6 +340,20 @@ function PrivateNavigator() {
       <Stack.Screen
         component={ConversationPublicEventPicker}
         name={RouteNames.ConversationPublicEventPicker}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={PlanningWeekFullscreen}
+        name={RouteNames.PlanningWeekFullscreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        component={PlanningWeekFullscreen}
+        name={RouteNames.PersonalPlanningWeekFullscreen}
         options={{
           headerShown: false,
         }}

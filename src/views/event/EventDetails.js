@@ -35,9 +35,16 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetEvent, useGetEventAttendance, useGetEventConvocation } from '@/services/event/eventQueries';
+import {
+  useGetEvent,
+  useGetEventAttendance,
+  useGetEventConvocation,
+  useGetEventTeamComposition,
+} from '@/services/event/eventQueries';
 import { exportEventParticipants } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
+
+import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
@@ -160,27 +167,45 @@ function EventDetails({ navigation, route }) {
   const {
     data: event, error, isLoading, refetch,
   } = useGetEvent(eventId || '');
+  const externalMatchDisplay = useMemo(() => resolveExternalMatchDisplay(event), [event]);
   const eventDescriptionText = useMemo(() => {
     const rawDescription = event?.description;
+    let resolvedDescription = '';
     if (typeof rawDescription === 'string') {
-      return rawDescription.trim();
-    }
-    if (typeof rawDescription === 'number') {
-      return String(rawDescription);
-    }
-    if (rawDescription && typeof rawDescription === 'object') {
+      resolvedDescription = rawDescription.trim();
+    } else if (typeof rawDescription === 'number') {
+      resolvedDescription = String(rawDescription);
+    } else if (rawDescription && typeof rawDescription === 'object') {
       if (typeof rawDescription.description === 'string') {
-        return rawDescription.description.trim();
-      }
-      if (typeof rawDescription.label === 'string') {
-        return rawDescription.label.trim();
-      }
-      if (typeof rawDescription.address === 'string') {
-        return rawDescription.address.trim();
+        resolvedDescription = rawDescription.description.trim();
+      } else if (typeof rawDescription.label === 'string') {
+        resolvedDescription = rawDescription.label.trim();
+      } else if (typeof rawDescription.address === 'string') {
+        resolvedDescription = rawDescription.address.trim();
       }
     }
-    return '';
-  }, [event?.description]);
+
+    const normalizedDescription = String(resolvedDescription || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (
+      externalMatchDisplay?.title
+      && normalizedDescription.includes('match externe synchron')
+      && !/\bvs\b/i.test(resolvedDescription)
+    ) {
+      return [
+        resolvedDescription,
+        externalMatchDisplay.contextLabel,
+        externalMatchDisplay.title,
+      ]
+        .filter(Boolean)
+        .join(' - ');
+    }
+
+    return resolvedDescription;
+  }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
   const canEdit = Boolean(canManageEvent(event));
   const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
 
@@ -924,6 +949,21 @@ function EventDetails({ navigation, route }) {
     return typeName.includes('match');
   }, [event?.type?.name]);
 
+  const getCompositionSourceLabel = useCallback((source) => {
+    switch (source) {
+      case 'default_composition':
+        return "Favori d'équipe";
+      case 'draft':
+        return 'Brouillon';
+      case 'last_match':
+        return 'Dernier match';
+      case 'published':
+        return 'Composition publiée';
+      default:
+        return 'Nouvelle composition';
+    }
+  }, []);
+
   const compositionTeamId = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
     if (!teams.length) return null;
@@ -944,6 +984,50 @@ function EventDetails({ navigation, route }) {
 
     return teams[0]?.documentId || null;
   }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+
+  const compositionEditorTeam = useMemo(() => {
+    const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
+    return teams.find((team) => team?.documentId === compositionTeamId)
+      || event?.team
+      || null;
+  }, [compositionTeamId, event?.invitedTeams, event?.team]);
+
+  const compositionEditorPlayers = useMemo(
+    () => getEligibleTeamPlayers(compositionEditorTeam),
+    [compositionEditorTeam],
+  );
+
+  const compositionSport = useMemo(
+    () => compositionEditorTeam?.activities?.[0]?.name || event?.team?.activities?.[0]?.name || 'football',
+    [compositionEditorTeam?.activities, event?.team?.activities],
+  );
+
+  const compositionEventLabel = useMemo(() => {
+    if (externalMatchDisplay?.title) {
+      return `Match ${externalMatchDisplay.title}`;
+    }
+
+    const preferredLabel = [eventDescriptionText, event?.name, event?.description]
+      .find((value) => typeof value === 'string' && value.trim());
+
+    if (typeof preferredLabel === 'string' && preferredLabel.trim()) {
+      return preferredLabel.trim();
+    }
+
+    return 'Match';
+  }, [event?.description, event?.name, eventDescriptionText, externalMatchDisplay?.title]);
+
+  const {
+    data: staffCompositionPayload,
+    isFetching: isStaffCompositionFetching,
+    refetch: refetchTeamComposition,
+  } = useGetEventTeamComposition(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && canEdit),
+    },
+  );
 
   const {
     data: convocationPayload,
@@ -974,16 +1058,130 @@ function EventDetails({ navigation, route }) {
       return a.convoked ? -1 : 1;
     }), [convocationSnapshotPlayers]);
 
-  const handleManageComposition = useCallback(() => {
-    if (!eventId) return;
-    navigation.navigate(RouteNames.TacticalSelectionV2, {
+  const compositionPrimaryAction = useMemo(() => {
+    if (staffCompositionPayload?.draft) {
+      return {
+        subtitle: staffCompositionPayload?.draft?.updatedAt
+          ? `Brouillon enregistré le ${new Date(staffCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}`
+          : 'Brouillon enregistré',
+        title: 'Reprendre le brouillon',
+      };
+    }
+
+    if (staffCompositionPayload?.published) {
+      const publishedVersion = Number(staffCompositionPayload?.published?.version || 1);
+      return {
+        subtitle: staffCompositionPayload?.published?.publishedAt
+          ? `Composition publiée v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
+          : `Composition publiée v${publishedVersion}`,
+        title: 'Voir la composition publiée',
+      };
+    }
+
+    const bootstrapSource = staffCompositionPayload?.bootstrap?.source;
+    if (bootstrapSource && bootstrapSource !== 'empty') {
+      return {
+        subtitle: `Préremplissage disponible : ${getCompositionSourceLabel(bootstrapSource)}`,
+        title: 'Créer la composition',
+      };
+    }
+
+    return {
+      subtitle: 'Sélectionne les joueurs puis organise ta composition.',
+      title: 'Créer la composition',
+    };
+  }, [getCompositionSourceLabel, staffCompositionPayload]);
+
+  const openCompositionBoard = useCallback((composition, options = {}) => {
+    if (!eventId || !compositionTeamId) return;
+
+    const playersForBoard = Array.isArray(options.players) && options.players.length > 0
+      ? options.players
+      : compositionEditorPlayers;
+
+    navigation.navigate(RouteNames.TacticalBoardV2, {
+      canEdit: Boolean(options.canEdit),
+      editorMode: options.editorMode || 'event',
+      editorSource: options.editorSource || null,
+      editorSourceLabel: options.editorSourceLabel || null,
       eventId,
-      existingComposition: null,
-      players: [],
-      sport: event?.team?.activities?.[0]?.name || 'football',
-      teamId: compositionTeamId || event?.team?.documentId,
+      eventName: compositionEventLabel,
+      existingComposition: composition,
+      players: playersForBoard,
+      readOnly: Boolean(options.readOnly),
+      sport: composition?.sportContext || compositionSport,
+      teamComposition: options.teamComposition || staffCompositionPayload || null,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
     });
-  }, [compositionTeamId, event?.team?.activities, event?.team?.documentId, eventId, navigation]);
+  }, [
+    compositionEditorPlayers,
+    compositionEditorTeam?.name,
+    compositionSport,
+    compositionTeamId,
+    compositionEventLabel,
+    eventId,
+    navigation,
+    staffCompositionPayload,
+  ]);
+
+  const handleManageComposition = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    if (isStaffCompositionFetching) {
+      Alert.alert('Patiente', "On récupère l'état actuel de la composition.");
+      return;
+    }
+
+    if (staffCompositionPayload?.draft) {
+      openCompositionBoard(staffCompositionPayload.draft, {
+        canEdit: true,
+        editorSource: 'draft',
+        editorSourceLabel: getCompositionSourceLabel('draft'),
+        readOnly: false,
+      });
+      return;
+    }
+
+    if (staffCompositionPayload?.published) {
+      openCompositionBoard(staffCompositionPayload.published, {
+        canEdit: true,
+        editorSource: 'published',
+        editorSourceLabel: getCompositionSourceLabel('published'),
+        players: Array.isArray(staffCompositionPayload?.published?.snapshotPlayers)
+          ? staffCompositionPayload.published.snapshotPlayers
+          : compositionEditorPlayers,
+        readOnly: true,
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.TacticalSelectionV2, {
+      bootstrapComposition: staffCompositionPayload?.bootstrap?.composition || null,
+      editorMode: 'event',
+      editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
+      editorSourceLabel: getCompositionSourceLabel(staffCompositionPayload?.bootstrap?.source || 'empty'),
+      eventId,
+      eventName: compositionEventLabel,
+      existingComposition: null,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionEditorTeam?.name,
+    compositionSport,
+    compositionTeamId,
+    compositionEventLabel,
+    eventId,
+    getCompositionSourceLabel,
+    isStaffCompositionFetching,
+    navigation,
+    openCompositionBoard,
+    staffCompositionPayload,
+  ]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
     if (!targetUser?.documentId) return;
@@ -1150,10 +1348,16 @@ function EventDetails({ navigation, route }) {
         {canEdit && isMatchEvent && (
           <View style={{ marginTop: 12 }}>
             <Button
+              disabled={isStaffCompositionFetching}
               onPress={handleManageComposition}
-              title="Composition d'équipe"
+              title={isStaffCompositionFetching ? 'Chargement...' : compositionPrimaryAction.title}
               variant="Secondary"
             />
+            {compositionPrimaryAction.subtitle ? (
+              <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
+                {compositionPrimaryAction.subtitle}
+              </Text>
+            ) : null}
           </View>
         )}
         {canEdit && canRequestFeatured && (
@@ -1177,17 +1381,22 @@ function EventDetails({ navigation, route }) {
       if (canAccessAttendance) {
         refetchAttendance();
       }
+      if (isMatchEvent && canEdit && compositionTeamId) {
+        refetchTeamComposition();
+      }
       if (isMatchEvent && isTeamMember && compositionTeamId) {
         refetchConvocation();
       }
     }, [
       canAccessAttendance,
+      canEdit,
       compositionTeamId,
       isMatchEvent,
       isTeamMember,
       refetch,
       refetchAttendance,
       refetchConvocation,
+      refetchTeamComposition,
       refetchParticipations,
     ]),
   );
@@ -1230,6 +1439,7 @@ function EventDetails({ navigation, route }) {
               refetch();
               refetchParticipations();
               if (canAccessAttendance) refetchAttendance();
+              if (isMatchEvent && canEdit && compositionTeamId) refetchTeamComposition();
               if (isMatchEvent && isTeamMember && compositionTeamId) refetchConvocation();
             }}
             refreshing={isLoading}
@@ -1313,6 +1523,19 @@ function EventDetails({ navigation, route }) {
                       </Text>
                     </View>
                   ))}
+                  {Array.isArray(convocationPublished?.placements) && convocationPublished.placements.length > 0 ? (
+                    <Button
+                      onPress={() => openCompositionBoard(convocationPublished, {
+                        canEdit: false,
+                        editorSource: 'published',
+                        editorSourceLabel: getCompositionSourceLabel('published'),
+                        players: convocationSnapshotPlayers,
+                        readOnly: true,
+                      })}
+                      title="Voir la composition"
+                      variant="Secondary"
+                    />
+                  ) : null}
                 </View>
               ) : (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>

@@ -911,6 +911,21 @@ function TeamDetails({ navigation, route }) {
     }
   };
 
+  const handleManageDefaultComposition = useCallback(() => {
+    if (!team?.documentId) return;
+
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        editorMode: 'team-default',
+        players: filteredPlayers,
+        sport: team?.activities?.[0]?.name || 'football',
+        teamId: team.documentId,
+        teamName: team.name || 'Équipe',
+      },
+      screen: RouteNames.TacticalSelectionV2,
+    });
+  }, [filteredPlayers, navigation, team?.activities, team?.documentId, team?.name]);
+
   const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
       t('teamDetails.alerts.deleteTrainer.title'),
@@ -1105,7 +1120,7 @@ function TeamDetails({ navigation, route }) {
                 {item?.eventDocumentId ? (
                   <Button
                     onPress={() => handleOpenSyncedEvent(item.eventDocumentId)}
-                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'evenement")}
+                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'événement")}
                     variant="SecondaryLight"
                   />
                 ) : null}
@@ -1222,6 +1237,16 @@ function TeamDetails({ navigation, route }) {
                 key: 'unchanged',
                 label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
                 value: externalSyncSummary.unchanged || 0,
+              },
+              {
+                key: 'venueEnriched',
+                label: t('teamDetails.external.summary.venueEnriched', 'Lieux enrichis'),
+                value: externalSyncSummary.venueEnriched || 0,
+              },
+              {
+                key: 'venueFallbackUsed',
+                label: t('teamDetails.external.summary.venueFallbackUsed', 'Lieu a confirmer'),
+                value: externalSyncSummary.venueFallbackUsed || 0,
               },
             ].map((stat) => (
               <View
@@ -1398,14 +1423,15 @@ function TeamDetails({ navigation, route }) {
             <View style={[Alignments.alignCenter, { elevation: 2, marginBottom: -40, zIndex: 2 }]}>
               {team?.club?.logo?.url ? (
                 <ProfileAvatar
-                  imageStyle={{ borderRadius: 90 }}
                   imageUrl={team.club.logo.url}
+                  shape="rounded"
                   size={90}
                   variant="logo"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,
-                    { borderRadius: 90 },
+                    ApplicationStyle.backgroundColor.neutral00,
+                    { borderRadius: 22 },
                   ]}
                 />
               ) : (
@@ -2440,6 +2466,14 @@ function TeamDetails({ navigation, route }) {
           />
         )}
       </View>
+      {canManageTeam ? (
+        <Button
+          onPress={handleManageDefaultComposition}
+          style={Spaces.paddingHorizontal[16]}
+          title="Favori d'équipe"
+          variant="Secondary"
+        />
+      ) : null}
       {canRefreshExternalSync && (
         <Button
           isLoading={refreshScrapingMutation.isPending}
@@ -2697,6 +2731,21 @@ function TeamDetails({ navigation, route }) {
                     label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
                     value: externalSyncSummary?.unchanged || 0,
                   },
+                  {
+                    key: 'venueEnriched',
+                    label: t('teamDetails.external.summary.venueEnriched', 'Lieux enrichis'),
+                    value: externalSyncSummary?.venueEnriched || 0,
+                  },
+                  {
+                    key: 'venueFallbackUsed',
+                    label: t('teamDetails.external.summary.venueFallbackUsed', 'Lieu a confirmer'),
+                    value: externalSyncSummary?.venueFallbackUsed || 0,
+                  },
+                  {
+                    key: 'venueDetailFetchFailed',
+                    label: t('teamDetails.external.summary.venueDetailFetchFailed', 'Details lieu KO'),
+                    value: externalSyncSummary?.venueDetailFetchFailed || 0,
+                  },
                 ].map((stat) => (
                   <View
                     key={stat.key}
@@ -2905,4 +2954,3 @@ function TeamDetails({ navigation, route }) {
 }
 
 export default TeamDetails;
-

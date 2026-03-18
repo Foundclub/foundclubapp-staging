@@ -1,5 +1,4 @@
 import {
-  Image,
   Text,
   TouchableOpacity,
   View,
@@ -7,10 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { getShortAddress } from '@/utils/location';
-
-const defaultClubIcon = require('@/assets/icons/shield.png');
 
 const getSectionLabel = (count) => {
   if (!count) return '';
@@ -60,28 +57,38 @@ function ClubSearchResultCard({
         },
       ]}
     >
-      <View
-        style={{
-          alignItems: 'center',
-          backgroundColor: '#FFFFFF',
-          borderColor: isSelected ? Colors.primary500 : Colors.primary200,
-          borderRadius: 18,
-          borderWidth: 1,
-          height: 56,
-          justifyContent: 'center',
-          width: 56,
-        }}
-      >
-        <Image
-          resizeMode="contain"
-          source={item?.logo?.url ? { uri: getImageUrl(item.logo.url) } : defaultClubIcon}
+      {item?.logo?.url ? (
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={item.logo.url}
+          shape="rounded"
+          size={56}
           style={{
-            height: 38,
-            tintColor: item?.logo?.url ? undefined : Colors.primary500,
-            width: 38,
+            backgroundColor: '#FFFFFF',
+            borderColor: isSelected ? Colors.primary500 : Colors.primary200,
+            borderRadius: 14,
+            borderWidth: 1,
           }}
+          variant="logo"
         />
-      </View>
+      ) : (
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: '#FFFFFF',
+            borderColor: isSelected ? Colors.primary500 : Colors.primary200,
+            borderRadius: 14,
+            borderWidth: 1,
+            height: 56,
+            justifyContent: 'center',
+            width: 56,
+          }}
+        >
+          <Text style={[Fonts.h3Black, { color: Colors.primary500 }]}>
+            {(item?.name || 'C').trim().charAt(0).toUpperCase() || 'C'}
+          </Text>
+        </View>
+      )}
 
       <View style={[Spaces.gap[4], { flex: 1 }]}>
         {reasonLabel ? (

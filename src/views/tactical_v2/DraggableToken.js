@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -116,7 +116,7 @@ function DraggableToken({
         style={[
           styles.fieldToken,
           {
-            backgroundColor: Colors.primary500,
+            backgroundColor: Colors.primary700 || Colors.primary500,
             borderColor: Colors.neutral00,
             shadowColor: Colors.primary500,
           },
@@ -126,19 +126,19 @@ function DraggableToken({
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.fieldAvatar} />
           ) : (
-            <View style={[styles.fieldInitialsContainer, { backgroundColor: '#0088CC' }]}>
+            <View style={[styles.fieldInitialsContainer, { backgroundColor: Colors.primary600 || Colors.primary500 }]}>
               <Text style={styles.fieldInitials}>{initials}</Text>
             </View>
           )}
         </View>
 
         {player?.number && (
-          <View style={[styles.jerseyBadge, { backgroundColor: Colors.neutral900 }]}>
+          <View style={[styles.jerseyBadge, { backgroundColor: Colors.primary900 || Colors.neutral900 }]}>
             <Text style={styles.jerseyNumber}>{player.number}</Text>
           </View>
         )}
 
-        <View style={styles.fieldNameBadge}>
+        <View style={[styles.fieldNameBadge, { backgroundColor: `${Colors.primary900 || Colors.neutral900}A6` }]}>
           <Text numberOfLines={1} style={styles.fieldName}>
             {player?.firstname || ''}
           </Text>
@@ -153,12 +153,13 @@ function DraggableToken({
       style={[
         styles.benchToken,
         {
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.neutral200,
+          backgroundColor: Colors.primary900 || Colors.neutral800,
+          borderColor: `${Colors.primary500}55`,
+          shadowColor: Colors.primary500,
         },
       ]}
     >
-      <View style={[styles.benchAvatarCircle, { backgroundColor: Colors.neutral700 }]}>
+      <View style={[styles.benchAvatarCircle, { backgroundColor: `${Colors.primary500}22`, borderColor: `${Colors.primary500}40` }]}>
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.benchAvatar} />
         ) : (
@@ -264,9 +265,13 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   fieldNameBadge: {
+    alignItems: 'center',
+    borderRadius: 999,
     marginTop: 2,
     maxWidth: 65,
-    paddingHorizontal: 6,
+    minWidth: 42,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   fieldToken: {
     alignItems: 'center',
@@ -275,9 +280,9 @@ const styles = StyleSheet.create({
     elevation: 12,
     height: 72,
     paddingTop: 4,
-    shadowOffset: { height: 6, width: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
     width: 58,
   },
   jerseyBadge: {
@@ -307,6 +312,7 @@ const styles = StyleSheet.create({
   benchAvatarCircle: {
     alignItems: 'center',
     borderRadius: 22,
+    borderWidth: 1,
     height: 44,
     justifyContent: 'center',
     overflow: 'hidden',
@@ -349,17 +355,16 @@ const styles = StyleSheet.create({
   },
   benchToken: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     elevation: 6,
-    height: 84,
+    height: 88,
     marginHorizontal: 4,
-    paddingTop: 8,
-    shadowColor: '#000',
+    paddingTop: 9,
     shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    width: 68,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    width: 72,
   },
 });
 

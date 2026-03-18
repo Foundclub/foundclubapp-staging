@@ -29,6 +29,10 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import {
+  resolveExternalMatchDisplay,
+  resolveExternalMatchLocation,
+} from '@/utils/externalMatchDisplay';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getShortAddress } from '@/utils/location';
 
@@ -181,20 +185,37 @@ function EventCardNew({
 
   const typeName = item?.type?.name || '';
   const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
+  const isMatchEvent = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('match');
   const isShareMode = mode === 'share';
   const backgroundImage = getBackgroundImage(typeName);
   const headerTitle = getHeaderTitle(typeName);
 
   // Sponsors
   const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
+  const externalMatchLocation = isMatchEvent ? resolveExternalMatchLocation(item) : '';
+  const isImportedExternalMatch = isMatchEvent && (
+    item?.externalAutoSource === 'external_competition'
+    || Array.isArray(item?.team?.externalCalendarData)
+  );
 
   // Location - check facility first (club installation), then other options
-  const locationText = item?.facility?.name
-        || getShortAddress(item?.locationDetails)
-        || getShortAddress(item?.club?.addressDetails)
-        || getShortAddress(item?.team?.club?.addressDetails)
-        || getShortAddress(item?.location)
-        || null;
+  const locationText = isImportedExternalMatch
+    ? (
+      item?.facility?.name
+      || externalMatchLocation
+      || getShortAddress(item?.locationDetails)
+      || getShortAddress(item?.location)
+      || t('eventDetails.locationUnknown', 'Lieu a confirmer')
+    )
+    : (
+      item?.facility?.name
+      || getShortAddress(item?.locationDetails)
+      || getShortAddress(item?.club?.addressDetails)
+      || getShortAddress(item?.team?.club?.addressDetails)
+      || getShortAddress(item?.location)
+      || externalMatchLocation
+      || null
+    );
 
   // Sport/Activity
   const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ') || item?.type?.name || 'Sport';
@@ -202,6 +223,13 @@ function EventCardNew({
   const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
   const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
   const teamName = item?.team?.name || '';
+  const matchDisplay = isMatchEvent ? resolveExternalMatchDisplay(item) : { contextLabel: '', title: '' };
+  const eventTitle = matchDisplay.title;
+  const matchContextLabel = matchDisplay.contextLabel;
+  const primaryTitle = isMatchEvent && eventTitle ? eventTitle : clubName;
+  const secondaryTitle = isMatchEvent && eventTitle
+    ? [matchContextLabel, clubName].filter(Boolean).join(' - ')
+    : teamName;
   const teamSection = getDisplayLabel(item?.team?.section || item?.section);
   const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
   const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
@@ -272,8 +300,8 @@ function EventCardNew({
               )}
             </View>
             <View style={styles.clubTextContainer}>
-              <Text numberOfLines={2} style={[styles.clubName, showClubHeader && { fontSize: 20 }]}>{clubName}</Text>
-              {teamName ? <Text numberOfLines={1} style={styles.category}>{teamName}</Text> : null}
+              <Text numberOfLines={2} style={[styles.clubName, showClubHeader && { fontSize: 20 }]}>{primaryTitle}</Text>
+              {secondaryTitle ? <Text numberOfLines={1} style={styles.category}>{secondaryTitle}</Text> : null}
               {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
               {invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={styles.invitedTeamsInline}>
@@ -755,4 +783,3 @@ const styles = StyleSheet.create({
 });
 
 export default EventCardNew;
-

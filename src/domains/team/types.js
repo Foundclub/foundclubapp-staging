@@ -72,7 +72,10 @@
  *   skippedNoLocation?: number,
  *   totalCandidates?: number,
  *   unchanged?: number,
- *   updated?: number
+ *   updated?: number,
+ *   venueDetailFetchFailed?: number,
+ *   venueEnriched?: number,
+ *   venueFallbackUsed?: number
  * }} [eventSyncSummary]
  * @property {'connect' | 'manual' | 'scheduled'} [mode]
  * @property {'fff' | 'ffbb'} [provider]

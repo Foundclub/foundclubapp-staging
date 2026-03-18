@@ -18,6 +18,10 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import {
+  resolveExternalMatchDisplay,
+  resolveExternalMatchLocation,
+} from '@/utils/externalMatchDisplay';
 import { getShortAddress } from '@/utils/location';
 
 /**
@@ -54,6 +58,34 @@ function EventCard({
   const clubName = club?.name || '';
   const clubLogo = club?.logo?.url;
   const sponsors = club?.sponsor || [];
+  const isMatchEvent = String(item?.type?.name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .includes('match');
+  const matchDisplay = isMatchEvent ? resolveExternalMatchDisplay(item) : { contextLabel: '', title: '' };
+  const externalMatchLocation = isMatchEvent ? resolveExternalMatchLocation(item) : '';
+  const isImportedExternalMatch = isMatchEvent && (
+    item?.externalAutoSource === 'external_competition'
+    || Array.isArray(item?.team?.externalCalendarData)
+  );
+  const primaryTitle = isMatchEvent && matchDisplay.title ? matchDisplay.title : clubName;
+  const secondaryTitle = isMatchEvent && matchDisplay.title
+    ? [matchDisplay.contextLabel, clubName].filter(Boolean).join(' - ')
+    : item?.team?.name;
+  const locationText = isImportedExternalMatch
+    ? (
+      externalMatchLocation
+      || getShortAddress(item?.locationDetails)
+      || getShortAddress(item?.location)
+      || t('eventDetails.locationUnknown', 'Lieu a confirmer')
+    )
+    : (
+      getShortAddress(item?.locationDetails)
+      || getShortAddress(item?.location)
+      || externalMatchLocation
+      || ''
+    );
 
   return (
     <TouchableOpacity
@@ -102,16 +134,15 @@ function EventCard({
               numberOfLines={2}
               style={[Fonts.p1Bold, Fonts.neutral00]}
             >
-              {clubName}
+              {primaryTitle}
             </Text>
-            {/* Display Team Name below Club Name */}
-            {item?.team?.name && (
+            {secondaryTitle && (
             <Text
               ellipsizeMode="tail"
               numberOfLines={1}
               style={[Fonts.p2, Fonts.neutral200]}
             >
-              {item.team.name}
+              {secondaryTitle}
             </Text>
             )}
           </View>
@@ -177,14 +208,14 @@ function EventCard({
             </Text>
           </View>
         ) : null}
-        {item?.locationDetails ? (
+        {locationText ? (
           <View style={[Alignments.row, Spaces.gap[4], Spaces.marginRight[16]]}>
             <Image
               source={Images.pin}
               style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
             />
             <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '95%' }]}>
-              {getShortAddress(item.locationDetails)}
+              {locationText}
             </Text>
           </View>
         ) : null}

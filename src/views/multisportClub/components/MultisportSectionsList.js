@@ -101,11 +101,11 @@ function MultisportSectionsList({
           >
             {logoUrl ? (
               <ProfileAvatar
-                imageStyle={{ borderRadius: 25 }}
                 imageUrl={logoUrl}
+                shape="rounded"
                 size={50}
                 variant="logo"
-                style={{ borderRadius: 25 }}
+                style={[ApplicationStyle.backgroundColor.neutral00, { borderRadius: 14 }]}
               />
             ) : (
               <TeamShield initials={getClubInitials(section?.name || '')} isSmall />

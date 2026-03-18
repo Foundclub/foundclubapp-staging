@@ -1,16 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
-import React from 'react';
 import {
-  Dimensions, ImageBackground, StyleSheet, Text, TouchableOpacity, View,
+  ImageBackground, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import 'dayjs/locale/fr';
 
 import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
-
-import { getImageUrl } from '@/utils/imageUrl';
 
 // Field images (same as TacticalBoard)
 const FIELD_IMAGES = {
@@ -52,7 +49,7 @@ const MINI_TOKEN_SIZE = 24;
  * @returns {import('react').ReactElement | null}
  */
 function CompositionMessageBubble({ composition, isMe = false }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const { Colors, Fonts } = useTheme();
   const navigation = useNavigation();
 
   if (!composition) return null;
@@ -63,9 +60,12 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     eventName,
     manualPlayers = [],
     placements = [],
+    publishedVersion,
     sport = 'football',
     sportContext,
+    teamName,
     teamPlayers = [], // Team players for reconstruction
+    type,
   } = composition;
 
   // Combine all players for lookup
@@ -81,7 +81,11 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     navigation.navigate(RouteNames.EventStack, {
       params: {
         canEdit: false,
+        editorMode: 'event',
+        editorSource: type === 'lineup_share' ? 'published' : null,
+        editorSourceLabel: type === 'lineup_share' ? 'Composition publiée' : null,
         eventId,
+        eventName,
         existingComposition: {
           manualPlayers,
           placements,
@@ -89,6 +93,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         },
         readOnly: true,
         sport,
+        teamName,
         // Pass ALL players (team + manual) for lookup
         players: allPlayers,
       },
@@ -97,7 +102,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   };
 
   // Render mini tokens on the field
-  const renderMiniTokens = () => placements.map((/** @type {CompositionPlacement} */ placement, /** @type {number} */ index) => {
+  const renderMiniTokens = () => placements.map((/** @type {CompositionPlacement} */ placement) => {
     const { playerId, positionX, positionY } = placement;
 
     // Find player data from all players (team + manual)
@@ -112,7 +117,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
 
     return (
       <View
-        key={`${playerId}-${index}`}
+        key={`${playerId || 'unknown'}-${positionX || 0}-${positionY || 0}`}
         style={[
           styles.miniToken,
           {
@@ -145,7 +150,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-          🏆 Compo du match
+          {type === 'lineup_share' ? 'Convocation publiée' : 'Composition du match'}
         </Text>
         {formattedDate && (
           <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>
@@ -177,7 +182,9 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       {/* Footer hint */}
       <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
         <Text style={[Fonts.p4, { color: Colors.primary500 }]}>
-          Appuyer pour voir la composition
+          {type === 'lineup_share'
+            ? `${teamName || 'Équipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`
+            : 'Appuyer pour voir la composition'}
         </Text>
       </View>
     </TouchableOpacity>
