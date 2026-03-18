@@ -7,6 +7,11 @@ import {
   startOfWeek,
 } from 'date-fns';
 
+import {
+  getParisNowAsDeviceDate,
+  toDeviceDateFromParisInstant,
+} from '@/utils/parisTime';
+
 const normalizeText = (value) => String(value || '')
   .trim()
   .normalize('NFD')
@@ -14,6 +19,7 @@ const normalizeText = (value) => String(value || '')
   .toLowerCase();
 
 export const toPlanningApiDate = (value) => format(value, 'yyyy-MM-dd');
+export const getPlanningDefaultDate = () => getParisNowAsDeviceDate();
 
 export const getPlanningRange = (currentDate, viewMode = 'week') => {
   if (viewMode === 'month') {
@@ -140,8 +146,8 @@ export const getPlanningItemDate = (item) => {
   const rawDate = item?.startAt || item?.date || null;
   if (!rawDate) return null;
 
-  const date = new Date(rawDate);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const date = toDeviceDateFromParisInstant(rawDate);
+  return date && !Number.isNaN(date.getTime()) ? date : null;
 };
 
 export const getPlanningItemSecondaryLabel = (item) => {

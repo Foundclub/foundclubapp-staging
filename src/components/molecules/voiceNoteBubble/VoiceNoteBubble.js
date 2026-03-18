@@ -8,6 +8,8 @@ import {
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
 
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 
 const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -17,43 +19,6 @@ const formatDuration = (valueMs) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-};
-
-const toPublicApiOrigin = (rawApiUrl) => {
-  const raw = String(rawApiUrl || '').trim();
-  if (!raw) return '';
-  return raw.replace(/\/api\/?$/i, '');
-};
-
-const isLoopbackHost = (host) => ['10.0.2.2', '127.0.0.1', 'localhost']
-  .includes(String(host || '').trim().toLowerCase());
-
-const normalizeOrigin = (rawOrigin) => {
-  const origin = toPublicApiOrigin(rawOrigin);
-  if (!origin) return '';
-  try {
-    return new URL(origin).origin;
-  } catch (_error) {
-    return origin.replace(/\/+$/g, '');
-  }
-};
-
-const rewriteLoopbackUrl = (rawUrl, targetOrigin) => {
-  if (!rawUrl || !targetOrigin || !/^https?:\/\//i.test(rawUrl)) return rawUrl;
-
-  try {
-    const currentUrl = new URL(rawUrl);
-    const targetUrl = new URL(targetOrigin);
-    if (
-      isLoopbackHost(currentUrl.hostname)
-      && currentUrl.hostname !== targetUrl.hostname
-    ) {
-      return `${targetUrl.origin}${currentUrl.pathname}${currentUrl.search || ''}`;
-    }
-  } catch (_error) {
-    // Keep original URL if parsing fails.
-  }
-  return rawUrl;
 };
 
 const resolveAudioAttachmentUrl = (attachments = []) => {
@@ -71,29 +36,7 @@ const resolveAudioAttachmentUrl = (attachments = []) => {
     || '',
   ).trim();
   if (!rawUrl) return '';
-  const origins = [
-    process.env.API_URL,
-    process.env.API_PUBLIC_URL,
-    __DEV__ ? 'http://10.0.2.2:1337' : '',
-  ]
-    .map((origin) => normalizeOrigin(origin))
-    .filter(Boolean);
-
-  if (
-    rawUrl.startsWith('http://')
-    || rawUrl.startsWith('https://')
-    || rawUrl.startsWith('file://')
-    || rawUrl.startsWith('content://')
-    || rawUrl.startsWith('data:')
-  ) {
-    const preferredOrigin = origins[0] || '';
-    return rewriteLoopbackUrl(rawUrl, preferredOrigin);
-  }
-
-  const normalizedPath = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
-
-  if (origins.length === 0) return normalizedPath;
-  return `${origins[0]}${normalizedPath}`;
+  return resolveMediaUrl(rawUrl);
 };
 
 const buildFallbackWaveform = (durationMs, size = 28) => (
@@ -141,12 +84,14 @@ const normalizeWaveformBars = (rawWaveform, durationMs) => {
  * @param {any} props.composition
  * @param {Array<{ url?: string; uri?: string; mime?: string; name?: string }>} [props.attachments]
  * @param {boolean} [props.isMe]
+ * @param {string} [props.message]
  * @returns {import('react').ReactElement | null}
  */
 function VoiceNoteBubble({
   attachments = [],
   composition,
   isMe = false,
+  message = '',
 }) {
   const {
     Alignments,
@@ -157,6 +102,7 @@ function VoiceNoteBubble({
   } = useTheme();
 
   const audioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
+  const messageText = String(message || '').trim();
   const playbackHeaders = useMemo(() => {
     if (!/^https?:\/\//i.test(String(audioUrl || ''))) return undefined;
     const token = getAuthTokens()?.token;
@@ -187,7 +133,37 @@ function VoiceNoteBubble({
     [composition?.waveform, displayedDuration],
   );
 
-  if (!audioUrl) return null;
+  const containerStyle = [
+    ApplicationStyle.card,
+    Spaces.marginVertical[6],
+    {
+      alignSelf: isMe ? 'flex-end' : 'flex-start',
+      backgroundColor: isMe ? 'rgba(11, 41, 56, 0.96)' : 'rgba(7, 24, 34, 0.95)',
+      borderColor: isMe ? Colors.primary500 : Colors.primary700,
+      borderWidth: 1,
+      maxWidth: '88%',
+      minWidth: 220,
+      overflow: 'hidden',
+    },
+  ];
+
+  if (!audioUrl) {
+    return (
+      <View style={containerStyle}>
+        <View style={[Spaces.padding[12], { gap: 8 }]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+            Note vocale indisponible
+          </Text>
+          {messageText ? (
+            <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+              {messageText}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
   const canTogglePlayback = isPlayerAvailable && !isLoading;
   let playbackButtonLabel = '>';
   if (isLoading) playbackButtonLabel = '...';
@@ -205,19 +181,7 @@ function VoiceNoteBubble({
 
   return (
     <View
-      style={[
-        ApplicationStyle.card,
-        Spaces.marginVertical[6],
-        {
-          alignSelf: isMe ? 'flex-end' : 'flex-start',
-          backgroundColor: isMe ? 'rgba(11, 41, 56, 0.96)' : 'rgba(7, 24, 34, 0.95)',
-          borderColor: isMe ? Colors.primary500 : Colors.primary700,
-          borderWidth: 1,
-          maxWidth: '88%',
-          minWidth: 220,
-          overflow: 'hidden',
-        },
-      ]}
+      style={containerStyle}
     >
       <View style={[Spaces.padding[12], { gap: 10 }]}>
         <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
@@ -316,6 +280,12 @@ function VoiceNoteBubble({
         {lastError ? (
           <Text style={[Fonts.p4, { color: Colors.error500 }]}>
             {lastError}
+          </Text>
+        ) : null}
+
+        {messageText ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+            {messageText}
           </Text>
         ) : null}
       </View>

@@ -16,7 +16,11 @@ import { getCMFacilities } from '@/services/facility/facilityService';
 import { getCMClubs, getCMPlanning } from '@/services/multisportClub/multisportClubService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
-import { getPlanningRange, normalizePlanningItems } from '@/utils/planning/planningSlots';
+import {
+  getPlanningDefaultDate,
+  getPlanningRange,
+  normalizePlanningItems,
+} from '@/utils/planning/planningSlots';
 
 /** @typedef {{ documentId?: string; name?: string; planningColor?: string }} NamedEntity */
 
@@ -29,7 +33,7 @@ function CMPlanningContent({ cmId, navigation }) {
   const [selectedSectionId, setSelectedSectionId] = useState(/** @type {string | null} */ (null));
   const [selectedFacilityId, setSelectedFacilityId] = useState(/** @type {string | null} */ (null));
   const [viewMode, setViewMode] = useState('week');
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),

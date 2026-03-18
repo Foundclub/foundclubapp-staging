@@ -74,6 +74,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 import {
   cancelRecording,
+  deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
   startRecording,
   stopRecording,
@@ -836,6 +837,12 @@ function Conversation({ navigation, route }) {
       cancelRecording().catch(() => {});
     }
   }, []);
+
+  useEffect(() => () => {
+    const currentDraftUri = String(pendingVoiceDraft?.uri || '').trim();
+    if (!currentDraftUri) return;
+    deleteVoiceNoteFile(currentDraftUri).catch(() => {});
+  }, [pendingVoiceDraft?.uri]);
 
   // Handle Input Text Change for Typing Indicator
   const handleInputTextChanged = (/** @type {string} */ text) => {
@@ -1974,6 +1981,7 @@ function Conversation({ navigation, route }) {
         throw new Error('VOICE_EMPTY');
       }
       if ((draft?.durationMs || 0) < 500) {
+        await deleteVoiceNoteFile(draft.uri);
         resetVoiceRecordingState();
         return;
       }
@@ -2649,10 +2657,20 @@ function Conversation({ navigation, route }) {
     setPendingMediaDraft(null);
   };
 
-  const clearPendingVoiceDraft = () => {
+  const clearPendingVoiceDraft = useCallback(async () => {
+    const currentDraftUri = String(pendingVoiceDraft?.uri || '').trim();
     stopDraftVoicePlayback().catch(() => {});
     setPendingVoiceDraft(null);
-  };
+    if (!currentDraftUri) return;
+    try {
+      await deleteVoiceNoteFile(currentDraftUri);
+    } catch (error) {
+      conversationLogger.warn('Failed to delete local voice draft', {
+        message: error?.message || error,
+        uri: currentDraftUri,
+      });
+    }
+  }, [pendingVoiceDraft?.uri, stopDraftVoicePlayback]);
 
   const sendPendingVoiceDraft = async () => {
     if (uploadInFlightRef.current) {
@@ -2661,15 +2679,33 @@ function Conversation({ navigation, route }) {
     }
 
     if (!pendingVoiceDraft?.uri || !chatId) return;
+    if (!isSocketConnected || !socket) {
+      Alert.alert(
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+        'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+      );
+      return;
+    }
+
+    const normalizedVoiceAsset = {
+      fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.m4a`,
+      size: Number(pendingVoiceDraft.size || 0) || 0,
+      type: pendingVoiceDraft.mime || 'audio/mp4',
+      uri: pendingVoiceDraft.uri,
+    };
+    const voiceValidationError = validateAttachmentAsset(normalizedVoiceAsset);
+    if (voiceValidationError) {
+      Alert.alert(
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+        voiceValidationError,
+      );
+      return;
+    }
 
     try {
       uploadInFlightRef.current = true;
       setIsUploading(true);
-      const uploadedFiles = await uploadAttachmentAsset({
-        fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.m4a`,
-        type: pendingVoiceDraft.mime || 'audio/mp4',
-        uri: pendingVoiceDraft.uri,
-      });
+      const uploadedFiles = await uploadAttachmentAsset(normalizedVoiceAsset);
 
       if (!uploadedFiles.length) {
         throw new Error('VOICE_UPLOAD_FAILED');
@@ -2692,7 +2728,7 @@ function Conversation({ navigation, route }) {
         throw new Error('VOICE_SOCKET_UNAVAILABLE');
       }
 
-      clearPendingVoiceDraft();
+      await clearPendingVoiceDraft();
       setReplyingTo(null);
       setComposerText('');
       sendTypingStop(chatId);
@@ -3347,6 +3383,7 @@ function Conversation({ navigation, route }) {
                 attachments={currentMessage.attachments || []}
                 composition={currentMessage.composition}
                 isMe={!isLeft}
+                message={currentMessage.message}
               />
             </View>
           ),

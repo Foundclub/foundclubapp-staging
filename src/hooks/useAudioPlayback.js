@@ -9,6 +9,7 @@ import { Linking } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { createLogger } from '@/utils/logger/logger';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 const playbackLogger = createLogger('audio-playback');
 
@@ -203,6 +204,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const [lastError, setLastError] = useState('');
 
   const playerFactory = useMemo(() => resolvePlayerFactory(), []);
+  const normalizedSourceUrl = useMemo(() => resolveMediaUrl(sourceUrl), [sourceUrl]);
   const isPlayerAvailable = Boolean(playerFactory);
 
   const safeSetState = useCallback((setter, value) => {
@@ -241,7 +243,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   }, []);
 
   const resolvePlayableSource = useCallback(async () => {
-    const rawSource = String(sourceUrl || '').trim();
+    const rawSource = String(normalizedSourceUrl || '').trim();
     if (!rawSource) return '';
 
     if (!isHttpUrl(rawSource)) {
@@ -314,7 +316,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     downloadedSourceRef.current = rawSource;
     downloadedPathRef.current = downloadedPath;
     return withFileScheme(downloadedPath);
-  }, [cleanupDownloadedSource, headers, sourceUrl]);
+  }, [cleanupDownloadedSource, headers, normalizedSourceUrl]);
 
   const stopPlayback = useCallback(async (options = {}) => {
     const {
@@ -348,7 +350,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       return;
     }
 
-    const rawSource = String(sourceUrl || '').trim();
+    const rawSource = String(normalizedSourceUrl || '').trim();
     if (!rawSource || !isHttpUrl(rawSource)) {
       safeSetState(setLastError, 'Lecture audio indisponible');
       return;
@@ -364,10 +366,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       });
       safeSetState(setLastError, 'Lecture audio indisponible');
     }
-  }, [allowExternalFallback, safeSetState, sourceUrl]);
+  }, [allowExternalFallback, normalizedSourceUrl, safeSetState]);
 
   const startPlayback = useCallback(async () => {
-    const rawSource = String(sourceUrl || '').trim();
+    const rawSource = String(normalizedSourceUrl || '').trim();
     if (!rawSource) return;
 
     const player = ensurePlayer();
@@ -461,13 +463,13 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     openExternalFallback,
     resolvePlayableSource,
     safeSetState,
-    sourceUrl,
+    normalizedSourceUrl,
     speed,
     stopPlayback,
   ]);
 
   const togglePlayback = useCallback(async () => {
-    if (!sourceUrl) return;
+    if (!normalizedSourceUrl) return;
 
     const player = ensurePlayer();
     if (!player) {
@@ -518,7 +520,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     openExternalFallback,
     positionMs,
     safeSetState,
-    sourceUrl,
+    normalizedSourceUrl,
     speed,
     startPlayback,
     stopPlayback,
@@ -547,7 +549,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     safeSetState(setPositionMs, 0);
     safeSetState(setIsPlaying, false);
     safeSetState(setLastError, '');
-  }, [cleanupDownloadedSource, safeSetState, sourceUrl, stopPlayback]);
+  }, [cleanupDownloadedSource, normalizedSourceUrl, safeSetState, stopPlayback]);
 
   useEffect(() => {
     mountedRef.current = true;

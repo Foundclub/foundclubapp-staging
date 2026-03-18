@@ -29,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
+  getPlanningDefaultDate,
   getPlanningDisplayTitle,
   getPlanningItemDate,
   getPlanningItemSecondaryLabel,
@@ -131,8 +132,9 @@ function PlanningWeekTimelineView({
   scrollEnabled = true,
 }) {
   const { Colors, Fonts } = useTheme();
-  const [internalDate, setInternalDate] = useState(new Date());
+  const [internalDate, setInternalDate] = useState(getPlanningDefaultDate());
   const currentDate = propDate || internalDate;
+  const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
 
   const weekDays = useMemo(() => {
@@ -395,10 +397,10 @@ function PlanningWeekTimelineView({
   const nowLine = useMemo(() => {
     if (!timedEvents.length) return null;
 
-    const todayIndex = weekDays.findIndex((day) => isSameDay(day, new Date()));
+    const todayIndex = weekDays.findIndex((day) => isSameDay(day, nowReference));
     if (todayIndex === -1) return null;
 
-    const now = new Date();
+    const now = nowReference;
     const hour = now.getHours();
     const minute = now.getMinutes();
     const base = hourPositions[hour];
@@ -408,7 +410,7 @@ function PlanningWeekTimelineView({
       dayIndex: todayIndex,
       top: base + (activeHours.has(hour) ? (minute / 60) * HOUR_HEIGHT : (minute / 60) * COLLAPSED_HEIGHT),
     };
-  }, [activeHours, hourPositions, timedEvents.length, weekDays]);
+  }, [activeHours, hourPositions, nowReference, timedEvents.length, weekDays]);
 
   const handleDateUpdate = (nextDate) => {
     if (onDateChange) {
@@ -483,7 +485,7 @@ function PlanningWeekTimelineView({
             <View style={{ width: TIME_COLUMN_WIDTH }} />
             {weekDays.map((day) => {
               const dayKey = getDayKey(day);
-              const isTodayColumn = isSameDay(day, new Date());
+              const isTodayColumn = isSameDay(day, nowReference);
               const eventCount = dayEventCounts.get(dayKey) || 0;
               let badgeBackground = 'transparent';
 
@@ -591,7 +593,7 @@ function PlanningWeekTimelineView({
                       <View
                         key={`bg-${getDayKey(day)}`}
                         style={[styles.dayBackgroundColumn, {
-                          backgroundColor: isSameDay(day, new Date()) ? hexToRgba(Colors.primary500, 0.05) : 'transparent',
+                          backgroundColor: isSameDay(day, nowReference) ? hexToRgba(Colors.primary500, 0.05) : 'transparent',
                           borderLeftColor: 'rgba(255,255,255,0.10)',
                         }]}
                       />
@@ -662,12 +664,12 @@ function PlanningWeekTimelineView({
 
                     const contextFontSize = mode === 'week' ? 10 : 11;
                     const showPrimaryAsType = Boolean(typeLabel);
-                    const primaryMinimumFontScale = showPrimaryAsType
-                      ? (mode === 'week' ? 0.52 : 0.58)
-                      : 0.8;
-                    const primaryPaddingHorizontal = showPrimaryAsType
-                      ? (mode === 'week' ? 3 : 4)
-                      : (mode === 'week' ? 4 : 6);
+                    let primaryMinimumFontScale = 0.8;
+                    let primaryPaddingHorizontal = mode === 'week' ? 4 : 6;
+                    if (showPrimaryAsType) {
+                      primaryMinimumFontScale = mode === 'week' ? 0.52 : 0.58;
+                      primaryPaddingHorizontal = mode === 'week' ? 3 : 4;
+                    }
 
                     return (
                       <TouchableOpacity

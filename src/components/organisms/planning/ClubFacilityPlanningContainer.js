@@ -20,6 +20,7 @@ import { getClubSharedPlanning } from '@/services/multisportClub/multisportClubS
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
+  getPlanningDefaultDate,
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
@@ -54,7 +55,7 @@ function ClubFacilityPlanningContainer({
   } = useTheme();
   const { canManageTeam, USER_ROLES, userData } = useAuth();
   const [selectedFacilityId, setSelectedFacilityId] = useState(null); // null = All
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
   const [viewMode, setViewMode] = useState('week'); // '3days' | 'week' | 'month'
   const [planningScope, setPlanningScope] = useState(initialScope);
 

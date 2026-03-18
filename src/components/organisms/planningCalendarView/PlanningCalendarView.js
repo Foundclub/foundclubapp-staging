@@ -1,7 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import {
   format,
-  isToday,
   parseISO,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
+  getPlanningDefaultDate,
   getPlanningDisplayTitle,
   getPlanningItemDate,
   getPlanningTypeLabel,
@@ -90,6 +90,7 @@ function PlanningCalendarDay({
   onPress,
   selectedDate,
   state,
+  todayKey,
 }) {
   const dateString = date?.dateString;
   if (!dateString) return null;
@@ -102,7 +103,7 @@ function PlanningCalendarDay({
   )].slice(0, 3);
   const extraCount = Math.max(0, dayEvents.length - 3);
   const isSelected = dateString === selectedDate;
-  const isCurrentDay = isToday(parseISO(dateString));
+  const isCurrentDay = dateString === todayKey;
   const isDisabled = state === 'disabled';
 
   let dayColor = colors.neutral00;
@@ -187,7 +188,7 @@ function PlanningCalendarView({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const [internalDate, setInternalDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [internalDate, setInternalDate] = useState(format(getPlanningDefaultDate(), 'yyyy-MM-dd'));
 
   const selectedDate = useMemo(() => {
     if (propDate) return format(propDate, 'yyyy-MM-dd');
@@ -309,6 +310,8 @@ function PlanningCalendarView({
     t,
   ]);
 
+  const todayKey = format(getPlanningDefaultDate(), 'yyyy-MM-dd');
+
   const renderDayComponent = useCallback(({ date, state }) => (
     <PlanningCalendarDay
       colors={Colors}
@@ -318,10 +321,9 @@ function PlanningCalendarView({
       onPress={handleDateChange}
       selectedDate={selectedDate}
       state={state}
+      todayKey={todayKey}
     />
-  ), [Colors, Fonts, eventsByDate, handleDateChange, selectedDate]);
-
-  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  ), [Colors, Fonts, eventsByDate, handleDateChange, selectedDate, todayKey]);
 
   return (
     <View style={Alignments.fill}>

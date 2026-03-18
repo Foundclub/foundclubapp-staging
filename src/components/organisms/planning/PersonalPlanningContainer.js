@@ -1,6 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -22,6 +24,11 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { getMyPlanning } from '@/services/event/eventService';
 
 import {
+  lockToLandscape,
+  lockToPortrait,
+} from '@/utils/device/orientation';
+import {
+  getPlanningDefaultDate,
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
@@ -105,9 +112,22 @@ function PersonalPlanningContainer({ onSummaryPress }) {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
   const [isFullscreenVisible, setIsFullscreenVisible] = useState(false);
   const [viewMode, setViewMode] = useState('3days');
+
+  useEffect(() => {
+    if (isFullscreenVisible) {
+      lockToLandscape();
+
+      return () => {
+        lockToPortrait();
+      };
+    }
+
+    lockToPortrait();
+    return undefined;
+  }, [isFullscreenVisible]);
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -194,9 +214,11 @@ function PersonalPlanningContainer({ onSummaryPress }) {
               />
             ) : null}
           </View>
-          <Text style={[Fonts.p3, Fonts.primary100, Fonts.textCenter, Spaces.marginTop[8]]}>
-            {modeDescription}
-          </Text>
+          {!isFullscreen ? (
+            <Text style={[Fonts.p3, Fonts.primary100, Fonts.textCenter, Spaces.marginTop[8]]}>
+              {modeDescription}
+            </Text>
+          ) : null}
         </View>
 
         <View style={isFullscreen ? { flex: 1, minHeight: 0 } : { width: '100%' }}>
@@ -214,11 +236,12 @@ function PersonalPlanningContainer({ onSummaryPress }) {
         animationType="slide"
         onRequestClose={() => setIsFullscreenVisible(false)}
         presentationStyle="fullScreen"
+        supportedOrientations={['landscape-left', 'landscape-right']}
         visible={isFullscreenVisible}
       >
         <ScreenContainer
           bgImage="bg2"
-          contentContainerStyle={[{ paddingBottom: Math.max(insets.bottom, 16) }]}
+          contentContainerStyle={[{ paddingBottom: Math.max(insets.bottom, 12) }]}
           withHeaderPadding={false}
         >
           <View style={{ flex: 1, paddingTop: Math.max(insets.top + 8, 16) }}>
@@ -227,17 +250,11 @@ function PersonalPlanningContainer({ onSummaryPress }) {
                 Alignments.row,
                 Alignments.alignCenter,
                 Alignments.justifySpaceBetween,
-                Spaces.marginBottom[16],
+                Spaces.marginBottom[12],
               ]}
             >
               <View style={{ flex: 1, paddingRight: 12 }}>
                 <Text style={[Fonts.h2, Fonts.neutral00]}>Mon planning</Text>
-                <Text style={[Fonts.p3, Fonts.primary100, Spaces.marginTop[4]]}>
-                  {t(
-                    'planning.fullscreen.subtitle',
-                    'Mode plein ecran pour mieux naviguer dans le calendrier.',
-                  )}
-                </Text>
               </View>
               <TouchableOpacity
                 accessibilityLabel="Fermer le planning plein ecran"

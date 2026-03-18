@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as Sentry from '@sentry/react-native';
 import {
   MutationCache, QueryCache, QueryClient, QueryClientProvider,
 } from '@tanstack/react-query';
 import { isAxiosError } from 'axios/dist/browser/axios.cjs';
+import { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,14 +21,15 @@ import AppNavigator from '@/navigation/appNavigator';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
 
-import { displayErrorAlert } from '@/utils/errors/displayError';
-
-import { AppModeProvider } from '@/context/AppModeContext';
-import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 import {
   clearPersistedBootError,
   readPersistedBootError,
 } from '@/utils/bootDiagnostics';
+import { lockToPortrait } from '@/utils/device/orientation';
+import { displayErrorAlert } from '@/utils/errors/displayError';
+
+import { AppModeProvider } from '@/context/AppModeContext';
+import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
 const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase();
 const isStaging = appEnv === 'staging';
@@ -121,6 +122,10 @@ const queryClient = new QueryClient({
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
+  useEffect(() => {
+    lockToPortrait();
+  }, []);
+
   useEffect(() => {
     const previousBootError = readPersistedBootError();
     if (!previousBootError) return;

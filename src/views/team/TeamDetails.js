@@ -564,6 +564,10 @@ function TeamDetails({ navigation, route }) {
       team?.externalTeamName,
     ],
   );
+  const canRefreshExternalSync = useMemo(
+    () => !!(canManageTeam && teamId && team?.externalStandingUrl),
+    [canManageTeam, team?.externalStandingUrl, teamId],
+  );
   const showStandingsTab = useMemo(
     () => !!(isMyTeam || hasStandingData || canConfigureFFBB),
     [isMyTeam, hasStandingData, canConfigureFFBB],
@@ -1090,7 +1094,7 @@ function TeamDetails({ navigation, route }) {
                     {roundLabel ? `${roundLabel} - ${opponentLabel}` : opponentLabel}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {[homeAwayLabel, itemDateLabel].filter(Boolean).join(' • ') || t('teamDetails.external.report.dateUnknown', 'Date a confirmer')}
+                    {[homeAwayLabel, itemDateLabel].filter(Boolean).join(' - ') || t('teamDetails.external.report.dateUnknown', 'Date a confirmer')}
                   </Text>
                   {reasonLabel ? (
                     <Text style={[Fonts.p4, { color: accentColor }]}>
@@ -1128,6 +1132,183 @@ function TeamDetails({ navigation, route }) {
     handleOpenSyncedEvent,
     t,
   ]);
+
+  const renderExternalSyncCard = () => {
+    if (!showExternalSyncCard) return null;
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Spaces.padding[16],
+          Spaces.gap[12],
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
+              {t('teamDetails.external.cardTitle', 'Source externe')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.primary100]}>
+              {externalSyncCompetitionName || t('teamDetails.external.noSource', 'Aucune source configuree')}
+            </Text>
+          </View>
+          <View
+            style={[
+              ApplicationStyle.borderRadius24,
+              Spaces.paddingVertical[6],
+              Spaces.paddingHorizontal[10],
+              {
+                backgroundColor: externalSyncStatusMeta.badgeBackground,
+                borderColor: externalSyncStatusMeta.badgeBorder,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: externalSyncStatusMeta.textColor }]}>
+              {externalSyncStatusMeta.label}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[Spaces.gap[4]]}>
+          {externalSyncProviderLabel ? (
+            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+              {`Provider: ${externalSyncProviderLabel}`}
+            </Text>
+          ) : null}
+          {externalSyncSelectedTeamName ? (
+            <Text style={[Fonts.p3, Fonts.neutral00]}>
+              {t('teamDetails.external.followedTeam', 'Equipe suivie')}: {externalSyncSelectedTeamName}
+            </Text>
+          ) : null}
+          {externalSyncPouleName ? (
+            <Text style={[Fonts.p3, Fonts.neutral00]}>
+              {t('teamDetails.external.pool', 'Poule')}: {externalSyncPouleName}
+            </Text>
+          ) : null}
+          {externalSyncUpdatedLabel ? (
+            <Text style={[Fonts.p3, Fonts.primary100]}>
+              {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
+            </Text>
+          ) : null}
+          {externalSyncReport?.mode ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncReport.mode}
+            </Text>
+          ) : null}
+        </View>
+
+        {externalSyncSummary ? (
+          <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+            {[
+              {
+                key: 'created',
+                label: t('teamDetails.external.summary.created', 'Crees'),
+                value: externalSyncSummary.created || 0,
+              },
+              {
+                key: 'updated',
+                label: t('teamDetails.external.summary.updated', 'Mis a jour'),
+                value: externalSyncSummary.updated || 0,
+              },
+              {
+                key: 'archivedFuture',
+                label: t('teamDetails.external.summary.archived', 'Archives'),
+                value: externalSyncSummary.archivedFuture || 0,
+              },
+              {
+                key: 'unchanged',
+                label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
+                value: externalSyncSummary.unchanged || 0,
+              },
+            ].map((stat) => (
+              <View
+                key={stat.key}
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Spaces.paddingVertical[8],
+                  Spaces.paddingHorizontal[12],
+                  {
+                    backgroundColor: `${Colors.primary500}14`,
+                    borderColor: `${Colors.primary500}33`,
+                    borderWidth: 1,
+                    minWidth: 88,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4, Fonts.primary100]}>{stat.label}</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{stat.value}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {externalSyncReport?.warnings?.length ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.padding[12],
+              Spaces.gap[4],
+              {
+                backgroundColor: `${Colors.warning500}18`,
+                borderColor: `${Colors.warning500}44`,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+              {t('teamDetails.external.warningsTitle', 'Avertissements')}
+            </Text>
+            {externalSyncReport.warnings.slice(0, 2).map((warning, index) => (
+              <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
+                {`- ${warning}`}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+          {canConfigureFFBB ? (
+            <Button
+              onPress={() => setShowFFBBUrlModal(true)}
+              style={{ flexGrow: 1 }}
+              title={t('teamDetails.external.actions.source', 'Source')}
+              variant="SecondaryLight"
+            />
+          ) : null}
+          {canRefreshExternalSync ? (
+            <Button
+              isLoading={refreshScrapingMutation.isPending}
+              onPress={() => {
+                if (teamId) refreshScrapingMutation.mutate(teamId);
+              }}
+              style={{ flexGrow: 1 }}
+              title={t('teamDetails.external.actions.sync', 'Synchroniser')}
+              variant="Secondary"
+            />
+          ) : null}
+          {externalSyncReport ? (
+            <Button
+              onPress={() => openExternalSyncReport(externalSyncReport)}
+              style={{ flexGrow: 1 }}
+              title={t('teamDetails.external.actions.report', 'Voir le rapport')}
+              variant="SecondaryLight"
+            />
+          ) : null}
+          {canManageTeam ? (
+            <Button
+              onPress={() => setShowFFBBErrorModal(true)}
+              style={{ flexGrow: 1 }}
+              title={t('teamDetails.external.actions.reportBug', 'Signaler')}
+              variant="SecondaryLight"
+            />
+          ) : null}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <ScreenContainer
@@ -1211,180 +1392,6 @@ function TeamDetails({ navigation, route }) {
           isLoading={isLoading}
           wrapperStyle={[Alignments.fill]}
         >
-          {activeTab !== 'infos' && showExternalSyncCard ? (
-            <View
-              style={[
-                ApplicationStyle.backgroundColor.primary700,
-                ApplicationStyle.borderRadius24,
-                Spaces.padding[16],
-                Spaces.gap[12],
-                Spaces.marginTop[8],
-              ]}
-            >
-              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
-                    {t('teamDetails.external.cardTitle', 'Source externe')}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {externalSyncCompetitionName || t('teamDetails.external.noSource', 'Aucune source configuree')}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    ApplicationStyle.borderRadius24,
-                    Spaces.paddingVertical[6],
-                    Spaces.paddingHorizontal[10],
-                    {
-                      backgroundColor: externalSyncStatusMeta.badgeBackground,
-                      borderColor: externalSyncStatusMeta.badgeBorder,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, { color: externalSyncStatusMeta.textColor }]}>
-                    {externalSyncStatusMeta.label}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[Spaces.gap[4]]}>
-                {externalSyncProviderLabel ? (
-                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                    {`Provider: ${externalSyncProviderLabel}`}
-                  </Text>
-                ) : null}
-                {externalSyncSelectedTeamName ? (
-                  <Text style={[Fonts.p3, Fonts.neutral00]}>
-                    {t('teamDetails.external.followedTeam', 'Equipe suivie')}: {externalSyncSelectedTeamName}
-                  </Text>
-                ) : null}
-                {externalSyncPouleName ? (
-                  <Text style={[Fonts.p3, Fonts.neutral00]}>
-                    {t('teamDetails.external.pool', 'Poule')}: {externalSyncPouleName}
-                  </Text>
-                ) : null}
-                {externalSyncUpdatedLabel ? (
-                  <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
-                  </Text>
-                ) : null}
-                {externalSyncReport?.mode ? (
-                  <Text style={[Fonts.p4, Fonts.primary100]}>
-                    {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncReport.mode}
-                  </Text>
-                ) : null}
-              </View>
-
-              {externalSyncSummary ? (
-                <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
-                  {[
-                    {
-                      key: 'created',
-                      label: t('teamDetails.external.summary.created', 'Crees'),
-                      value: externalSyncSummary.created || 0,
-                    },
-                    {
-                      key: 'updated',
-                      label: t('teamDetails.external.summary.updated', 'Mis a jour'),
-                      value: externalSyncSummary.updated || 0,
-                    },
-                    {
-                      key: 'archivedFuture',
-                      label: t('teamDetails.external.summary.archived', 'Archives'),
-                      value: externalSyncSummary.archivedFuture || 0,
-                    },
-                    {
-                      key: 'unchanged',
-                      label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
-                      value: externalSyncSummary.unchanged || 0,
-                    },
-                  ].map((stat) => (
-                    <View
-                      key={stat.key}
-                      style={[
-                        ApplicationStyle.borderRadius16,
-                        Spaces.paddingVertical[8],
-                        Spaces.paddingHorizontal[12],
-                        {
-                          backgroundColor: `${Colors.primary500}14`,
-                          borderColor: `${Colors.primary500}33`,
-                          borderWidth: 1,
-                          minWidth: 88,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4, Fonts.primary100]}>{stat.label}</Text>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{stat.value}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-
-              {externalSyncReport?.warnings?.length ? (
-                <View
-                  style={[
-                    ApplicationStyle.borderRadius16,
-                    Spaces.padding[12],
-                    Spaces.gap[4],
-                    {
-                      backgroundColor: `${Colors.warning500}18`,
-                      borderColor: `${Colors.warning500}44`,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                    {t('teamDetails.external.warningsTitle', 'Avertissements')}
-                  </Text>
-                  {externalSyncReport.warnings.slice(0, 2).map((warning, index) => (
-                    <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
-                      {`• ${warning}`}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-
-              <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
-                {canConfigureFFBB ? (
-                  <Button
-                    onPress={() => setShowFFBBUrlModal(true)}
-                    style={{ flexGrow: 1 }}
-                    title={t('teamDetails.external.actions.source', 'Source')}
-                    variant="SecondaryLight"
-                  />
-                ) : null}
-                {canManageTeam ? (
-                  <Button
-                    isLoading={refreshScrapingMutation.isPending}
-                    onPress={() => {
-                      if (teamId) refreshScrapingMutation.mutate(teamId);
-                    }}
-                    style={{ flexGrow: 1 }}
-                    title={t('teamDetails.external.actions.sync', 'Synchroniser')}
-                    variant="Secondary"
-                  />
-                ) : null}
-                {externalSyncReport ? (
-                  <Button
-                    onPress={() => openExternalSyncReport(externalSyncReport)}
-                    style={{ flexGrow: 1 }}
-                    title={t('teamDetails.external.actions.report', 'Voir le rapport')}
-                    variant="SecondaryLight"
-                  />
-                ) : null}
-                {canManageTeam ? (
-                  <Button
-                    onPress={() => setShowFFBBErrorModal(true)}
-                    style={{ flexGrow: 1 }}
-                    title={t('teamDetails.external.actions.reportBug', 'Signaler')}
-                    variant="SecondaryLight"
-                  />
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-
           {/* TAB CONTENT: INFOS */}
           {activeTab === 'infos' && (
           <View style={[Spaces.marginTop[8]]}>
@@ -1442,9 +1449,9 @@ function TeamDetails({ navigation, route }) {
                 {showStandingsTab && myTeamRanking && (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                   <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                    {myTeamRanking.rank === 1 ? '🥇' : myTeamRanking.rank === 2 ? '🥈' : myTeamRanking.rank === 3 ? '🥉' : `${myTeamRanking.rank}${myTeamRanking.rank === 1 ? 'er' : 'ème'}`}
+                    {`${myTeamRanking.rank}${myTeamRanking.rank === 1 ? 'er' : 'e'}`}
                   </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral00]}>•</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral00]}>-</Text>
                   <Text style={[Fonts.p1Bold, Fonts.primary500]}>
                     {myTeamRanking.points}
                     {' '}
@@ -1462,7 +1469,7 @@ function TeamDetails({ navigation, route }) {
               ) : null}
               {(team?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label || team?.club?.city) && (
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <Text style={{ fontSize: 16 }}>📍</Text>
+                <Text style={{ fontSize: 16 }}>o</Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                   {team?.address?.properties?.label || team?.city || team?.club?.address?.properties?.label || team?.club?.city}
                 </Text>
@@ -1723,12 +1730,12 @@ function TeamDetails({ navigation, route }) {
 
           {/* TAB CONTENT: STANDINGS */}
           {showStandingsTab && activeTab === 'standings' && (
-          <View style={[Spaces.padding[16], Alignments.alignCenter]}>
+          <View style={[Spaces.padding[16], Alignments.alignCenter, Spaces.gap[16]]}>
             {team?.externalStandingData && team.externalStandingData.length > 0 ? (
               <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Alignments.fullWidth]}>
                 <View style={[Alignments.row, Spaces.paddingBottom[8], { borderBottomColor: '#FFFFFF33', borderBottomWidth: 1 }]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 25 }]}>#</Text>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>Équipe</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>Equipe</Text>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>Pts</Text>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>J</Text>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center', width: 25 }]}>M</Text>
@@ -1759,7 +1766,7 @@ function TeamDetails({ navigation, route }) {
                       >
                         <Text style={[Fonts.p2, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { width: 25 }]}>{rowRank}</Text>
                         <Text numberOfLines={1} style={[Fonts.p2Bold, isMyTeam ? Fonts.primary500 : Fonts.neutral00, { flex: 1 }]}>
-                          {isMyTeam && '★ '}
+                          {isMyTeam && '* '}
                           {row.teamName}
                         </Text>
                         <Text style={[Fonts.p2Bold, Fonts.primary500, { textAlign: 'center', width: 25 }]}>{row.points}</Text>
@@ -1785,12 +1792,13 @@ function TeamDetails({ navigation, route }) {
                 )}
               </View>
             )}
+            {renderExternalSyncCard()}
           </View>
           )}
 
           {/* TAB CONTENT: CALENDAR */}
           {showCalendarTab && activeTab === 'calendar' && (
-          <View style={[Spaces.padding[16]]}>
+          <View style={[Spaces.padding[16], Spaces.gap[16]]}>
             {team?.externalCalendarData && team.externalCalendarData.length > 0 ? (
               <View>
                 {/* Calendar filters + list */}
@@ -2029,7 +2037,7 @@ function TeamDetails({ navigation, route }) {
                       : t('teamDetails.calendar.scope.fullPool', 'Résultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
-                  const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Équipe suivie');
+                  const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Equipe suivie');
                   const followedTeamBadgeText = `${followedTeamLabel}: ${followedTeamName}`;
 
                   return (
@@ -2232,7 +2240,7 @@ function TeamDetails({ navigation, route }) {
                               const isMyAwayTeam = Boolean(match?._isMyAwayTeam);
                               const statusLabel = match._isPlayed
                                 ? t('teamDetails.calendar.status.played', 'Termine')
-                                : t('teamDetails.calendar.status.upcoming', 'À venir');
+                                : t('teamDetails.calendar.status.upcoming', 'A venir');
                               const dateLabel = match._dateObj
                                 ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
                                 : t('teamDetails.calendar.dateUnknown', 'Date a confirmer');
@@ -2325,6 +2333,7 @@ function TeamDetails({ navigation, route }) {
               <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Aucun calendrier disponible.</Text>
             )}
 
+            {renderExternalSyncCard()}
           </View>
           )}
 
@@ -2345,7 +2354,7 @@ function TeamDetails({ navigation, route }) {
               </View>
               <View style={[Alignments.alignCenter, { flex: 1 }]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.totalEvents}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Événements</Text>
+                <Text style={[Fonts.p3, Fonts.neutral00]}>Evenements</Text>
               </View>
               <View style={[Alignments.alignCenter, { flex: 1 }]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
@@ -2426,11 +2435,22 @@ function TeamDetails({ navigation, route }) {
             iconPosition="before"
             onPress={handleStartChat}
             style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-            title={t('teamDetails.actions.teamChat', 'Équipe')}
+            title={t('teamDetails.actions.teamChat', 'Equipe')}
             variant="PrimaryLight"
           />
         )}
       </View>
+      {canRefreshExternalSync && (
+        <Button
+          isLoading={refreshScrapingMutation.isPending}
+          onPress={() => {
+            if (teamId) refreshScrapingMutation.mutate(teamId);
+          }}
+          style={Spaces.paddingHorizontal[16]}
+          title={t('teamDetails.external.actions.syncStandings', 'Synchroniser le classement')}
+          variant="PrimaryLight"
+        />
+      )}
       {
         isMyTeam && (
           <Button
@@ -2651,7 +2671,7 @@ function TeamDetails({ navigation, route }) {
                 externalSyncProviderLabel,
                 externalSyncSelectedTeamName,
                 externalSyncPouleName,
-              ].filter(Boolean).join(' • ')}
+              ].filter(Boolean).join(' - ')}
             </Text>
 
             <ScrollView contentContainerStyle={[Spaces.gap[16]]} showsVerticalScrollIndicator={false}>
@@ -2722,7 +2742,7 @@ function TeamDetails({ navigation, route }) {
                   </Text>
                   {externalSyncReport.warnings.map((warning, index) => (
                     <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
-                      {`• ${warning}`}
+                      {`- ${warning}`}
                     </Text>
                   ))}
                 </View>
@@ -2746,7 +2766,7 @@ function TeamDetails({ navigation, route }) {
                   </Text>
                   {externalSyncReport.errors.map((entry, index) => (
                     <Text key={`${entry}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
-                      {`• ${entry}`}
+                      {`- ${entry}`}
                     </Text>
                   ))}
                 </View>
@@ -2808,7 +2828,7 @@ function TeamDetails({ navigation, route }) {
             <View style={[Spaces.marginBottom[16], Spaces.gap[8]]}>
               {[
                 { key: 'wrong_data', label: t('teamDetails.ffbb.problems.wrongData', 'Données incorrectes') },
-                { key: 'missing_team', label: t('teamDetails.ffbb.problems.missingTeam', 'Équipe manquante') },
+                { key: 'missing_team', label: t('teamDetails.ffbb.problems.missingTeam', 'Equipe manquante') },
                 { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'Données obsolètes') },
                 { key: 'wrong_url', label: t('teamDetails.ffbb.problems.wrongUrl', 'Mauvaise URL') },
                 { key: 'other', label: t('teamDetails.ffbb.problems.other', 'Autre') },
@@ -2885,3 +2905,4 @@ function TeamDetails({ navigation, route }) {
 }
 
 export default TeamDetails;
+

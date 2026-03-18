@@ -379,4 +379,18 @@ export const cancelRecording = async () => {
   resetSession();
 };
 
+export const deleteVoiceNoteFile = async (uriOrPath) => {
+  const normalizedPath = normalizePathForFs(uriOrPath);
+  if (!normalizedPath) return;
+
+  try {
+    const exists = await ReactNativeBlobUtil.fs.exists(normalizedPath);
+    if (exists) {
+      await ReactNativeBlobUtil.fs.unlink(normalizedPath);
+    }
+  } catch (_error) {
+    // Best effort cleanup.
+  }
+};
+
 export const getRecordingDuration = () => recordingSession.durationMs;
