@@ -1316,7 +1316,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucune convocation publiee pour le moment.
+                  Aucune convocation publiée pour le moment.
                 </Text>
               )}
             </View>

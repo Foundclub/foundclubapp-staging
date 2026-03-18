@@ -703,7 +703,7 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const handleResetAllTutorials = useCallback(() => {
     Alert.alert(
-      t('homeHubTutorial.reset.title', 'Reinitialiser les tutoriels'),
+      t('homeHubTutorial.reset.title', 'Réinitialiser les tutoriels'),
       t('homeHubTutorial.reset.description', 'Tous les tutoriels seront remis a zero pour ce compte.'),
       [
         { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
@@ -717,7 +717,7 @@ function HomeHubContent({ auth, navigation, route }) {
             });
           },
           style: 'destructive',
-          text: t('homeHubTutorial.reset.confirm', 'Reinitialiser'),
+          text: t('homeHubTutorial.reset.confirm', 'Réinitialiser'),
         },
       ],
     );
@@ -859,7 +859,7 @@ function HomeHubContent({ auth, navigation, route }) {
     const options = [
       { id: TutorialIds.SEARCH_EVENTS, label: t('homeHub.cards.search.events.title', 'Événement') },
       { id: TutorialIds.SEARCH_CLUBS, label: t('homeHub.cards.search.clubs.title', 'Club') },
-      { id: TutorialIds.SEARCH_RESERVATIONS, label: t('homeHub.cards.search.reservations.title', 'Reservations') },
+      { id: TutorialIds.SEARCH_RESERVATIONS, label: t('homeHub.cards.search.reservations.title', 'Réservations') },
       { id: TutorialIds.SEARCH_RECRUITMENT, label: t('homeHub.cards.search.ads.title', 'Annonces') },
       { id: TutorialIds.PROFILE_MAIN, label: t('homeHub.cards.profile.view.title', 'Voir mon profil') },
       { id: TutorialIds.PROFILE_EDIT, label: t('homeHub.cards.profile.edit.title', 'Modifier mon profil') },
@@ -1043,7 +1043,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: () => navigation.navigate(RouteNames.SearchEvents),
       subtitle: t('homeHub.cards.search.events.subtitle'),
       title: t('homeHub.cards.search.events.title'),
-      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouv?z des événements sportifs en utilisant les filtres de recherche.'),
+      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouvez des événements sportifs en utilisant les filtres de recherche.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1052,7 +1052,7 @@ function HomeHubContent({ auth, navigation, route }) {
       onPress: () => navigation.navigate(RouteNames.SearchClubs),
       subtitle: t('homeHub.cards.search.clubs.subtitle'),
       title: t('homeHub.cards.search.clubs.title'),
-      tutorial: makeTutorial('searchClubs', 11, 'Rechercher un club', 'Explorez les clubs et ouvrez leur fiche detaillee.'),
+      tutorial: makeTutorial('searchClubs', 11, 'Rechercher un club', 'Explorez les clubs et ouvrez leur fiche détaillée.'),
     },
     {
       accentColor: Colors.primary500,
@@ -1098,7 +1098,7 @@ function HomeHubContent({ auth, navigation, route }) {
         'league',
         20,
         'FoundClub League',
-        'Basculez vers FoundClub League pour les fonctionnalit?s competitives.',
+        'Basculez vers FoundClub League pour les fonctionnalités compétitives.',
         {
           nextAction: 'scrollDown',
           nextLabel: scrollDownLabel,
@@ -1278,7 +1278,7 @@ function HomeHubContent({ auth, navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <OnboardingWrapper
-          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un accès rapide a toutes les fonctionnalit?s principales.')}
+          description={t('homeHubTutorial.steps.header.description', 'Cette page vous donne un accès rapide à toutes les fonctionnalités principales.')}
           id="homehub-header"
           nextAction={!hasManageSection ? 'scrollDown' : undefined}
           nextLabel={!hasManageSection ? scrollDownLabel : undefined}
@@ -1322,17 +1322,17 @@ function HomeHubContent({ auth, navigation, route }) {
           <BottomModal close={closeTutorialCenterModal} isVisible={isTutorialCenterVisible} snapPoints={['48%']}>
             <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('homeHubTutorial.center.title', 'Tutoriels et aide')}</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.center.subtitle', 'Relancez un tutoriel ou reinitialisez tous les guides.')}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.center.subtitle', 'Relancez un tutoriel ou réinitialisez tous les guides.')}</Text>
               <Button onPress={startHomeTutorial} title={t('homeHubTutorial.center.actions.relaunchHome', 'Relancer le tutoriel Accueil')} variant="Primary" />
-              <Button onPress={openFeatureTutorialPicker} title={t('homeHubTutorial.center.actions.pickFeature', 'Choisir un tutoriel de fonctionnalite')} variant="Secondary" />
-              <Button onPress={handleResetAllTutorials} title={t('homeHubTutorial.center.actions.resetAll', 'Reinitialiser tous les tutoriels')} variant="Secondary" />
+              <Button onPress={openFeatureTutorialPicker} title={t('homeHubTutorial.center.actions.pickFeature', 'Choisir un tutoriel de fonctionnalité')} variant="Secondary" />
+              <Button onPress={handleResetAllTutorials} title={t('homeHubTutorial.center.actions.resetAll', 'Réinitialiser tous les tutoriels')} variant="Secondary" />
             </View>
           </BottomModal>
 
           <BottomModal close={closeFeatureTutorialPicker} isVisible={isFeatureTutorialPickerVisible} snapPoints={['75%']}>
             <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('homeHubTutorial.featurePicker.title', 'Choisir un tutoriel')}</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.featurePicker.subtitle', 'Sélectionnez une fonctionnalite a decouvrir.')}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.featurePicker.subtitle', 'Sélectionnez une fonctionnalité à découvrir.')}</Text>
               {tutorialOptions.map((option) => (
                 <TouchableOpacity
                   key={option.id}

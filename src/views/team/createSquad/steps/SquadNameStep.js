@@ -90,7 +90,7 @@ function SquadNameStep({ data, onNext, updateData }) {
       } catch (_error) {
         if (isCancelled) return;
         setNameCheckState('error');
-        setNameMessage('Impossible de vérifier le nom maintenant. R?essaie.');
+        setNameMessage('Impossible de vérifier le nom maintenant. Réessaie.');
         setNameSuggestions([]);
       }
     };

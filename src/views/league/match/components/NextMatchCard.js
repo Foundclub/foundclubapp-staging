@@ -182,10 +182,10 @@ function NextMatchCard({
       .includes(normalizedStatus) || ['disputed', 'pending_validation'].includes(derivedPhase);
 
     return [
-      { done: true, key: 'found', label: 'Trouv?' },
-      { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain r?serv?' },
-      { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match jou?' },
-      { done: resultSubmitted, key: 'result', label: 'R?sultat' },
+      { done: true, key: 'found', label: 'Trouvé' },
+      { done: isVenueBooked || matchPlayed || resultSubmitted, key: 'booked', label: 'Terrain réservé' },
+      { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match joué' },
+      { done: resultSubmitted, key: 'result', label: 'Résultat' },
     ];
   }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus]);
 
@@ -463,7 +463,7 @@ function NextMatchCard({
             if (isScoreLockedByTime) {
               Alert.alert(
                 'Score indisponible',
-                "Vous pourrez saisir le score une fois l'heure de début du match d?pass?e de 1 minute.",
+                "Vous pourrez saisir le score une fois l'heure de début du match dépassée de 1 minute.",
               );
               return;
             }
@@ -478,7 +478,7 @@ function NextMatchCard({
           ]}
         >
           <Text style={[styles.bookingButtonText, { color: isScoreLockedByTime ? Colors.neutral400 : Colors.primary500 }]}>
-            {isScoreLockedByTime ? 'SCORE Verrouillé (AVANT D?but + 1 MIN)' : 'SAISIR LE SCORE'}
+            {isScoreLockedByTime ? 'SCORE Verrouillé (AVANT Début + 1 MIN)' : 'SAISIR LE SCORE'}
           </Text>
         </TouchableOpacity>
         )}

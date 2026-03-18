@@ -201,7 +201,7 @@ function SuperAdminEntryList({ navigation, route }) {
     if (selectedCount === 0) {
       Alert.alert(
         t('superAdminContentManager.alerts.emptySelectionTitle', 'Sélection vide'),
-        t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionnez au moins une entr?e.'),
+        t('superAdminContentManager.alerts.emptySelectionMessage', 'Sélectionnez au moins une entrée.'),
       );
       return;
     }
@@ -245,7 +245,7 @@ function SuperAdminEntryList({ navigation, route }) {
         uid,
       });
       closeDeleteModal();
-      setFeedbackMessage(t('superAdminContentManager.feedback.entryDeleted', 'Entr?e supprim?e'));
+      setFeedbackMessage(t('superAdminContentManager.feedback.entryDeleted', 'Entrée supprimée'));
     } catch (error) {
       Alert.alert(
         t('superAdminContentManager.alerts.deleteFailedTitle', 'Suppression impossible'),
@@ -282,9 +282,9 @@ function SuperAdminEntryList({ navigation, route }) {
       clearSelection();
 
       if (failedCount > 0) {
-        setFeedbackMessage(`${succeededCount}/${selectedBeforeRequest} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliqu?e(s)')}`);
+        setFeedbackMessage(`${succeededCount}/${selectedBeforeRequest} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliquée(s)')}`);
       } else {
-        setFeedbackMessage(`${succeededCount} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliqu?e(s)')}`);
+        setFeedbackMessage(`${succeededCount} ${t('superAdminContentManager.feedback.bulkApplied', 'action(s) appliquée(s)')}`);
       }
     } catch (error) {
       Alert.alert(
@@ -346,11 +346,11 @@ function SuperAdminEntryList({ navigation, route }) {
         sortMode={sortMode}
         sortOptions={SUPERADMIN_SORT_OPTIONS}
         texts={{
-          create: t('superAdminContentManager.actions.createEntry', 'Créer une entr?e'),
+          create: t('superAdminContentManager.actions.createEntry', 'Créer une entrée'),
           page: t('superAdminContentManager.list.page', 'Page'),
-          searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entr?e'),
+          searchPlaceholder: t('superAdminContentManager.list.searchPlaceholder', 'Rechercher une entrée'),
           selectAll: t('superAdminContentManager.actions.selectAll', 'Tout sélectionner'),
-          selected: t('superAdminContentManager.list.selectedEntries', 'entr?e(s) sélectionnée(s)'),
+          selected: t('superAdminContentManager.list.selectedEntries', 'entrée(s) sélectionnée(s)'),
           selectionModeOff: t('superAdminContentManager.actions.multiSelect', 'Selection multiple'),
           selectionModeOn: t('superAdminContentManager.actions.exitSelection', 'Quitter selection'),
           total: t('superAdminContentManager.list.total', 'Total'),
@@ -376,7 +376,7 @@ function SuperAdminEntryList({ navigation, route }) {
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {selectedCount}
             {' '}
-            {t('superAdminContentManager.list.selectedEntries', 'entr?e(s) sélectionnée(s)')}
+            {t('superAdminContentManager.list.selectedEntries', 'entrée(s) sélectionnée(s)')}
           </Text>
           <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
             <TouchableOpacity
@@ -444,7 +444,7 @@ function SuperAdminEntryList({ navigation, route }) {
           !isLoading ? (
             <SuperAdminEmptyState
               description={t('superAdminContentManager.empty.listDescription', 'Aucune donnée ne correspond aux filtres actifs.')}
-              title={t('superAdminContentManager.empty.listTitle', 'Aucune entr?e')}
+              title={t('superAdminContentManager.empty.listTitle', 'Aucune entrée')}
             />
           ) : null
         }
@@ -583,7 +583,7 @@ function SuperAdminEntryList({ navigation, route }) {
         snapPoints={['45%']}
       >
         <Text style={[Fonts.h3, Fonts.neutral00]}>
-          {t('superAdminContentManager.deleteModal.title', 'Supprimer l\'entr?e')}
+          {t('superAdminContentManager.deleteModal.title', 'Supprimer l\'entrée')}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
           {t('superAdminContentManager.deleteModal.description', 'Cette action est definitive et necessite une raison d\'audit.')}
@@ -669,7 +669,7 @@ function SuperAdminEntryList({ navigation, route }) {
         <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
           {selectedCount}
           {' '}
-          {t('superAdminContentManager.bulkModal.description', 'entr?e(s) seront traitees. Une raison d\'audit est obligatoire.')}
+          {t('superAdminContentManager.bulkModal.description', 'entrée(s) seront traitées. Une raison d\'audit est obligatoire.')}
         </Text>
 
         <TextInput

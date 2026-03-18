@@ -338,7 +338,7 @@ function PastMatchDetails() {
               </View>
 
               <View style={styles.eloCol}>
-                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Apr?s</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Après</Text>
                 <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>{eloInfo.after}</Text>
               </View>
             </View>

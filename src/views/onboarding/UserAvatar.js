@@ -45,7 +45,7 @@ function UserAvatar({ navigation }) {
       const rawMessage = typeof error?.message === 'string' ? error.message : '';
       const isNetworkFailure = rawMessage.toLowerCase().includes('network request failed');
       const message = isNetworkFailure
-        ? 'Connexion impossible au serveur pour le moment. R?essaie dans quelques secondes.'
+        ? 'Connexion impossible au serveur pour le moment. Réessaie dans quelques secondes.'
         : (rawMessage || 'Impossible de mettre à jour votre profil.');
       Alert.alert('Erreur', message);
     },

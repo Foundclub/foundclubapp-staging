@@ -141,6 +141,10 @@ const buildPlaybackSourceCandidates = (rawSourceUrl) => {
   return candidates;
 };
 
+const waitFor = (delayMs) => new Promise((resolve) => {
+  setTimeout(resolve, Math.max(0, Number(delayMs) || 0));
+});
+
 const claimPlaybackSlot = async (ownerId, stopCurrentOwner) => {
   if (
     activePlayback.ownerId
@@ -168,7 +172,7 @@ const releasePlaybackSlot = (ownerId) => {
 /**
  * Playback hook with local-cache strategy for remote audio sources.
  *
- * @param {{ sourceUrl?: string; headers?: Record<string, string> }} params
+ * @param {{ sourceUrl?: string; headers?: Record<string, string>; allowExternalFallback?: boolean }} params
  * @returns {{
  *   isPlayerAvailable: boolean;
  *   isLoading: boolean;
@@ -183,7 +187,7 @@ const releasePlaybackSlot = (ownerId) => {
  *   cycleSpeed: () => void;
  * }}
  */
-const useAudioPlayback = ({ headers, sourceUrl }) => {
+const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl }) => {
   const ownerIdRef = useRef(`voice-playback-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const mountedRef = useRef(true);
   const playerRef = useRef(/** @type {any | null} */ (null));
@@ -339,6 +343,11 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
   }, [safeSetState]);
 
   const openExternalFallback = useCallback(async () => {
+    if (!allowExternalFallback) {
+      safeSetState(setLastError, 'Lecture audio indisponible');
+      return;
+    }
+
     const rawSource = String(sourceUrl || '').trim();
     if (!rawSource || !isHttpUrl(rawSource)) {
       safeSetState(setLastError, 'Lecture audio indisponible');
@@ -355,7 +364,7 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
       });
       safeSetState(setLastError, 'Lecture audio indisponible');
     }
-  }, [safeSetState, sourceUrl]);
+  }, [allowExternalFallback, safeSetState, sourceUrl]);
 
   const startPlayback = useCallback(async () => {
     const rawSource = String(sourceUrl || '').trim();
@@ -381,26 +390,36 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
         throw new Error('PLAYER_SOURCE_EMPTY');
       }
 
-      let started = false;
-      /** @type {any} */
-      let startError = null;
+      const startPlayerWithCandidates = async () => {
+        /** @type {any} */
+        let lastStartError = null;
 
-      for (let index = 0; index < sourceCandidates.length; index += 1) {
-        const candidate = sourceCandidates[index];
-        const requestHeaders = isHttpUrl(candidate) ? (headers || undefined) : undefined;
+        for (let index = 0; index < sourceCandidates.length; index += 1) {
+          const candidate = sourceCandidates[index];
+          const requestHeaders = isHttpUrl(candidate) ? (headers || undefined) : undefined;
 
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await player.startPlayer(candidate, requestHeaders);
-          started = true;
-          break;
-        } catch (error) {
-          startError = error;
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await player.startPlayer(candidate, requestHeaders);
+            return true;
+          } catch (error) {
+            lastStartError = error;
+          }
         }
-      }
 
-      if (!started) {
-        throw startError || new Error('PLAYER_START_FAILED');
+        throw lastStartError || new Error('PLAYER_START_FAILED');
+      };
+
+      try {
+        await startPlayerWithCandidates();
+      } catch (firstStartError) {
+        const shouldRetryStart = sourceCandidates.some((candidate) => !isHttpUrl(candidate));
+        if (!shouldRetryStart) {
+          throw firstStartError;
+        }
+
+        await waitFor(180);
+        await startPlayerWithCandidates();
       }
 
       await player.setVolume?.(1);
@@ -429,13 +448,14 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
       playbackLogger.warn('Failed to start playback', { message: error?.message });
       safeSetState(setLastError, 'Lecture audio indisponible');
       await stopPlayback();
-      if (isHttpUrl(rawSource)) {
+      if (allowExternalFallback && isHttpUrl(rawSource)) {
         await openExternalFallback();
       }
     } finally {
       safeSetState(setIsLoading, false);
     }
   }, [
+    allowExternalFallback,
     ensurePlayer,
     headers,
     openExternalFallback,
@@ -451,7 +471,10 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
 
     const player = ensurePlayer();
     if (!player) {
-      await openExternalFallback();
+      safeSetState(setLastError, 'Lecture audio indisponible');
+      if (allowExternalFallback) {
+        await openExternalFallback();
+      }
       return;
     }
 
@@ -488,6 +511,7 @@ const useAudioPlayback = ({ headers, sourceUrl }) => {
       safeSetState(setIsLoading, false);
     }
   }, [
+    allowExternalFallback,
     durationMs,
     ensurePlayer,
     isPlaying,

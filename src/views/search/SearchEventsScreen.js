@@ -33,7 +33,7 @@ const TOOLTIP_BOTTOM_GUARD = 72;
 
 const EVENT_TUTORIAL_STEPS = [
   {
-    description: 'Cet ?cran vous permet de trouver les événements selon vos crit?res.',
+    description: 'Cet écran vous permet de trouver les événements selon vos critères.',
     id: 'intro',
     target: 'header',
     title: 'Recherche événement',
@@ -54,7 +54,7 @@ const EVENT_TUTORIAL_STEPS = [
     description: 'Chaque carte affiche les détails. Appuyez sur "À propos" pour ouvrir la fiche.',
     id: 'cards',
     target: 'card',
-    title: 'R?sultats',
+    title: 'Résultats',
   },
 ];
 

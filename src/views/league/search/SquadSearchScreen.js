@@ -233,7 +233,7 @@ function SquadSearchScreen() {
             withDefaultMargin={false}
           />
           <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
-            {t('squad.search.title', 'Trouv?r une Squad')}
+            {t('squad.search.title', 'Trouver une Squad')}
           </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate(RouteNames.SquadFilters)}

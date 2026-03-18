@@ -31,6 +31,9 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigation = useNavigation();
+  const invalidatePersonalPlanning = () => {
+    queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+  };
 
   // --- Participation Mutations ---
 
@@ -38,6 +41,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: createEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       refetchParticipations();
     },
@@ -47,6 +51,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: acceptEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       refetchParticipations();
     },
@@ -56,6 +61,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: declineEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetchParticipations();
     },
   });
@@ -70,6 +76,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       refetchParticipations();
     },
@@ -79,6 +86,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: missingEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       refetchParticipations();
     },
@@ -90,6 +98,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: cancelEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       navigation.goBack();
     },
   });
@@ -98,6 +107,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: updateEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       // Only go back if full update? Maybe context dependent.
       // The original code did navigation.goBack() on success.
@@ -121,6 +131,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     mutationFn: updateEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
     },
   });
@@ -155,6 +166,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      invalidatePersonalPlanning();
       refetch();
       Alert.alert(
         t('reservation.joinSuccess.title', 'Participation confirmee'),
@@ -171,6 +183,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      invalidatePersonalPlanning();
       refetch();
       Alert.alert(
         t('reservation.bookFull.success.title', 'Reservation privatisee'),
@@ -187,6 +200,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      invalidatePersonalPlanning();
       refetch();
       Alert.alert(
         t('reservation.openForPlayers.success.title', 'Reservation ouverte'),
@@ -212,7 +226,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   });
 
   const selfArrivalMutation = useMutation({
-    mutationFn: ({ eventId, payload }) => markSelfArrival(eventId, payload),
+    mutationFn: ({ eventId: targetEventId, payload }) => markSelfArrival(targetEventId, payload),
     onError: (error) => {
       Alert.alert(
         t('common.error'),
@@ -221,6 +235,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
@@ -230,12 +245,13 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   });
 
   const coachArrivalMutation = useMutation({
-    mutationFn: ({ eventId, payload, userId }) => markCoachArrival(eventId, userId, payload),
+    mutationFn: ({ eventId: targetEventId, payload, userId }) => markCoachArrival(targetEventId, userId, payload),
     onError: () => {
       Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivée.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
@@ -245,12 +261,13 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   });
 
   const updateLateMinutesMutation = useMutation({
-    mutationFn: ({ eventId, payload, userId }) => updateCoachLateMinutes(eventId, userId, payload),
+    mutationFn: ({ eventId: targetEventId, payload, userId }) => updateCoachLateMinutes(targetEventId, userId, payload),
     onError: () => {
       Alert.alert(t('common.error'), 'Impossible de modifier le retard.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
@@ -266,6 +283,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
       refetch();
       Alert.alert(
         t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),

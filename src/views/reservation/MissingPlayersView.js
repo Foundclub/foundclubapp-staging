@@ -63,6 +63,7 @@ function MissingPlayersView({ navigation }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       refetch();
       setIsJoinModalVisible(false);
     },

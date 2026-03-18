@@ -147,14 +147,14 @@ const buildSearchStatusLabel = ({
   }
 
   if (tier === 2) {
-    return `Statut: recherche ?largie niveau 1.\nCrit?re actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
+    return `Statut: recherche élargie niveau 1.\nCritère actuel: ${divisionLabel} +/-1 avec un ELO proche.\n${zoneLine}`;
   }
 
   if (tier === 3) {
-    return `Statut: recherche ?largie niveau 2.\nCrit?re actuel: ${divisionLabel} +/-2.\nZone ?tendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
+    return `Statut: recherche élargie niveau 2.\nCritère actuel: ${divisionLabel} +/-2.\nZone étendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
   }
 
-  return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilit?s restantes.\nZone ?tendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
+  return `Statut: recherche large.\nObjectif: trouver un match rapidement avec les meilleures compatibilités restantes.\nZone étendue temporairement (+${geoRelaxationKm} km).\n${zoneLine}`;
 };
 
 /**

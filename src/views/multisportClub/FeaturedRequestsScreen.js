@@ -64,7 +64,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('featuredRequests.approveSuccess.title', 'Demande acceptee'),
+        t('featuredRequests.approveSuccess.title', 'Demande acceptée'),
         t('featuredRequests.approveSuccess.message', "L'événement est maintenant à la une du club."),
       );
     },
@@ -77,7 +77,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       refetch();
       Alert.alert(
-        t('featuredRequests.rejectSuccess.title', 'Demande refusee'),
+        t('featuredRequests.rejectSuccess.title', 'Demande refusée'),
         t('featuredRequests.rejectSuccess.message', 'Le demandeur a été notifie.'),
       );
     },

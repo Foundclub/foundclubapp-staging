@@ -169,7 +169,7 @@ const OptionInputRow = memo(({
       </View>
       {hasDuplicate ? (
         <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-          Cette option est deja utilisee.
+          Cette option est d?j? utilis?e.
         </Text>
       ) : null}
     </View>
@@ -360,7 +360,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     >
       <View style={[Spaces.gap[8], Spaces.marginBottom[12]]}>
         <Text style={[Fonts.h3, { color: Colors.primary500, textAlign: 'center' }]}>
-          {t('conversation.attachments.createPoll', 'Creer un sondage')}
+          {t('conversation.attachments.createPoll', 'Créer un sondage')}
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
           {t(
@@ -379,7 +379,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         onValueChange={handleQuestionChange}
         placeholder={t(
           'conversation.poll.form.questionPlaceholder',
-          'Ex: Quel creneau vous convient ?',
+          'Ex: Quel créneau vous convient ?',
         )}
         placeholderTextColor={Colors.neutral400}
         selectionColor={Colors.primary500}

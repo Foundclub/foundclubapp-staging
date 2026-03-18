@@ -33,6 +33,56 @@
  * @property {string} [awayTeam]
  * @property {number | string} [homeScore]
  * @property {number | string} [awayScore]
+ * @property {string} [venueAddress]
+ * @property {string} [venueCity]
+ * @property {string} [venueLabel]
+ * @property {number | string | null} [venueLat]
+ * @property {number | string | null} [venueLng]
+ * @property {string} [venueName]
+ */
+
+/**
+ * @typedef {object} ExternalSyncReportItem
+ * @property {string | null} [date]
+ * @property {string | null} [eventDocumentId]
+ * @property {'away' | 'home' | null} [homeAway]
+ * @property {string | null} [matchId]
+ * @property {string | null} [opponent]
+ * @property {string | null} [reason]
+ * @property {number | string | null} [round]
+ */
+
+/**
+ * @typedef {object} ExternalSyncReport
+ * @property {number} [calendarCount]
+ * @property {{
+ *   competitionName?: string | null,
+ *   competitionRef?: Record<string, any> | null,
+ *   pouleName?: string | null,
+ *   sourceUrl?: string | null
+ * }} [competition]
+ * @property {ExternalSyncReportItem[]} [createdEvents]
+ * @property {string[]} [errors]
+ * @property {{
+ *   archivedFuture?: number,
+ *   created?: number,
+ *   duplicateExistingDeactivated?: number,
+ *   duplicateSourceSkipped?: number,
+ *   skippedNoDate?: number,
+ *   skippedNoLocation?: number,
+ *   totalCandidates?: number,
+ *   unchanged?: number,
+ *   updated?: number
+ * }} [eventSyncSummary]
+ * @property {'connect' | 'manual' | 'scheduled'} [mode]
+ * @property {'fff' | 'ffbb'} [provider]
+ * @property {{ externalTeamId?: string | null, externalTeamName?: string | null } | null} [selectedTeam]
+ * @property {ExternalSyncReportItem[]} [skippedMatches]
+ * @property {number} [standingCount]
+ * @property {string} [syncedAt]
+ * @property {ExternalSyncReportItem[]} [updatedEvents]
+ * @property {ExternalSyncReportItem[]} [archivedFutureEvents]
+ * @property {string[]} [warnings]
  */
 
 /**
@@ -70,12 +120,13 @@
  * @property {ExternalStandingRow[]} [externalStandingData] - Parsed standings
  * @property {ExternalCalendarMatch[]} [externalCalendarData] - Parsed calendar
  * @property {'fff' | 'ffbb'} [externalProvider] - External competition provider
- * @property {'not_configured' | 'configured' | 'syncing' | 'synced' | 'error'} [externalSyncStatus]
+ * @property {'not_configured' | 'configured' | 'syncing' | 'synced' | 'synced_with_warnings' | 'error'} [externalSyncStatus]
  * @property {string} [externalSyncError]
  * @property {string} [externalSyncUpdatedAt]
  * @property {string} [externalDataLastUpdate]
  * @property {string} [externalTeamId]
  * @property {string} [externalTeamName] - Team alias used in external sources
+ * @property {ExternalSyncReport} [externalLastSyncReport]
  * @property {Avatar} [crest] - League crest
  * @property {Avatar} [logo] - Team logo
  * @property {User} [captain] - Team captain

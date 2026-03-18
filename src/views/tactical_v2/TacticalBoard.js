@@ -471,7 +471,7 @@ function TacticalBoard() {
       });
       setCompositionMeta(response || null);
       invalidateCompositionQueries();
-      Alert.alert('Succès', 'Brouillon enregistre.');
+      Alert.alert('Succès', 'Brouillon enregistré.');
     } catch (error) {
       console.error('Save draft error:', error);
       Alert.alert('Erreur', 'Impossible de sauvegarder le brouillon');
@@ -499,7 +499,7 @@ function TacticalBoard() {
         ...(published || {}),
       });
       invalidateCompositionQueries();
-      Alert.alert('Succès', 'Convocation publiee.', [
+      Alert.alert('Succès', 'Convocation publiée.', [
         { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
       ]);
     } catch (error) {
@@ -635,7 +635,7 @@ function TacticalBoard() {
                   Convocation v
                   {Number(compositionMeta?.published?.version || 1)}
                   {' '}
-                  publiee:
+                  publiée:
                   {' '}
                   {new Date(compositionMeta.published.publishedAt).toLocaleString('fr-FR')}
                 </Text>
@@ -805,4 +805,3 @@ const styles = StyleSheet.create({
 });
 
 export default TacticalBoard;
-

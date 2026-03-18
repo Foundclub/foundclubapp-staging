@@ -93,11 +93,11 @@ const SORT_MODES = {
 const SORT_OPTIONS = [
   {
     key: SORT_MODES.updated,
-    label: 'MAJ recente',
+    label: 'MAJ récente',
   },
   {
     key: SORT_MODES.created,
-    label: 'Cr?ation recente',
+    label: 'Création récente',
   },
   {
     key: SORT_MODES.alpha,

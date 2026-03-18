@@ -144,6 +144,7 @@ function ParticipantEventList({ navigation }) {
     mutationFn: createEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       refetch();
     },
   });

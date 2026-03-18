@@ -36,6 +36,7 @@ export const getRecruitmentAds = async (filters = {}) => {
         'section',
         'level',
       ],
+      sort: ['createdAt:desc'],
     };
 
     // Apply filters

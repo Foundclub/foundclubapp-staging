@@ -87,6 +87,7 @@ function ReservationListContent({ showFilters = false }) {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['featured-reservations'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       if (isSmartSearchEnabled) {
         refetchSmart();
       } else {

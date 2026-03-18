@@ -890,10 +890,10 @@ function UserAffiliationGuideContent({ navigation }) {
                 "Renseigne le nom de l'équipe que tu recherches.",
               )}
             accessibilityLabel={isClubFlow
-              ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherch? *')
+              ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherché *')
               : t('onboardingAffiliation.modal.nameLabelTeam', "Nom de l'équipe recherchée *")}
             label={isClubFlow
-              ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherch? *')
+              ? t('onboardingAffiliation.modal.nameLabelClub', 'Nom du club recherché *')
               : t('onboardingAffiliation.modal.nameLabelTeam', "Nom de l'équipe recherchée *")}
             onChangeText={setRequestedName}
             placeholder={isClubFlow

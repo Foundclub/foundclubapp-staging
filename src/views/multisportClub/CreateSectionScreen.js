@@ -118,7 +118,7 @@ function CreateSectionScreen({ navigation, route }) {
   const createMutation = useMutation({
     mutationFn: (data) => createCMSection(cmId || '', /** @type {SectionPayload} */ (data)),
     onError: (error) => {
-      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la cr?ation de la section.');
+      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la création de la section.');
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
         : fallbackMessage;
@@ -252,7 +252,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce num?ro sera utilise pour rattacher le dirigeant à la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce numéro sera utilisé pour rattacher le dirigeant à la section.')}
               </Text>
             </View>
           </View>
@@ -277,7 +277,7 @@ function CreateSectionScreen({ navigation, route }) {
             disabled={!isValid || createMutation.isPending}
             onPress={handleCreate}
             title={createMutation.isPending
-              ? t('multisport.createSection.actions.creating', 'Cr?ation...')
+              ? t('multisport.createSection.actions.creating', 'Création...')
               : t('multisport.createSection.actions.create', 'Créer la section')}
             variant="Primary"
           />

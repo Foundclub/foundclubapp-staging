@@ -212,7 +212,7 @@ function CMDashboard({ navigation, route }) {
       icon: 'users',
       key: 'manage-club',
       onPress: handleOpenManageClub,
-      subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et r?glages du club.'),
+      subtitle: t('multisport.actions.manageClub.subtitle', 'Modifier les informations et réglages du club.'),
       title: t('multisport.actions.manageClub.title', 'Gérer mon club'),
     },
     {
@@ -287,7 +287,7 @@ function CMDashboard({ navigation, route }) {
         ]}
       >
         <OnboardingWrapper
-          description={t('multisport.tutorial.mainDescription', 'G?rez vos sections, vos membres et vos actions rapides depuis un seul ?cran.')}
+          description={t('multisport.tutorial.mainDescription', 'Gérez vos sections, vos membres et vos actions rapides depuis un seul écran.')}
           id="cm-dashboard-main-content"
           order={1}
           spotlight={{

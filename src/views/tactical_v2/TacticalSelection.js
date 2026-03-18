@@ -501,7 +501,7 @@ function TacticalSelection() {
         ) : null}
         {teamCompositionPayload?.published?.publishedAt ? (
           <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 4 }]}>
-            Convocation publiee (v
+            Convocation publiée (v
             {Number(teamCompositionPayload?.published?.version || 1)}
             ) le
             {' '}

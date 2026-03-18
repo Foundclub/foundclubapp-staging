@@ -91,7 +91,7 @@ const getEventColor = (event, fallbackColor) => {
 const getPrimaryPlanningLabel = (event) => (
   getPlanningTypeLabel(event)
   || getPlanningDisplayTitle(event)
-  || 'Evenement'
+  || 'Événement'
 );
 
 const getPlanningContextLabel = (event) => {
@@ -662,6 +662,12 @@ function PlanningWeekTimelineView({
 
                     const contextFontSize = mode === 'week' ? 10 : 11;
                     const showPrimaryAsType = Boolean(typeLabel);
+                    const primaryMinimumFontScale = showPrimaryAsType
+                      ? (mode === 'week' ? 0.52 : 0.58)
+                      : 0.8;
+                    const primaryPaddingHorizontal = showPrimaryAsType
+                      ? (mode === 'week' ? 3 : 4)
+                      : (mode === 'week' ? 4 : 6);
 
                     return (
                       <TouchableOpacity
@@ -675,20 +681,23 @@ function PlanningWeekTimelineView({
                           height: event.height - 2,
                           justifyContent: isTiny ? 'center' : 'flex-start',
                           left: `${left}%`,
-                          padding: mode === 'week' ? 4 : 6,
+                          paddingHorizontal: primaryPaddingHorizontal,
+                          paddingVertical: mode === 'week' ? 4 : 6,
                           top: event.top + 1,
                           width: `${width}%`,
                         }]}
                       >
                         <Text
+                          adjustsFontSizeToFit={showPrimaryAsType}
+                          minimumFontScale={primaryMinimumFontScale}
                           numberOfLines={1}
                           style={[Fonts.p3Bold, {
                             color: showPrimaryAsType ? color : Colors.neutral00,
+                            flexShrink: 1,
                             fontSize: primaryFontSize,
                             letterSpacing: showPrimaryAsType ? 0.35 : 0,
-                            lineHeight: mode === 'week' ? 10 : 11,
+                            lineHeight: primaryFontSize + 2,
                             marginBottom: !isCompact && contextLabel ? 2 : 0,
-                            textTransform: showPrimaryAsType ? 'uppercase' : 'none',
                           }]}
                         >
                           {primaryLabel}

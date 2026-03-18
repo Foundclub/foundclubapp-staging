@@ -780,7 +780,7 @@ function MatchCenterScreen() {
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
         <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt À l'ACTION ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Cr?e ton équipe pour rejoindre la comp?tition officielle.
+          Crée ton équipe pour rejoindre la compétition officielle.
         </Text>
         <Button
           icon="plus"
@@ -1245,7 +1245,7 @@ function MatchCenterScreen() {
             color: Colors.neutral300, marginBottom: 28, paddingHorizontal: 10, textAlign: 'center',
           }]}
           >
-            Le match correspond ? vos crit?res. Discutez pour valider le terrain.
+            Le match correspond à vos critères. Discutez pour valider le terrain.
           </Text>
 
           <Button
@@ -1958,7 +1958,7 @@ function MatchCenterScreen() {
           </View>
         </View>
 
-        {/* SECTION: Selection des creneaux récurrents */}
+        {/* SECTION: Sélection des créneaux récurrents */}
         <View style={{ marginBottom: 24 }}>
           <View style={{
             alignItems: 'center', flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginBottom: 8,
@@ -2021,13 +2021,13 @@ function MatchCenterScreen() {
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
               {selectedSlotIds.length === (squadSlots || []).length && selectedSlotIds.length > 0
-                ? 'Tout d?sélectionner'
+                ? 'Tout désélectionner'
                 : 'Tout sélectionner'}
             </Text>
           </TouchableOpacity>
           )}
 
-          {/* SECTION: Autres creneaux communs (negociation) */}
+          {/* SECTION: Autres créneaux communs (négociation) */}
           {currentMatch?.common_slots && currentMatch.common_slots.length > 1 && (
           <View style={{
             backgroundColor: Colors.neutral800, borderColor: Colors.neutral700, borderRadius: 8, borderWidth: 1, marginTop: 16, padding: 12,

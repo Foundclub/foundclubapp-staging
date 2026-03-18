@@ -172,7 +172,7 @@ function EndMatchScreen() {
 
   const matchPhase = getMatchDerivedPhase(match);
   const isScoreSubmissionAllowed = ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase);
-  const scoreSubmissionBlockReason = "Le score ne peut pas être saisi ? ce stade. Vérifiez que l'heure de début du match est d?pass?e.";
+  const scoreSubmissionBlockReason = "Le score ne peut pas être saisi à ce stade. Vérifiez que l'heure de début du match est dépassée.";
   const currentUserId = getEntityDocumentId(userData);
   const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
   const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
@@ -244,7 +244,7 @@ function EndMatchScreen() {
   const promptForSearchRelaunch = () => {
     Alert.alert(
       'Score validé',
-      'Le match est termine. Voulez-vous relancer une recherche pour un autre match ?',
+      'Le match est terminé. Voulez-vous relancer une recherche pour un autre match ?',
       [
         {
           onPress: () => navigation.goBack(),
@@ -302,18 +302,18 @@ function EndMatchScreen() {
             promptForSearchRelaunch();
           } else if (recoveredStatus === 'pending_validation') {
             Alert.alert(
-              'Score enregistre',
+              'Score enregistré',
               'Votre score est en attente de validation par le capitaine adverse.',
               [{ onPress: () => navigation.goBack(), text: 'OK' }],
             );
           } else if (recoveredStatus === 'disputed') {
             Alert.alert(
               'Litige ouvert',
-              'Le score a été enregistre mais est passe en litige.',
+              'Le score a été enregistré mais est passé en litige.',
               [{ onPress: () => navigation.goBack(), text: 'OK' }],
             );
           } else {
-            Alert.alert('Score enregistre', 'Le score a été enregistre.', [{ onPress: () => navigation.goBack(), text: 'OK' }]);
+            Alert.alert('Score enregistré', 'Le score a été enregistré.', [{ onPress: () => navigation.goBack(), text: 'OK' }]);
           }
           return;
         }
@@ -336,7 +336,7 @@ function EndMatchScreen() {
 
       if (finalStatus === 'pending_validation') {
         Alert.alert(
-          'Score enregistre',
+          'Score enregistré',
           'Votre score est en attente de validation par le capitaine adverse.',
           [{ onPress: () => navigation.goBack(), text: 'OK' }],
         );
@@ -353,7 +353,7 @@ function EndMatchScreen() {
       }
 
       Alert.alert(
-        'Score enregistre',
+        'Score enregistré',
         'Le score a bien été envoyé.',
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );
@@ -703,7 +703,7 @@ function EndMatchScreen() {
                         />
                     ) : null}
                   {isNoShowDispute ? (
-                      <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Pour un no-show, seule une preuve prise en direct est acceptee.</Text>
+                      <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Pour un no-show, seule une preuve prise en direct est acceptée.</Text>
                     ) : null}
                   {proof ? <Image source={{ uri: proof.uri }} style={styles.proofPreview} /> : null}
                 </View>
@@ -870,4 +870,3 @@ const styles = StyleSheet.create({
 });
 
 export default EndMatchScreen;
-

@@ -1275,8 +1275,8 @@ function SuperAdminEntryForm({ navigation, route }) {
         <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
             {isEditMode
-              ? t('superAdminContentManager.form.titleEdit', 'Modifier une entr?e')
-              : t('superAdminContentManager.form.titleCreate', 'Créer une entr?e')}
+              ? t('superAdminContentManager.form.titleEdit', 'Modifier une entrée')
+              : t('superAdminContentManager.form.titleCreate', 'Créer une entrée')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
             {uidDisplayName}

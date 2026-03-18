@@ -136,7 +136,7 @@ function SuperAdminContentExplorer({ navigation }) {
             {contentTypes.length}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary200]}>
-            {t('superAdminContentManager.explorer.results', 'R?sultats')}
+            {t('superAdminContentManager.explorer.results', 'Résultats')}
             {': '}
             {filtered.length}
           </Text>

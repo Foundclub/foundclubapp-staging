@@ -79,7 +79,7 @@ function TeamWizardActivity({ navigation }) {
       onSkip={() => {}}
       stepCount={8}
       stepIndex={4}
-      subtitle={t('teamWizard.steps.activity.subtitle', "Selectionne le sport principal de l'equipe.")}
+      subtitle={t('teamWizard.steps.activity.subtitle', "Sélectionne le sport principal de l'équipe.")}
       title={t('teamWizard.steps.activity.title', 'Sport')}
     >
       <View>

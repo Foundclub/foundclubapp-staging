@@ -52,8 +52,8 @@ const getFacilityAddressLabel = (address) => {
 const getFacilityCapacityChipLabel = (maxSlots, t) => {
   const teams = Number(maxSlots || 1);
   const unit = teams > 1
-    ? t('facilityList.capacity.teamPlural', 'équipes simultan?es')
-    : t('facilityList.capacity.teamSingular', 'équipe simultan?e');
+    ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
+    : t('facilityList.capacity.teamSingular', 'équipe simultanée');
   return `${teams} ${unit}`;
 };
 

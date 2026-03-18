@@ -247,7 +247,7 @@ function EventCardNew({
 
         {/* Non-interactive Content (Passes touches to background Pressable) */}
         <View pointerEvents="none">
-          {/* Header: Event Type or Sport for Reservations */}
+          {/* Header: Event Type or Sport for Réservations */}
           <View style={[styles.headerContainer, headerAccentStyle]}>
             <Text style={[styles.headerText, headerTextAccentStyle]}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
           </View>
@@ -277,7 +277,7 @@ function EventCardNew({
               {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
               {invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={styles.invitedTeamsInline}>
-                  {`équipes invit?es: ${invitedTeamNames.join(', ')}`}
+                  {`équipes invitées: ${invitedTeamNames.join(', ')}`}
                 </Text>
               ) : null}
             </View>

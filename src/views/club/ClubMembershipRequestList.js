@@ -164,7 +164,7 @@ function ClubMembershipRequestList({ navigation, route }) {
       }
 
       Alert.alert(
-        'Entra?neur ajouté',
+        'Entraîneur ajouté',
         `${trainerLabel} a bien été ajouté ? votre club.\n\nVoulez-vous l'assigner ? une équipe maintenant ?`,
         [
           {

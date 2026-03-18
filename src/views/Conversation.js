@@ -765,6 +765,7 @@ function Conversation({ navigation, route }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       Alert.alert(t('common.success'), t('eventDetails.participationSuccess'));
     },
@@ -1091,7 +1092,7 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        Alert.alert('Erreur', 'Connexion messagerie indisponible. R?essayez dans quelques secondes.');
+        Alert.alert('Erreur', 'Connexion messagerie indisponible. Réessayez dans quelques secondes.');
         return false;
       }
 
@@ -1692,7 +1693,7 @@ function Conversation({ navigation, route }) {
         : null,
       location: event?.location || null,
       locationDetails: event?.locationDetails || locationLabel || '',
-      name: event?.name || 'Evenement',
+      name: event?.name || 'Événement',
       startTime: event?.startTime || null,
       team: event?.team
         ? {
@@ -1716,10 +1717,10 @@ function Conversation({ navigation, route }) {
         : null,
       type: event?.type && typeof event.type === 'object'
         ? {
-          name: event?.type?.name || 'Evenement',
+          name: event?.type?.name || 'Événement',
         }
         : {
-          name: 'Evenement',
+          name: 'Événement',
         },
     };
     sharedEventPreviewByIdRef.current.set(eventDocumentId, eventPreview);
@@ -1783,9 +1784,9 @@ function Conversation({ navigation, route }) {
       date: composition?.eventDate || null,
       documentId: compositionEventDocumentId,
       locationDetails: composition?.locationLabel || '',
-      name: composition?.eventName || 'Evenement',
+      name: composition?.eventName || 'Événement',
       team: composition?.teamName ? { name: composition?.teamName } : null,
-      type: { name: 'Evenement' },
+      type: { name: 'Événement' },
     };
     sharedEventPreviewByIdRef.current.set(compositionEventDocumentId, fallbackEvent);
     return fallbackEvent;

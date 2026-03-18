@@ -319,7 +319,7 @@ function EventWizardParticipants({ navigation }) {
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
             'eventWizard.steps.participants.hint',
-            'Tu pourras encore modifier ces valeurs avant la cr?ation finale.',
+            'Tu pourras encore modifier ces valeurs avant la création finale.',
           )}
         </Text>
       </View>

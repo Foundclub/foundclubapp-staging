@@ -215,7 +215,7 @@ function LeagueMatchDetails({ navigation, route }) {
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', '?chec confirmation');
+      Alert.alert('Erreur', 'Échec confirmation');
     } finally {
       setActionLoading(false);
     }
@@ -265,7 +265,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 Alert.alert('Erreur', 'Équipe introuvable.');
                 return;
               }
-              await cancelMatch(matchId, myTeamId, 'Annul? par le capitaine');
+              await cancelMatch(matchId, myTeamId, 'Annulé par le capitaine');
               Alert.alert('Match annulé', 'Le match a été annulé.');
               navigation.goBack();
             } catch (_error) {

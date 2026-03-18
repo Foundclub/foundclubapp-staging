@@ -38,7 +38,7 @@ function SearchRecruitmentScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'Decouvrez ici les annonces et profils de recrutement.',
+            description: 'D\u00e9couvre ici les annonces et profils de recrutement.',
             id: 'search-recruitment-header',
             order: 1,
             title: 'Recherche recrutement',

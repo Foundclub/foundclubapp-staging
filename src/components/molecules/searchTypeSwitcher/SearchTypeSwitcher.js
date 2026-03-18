@@ -33,7 +33,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
     () => [
       {
         key: 'events',
-        label: t('homeHub.cards.search.events.title', 'Événement'),
+        label: t('homeHub.cards.search.events.title', '\u00c9v\u00e9nement'),
       },
       {
         key: 'clubs',
@@ -41,7 +41,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
       },
       {
         key: 'reservations',
-        label: t('homeHub.cards.search.reservations.title', 'Reservations'),
+        label: t('homeHub.cards.search.reservations.title', 'R\u00e9servations'),
       },
       {
         key: 'recruitment',
@@ -66,15 +66,16 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
               key={option.key}
               onPress={() => onTypeChange(/** @type {SearchType} */ (option.key))}
               style={{
-                backgroundColor: isActive ? Colors.primary500 : 'rgba(1,179,244,0.12)',
-                borderColor: isActive ? Colors.primary500 : 'rgba(1,179,244,0.45)',
+                backgroundColor: isActive ? Colors.primary500 : `${Colors.primary900}F0`,
+                borderColor: isActive ? Colors.primary500 : `${Colors.primary500}30`,
                 borderRadius: 999,
                 borderWidth: 1,
-                paddingHorizontal: 14,
-                paddingVertical: 8,
+                minHeight: 40,
+                paddingHorizontal: 16,
+                paddingVertical: 9,
               }}
             >
-              <Text style={[Fonts.p3Bold, isActive ? Fonts.neutral900 : Fonts.primary200]}>
+              <Text style={[Fonts.p3Bold, isActive ? Fonts.neutral900 : Fonts.neutral100]}>
                 {option.label}
               </Text>
             </TouchableOpacity>

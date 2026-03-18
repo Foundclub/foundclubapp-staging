@@ -127,8 +127,10 @@ function TeamDetails({ navigation, route }) {
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
   const [showFFBBTeamModal, setShowFFBBTeamModal] = useState(false);
   const [showFFBBErrorModal, setShowFFBBErrorModal] = useState(false);
+  const [showExternalSyncReportModal, setShowExternalSyncReportModal] = useState(false);
   const [ffbbUrl, setFfbbUrl] = useState('');
   const [ffbbTeamsList, setFfbbTeamsList] = useState(/** @type {ExternalTeamOption[]} */ ([]));
+  const [latestExternalSyncReport, setLatestExternalSyncReport] = useState(null);
   const [ffbbLoading, setFfbbLoading] = useState(false);
   const [ffbbErrorType, setFfbbErrorType] = useState('wrong_data');
   const [ffbbErrorDescription, setFfbbErrorDescription] = useState('');
@@ -140,11 +142,11 @@ function TeamDetails({ navigation, route }) {
    * @param {string} [fallback]
    * @returns {string}
    */
-  const getErrorMessage = (error, fallback = 'Erreur') => {
-    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-      return error.message;
+  const getErrorMessage = (sourceError, fallback = 'Erreur') => {
+    if (sourceError && typeof sourceError === 'object' && 'message' in sourceError && typeof sourceError.message === 'string') {
+      return sourceError.message;
     }
-    if (typeof error === 'string') return error;
+    if (typeof sourceError === 'string') return sourceError;
     return fallback;
   };
 
@@ -162,6 +164,92 @@ function TeamDetails({ navigation, route }) {
     if (left === right) return true;
     return left.includes(right) || right.includes(left);
   };
+
+  const getSyncPayload = useCallback((result) => result?.data || result || {}, []);
+
+  const getExternalSyncStatusMeta = useCallback((status) => {
+    switch (status) {
+      case 'configured':
+        return {
+          badgeBackground: `${Colors.neutral300}18`,
+          badgeBorder: `${Colors.neutral300}40`,
+          label: t('teamDetails.external.status.configured', 'Configure'),
+          textColor: Colors.neutral100,
+        };
+      case 'error':
+        return {
+          badgeBackground: `${Colors.error500}22`,
+          badgeBorder: `${Colors.error500}55`,
+          label: t('teamDetails.external.status.error', 'Erreur'),
+          textColor: Colors.error500,
+        };
+      case 'synced':
+        return {
+          badgeBackground: `${Colors.success500}22`,
+          badgeBorder: `${Colors.success500}55`,
+          label: t('teamDetails.external.status.synced', 'Synchronise'),
+          textColor: Colors.success500,
+        };
+      case 'synced_with_warnings':
+        return {
+          badgeBackground: `${Colors.warning500}22`,
+          badgeBorder: `${Colors.warning500}55`,
+          label: t('teamDetails.external.status.syncedWithWarnings', 'Synchronise avec avertissements'),
+          textColor: Colors.warning500,
+        };
+      case 'syncing':
+        return {
+          badgeBackground: `${Colors.primary500}22`,
+          badgeBorder: `${Colors.primary500}55`,
+          label: t('teamDetails.external.status.syncing', 'Synchronisation'),
+          textColor: Colors.primary500,
+        };
+      default:
+        return {
+          badgeBackground: `${Colors.neutral300}18`,
+          badgeBorder: `${Colors.neutral300}40`,
+          label: t('teamDetails.external.status.notConfigured', 'Non configure'),
+          textColor: Colors.neutral100,
+        };
+    }
+  }, [Colors.error500, Colors.neutral100, Colors.neutral300, Colors.primary500, Colors.success500, Colors.warning500, t]);
+
+  const formatExternalSyncDate = useCallback((value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toLocaleString('fr-FR', {
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, []);
+
+  const openExternalSyncReport = useCallback((report) => {
+    if (!report || typeof report !== 'object') return;
+    setLatestExternalSyncReport(report);
+    setShowExternalSyncReportModal(true);
+  }, []);
+
+  const applyExternalSyncFeedback = useCallback((result) => {
+    const payload = getSyncPayload(result);
+    const syncReport = payload?.syncReport;
+
+    queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+    refetch();
+
+    if (syncReport && typeof syncReport === 'object') {
+      openExternalSyncReport(syncReport);
+      return;
+    }
+
+    Alert.alert(
+      t('common.success', 'Succes'),
+      t('teamDetails.external.syncCompleted', 'Classement et calendrier synchronises.'),
+    );
+  }, [getSyncPayload, openExternalSyncReport, queryClient, refetch, t, teamId]);
 
   const allMembers = useMemo(() => {
     const allTrainers = team?.trainers || [];
@@ -315,7 +403,7 @@ function TeamDetails({ navigation, route }) {
       refetchTeamStats();
       Alert.alert(
         t('common.success', 'Succès'),
-        t('teamDetails.stats.resetSuccess', 'Les statistiques ont été reinitialisees a partir de maintenant.'),
+        t('teamDetails.stats.resetSuccess', 'Les statistiques ont été réinitialisées à partir de maintenant.'),
       );
     },
   });
@@ -331,9 +419,8 @@ function TeamDetails({ navigation, route }) {
         Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise à jour : ${getErrorMessage(apiError)}`));
       }
     },
-    onSuccess: () => {
-      Alert.alert(t('common.success'), t('teamDetails.alerts.scrapingSuccess.description', 'Classement mis à jour avec succès.'));
-      refetch();
+    onSuccess: (result) => {
+      applyExternalSyncFeedback(result);
     },
   });
 
@@ -379,12 +466,11 @@ function TeamDetails({ navigation, route }) {
   const handleSelectFFBBTeam = async (/** @type {ExternalTeamOption} */ selectedTeam) => {
     if (!teamId) return;
     try {
-      await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
+      const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
       setShowFFBBTeamModal(false);
-      refetch();
-      Alert.alert(t('common.success'), t('teamDetails.ffbb.teamSelected', 'Équipe associée avec succès!'));
-    } catch (error) {
-      Alert.alert(t('common.error'), getErrorMessage(error));
+      applyExternalSyncFeedback(result);
+    } catch (caughtError) {
+      Alert.alert(t('common.error'), getErrorMessage(caughtError));
     }
   };
 
@@ -418,9 +504,65 @@ function TeamDetails({ navigation, route }) {
     () => Array.isArray(team?.externalCalendarData) && team.externalCalendarData.length > 0,
     [team?.externalCalendarData],
   );
+  const externalSyncReport = useMemo(() => {
+    const candidate = latestExternalSyncReport || team?.externalLastSyncReport || null;
+    return candidate && typeof candidate === 'object' ? candidate : null;
+  }, [latestExternalSyncReport, team?.externalLastSyncReport]);
+  const externalSyncStatusMeta = useMemo(
+    () => getExternalSyncStatusMeta(team?.externalSyncStatus),
+    [getExternalSyncStatusMeta, team?.externalSyncStatus],
+  );
+  const externalSyncSummary = useMemo(() => {
+    const summary = externalSyncReport?.eventSyncSummary;
+    return summary && typeof summary === 'object' ? summary : null;
+  }, [externalSyncReport]);
+  const externalSyncUpdatedLabel = useMemo(
+    () => formatExternalSyncDate(
+      externalSyncReport?.syncedAt || team?.externalSyncUpdatedAt || team?.externalDataLastUpdate,
+    ),
+    [externalSyncReport?.syncedAt, formatExternalSyncDate, team?.externalDataLastUpdate, team?.externalSyncUpdatedAt],
+  );
+  const externalSyncCompetitionName = useMemo(
+    () => externalSyncReport?.competition?.competitionName
+      || team?.externalCompetitionName
+      || null,
+    [externalSyncReport?.competition?.competitionName, team?.externalCompetitionName],
+  );
+  const externalSyncPouleName = useMemo(
+    () => externalSyncReport?.competition?.pouleName
+      || team?.externalPouleName
+      || null,
+    [externalSyncReport?.competition?.pouleName, team?.externalPouleName],
+  );
+  const externalSyncSelectedTeamName = useMemo(
+    () => externalSyncReport?.selectedTeam?.externalTeamName
+      || team?.externalTeamName
+      || null,
+    [externalSyncReport?.selectedTeam?.externalTeamName, team?.externalTeamName],
+  );
+  const externalSyncProviderLabel = useMemo(
+    () => String(externalSyncReport?.provider || team?.externalProvider || '').toUpperCase() || null,
+    [externalSyncReport?.provider, team?.externalProvider],
+  );
   const canConfigureFFBB = useMemo(
     () => !!(canManageTeam && team?.club?.documentId && (isMyTeam || canEditClub(team.club.documentId))),
     [canEditClub, canManageTeam, isMyTeam, team?.club?.documentId],
+  );
+  const showExternalSyncCard = useMemo(
+    () => !!(
+      canConfigureFFBB
+      || team?.externalStandingUrl
+      || externalSyncReport
+      || team?.externalCompetitionName
+      || team?.externalTeamName
+    ),
+    [
+      canConfigureFFBB,
+      externalSyncReport,
+      team?.externalCompetitionName,
+      team?.externalStandingUrl,
+      team?.externalTeamName,
+    ],
   );
   const showStandingsTab = useMemo(
     () => !!(isMyTeam || hasStandingData || canConfigureFFBB),
@@ -642,7 +784,7 @@ function TeamDetails({ navigation, route }) {
 
     Alert.alert(
       'Preselection effectuee',
-      `${assignmentTrainerName || 'L entra?neur'} est pr?sélectionn?. Vérifiez puis appuyez sur "Valider".`,
+      `${assignmentTrainerName || "L'entraîneur"} est présélectionné. Vérifiez puis appuyez sur "Valider".`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -726,7 +868,7 @@ function TeamDetails({ navigation, route }) {
     if (!teamId || !canResetTeamStats) return;
 
     Alert.alert(
-      t('teamDetails.stats.resetTitle', 'Reinitialiser les statistiques ?'),
+      t('teamDetails.stats.resetTitle', 'Réinitialiser les statistiques ?'),
       t('teamDetails.stats.resetDescription', 'Les compteurs repartiront de zero a partir de maintenant. L historique est conserve.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
@@ -900,6 +1042,93 @@ function TeamDetails({ navigation, route }) {
     );
   };
 
+  const handleOpenSyncedEvent = useCallback((eventId) => {
+    if (!eventId) return;
+    setShowExternalSyncReportModal(false);
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
+  const renderExternalSyncItems = useCallback((title, items, accentColor) => {
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    return (
+      <View style={[Spaces.gap[8]]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
+        {items.map((item, index) => {
+          const itemDateLabel = formatExternalSyncDate(item?.date);
+          const roundLabel = item?.round !== null && item?.round !== undefined && item?.round !== ''
+            ? `J${item.round}`
+            : null;
+          const opponentLabel = item?.opponent || t('teamDetails.external.report.unknownOpponent', 'Adversaire non precise');
+          const reasonLabel = item?.reason || null;
+          const homeAwayLabel = item?.homeAway === 'home'
+            ? t('teamDetails.external.report.home', 'Domicile')
+            : item?.homeAway === 'away'
+              ? t('teamDetails.external.report.away', 'Exterieur')
+              : null;
+
+          return (
+            <View
+              key={`${title}-${item?.eventDocumentId || item?.matchId || index}`}
+              style={[
+                ApplicationStyle.backgroundColor.primary700,
+                ApplicationStyle.borderRadius16,
+                Spaces.padding[12],
+                Spaces.gap[6],
+                {
+                  borderColor: `${accentColor}55`,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {roundLabel ? `${roundLabel} - ${opponentLabel}` : opponentLabel}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {[homeAwayLabel, itemDateLabel].filter(Boolean).join(' • ') || t('teamDetails.external.report.dateUnknown', 'Date a confirmer')}
+                  </Text>
+                  {reasonLabel ? (
+                    <Text style={[Fonts.p4, { color: accentColor }]}>
+                      {reasonLabel}
+                    </Text>
+                  ) : null}
+                </View>
+                {item?.eventDocumentId ? (
+                  <Button
+                    onPress={() => handleOpenSyncedEvent(item.eventDocumentId)}
+                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'evenement")}
+                    variant="SecondaryLight"
+                  />
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }, [
+    Alignments.alignCenter,
+    Alignments.justifySpaceBetween,
+    Alignments.row,
+    ApplicationStyle.backgroundColor.primary700,
+    ApplicationStyle.borderRadius16,
+    Fonts.neutral00,
+    Fonts.p2Bold,
+    Fonts.p3,
+    Fonts.p4,
+    Fonts.primary100,
+    Spaces.gap,
+    Spaces.padding,
+    formatExternalSyncDate,
+    handleOpenSyncedEvent,
+    t,
+  ]);
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -982,6 +1211,179 @@ function TeamDetails({ navigation, route }) {
           isLoading={isLoading}
           wrapperStyle={[Alignments.fill]}
         >
+          {activeTab !== 'infos' && showExternalSyncCard ? (
+            <View
+              style={[
+                ApplicationStyle.backgroundColor.primary700,
+                ApplicationStyle.borderRadius24,
+                Spaces.padding[16],
+                Spaces.gap[12],
+                Spaces.marginTop[8],
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
+                    {t('teamDetails.external.cardTitle', 'Source externe')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {externalSyncCompetitionName || t('teamDetails.external.noSource', 'Aucune source configuree')}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    Spaces.paddingVertical[6],
+                    Spaces.paddingHorizontal[10],
+                    {
+                      backgroundColor: externalSyncStatusMeta.badgeBackground,
+                      borderColor: externalSyncStatusMeta.badgeBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: externalSyncStatusMeta.textColor }]}>
+                    {externalSyncStatusMeta.label}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[Spaces.gap[4]]}>
+                {externalSyncProviderLabel ? (
+                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                    {`Provider: ${externalSyncProviderLabel}`}
+                  </Text>
+                ) : null}
+                {externalSyncSelectedTeamName ? (
+                  <Text style={[Fonts.p3, Fonts.neutral00]}>
+                    {t('teamDetails.external.followedTeam', 'Equipe suivie')}: {externalSyncSelectedTeamName}
+                  </Text>
+                ) : null}
+                {externalSyncPouleName ? (
+                  <Text style={[Fonts.p3, Fonts.neutral00]}>
+                    {t('teamDetails.external.pool', 'Poule')}: {externalSyncPouleName}
+                  </Text>
+                ) : null}
+                {externalSyncUpdatedLabel ? (
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
+                  </Text>
+                ) : null}
+                {externalSyncReport?.mode ? (
+                  <Text style={[Fonts.p4, Fonts.primary100]}>
+                    {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncReport.mode}
+                  </Text>
+                ) : null}
+              </View>
+
+              {externalSyncSummary ? (
+                <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                  {[
+                    {
+                      key: 'created',
+                      label: t('teamDetails.external.summary.created', 'Crees'),
+                      value: externalSyncSummary.created || 0,
+                    },
+                    {
+                      key: 'updated',
+                      label: t('teamDetails.external.summary.updated', 'Mis a jour'),
+                      value: externalSyncSummary.updated || 0,
+                    },
+                    {
+                      key: 'archivedFuture',
+                      label: t('teamDetails.external.summary.archived', 'Archives'),
+                      value: externalSyncSummary.archivedFuture || 0,
+                    },
+                    {
+                      key: 'unchanged',
+                      label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
+                      value: externalSyncSummary.unchanged || 0,
+                    },
+                  ].map((stat) => (
+                    <View
+                      key={stat.key}
+                      style={[
+                        ApplicationStyle.borderRadius16,
+                        Spaces.paddingVertical[8],
+                        Spaces.paddingHorizontal[12],
+                        {
+                          backgroundColor: `${Colors.primary500}14`,
+                          borderColor: `${Colors.primary500}33`,
+                          borderWidth: 1,
+                          minWidth: 88,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, Fonts.primary100]}>{stat.label}</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{stat.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              {externalSyncReport?.warnings?.length ? (
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius16,
+                    Spaces.padding[12],
+                    Spaces.gap[4],
+                    {
+                      backgroundColor: `${Colors.warning500}18`,
+                      borderColor: `${Colors.warning500}44`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                    {t('teamDetails.external.warningsTitle', 'Avertissements')}
+                  </Text>
+                  {externalSyncReport.warnings.slice(0, 2).map((warning, index) => (
+                    <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
+                      {`• ${warning}`}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                {canConfigureFFBB ? (
+                  <Button
+                    onPress={() => setShowFFBBUrlModal(true)}
+                    style={{ flexGrow: 1 }}
+                    title={t('teamDetails.external.actions.source', 'Source')}
+                    variant="SecondaryLight"
+                  />
+                ) : null}
+                {canManageTeam ? (
+                  <Button
+                    isLoading={refreshScrapingMutation.isPending}
+                    onPress={() => {
+                      if (teamId) refreshScrapingMutation.mutate(teamId);
+                    }}
+                    style={{ flexGrow: 1 }}
+                    title={t('teamDetails.external.actions.sync', 'Synchroniser')}
+                    variant="Secondary"
+                  />
+                ) : null}
+                {externalSyncReport ? (
+                  <Button
+                    onPress={() => openExternalSyncReport(externalSyncReport)}
+                    style={{ flexGrow: 1 }}
+                    title={t('teamDetails.external.actions.report', 'Voir le rapport')}
+                    variant="SecondaryLight"
+                  />
+                ) : null}
+                {canManageTeam ? (
+                  <Button
+                    onPress={() => setShowFFBBErrorModal(true)}
+                    style={{ flexGrow: 1 }}
+                    title={t('teamDetails.external.actions.reportBug', 'Signaler')}
+                    variant="SecondaryLight"
+                  />
+                ) : null}
+              </View>
+            </View>
+          ) : null}
 
           {/* TAB CONTENT: INFOS */}
           {activeTab === 'infos' && (
@@ -1383,32 +1785,6 @@ function TeamDetails({ navigation, route }) {
                 )}
               </View>
             )}
-            {/* Refresh Button for Staff */}
-            {canManageTeam && (
-            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
-              <Button
-                onPress={() => setShowFFBBUrlModal(true)}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.source', 'Source')}
-                variant="SecondaryLight"
-              />
-              <Button
-                isLoading={refreshScrapingMutation.isPending}
-                onPress={() => {
-                  if (teamId) refreshScrapingMutation.mutate(teamId);
-                }}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.sync', 'Sync')}
-                variant="Secondary"
-              />
-              <Button
-                onPress={() => setShowFFBBErrorModal(true)}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.report', 'Bug')}
-                variant="SecondaryLight"
-              />
-            </View>
-            )}
           </View>
           )}
 
@@ -1421,7 +1797,7 @@ function TeamDetails({ navigation, route }) {
                 {(() => {
                   const modeOptions = [
                     { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'R?sultats poule') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Résultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
 
@@ -1650,7 +2026,7 @@ function TeamDetails({ navigation, route }) {
                     )
                     : useRoundFilters
                       ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisé par journée FFBB.')
-                      : t('teamDetails.calendar.scope.fullPool', 'R?sultats et calendrier de toute la poule.');
+                      : t('teamDetails.calendar.scope.fullPool', 'Résultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
                   const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Équipe suivie');
@@ -1949,32 +2325,6 @@ function TeamDetails({ navigation, route }) {
               <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Aucun calendrier disponible.</Text>
             )}
 
-            {/* Refresh Button for Staff (Duplicate from Standings) */}
-            {canManageTeam && (
-            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[24]]}>
-              <Button
-                onPress={() => setShowFFBBUrlModal(true)}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.source', 'Source')}
-                variant="SecondaryLight"
-              />
-              <Button
-                isLoading={refreshScrapingMutation.isPending}
-                onPress={() => {
-                  if (teamId) refreshScrapingMutation.mutate(teamId);
-                }}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.sync', 'Sync')}
-                variant="Secondary"
-              />
-              <Button
-                onPress={() => setShowFFBBErrorModal(true)}
-                style={{ flex: 1 }}
-                title={t('teamDetails.external.actions.report', 'Bug')}
-                variant="SecondaryLight"
-              />
-            </View>
-            )}
           </View>
           )}
 
@@ -2052,7 +2402,7 @@ function TeamDetails({ navigation, route }) {
               <Button
                 isLoading={resetTeamStatsMutation.isPending}
                 onPress={handleResetStats}
-                title={t('teamDetails.stats.resetAction', 'Reinitialiser les statistiques')}
+                title={t('teamDetails.stats.resetAction', 'Réinitialiser les statistiques')}
                 variant="Secondary"
               />
             ) : null}
@@ -2282,6 +2632,159 @@ function TeamDetails({ navigation, route }) {
         </View>
       </Modal>
 
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setShowExternalSyncReportModal(false)}
+        transparent
+        visible={showExternalSyncReportModal}
+      >
+        <View style={{
+          alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
+        }}
+        >
+          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxHeight: '82%', maxWidth: 440, width: '92%' }]}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[8]]}>
+              {t('teamDetails.external.report.title', 'Classement et calendrier synchronises')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginBottom[16]]}>
+              {[
+                externalSyncProviderLabel,
+                externalSyncSelectedTeamName,
+                externalSyncPouleName,
+              ].filter(Boolean).join(' • ')}
+            </Text>
+
+            <ScrollView contentContainerStyle={[Spaces.gap[16]]} showsVerticalScrollIndicator={false}>
+              <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                {[
+                  {
+                    key: 'created',
+                    label: t('teamDetails.external.summary.created', 'Crees'),
+                    value: externalSyncSummary?.created || 0,
+                  },
+                  {
+                    key: 'updated',
+                    label: t('teamDetails.external.summary.updated', 'Mis a jour'),
+                    value: externalSyncSummary?.updated || 0,
+                  },
+                  {
+                    key: 'archivedFuture',
+                    label: t('teamDetails.external.summary.archived', 'Archives'),
+                    value: externalSyncSummary?.archivedFuture || 0,
+                  },
+                  {
+                    key: 'unchanged',
+                    label: t('teamDetails.external.summary.unchanged', 'Inchanges'),
+                    value: externalSyncSummary?.unchanged || 0,
+                  },
+                ].map((stat) => (
+                  <View
+                    key={stat.key}
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      Spaces.paddingVertical[8],
+                      Spaces.paddingHorizontal[12],
+                      {
+                        backgroundColor: `${Colors.primary500}14`,
+                        borderColor: `${Colors.primary500}33`,
+                        borderWidth: 1,
+                        minWidth: 96,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4, Fonts.primary100]}>{stat.label}</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{stat.value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {externalSyncUpdatedLabel ? (
+                <Text style={[Fonts.p3, Fonts.primary100]}>
+                  {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
+                </Text>
+              ) : null}
+
+              {externalSyncReport?.warnings?.length ? (
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius16,
+                    Spaces.padding[12],
+                    Spaces.gap[4],
+                    {
+                      backgroundColor: `${Colors.warning500}18`,
+                      borderColor: `${Colors.warning500}44`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                    {t('teamDetails.external.warningsTitle', 'Avertissements')}
+                  </Text>
+                  {externalSyncReport.warnings.map((warning, index) => (
+                    <Text key={`${warning}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
+                      {`• ${warning}`}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {externalSyncReport?.errors?.length ? (
+                <View
+                  style={[
+                    ApplicationStyle.borderRadius16,
+                    Spaces.padding[12],
+                    Spaces.gap[4],
+                    {
+                      backgroundColor: `${Colors.error500}18`,
+                      borderColor: `${Colors.error500}44`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                    {t('teamDetails.external.errorsTitle', 'Erreurs')}
+                  </Text>
+                  {externalSyncReport.errors.map((entry, index) => (
+                    <Text key={`${entry}-${index}`} style={[Fonts.p4, Fonts.neutral00]}>
+                      {`• ${entry}`}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {renderExternalSyncItems(
+                t('teamDetails.external.report.createdSection', 'Evenements crees'),
+                externalSyncReport?.createdEvents,
+                Colors.success500,
+              )}
+              {renderExternalSyncItems(
+                t('teamDetails.external.report.updatedSection', 'Evenements mis a jour'),
+                externalSyncReport?.updatedEvents,
+                Colors.primary500,
+              )}
+              {renderExternalSyncItems(
+                t('teamDetails.external.report.archivedSection', 'Evenements archives'),
+                externalSyncReport?.archivedFutureEvents,
+                Colors.warning500,
+              )}
+              {renderExternalSyncItems(
+                t('teamDetails.external.report.skippedSection', 'Matchs ignores'),
+                externalSyncReport?.skippedMatches,
+                Colors.error500,
+              )}
+            </ScrollView>
+
+            <View style={[Spaces.marginTop[16], Spaces.gap[8]]}>
+              <Button
+                onPress={() => setShowExternalSyncReportModal(false)}
+                title={t('common.close', 'Fermer')}
+                variant="Primary"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* FFBB Error Report Modal */}
       <Modal
         animationType="slide"
@@ -2382,4 +2885,3 @@ function TeamDetails({ navigation, route }) {
 }
 
 export default TeamDetails;
-

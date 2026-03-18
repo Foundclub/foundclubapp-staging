@@ -13,6 +13,7 @@ const teamSchema = Joi.object({
   documentId: Joi.string().allow('', null).optional(),
   externalCalendarData: Joi.array().allow(null).optional(),
   externalDataLastUpdate: Joi.string().allow('', null).optional(),
+  externalLastSyncReport: Joi.object().allow(null).optional(),
   externalStandingData: Joi.array().allow(null).optional(),
   externalStandingUrl: Joi.string().allow('', null).optional(),
   level: Joi.any().allow(null).optional(),

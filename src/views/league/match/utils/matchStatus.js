@@ -248,7 +248,7 @@ export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now 
 
   /** @type {Record<string, {label: string, color: string, bg: string}>} */
   const map = {
-    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annul?' },
+    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annulé' },
     confirmed_upcoming: { bg: withAlpha(palette.primary), color: palette.primary, label: 'À venir' },
     disputed: { bg: withAlpha(palette.error), color: palette.error, label: 'Litige' },
     forfeit: { bg: withAlpha(palette.error), color: palette.error, label: 'Forfait' },

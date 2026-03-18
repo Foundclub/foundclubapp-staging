@@ -111,8 +111,8 @@ function AssignCoachTeams({ navigation, route }) {
     },
     onSuccess: () => {
       Alert.alert(
-        'Assignation termin?e',
-        `${trainerName || 'L entra?neur'} a été assign? aux équipes sélectionn?es.`,
+        'Assignation terminée',
+        `${trainerName || "L'entraîneur"} a été assigné aux équipes sélectionnées.`,
         [{
           onPress: () => navigation.goBack(),
           text: t('common.actions.ok', 'OK'),
@@ -240,7 +240,7 @@ function AssignCoachTeams({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p4Bold, Fonts.gold500]}>
-                D?j? assign?
+                Déjà assigné
               </Text>
             </View>
           ) : (
@@ -373,4 +373,3 @@ function AssignCoachTeams({ navigation, route }) {
 }
 
 export default AssignCoachTeams;
-

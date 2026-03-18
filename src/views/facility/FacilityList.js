@@ -236,8 +236,8 @@ function FacilityList() {
     const facilityId = item?.documentId || item?.id;
     const teams = Number(item?.maxSlots || 1);
     const capacityLabel = `${teams} ${teams > 1
-      ? t('facilityList.capacity.teamPlural', 'équipes simultan?es')
-      : t('facilityList.capacity.teamSingular', 'équipe simultan?e')}`;
+      ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
+      : t('facilityList.capacity.teamSingular', 'équipe simultanée')}`;
     const addressLabel = getAddressLabel(
       item?.address,
       t('facilityList.defaults.addressMissing', 'Adresse non renseignee'),

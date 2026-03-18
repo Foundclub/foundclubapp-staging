@@ -131,7 +131,7 @@ function HistoryWizardRecap({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
       subtitle="Vérifie les informations avant de valider"
-      title="Recapitulatif"
+      title="Récapitulatif"
     >
       <View style={[Spaces.gap[32]]}>
         <View

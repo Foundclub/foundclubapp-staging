@@ -367,7 +367,7 @@ function VenueProposalModal({
             <DateTimeSelector
               buttonStyle={glassPickerStyle}
               display="inline"
-              label="D?but"
+              label="Début"
               mode="time"
               onChange={setStartTime}
               onOpen={() => handleSelectorOpen('time')}

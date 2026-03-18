@@ -164,15 +164,15 @@ function TeamWizardRecap({ navigation }) {
     <WizardStepLayout
       isNextDisabled={!isRecapReady}
       isNextLoading={createTeamMutation.isPending}
-      nextLabel={t('teamWizard.actions.create', "Creer l'equipe")}
+      nextLabel={t('teamWizard.actions.create', "Créer l'équipe")}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
       onClose={handleExitWizard}
       onNext={handleSubmit}
       onSkip={() => {}}
       stepCount={8}
       stepIndex={8}
-      subtitle={t('teamWizard.steps.recap.subtitle', "Verifie les informations avant de creer l'equipe.")}
-      title={t('teamWizard.steps.recap.title', 'Recapitulatif')}
+      subtitle={t('teamWizard.steps.recap.subtitle', "Vérifie les informations avant de créer l'équipe.")}
+      title={t('teamWizard.steps.recap.title', 'Récapitulatif')}
     >
       <View style={[Spaces.gap[16]]}>
         <View
@@ -205,7 +205,7 @@ function TeamWizardRecap({ navigation }) {
             >
               <Text style={[Fonts.p3Bold, isRecapReady ? Fonts.primary500 : Fonts.gold500]}>
                 {isRecapReady
-                  ? t('teamWizard.recap.ready', 'Prêt ? cr?er')
+                  ? t('teamWizard.recap.ready', 'Prêt à créer')
                   : t('teamWizard.recap.incomplete', 'Champs manquants')}
               </Text>
             </View>

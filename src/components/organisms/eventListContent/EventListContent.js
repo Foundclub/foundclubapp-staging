@@ -219,6 +219,7 @@ function EventListContent({
     mutationFn: createEventParticipation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       if (!propEvents) {
         if (isSmartSearchEnabled) {
           refetchSearch();
@@ -319,6 +320,7 @@ function EventListContent({
     mutationFn: missingEvent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       if (!propEvents) {
         if (isSmartSearchEnabled) {
           refetchSearch();

@@ -112,8 +112,8 @@ const normalizeAddressPayload = (address) => {
 const getCapacityLabel = (value, t) => {
   const teams = Number(value || 1);
   const unit = teams > 1
-    ? t('facilityForm.capacity.teamPlural', 'équipes simultan?es')
-    : t('facilityForm.capacity.teamSingular', 'équipe simultan?e');
+    ? t('facilityForm.capacity.teamPlural', 'équipes simultanées')
+    : t('facilityForm.capacity.teamSingular', 'équipe simultanée');
   return `${teams} ${unit}`;
 };
 
@@ -457,7 +457,7 @@ function FacilityForm() {
                 return (
                   <View style={[Spaces.gap[8]]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t('facilityForm.fields.capacity', 'Capacité (équipes simultan?es)')}
+                      {t('facilityForm.fields.capacity', 'Capacité (équipes simultanées)')}
                     </Text>
                     <View
                       style={[

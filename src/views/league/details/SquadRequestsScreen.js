@@ -84,7 +84,7 @@ function SquadRequestsScreen({ navigation, route }) {
       await respondToJoinRequest(teamId, userId, accept);
       await refetch();
       setFeedback({
-        message: accept ? 'Demande acceptee.' : 'Demande refusee.',
+        message: accept ? 'Demande acceptée.' : 'Demande refusée.',
         type: 'success',
       });
     } catch (requestError) {
