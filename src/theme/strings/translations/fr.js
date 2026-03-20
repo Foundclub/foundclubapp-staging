@@ -2086,9 +2086,12 @@ export default {
   teamDetails: {
     actions: {
       contactTeam: 'Contacter',
+      defaultComposition: 'Composition type',
       edit: 'Modifier',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
+      openPanel: 'Ouvrir',
+      panelTitle: "Actions d'équipe",
       stats: 'Statistiques',
       teamChat: 'Équipe',
     },

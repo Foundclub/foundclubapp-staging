@@ -16,6 +16,8 @@ import EventWizardTeam from '@/views/event/wizard/EventWizardTeam';
 import EventWizardType from '@/views/event/wizard/EventWizardType';
 import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidationMode';
 import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
+import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
+import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
 import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
 import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
 
@@ -78,6 +80,16 @@ function EventStack() {
         <Stack.Screen
           component={TacticalBoardV2}
           name={RouteNames.TacticalBoardV2}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={MatchStatsEditor}
+          name={RouteNames.MatchStatsEditor}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={PendingMatchStatsScreen}
+          name={RouteNames.PendingMatchStats}
           options={{ headerShown: false }}
         />
 

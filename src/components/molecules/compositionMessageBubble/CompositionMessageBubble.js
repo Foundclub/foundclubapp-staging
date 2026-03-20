@@ -9,17 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-// Field images (same as TacticalBoard)
-const FIELD_IMAGES = {
-  basket: require('@/assets/fields/field_basket.png'),
-  basketball: require('@/assets/fields/field_basket.png'),
-  football: require('@/assets/fields/field_generic.png'),
-  generic: require('@/assets/fields/field_generic.png'),
-  handball: require('@/assets/fields/field_handball.png'),
-  rugby: require('@/assets/fields/field_rugby.png'),
-  volley: require('@/assets/fields/field_volley.png'),
-  volleyball: require('@/assets/fields/field_volley.png'),
-};
+import { getTacticalFieldImage } from '@/utils/tacticalField';
 
 // Mini field dimensions
 const MINI_FIELD_WIDTH = 220;
@@ -71,8 +61,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // Combine all players for lookup
   const allPlayers = [...teamPlayers, ...manualPlayers];
 
-  const sportKey = /** @type {keyof typeof FIELD_IMAGES} */ ((sport || 'football').toLowerCase());
-  const fieldImage = FIELD_IMAGES[sportKey] || FIELD_IMAGES.generic;
+  const fieldImage = getTacticalFieldImage(sport);
   const formattedDate = eventDate ? dayjs(eventDate).locale('fr').format('DD/MM/YYYY') : '';
 
   // Navigate to TacticalBoard in readonly mode

@@ -301,17 +301,29 @@ function AppProvider({ children }) {
 
   useEffect(() => {
     setPersistantState('auth', safeJsonStringify('auth', state.auth));
+  }, [state.auth]);
+
+  useEffect(() => {
     setPersistantState(
       'activeSessionDocumentId',
       normalizeDocumentId(state.activeSessionDocumentId),
     );
+  }, [state.activeSessionDocumentId]);
+
+  useEffect(() => {
     setPersistantState('authSessions', safeJsonStringify('authSessions', state.authSessions));
+  }, [state.authSessions]);
+
+  useEffect(() => {
     setPersistantState(
       'fcmToken',
       typeof state.fcmToken === 'string' ? state.fcmToken.trim() : undefined,
     );
+  }, [state.fcmToken]);
+
+  useEffect(() => {
     setPersistantState('theme', state.theme);
-  }, [state]);
+  }, [state.theme]);
 
   useEffect(() => {
     const unregister = registerAuthRuntimeDispatch(dispatch);

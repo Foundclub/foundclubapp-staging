@@ -1,6 +1,9 @@
 import { BlurView } from '@sbaiahmed1/react-native-blur';
-import React, {
-  useCallback, useMemo, useRef, useState,
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import {
   Alert,
@@ -16,7 +19,6 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import Animated, {
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -27,40 +29,20 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 
+import {
+  getTacticalFieldAspectRatio,
+  getTacticalFieldImage,
+} from '@/utils/tacticalField';
+
 import PlayerToken from './PlayerToken';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Aspect ratios per sport
-/** @type {Record<string, number>} */
-const FIELD_ASPECT_RATIOS = {
-  basket: 1.7,
-  basketball: 1.7,
-  football: 1.5, // 3:2 portrait
-  generic: 1.5,
-  handball: 1.5,
-  rugby: 1.4,
-  volley: 1.8,
-  volleyball: 1.8,
-};
 
 // Spring config
 const SPRING_CONFIG = {
   damping: 15,
   mass: 0.8,
   stiffness: 150,
-};
-
-/** @type {Record<string, any>} */
-const FIELD_IMAGES = {
-  basket: require('@/assets/fields/field_basket.png'),
-  basketball: require('@/assets/fields/field_basket.png'),
-  football: require('@/assets/fields/field_football.png'),
-  generic: require('@/assets/fields/field_generic.png'),
-  handball: require('@/assets/fields/field_handball.png'),
-  rugby: require('@/assets/fields/field_rugby.png'),
-  volley: require('@/assets/fields/field_volley.png'),
-  volleyball: require('@/assets/fields/field_volley.png'),
 };
 
 /**
@@ -288,7 +270,7 @@ function TacticalBoard({
   sport = 'generic',
 }) {
   const { Colors, Fonts, Images } = useTheme();
-  /** @type {React.MutableRefObject<View|null>} */
+  /** @type {import('react').MutableRefObject<View | null>} */
   const fieldRef = useRef(null);
   const [fieldLayout, setFieldLayout] = useState({
     height: 400, width: 300, x: 0, y: 0,
@@ -312,12 +294,11 @@ function TacticalBoard({
   const isOverField = useSharedValue(0);
   const removeZoneVisible = useSharedValue(0);
   const [ghostPlayer, setGhostPlayer] = useState(/** @type {Player|null} */ (null));
-  const [isDraggingFromField, setIsDraggingFromField] = useState(false);
+  const [, setIsDraggingFromField] = useState(false);
 
   // Calculate field dimensions with fixed aspect ratio
-  const sportKey = sport?.toLowerCase?.() || 'generic';
-  const aspectRatio = FIELD_ASPECT_RATIOS[sportKey] || 1.5;
-  const fieldImage = FIELD_IMAGES[sportKey] || FIELD_IMAGES.generic;
+  const aspectRatio = getTacticalFieldAspectRatio(sport);
+  const fieldImage = getTacticalFieldImage(sport);
 
   // All players
   const allPlayers = useMemo(() => [...players, ...manualPlayers], [players, manualPlayers]);

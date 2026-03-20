@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   approveClubClaim,
   getAdminClub,
@@ -26,7 +28,7 @@ import {
  */
 export const useGetClubClaimsRequestList = (params) => useQuery({
   queryFn: () => getClubClaimsRequestList(params),
-  queryKey: ['admin', 'claims', 'list', params],
+  queryKey: buildNormalizedQueryKey(['admin', 'claims', 'list'], params),
 });
 
 /**
@@ -123,7 +125,7 @@ export const useGetPendingClubClaims = () => useQuery({
  */
 export const useGetAdminUsers = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
   queryFn: () => getAdminUsers(params),
-  queryKey: ['admin', 'users', params],
+  queryKey: buildNormalizedQueryKey(['admin', 'users'], params),
 });
 
 /**
@@ -157,7 +159,7 @@ export const useUpdateAdminUser = () => {
  */
 export const useGetAdminClubs = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
   queryFn: () => getAdminClubs(params),
-  queryKey: ['admin', 'clubs', params],
+  queryKey: buildNormalizedQueryKey(['admin', 'clubs'], params),
 });
 
 /**
@@ -191,7 +193,7 @@ export const useUpdateAdminClub = () => {
  */
 export const useGetLeagueDisputes = (/** @type {Record<string, any> | undefined} */ params) => useQuery({
   queryFn: () => getLeagueDisputes(params),
-  queryKey: ['admin', 'league-disputes', params],
+  queryKey: buildNormalizedQueryKey(['admin', 'league-disputes'], params),
 });
 
 /**

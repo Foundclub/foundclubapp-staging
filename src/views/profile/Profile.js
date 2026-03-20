@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Image, Linking, RefreshControl, Text, TouchableOpacity, View,
+  RefreshControl, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -35,10 +35,52 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { deleteAccount } from '@/services/auth/authService';
-
-import { getImageUrl } from '@/utils/imageUrl';
+import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
+
+const resolveProfileStatValue = ({
+  overallValue,
+  selectedStatsSport,
+  sportValue,
+  teamValue,
+}) => {
+  if (teamValue !== null && teamValue !== undefined) {
+    return Number(teamValue || 0);
+  }
+
+  if (selectedStatsSport === 'all') {
+    return Number(overallValue || 0);
+  }
+
+  return Number(sportValue || 0);
+};
+
+const toTextLabel = (value) => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const nested = value?.name || value?.label || value?.title;
+    return typeof nested === 'string' ? nested.trim() : '';
+  }
+  return String(value).trim();
+};
+
+const formatNullableValue = (value, fallback = 'Non renseigne') => {
+  if (value === 0) return '0';
+  if (value === false) return 'Non';
+  if (value === true) return 'Oui';
+  const normalized = toTextLabel(value);
+  return normalized || fallback;
+};
+
+const formatSectionLabel = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (['homme', 'male', 'masculin', 'masculine'].includes(normalized)) return 'Masculin';
+  if (['female', 'feminin', 'feminine', 'femme'].includes(normalized)) return 'Feminin';
+  if (['mixed', 'mixte'].includes(normalized)) return 'Mixte';
+  return String(value);
+};
 
 /**
  * Profile screen component. Displays user information and profile management options.
@@ -47,8 +89,9 @@ import { getImageUrl } from '@/utils/imageUrl';
  */
 function Profile({ navigation, route }) {
   const {
-    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { width } = useWindowDimensions();
   const { t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
   const { getClubInitials } = useClub();
@@ -68,14 +111,32 @@ function Profile({ navigation, route }) {
 
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState(/** @type {string | null} */ (null));
+  const [selectedStatsSport, setSelectedStatsSport] = useState('all');
+  const [selectedStatsTeamKey, setSelectedStatsTeamKey] = useState('all');
   const safeAuthSessions = authSessions || [];
-  const multisportClubs = userData?.multisportClubs || [];
+  const multisportClubs = useMemo(
+    () => userData?.multisportClubs || [],
+    [userData?.multisportClubs],
+  );
+  const {
+    data: personalStats,
+    isLoading: isPersonalStatsLoading,
+    refetch: refetchPersonalStats,
+  } = useGetPersonalStats(userData?.documentId || '', {
+    enabled: Boolean(userData?.documentId),
+  });
 
   useEffect(() => {
     if (!route?.params?.openAccountModal) return;
     setIsAccountModalVisible(true);
     navigation.setParams({ openAccountModal: false });
   }, [navigation, route?.params?.openAccountModal]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchPersonalStats();
+    }, [refetchPersonalStats]),
+  );
 
   const canManageClub = useMemo(() => {
     if (!userData?.club?.documentId) {
@@ -89,6 +150,163 @@ function Profile({ navigation, route }) {
 
   // Get the first multisport club for quick access
   const firstMultisportClub = useMemo(() => multisportClubs[0] || null, [multisportClubs]);
+
+  const availableStatSports = useMemo(() => {
+    const sports = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
+    return sports.map((entry) => entry?.sport).filter(Boolean);
+  }, [personalStats?.bySport]);
+
+  const filteredPersonalTeamStats = useMemo(() => {
+    const items = Array.isArray(personalStats?.byTeam) ? personalStats.byTeam : [];
+    if (selectedStatsSport === 'all') return items;
+    return items.filter((entry) => entry?.sport === selectedStatsSport);
+  }, [personalStats?.byTeam, selectedStatsSport]);
+  const availableStatTeams = useMemo(() => {
+    const seen = new Set();
+    return filteredPersonalTeamStats.reduce((accumulator, entry) => {
+      const key = `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`;
+      if (seen.has(key)) return accumulator;
+      seen.add(key);
+      accumulator.push({
+        key,
+        label: entry?.teamName || 'Equipe',
+      });
+      return accumulator;
+    }, []);
+  }, [filteredPersonalTeamStats]);
+  const filteredStatsByTeamSelection = useMemo(() => {
+    if (selectedStatsTeamKey === 'all') return filteredPersonalTeamStats;
+
+    return filteredPersonalTeamStats.filter((entry) => (
+      `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`
+      === selectedStatsTeamKey
+    ));
+  }, [filteredPersonalTeamStats, selectedStatsTeamKey]);
+  const selectedTeamSummary = useMemo(
+    () => (selectedStatsTeamKey === 'all' ? null : filteredStatsByTeamSelection[0] || null),
+    [filteredStatsByTeamSelection, selectedStatsTeamKey],
+  );
+
+  const filteredSportSummary = useMemo(() => {
+    if (selectedStatsSport === 'all') return null;
+    const items = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
+    return items.find((entry) => entry?.sport === selectedStatsSport) || null;
+  }, [personalStats?.bySport, selectedStatsSport]);
+  const profileSummaryCards = useMemo(() => {
+    const matches = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.matches,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.matches,
+      teamValue: selectedTeamSummary?.matches,
+    });
+    const wins = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.wins,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.wins,
+      teamValue: selectedTeamSummary?.wins,
+    });
+    const losses = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.losses,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.losses,
+      teamValue: selectedTeamSummary?.losses,
+    });
+    const minutes = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.minutesPlayed,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.minutesPlayed,
+      teamValue: selectedTeamSummary?.minutesPlayed,
+    });
+    const primaryLabel = selectedStatsSport === 'basketball' ? 'Points' : 'Buts';
+    let primaryValue;
+    if (selectedTeamSummary) {
+      primaryValue = Number(
+        selectedTeamSummary?.sport === 'basketball'
+          ? selectedTeamSummary?.points || 0
+          : selectedTeamSummary?.goals || 0,
+      );
+    } else {
+      primaryValue = resolveProfileStatValue({
+        overallValue: personalStats?.overall?.football?.goals,
+        selectedStatsSport,
+        sportValue: selectedStatsSport === 'basketball'
+          ? filteredSportSummary?.points
+          : filteredSportSummary?.goals,
+      });
+    }
+    const assists = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.football?.assists,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.assists,
+      teamValue: selectedTeamSummary?.assists,
+    });
+
+    return [
+      { label: 'Matchs', value: matches },
+      { label: 'Victoires', value: wins },
+      { label: 'Defaites', value: losses },
+      { label: 'Minutes', value: minutes },
+      { label: primaryLabel, value: primaryValue },
+      { label: 'Passes D', value: assists },
+    ];
+  }, [
+    filteredSportSummary,
+    personalStats?.overall?.football?.assists,
+    personalStats?.overall?.football?.goals,
+    personalStats?.overall?.losses,
+    personalStats?.overall?.matches,
+    personalStats?.overall?.minutesPlayed,
+    personalStats?.overall?.wins,
+    selectedStatsSport,
+    selectedTeamSummary,
+  ]);
+  const isCompactStatsLayout = width < 390;
+  const statsSectionPadding = isCompactStatsLayout ? 14 : 16;
+  const statsSectionGap = isCompactStatsLayout ? 12 : 16;
+  const statsCardMinHeight = isCompactStatsLayout ? 92 : 98;
+  const shouldShowSportFilter = availableStatSports.length > 1;
+  const preferredSportLabel = useMemo(
+    () => formatNullableValue(userData?.preferredSport?.name || userData?.preferredSport),
+    [userData?.preferredSport],
+  );
+  const bestLevelLabel = useMemo(
+    () => formatNullableValue(userData?.bestLevel?.name || userData?.bestLevel),
+    [userData?.bestLevel],
+  );
+  const positionLabel = useMemo(
+    () => formatNullableValue(userData?.position),
+    [userData?.position],
+  );
+  const sectionLabel = useMemo(
+    () => formatNullableValue(formatSectionLabel(userData?.section)),
+    [userData?.section],
+  );
+  const categoryLabel = useMemo(
+    () => formatNullableValue(userData?.category),
+    [userData?.category],
+  );
+  const sportProfileItems = useMemo(
+    () => [
+      { label: 'Sport', value: preferredSportLabel },
+      { label: 'Niveau', value: bestLevelLabel },
+      { label: 'Poste', value: positionLabel },
+      { label: 'Section', value: sectionLabel },
+      { fullWidth: true, label: 'Categorie', value: categoryLabel },
+    ],
+    [bestLevelLabel, categoryLabel, positionLabel, preferredSportLabel, sectionLabel],
+  );
+
+  useEffect(() => {
+    if (selectedStatsSport === 'all') return;
+    if (availableStatSports.includes(selectedStatsSport)) return;
+    setSelectedStatsSport('all');
+  }, [availableStatSports, selectedStatsSport]);
+
+  useEffect(() => {
+    if (selectedStatsTeamKey === 'all') return;
+    if (availableStatTeams.some((entry) => entry.key === selectedStatsTeamKey)) return;
+    setSelectedStatsTeamKey('all');
+  }, [availableStatTeams, selectedStatsTeamKey]);
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
@@ -198,7 +416,7 @@ function Profile({ navigation, route }) {
     if (safeAuthSessions.length >= MAX_ACCOUNTS) {
       Alert.alert(
         t('profile.alerts.maxAccounts.title', 'Limite atteinte'),
-        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectés.`),
+        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectÃ©s.`),
       );
       return;
     }
@@ -426,7 +644,7 @@ function Profile({ navigation, route }) {
         <TabButton
           isActive={false}
           onPress={handleOpenRequestsHub}
-          title={t('profile.actions.manageRequests', 'Gérer mes demandes')}
+          title={t('profile.actions.manageRequests', 'GÃ©rer mes demandes')}
         />
       ) : null}
       {userData?.role?.name === USER_ROLES.superAdmin ? (
@@ -556,7 +774,10 @@ function Profile({ navigation, route }) {
           ]}
           refreshControl={(
             <RefreshControl
-              onRefresh={refetchUserData}
+              onRefresh={() => {
+                refetchUserData();
+                refetchPersonalStats();
+              }}
               refreshing={userDataLoading}
             />
         )}
@@ -606,6 +827,96 @@ function Profile({ navigation, route }) {
               )}
             </View>
           </WithDataWrapper>
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[statsSectionPadding],
+              Spaces.gap[statsSectionGap],
+              {
+                backgroundColor: `${Colors.primary700}73`,
+                borderColor: `${Colors.primary500}80`,
+              },
+            ]}
+          >
+            {shouldShowSportFilter ? (
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>Sport</Text>
+                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                  <TabButton
+                    isFocused={selectedStatsSport === 'all'}
+                    onPress={() => setSelectedStatsSport('all')}
+                    title="Tous"
+                  />
+                  {availableStatSports.map((sportKey) => (
+                    <TabButton
+                      isFocused={selectedStatsSport === sportKey}
+                      key={sportKey}
+                      onPress={() => {
+                        setSelectedStatsSport(sportKey);
+                        setSelectedStatsTeamKey('all');
+                      }}
+                      title={sportKey === 'basketball' ? 'Basket' : 'Football'}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {availableStatTeams.length > 1 ? (
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>Equipe</Text>
+                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                  <TabButton
+                    isFocused={selectedStatsTeamKey === 'all'}
+                    onPress={() => setSelectedStatsTeamKey('all')}
+                    title="Toutes"
+                  />
+                  {availableStatTeams.map((teamOption) => (
+                    <TabButton
+                      isFocused={selectedStatsTeamKey === teamOption.key}
+                      key={teamOption.key}
+                      onPress={() => setSelectedStatsTeamKey(teamOption.key)}
+                      title={teamOption.label}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {isPersonalStatsLoading ? (
+              <Text style={[Fonts.p2, Fonts.neutral00]}>Chargement des statistiques...</Text>
+            ) : (
+              <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
+                {profileSummaryCards.map((stat) => (
+                  <View
+                    key={stat.label}
+                    style={[
+                      ApplicationStyle.card,
+                      Spaces.padding[12],
+                      Spaces.gap[8],
+                      {
+                        backgroundColor: `${Colors.primary700}BF`,
+                        borderColor: `${Colors.primary500}52`,
+                        marginBottom: 12,
+                        minHeight: statsCardMinHeight,
+                        width: '48%',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary500,
+                        ApplicationStyle.borderRadius16,
+                        { height: 4, width: isCompactStatsLayout ? 26 : 32 },
+                      ]}
+                    />
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
           {/* Sports History Section - prioritize this block at top of profile content */}
           <UserHistorySection
             bestLevel={
@@ -627,9 +938,62 @@ function Profile({ navigation, route }) {
             userId={undefined}
           />
 
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                backgroundColor: `${Colors.primary700}73`,
+                borderColor: `${Colors.primary500}80`,
+              },
+            ]}
+          >
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Profil sportif</Text>
+              <View
+                style={[
+                  ApplicationStyle.separator,
+                  { backgroundColor: `${Colors.primary500}3D` },
+                ]}
+              />
+            </View>
+
+            <View style={[Alignments.row, Alignments.wrap, Alignments.justifyBetween]}>
+              {sportProfileItems.map((item) => (
+                <View
+                  key={item.label}
+                  style={[
+                    ApplicationStyle.card,
+                    Spaces.padding[12],
+                    Spaces.gap[6],
+                    {
+                      backgroundColor: `${Colors.primary700}BF`,
+                      borderColor: `${Colors.primary500}66`,
+                      marginBottom: 12,
+                      minHeight: 78,
+                      width: item.fullWidth ? '100%' : '48%',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{item.label}</Text>
+                  <Text
+                    numberOfLines={item.fullWidth ? 2 : 1}
+                    style={[
+                      item.value === 'Non renseigne' ? Fonts.p2 : Fonts.p1Bold,
+                      item.value === 'Non renseigne' ? Fonts.neutral300 : Fonts.neutral00,
+                    ]}
+                  >
+                    {item.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
           {isProfileMainTutorial ? (
             <OnboardingWrapper
-              description="Depuis cette zone, vous pouvez modifier votre profil, gérer vos demandes et changer de compte."
+              description="Depuis cette zone, vous pouvez modifier votre profil, gÃ©rer vos demandes et changer de compte."
               id="profile-main-actions"
               order={1}
               spotlight={{
@@ -643,13 +1007,13 @@ function Profile({ navigation, route }) {
 
           {isLogoutTutorial ? (
             <OnboardingWrapper
-              description="Ce bouton lance la confirmation de déconnexion de votre session."
+              description="Ce bouton lance la confirmation de dÃ©connexion de votre session."
               id="profile-logout-action"
               order={2}
               spotlight={{
                 borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
               }}
-              title="Déconnexion"
+              title="DÃ©connexion"
             >
               <Button
                 onPress={handleLogout}
@@ -697,5 +1061,4 @@ function Profile({ navigation, route }) {
     </TutorialFlowBoundary>
   );
 }
-
 export default Profile;

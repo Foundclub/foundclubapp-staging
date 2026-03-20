@@ -373,7 +373,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
     if (isCoachOrAdmin) return;
     if (!isRefresh) setLoading(true);
     try {
-      const data = await getMyApplications(String(userData?.documentId || userData?.id || ''));
+      const data = await getMyApplications(userData);
       setMyApplications(data || []);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching applications:', error);

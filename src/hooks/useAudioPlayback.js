@@ -167,6 +167,21 @@ const waitFor = (delayMs) => new Promise((resolve) => {
   setTimeout(resolve, Math.max(0, Number(delayMs) || 0));
 });
 
+const formatDiagnosticMeta = (meta) => {
+  if (!meta || typeof meta !== 'object') return '';
+  try {
+    const serialized = JSON.stringify(meta);
+    return serialized && serialized !== '{}' ? ` ${serialized}` : '';
+  } catch (_error) {
+    return '';
+  }
+};
+
+const logPlaybackDiagnostic = (stage, meta = undefined) => {
+  if (!isPlaybackDiagnosticsEnabled) return;
+  playbackLogger.warn(`[voice-diag] ${stage}${formatDiagnosticMeta(meta)}`);
+};
+
 const getPlaybackErrorCode = (error) => String(error?.message || error || '').trim().toUpperCase();
 
 const toPlaybackErrorMessage = (error) => {
@@ -236,6 +251,11 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const stopPlaybackRef = useRef(/** @type {() => Promise<void>} */ (async () => {}));
   const downloadedSourceRef = useRef('');
   const downloadedPathRef = useRef('');
+  const playbackSessionRef = useRef({
+    durationMs: 0,
+    lastPositionMs: 0,
+    startedAtMs: 0,
+  });
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -316,14 +336,12 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(rawSource)}.${targetExtension}`;
     const safeHeaders = headers && typeof headers === 'object' ? headers : {};
 
-    if (isPlaybackDiagnosticsEnabled) {
-      playbackLogger.warn('[voice-diag] playback-download-start', {
-        hasHeaders: Object.keys(safeHeaders).length > 0,
-        sourceUrl: rawSource,
-        targetExtension,
-        targetPath,
-      });
-    }
+    logPlaybackDiagnostic('playback-download-start', {
+      hasHeaders: Object.keys(safeHeaders).length > 0,
+      sourceUrl: rawSource,
+      targetExtension,
+      targetPath,
+    });
 
     const response = await ReactNativeBlobUtil
       .config({
@@ -364,14 +382,12 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       throw new Error('AUDIO_DOWNLOAD_EMPTY_FILE');
     }
 
-    if (isPlaybackDiagnosticsEnabled) {
-      playbackLogger.warn('[voice-diag] playback-download-success', {
-        contentType: responseContentType,
-        fileSize,
-        sourceUrl: rawSource,
-        targetPath: downloadedPath,
-      });
-    }
+    logPlaybackDiagnostic('playback-download-success', {
+      contentType: responseContentType,
+      fileSize,
+      sourceUrl: rawSource,
+      targetPath: downloadedPath,
+    });
 
     downloadedSourceRef.current = rawSource;
     downloadedPathRef.current = downloadedPath;
@@ -434,11 +450,9 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
     const player = ensurePlayer();
     if (!player) {
-      if (isPlaybackDiagnosticsEnabled) {
-        playbackLogger.warn('[voice-diag] playback-player-unavailable', {
-          sourceUrl: rawSource,
-        });
-      }
+      logPlaybackDiagnostic('playback-player-unavailable', {
+        sourceUrl: rawSource,
+      });
       if (!allowExternalFallback) {
         safeSetState(setLastError, 'Module audio indisponible');
         return;
@@ -469,12 +483,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
           const candidate = sourceCandidates[index];
           const requestHeaders = isHttpUrl(candidate) ? (headers || undefined) : undefined;
 
-          if (isPlaybackDiagnosticsEnabled) {
-            playbackLogger.warn('[voice-diag] playback-native-start-attempt', {
-              candidate,
-              isRemote: isHttpUrl(candidate),
-            });
-          }
+          logPlaybackDiagnostic('playback-native-start-attempt', {
+            candidate,
+            isRemote: isHttpUrl(candidate),
+          });
 
           try {
             // eslint-disable-next-line no-await-in-loop
@@ -505,16 +517,26 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
       await player.setVolume?.(1);
       setPlayerSpeed(player, speed);
+      playbackSessionRef.current = {
+        durationMs: 0,
+        lastPositionMs: 0,
+        startedAtMs: Date.now(),
+      };
 
       removePlaybackListeners(player);
       let hasLoggedProgress = false;
       addPlaybackListener(player, (event) => {
         const nextPosition = toMs(event?.currentPosition ?? event?.position ?? event?.current_position);
         const nextDuration = toMs(event?.duration ?? event?.durationMs ?? event?.duration_ms);
+        playbackSessionRef.current = {
+          ...playbackSessionRef.current,
+          durationMs: nextDuration > 0 ? nextDuration : playbackSessionRef.current.durationMs,
+          lastPositionMs: nextPosition,
+        };
 
         if (isPlaybackDiagnosticsEnabled && !hasLoggedProgress && nextPosition > 0) {
           hasLoggedProgress = true;
-          playbackLogger.warn('[voice-diag] playback-progress-first', {
+          logPlaybackDiagnostic('playback-progress-first', {
             durationMs: nextDuration,
             positionMs: nextPosition,
             sourceUrl: rawSource,
@@ -531,33 +553,37 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         safeSetState(setIsPlaying, false);
         safeSetState(setPositionMs, 0);
         releasePlaybackSlot(ownerIdRef.current);
-        if (isPlaybackDiagnosticsEnabled) {
-          playbackLogger.warn('[voice-diag] playback-ended', {
-            sourceUrl: rawSource,
-          });
-        }
+        logPlaybackDiagnostic('playback-ended', {
+          durationMs: playbackSessionRef.current.durationMs,
+          elapsedWallMs: playbackSessionRef.current.startedAtMs > 0
+            ? Math.max(0, Date.now() - playbackSessionRef.current.startedAtMs)
+            : 0,
+          lastPositionMs: playbackSessionRef.current.lastPositionMs,
+          sourceUrl: rawSource,
+        });
+        playbackSessionRef.current = {
+          durationMs: 0,
+          lastPositionMs: 0,
+          startedAtMs: 0,
+        };
       });
 
       safeSetState(setLastError, '');
       safeSetState(setIsPlaying, true);
-      if (isPlaybackDiagnosticsEnabled) {
-        playbackLogger.warn('[voice-diag] playback-start-succeeded', {
-          candidate: selectedCandidate,
-          sourceUrl: rawSource,
-        });
-      }
+      logPlaybackDiagnostic('playback-start-succeeded', {
+        candidate: selectedCandidate,
+        sourceUrl: rawSource,
+      });
     } catch (error) {
       playbackLogger.warn('Failed to start playback', {
         message: error?.message,
         normalizedSourceUrl: rawSource,
       });
-      if (isPlaybackDiagnosticsEnabled) {
-        playbackLogger.warn('[voice-diag] playback-start-failed', {
-          errorCode: getPlaybackErrorCode(error),
-          message: error?.message,
-          normalizedSourceUrl: rawSource,
-        });
-      }
+      logPlaybackDiagnostic('playback-start-failed', {
+        errorCode: getPlaybackErrorCode(error),
+        message: error?.message,
+        normalizedSourceUrl: rawSource,
+      });
       safeSetState(setLastError, toPlaybackErrorMessage(error));
       await stopPlayback();
       if (allowExternalFallback && isHttpUrl(rawSource)) {

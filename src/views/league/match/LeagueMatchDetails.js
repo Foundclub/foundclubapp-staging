@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import React, {
+import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import {
@@ -24,6 +24,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import {
@@ -34,6 +35,8 @@ import {
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   cancelMatch,
   confirmParticipation,
@@ -41,6 +44,7 @@ import {
   fetchMatch,
   markVenueBooked,
 } from '@/services/league/leagueMatchService';
+import { useGetLeagueMatchStats } from '@/services/matchStats/matchStatsQueries';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
@@ -89,6 +93,8 @@ function LeagueMatchDetails({ navigation, route }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
+  const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
+  const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const userId = getEntityDocumentId(userData);
@@ -139,8 +145,25 @@ function LeagueMatchDetails({ navigation, route }) {
     );
   }, [match, userId]);
 
-  const teamSide = isInTeamA ? 'a' : (isInTeamB ? 'b' : null);
-  const myTeam = teamSide === 'a' ? match?.team_a : (teamSide === 'b' ? match?.team_b : null);
+  const teamSide = useMemo(() => {
+    if (isInTeamA) return 'a';
+    if (isInTeamB) return 'b';
+    return null;
+  }, [isInTeamA, isInTeamB]);
+  const myTeam = useMemo(() => {
+    if (teamSide === 'a') return match?.team_a || null;
+    if (teamSide === 'b') return match?.team_b || null;
+    return null;
+  }, [match?.team_a, match?.team_b, teamSide]);
+  const myTeamId = getEntityDocumentId(myTeam);
+
+  const {
+    data: leagueMatchStatsPayload,
+    isFetching: isLeagueMatchStatsFetching,
+    refetch: refetchLeagueMatchStats,
+  } = useGetLeagueMatchStats(matchId, myTeamId || undefined, {
+    enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
+  });
 
   const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId);
   const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId);
@@ -155,6 +178,12 @@ function LeagueMatchDetails({ navigation, route }) {
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
+  const leagueStatsReport = leagueMatchStatsPayload?.report || null;
+  const isLeagueStatsFinal = leagueStatsReport?.status === 'final';
+  const isLeagueStatsReviewRequired = Boolean(leagueStatsReport?.needsReview);
+  const isLeagueStatsCompleted = isLeagueStatsFinal && !isLeagueStatsReviewRequired;
+  const canViewLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canView || teamSide);
+  const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage || teamSide);
   const canSubmitScore = useMemo(
     () => isCaptain && ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase),
     [isCaptain, matchPhase],
@@ -201,21 +230,129 @@ function LeagueMatchDetails({ navigation, route }) {
   const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || (normalizedStatus === 'scheduled' && !isVenueBooked);
   const canShowCaptainCancel = normalizedStatus === 'scheduled';
   const hasBottomPresenceBar = Boolean(teamSide && normalizedStatus === 'scheduled');
-  const scrollBottomPadding = hasBottomPresenceBar
-    ? ((isCaptain && (canShowCaptainPrimary || canShowCaptainCancel)) ? 320 : 250)
-    : 52;
+  const scrollBottomPadding = useMemo(() => {
+    if (!hasBottomPresenceBar) return 52;
+    if (isCaptain && (canShowCaptainPrimary || canShowCaptainCancel)) return 320;
+    return 250;
+  }, [canShowCaptainCancel, canShowCaptainPrimary, hasBottomPresenceBar, isCaptain]);
   const isScoreToSubmitBadge = statusConfig.label === 'Score a saisir';
+  const leagueStatsAction = useMemo(() => {
+    if (normalizedStatus !== 'valid') {
+      return {
+        disabled: true,
+        subtitle: 'Les stats seront disponibles une fois le score valide.',
+        title: 'Stats bientot disponibles',
+      };
+    }
+
+    if (isLeagueStatsReviewRequired) {
+      return {
+        disabled: false,
+        subtitle: 'Le score officiel a change. Verifie puis republie cette version.',
+        title: 'Mettre a jour apres score officiel',
+      };
+    }
+
+    if (isLeagueStatsFinal) {
+      return {
+        disabled: false,
+        subtitle: leagueStatsReport?.finalizedAt
+          ? `Rapport finalise le ${new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')}`
+          : 'Rapport finalise',
+        title: 'Voir les stats du match',
+      };
+    }
+
+    if (canManageLeagueStats) {
+      return {
+        disabled: false,
+        subtitle: 'Temps de jeu et stats cles a completer pour ton equipe.',
+        title: 'Saisir les stats du match',
+      };
+    }
+
+    return {
+      disabled: true,
+      subtitle: 'Les membres de ton equipe peuvent encore finaliser ce rapport.',
+      title: "En attente de l'equipe",
+    };
+  }, [
+    canManageLeagueStats,
+    isLeagueStatsFinal,
+    isLeagueStatsReviewRequired,
+    leagueStatsReport?.finalizedAt,
+    normalizedStatus,
+  ]);
+  const leagueStatsSummaryText = useMemo(() => {
+    if (isLeagueStatsReviewRequired) {
+      return 'Le score officiel a change. Verification requise avant nouvelle publication.';
+    }
+
+    if (isLeagueStatsFinal) {
+      return 'Le rapport stats de ton equipe est finalise.';
+    }
+
+    if (normalizedStatus !== 'valid') {
+      return 'Les stats seront disponibles une fois le score valide.';
+    }
+
+    if (canManageLeagueStats) {
+      return 'Complete les stats de ton equipe maintenant que le score est valide.';
+    }
+
+    return 'Les membres de ton equipe peuvent encore finaliser ce rapport.';
+  }, [canManageLeagueStats, isLeagueStatsFinal, isLeagueStatsReviewRequired, normalizedStatus]);
+  const leagueStatsStatusMeta = useMemo(() => {
+    if (isLeagueStatsReviewRequired) {
+      return {
+        backgroundColor: `${Colors.warning500}20`,
+        borderColor: `${Colors.warning500}45`,
+        label: 'Verification requise',
+        textColor: Colors.warning500,
+      };
+    }
+
+    if (isLeagueStatsFinal) {
+      return {
+        backgroundColor: `${Colors.success500}20`,
+        borderColor: `${Colors.success500}45`,
+        label: 'Stats publiees',
+        textColor: Colors.success500,
+      };
+    }
+
+    if (normalizedStatus !== 'valid') {
+      return {
+        backgroundColor: `${Colors.gold500}20`,
+        borderColor: `${Colors.gold500}45`,
+        label: 'Score valide en attente',
+        textColor: Colors.gold500,
+      };
+    }
+
+    return {
+      backgroundColor: `${Colors.primary500}20`,
+      borderColor: `${Colors.primary500}45`,
+      label: 'A finaliser',
+      textColor: Colors.primary500,
+    };
+  }, [Colors.gold500, Colors.primary500, Colors.success500, Colors.warning500, isLeagueStatsFinal, isLeagueStatsReviewRequired, normalizedStatus]);
+  const leagueStatsCardButtonTitle = useMemo(() => {
+    if (isLeagueStatsReviewRequired) return 'Mettre a jour';
+    if (isLeagueStatsCompleted) return 'Voir';
+    return 'Ouvrir';
+  }, [isLeagueStatsCompleted, isLeagueStatsReviewRequired]);
 
   const handleConfirmParticipation = async () => {
     if (!teamSide) return;
     setActionLoading(true);
     try {
       const result = await confirmParticipation(matchId, teamSide);
-      Alert.alert('Confirmé', result.message || 'Presence confirmee');
+      Alert.alert('ConfirmÃƒÂ©', result.message || 'Presence confirmee');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Échec confirmation');
+      Alert.alert('Erreur', 'Ãƒâ€°chec confirmation');
     } finally {
       setActionLoading(false);
     }
@@ -226,11 +363,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await declineParticipation(matchId, teamSide);
-      Alert.alert('Decline', 'Votre participation a été annulée');
+      Alert.alert('Decline', 'Votre participation a ÃƒÂ©tÃƒÂ© annulÃƒÂ©e');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Échec annulation');
+      Alert.alert('Erreur', 'Ãƒâ€°chec annulation');
     } finally {
       setActionLoading(false);
     }
@@ -240,11 +377,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await markVenueBooked(matchId);
-      Alert.alert('Succès', 'Terrain marque comme reserve');
+      Alert.alert('SuccÃƒÂ¨s', 'Terrain marque comme reserve');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
+      Alert.alert('Erreur', 'Impossible de mettre ÃƒÂ  jour le statut');
     } finally {
       setActionLoading(false);
     }
@@ -253,23 +390,23 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleCancelMatch = () => {
     Alert.alert(
       'Annuler le match ?',
-      'Action irréversible. Êtes-vous sûr ?',
+      'Action irrÃƒÂ©versible. ÃƒÅ tes-vous sÃƒÂ»r ?',
       [
         { style: 'cancel', text: 'Non' },
         {
           onPress: async () => {
             setActionLoading(true);
             try {
-              const myTeamId = getEntityDocumentId(myTeam);
-              if (!myTeamId) {
-                Alert.alert('Erreur', 'Équipe introuvable.');
+              const targetTeamId = getEntityDocumentId(myTeam);
+              if (!targetTeamId) {
+                Alert.alert('Erreur', 'Ãƒâ€°quipe introuvable.');
                 return;
               }
-              await cancelMatch(matchId, myTeamId, 'Annulé par le capitaine');
-              Alert.alert('Match annulé', 'Le match a été annulé.');
+              await cancelMatch(matchId, targetTeamId, 'AnnulÃƒÂ© par le capitaine');
+              Alert.alert('Match annulÃƒÂ©', 'Le match a ÃƒÂ©tÃƒÂ© annulÃƒÂ©.');
               navigation.goBack();
             } catch (_error) {
-              Alert.alert('Erreur', 'Échec annulation');
+              Alert.alert('Erreur', 'Ãƒâ€°chec annulation');
             } finally {
               setActionLoading(false);
             }
@@ -295,13 +432,54 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de début du match dépassée de 1 minute.",
+        "Vous pourrez saisir le score une fois l'heure de dÃƒÂ©but du match dÃƒÂ©passÃƒÂ©e de 1 minute.",
       );
       return;
     }
 
     navigateToEndMatchScreen(navigation, matchId);
   };
+
+  const handleOpenMatchStats = useCallback(() => {
+    if (!myTeamId) return;
+
+    navigation.navigate(RouteNames.MatchStatsEditor, {
+      matchId,
+      matchLabel: `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Equipe B'}`,
+      sourceType: 'league',
+      sport: myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport || 'football',
+      teamId: myTeamId,
+      teamName: myTeam?.name || null,
+      title: 'Stats du match',
+    });
+  }, [match?.team_a?.name, match?.team_a?.sport, match?.team_b?.name, match?.team_b?.sport, matchId, myTeam?.name, myTeam?.sport, myTeamId, navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setHasDismissedMatchStatsPrompt(false);
+      return () => {
+        setIsMatchStatsPromptVisible(false);
+      };
+    }, []),
+  );
+
+  useEffect(() => {
+    if (!canManageLeagueStats || normalizedStatus !== 'valid' || isLeagueStatsCompleted) {
+      setIsMatchStatsPromptVisible(false);
+      return;
+    }
+
+    if (leagueMatchStatsPayload && !isLeagueMatchStatsFetching && !hasDismissedMatchStatsPrompt) {
+      setIsMatchStatsPromptVisible(true);
+    }
+  }, [
+    canManageLeagueStats,
+    hasDismissedMatchStatsPrompt,
+    isLeagueMatchStatsFetching,
+    isLeagueStatsCompleted,
+    leagueMatchStatsPayload,
+    normalizedStatus,
+  ]);
 
   const screenContainerStyle = useMemo(() => ({
     paddingHorizontal: 0,
@@ -330,7 +508,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Détails du match</Text>
+          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>DÃƒÂ©tails du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
         <View style={styles.centered}>
@@ -353,7 +531,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Détails du match</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>DÃƒÂ©tails du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {match.chat ? (
               <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
@@ -369,6 +547,9 @@ function LeagueMatchDetails({ navigation, route }) {
             <RefreshControl
               onRefresh={() => {
                 setRefreshing(true);
+                if (myTeamId && normalizedStatus === 'valid') {
+                  refetchLeagueMatchStats();
+                }
                 loadMatch();
               }}
               refreshing={refreshing}
@@ -379,7 +560,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <View style={styles.heroSection}>
             <View style={styles.teamColumn}>
               <TeamShield initials={String(match.team_a?.initials || match.team_a?.name || '?')} isGold size={80} />
-              <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Équipe A'}</Text>
+              <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
             </View>
 
             <View style={styles.scoreColumn}>
@@ -416,13 +597,13 @@ function LeagueMatchDetails({ navigation, route }) {
                     <Text style={{ color: Colors.neutral200, fontSize: 30 }}>?</Text>
                   </View>
                   <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>
-                    Mystère
+                    MystÃƒÂ¨re
                   </Text>
                 </>
               ) : (
                 <>
                   <TeamShield initials={String(match.team_b?.initials || match.team_b?.name || '?')} isGold size={80} />
-                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Équipe B'}</Text>
+                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_b?.name || 'Equipe B'}</Text>
                 </>
               )}
             </View>
@@ -481,6 +662,104 @@ function LeagueMatchDetails({ navigation, route }) {
               </>
             ) : null}
           </LeagueCard>
+
+          {canViewLeagueStats ? (
+            <>
+              <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
+                Stats du match
+              </Text>
+              <LeagueCard>
+                <View style={{ gap: 12 }}>
+                  <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>SUIVI POST-MATCH</Text>
+                      <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                        {leagueMatchStatsPayload?.score?.available
+                          ? `${leagueMatchStatsPayload?.score?.scoreFor ?? '-'} - ${leagueMatchStatsPayload?.score?.scoreAgainst ?? '-'}`
+                          : 'Score en attente'}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: leagueStatsStatusMeta.backgroundColor,
+                        borderColor: leagueStatsStatusMeta.borderColor,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: leagueStatsStatusMeta.textColor }]}>
+                        {leagueStatsStatusMeta.label}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                    {leagueStatsSummaryText}
+                  </Text>
+
+                  {leagueStatsReport ? (
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderRadius: 16,
+                          flex: 1,
+                          padding: 12,
+                        }}
+                      >
+                        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Version</Text>
+                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                          {`v${Number(leagueStatsReport?.version || 1)}`}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderRadius: 16,
+                          flex: 2,
+                          padding: 12,
+                        }}
+                      >
+                        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Publication</Text>
+                        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                          {leagueStatsReport?.finalizedAt
+                            ? new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')
+                            : '-'}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {isLeagueStatsReviewRequired ? (
+                    <View
+                      style={{
+                        backgroundColor: `${Colors.warning500}14`,
+                        borderColor: `${Colors.warning500}45`,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        padding: 12,
+                      }}
+                    >
+                      <Text style={[Fonts.p3, { color: Colors.warning400 }]}>
+                        Le score officiel a change apres la premiere publication. Une mise a jour est requise.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Button
+                    disabled={leagueStatsAction.disabled || isLeagueMatchStatsFetching}
+                    onPress={handleOpenMatchStats}
+                    size="small"
+                    title={leagueStatsCardButtonTitle}
+                    variant="Secondary"
+                  />
+                </View>
+              </LeagueCard>
+            </>
+          ) : null}
 
           <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
             Compositions (
@@ -549,13 +828,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       marginBottom: 12,
                     }}
                     textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                    title={isScoreLockedByTime ? 'Score verrouillé (avant début + 1 min)' : 'Saisir le score final'}
+                    title={isScoreLockedByTime ? 'Score verrouillÃƒÂ© (avant dÃƒÂ©but + 1 min)' : 'Saisir le score final'}
                     variant="Primary"
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
-                    Le score sera disponible après l'heure de début du match (+1 min).
+                    Le score sera disponible aprÃƒÂ¨s l&apos;heure de dÃƒÂ©but du match (+1 min).
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (
@@ -623,6 +902,56 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
           </View>
         ) : null}
+
+        <BottomModal
+          close={() => {
+            setHasDismissedMatchStatsPrompt(true);
+            setIsMatchStatsPromptVisible(false);
+          }}
+          isVisible={isMatchStatsPromptVisible}
+          snapPoints={['40%']}
+        >
+          <View style={{ gap: 16, paddingBottom: 12 }}>
+            <View style={{ gap: 4 }}>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Stats de fin de match</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+                {isLeagueStatsReviewRequired
+                  ? 'Le score officiel a change. Verifie les lignes puis republie ce rapport.'
+                  : 'Le score est valide. Tu peux maintenant completer le temps de jeu et les stats cles de ton equipe.'}
+              </Text>
+            </View>
+
+            <LeagueCard>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Equipe concernee</Text>
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
+                {myTeam?.name || 'Mon equipe'}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 6 }]}>
+                {match?.team_a?.name || 'Equipe A'}
+                {' VS '}
+                {match?.team_b?.name || 'Equipe B'}
+              </Text>
+            </LeagueCard>
+
+            <Button
+              onPress={() => {
+                setHasDismissedMatchStatsPrompt(true);
+                setIsMatchStatsPromptVisible(false);
+                handleOpenMatchStats();
+              }}
+              title={leagueStatsAction.title}
+              variant="Primary"
+            />
+            <Button
+              onPress={() => {
+                setHasDismissedMatchStatsPrompt(true);
+                setIsMatchStatsPromptVisible(false);
+              }}
+              title="Plus tard"
+              variant="Secondary"
+            />
+          </View>
+        </BottomModal>
       </SafeAreaView>
     </ScreenContainer>
   );

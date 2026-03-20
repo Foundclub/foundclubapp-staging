@@ -3,10 +3,15 @@ import { MMKV } from 'react-native-mmkv';
 
 import client from '@/services/client';
 
-import { normalizeNotificationPayload } from '@/utils/notifications/notificationNavigation';
+import {
+  normalizeNotificationPayload,
+} from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import {
+  CHAT_REPLY_ACTION_CONTEXT,
+  CHAT_REPLY_ACTION_REPLY,
+  CHAT_REPLY_CATEGORY,
   EVENT_RSVP_ACTION_ABSENT,
   EVENT_RSVP_ACTION_CONTEXT,
   EVENT_RSVP_ACTION_PRESENT,
@@ -42,6 +47,13 @@ const getNotificationStorage = () => ({
 
 const notificationStorage = getNotificationStorage();
 
+const CHAT_REPLY_ACTIONABLE_TYPES = new Set([
+  NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE,
+  NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
+  NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE,
+  NOTIFICATION_TYPES.NEW_WHISPER,
+]);
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -64,6 +76,18 @@ export const isEventRsvpActionablePayload = (rawData) => {
 };
 
 /**
+ * @param {unknown} rawData
+ * @returns {boolean}
+ */
+export const isChatReplyActionablePayload = (rawData) => {
+  const data = normalizeNotificationPayload(rawData || {});
+  const type = toSafeString(data.type).trim();
+  const hasChatId = Boolean(data.chatId || data.conversationId);
+  const hasContext = data.actionContext === CHAT_REPLY_ACTION_CONTEXT;
+  return hasChatId && CHAT_REPLY_ACTIONABLE_TYPES.has(type) && (hasContext || !data.actionContext);
+};
+
+/**
  * @param {string | undefined} pressActionId
  * @returns {'present' | 'absent' | null}
  */
@@ -77,15 +101,36 @@ const resolveAnswerFromAction = (pressActionId) => {
  * @param {'present' | 'absent'} answer
  * @returns {{ title: string, body: string }}
  */
-const getFeedbackCopy = (answer) => (answer === 'present'
+const getRsvpFeedbackCopy = (answer) => (answer === 'present'
   ? {
-    body: 'Votre presence est enregistrée.',
+    body: 'Votre presence est enregistree.',
     title: 'Presence confirmee',
   }
   : {
-    body: 'Votre absence est enregistrée.',
+    body: 'Votre absence est enregistree.',
     title: 'Absence confirmee',
   });
+
+const getChatReplyFeedbackCopy = () => ({
+  body: 'Votre reponse a ete envoyee.',
+  title: 'Reponse envoyee',
+});
+
+const getChatReplyFailureCopy = () => ({
+  body: "Ouvrez l'application pour finaliser votre reponse.",
+  title: 'Action non finalisee',
+});
+
+const getChatReplyAndroidActions = () => ([
+  {
+    input: {
+      allowFreeFormInput: true,
+      placeholder: 'Votre reponse',
+    },
+    pressAction: { id: CHAT_REPLY_ACTION_REPLY },
+    title: 'Repondre',
+  },
+]);
 
 /**
  * @param {string | number} eventId
@@ -103,34 +148,51 @@ const sendRsvpAnswer = async (eventId, answer, notificationId) => {
 };
 
 /**
+ * @param {string | number} chatId
+ * @param {string} message
+ * @returns {Promise<any>}
+ */
+const sendChatReplyMessage = async (chatId, message) => {
+  const response = await client.post('/chat-messages', {
+    data: {
+      chat: chatId,
+      message,
+    },
+  });
+  return response.data;
+};
+
+/**
+ * @param {Record<string, any>} notificationData
+ * @returns {string}
+ */
+const resolveChatIdFromNotification = (notificationData) => {
+  const rawChatId = notificationData?.chatId || notificationData?.conversationId || '';
+  return toSafeString(rawChatId).trim();
+};
+
+/**
  * @param {{
  *  title?: string,
  *  body?: string,
  *  data?: Record<string, any>,
  *  channelId?: string,
- *  isActionable?: boolean,
+ *  androidActions?: any[],
+ *  iosCategoryId?: string,
  * }} payload
  * @returns {Promise<void>}
  */
 const displayLocalNotification = async ({
+  androidActions,
   body,
   channelId = NOTIFICATION_DEFAULT_CHANNEL_ID,
   data,
-  isActionable = false,
+  iosCategoryId,
   title,
 }) => {
   const androidConfig = /** @type {any} */ ({
-    actions: isActionable
-      ? [
-        {
-          pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
-          title: 'Present',
-        },
-        {
-          pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
-          title: 'Absent',
-        },
-      ]
+    actions: Array.isArray(androidActions) && androidActions.length > 0
+      ? androidActions
       : undefined,
     channelId,
     importance: channelId === NOTIFICATION_SILENT_CHANNEL_ID ? 2 : 4,
@@ -147,10 +209,7 @@ const displayLocalNotification = async ({
     body: toSafeString(body),
     data,
     ios: {
-      categoryId:
-        isActionable
-          ? EVENT_RSVP_CATEGORY
-          : undefined,
+      categoryId: iosCategoryId || undefined,
       foregroundPresentationOptions: {
         alert: true,
         badge: false,
@@ -195,6 +254,19 @@ export const ensureNotificationActionSetup = async () => {
       ],
       id: EVENT_RSVP_CATEGORY,
     },
+    {
+      actions: [
+        {
+          id: CHAT_REPLY_ACTION_REPLY,
+          input: {
+            buttonText: 'Envoyer',
+            placeholderText: 'Votre reponse',
+          },
+          title: 'Repondre',
+        },
+      ],
+      id: CHAT_REPLY_CATEGORY,
+    },
   ]);
 };
 
@@ -210,10 +282,41 @@ export const displayEventRsvpActionableNotification = async ({
   const normalizedData = normalizeNotificationPayload(data || {});
   await ensureNotificationActionSetup();
   await displayLocalNotification({
+    androidActions: [
+      {
+        pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
+        title: 'Present',
+      },
+      {
+        pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
+        title: 'Absent',
+      },
+    ],
     body,
     channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
     data: normalizedData,
-    isActionable: true,
+    iosCategoryId: EVENT_RSVP_CATEGORY,
+    title,
+  });
+};
+
+/**
+ * @param {{ title?: string, body?: string, data?: Record<string, any> }} payload
+ * @returns {Promise<void>}
+ */
+export const displayChatReplyActionableNotification = async ({
+  body,
+  data,
+  title,
+}) => {
+  const normalizedData = normalizeNotificationPayload(data || {});
+  await ensureNotificationActionSetup();
+  await displayLocalNotification({
+    androidActions: getChatReplyAndroidActions(),
+    body,
+    channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
+    data: normalizedData,
+    iosCategoryId: CHAT_REPLY_CATEGORY,
     title,
   });
 };
@@ -248,7 +351,7 @@ export const handleEventRsvpActionPress = async ({
   try {
     await sendRsvpAnswer(eventId, answer, notificationId);
 
-    const feedback = getFeedbackCopy(answer);
+    const feedback = getRsvpFeedbackCopy(answer);
     await displayLocalNotification({
       body: feedback.body,
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
@@ -261,10 +364,64 @@ export const handleEventRsvpActionPress = async ({
       `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} eventId=${normalizedData?.eventId || 'unknown'}`,
     );
     await displayLocalNotification({
-      body: "Ouvrez l'application pour finaliser votre réponse.",
+      body: "Ouvrez l'application pour finaliser votre reponse.",
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
       data: normalizedData,
       title: 'Action non finalisee',
+    });
+    return { handled: true, success: false };
+  }
+};
+
+/**
+ * @param {{ notificationData?: Record<string, any>, pressActionId?: string, inputText?: string }} payload
+ * @returns {Promise<{ handled: boolean, success?: boolean }>}
+ */
+export const handleChatReplyActionPress = async ({
+  inputText,
+  notificationData,
+  pressActionId,
+}) => {
+  const normalizedData = normalizeNotificationPayload(notificationData || {});
+  if (!isChatReplyActionablePayload(normalizedData)) {
+    return { handled: false };
+  }
+
+  if (pressActionId !== CHAT_REPLY_ACTION_REPLY) {
+    return { handled: false };
+  }
+
+  const replyText = toSafeString(inputText).trim();
+  if (!replyText) {
+    return { handled: false };
+  }
+
+  const chatId = resolveChatIdFromNotification(normalizedData);
+  if (!chatId) {
+    return { handled: false };
+  }
+
+  try {
+    await sendChatReplyMessage(chatId, replyText);
+
+    const feedback = getChatReplyFeedbackCopy();
+    await displayLocalNotification({
+      body: feedback.body,
+      channelId: NOTIFICATION_SILENT_CHANNEL_ID,
+      title: feedback.title,
+    });
+    return { handled: true, success: true };
+  } catch (error) {
+    console.warn('[CHAT_REPLY_ACTION] Failed to send quick reply:', error);
+    console.warn(
+      `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} chatId=${chatId || 'unknown'}`,
+    );
+    const feedback = getChatReplyFailureCopy();
+    await displayLocalNotification({
+      body: feedback.body,
+      channelId: NOTIFICATION_SILENT_CHANNEL_ID,
+      data: normalizedData,
+      title: feedback.title,
     });
     return { handled: true, success: false };
   }
@@ -275,9 +432,10 @@ export const handleEventRsvpActionPress = async ({
  */
 export const storePendingOpenNotification = (data) => {
   try {
+    const normalizedData = normalizeNotificationPayload(data || {});
     notificationStorage.set(
       NOTIFICATION_PENDING_OPEN_KEY,
-      JSON.stringify(data || {}),
+      JSON.stringify(normalizedData),
     );
   } catch (error) {
     console.warn('[NotificationAction] Failed to persist pending notification:', error);

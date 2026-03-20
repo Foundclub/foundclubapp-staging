@@ -1,5 +1,83 @@
 import client from '@/services/client';
 
+const normalizeRecruitmentAd = (ad) => {
+  if (!ad || typeof ad !== 'object') {
+    return ad;
+  }
+
+  let candidates = [];
+  if (Array.isArray(ad.candidates)) {
+    candidates = ad.candidates;
+  } else if (Array.isArray(ad.applications)) {
+    candidates = ad.applications;
+  }
+
+  return {
+    ...ad,
+    applications: candidates,
+    candidates,
+    candidatesCount: candidates.length,
+  };
+};
+
+const normalizeRecruitmentCollection = (items) => (
+  Array.isArray(items) ? items.map((item) => normalizeRecruitmentAd(item)) : []
+);
+
+const normalizeUserReference = (userRef) => {
+  if (!userRef) {
+    return { documentId: undefined, id: undefined };
+  }
+
+  if (typeof userRef === 'object') {
+    const documentId = typeof userRef.documentId === 'string' ? userRef.documentId.trim() : undefined;
+    const numericId = Number(userRef.id);
+
+    return {
+      documentId: documentId || undefined,
+      id: Number.isFinite(numericId) ? numericId : undefined,
+    };
+  }
+
+  const normalizedValue = String(userRef).trim();
+  if (!normalizedValue) {
+    return { documentId: undefined, id: undefined };
+  }
+
+  if (/^\d+$/.test(normalizedValue)) {
+    return {
+      documentId: undefined,
+      id: Number.parseInt(normalizedValue, 10),
+    };
+  }
+
+  return {
+    documentId: normalizedValue,
+    id: undefined,
+  };
+};
+
+const buildCandidateFilter = (userRef) => {
+  const { documentId, id } = normalizeUserReference(userRef);
+  if (documentId) {
+    return {
+      documentId: {
+        $eq: documentId,
+      },
+    };
+  }
+
+  if (Number.isFinite(id)) {
+    return {
+      id: {
+        $eq: id,
+      },
+    };
+  }
+
+  return undefined;
+};
+
 /**
  * Get recruitment ads matching player profile
  * @param {object} filters - Filters for matching
@@ -54,8 +132,10 @@ export const getRecruitmentAds = async (filters = {}) => {
     // For now, we fetch all and can filter client-side if needed
 
     const response = await client.get('/recruitment-ads', { params });
-    // Return full response to access meta (pagination)
-    return response.data;
+    return {
+      ...response.data,
+      data: normalizeRecruitmentCollection(response.data?.data),
+    };
   } catch (error) {
     console.error('[recruitmentService] Error fetching ads:', error);
     throw error;
@@ -86,7 +166,7 @@ export const getRecruitmentAd = async (adId) => {
     };
 
     const response = await client.get(`/recruitment-ads/${adId}`, { params });
-    return response.data?.data;
+    return normalizeRecruitmentAd(response.data?.data);
   } catch (error) {
     console.error('[recruitmentService] Error fetching single ad:', error);
     throw error;
@@ -121,7 +201,7 @@ export const getMyRecruitmentAds = async () => {
         sort: ['createdAt:desc'],
       },
     });
-    return response.data?.data || [];
+    return normalizeRecruitmentCollection(response.data?.data);
   } catch (error) {
     console.error('[recruitmentService] Error fetching my ads:', error);
     throw error;
@@ -219,20 +299,17 @@ export const deleteRecruitmentAd = async (adId) => {
 };
 /**
  * Get applications for the current user (ads they applied to)
- * @param {string} userId - Current user ID
+ * @param {string | number | { id?: string | number, documentId?: string }} userRef - Current user reference
  * @returns {Promise<Array>} Array of ads
  */
-export const getMyApplications = async (userId) => {
+export const getMyApplications = async (userRef) => {
   try {
-    if (!userId) return [];
+    const candidateFilter = buildCandidateFilter(userRef);
+    if (!candidateFilter) return [];
 
     const params = {
       filters: {
-        candidates: {
-          id: {
-            $eq: userId,
-          },
-        },
+        candidates: candidateFilter,
       },
       populate: [
         'team',
@@ -248,7 +325,7 @@ export const getMyApplications = async (userId) => {
     };
 
     const response = await client.get('/recruitment-ads', { params });
-    return response.data?.data || [];
+    return normalizeRecruitmentCollection(response.data?.data);
   } catch (error) {
     console.error('[recruitmentService] Error fetching applications:', error);
     throw error;

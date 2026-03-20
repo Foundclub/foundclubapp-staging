@@ -47,35 +47,14 @@ import {
   saveTeamDefaultComposition,
 } from '@/services/team/teamService';
 
+import {
+  getTacticalFieldAspectRatio,
+  getTacticalFieldImage,
+} from '@/utils/tacticalField';
+
 import DraggableToken from './DraggableToken';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Field aspect ratios per sport
-/** @type {Record<string, number>} */
-const FIELD_ASPECT_RATIOS = {
-  basket: 1.7,
-  basketball: 1.7,
-  football: 1.5,
-  generic: 1.5,
-  handball: 1.5,
-  rugby: 1.4,
-  volley: 1.8,
-  volleyball: 1.8,
-};
-
-// Field images
-/** @type {Record<string, any>} */
-const FIELD_IMAGES = {
-  basket: require('@/assets/fields/field_basket.png'),
-  basketball: require('@/assets/fields/field_basket.png'),
-  football: require('@/assets/fields/field_generic.png'),
-  generic: require('@/assets/fields/field_generic.png'),
-  handball: require('@/assets/fields/field_handball.png'),
-  rugby: require('@/assets/fields/field_rugby.png'),
-  volley: require('@/assets/fields/field_volley.png'),
-  volleyball: require('@/assets/fields/field_volley.png'),
-};
 
 // Spring config
 const SPRING_CONFIG = {
@@ -284,9 +263,8 @@ function TacticalBoard() {
   const panelDragStartHeight = useSharedValue(PANEL_COLLAPSED_HEIGHT);
 
   // Sport specific
-  const sportKey = (sport?.toLowerCase?.() || 'football');
-  const aspectRatio = FIELD_ASPECT_RATIOS[sportKey] || 1.5;
-  const fieldImage = FIELD_IMAGES[sportKey] || FIELD_IMAGES.generic;
+  const aspectRatio = getTacticalFieldAspectRatio(sport);
+  const fieldImage = getTacticalFieldImage(sport);
 
   // Calculate field dimensions - maximize space
   const fieldWidth = SCREEN_WIDTH - 28;

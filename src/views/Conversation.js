@@ -218,6 +218,16 @@ const toApiBaseUrl = (rawApiUrl) => {
 const isLoopbackHost = (host) => ['10.0.2.2', '127.0.0.1', 'localhost']
   .includes(String(host || '').trim().toLowerCase());
 
+const formatDiagnosticMeta = (meta) => {
+  if (!meta || typeof meta !== 'object') return '';
+  try {
+    const serialized = JSON.stringify(meta);
+    return serialized && serialized !== '{}' ? ` ${serialized}` : '';
+  } catch (_error) {
+    return '';
+  }
+};
+
 /** @type {any | null | undefined} */
 let cachedDocumentPickerModule;
 
@@ -329,7 +339,7 @@ function Conversation({ navigation, route }) {
 
   const logVoiceDiagnostic = useCallback((stage, meta = undefined) => {
     if (!isVoiceDiagnosticsEnabled) return;
-    conversationLogger.warn(`[voice-diag] ${stage}`, meta);
+    conversationLogger.warn(`[voice-diag] ${stage}${formatDiagnosticMeta(meta)}`);
   }, []);
 
   const describeAsset = useCallback((asset) => {

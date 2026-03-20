@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   getFeaturedReservations,
   getReservations,
@@ -34,7 +36,7 @@ export const useGetReservations = (filters = {}, options = {}) => useInfiniteQue
   },
   initialPageParam: 1,
   queryFn: ({ pageParam = 1 }) => getReservations({ ...filters, page: pageParam }),
-  queryKey: ['reservations', filters],
+  queryKey: buildNormalizedQueryKey('reservations', filters),
   ...options,
 });
 

@@ -19,14 +19,18 @@ import useAuth from '@/domains/auth/useAuth';
 import { addDeviceToken } from '@/services/auth/authService';
 import {
   consumePendingOpenNotification,
+  displayChatReplyActionableNotification,
   displayEventRsvpActionableNotification,
   ensureNotificationActionSetup,
+  handleChatReplyActionPress,
   handleEventRsvpActionPress,
+  isChatReplyActionablePayload,
   isEventRsvpActionablePayload,
 } from '@/services/notificationActions/rsvpActions';
 
 import { createLogger } from '@/utils/logger/logger';
 import {
+  getNotificationOpenKey,
   normalizeNotificationPayload,
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
@@ -61,6 +65,20 @@ const notificationStorage = {
   set: (key, value) => getNotificationStorage().set(key, value),
   /** @param {string} key */
   contains: (key) => getNotificationStorage().contains(key),
+};
+
+/**
+ * @param {import('react').MutableRefObject<Set<string>>} ref
+ * @param {string} key
+ */
+const rememberNotificationKey = (ref, key) => {
+  if (!key) return;
+  ref.current.add(key);
+  if (ref.current.size <= 100) return;
+  const oldestKey = ref.current.values().next().value;
+  if (oldestKey) {
+    ref.current.delete(oldestKey);
+  }
 };
 
 /**
@@ -173,6 +191,15 @@ const onDisplayNotification = async ({ body, data, title }) => {
       return;
     }
 
+    if (isChatReplyActionablePayload(normalizedData)) {
+      await displayChatReplyActionableNotification({
+        body,
+        data: normalizedData,
+        title,
+      });
+      return;
+    }
+
     if (title || body) {
       // Display a notification
       await notifee.displayNotification({
@@ -254,6 +281,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     return __DEV__;
   })());
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const queuedNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
 
   useEffect(() => {
     ensureNotificationActionSetup().catch((error) => {
@@ -318,10 +347,24 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   // methods
   const handleNavigateOnOpen = useCallback((/** @type {any} */ remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
+    const notificationOpenKey = getNotificationOpenKey(notificationData);
     notificationsLogger.debug('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
+    if (handledNotificationKeysRef.current.has(notificationOpenKey)) {
+      notificationsLogger.debug(`[NOTIF_OPENED] skip=duplicate_open key=${notificationOpenKey}`);
+      return true;
+    }
+
+    const markHandled = () => {
+      rememberNotificationKey(handledNotificationKeysRef, notificationOpenKey);
+      queuedNotificationKeysRef.current.delete(notificationOpenKey);
+    };
+
     if (!notificationData?.type) {
       notificationsLogger.warn('[useNotifications] No type in notification data, cannot navigate');
       const fallback = navigate(RouteNames.NotificationList);
+      if (fallback !== false) {
+        markHandled();
+      }
       return fallback !== false;
     }
 
@@ -343,10 +386,16 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       notificationsLogger.warn('[useNotifications] Unknown notification type:', notificationData.type);
       const fallback = navigate(RouteNames.NotificationList);
       notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${RouteNames.NotificationList} fallback=invalid_destination`);
+      if (fallback !== false) {
+        markHandled();
+      }
       return fallback !== false;
     }
 
     const handled = tryNavigate(destination.route, destination.params || {});
+    if (handled) {
+      markHandled();
+    }
     notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
     return handled;
   }, [navigate, maybePromptAddToCalendar]);
@@ -449,6 +498,18 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
     return notifee.onForegroundEvent(async ({ detail, type }) => {
       if (type === EventType.ACTION_PRESS) {
+        const chatReplyResult = await handleChatReplyActionPress({
+          inputText: detail.input,
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (chatReplyResult?.handled) {
+          if (detail.notification?.id) {
+            await notifee.cancelNotification(detail.notification.id);
+          }
+          return;
+        }
+
         const result = await handleEventRsvpActionPress({
           notificationData: detail.notification?.data || {},
           pressActionId: detail?.pressAction?.id,
@@ -540,10 +601,21 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       /** @type {Record<string, any> | undefined | null} */ payload,
       /** @type {string} */ source,
     ) => {
-      if (payload?.type) {
-        notificationsLogger.debug(`[FCM] Storing pending notification from ${source}`);
+      const normalizedPayload = normalizeNotificationPayload(payload || {});
+      if (normalizedPayload?.type) {
+        const notificationOpenKey = getNotificationOpenKey(normalizedPayload);
+        if (
+          queuedNotificationKeysRef.current.has(notificationOpenKey)
+          || handledNotificationKeysRef.current.has(notificationOpenKey)
+        ) {
+          notificationsLogger.debug(`[FCM] Skipping duplicate pending notification from ${source} key=${notificationOpenKey}`);
+          return;
+        }
+
+        rememberNotificationKey(queuedNotificationKeysRef, notificationOpenKey);
+        notificationsLogger.debug(`[FCM] Storing pending notification from ${source} key=${notificationOpenKey}`);
         dispatch({
-          payload,
+          payload: normalizedPayload,
           type: 'SET_PENDING_NOTIFICATION',
         });
       }

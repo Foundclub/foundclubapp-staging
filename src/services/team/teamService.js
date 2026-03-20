@@ -431,7 +431,11 @@ export const removePlayerFromTeam = async (teamId, playerId) => {
  * @returns {Promise<object>}
  */
 export const previewExternalCompetition = async (teamId, url) => {
-  const response = await client.post(`/teams/${teamId}/external-competition/preview`, { url });
+  const response = await client.post(
+    `/teams/${teamId}/external-competition/preview`,
+    { url },
+    { timeout: 45000 },
+  );
   return response.data;
 };
 
@@ -447,7 +451,11 @@ export const connectExternalCompetition = async (teamId, url, selectedTeam) => {
     url,
     ...(selectedTeam ? { selectedTeam } : {}),
   };
-  const response = await client.post(`/teams/${teamId}/external-competition/connect`, payload);
+  const response = await client.post(
+    `/teams/${teamId}/external-competition/connect`,
+    payload,
+    { timeout: 45000 },
+  );
   return response.data;
 };
 
@@ -457,7 +465,11 @@ export const connectExternalCompetition = async (teamId, url, selectedTeam) => {
  * @returns {Promise<object>}
  */
 export const refreshExternalCompetition = async (teamId) => {
-  const response = await client.post(`/teams/${teamId}/external-competition/refresh`);
+  const response = await client.post(
+    `/teams/${teamId}/external-competition/refresh`,
+    null,
+    { timeout: 45000 },
+  );
   return response.data;
 };
 

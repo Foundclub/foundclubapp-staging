@@ -68,6 +68,7 @@
  *   created?: number,
  *   duplicateExistingDeactivated?: number,
  *   duplicateSourceSkipped?: number,
+ *   scoreUpdated?: number,
  *   skippedNoDate?: number,
  *   skippedNoLocation?: number,
  *   totalCandidates?: number,
@@ -81,6 +82,7 @@
  * @property {'fff' | 'ffbb'} [provider]
  * @property {{ externalTeamId?: string | null, externalTeamName?: string | null } | null} [selectedTeam]
  * @property {ExternalSyncReportItem[]} [skippedMatches]
+ * @property {ExternalSyncReportItem[]} [scoreUpdatedEvents]
  * @property {number} [standingCount]
  * @property {string} [syncedAt]
  * @property {ExternalSyncReportItem[]} [updatedEvents]

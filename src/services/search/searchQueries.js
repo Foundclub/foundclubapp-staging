@@ -1,5 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   searchClubs,
   searchEvents,
@@ -22,7 +24,7 @@ export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchEvents({ ...params, page: pageParam }, { signal }),
-  queryKey: ['search', 'events', params],
+  queryKey: buildNormalizedQueryKey(['search', 'events'], params),
   staleTime: 30_000,
   ...options,
 });
@@ -35,7 +37,7 @@ export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchClubs({ ...params, page: pageParam }, { signal }),
-  queryKey: ['search', 'clubs', params],
+  queryKey: buildNormalizedQueryKey(['search', 'clubs'], params),
   staleTime: 30_000,
   ...options,
 });
@@ -48,7 +50,7 @@ export const useSearchReservations = (params = {}, options = {}) => useInfiniteQ
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchReservations({ ...params, page: pageParam }, { signal }),
-  queryKey: ['search', 'reservations', params],
+  queryKey: buildNormalizedQueryKey(['search', 'reservations'], params),
   staleTime: 30_000,
   ...options,
 });
@@ -61,7 +63,7 @@ export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQu
   enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   queryFn: ({ pageParam = 1, signal }) => searchRecruitment({ ...params, page: pageParam }, { signal }),
-  queryKey: ['search', 'recruitment', params],
+  queryKey: buildNormalizedQueryKey(['search', 'recruitment'], params),
   staleTime: 30_000,
   ...options,
 });

@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -25,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -43,6 +45,7 @@ import {
 } from '@/services/event/eventQueries';
 import { exportEventParticipants } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
+import { useGetEventMatchStats } from '@/services/matchStats/matchStatsQueries';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 
@@ -148,6 +151,9 @@ function EventDetails({ navigation, route }) {
   const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
+  const [isMatchActionsOpen, setIsMatchActionsOpen] = useState(true);
+  const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
+  const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'mark' | 'edit'} */ ('mark'));
@@ -261,6 +267,21 @@ function EventDetails({ navigation, route }) {
     return resolveEventStartAt(event);
   }, [attendancePayload?.data?.eventStartAt, event]);
 
+  const eventEndedAt = useMemo(() => {
+    if (event?.endDate) {
+      const parsed = new Date(event.endDate);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+
+    if (!eventStartAt) return null;
+    return new Date(eventStartAt.getTime() + (120 * 60 * 1000));
+  }, [event?.endDate, eventStartAt]);
+
+  const isMatchFinished = useMemo(() => {
+    if (!eventEndedAt) return false;
+    return eventEndedAt.getTime() <= Date.now();
+  }, [eventEndedAt]);
+
   const serverNowMs = useMemo(() => {
     const backendNowRaw = attendancePayload?.data?.serverNow;
     const backendNowMs = backendNowRaw ? new Date(backendNowRaw).getTime() : Date.now();
@@ -345,7 +366,7 @@ function EventDetails({ navigation, route }) {
         const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
         return {
           isLate: false,
-          message: `Arrivée enregistrée: ${earlyMinutes} min en avance.`,
+          message: `ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e: ${earlyMinutes} min en avance.`,
         };
       }
 
@@ -357,13 +378,13 @@ function EventDetails({ navigation, route }) {
       if (lateMinutes > 0) {
         return {
           isLate: true,
-          message: `Arrivée enregistrée: +${lateMinutes} min de retard.`,
+          message: `ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e: +${lateMinutes} min de retard.`,
         };
       }
 
       return {
         isLate: false,
-        message: 'Arrivée enregistrée à l\'heure.',
+        message: 'ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  l\'heure.',
       };
     }
 
@@ -372,7 +393,7 @@ function EventDetails({ navigation, route }) {
       const minutesLeft = Math.max(1, Math.ceil(diffMs / 60000));
       return {
         isLate: false,
-        message: `Il vous reste ${minutesLeft} min pour ne pas être en retard.`,
+        message: `Il vous reste ${minutesLeft} min pour ne pas ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªtre en retard.`,
       };
     }
 
@@ -447,13 +468,13 @@ function EventDetails({ navigation, route }) {
         isHome: true,
         key: event.team.documentId || 'home-team',
         players: getEligibleTeamPlayers(event.team),
-        teamName: event.team.name || 'Équipe organisatrice',
+        teamName: event.team.name || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°quipe organisatrice',
       } : null,
       ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
         players: getEligibleTeamPlayers(team),
-        teamName: team?.name || 'Équipe invitee',
+        teamName: team?.name || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°quipe invitee',
       }))),
     ].filter(Boolean);
 
@@ -525,7 +546,7 @@ function EventDetails({ navigation, route }) {
         }
 
         const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || 'Équipe retirée';
+        const teamName = resolvedTeamName || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°quipe retirÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e';
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -839,7 +860,7 @@ function EventDetails({ navigation, route }) {
 
     Alert.alert(
       t('common.error'),
-      'Impossible de retrouver votre réponse pour cet événement. Rechargez la page et réessayez.',
+      'Impossible de retrouver votre rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©ponse pour cet ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nement. Rechargez la page et rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©essayez.',
     );
   }, [
     activeEventParticipations,
@@ -857,7 +878,6 @@ function EventDetails({ navigation, route }) {
       if (Platform.OS === 'ios') {
         setTimeout(() => Share.share({ title: 'Participants', url: path }), 500);
       } else {
-        const ReactNativeBlobUtil = require('react-native-blob-util').default;
         ReactNativeBlobUtil.android
           .actionViewIntent(path, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
           .catch(() => Alert.alert(t('common.success'), t('eventDetails.exportSuccess')));
@@ -873,7 +893,7 @@ function EventDetails({ navigation, route }) {
     if (!sentMessageId) {
       Alert.alert(
         t('common.error'),
-        t('event.shareInChatError', 'Impossible de partager l\'événement pour le moment.'),
+        t('event.shareInChatError', 'Impossible de partager l\'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nement pour le moment.'),
       );
       return;
     }
@@ -881,10 +901,10 @@ function EventDetails({ navigation, route }) {
     setIsShareModalVisible(false);
     setTimeout(() => {
       Alert.alert(
-        t('event.shareInChatSuccessTitle', 'Événement partage'),
+        t('event.shareInChatSuccessTitle', 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nement partage'),
         t(
           'event.shareInChatSuccessDescription',
-          'Votre événement a bien été partage. Appuyez sur OK pour ouvrir la conversation.',
+          'Votre ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nement a bien ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© partage. Appuyez sur OK pour ouvrir la conversation.',
         ),
         [
           {
@@ -952,13 +972,13 @@ function EventDetails({ navigation, route }) {
   const getCompositionSourceLabel = useCallback((source) => {
     switch (source) {
       case 'default_composition':
-        return "Favori d'équipe";
+        return "Favori d'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©quipe";
       case 'draft':
         return 'Brouillon';
       case 'last_match':
         return 'Dernier match';
       case 'published':
-        return 'Composition publiée';
+        return 'Composition publiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e';
       default:
         return 'Nouvelle composition';
     }
@@ -1030,6 +1050,18 @@ function EventDetails({ navigation, route }) {
   );
 
   const {
+    data: matchStatsPayload,
+    isFetching: isMatchStatsFetching,
+    refetch: refetchMatchStats,
+  } = useGetEventMatchStats(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember)),
+    },
+  );
+
+  const {
     data: convocationPayload,
     refetch: refetchConvocation,
   } = useGetEventConvocation(
@@ -1039,6 +1071,157 @@ function EventDetails({ navigation, route }) {
       enabled: Boolean(eventId && isMatchEvent && compositionTeamId && isTeamMember),
     },
   );
+
+  const matchStatsReport = matchStatsPayload?.report || null;
+  const isMatchStatsFinal = matchStatsReport?.status === 'final';
+  const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
+  const isMatchStatsCompleted = isMatchStatsFinal && !isMatchStatsReviewRequired;
+  const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
+  const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage || isTeamMember);
+  const matchStatsScoreLabel = useMemo(() => {
+    if (!matchStatsPayload?.score?.available) {
+      return 'Score a completer';
+    }
+
+    return `${matchStatsPayload?.score?.scoreFor ?? '-'} - ${matchStatsPayload?.score?.scoreAgainst ?? '-'}`;
+  }, [
+    matchStatsPayload?.score?.available,
+    matchStatsPayload?.score?.scoreAgainst,
+    matchStatsPayload?.score?.scoreFor,
+  ]);
+  const matchHeaderScoreSummary = useMemo(() => {
+    if (!isMatchEvent) return null;
+
+    const scoreState = matchStatsPayload?.score || null;
+    const organizerTeamId = event?.team?.documentId || null;
+    const currentTeamId = compositionTeamId || organizerTeamId || null;
+    const storedMatchResult = event?.matchResult || null;
+    const shouldInvertStoredScore = Boolean(
+      storedMatchResult
+      && organizerTeamId
+      && currentTeamId
+      && organizerTeamId !== currentTeamId,
+    );
+
+    let fallbackScoreFor = null;
+    let fallbackScoreAgainst = null;
+    if (storedMatchResult) {
+      fallbackScoreFor = shouldInvertStoredScore
+        ? storedMatchResult?.scoreAgainst
+        : storedMatchResult?.scoreFor;
+      fallbackScoreAgainst = shouldInvertStoredScore
+        ? storedMatchResult?.scoreFor
+        : storedMatchResult?.scoreAgainst;
+    }
+    const fallbackAvailable = fallbackScoreFor !== null
+      && fallbackScoreFor !== undefined
+      && fallbackScoreAgainst !== null
+      && fallbackScoreAgainst !== undefined;
+    const fallbackSource = storedMatchResult?.source || null;
+
+    const available = Boolean(scoreState?.available || fallbackAvailable);
+    const resolvedScoreFor = scoreState?.available ? scoreState?.scoreFor : fallbackScoreFor;
+    const resolvedScoreAgainst = scoreState?.available ? scoreState?.scoreAgainst : fallbackScoreAgainst;
+    const resolvedSource = scoreState?.available ? scoreState?.source : fallbackSource;
+    const waitingOfficial = Boolean(
+      scoreState?.waitingOfficial || (!scoreState?.available && event?.externalAutoSource),
+    );
+
+    if (!available && !isMatchFinished) {
+      return null;
+    }
+
+    if (!available) {
+      return {
+        badgeLabel: waitingOfficial ? 'Score officiel' : 'Score du match',
+        helperText: waitingOfficial ? 'Score en attente de synchronisation' : 'Score en attente',
+        value: 'Score en attente',
+      };
+    }
+
+    let badgeLabel = 'Score du match';
+    if (resolvedSource === 'external_sync') {
+      badgeLabel = 'Score officiel';
+    } else if (resolvedSource === 'manual') {
+      badgeLabel = 'Score manuel';
+    }
+
+    return {
+      badgeLabel,
+      helperText: waitingOfficial ? 'Synchronise automatiquement depuis la source officielle' : null,
+      value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
+    };
+  }, [
+    compositionTeamId,
+    event?.externalAutoSource,
+    event?.matchResult,
+    event?.team?.documentId,
+    isMatchEvent,
+    isMatchFinished,
+    matchStatsPayload?.score,
+  ]);
+  const matchStatsSummaryText = useMemo(() => {
+    if (isMatchStatsReviewRequired) {
+      return 'Le score officiel a change. Verification requise avant nouvelle publication.';
+    }
+    if (isMatchStatsFinal) {
+      return 'Rapport finalise pour cette equipe.';
+    }
+    if (matchStatsPayload?.score?.waitingOfficial) {
+      return 'En attente du score officiel.';
+    }
+    return 'Temps de jeu et statistiques cles a completer.';
+  }, [isMatchStatsFinal, isMatchStatsReviewRequired, matchStatsPayload?.score?.waitingOfficial]);
+  const matchStatsStatusMeta = useMemo(() => {
+    if (isMatchStatsReviewRequired) {
+      return {
+        backgroundColor: `${Colors.warning500}20`,
+        borderColor: `${Colors.warning500}45`,
+        label: 'Verification requise',
+        textColor: Colors.warning500,
+      };
+    }
+    if (isMatchStatsFinal) {
+      return {
+        backgroundColor: `${Colors.success500}20`,
+        borderColor: `${Colors.success500}45`,
+        label: 'Stats publiees',
+        textColor: Colors.success500,
+      };
+    }
+    if (matchStatsPayload?.score?.waitingOfficial) {
+      return {
+        backgroundColor: `${Colors.gold500}20`,
+        borderColor: `${Colors.gold500}45`,
+        label: 'Score officiel en attente',
+        textColor: Colors.gold500,
+      };
+    }
+    if (matchStatsPayload?.score?.available) {
+      return {
+        backgroundColor: `${Colors.primary500}20`,
+        borderColor: `${Colors.primary500}45`,
+        label: 'A finaliser',
+        textColor: Colors.primary500,
+      };
+    }
+    return {
+      backgroundColor: `${Colors.neutral00}14`,
+      borderColor: `${Colors.neutral00}24`,
+      label: 'Score a completer',
+      textColor: Colors.neutral00,
+    };
+  }, [
+    Colors.gold500,
+    Colors.neutral00,
+    Colors.primary500,
+    Colors.success500,
+    Colors.warning500,
+    isMatchStatsFinal,
+    isMatchStatsReviewRequired,
+    matchStatsPayload?.score?.available,
+    matchStatsPayload?.score?.waitingOfficial,
+  ]);
 
   const convocationPublished = convocationPayload?.published || null;
   const convocationSnapshotPlayers = useMemo(
@@ -1062,9 +1245,9 @@ function EventDetails({ navigation, route }) {
     if (staffCompositionPayload?.draft) {
       return {
         subtitle: staffCompositionPayload?.draft?.updatedAt
-          ? `Brouillon enregistré le ${new Date(staffCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}`
-          : 'Brouillon enregistré',
-        title: 'Reprendre le brouillon',
+          ? `Brouillon enregistre le ${new Date(staffCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}`
+          : 'Brouillon enregistre',
+        title: "Composition d'equipe",
       };
     }
 
@@ -1072,25 +1255,101 @@ function EventDetails({ navigation, route }) {
       const publishedVersion = Number(staffCompositionPayload?.published?.version || 1);
       return {
         subtitle: staffCompositionPayload?.published?.publishedAt
-          ? `Composition publiée v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
-          : `Composition publiée v${publishedVersion}`,
-        title: 'Voir la composition publiée',
+          ? `Composition publiee v${publishedVersion} le ${new Date(staffCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}`
+          : `Composition publiee v${publishedVersion}`,
+        title: "Composition d'equipe",
       };
     }
 
     const bootstrapSource = staffCompositionPayload?.bootstrap?.source;
     if (bootstrapSource && bootstrapSource !== 'empty') {
       return {
-        subtitle: `Préremplissage disponible : ${getCompositionSourceLabel(bootstrapSource)}`,
-        title: 'Créer la composition',
+        subtitle: `Preremplissage disponible : ${getCompositionSourceLabel(bootstrapSource)}`,
+        title: "Composition d'equipe",
       };
     }
 
     return {
-      subtitle: 'Sélectionne les joueurs puis organise ta composition.',
-      title: 'Créer la composition',
+      subtitle: 'Selectionne les joueurs puis organise ta composition.',
+      title: "Composition d'equipe",
     };
   }, [getCompositionSourceLabel, staffCompositionPayload]);
+
+  const matchStatsPrimaryAction = useMemo(() => {
+    if (!isMatchFinished) {
+      return {
+        disabled: true,
+        subtitle: 'Les stats seront disponibles a la fin du match.',
+        title: 'Stats du match',
+      };
+    }
+    if (matchStatsPayload?.score?.waitingOfficial) {
+      return {
+        disabled: true,
+        subtitle: 'En attente du score officiel synchronise.',
+        title: 'Score officiel en attente',
+      };
+    }
+    if (isMatchStatsReviewRequired) {
+      return {
+        disabled: false,
+        subtitle: 'Le score officiel a change. Verifie puis republie cette version.',
+        title: 'Mettre a jour apres score officiel',
+      };
+    }
+    if (isMatchStatsFinal) {
+      return {
+        disabled: false,
+        subtitle: matchStatsReport?.finalizedAt
+          ? `Rapport finalise le ${new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')}`
+          : 'Rapport finalise',
+        title: 'Voir les stats du match',
+      };
+    }
+    if (!canManageMatchStats) {
+      return {
+        disabled: true,
+        subtitle: 'Les membres de ton equipe peuvent encore finaliser ce rapport.',
+        title: "En attente de l'equipe",
+      };
+    }
+    if (matchStatsPayload?.score?.available) {
+      return {
+        disabled: false,
+        subtitle: 'Complete le temps de jeu et les stats cles de ton equipe.',
+        title: 'Saisir les stats du match',
+      };
+    }
+    return {
+      disabled: false,
+      subtitle: 'Commence par enregistrer le score du match.',
+      title: 'Enregistrer le score',
+    };
+  }, [
+    isMatchFinished,
+    isMatchStatsFinal,
+    canManageMatchStats,
+    isMatchStatsReviewRequired,
+    matchStatsPayload?.score?.available,
+    matchStatsPayload?.score?.waitingOfficial,
+    matchStatsReport?.finalizedAt,
+  ]);
+  const matchStatsCardButtonTitle = useMemo(() => {
+    if (isMatchStatsReviewRequired) return 'Mettre a jour';
+    if (isMatchStatsCompleted) return 'Voir';
+    return 'Ouvrir';
+  }, [isMatchStatsCompleted, isMatchStatsReviewRequired]);
+  const matchStatsPromptMessage = useMemo(() => {
+    if (matchStatsPayload?.score?.available) {
+      if (isMatchStatsReviewRequired) {
+        return 'Le score officiel a change. Verifie les lignes puis republie ce rapport.';
+      }
+
+      return 'Le score est pret. Tu peux maintenant completer le temps de jeu et les stats cles de ton equipe.';
+    }
+
+    return 'Le match est termine. Enregistre d abord le score puis complete les statistiques de ton equipe.';
+  }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available]);
 
   const openCompositionBoard = useCallback((composition, options = {}) => {
     if (!eventId || !compositionTeamId) return;
@@ -1129,7 +1388,7 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     if (isStaffCompositionFetching) {
-      Alert.alert('Patiente', "On récupère l'état actuel de la composition.");
+      Alert.alert('Patiente', "On rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cupÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¨re l'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tat actuel de la composition.");
       return;
     }
 
@@ -1183,6 +1442,66 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload,
   ]);
 
+  const openMatchStatsEditor = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.MatchStatsEditor, {
+      eventId,
+      sourceType: 'event',
+      sport: matchStatsPayload?.sport || compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
+      title: compositionEventLabel,
+    });
+  }, [
+    compositionEditorTeam?.name,
+    compositionEventLabel,
+    compositionSport,
+    compositionTeamId,
+    eventId,
+    matchStatsPayload?.sport,
+    matchStatsPayload?.team?.name,
+    navigation,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setHasDismissedMatchStatsPrompt(false);
+      return () => {
+        setIsMatchStatsPromptVisible(false);
+      };
+    }, []),
+  );
+
+  useEffect(() => {
+    if (!canManageMatchStats || !isMatchEvent || !compositionTeamId || !isMatchFinished) {
+      setIsMatchStatsPromptVisible(false);
+      return;
+    }
+
+    if (matchStatsPayload?.score?.waitingOfficial) {
+      setIsMatchStatsPromptVisible(false);
+      return;
+    }
+
+    if (isMatchStatsCompleted) {
+      setIsMatchStatsPromptVisible(false);
+      return;
+    }
+
+    if (matchStatsPayload && !isMatchStatsFetching && !hasDismissedMatchStatsPrompt) {
+      setIsMatchStatsPromptVisible(true);
+    }
+  }, [canManageMatchStats, compositionTeamId,
+    hasDismissedMatchStatsPrompt,
+    isMatchEvent,
+    isMatchFinished,
+    isMatchStatsFetching,
+    isMatchStatsCompleted,
+    matchStatsPayload,
+    matchStatsPayload?.score?.waitingOfficial,
+  ]);
+
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
     if (!targetUser?.documentId) return;
 
@@ -1221,7 +1540,7 @@ function EventDetails({ navigation, route }) {
 
     const parsedMinutes = Number(lateModalMinutes);
     if (!Number.isFinite(parsedMinutes) || parsedMinutes < 0) {
-      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit être un nombre positif.'));
+      Alert.alert(t('common.error'), t('eventDetails.late.minutesInvalid', 'Le retard doit ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªtre un nombre positif.'));
       return;
     }
 
@@ -1256,11 +1575,11 @@ function EventDetails({ navigation, route }) {
 
   const handleSelfArrival = useCallback(() => {
     if (!eventId) {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer votre arrivée (événement introuvable).");
+      Alert.alert(t('common.error'), "Impossible d'enregistrer votre arrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nement introuvable).");
       return;
     }
     if (hasSelfArrived) {
-      Alert.alert(t('common.success'), 'Arrivée déjà enregistrée.');
+      Alert.alert(t('common.success'), 'ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e dÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e.');
       return;
     }
     setSelfArrivalMarkedLocal(true);
@@ -1284,18 +1603,18 @@ function EventDetails({ navigation, route }) {
             && !Number.isNaN(arrivedAtMs),
           );
 
-          let message = t('eventDetails.late.selfOnTime', 'Arrivée enregistrée à l\'heure.');
+          let message = t('eventDetails.late.selfOnTime', 'ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  l\'heure.');
 
           if (hasValidTimestamps && eventStartMs && arrivedAtMs < eventStartMs) {
             const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
-            message = t('eventDetails.late.selfEarly', `Bravo ! Vous êtes en avance de ${earlyMinutes} min.`);
+            message = t('eventDetails.late.selfEarly', `Bravo ! Vous ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªtes en avance de ${earlyMinutes} min.`);
           } else {
             const lateMinutesFromDiff = hasValidTimestamps && eventStartMs && arrivedAtMs > eventStartMs
               ? Math.max(1, Math.ceil((arrivedAtMs - eventStartMs) / 60000))
               : 0;
             const lateMinutes = Math.max(lateMinutesFromResponse, lateMinutesFromDiff);
             if (lateMinutes > 0) {
-              message = t('eventDetails.late.selfLate', `Arrivée enregistrée: ${lateMinutes} min de retard.`);
+              message = t('eventDetails.late.selfLate', `ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e: ${lateMinutes} min de retard.`);
             }
           }
 
@@ -1307,7 +1626,7 @@ function EventDetails({ navigation, route }) {
 
   const renderActionButtons = () => {
     const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
-      || event?.type?.name?.toLowerCase()?.includes('réservation');
+      || event?.type?.name?.toLowerCase()?.includes('rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©servation');
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
@@ -1332,7 +1651,18 @@ function EventDetails({ navigation, route }) {
       );
     }
 
-    return (
+    const featuredActionNode = canEdit && canRequestFeatured ? (
+      <View style={{ marginTop: 12 }}>
+        <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title={'Mettre \u00e0 la une'} variant="Secondary" />
+      </View>
+    ) : null;
+    const pendingFeaturedActionNode = event?.featuredRequestStatus === 'pending' ? (
+      <View style={{ marginTop: 12, opacity: 0.7 }}>
+        <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
+      </View>
+    ) : null;
+
+    const actionButtonsNode = (
       <View>
         <EventAnswerButtons
           event={event}
@@ -1350,7 +1680,7 @@ function EventDetails({ navigation, route }) {
             <Button
               disabled={isStaffCompositionFetching}
               onPress={handleManageComposition}
-              title={isStaffCompositionFetching ? 'Chargement...' : compositionPrimaryAction.title}
+              title={isStaffCompositionFetching ? 'Chargement...' : "Composition d'equipe"}
               variant="Secondary"
             />
             {compositionPrimaryAction.subtitle ? (
@@ -1358,18 +1688,80 @@ function EventDetails({ navigation, route }) {
                 {compositionPrimaryAction.subtitle}
               </Text>
             ) : null}
+
+            <View style={{ marginTop: 12 }}>
+              <Button
+                disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                onPress={openMatchStatsEditor}
+                title={isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title}
+                variant="Secondary"
+              />
+              {matchStatsPrimaryAction.subtitle ? (
+                <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 8, textAlign: 'center' }]}>
+                  {matchStatsPrimaryAction.subtitle}
+                </Text>
+              ) : null}
+            </View>
           </View>
         )}
-        {canEdit && canRequestFeatured && (
-          <View style={{ marginTop: 12 }}>
-            <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title="Mettre à la une" variant="Secondary" />
+      </View>
+    );
+
+    if (canEdit && isMatchEvent) {
+      return (
+        <View>
+          <View
+            style={[
+              ApplicationStyle.card,
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderColor.primary500,
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+            ]}
+          >
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setIsMatchActionsOpen((prev) => !prev)}
+              style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}
+            >
+              <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions du match</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  Modifie cet evenement, gere son annulation ou ouvre la composition d equipe.
+                </Text>
+              </View>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary700,
+                  ApplicationStyle.borderColor.primary500,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  { borderRadius: 20 },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {isMatchActionsOpen ? 'Fermer' : 'Ouvrir'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {isMatchActionsOpen ? actionButtonsNode : null}
           </View>
-        )}
-        {event?.featuredRequestStatus === 'pending' && (
-          <View style={{ marginTop: 12, opacity: 0.7 }}>
-            <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
-          </View>
-        )}
+
+          {featuredActionNode}
+          {pendingFeaturedActionNode}
+        </View>
+      );
+    }
+
+    return (
+      <View>
+        {actionButtonsNode}
+        {featuredActionNode}
+        {pendingFeaturedActionNode}
       </View>
     );
   };
@@ -1384,6 +1776,9 @@ function EventDetails({ navigation, route }) {
       if (isMatchEvent && canEdit && compositionTeamId) {
         refetchTeamComposition();
       }
+      if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) {
+        refetchMatchStats();
+      }
       if (isMatchEvent && isTeamMember && compositionTeamId) {
         refetchConvocation();
       }
@@ -1392,6 +1787,8 @@ function EventDetails({ navigation, route }) {
       canEdit,
       compositionTeamId,
       isMatchEvent,
+      canManageMatchStats,
+      refetchMatchStats,
       isTeamMember,
       refetch,
       refetchAttendance,
@@ -1401,26 +1798,30 @@ function EventDetails({ navigation, route }) {
     ]),
   );
 
-  useLayoutEffect(() => {
-    const options = {
-      headerLeft: fromEventCreation
-        ? () => (
-          <HeaderBackButton onPress={handleBackAfterCreation} />
-        )
-        : undefined,
-      headerRight: () => (
-        <Button
-          icon="flag"
-          isOption
-          onPress={() => setIsReportModalVisible(true)}
-          style={Spaces.marginRight[16]}
-          variant="Secondary"
-        />
-      ),
-    };
+  const renderHeaderLeft = useCallback(
+    () => (fromEventCreation ? <HeaderBackButton onPress={handleBackAfterCreation} /> : null),
+    [fromEventCreation, handleBackAfterCreation],
+  );
 
-    navigation.setOptions(options);
-  }, [Spaces.marginRight, fromEventCreation, handleBackAfterCreation, navigation]);
+  const renderHeaderRight = useCallback(
+    () => (
+      <Button
+        icon="flag"
+        isOption
+        onPress={() => setIsReportModalVisible(true)}
+        style={Spaces.marginRight[16]}
+        variant="Secondary"
+      />
+    ),
+    [Spaces.marginRight],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
+      headerRight: renderHeaderRight,
+    });
+  }, [fromEventCreation, navigation, renderHeaderLeft, renderHeaderRight]);
 
   const isLateModalLoading = mutations.coachArrivalMutation.isPending
     || mutations.updateLateMinutesMutation.isPending;
@@ -1440,6 +1841,7 @@ function EventDetails({ navigation, route }) {
               refetchParticipations();
               if (canAccessAttendance) refetchAttendance();
               if (isMatchEvent && canEdit && compositionTeamId) refetchTeamComposition();
+              if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) refetchMatchStats();
               if (isMatchEvent && isTeamMember && compositionTeamId) refetchConvocation();
             }}
             refreshing={isLoading}
@@ -1448,7 +1850,7 @@ function EventDetails({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper error={error?.message} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
-          <EventHeader event={event} />
+          <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
 
           {eventDescriptionText ? (
             <View style={[Spaces.gap[16]]}>
@@ -1478,13 +1880,115 @@ function EventDetails({ navigation, route }) {
             teamParticipationSections={teamParticipationSections}
           />
 
+          {isMatchEvent && compositionTeamId && canViewMatchStats ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.borderColor.primary500,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{matchStatsScoreLabel}</Text>
+                  </View>
+                  <View
+                    style={[
+                      Spaces.paddingHorizontal[10],
+                      Spaces.paddingVertical[6],
+                      {
+                        backgroundColor: matchStatsStatusMeta.backgroundColor,
+                        borderColor: matchStatsStatusMeta.borderColor,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: matchStatsStatusMeta.textColor }]}>
+                      {matchStatsStatusMeta.label}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {matchStatsSummaryText}
+                </Text>
+
+                {matchStatsReport ? (
+                  <View style={[Alignments.row, Spaces.gap[12]]}>
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                        { flex: 1 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, Fonts.neutral300]}>Version</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {`v${Number(matchStatsReport?.version || 1)}`}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius16,
+                        Spaces.padding[12],
+                        { flex: 2 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4, Fonts.neutral300]}>Publication</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {matchStatsReport?.finalizedAt
+                          ? new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')
+                          : '-'}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                {isMatchStatsReviewRequired ? (
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                      {
+                        backgroundColor: `${Colors.warning500}14`,
+                        borderColor: `${Colors.warning500}45`,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4, Fonts.warning400]}>
+                      Le score officiel a change apres la premiere publication. Une mise a jour est requise.
+                    </Text>
+                  </View>
+                ) : null}
+
+                <Button
+                  disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                  onPress={openMatchStatsEditor}
+                  size="sm"
+                  title={matchStatsCardButtonTitle}
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          ) : null}
+
           {isMatchEvent && isTeamMember ? (
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Convocation</Text>
               {convocationPublished ? (
                 <View style={[Spaces.gap[8]]}>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Publiee le
+                    Publie le
                     {' '}
                     {convocationPublished?.publishedAt
                       ? new Date(convocationPublished.publishedAt).toLocaleString('fr-FR')
@@ -1539,7 +2043,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucune convocation publiée pour le moment.
+                  Aucune convocation publiee pour le moment.
                 </Text>
               )}
             </View>
@@ -1568,7 +2072,7 @@ function EventDetails({ navigation, route }) {
             isLoading={mutations.selfArrivalMutation.isPending}
             onPress={handleSelfArrival}
             title={hasSelfArrived
-              ? t('eventDetails.actions.selfArrivalDone', 'Arrivée enregistrée')
+              ? t('eventDetails.actions.selfArrivalDone', 'ArrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e enregistrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e')
               : t('eventDetails.actions.selfArrival', 'Je suis arrive')}
             variant="SecondaryLight"
           />
@@ -1625,6 +2129,57 @@ function EventDetails({ navigation, route }) {
         onSelectChat={handleShareEventInChat}
       />
 
+      <BottomModal
+        close={() => {
+          setHasDismissedMatchStatsPrompt(true);
+          setIsMatchStatsPromptVisible(false);
+        }}
+        isVisible={isMatchStatsPromptVisible}
+        snapPoints={['42%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats de fin de match</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {matchStatsPromptMessage}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius20,
+              Spaces.padding[16],
+              Spaces.gap[6],
+            ]}
+          >
+            <Text style={[Fonts.p3, Fonts.neutral300]}>Match</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{compositionEventLabel}</Text>
+            <Text style={[Fonts.p3, Fonts.primary100]}>
+              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || 'ÃƒÆ’Ã¢â‚¬Â°quipe'}
+            </Text>
+          </View>
+
+          <Button
+            onPress={() => {
+              setHasDismissedMatchStatsPrompt(true);
+              setIsMatchStatsPromptVisible(false);
+              openMatchStatsEditor();
+            }}
+            title={matchStatsPrimaryAction.title}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => {
+              setHasDismissedMatchStatsPrompt(true);
+              setIsMatchStatsPromptVisible(false);
+            }}
+            title="Plus tard"
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
+
       <Modal
         onRequestClose={() => setIsFeaturedModalVisible(false)}
         transparent
@@ -1679,12 +2234,12 @@ function EventDetails({ navigation, route }) {
                   <View style={[Spaces.gap[4]]}>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                       {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markTitle', 'Confirmer l\'arrivée')
+                        ? t('eventDetails.late.markTitle', 'Confirmer l\'arrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e')
                         : t('eventDetails.late.editTitle', 'Modifier le retard')}
                     </Text>
                     <Text style={[Fonts.p2, Fonts.neutral200]}>
                       {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markDescription', 'Confirmez l\'arrivée puis ajustez le retard si besoin.')
+                        ? t('eventDetails.late.markDescription', 'Confirmez l\'arrivÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e puis ajustez le retard si besoin.')
                         : t('eventDetails.late.editDescription', 'Modifiez le retard en minutes pour ce participant.')}
                     </Text>
                   </View>
@@ -1729,7 +2284,7 @@ function EventDetails({ navigation, route }) {
                       value={lateModalMinutes}
                     />
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {t('eventDetails.late.helper', '0 = à l\'heure. Ajustez la valeur si nécessaire avant validation.')}
+                      {t('eventDetails.late.helper', '0 = ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  l\'heure. Ajustez la valeur si nÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cessaire avant validation.')}
                     </Text>
                   </View>
 

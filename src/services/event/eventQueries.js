@@ -1,38 +1,21 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
-  getEventConvocation,
   getEventAttendance,
   getEventById,
-  getEventTeamComposition,
+  getEventConvocation,
   getEvents,
+  getEventTeamComposition,
   getEventTypes,
 } from './eventService';
-
-const normalizeQueryValue = (value) => {
-  if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) {
-    return [...value].map((item) => normalizeQueryValue(item));
-  }
-  if (value && typeof value === 'object') {
-    return Object.keys(value)
-      .sort()
-      .reduce((acc, key) => {
-        const nextValue = value[key];
-        if (nextValue !== undefined) {
-          acc[key] = normalizeQueryValue(nextValue);
-        }
-        return acc;
-      }, {});
-  }
-  return value;
-};
 
 /**
  * @param {Record<string, any> | undefined} params
  * @returns {[string, Record<string, any>]}
  */
-export const getEventsQueryKey = (params) => ['events', normalizeQueryValue(params || {})];
+export const getEventsQueryKey = (params) => buildNormalizedQueryKey('events', params || {});
 
 /**
  * React Query hook to fetch event types

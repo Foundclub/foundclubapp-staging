@@ -1,5 +1,10 @@
 import { differenceInYears, format } from 'date-fns';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -19,6 +24,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TabButton from '@/components/atoms/tabButton/TabButton';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -28,10 +34,28 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetUserById } from '@/services/auth/authQueries';
+import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
   useGetMyHistories,
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
+
+const resolveProfileStatValue = ({
+  overallValue,
+  selectedStatsSport,
+  sportValue,
+  teamValue,
+}) => {
+  if (teamValue !== null && teamValue !== undefined) {
+    return Number(teamValue || 0);
+  }
+
+  if (selectedStatsSport === 'all') {
+    return Number(overallValue || 0);
+  }
+
+  return Number(sportValue || 0);
+};
 
 const isFlagEnabled = (rawValue, defaultValue = false) => {
   if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
@@ -286,6 +310,8 @@ function UserDetails({ navigation, route }) {
   const requestedUserId = toComparableId(routeUserId);
   const isSelfProfile = !requestedUserId || requestedUserId === currentUserId;
   const targetUserId = requestedUserId || currentUserId;
+  const [selectedStatsSport, setSelectedStatsSport] = useState('all');
+  const [selectedStatsTeamKey, setSelectedStatsTeamKey] = useState('all');
 
   const {
     data: fetchedUser,
@@ -308,6 +334,13 @@ function UserDetails({ navigation, route }) {
 
   const profileError = isSelfProfile ? undefined : fetchedUserError?.message;
   const isProfileLoading = isSelfProfile ? !currentUser : fetchedUserLoading;
+  const {
+    data: personalStats,
+    isLoading: isPersonalStatsLoading,
+    refetch: refetchPersonalStats,
+  } = useGetPersonalStats(targetUserId, {
+    enabled: Boolean(targetUserId),
+  });
 
   const displayName = useMemo(() => {
     const first = String(user?.firstname || '').trim();
@@ -337,6 +370,114 @@ function UserDetails({ navigation, route }) {
   const bestLevelValue = toTextLabel(user?.bestLevel);
 
   const addressLabel = useMemo(() => parseAddressLabel(user?.address), [user?.address]);
+  const availableStatSports = useMemo(() => {
+    const sports = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
+    return sports.map((entry) => entry?.sport).filter(Boolean);
+  }, [personalStats?.bySport]);
+  const filteredPersonalTeamStats = useMemo(() => {
+    const items = Array.isArray(personalStats?.byTeam) ? personalStats.byTeam : [];
+    if (selectedStatsSport === 'all') return items;
+    return items.filter((entry) => entry?.sport === selectedStatsSport);
+  }, [personalStats?.byTeam, selectedStatsSport]);
+  const availableStatTeams = useMemo(() => {
+    const seen = new Set();
+    return filteredPersonalTeamStats.reduce((accumulator, entry) => {
+      const key = `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`;
+      if (seen.has(key)) return accumulator;
+      seen.add(key);
+      accumulator.push({
+        key,
+        label: entry?.teamName || 'Equipe',
+      });
+      return accumulator;
+    }, []);
+  }, [filteredPersonalTeamStats]);
+  const filteredStatsByTeamSelection = useMemo(() => {
+    if (selectedStatsTeamKey === 'all') return filteredPersonalTeamStats;
+
+    return filteredPersonalTeamStats.filter((entry) => (
+      `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`
+      === selectedStatsTeamKey
+    ));
+  }, [filteredPersonalTeamStats, selectedStatsTeamKey]);
+  const selectedTeamSummary = useMemo(
+    () => (selectedStatsTeamKey === 'all' ? null : filteredStatsByTeamSelection[0] || null),
+    [filteredStatsByTeamSelection, selectedStatsTeamKey],
+  );
+  const filteredSportSummary = useMemo(() => {
+    if (selectedStatsSport === 'all') return null;
+    const items = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
+    return items.find((entry) => entry?.sport === selectedStatsSport) || null;
+  }, [personalStats?.bySport, selectedStatsSport]);
+  const profileSummaryCards = useMemo(() => {
+    const matches = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.matches,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.matches,
+      teamValue: selectedTeamSummary?.matches,
+    });
+    const wins = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.wins,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.wins,
+      teamValue: selectedTeamSummary?.wins,
+    });
+    const losses = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.losses,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.losses,
+      teamValue: selectedTeamSummary?.losses,
+    });
+    const minutes = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.minutesPlayed,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.minutesPlayed,
+      teamValue: selectedTeamSummary?.minutesPlayed,
+    });
+    const primaryLabel = selectedStatsSport === 'basketball' ? 'Points' : 'Buts';
+    let primaryValue;
+    if (selectedTeamSummary) {
+      primaryValue = Number(
+        selectedTeamSummary?.sport === 'basketball'
+          ? selectedTeamSummary?.points || 0
+          : selectedTeamSummary?.goals || 0,
+      );
+    } else {
+      primaryValue = resolveProfileStatValue({
+        overallValue: personalStats?.overall?.football?.goals,
+        selectedStatsSport,
+        sportValue: selectedStatsSport === 'basketball'
+          ? filteredSportSummary?.points
+          : filteredSportSummary?.goals,
+      });
+    }
+    const assists = resolveProfileStatValue({
+      overallValue: personalStats?.overall?.football?.assists,
+      selectedStatsSport,
+      sportValue: filteredSportSummary?.assists,
+      teamValue: selectedTeamSummary?.assists,
+    });
+
+    return [
+      { label: 'Matchs', value: matches },
+      { label: 'Victoires', value: wins },
+      { label: 'Defaites', value: losses },
+      { label: 'Minutes', value: minutes },
+      { label: primaryLabel, value: primaryValue },
+      { label: 'Passes D', value: assists },
+    ];
+  }, [
+    filteredSportSummary,
+    personalStats?.overall?.football?.assists,
+    personalStats?.overall?.football?.goals,
+    personalStats?.overall?.losses,
+    personalStats?.overall?.matches,
+    personalStats?.overall?.minutesPlayed,
+    personalStats?.overall?.wins,
+    selectedStatsSport,
+    selectedTeamSummary,
+  ]);
+  const shouldShowSportFilter = availableStatSports.length > 1;
 
   const coachedTeams = useMemo(() => {
     const teams = Array.isArray(user?.trainedTeams) ? user.trainedTeams : [];
@@ -374,18 +515,33 @@ function UserDetails({ navigation, route }) {
   }, [coachedTeamIds, user?.myTeams]);
   const shouldShowTeamsSection = isSelfProfile || playerTeams.length > 0 || coachedTeams.length > 0;
 
+  useEffect(() => {
+    if (selectedStatsSport === 'all') return;
+    if (availableStatSports.includes(selectedStatsSport)) return;
+    setSelectedStatsSport('all');
+  }, [availableStatSports, selectedStatsSport]);
+
+  useEffect(() => {
+    if (selectedStatsTeamKey === 'all') return;
+    if (availableStatTeams.some((entry) => entry.key === selectedStatsTeamKey)) return;
+    setSelectedStatsTeamKey('all');
+  }, [availableStatTeams, selectedStatsTeamKey]);
+
   const handleRefresh = useCallback(() => {
     if (isSelfProfile) {
       refetchUserData?.();
       refetchOwnHistories?.();
+      refetchPersonalStats?.();
       return;
     }
     refetchFetchedUser();
     refetchTargetHistories?.();
+    refetchPersonalStats?.();
   }, [
     isSelfProfile,
     refetchFetchedUser,
     refetchOwnHistories,
+    refetchPersonalStats,
     refetchTargetHistories,
     refetchUserData,
   ]);
@@ -591,6 +747,95 @@ function UserDetails({ navigation, route }) {
               </View>
             ) : null}
           </View>
+
+          <SectionCard
+            ApplicationStyle={ApplicationStyle}
+            Colors={Colors}
+            Fonts={Fonts}
+            Spaces={Spaces}
+            title="Stats de match"
+          >
+            <View style={[Spaces.gap[12]]}>
+              {shouldShowSportFilter ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Sport</Text>
+                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                    <TabButton
+                      isFocused={selectedStatsSport === 'all'}
+                      onPress={() => setSelectedStatsSport('all')}
+                      title="Tous"
+                    />
+                    {availableStatSports.map((sportKey) => (
+                      <TabButton
+                        isFocused={selectedStatsSport === sportKey}
+                        key={sportKey}
+                        onPress={() => {
+                          setSelectedStatsSport(sportKey);
+                          setSelectedStatsTeamKey('all');
+                        }}
+                        title={sportKey === 'basketball' ? 'Basket' : 'Football'}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {availableStatTeams.length > 1 ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>Equipe</Text>
+                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                    <TabButton
+                      isFocused={selectedStatsTeamKey === 'all'}
+                      onPress={() => setSelectedStatsTeamKey('all')}
+                      title="Toutes"
+                    />
+                    {availableStatTeams.map((teamOption) => (
+                      <TabButton
+                        isFocused={selectedStatsTeamKey === teamOption.key}
+                        key={teamOption.key}
+                        onPress={() => setSelectedStatsTeamKey(teamOption.key)}
+                        title={teamOption.label}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+
+              {isPersonalStatsLoading ? (
+                <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des statistiques...</Text>
+              ) : (
+                <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
+                  {profileSummaryCards.map((stat) => (
+                    <View
+                      key={stat.label}
+                      style={[
+                        ApplicationStyle.card,
+                        Spaces.padding[12],
+                        Spaces.gap[8],
+                        {
+                          backgroundColor: `${Colors.primary700}BF`,
+                          borderColor: `${Colors.primary500}52`,
+                          marginBottom: 12,
+                          minHeight: isCompactScreen ? 92 : 98,
+                          width: '48%',
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary500,
+                          ApplicationStyle.borderRadius16,
+                          { height: 4, width: isCompactScreen ? 26 : 32 },
+                        ]}
+                      />
+                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
+                      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </SectionCard>
 
           <UserHistorySection
             bestLevel={bestLevelValue || undefined}

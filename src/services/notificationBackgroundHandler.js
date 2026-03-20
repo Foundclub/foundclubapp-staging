@@ -7,15 +7,27 @@ import { createLogger } from '@/utils/logger/logger';
 import { normalizeNotificationPayload } from '@/utils/notifications/notificationNavigation';
 
 import {
+  displayChatReplyActionableNotification,
   displayEventRsvpActionableNotification,
   ensureNotificationActionSetup,
+  handleChatReplyActionPress,
   handleEventRsvpActionPress,
+  isChatReplyActionablePayload,
   isEventRsvpActionablePayload,
   storePendingOpenNotification,
 } from './notificationActions/rsvpActions';
 
 let handlersRegistered = false;
 const notificationsBgLogger = createLogger('notifications-bg');
+
+const getMessagingInstanceSafe = () => {
+  try {
+    return getMessaging(getApp());
+  } catch (error) {
+    notificationsBgLogger.warn('Messaging background handler unavailable', error);
+    return null;
+  }
+};
 
 /**
  * @param {any} remoteMessage
@@ -42,7 +54,11 @@ export const registerBackgroundHandler = () => {
     notificationsBgLogger.warn('Failed to setup action catégories', error);
   });
 
-  const messagingInstance = getMessaging(getApp());
+  const messagingInstance = getMessagingInstanceSafe();
+  if (!messagingInstance) {
+    notificationsBgLogger.warn('Skipping background FCM registration: messaging unavailable');
+    return;
+  }
 
   setBackgroundMessageHandler(messagingInstance, async (/** @type {any} */ remoteMessage) => {
     try {
@@ -52,6 +68,15 @@ export const registerBackgroundHandler = () => {
         && isEventRsvpActionablePayload(normalizedData)
       ) {
         await displayEventRsvpActionableNotification({
+          body: resolvePushBody(remoteMessage, normalizedData),
+          data: normalizedData,
+          title: resolvePushTitle(remoteMessage, normalizedData),
+        });
+      } else if (
+        Platform.OS === 'android'
+        && isChatReplyActionablePayload(normalizedData)
+      ) {
+        await displayChatReplyActionableNotification({
           body: resolvePushBody(remoteMessage, normalizedData),
           data: normalizedData,
           title: resolvePushTitle(remoteMessage, normalizedData),
@@ -66,11 +91,23 @@ export const registerBackgroundHandler = () => {
   notifee.onBackgroundEvent(async ({ detail, type }) => {
     try {
       if (type === EventType.ACTION_PRESS) {
-        await handleEventRsvpActionPress({
+        const chatReplyResult = await handleChatReplyActionPress({
+          inputText: detail.input,
           notificationData: detail.notification?.data || {},
           pressActionId: detail?.pressAction?.id,
         });
-        if (detail.notification?.id) {
+        if (chatReplyResult?.handled) {
+          if (detail.notification?.id) {
+            await notifee.cancelNotification(detail.notification.id);
+          }
+          return;
+        }
+
+        const rsvpResult = await handleEventRsvpActionPress({
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (rsvpResult?.handled && detail.notification?.id) {
           await notifee.cancelNotification(detail.notification.id);
         }
         return;

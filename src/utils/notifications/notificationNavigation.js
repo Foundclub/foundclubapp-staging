@@ -30,6 +30,7 @@ import {
  *  notificationTitle?: string,
  *  notificationBody?: string,
  *  notificationId?: string | number,
+ *  dedupeKey?: string,
  *  matchId?: string | number,
  *  adId?: string | number,
  * }} NotificationPayload
@@ -79,6 +80,38 @@ const normalizeEntityId = (value) => {
 };
 
 /**
+ * @param {...unknown} values
+ * @returns {unknown}
+ */
+const firstDefinedValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '');
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+const toSafeString = (value) => (typeof value === 'string' ? value : '');
+
+/**
+ * @param {NotificationPayload} payload
+ * @returns {string}
+ */
+const buildNotificationFallbackKey = (payload) => {
+  const identifiers = [
+    payload.type,
+    normalizeEntityId(payload.notificationId),
+    normalizeEntityId(payload.matchId),
+    normalizeEntityId(payload.eventId),
+    normalizeEntityId(payload.chatId || payload.conversationId),
+    normalizeEntityId(payload.teamId),
+    normalizeEntityId(payload.clubId),
+    normalizeEntityId(payload.adId),
+    toSafeString(payload.createdAt),
+  ].filter(Boolean);
+
+  return identifiers.length > 0 ? identifiers.join(':') : 'notification:unknown';
+};
+
+/**
  * @param {unknown} payload
  * @returns {NotificationPayload}
  */
@@ -88,8 +121,80 @@ export const normalizeNotificationPayload = (payload) => {
     acc[key] = parseMaybeJson(raw);
     return acc;
   }, /** @type {NotificationPayload} */ ({}));
-  normalized.type = normalizeNotificationType(normalized.type);
-  return normalized;
+
+  const nestedData = isPlainObject(normalized.data)
+    ? /** @type {NotificationPayload} */ (normalized.data)
+    : /** @type {NotificationPayload} */ ({});
+  const merged = {
+    ...nestedData,
+    ...normalized,
+  };
+
+  merged.type = normalizeNotificationType(
+    firstDefinedValue(
+      merged.type,
+      merged.notificationType,
+      merged.kind,
+      merged.notificationKind,
+      merged.dataType,
+    ),
+  );
+
+  const notificationId = normalizeEntityId(
+    firstDefinedValue(merged.notificationId, merged.documentId, merged.id),
+  );
+  if (notificationId) {
+    merged.notificationId = notificationId;
+  }
+
+  const chatId = normalizeEntityId(firstDefinedValue(merged.chatId, merged.conversationId));
+  if (chatId) {
+    merged.chatId = chatId;
+    merged.conversationId = chatId;
+  }
+
+  const eventId = normalizeEntityId(merged.eventId);
+  if (eventId) merged.eventId = eventId;
+
+  const teamId = normalizeEntityId(merged.teamId);
+  if (teamId) merged.teamId = teamId;
+
+  const clubId = normalizeEntityId(merged.clubId);
+  if (clubId) merged.clubId = clubId;
+
+  const profileId = normalizeEntityId(merged.profileId);
+  if (profileId) merged.profileId = profileId;
+
+  const matchId = normalizeEntityId(merged.matchId);
+  if (matchId) merged.matchId = matchId;
+
+  const adId = normalizeEntityId(firstDefinedValue(merged.adId, merged.recruitmentAdId));
+  if (adId) merged.adId = adId;
+
+  if (!toSafeString(merged.notificationTitle) && toSafeString(merged.title)) {
+    merged.notificationTitle = merged.title;
+  }
+
+  if (!toSafeString(merged.notificationBody) && toSafeString(merged.body)) {
+    merged.notificationBody = merged.body;
+  }
+
+  if (!toSafeString(merged.dedupeKey)) {
+    merged.dedupeKey = buildNotificationFallbackKey(merged);
+  }
+
+  return merged;
+};
+
+/**
+ * @param {unknown} rawPayload
+ * @returns {string}
+ */
+export const getNotificationOpenKey = (rawPayload) => {
+  const payload = normalizeNotificationPayload(rawPayload);
+  const explicitKey = toSafeString(payload.dedupeKey).trim();
+  if (explicitKey) return explicitKey;
+  return buildNotificationFallbackKey(payload);
 };
 
 /**

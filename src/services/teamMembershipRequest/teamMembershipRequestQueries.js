@@ -1,5 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import { getTeamMembershipRequests } from './teamMembershipRequestService';
 
 /**
@@ -20,6 +22,6 @@ export const useGetTeamMembershipRequests = (teamId, params, options) => useInfi
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
   queryFn: ({ pageParam = 1 }) => getTeamMembershipRequests(teamId, { ...params, page: pageParam }),
-  queryKey: ['teamMembershipRequests', teamId, params],
+  queryKey: buildNormalizedQueryKey(['teamMembershipRequests', teamId], params),
   ...options,
 });

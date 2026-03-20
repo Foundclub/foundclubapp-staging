@@ -1,5 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   getEventParticipations,
 } from './eventParticipationService';
@@ -28,6 +30,6 @@ export const useGetEventParticipations = (eventId, userId, params, options) => u
     userId,
     { ...params, page: pageParam },
   ),
-  queryKey: ['eventParticipations', eventId, userId, params],
+  queryKey: buildNormalizedQueryKey(['eventParticipations', eventId, userId || 'all'], params),
   ...options,
 });

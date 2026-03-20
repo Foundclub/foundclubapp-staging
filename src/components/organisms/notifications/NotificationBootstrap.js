@@ -1,29 +1,29 @@
 import React from 'react';
+import { Platform } from 'react-native';
 
-import { DISABLE_NOTIFICATIONS_BOOTSTRAP } from '@/constants/runtimeFlags';
+import { navigate } from '@/navigation/navigationService';
 
-const parseBooleanFlag = (rawValue) => {
-  if (typeof rawValue !== 'string') return false;
-  const normalized = rawValue.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-};
+import {
+  DISABLE_NOTIFICATIONS_BOOTSTRAP,
+  NOTIFICATIONS_BOOTSTRAP_POLICY,
+} from '@/constants/runtimeFlags';
+import { useSmartNotifications } from '@/context/SmartNotificationContext';
+import useNotifications from '@/hooks/useNotifications';
 
-const isNotificationsBootstrapDisabled = DISABLE_NOTIFICATIONS_BOOTSTRAP || parseBooleanFlag(
-  process.env.FC_DISABLE_NOTIFICATIONS_BOOTSTRAP,
-);
+const isNotificationsBootstrapDisabled = DISABLE_NOTIFICATIONS_BOOTSTRAP;
 
 function NotificationBootstrapDisabled() {
   React.useEffect(() => {
-    console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_SKIPPED_BY_FLAG');
+    console.info('[BOOT] BOOT_NOTIFICATIONS_COMPONENT_SKIPPED', {
+      platform: Platform.OS,
+      policy: NOTIFICATIONS_BOOTSTRAP_POLICY,
+    });
   }, []);
 
   return null;
 }
 
 function NotificationBootstrapEnabled() {
-  const { navigate } = require('../../../navigation/navigationService');
-  const { useSmartNotifications } = require('../../../context/SmartNotificationContext');
-  const useNotifications = require('../../../hooks/useNotifications').default;
   const { consumeNotification } = useSmartNotifications();
   const smartNotifEnabled = (() => {
     const raw = process.env.LEAGUE_SMART_NOTIF_V1;

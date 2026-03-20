@@ -83,9 +83,9 @@ const toDisplayText = (value) => {
  * @param root0
  * @param root0.event
  */
-function EventHeader({ event }) {
+function EventHeader({ event, matchScoreSummary = null }) {
   const {
-    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { getClubInitials } = useClub();
@@ -243,6 +243,36 @@ function EventHeader({ event }) {
         </View>
       </View>
 
+      {matchScoreSummary ? (
+        <View
+          style={[
+            ApplicationStyle.borderRadius24,
+            Alignments.alignCenter,
+            Spaces.paddingVertical[10],
+            Spaces.paddingHorizontal[18],
+            Spaces.gap[6],
+            {
+              backgroundColor: `${Colors.primary500}18`,
+              borderColor: `${Colors.primary500}55`,
+              borderWidth: 1,
+              minWidth: 172,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+            {matchScoreSummary.badgeLabel}
+          </Text>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+            {matchScoreSummary.value}
+          </Text>
+          {matchScoreSummary.helperText ? (
+            <Text style={[Fonts.p4, Fonts.primary100, Fonts.textCenter]}>
+              {matchScoreSummary.helperText}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       {/* Section Name */}
       <View style={[Alignments.fullWidth, Spaces.gap[8], Spaces.marginBottom[12]]}>
         <Text style={[Fonts.p2Bold, Fonts.primary500, Fonts.textRight, Alignments.fullWidth]}>
@@ -318,7 +348,7 @@ function EventHeader({ event }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              équipes invitées
+              Equipes invitees
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}

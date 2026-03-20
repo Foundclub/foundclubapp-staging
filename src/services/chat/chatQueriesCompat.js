@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import * as ChatQueries from './chatQueries';
 import {
   getChatById,
@@ -22,7 +24,12 @@ const useFallbackGetChats = (params, options) => useInfiniteQuery({
     currentUserId: params?.currentUserId,
     currentUserTeamIds: params?.currentUserTeamIds,
   }),
-  queryKey: ['chats', params?.currentUserClubId, params?.currentUserId, params?.currentUserTeamIds],
+  queryKey: buildNormalizedQueryKey('chats', {
+    currentUserClubId: params?.currentUserClubId,
+    currentUserId: params?.currentUserId,
+    currentUserTeamIds: params?.currentUserTeamIds,
+    pageSize: params?.pageSize,
+  }),
   ...options,
 });
 
@@ -41,7 +48,9 @@ const useFallbackGetChatMessages = (params, options) => useInfiniteQuery({
   },
   initialPageParam: 1,
   queryFn: ({ pageParam = 1 }) => getChatMessages(params?.chatId, pageParam, params?.pageSize),
-  queryKey: ['chat-messages', params?.chatId],
+  queryKey: buildNormalizedQueryKey(['chat-messages', params?.chatId], {
+    pageSize: params?.pageSize,
+  }),
   ...options,
 });
 

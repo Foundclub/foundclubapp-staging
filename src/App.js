@@ -13,6 +13,7 @@ import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
+import MatchStatsPromptHost from '@/components/organisms/matchStats/MatchStatsPromptHost';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
 import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
 import ErrorScreen from '@/views/Error';
@@ -30,17 +31,80 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 
+/**
+ * @param {unknown} rawValue
+ * @param {number} fallbackValue
+ * @returns {number}
+ */
+const parseSampleRate = (rawValue, fallbackValue) => {
+  const parsed = Number.parseFloat(String(rawValue ?? ''));
+  if (!Number.isFinite(parsed)) {
+    return fallbackValue;
+  }
+
+  if (parsed < 0 || parsed > 1) {
+    return fallbackValue;
+  }
+
+  return parsed;
+};
+
+/**
+ * @param {number} failureCount
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+const shouldRetryQuery = (failureCount, error) => {
+  if (failureCount >= 2) {
+    return false;
+  }
+
+  const typedError = /** @type {any} */ (error);
+  if (!isAxiosError(typedError)) {
+    return true;
+  }
+
+  const method = String(typedError?.config?.method || 'get').trim().toUpperCase();
+  if (method && method !== 'GET') {
+    return false;
+  }
+
+  const status = typedError?.response?.status;
+  if (!status) {
+    return true;
+  }
+
+  if (status === 408 || status === 425 || status === 429) {
+    return true;
+  }
+
+  return status >= 500;
+};
+
 const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase();
 const isStaging = appEnv === 'staging';
 const sentryDsn = process.env.SENTRY_DSN;
 const isSentryEnabled = Boolean(sentryDsn);
-const navigationIntegration = isSentryEnabled
+const sentryTracesSampleRate = parseSampleRate(
+  process.env.SENTRY_TRACES_SAMPLE_RATE,
+  __DEV__ || isStaging ? 1 : 0.2,
+);
+const navigationIntegration = /** @type {any} */ (isSentryEnabled
   ? Sentry.reactNavigationIntegration({
     enableTimeToInitialDisplay: true,
   })
-  : { registerNavigationContainer: () => {} };
+  : {
+    name: 'noop-navigation-integration',
+    registerNavigationContainer: () => {},
+    setupOnce: () => {},
+  });
 
-console.info('[BOOT] APP_ENV_RESOLVED', { appEnv, isSentryEnabled, isStaging });
+console.info('[BOOT] APP_ENV_RESOLVED', {
+  appEnv,
+  isSentryEnabled,
+  isStaging,
+  sentryTracesSampleRate,
+});
 
 // Désactiver Sentry en staging ou utiliser un projet Sentry séparé
 if (isSentryEnabled) {
@@ -57,7 +121,7 @@ if (isSentryEnabled) {
     dsn: sentryDsn,
     enableAutoSessionTracking: true,
     enableUserInteractionTracing: true,
-    tracesSampleRate: 1.0,
+    tracesSampleRate: sentryTracesSampleRate,
     // Add integration for better React Navigation tracking
     integrations: [navigationIntegration],
   });
@@ -83,7 +147,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 0,
+      retry: shouldRetryQuery,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
     },
   },
   mutationCache: new MutationCache({
@@ -107,7 +172,8 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       // Capture exceptions to Sentry unless in allow list
-      const shouldSkip = isAxiosError(error) && isInSentryExceptionsAllowList(error);
+      const typedError = /** @type {any} */ (error);
+      const shouldSkip = isAxiosError(typedError) && isInSentryExceptionsAllowList(typedError);
       if (isSentryEnabled && !shouldSkip) {
         Sentry.captureException(error);
       }
@@ -153,12 +219,14 @@ function App() {
                     {isSentryEnabled ? (
                       <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
                         <AppNavigator navigationIntegration={navigationIntegration} />
+                        <MatchStatsPromptHost />
                         <NotificationBootstrap />
                         <SmartNotificationHost />
                       </Sentry.ErrorBoundary>
                     ) : (
                       <>
                         <AppNavigator navigationIntegration={navigationIntegration} />
+                        <MatchStatsPromptHost />
                         <NotificationBootstrap />
                         <SmartNotificationHost />
                       </>

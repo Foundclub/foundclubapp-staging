@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   getTeamById,
   getTeamDefaultComposition,
@@ -25,7 +27,7 @@ export const useGetTeams = (params, options) => useInfiniteQuery({
     return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
   },
   queryFn: ({ pageParam = 1 }) => getTeams({ ...params, page: pageParam }),
-  queryKey: ['teams', params],
+  queryKey: buildNormalizedQueryKey('teams', params),
   ...options,
 });
 

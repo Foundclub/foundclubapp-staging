@@ -15,6 +15,16 @@ import useAudioPlayback from '@/hooks/useAudioPlayback';
 
 const voiceBubbleLogger = createLogger('voice-bubble');
 
+const formatDiagnosticMeta = (meta) => {
+  if (!meta || typeof meta !== 'object') return '';
+  try {
+    const serialized = JSON.stringify(meta);
+    return serialized && serialized !== '{}' ? ` ${serialized}` : '';
+  } catch (_error) {
+    return '';
+  }
+};
+
 const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const formatDuration = (valueMs) => {
@@ -134,20 +144,20 @@ function VoiceNoteBubble({
     if (!__DEV__) return;
     if (audioUrl || attachments.length === 0) return;
 
-    voiceBubbleLogger.warn('[voice-diag] bubble-no-audio-url', {
+    voiceBubbleLogger.warn(`[voice-diag] bubble-no-audio-url${formatDiagnosticMeta({
       attachmentCount: attachments.length,
       attachmentMimes: attachments.map((attachment) => String(attachment?.mime || '')),
       compositionType: composition?.type || '',
-    });
+    })}`);
   }, [attachments, audioUrl, composition?.type]);
 
   useEffect(() => {
     if (!__DEV__ || !lastError) return;
 
-    voiceBubbleLogger.warn('[voice-diag] bubble-playback-error', {
+    voiceBubbleLogger.warn(`[voice-diag] bubble-playback-error${formatDiagnosticMeta({
       audioUrl,
       error: lastError,
-    });
+    })}`);
   }, [audioUrl, lastError]);
 
   const displayedDuration = durationMs || fallbackDuration;

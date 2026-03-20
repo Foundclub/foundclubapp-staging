@@ -43,6 +43,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { removeTrainerFromClub } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
+import { useGetTeamPerformanceStats } from '@/services/matchStats/matchStatsQueries';
 import { useGetTeamStats } from '@/services/stats/statsQueries';
 import { resetTeamStats } from '@/services/stats/statsService';
 import { useGetTeam } from '@/services/team/teamQueries';
@@ -113,14 +114,24 @@ function TeamDetails({ navigation, route }) {
       staleTime: 1000 * 60,
     },
   );
+  const {
+    data: teamPerformanceStats,
+    isLoading: isTeamPerformanceLoading,
+    refetch: refetchTeamPerformanceStats,
+  } = useGetTeamPerformanceStats(teamId || '', {
+    enabled: Boolean(teamId),
+    staleTime: 1000 * 60,
+  });
 
   const [activeTab, setActiveTab] = useState('infos');
+  const [statsMode, setStatsMode] = useState(/** @type {'attendance' | 'performance'} */ ('attendance'));
   const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
   const [isTrainerPickerVisible, setIsTrainerPickerVisible] = useState(false);
   const [selectedTrainerIds, setSelectedTrainerIds] = useState(/** @type {string[]} */ ([]));
   const [selectedMonthKey, setSelectedMonthKey] = useState(/** @type {string | null} */ (null));
   const [selectedUpcomingMatchKey, setSelectedUpcomingMatchKey] = useState(/** @type {string | null} */ (null));
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
+  const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
 
   // FFBB Modal states
@@ -236,8 +247,20 @@ function TeamDetails({ navigation, route }) {
   const applyExternalSyncFeedback = useCallback((result) => {
     const payload = getSyncPayload(result);
     const syncReport = payload?.syncReport;
+    const scoreUpdatedEventIds = (Array.isArray(syncReport?.scoreUpdatedEvents)
+      ? syncReport.scoreUpdatedEvents
+      : [])
+      .map((item) => item?.eventDocumentId)
+      .filter(Boolean);
 
     queryClient.invalidateQueries({ queryKey: ['team', teamId] });
+    queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] });
+    queryClient.invalidateQueries({ queryKey: ['teamPerformanceStats', teamId] });
+    scoreUpdatedEventIds.forEach((updatedEventId) => {
+      queryClient.invalidateQueries({ queryKey: ['event', updatedEventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventMatchResult', updatedEventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventMatchStats', updatedEventId] });
+    });
     refetch();
 
     if (syncReport && typeof syncReport === 'object') {
@@ -362,7 +385,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraîneur')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraÃƒÂ®neur')),
       );
     },
     onSuccess: () => {
@@ -376,7 +399,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre à jour les entraîneurs')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre ÃƒÂ  jour les entraÃƒÂ®neurs')),
       );
     },
     onSuccess: () => {
@@ -395,15 +418,15 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de réinitialiser les statistiques')),
+        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de rÃƒÂ©initialiser les statistiques')),
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamStats', teamId] });
       refetchTeamStats();
       Alert.alert(
-        t('common.success', 'Succès'),
-        t('teamDetails.stats.resetSuccess', 'Les statistiques ont été réinitialisées à partir de maintenant.'),
+        t('common.success', 'SuccÃƒÂ¨s'),
+        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ÃƒÂ©tÃƒÂ© rÃƒÂ©initialisÃƒÂ©es ÃƒÂ  partir de maintenant.'),
       );
     },
   });
@@ -416,7 +439,7 @@ function TeamDetails({ navigation, route }) {
         const seconds = apiError.response.data.remainingSeconds || 0;
         Alert.alert(t('common.error'), t('teamDetails.ffbb.rateLimit', `Veuillez patienter ${seconds} secondes.`));
       } else {
-        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise à jour : ${getErrorMessage(apiError)}`));
+        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise ÃƒÂ  jour : ${getErrorMessage(apiError)}`));
       }
     },
     onSuccess: (result) => {
@@ -444,7 +467,7 @@ function TeamDetails({ navigation, route }) {
         setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
-          t('teamDetails.ffbb.noCandidate', 'Aucune équipe détectée depuis cette source.'),
+          t('teamDetails.ffbb.noCandidate', 'Aucune ÃƒÂ©quipe dÃƒÂ©tectÃƒÂ©e depuis cette source.'),
         );
         return;
       }
@@ -486,7 +509,7 @@ function TeamDetails({ navigation, route }) {
       });
       setShowFFBBErrorModal(false);
       setFfbbErrorDescription('');
-      Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoyé, merci!'));
+      Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoyÃƒÂ©, merci!'));
     } catch (error) {
       Alert.alert(t('common.error'), getErrorMessage(error));
     } finally {
@@ -583,11 +606,15 @@ function TeamDetails({ navigation, route }) {
   const areSlotActionsEnabled = String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
   const showSlotFeatureComingSoon = () => Alert.alert(
     'Bientot disponible',
-    'La gestion des créneaux sera activee prochainement.',
+    'La gestion des crÃƒÂ©neaux sera activee prochainement.',
   );
   const showStatsTab = useMemo(
-    () => !!isMyTeam,
-    [isMyTeam],
+    () => Boolean(
+      isMyTeam
+      || teamPerformanceStats?.totals
+      || (Array.isArray(teamPerformanceStats?.players) && teamPerformanceStats.players.length > 0)
+    ),
+    [isMyTeam, teamPerformanceStats?.players, teamPerformanceStats?.totals],
   );
   const primaryActivityLabel = useMemo(
     () => String(team?.activities?.[0]?.name || '').trim(),
@@ -697,7 +724,31 @@ function TeamDetails({ navigation, route }) {
     return parsed.toLocaleString('fr-FR');
   }, [statsSummary.baselineAt]);
 
-  const canResetTeamStats = useMemo(
+  const teamPerformancePlayers = useMemo(
+    () => (Array.isArray(teamPerformanceStats?.players) ? teamPerformanceStats.players : []),
+    [teamPerformanceStats?.players],
+  );
+
+  const performanceSummary = useMemo(() => {
+    const totals = teamPerformanceStats?.totals || {};
+    const sport = teamPerformanceStats?.sport || 'football';
+
+    return {
+      assists: Number(totals?.assists || 0),
+      cleanSheets: Number(totals?.cleanSheets || 0),
+      goals: Number(totals?.goals || 0),
+      matches: Number(totals?.matchesPlayed || totals?.matches || 0),
+      minutesPlayed: Number(totals?.minutesPlayed || 0),
+      points: Number(totals?.points || 0),
+      rebounds: Number(totals?.rebounds || 0),
+      scoreAgainstTotal: Number(totals?.scoreAgainstTotal || 0),
+      scoreForTotal: Number(totals?.scoreForTotal || 0),
+      sport,
+      threePointsMade: Number(totals?.threePointsMade || 0),
+    };
+  }, [teamPerformanceStats?.sport, teamPerformanceStats?.totals]);
+
+    const canResetTeamStats = useMemo(
     () => Boolean(canManageTeam && isMyTeam),
     [canManageTeam, isMyTeam],
   );
@@ -732,7 +783,7 @@ function TeamDetails({ navigation, route }) {
     if (!selectedTrainerIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('teamDetails.alerts.trainerRequired', 'Au moins un entraîneur est requis'),
+        t('teamDetails.alerts.trainerRequired', 'Au moins un entraÃƒÂ®neur est requis'),
       );
       return;
     }
@@ -788,7 +839,7 @@ function TeamDetails({ navigation, route }) {
 
     Alert.alert(
       'Preselection effectuee',
-      `${assignmentTrainerName || "L'entraîneur"} est présélectionné. Vérifiez puis appuyez sur "Valider".`,
+      `${assignmentTrainerName || "L'entraÃƒÂ®neur"} est prÃƒÂ©sÃƒÂ©lectionnÃƒÂ©. VÃƒÂ©rifiez puis appuyez sur "Valider".`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -872,14 +923,14 @@ function TeamDetails({ navigation, route }) {
     if (!teamId || !canResetTeamStats) return;
 
     Alert.alert(
-      t('teamDetails.stats.resetTitle', 'Réinitialiser les statistiques ?'),
+      t('teamDetails.stats.resetTitle', 'RÃƒÂ©initialiser les statistiques ?'),
       t('teamDetails.stats.resetDescription', 'Les compteurs repartiront de zero a partir de maintenant. L historique est conserve.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
           onPress: () => {
             resetTeamStatsMutation.mutate({
-              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon équipe'),
+              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon ÃƒÂ©quipe'),
             });
           },
           style: 'destructive',
@@ -920,11 +971,36 @@ function TeamDetails({ navigation, route }) {
         players: filteredPlayers,
         sport: team?.activities?.[0]?.name || 'football',
         teamId: team.documentId,
-        teamName: team.name || 'Équipe',
+        teamName: team.name || 'Ãƒâ€°quipe',
       },
       screen: RouteNames.TacticalSelectionV2,
     });
   }, [filteredPlayers, navigation, team?.activities, team?.documentId, team?.name]);
+
+  const handleSyncStandings = useCallback(() => {
+    if (!teamId || refreshScrapingMutation.isPending) return;
+
+    refreshScrapingMutation.mutate(teamId);
+  }, [refreshScrapingMutation, teamId]);
+
+  const showEditAction = canManageTeam
+    && isMyClub
+    && (isMyTeam || (team?.club?.documentId ? canEditClub(team.club.documentId) : false));
+  const showTeamChatAction = canManageTeam && allMembers?.length > 1 && isMyTeam;
+  const showDefaultCompositionAction = canManageTeam;
+  const showLeaveAction = isMyTeam;
+  const showJoinAction = canJoinTeam(teamId);
+  const hasTeamActionsPanel = showEditAction
+    || showTeamChatAction
+    || showDefaultCompositionAction
+    || showLeaveAction
+    || showJoinAction;
+
+  useEffect(() => {
+    if (!hasTeamActionsPanel) {
+      setIsTeamActionsPanelOpen(false);
+    }
+  }, [hasTeamActionsPanel]);
 
   const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
@@ -947,7 +1023,7 @@ function TeamDetails({ navigation, route }) {
   const handleRemovePlayer = (/** @type {string} */ playerId) => {
     Alert.alert(
       t('teamDetails.alerts.removePlayer.title', 'Supprimer le joueur'),
-      t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'équipe ?'),
+      t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'ÃƒÂ©quipe ?'),
       [
         {
           style: 'cancel',
@@ -971,7 +1047,8 @@ function TeamDetails({ navigation, route }) {
     useCallback(() => {
       refetch();
       refetchTeamStats();
-    }, [refetch, refetchTeamStats]),
+      refetchTeamPerformanceStats();
+    }, [refetch, refetchTeamPerformanceStats, refetchTeamStats]),
   );
 
   useFocusEffect(
@@ -1021,6 +1098,10 @@ function TeamDetails({ navigation, route }) {
   useEffect(() => {
     setCalendarDisplayMode('upcoming');
   }, [team?.documentId]);
+
+  useEffect(() => {
+    setStatsMode(isMyTeam ? 'attendance' : 'performance');
+  }, [isMyTeam, team?.documentId]);
 
   useEffect(() => {
     setSelectedMonthKey(null);
@@ -1120,7 +1201,7 @@ function TeamDetails({ navigation, route }) {
                 {item?.eventDocumentId ? (
                   <Button
                     onPress={() => handleOpenSyncedEvent(item.eventDocumentId)}
-                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'événement")}
+                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'ÃƒÂ©vÃƒÂ©nement")}
                     variant="SecondaryLight"
                   />
                 ) : null}
@@ -1229,6 +1310,11 @@ function TeamDetails({ navigation, route }) {
                 value: externalSyncSummary.updated || 0,
               },
               {
+                key: 'scoreUpdated',
+                label: t('teamDetails.external.summary.scoreUpdated', 'Scores importes'),
+                value: externalSyncSummary.scoreUpdated || 0,
+              },
+              {
                 key: 'archivedFuture',
                 label: t('teamDetails.external.summary.archived', 'Archives'),
                 value: externalSyncSummary.archivedFuture || 0,
@@ -1306,9 +1392,7 @@ function TeamDetails({ navigation, route }) {
           {canRefreshExternalSync ? (
             <Button
               isLoading={refreshScrapingMutation.isPending}
-              onPress={() => {
-                if (teamId) refreshScrapingMutation.mutate(teamId);
-              }}
+              onPress={handleSyncStandings}
               style={{ flexGrow: 1 }}
               title={t('teamDetails.external.actions.sync', 'Synchroniser')}
               variant="Secondary"
@@ -1659,7 +1743,7 @@ function TeamDetails({ navigation, route }) {
                       ]}
                     >
                       <Text style={[Fonts.p2, Fonts.primary100]}>
-                        {t('teamDetails.sections.noTrainer', 'Aucun entraîneur pour le moment')}
+                        {t('teamDetails.sections.noTrainer', 'Aucun entraÃƒÂ®neur pour le moment')}
                       </Text>
                     </View>
                   ) : null}
@@ -1830,8 +1914,8 @@ function TeamDetails({ navigation, route }) {
                 {/* Calendar filters + list */}
                 {(() => {
                   const modeOptions = [
-                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon équipe') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Résultats poule') },
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon ÃƒÂ©quipe') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'RÃƒÂ©sultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
 
@@ -2033,8 +2117,8 @@ function TeamDetails({ navigation, route }) {
                   const groupedMatches = sortedMatches.reduce((groups, match) => {
                     const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
                     const roundLabel = match._roundLabel
-                      ? t('teamDetails.calendar.round.title', 'Journée {{round}}', { round: match._roundLabel })
-                      : t('teamDetails.calendar.round.unknown', 'Journée non précisée');
+                      ? t('teamDetails.calendar.round.title', 'JournÃƒÂ©e {{round}}', { round: match._roundLabel })
+                      : t('teamDetails.calendar.round.unknown', 'JournÃƒÂ©e non prÃƒÂ©cisÃƒÂ©e');
                     const groupLabel = useRoundFilters ? roundLabel : monthLabel;
                     const groupSubtitle = useRoundFilters ? monthLabel : null;
                     const existingGroup = groups.find((group) => group.label === groupLabel);
@@ -2046,7 +2130,7 @@ function TeamDetails({ navigation, route }) {
                   }, []);
 
                   const emptyLabel = calendarDisplayMode === 'upcoming'
-                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match à venir pour cette équipe.')
+                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match ÃƒÂ  venir pour cette ÃƒÂ©quipe.')
                     : calendarDisplayMode === 'results'
                       ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
                       : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
@@ -2055,12 +2139,12 @@ function TeamDetails({ navigation, route }) {
                   const modeScopeText = isUpcomingMode
                     ? (
                       hasSelectedExternalTeam
-                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre équipe uniquement.')
-                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres à venir de la poule.')
+                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre ÃƒÂ©quipe uniquement.')
+                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres ÃƒÂ  venir de la poule.')
                     )
                     : useRoundFilters
-                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisé par journée FFBB.')
-                      : t('teamDetails.calendar.scope.fullPool', 'Résultats et calendrier de toute la poule.');
+                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisÃƒÂ© par journÃƒÂ©e FFBB.')
+                      : t('teamDetails.calendar.scope.fullPool', 'RÃƒÂ©sultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
                   const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Equipe suivie');
@@ -2365,149 +2449,326 @@ function TeamDetails({ navigation, route }) {
 
           {showStatsTab && activeTab === 'stats' && (
           <View style={[Spaces.padding[16], Spaces.gap[16]]}>
-            <View
-              style={[
-                Alignments.row,
-                Alignments.justifySpaceBetween,
-                ApplicationStyle.backgroundColor.primary700,
-                ApplicationStyle.borderRadius24,
-                Spaces.padding[16],
-              ]}
-            >
-              <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                <Text style={[Fonts.h3Bold, Fonts.primary500]}>{statsSummary.rowCount}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Joueurs</Text>
-              </View>
-              <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.totalEvents}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Evenements</Text>
-              </View>
-              <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Retards</Text>
-              </View>
-              <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                  {statsSummary.lateMinutesAvg}
-                  m
+            <View style={[Alignments.row, Spaces.gap[8]]}>
+              <TouchableOpacity
+                onPress={() => setStatsMode('attendance')}
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  Spaces.paddingVertical[10],
+                  { borderRadius: 18, flex: 1 },
+                  statsMode === 'attendance'
+                    ? ApplicationStyle.backgroundColor.primary500
+                    : ApplicationStyle.backgroundColor.primary700,
+                ]}
+              >
+                <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                  Vie d'equipe
                 </Text>
-                <Text style={[Fonts.p3, Fonts.neutral00]}>Moyenne</Text>
-              </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setStatsMode('performance')}
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  Spaces.paddingVertical[10],
+                  { borderRadius: 18, flex: 1 },
+                  statsMode === 'performance'
+                    ? ApplicationStyle.backgroundColor.primary500
+                    : ApplicationStyle.backgroundColor.primary700,
+                ]}
+              >
+                <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                  Performance
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            <View style={[Spaces.gap[8]]}>
-              <View style={[Alignments.row, Alignments.alignCenter, Spaces.paddingHorizontal[12]]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>Joueur</Text>
-                <View style={[Alignments.row, Spaces.gap[8]]}>
-                  {statsColumns.map((column) => (
-                    <View key={column.key} style={[Alignments.alignCenter, { width: 44 }]}>
-                      <Text style={[Fonts.p4Bold, Fonts.neutral00]}>{column.label}</Text>
+            {statsMode === 'attendance' ? (
+              <>
+                <View
+                  style={[
+                    Alignments.row,
+                    Alignments.justifySpaceBetween,
+                    ApplicationStyle.backgroundColor.primary700,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                  ]}
+                >
+                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                    <Text style={[Fonts.h3Bold, Fonts.primary500]}>{statsSummary.rowCount}</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral00]}>Joueurs</Text>
+                  </View>
+                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.totalEvents}</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral00]}>Evenements</Text>
+                  </View>
+                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral00]}>Retards</Text>
+                  </View>
+                  <View style={[Alignments.alignCenter, { flex: 1 }]}>
+                    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                      {statsSummary.lateMinutesAvg}
+                      m
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral00]}>Moyenne</Text>
+                  </View>
+                </View>
+
+                <View style={[Spaces.gap[8]]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.paddingHorizontal[12]]}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>Joueur</Text>
+                    <View style={[Alignments.row, Spaces.gap[8]]}>
+                      {statsColumns.map((column) => (
+                        <View key={column.key} style={[Alignments.alignCenter, { width: 44 }]}>
+                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>{column.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {isTeamStatsLoading ? (
+                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                      {t('common.loading', 'Chargement...')}
+                    </Text>
+                  ) : teamStatsRows.length ? (
+                    teamStatsRows.map((row, index) => (
+                      <StatRow
+                        columns={statsColumns}
+                        isEven={index % 2 === 0}
+                        key={row?.user?.documentId || `stats-${index}`}
+                        player={row}
+                      />
+                    ))
+                  ) : (
+                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                      {t('teamDetails.stats.noData', 'Aucune statistique disponible pour le moment.')}
+                    </Text>
+                  )}
+                </View>
+
+                {statsBaselineLabel ? (
+                  <Text style={[Fonts.p3, Fonts.primary100]}>
+                    {t('teamDetails.stats.baselineLabel', 'Depuis le {{date}}', { date: statsBaselineLabel })}
+                  </Text>
+                ) : null}
+
+                {canResetTeamStats ? (
+                  <Button
+                    isLoading={resetTeamStatsMutation.isPending}
+                    onPress={handleResetStats}
+                    title={t('teamDetails.stats.resetAction', 'Reinitialiser les statistiques')}
+                    variant="Secondary"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <View style={[Spaces.gap[16]]}>
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary700,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[8],
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, Fonts.primary500]}>Performance equipe</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Recap du groupe</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    Lecture des stats match publiees pour l equipe et ses joueurs.
+                  </Text>
+                </View>
+
+                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                  {[
+                    { label: 'Matchs', value: performanceSummary.matches },
+                    { label: 'Minutes', value: performanceSummary.minutesPlayed },
+                    { label: performanceSummary.sport === 'basketball' ? 'Points' : 'Buts', value: performanceSummary.sport === 'basketball' ? performanceSummary.points : performanceSummary.goals },
+                    { label: 'Passes D', value: performanceSummary.assists },
+                  ].map((stat) => (
+                    <View
+                      key={stat.label}
+                      style={[
+                        ApplicationStyle.backgroundColor.primary700,
+                        ApplicationStyle.borderRadius20,
+                        Spaces.padding[16],
+                        Spaces.gap[4],
+                        { flexGrow: 1, minWidth: '47%' },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
+                      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
                     </View>
                   ))}
                 </View>
+
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary700,
+                    ApplicationStyle.borderRadius24,
+                    Spaces.padding[16],
+                    Spaces.gap[8],
+                  ]}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`Score cumule: ${performanceSummary.scoreForTotal} - ${performanceSummary.scoreAgainstTotal}`}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral100]}>
+                    {performanceSummary.sport === 'basketball'
+                      ? `${performanceSummary.rebounds} rebonds - ${performanceSummary.threePointsMade} tirs a 3 points`
+                      : `${performanceSummary.cleanSheets} clean sheets - ${performanceSummary.scoreAgainstTotal} buts encaisses`}
+                  </Text>
+                </View>
+
+                {(() => {
+                  if (isTeamPerformanceLoading) {
+                    return <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>Chargement des performances...</Text>;
+                  }
+
+                  if (teamPerformancePlayers.length) {
+                    return (
+                      <View style={[Spaces.gap[8]]}>
+                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Joueurs</Text>
+                        {teamPerformancePlayers.map((player, index) => (
+                          <View
+                            key={player?.documentId || player?.manualPlayerName || `performance-${index}`}
+                            style={[
+                              ApplicationStyle.backgroundColor.primary700,
+                              ApplicationStyle.borderRadius20,
+                              Spaces.padding[16],
+                              Spaces.gap[8],
+                            ]}
+                          >
+                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+                              <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                                {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || 'Joueur'}
+                              </Text>
+                              <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[6]]}>
+                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>{`${Number(player?.matches || 0)} matchs`}</Text>
+                              </View>
+                            </View>
+                            <Text style={[Fonts.p3, Fonts.neutral100]}>
+                              {performanceSummary.sport === 'basketball'
+                                ? `${Number(player?.points || 0)} points - ${Number(player?.assists || 0)} passes - ${Number(player?.rebounds || 0)} rebonds`
+                                : `${Number(player?.goals || 0)} buts - ${Number(player?.assists || 0)} passes - ${Number(player?.minutesPlayed || 0)} min`}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                      Aucune performance de match disponible pour le moment.
+                    </Text>
+                  );
+                })()}
               </View>
-
-              {isTeamStatsLoading ? (
-                <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                  {t('common.loading', 'Chargement...')}
-                </Text>
-              ) : teamStatsRows.length ? (
-                teamStatsRows.map((row, index) => (
-                  <StatRow
-                    columns={statsColumns}
-                    isEven={index % 2 === 0}
-                    key={row?.user?.documentId || `stats-${index}`}
-                    player={row}
-                  />
-                ))
-              ) : (
-                <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                  {t('teamDetails.stats.noData', 'Aucune statistique disponible pour le moment.')}
-                </Text>
-              )}
-            </View>
-
-            {statsBaselineLabel ? (
-              <Text style={[Fonts.p3, Fonts.primary100]}>
-                {t('teamDetails.stats.baselineLabel', 'Depuis le {{date}}', { date: statsBaselineLabel })}
-              </Text>
-            ) : null}
-
-            {canResetTeamStats ? (
-              <Button
-                isLoading={resetTeamStatsMutation.isPending}
-                onPress={handleResetStats}
-                title={t('teamDetails.stats.resetAction', 'Réinitialiser les statistiques')}
-                variant="Secondary"
-              />
-            ) : null}
+            )}
           </View>
           )}
 
         </WithDataWrapper>
       </ScrollView>
-      <View style={[Alignments.row, Spaces.gap[16]]}>
-        {canManageTeam && isMyClub && (isMyTeam || (team?.club?.documentId ? canEditClub(team.club.documentId) : false)) && (
-          <Button
-            onPress={handleEditTeam}
-            style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-            title={t('teamDetails.actions.edit')}
-            variant="Primary"
-          />
-        )}
-        {canManageTeam && allMembers?.length > 1 && isMyTeam && (
-          <Button
-            icon="envelope"
-            iconPosition="before"
-            onPress={handleStartChat}
-            style={[Alignments.fill, Spaces.paddingHorizontal[16]]}
-            title={t('teamDetails.actions.teamChat', 'Equipe')}
-            variant="PrimaryLight"
-          />
-        )}
-      </View>
-      {canManageTeam ? (
-        <Button
-          onPress={handleManageDefaultComposition}
-          style={Spaces.paddingHorizontal[16]}
-          title="Favori d'équipe"
-          variant="Secondary"
-        />
+      {hasTeamActionsPanel ? (
+        <View style={[Spaces.marginTop[12], Spaces.paddingBottom[24], Spaces.paddingHorizontal[16]]}>
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius24,
+              Spaces.paddingHorizontal[16],
+              { borderColor: `${Colors.primary500}44`, borderWidth: 1, overflow: 'hidden' },
+            ]}
+          >
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsTeamActionsPanelOpen((previousValue) => !previousValue)}
+              style={[Spaces.paddingTop[10], Spaces.paddingBottom[12], Spaces.gap[10]]}
+            >
+              <View style={[Alignments.alignCenter]}>
+                <View
+                  style={{
+                    backgroundColor: `${Colors.neutral00}55`,
+                    borderRadius: 999,
+                    height: 4,
+                    width: 48,
+                  }}
+                />
+              </View>
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                  {t('teamDetails.actions.panelTitle', "Actions d'Ã©quipe")}
+                </Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {isTeamActionsPanelOpen
+                    ? t('common.close', 'Fermer')
+                    : t('teamDetails.actions.openPanel', 'Ouvrir')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {isTeamActionsPanelOpen ? (
+              <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]}>
+                {(showEditAction || showTeamChatAction) ? (
+                  <View style={[Alignments.row, Spaces.gap[16]]}>
+                    {showEditAction ? (
+                      <Button
+                        onPress={handleEditTeam}
+                        style={Alignments.fill}
+                        title={t('teamDetails.actions.edit')}
+                        variant="Primary"
+                      />
+                    ) : null}
+                    {showTeamChatAction ? (
+                      <Button
+                        icon="envelope"
+                        iconPosition="before"
+                        onPress={handleStartChat}
+                        style={Alignments.fill}
+                        title={t('teamDetails.actions.teamChat', 'Equipe')}
+                        variant="PrimaryLight"
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {showDefaultCompositionAction ? (
+                  <Button
+                    onPress={handleManageDefaultComposition}
+                    title={t('teamDetails.actions.defaultComposition', 'Composition type')}
+                    variant="Secondary"
+                  />
+                ) : null}
+
+                {showLeaveAction ? (
+                  <Button
+                    onPress={handleAskToLeave}
+                    style={{ backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 }}
+                    textStyle={{ color: Colors.error500 }}
+                    title={t('teamDetails.actions.leave')}
+                    variant="Secondary"
+                  />
+                ) : null}
+
+                {showJoinAction ? (
+                  <Button
+                    disabled={!!pendingRequest}
+                    onPress={pendingRequest ? undefined : handleJoinTeam}
+                    title={
+                      pendingRequest
+                        ? t('teamDetails.actions.requestPending', 'Demande en attente')
+                        : t('teamDetails.actions.join')
+                    }
+                    variant={pendingRequest ? 'Secondary' : 'Primary'}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        </View>
       ) : null}
-      {canRefreshExternalSync && (
-        <Button
-          isLoading={refreshScrapingMutation.isPending}
-          onPress={() => {
-            if (teamId) refreshScrapingMutation.mutate(teamId);
-          }}
-          style={Spaces.paddingHorizontal[16]}
-          title={t('teamDetails.external.actions.syncStandings', 'Synchroniser le classement')}
-          variant="PrimaryLight"
-        />
-      )}
-      {
-        isMyTeam && (
-          <Button
-            onPress={handleAskToLeave}
-            style={Spaces.paddingHorizontal[16]}
-            title={t('teamDetails.actions.leave')}
-            variant="Secondary"
-          />
-        )
-      }
-      {canJoinTeam(teamId) && (
-        <Button
-          disabled={!!pendingRequest}
-          onPress={pendingRequest ? undefined : handleJoinTeam}
-          style={Spaces.paddingHorizontal[16]}
-          title={
-            pendingRequest
-              ? t('teamDetails.actions.requestPending', 'Demande en attente')
-              : t('teamDetails.actions.join')
-          }
-          variant={pendingRequest ? 'Secondary' : 'Primary'}
-        />
-      )}
 
       <Modal
         animationType="slide"
@@ -2526,7 +2787,7 @@ function TeamDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('teamDetails.modals.trainers.title', 'Choisir les entraîneurs')}
+              {t('teamDetails.modals.trainers.title', 'Choisir les entraÃƒÂ®neurs')}
             </Text>
 
             <Input
@@ -2555,7 +2816,7 @@ function TeamDetails({ navigation, route }) {
               ))}
               {!trainerPickerOptions.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral500]}>
-                  {t('teamDetails.modals.trainers.noData', 'Aucun entraîneur ou dirigeant disponible')}
+                  {t('teamDetails.modals.trainers.noData', 'Aucun entraÃƒÂ®neur ou dirigeant disponible')}
                 </Text>
               ) : null}
             </ScrollView>
@@ -2563,7 +2824,7 @@ function TeamDetails({ navigation, route }) {
             <View style={[Spaces.gap[12]]}>
               <Button
                 onPress={handleOpenCreateTrainerModal}
-                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraîneur')}
+                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraÃƒÂ®neur')}
                 variant="SecondaryLight"
               />
               <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -2658,7 +2919,7 @@ function TeamDetails({ navigation, route }) {
         >
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxHeight: '70%', maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
-              {t('teamDetails.ffbb.selectTeam', 'Sélectionnez votre équipe')}
+              {t('teamDetails.ffbb.selectTeam', 'SÃƒÂ©lectionnez votre ÃƒÂ©quipe')}
             </Text>
             <ScrollView style={Spaces.marginBottom[16]}>
               {ffbbTeamsList.map((ffbbTeam, index) => (
@@ -2827,6 +3088,11 @@ function TeamDetails({ navigation, route }) {
                 Colors.success500,
               )}
               {renderExternalSyncItems(
+                t('teamDetails.external.report.scoreUpdatedSection', 'Scores importes'),
+                externalSyncReport?.scoreUpdatedEvents,
+                Colors.primary100,
+              )}
+              {renderExternalSyncItems(
                 t('teamDetails.external.report.updatedSection', 'Evenements mis a jour'),
                 externalSyncReport?.updatedEvents,
                 Colors.primary500,
@@ -2867,18 +3133,18 @@ function TeamDetails({ navigation, route }) {
         >
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
-              {t('teamDetails.ffbb.reportTitle', 'Signaler un problème')}
+              {t('teamDetails.ffbb.reportTitle', 'Signaler un problÃƒÂ¨me')}
             </Text>
 
             {/* Problem Type Selector */}
             <Text style={[Fonts.p2Bold, Fonts.primary100, Spaces.marginBottom[8]]}>
-              {t('teamDetails.ffbb.problemType', 'Type de problème')}
+              {t('teamDetails.ffbb.problemType', 'Type de problÃƒÂ¨me')}
             </Text>
             <View style={[Spaces.marginBottom[16], Spaces.gap[8]]}>
               {[
-                { key: 'wrong_data', label: t('teamDetails.ffbb.problems.wrongData', 'Données incorrectes') },
+                { key: 'wrong_data', label: t('teamDetails.ffbb.problems.wrongData', 'DonnÃƒÂ©es incorrectes') },
                 { key: 'missing_team', label: t('teamDetails.ffbb.problems.missingTeam', 'Equipe manquante') },
-                { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'Données obsolètes') },
+                { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'DonnÃƒÂ©es obsolÃƒÂ¨tes') },
                 { key: 'wrong_url', label: t('teamDetails.ffbb.problems.wrongUrl', 'Mauvaise URL') },
                 { key: 'other', label: t('teamDetails.ffbb.problems.other', 'Autre') },
               ].map((option) => (
@@ -2916,7 +3182,7 @@ function TeamDetails({ navigation, route }) {
               multiline
               numberOfLines={3}
               onChangeText={setFfbbErrorDescription}
-              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'Décrivez le problème...')}
+              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'DÃƒÂ©crivez le problÃƒÂ¨me...')}
               placeholderTextColor="#888"
               style={[
                 Fonts.p2, Fonts.neutral00,

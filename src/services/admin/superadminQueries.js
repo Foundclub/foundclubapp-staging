@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
+
 import {
   bulkDeleteSuperadminEntries,
   bulkSuperadminEntries,
@@ -14,7 +16,7 @@ import {
 } from './superadminService';
 
 const contentTypesKey = ['superadmin', 'content-types'];
-const listKey = (uid, params) => ['superadmin', 'content', uid, 'list', params];
+const listKey = (uid, params) => buildNormalizedQueryKey(['superadmin', 'content', uid, 'list'], params);
 const detailKey = (uid, documentId) => ['superadmin', 'content', uid, 'detail', documentId];
 const metadataKey = (uid) => ['superadmin', 'content', uid, 'metadata'];
 
