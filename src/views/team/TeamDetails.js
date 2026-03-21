@@ -29,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -57,6 +58,8 @@ import {
   updateTeam,
 } from '@/services/team/teamService';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+
+import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {{ externalTeamId?: string | null; externalTeamName: string }} ExternalTeamOption
@@ -145,6 +148,7 @@ function TeamDetails({ navigation, route }) {
   const [ffbbLoading, setFfbbLoading] = useState(false);
   const [ffbbErrorType, setFfbbErrorType] = useState('wrong_data');
   const [ffbbErrorDescription, setFfbbErrorDescription] = useState('');
+  const [teamClubLogoRatio, setTeamClubLogoRatio] = useState(1);
   const createTrainerOpenTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
   const assignmentPrefillHandledRef = useRef(false);
 
@@ -177,6 +181,40 @@ function TeamDetails({ navigation, route }) {
   };
 
   const getSyncPayload = useCallback((result) => result?.data || result || {}, []);
+
+  const teamClubLogoUrl = useMemo(
+    () => getImageUrl(team?.club?.logo?.url),
+    [team?.club?.logo?.url],
+  );
+
+  const teamClubLogoFrame = useMemo(() => {
+    const ratio = Number.isFinite(teamClubLogoRatio) && teamClubLogoRatio > 0 ? teamClubLogoRatio : 1;
+
+    if (ratio >= 1.3) {
+      return {
+        borderRadius: 20,
+        height: 78,
+        safeInsetRatio: 0.02,
+        width: 122,
+      };
+    }
+
+    if (ratio <= 0.8) {
+      return {
+        borderRadius: 22,
+        height: 102,
+        safeInsetRatio: 0.02,
+        width: 78,
+      };
+    }
+
+    return {
+      borderRadius: 22,
+      height: 92,
+      safeInsetRatio: 0,
+      width: 92,
+    };
+  }, [teamClubLogoRatio]);
 
   const getExternalSyncStatusMeta = useCallback((status) => {
     switch (status) {
@@ -849,6 +887,37 @@ function TeamDetails({ navigation, route }) {
     });
   }, [assignmentTrainerId, assignmentTrainerName, canAddTrainer, navigation, t, team?.documentId, team?.trainers]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!teamClubLogoUrl) {
+      setTeamClubLogoRatio(1);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    Image.getSize(
+      teamClubLogoUrl,
+      (width, height) => {
+        if (!isMounted) return;
+        if (width > 0 && height > 0) {
+          setTeamClubLogoRatio(width / height);
+          return;
+        }
+        setTeamClubLogoRatio(1);
+      },
+      () => {
+        if (!isMounted) return;
+        setTeamClubLogoRatio(1);
+      },
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, [teamClubLogoUrl]);
+
   const handleOpenCreateTrainerModal = useCallback(() => {
     Keyboard.dismiss();
     setIsTrainerPickerVisible(false);
@@ -1507,16 +1576,22 @@ function TeamDetails({ navigation, route }) {
             <View style={[Alignments.alignCenter, { elevation: 2, marginBottom: -40, zIndex: 2 }]}>
               {team?.club?.logo?.url ? (
                 <ProfileAvatar
+                  fitMode="contain"
+                  imageStyle={{ backgroundColor: 'transparent' }}
                   imageUrl={team.club.logo.url}
+                  safeInsetRatio={teamClubLogoFrame.safeInsetRatio}
                   shape="rounded"
                   size={90}
-                  variant="logo"
                   style={[
                     ApplicationStyle.borderWidth1,
                     ApplicationStyle.borderColor.neutral00,
-                    ApplicationStyle.backgroundColor.neutral00,
-                    { borderRadius: 22 },
+                    {
+                      borderRadius: teamClubLogoFrame.borderRadius,
+                      height: teamClubLogoFrame.height,
+                      width: teamClubLogoFrame.width,
+                    },
                   ]}
+                  variant="logo"
                 />
               ) : (
                 <TeamShield
@@ -1579,7 +1654,12 @@ function TeamDetails({ navigation, route }) {
               ) : null}
               {(team?.city || team?.address?.properties?.label || team?.club?.address?.properties?.label || team?.club?.city) && (
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <Text style={{ fontSize: 16 }}>o</Text>
+                <TeamLocationIcon
+                  color={Colors.primary100}
+                  height={14}
+                  name="location-pin-alt-1"
+                  width={14}
+                />
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                   {team?.address?.properties?.label || team?.city || team?.club?.address?.properties?.label || team?.club?.city}
                 </Text>

@@ -163,6 +163,20 @@ function ProfileEdit({ navigation, route }) {
 
   const preferredSport = watch('preferredSport');
 
+  useEffect(() => {
+    const focusField = route?.params?.focusField;
+    if (!focusField) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setFocus(focusField);
+      navigation.setParams({ focusField: undefined });
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [navigation, route?.params?.focusField, setFocus]);
+
   /**
    * Handle form submit
    * @param {typeof defaultValues} data

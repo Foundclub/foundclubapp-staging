@@ -1,4 +1,9 @@
-import { getAuthTokens, getOnboardingViews, USER_ROLES } from '@/domains/auth/authUseCases';
+import {
+  getAuthTokens,
+  getOnboardingViews,
+  getUserRoleKey,
+  USER_ROLES,
+} from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
 import {
   resetAuthRuntimeForTests,
@@ -53,6 +58,18 @@ describe('authUseCases', () => {
   });
 
   describe('getOnboardingViews', () => {
+    it('normalizes coach role aliases for onboarding', () => {
+      expect(getUserRoleKey('Coach')).toBe('coach');
+      expect(getUserRoleKey('Entraineur')).toBe('coach');
+      expect(getUserRoleKey('Entraîneur')).toBe('coach');
+    });
+
+    it('normalizes president role aliases for onboarding', () => {
+      expect(getUserRoleKey('President')).toBe('president');
+      expect(getUserRoleKey('Dirigeant')).toBe('president');
+      expect(getUserRoleKey('ClubAdmin')).toBe('president');
+    });
+
     it('returns empty views when onboarding is marked completed', () => {
       storage.getBoolean.mockReturnValue(true);
       const result = getOnboardingViews({
@@ -85,6 +102,21 @@ describe('authUseCases', () => {
       });
 
       expect(result.totalViews).toBe(6);
+      expect(result.views.map((v) => v.route)).toEqual([
+        RouteNames.UserName,
+        RouteNames.UserBirthdate,
+        RouteNames.UserAddress,
+        RouteNames.UserAvatar,
+        RouteNames.UserAffiliationGuide,
+        RouteNames.Welcome,
+      ]);
+    });
+
+    it('returns coach onboarding flow for alias role names', () => {
+      const result = getOnboardingViews({
+        role: { name: 'Coach' },
+      });
+
       expect(result.views.map((v) => v.route)).toEqual([
         RouteNames.UserName,
         RouteNames.UserBirthdate,

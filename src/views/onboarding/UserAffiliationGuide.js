@@ -14,8 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  getUserRoleKey,
   markOnboardingComplete,
-  USER_ROLES,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -77,8 +77,9 @@ function UserAffiliationGuideContent({ navigation }) {
   const { isActive, startOnboarding, totalSteps } = useOnboarding();
 
   const roleName = userData?.role?.name;
-  const isStaffAffiliationFlow = roleName === USER_ROLES.coach || roleName === USER_ROLES.president;
-  const isPlayerAffiliationFlow = roleName === USER_ROLES.player;
+  const roleKey = getUserRoleKey(roleName);
+  const isStaffAffiliationFlow = roleKey === 'coach' || roleKey === 'president';
+  const isPlayerAffiliationFlow = roleKey === 'player';
 
   const [selectedClub, setSelectedClub] = useState(null);
   const isClubFlow = isStaffAffiliationFlow || (isPlayerAffiliationFlow && !selectedClub?.documentId);

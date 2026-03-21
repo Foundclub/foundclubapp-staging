@@ -16,6 +16,25 @@ export const USER_ROLES = /** @type {const} */({
   superAdmin: 'SuperAdmin',
 });
 
+const normalizeRoleName = (roleName) => String(roleName || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase();
+
+export const getUserRoleKey = (roleName) => {
+  const normalized = normalizeRoleName(roleName);
+
+  if (!normalized || normalized === 'authenticated') return 'new';
+  if (normalized.includes('super')) return 'superAdmin';
+  if (normalized.includes('dirigeant') || normalized.includes('president') || normalized.includes('clubadmin')) {
+    return 'president';
+  }
+  if (normalized.includes('entra') || normalized.includes('coach')) return 'coach';
+  if (normalized.includes('joueur') || normalized === 'player') return 'player';
+  return 'new';
+};
+
 export const getAuthTokens = () => {
   const runtimeSnapshot = getAuthRuntimeSnapshot();
   if (runtimeSnapshot.ready) {
@@ -61,22 +80,23 @@ export const getOnboardingViews = ({
   }
 
   const roleName = role?.name || USER_ROLES.new;
+  const roleKey = getUserRoleKey(roleName);
   const hasClubAffiliation = !!(club?.documentId || club?.id);
   const hasTeamAffiliation = (Array.isArray(myTeams) ? myTeams.length : 0)
     + (Array.isArray(trainedTeams) ? trainedTeams.length : 0) > 0;
   const shouldShowAffiliationGuide = (() => {
-    if (roleName === USER_ROLES.coach || roleName === USER_ROLES.president) {
+    if (roleKey === 'coach' || roleKey === 'president') {
       return !hasClubAffiliation;
     }
-    if (roleName === USER_ROLES.player) {
+    if (roleKey === 'player') {
       return !hasTeamAffiliation;
     }
     return false;
   })();
 
   const baseViews = (() => {
-    switch (roleName) {
-      case USER_ROLES.coach:
+    switch (roleKey) {
+      case 'coach':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserBirthdate },
@@ -85,7 +105,7 @@ export const getOnboardingViews = ({
           { canShow: shouldShowAffiliationGuide, index: 5, route: RouteNames.UserAffiliationGuide },
           { canShow: true, index: 6, route: RouteNames.Welcome },
         ];
-      case USER_ROLES.player:
+      case 'player':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserSection },
@@ -103,14 +123,14 @@ export const getOnboardingViews = ({
           { canShow: shouldShowAffiliationGuide, index: 13, route: RouteNames.UserAffiliationGuide },
           { canShow: true, index: 14, route: RouteNames.Welcome },
         ];
-      case USER_ROLES.president:
+      case 'president':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserAvatar },
           { canShow: shouldShowAffiliationGuide, index: 3, route: RouteNames.UserAffiliationGuide },
           { canShow: true, index: 4, route: RouteNames.Welcome },
         ];
-      case USER_ROLES.superAdmin:
+      case 'superAdmin':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
           { canShow: true, index: 2, route: RouteNames.UserAvatar },
@@ -214,8 +234,8 @@ export const markOnboardingComplete = (documentId) => {
  * @returns {string[]} Array of field names to display
  */
 export const profileFieldToDisplay = (role) => {
-  switch (role.name) {
-    case USER_ROLES.coach:
+  switch (getUserRoleKey(role?.name)) {
+    case 'coach':
       return [
         'firstname',
         'lastname',
@@ -223,7 +243,7 @@ export const profileFieldToDisplay = (role) => {
         'address',
         'avatar',
       ];
-    case USER_ROLES.player:
+    case 'player':
       return [
         'firstname',
         'lastname',
@@ -238,7 +258,7 @@ export const profileFieldToDisplay = (role) => {
         'category',
         'preferredSport',
       ];
-    case USER_ROLES.president:
+    case 'president':
       return [
         'firstname',
         'lastname',

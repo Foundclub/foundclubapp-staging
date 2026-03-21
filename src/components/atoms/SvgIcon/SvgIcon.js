@@ -30,6 +30,7 @@ export function SvgIcon({
 
   return (
     <Image
+      resizeMode="contain"
       source={iconSource}
       style={[
         {

@@ -26,7 +26,8 @@ const normalizeCategoryName = (value) => (value || '')
  */
 export const getCategorySortKey = (value) => {
   const label = normalizeCategoryName(value);
-  const uMatch = label.match(/(?:^|[^A-Z0-9])U\s*[- ]?\s*(\d{1,2})(?:[^0-9]|$)/) || label.match(/^U\s*[- ]?\s*(\d{1,2})$/);
+  const uMatch = label.match(/(?:^|[^A-Z0-9])U\s*[- ]?\s*(\d{1,2})(?:[^0-9]|$)/)
+    || label.match(/^U\s*[- ]?\s*(\d{1,2})$/);
   if (uMatch) {
     return { group: 0, label, rank: Number(uMatch[1]) };
   }
@@ -54,7 +55,11 @@ export const compareCategories = (a, b) => {
 
   if (keyA.group !== keyB.group) return keyA.group - keyB.group;
   if (keyA.rank !== keyB.rank) return keyA.rank - keyB.rank;
-  return keyA.label.localeCompare(keyB.label, 'fr', { numeric: true, sensitivity: 'base' });
+
+  return keyA.label.localeCompare(keyB.label, 'fr', {
+    numeric: true,
+    sensitivity: 'base',
+  });
 };
 
 /**
@@ -63,7 +68,7 @@ export const compareCategories = (a, b) => {
  */
 export const getCategories = async () => {
   try {
-    const response = await client.get('/catégories', {
+    const response = await client.get('/categories', {
       params: {
         pagination: {
           page: 1,
@@ -80,9 +85,13 @@ export const getCategories = async () => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
+
     return [...validationResult.data].sort(compareCategories);
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to fetch catégories: ${errorToDisplay}`);
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error
+      ? error.message
+      : error;
+
+    throw new Error(`Failed to fetch categories: ${errorToDisplay}`);
   }
 };

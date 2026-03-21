@@ -58,6 +58,12 @@ const resolveProfileStatValue = ({
 
 const toTextLabel = (value) => {
   if (value === undefined || value === null) return '';
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => toTextLabel(entry))
+      .filter(Boolean)
+      .join(', ');
+  }
   if (typeof value === 'object' && !Array.isArray(value)) {
     const nested = value?.name || value?.label || value?.title;
     return typeof nested === 'string' ? nested.trim() : '';
@@ -74,12 +80,13 @@ const formatNullableValue = (value, fallback = 'Non renseigne') => {
 };
 
 const formatSectionLabel = (value) => {
-  const normalized = String(value || '').trim().toLowerCase();
+  const rawLabel = toTextLabel(value);
+  const normalized = rawLabel.toLowerCase();
   if (!normalized) return '';
   if (['homme', 'male', 'masculin', 'masculine'].includes(normalized)) return 'Masculin';
   if (['female', 'feminin', 'feminine', 'femme'].includes(normalized)) return 'Feminin';
   if (['mixed', 'mixte'].includes(normalized)) return 'Mixte';
-  return String(value);
+  return rawLabel;
 };
 
 /**
@@ -287,11 +294,11 @@ function Profile({ navigation, route }) {
   );
   const sportProfileItems = useMemo(
     () => [
-      { label: 'Sport', value: preferredSportLabel },
-      { label: 'Niveau', value: bestLevelLabel },
-      { label: 'Poste', value: positionLabel },
-      { label: 'Section', value: sectionLabel },
-      { fullWidth: true, label: 'Categorie', value: categoryLabel },
+      { field: 'preferredSport', label: 'Sport', value: preferredSportLabel },
+      { field: 'bestLevel', label: 'Niveau', value: bestLevelLabel },
+      { field: 'position', label: 'Poste', value: positionLabel },
+      { field: 'section', label: 'Section', value: sectionLabel },
+      { field: 'category', fullWidth: true, label: 'Categorie', value: categoryLabel },
     ],
     [bestLevelLabel, categoryLabel, positionLabel, preferredSportLabel, sectionLabel],
   );
@@ -310,6 +317,14 @@ function Profile({ navigation, route }) {
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
+  };
+
+  /**
+   * @param {'preferredSport' | 'bestLevel' | 'position' | 'section' | 'category'} field
+   * @returns {void}
+   */
+  const handleEditSportProfileField = (field) => {
+    navigation.navigate(RouteNames.ProfileEdit, { focusField: field });
   };
 
   const handleFindClub = () => {
@@ -614,7 +629,8 @@ function Profile({ navigation, route }) {
 
   const profileActionsContent = (
     <View style={[
-      Spaces.gap[16]]}
+      Spaces.gap[16],
+      { marginTop: 4 }]}
     >
       <TabButton
         isActive={false}
@@ -959,10 +975,26 @@ function Profile({ navigation, route }) {
               />
             </View>
 
-            <View style={[Alignments.row, Alignments.wrap, Alignments.justifyBetween]}>
+            <View
+              style={[
+                Alignments.row,
+                Alignments.wrap,
+                Alignments.justifyBetween,
+                {
+                  columnGap: 12,
+                  rowGap: 12,
+                },
+              ]}
+            >
               {sportProfileItems.map((item) => (
-                <View
+                <TouchableOpacity
+                  accessibilityLabel={`Modifier ${item.label}`}
+                  accessibilityRole="button"
+                  activeOpacity={0.86}
                   key={item.label}
+                  onPress={() => handleEditSportProfileField(
+                    /** @type {'preferredSport' | 'bestLevel' | 'position' | 'section' | 'category'} */ (item.field),
+                  )}
                   style={[
                     ApplicationStyle.card,
                     Spaces.padding[12],
@@ -970,7 +1002,6 @@ function Profile({ navigation, route }) {
                     {
                       backgroundColor: `${Colors.primary700}BF`,
                       borderColor: `${Colors.primary500}66`,
-                      marginBottom: 12,
                       minHeight: 78,
                       width: item.fullWidth ? '100%' : '48%',
                     },
@@ -986,7 +1017,10 @@ function Profile({ navigation, route }) {
                   >
                     {item.value}
                   </Text>
-                </View>
+                  <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                    Modifier
+                  </Text>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
