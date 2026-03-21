@@ -416,7 +416,7 @@ function Profile({ navigation, route }) {
     if (safeAuthSessions.length >= MAX_ACCOUNTS) {
       Alert.alert(
         t('profile.alerts.maxAccounts.title', 'Limite atteinte'),
-        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectÃ©s.`),
+        t('profile.alerts.maxAccounts.message', `Vous ne pouvez pas avoir plus de ${MAX_ACCOUNTS} comptes connectes.`),
       );
       return;
     }
@@ -644,7 +644,7 @@ function Profile({ navigation, route }) {
         <TabButton
           isActive={false}
           onPress={handleOpenRequestsHub}
-          title={t('profile.actions.manageRequests', 'GÃ©rer mes demandes')}
+          title={t('profile.actions.manageRequests', 'Gerer mes demandes')}
         />
       ) : null}
       {userData?.role?.name === USER_ROLES.superAdmin ? (
@@ -993,7 +993,7 @@ function Profile({ navigation, route }) {
 
           {isProfileMainTutorial ? (
             <OnboardingWrapper
-              description="Depuis cette zone, vous pouvez modifier votre profil, gÃ©rer vos demandes et changer de compte."
+              description="Depuis cette zone, vous pouvez modifier votre profil, gerer vos demandes et changer de compte."
               id="profile-main-actions"
               order={1}
               spotlight={{
@@ -1007,13 +1007,13 @@ function Profile({ navigation, route }) {
 
           {isLogoutTutorial ? (
             <OnboardingWrapper
-              description="Ce bouton lance la confirmation de dÃ©connexion de votre session."
+              description="Ce bouton lance la confirmation de deconnexion de votre session."
               id="profile-logout-action"
               order={2}
               spotlight={{
                 borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
               }}
-              title="DÃ©connexion"
+              title="Deconnexion"
             >
               <Button
                 onPress={handleLogout}

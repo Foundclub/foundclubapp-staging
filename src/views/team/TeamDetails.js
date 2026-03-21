@@ -385,7 +385,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraÃƒÂ®neur')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.addTrainerError', 'Impossible d\'ajouter cet entraineur')),
       );
     },
     onSuccess: () => {
@@ -399,7 +399,7 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre ÃƒÂ  jour les entraÃƒÂ®neurs')),
+        getErrorMessage(mutationError, t('teamDetails.alerts.updateTrainersError', 'Impossible de mettre a jour les entraineurs')),
       );
     },
     onSuccess: () => {
@@ -418,15 +418,15 @@ function TeamDetails({ navigation, route }) {
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de rÃƒÂ©initialiser les statistiques')),
+        getErrorMessage(mutationError, t('teamDetails.stats.resetError', 'Impossible de reinitialiser les statistiques')),
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamStats', teamId] });
       refetchTeamStats();
       Alert.alert(
-        t('common.success', 'SuccÃƒÂ¨s'),
-        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ÃƒÂ©tÃƒÂ© rÃƒÂ©initialisÃƒÂ©es ÃƒÂ  partir de maintenant.'),
+        t('common.success', 'Succes'),
+        t('teamDetails.stats.resetSuccess', 'Les statistiques ont ete reinitialisees a partir de maintenant.'),
       );
     },
   });
@@ -439,7 +439,7 @@ function TeamDetails({ navigation, route }) {
         const seconds = apiError.response.data.remainingSeconds || 0;
         Alert.alert(t('common.error'), t('teamDetails.ffbb.rateLimit', `Veuillez patienter ${seconds} secondes.`));
       } else {
-        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise ÃƒÂ  jour : ${getErrorMessage(apiError)}`));
+        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise a jour : ${getErrorMessage(apiError)}`));
       }
     },
     onSuccess: (result) => {
@@ -467,7 +467,7 @@ function TeamDetails({ navigation, route }) {
         setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
-          t('teamDetails.ffbb.noCandidate', 'Aucune ÃƒÂ©quipe dÃƒÂ©tectÃƒÂ©e depuis cette source.'),
+          t('teamDetails.ffbb.noCandidate', 'Aucune equipe detectee depuis cette source.'),
         );
         return;
       }
@@ -509,7 +509,7 @@ function TeamDetails({ navigation, route }) {
       });
       setShowFFBBErrorModal(false);
       setFfbbErrorDescription('');
-      Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoyÃƒÂ©, merci!'));
+      Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoye, merci !'));
     } catch (error) {
       Alert.alert(t('common.error'), getErrorMessage(error));
     } finally {
@@ -606,7 +606,7 @@ function TeamDetails({ navigation, route }) {
   const areSlotActionsEnabled = String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
   const showSlotFeatureComingSoon = () => Alert.alert(
     'Bientot disponible',
-    'La gestion des crÃƒÂ©neaux sera activee prochainement.',
+    'La gestion des creneaux sera activee prochainement.',
   );
   const showStatsTab = useMemo(
     () => Boolean(
@@ -783,7 +783,7 @@ function TeamDetails({ navigation, route }) {
     if (!selectedTrainerIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('teamDetails.alerts.trainerRequired', 'Au moins un entraÃƒÂ®neur est requis'),
+        t('teamDetails.alerts.trainerRequired', 'Au moins un entraineur est requis'),
       );
       return;
     }
@@ -839,7 +839,7 @@ function TeamDetails({ navigation, route }) {
 
     Alert.alert(
       'Preselection effectuee',
-      `${assignmentTrainerName || "L'entraÃƒÂ®neur"} est prÃƒÂ©sÃƒÂ©lectionnÃƒÂ©. VÃƒÂ©rifiez puis appuyez sur "Valider".`,
+      `${assignmentTrainerName || "L'entraineur"} est preselectionne. Verifiez puis appuyez sur "Valider".`,
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -923,14 +923,14 @@ function TeamDetails({ navigation, route }) {
     if (!teamId || !canResetTeamStats) return;
 
     Alert.alert(
-      t('teamDetails.stats.resetTitle', 'RÃƒÂ©initialiser les statistiques ?'),
+      t('teamDetails.stats.resetTitle', 'Reinitialiser les statistiques ?'),
       t('teamDetails.stats.resetDescription', 'Les compteurs repartiront de zero a partir de maintenant. L historique est conserve.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
           onPress: () => {
             resetTeamStatsMutation.mutate({
-              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon ÃƒÂ©quipe'),
+              reason: t('teamDetails.stats.resetReasonDefault', 'Reset manuel depuis Mon equipe'),
             });
           },
           style: 'destructive',
@@ -971,7 +971,7 @@ function TeamDetails({ navigation, route }) {
         players: filteredPlayers,
         sport: team?.activities?.[0]?.name || 'football',
         teamId: team.documentId,
-        teamName: team.name || 'Ãƒâ€°quipe',
+        teamName: team.name || 'Equipe',
       },
       screen: RouteNames.TacticalSelectionV2,
     });
@@ -1023,7 +1023,7 @@ function TeamDetails({ navigation, route }) {
   const handleRemovePlayer = (/** @type {string} */ playerId) => {
     Alert.alert(
       t('teamDetails.alerts.removePlayer.title', 'Supprimer le joueur'),
-      t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'ÃƒÂ©quipe ?'),
+      t('teamDetails.alerts.removePlayer.description', 'Voulez-vous vraiment retirer ce joueur de l\'equipe ?'),
       [
         {
           style: 'cancel',
@@ -1201,7 +1201,7 @@ function TeamDetails({ navigation, route }) {
                 {item?.eventDocumentId ? (
                   <Button
                     onPress={() => handleOpenSyncedEvent(item.eventDocumentId)}
-                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'ÃƒÂ©vÃƒÂ©nement")}
+                    title={t('teamDetails.external.report.openEvent', "Ouvrir l'evenement")}
                     variant="SecondaryLight"
                   />
                 ) : null}
@@ -1743,7 +1743,7 @@ function TeamDetails({ navigation, route }) {
                       ]}
                     >
                       <Text style={[Fonts.p2, Fonts.primary100]}>
-                        {t('teamDetails.sections.noTrainer', 'Aucun entraÃƒÂ®neur pour le moment')}
+                        {t('teamDetails.sections.noTrainer', 'Aucun entraineur pour le moment')}
                       </Text>
                     </View>
                   ) : null}
@@ -1914,8 +1914,8 @@ function TeamDetails({ navigation, route }) {
                 {/* Calendar filters + list */}
                 {(() => {
                   const modeOptions = [
-                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon ÃƒÂ©quipe') },
-                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'RÃƒÂ©sultats poule') },
+                    { key: 'upcoming', label: t('teamDetails.calendar.filters.myTeam', 'Mon equipe') },
+                    { key: 'results', label: t('teamDetails.calendar.filters.poolResults', 'Resultats poule') },
                     { key: 'all', label: t('teamDetails.calendar.filters.poolCalendar', 'Calendrier poule') },
                   ];
 
@@ -2117,8 +2117,8 @@ function TeamDetails({ navigation, route }) {
                   const groupedMatches = sortedMatches.reduce((groups, match) => {
                     const monthLabel = match._monthLabel || t('teamDetails.calendar.monthUnknown', 'Date a confirmer');
                     const roundLabel = match._roundLabel
-                      ? t('teamDetails.calendar.round.title', 'JournÃƒÂ©e {{round}}', { round: match._roundLabel })
-                      : t('teamDetails.calendar.round.unknown', 'JournÃƒÂ©e non prÃƒÂ©cisÃƒÂ©e');
+                      ? t('teamDetails.calendar.round.title', 'Journee {{round}}', { round: match._roundLabel })
+                      : t('teamDetails.calendar.round.unknown', 'Journee non precisee');
                     const groupLabel = useRoundFilters ? roundLabel : monthLabel;
                     const groupSubtitle = useRoundFilters ? monthLabel : null;
                     const existingGroup = groups.find((group) => group.label === groupLabel);
@@ -2130,7 +2130,7 @@ function TeamDetails({ navigation, route }) {
                   }, []);
 
                   const emptyLabel = calendarDisplayMode === 'upcoming'
-                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match ÃƒÂ  venir pour cette ÃƒÂ©quipe.')
+                    ? t('teamDetails.calendar.empty.upcoming', 'Aucun match a venir pour cette equipe.')
                     : calendarDisplayMode === 'results'
                       ? t('teamDetails.calendar.empty.results', 'Aucun resultat disponible.')
                       : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
@@ -2139,12 +2139,12 @@ function TeamDetails({ navigation, route }) {
                   const modeScopeText = isUpcomingMode
                     ? (
                       hasSelectedExternalTeam
-                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre ÃƒÂ©quipe uniquement.')
-                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres ÃƒÂ  venir de la poule.')
+                        ? t('teamDetails.calendar.scope.upcomingTeamOnly', 'Prochaines rencontres de votre equipe uniquement.')
+                        : t('teamDetails.calendar.scope.upcomingAll', 'Rencontres a venir de la poule.')
                     )
                     : useRoundFilters
-                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organisÃƒÂ© par journÃƒÂ©e FFBB.')
-                      : t('teamDetails.calendar.scope.fullPool', 'RÃƒÂ©sultats et calendrier de toute la poule.');
+                      ? t('teamDetails.calendar.scope.ffbbRound', 'Affichage organise par journee FFBB.')
+                      : t('teamDetails.calendar.scope.fullPool', 'Resultats et calendrier de toute la poule.');
                   const followedTeamName = String(team?.externalTeamName || team?.name || '').trim();
                   const showFollowedTeamBadge = hasSelectedExternalTeam && followedTeamName.length > 0;
                   const followedTeamLabel = t('teamDetails.calendar.followedTeam', 'Equipe suivie');
@@ -2699,7 +2699,7 @@ function TeamDetails({ navigation, route }) {
               </View>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                  {t('teamDetails.actions.panelTitle', "Actions d'Ã©quipe")}
+                  {t('teamDetails.actions.panelTitle', "Actions d'equipe")}
                 </Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                   {isTeamActionsPanelOpen
@@ -2787,7 +2787,7 @@ function TeamDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('teamDetails.modals.trainers.title', 'Choisir les entraÃƒÂ®neurs')}
+              {t('teamDetails.modals.trainers.title', 'Choisir les entraineurs')}
             </Text>
 
             <Input
@@ -2816,7 +2816,7 @@ function TeamDetails({ navigation, route }) {
               ))}
               {!trainerPickerOptions.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral500]}>
-                  {t('teamDetails.modals.trainers.noData', 'Aucun entraÃƒÂ®neur ou dirigeant disponible')}
+                  {t('teamDetails.modals.trainers.noData', 'Aucun entraineur ou dirigeant disponible')}
                 </Text>
               ) : null}
             </ScrollView>
@@ -2824,7 +2824,7 @@ function TeamDetails({ navigation, route }) {
             <View style={[Spaces.gap[12]]}>
               <Button
                 onPress={handleOpenCreateTrainerModal}
-                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraÃƒÂ®neur')}
+                title={t('teamDetails.modals.trainers.add', 'Ajouter un entraineur')}
                 variant="SecondaryLight"
               />
               <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -2919,7 +2919,7 @@ function TeamDetails({ navigation, route }) {
         >
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxHeight: '70%', maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
-              {t('teamDetails.ffbb.selectTeam', 'SÃƒÂ©lectionnez votre ÃƒÂ©quipe')}
+              {t('teamDetails.ffbb.selectTeam', 'Selectionnez votre equipe')}
             </Text>
             <ScrollView style={Spaces.marginBottom[16]}>
               {ffbbTeamsList.map((ffbbTeam, index) => (
@@ -3133,18 +3133,18 @@ function TeamDetails({ navigation, route }) {
         >
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxWidth: 400, width: '90%' }]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
-              {t('teamDetails.ffbb.reportTitle', 'Signaler un problÃƒÂ¨me')}
+              {t('teamDetails.ffbb.reportTitle', 'Signaler un probleme')}
             </Text>
 
             {/* Problem Type Selector */}
             <Text style={[Fonts.p2Bold, Fonts.primary100, Spaces.marginBottom[8]]}>
-              {t('teamDetails.ffbb.problemType', 'Type de problÃƒÂ¨me')}
+              {t('teamDetails.ffbb.problemType', 'Type de probleme')}
             </Text>
             <View style={[Spaces.marginBottom[16], Spaces.gap[8]]}>
               {[
-                { key: 'wrong_data', label: t('teamDetails.ffbb.problems.wrongData', 'DonnÃƒÂ©es incorrectes') },
+                { key: 'wrong_data', label: t('teamDetails.ffbb.problems.wrongData', 'Donnees incorrectes') },
                 { key: 'missing_team', label: t('teamDetails.ffbb.problems.missingTeam', 'Equipe manquante') },
-                { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'DonnÃƒÂ©es obsolÃƒÂ¨tes') },
+                { key: 'outdated', label: t('teamDetails.ffbb.problems.outdated', 'Donnees obsoletes') },
                 { key: 'wrong_url', label: t('teamDetails.ffbb.problems.wrongUrl', 'Mauvaise URL') },
                 { key: 'other', label: t('teamDetails.ffbb.problems.other', 'Autre') },
               ].map((option) => (
@@ -3182,7 +3182,7 @@ function TeamDetails({ navigation, route }) {
               multiline
               numberOfLines={3}
               onChangeText={setFfbbErrorDescription}
-              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'DÃƒÂ©crivez le problÃƒÂ¨me...')}
+              placeholder={t('teamDetails.ffbb.descriptionPlaceholder', 'Decrivez le probleme...')}
               placeholderTextColor="#888"
               style={[
                 Fonts.p2, Fonts.neutral00,

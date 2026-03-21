@@ -348,11 +348,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       const result = await confirmParticipation(matchId, teamSide);
-      Alert.alert('ConfirmÃƒÂ©', result.message || 'Presence confirmee');
+      Alert.alert('Confirme', result.message || 'Presence confirmee');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Ãƒâ€°chec confirmation');
+      Alert.alert('Erreur', 'Echec confirmation');
     } finally {
       setActionLoading(false);
     }
@@ -363,11 +363,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await declineParticipation(matchId, teamSide);
-      Alert.alert('Decline', 'Votre participation a ÃƒÂ©tÃƒÂ© annulÃƒÂ©e');
+      Alert.alert('Participation annulee', 'Votre participation a ete annulee');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Ãƒâ€°chec annulation');
+      Alert.alert('Erreur', 'Echec annulation');
     } finally {
       setActionLoading(false);
     }
@@ -377,11 +377,11 @@ function LeagueMatchDetails({ navigation, route }) {
     setActionLoading(true);
     try {
       await markVenueBooked(matchId);
-      Alert.alert('SuccÃƒÂ¨s', 'Terrain marque comme reserve');
+      Alert.alert('Succes', 'Terrain marque comme reserve');
       await loadMatch();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de mettre ÃƒÂ  jour le statut');
+      Alert.alert('Erreur', 'Impossible de mettre a jour le statut');
     } finally {
       setActionLoading(false);
     }
@@ -390,7 +390,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleCancelMatch = () => {
     Alert.alert(
       'Annuler le match ?',
-      'Action irrÃƒÂ©versible. ÃƒÅ tes-vous sÃƒÂ»r ?',
+      'Action irreversible. Etes-vous sur ?',
       [
         { style: 'cancel', text: 'Non' },
         {
@@ -399,14 +399,14 @@ function LeagueMatchDetails({ navigation, route }) {
             try {
               const targetTeamId = getEntityDocumentId(myTeam);
               if (!targetTeamId) {
-                Alert.alert('Erreur', 'Ãƒâ€°quipe introuvable.');
+                Alert.alert('Erreur', 'Equipe introuvable.');
                 return;
               }
-              await cancelMatch(matchId, targetTeamId, 'AnnulÃƒÂ© par le capitaine');
-              Alert.alert('Match annulÃƒÂ©', 'Le match a ÃƒÂ©tÃƒÂ© annulÃƒÂ©.');
+              await cancelMatch(matchId, targetTeamId, 'Annule par le capitaine');
+              Alert.alert('Match annule', 'Le match a ete annule.');
               navigation.goBack();
             } catch (_error) {
-              Alert.alert('Erreur', 'Ãƒâ€°chec annulation');
+              Alert.alert('Erreur', 'Echec annulation');
             } finally {
               setActionLoading(false);
             }
@@ -432,7 +432,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isScoreLockedByTime) {
       Alert.alert(
         'Score indisponible',
-        "Vous pourrez saisir le score une fois l'heure de dÃƒÂ©but du match dÃƒÂ©passÃƒÂ©e de 1 minute.",
+        "Vous pourrez saisir le score une fois l'heure de debut du match depassee de 1 minute.",
       );
       return;
     }
@@ -508,7 +508,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>DÃƒÂ©tails du match</Text>
+          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Details du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
         <View style={styles.centered}>
@@ -531,7 +531,7 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>DÃƒÂ©tails du match</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Details du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]}>
             {match.chat ? (
               <TouchableOpacity onPress={handleOpenChat} style={styles.chatButton}>
@@ -597,7 +597,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     <Text style={{ color: Colors.neutral200, fontSize: 30 }}>?</Text>
                   </View>
                   <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>
-                    MystÃƒÂ¨re
+                    Mystere
                   </Text>
                 </>
               ) : (
@@ -828,13 +828,13 @@ function LeagueMatchDetails({ navigation, route }) {
                       marginBottom: 12,
                     }}
                     textStyle={{ color: isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00 }}
-                    title={isScoreLockedByTime ? 'Score verrouillÃƒÂ© (avant dÃƒÂ©but + 1 min)' : 'Saisir le score final'}
+                    title={isScoreLockedByTime ? 'Score verrouille (avant debut + 1 min)' : 'Saisir le score final'}
                     variant="Primary"
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
-                    Le score sera disponible aprÃƒÂ¨s l&apos;heure de dÃƒÂ©but du match (+1 min).
+                    Le score sera disponible apres l&apos;heure de debut du match (+1 min).
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (

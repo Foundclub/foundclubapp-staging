@@ -297,28 +297,30 @@ function TeamListContent({
           imageUrl={item.crest.url}
           shape="rounded"
           size={80}
-          variant="logo"
           style={{
             backgroundColor: Colors.neutral00,
             borderColor: Colors.gold500,
             borderRadius: 20,
             borderWidth: 1,
           }}
+          variant="logo"
         />
       );
     } else if (item?.club?.logo?.url) {
       identityAvatar = (
         <ProfileAvatar
+          fitMode="cover"
+          imageStyle={{ backgroundColor: 'transparent' }}
           imageUrl={item.club.logo.url}
+          safeInsetRatio={0}
           shape="rounded"
           size={60}
-          variant="logo"
           style={[
             ApplicationStyle.borderWidth1,
             ApplicationStyle.borderColor.primary500,
-            ApplicationStyle.backgroundColor.neutral00,
             { borderRadius: 16 },
           ]}
+          variant="logo"
         />
       );
     }
@@ -380,7 +382,7 @@ function TeamListContent({
             const levelLabel = item?.level?.name || item?.level;
             const membersLabel = String(getUniqueMemberCount());
             const allSponsors = Array.isArray(item?.club?.sponsor) ? item.club.sponsor.filter(Boolean) : [];
-            const sponsors = allSponsors.slice(0, 2);
+            const sponsors = allSponsors.slice(0, 5);
 
             const metaItems = [
               { label: t('teamList.fields.section', 'Section'), value: sectionLabel },
@@ -395,28 +397,30 @@ function TeamListContent({
                   <View style={[Alignments.fullWidth, Spaces.marginBottom[12], Spaces.gap[8]]}>
                     <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
                       {sponsors.map((sponsor) => (
-                        <View
+                        <SponsorLogoTile
+                          borderRadius={16}
+                          containerStyle={{ minWidth: isCompactScreen ? 86 : 94 }}
+                          height={isCompactScreen ? 34 : 38}
+                          imageUrl={sponsor?.logo?.url}
                           key={sponsor?.documentId || sponsor?.id || sponsor?.link || sponsor?.title}
-                          style={{ minWidth: isCompactScreen ? 128 : 144, width: '47%' }}
-                        >
-                          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                            <SponsorLogoTile
-                              height={24}
-                              imageUrl={sponsor?.logo?.url}
-                              link={sponsor?.link}
-                              showTitle={false}
-                              width={40}
-                            />
-                            <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral100, Alignments.fill]}>
-                              {sponsor?.title || sponsor?.name}
-                            </Text>
-                          </View>
-                        </View>
+                          link={sponsor?.link}
+                          title={sponsor?.title || sponsor?.name}
+                          titleLines={2}
+                          titleStyle={[
+                            Fonts.p4Bold,
+                            Fonts.neutral100,
+                            {
+                              lineHeight: 14,
+                              marginTop: 4,
+                            },
+                          ]}
+                          width={isCompactScreen ? 86 : 94}
+                        />
                       ))}
                     </View>
                     {allSponsors.length > sponsors.length ? (
                       <Text style={[Fonts.p3Bold, Fonts.primary100]}>
-                        {`+${allSponsors.length - sponsors.length}`}
+                        {`+${allSponsors.length - sponsors.length} autres sponsors`}
                       </Text>
                     ) : null}
                   </View>
