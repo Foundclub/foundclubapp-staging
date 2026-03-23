@@ -370,6 +370,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   switch (type) {
     case NOTIFICATION_TYPES.ADD_TO_TEAM:
     case NOTIFICATION_TYPES.NEW_TEAM:
+    case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
       return teamDetailsDestination(payload.teamId);
 

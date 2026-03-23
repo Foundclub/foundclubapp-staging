@@ -77,6 +77,7 @@ function TeamDetails({ navigation, route }) {
     assignmentTrainerName,
     fromOnboardingAffiliation = false,
     invite,
+    openExternalSourceSetup = false,
     teamId,
   } = route?.params ?? {};
 
@@ -105,6 +106,14 @@ function TeamDetails({ navigation, route }) {
     },
     [currentUser?.trainedTeams, currentUser?.myTeams, teamId],
   );
+  const currentUserTeamSummary = useMemo(() => {
+    const allMyTeams = [
+      ...(Array.isArray(currentUser?.myTeams) ? currentUser.myTeams : []),
+      ...(Array.isArray(currentUser?.trainedTeams) ? currentUser.trainedTeams : []),
+    ];
+
+    return allMyTeams.find((item) => item?.documentId === teamId) || null;
+  }, [currentUser?.myTeams, currentUser?.trainedTeams, teamId]);
 
   const {
     data: team, error, isLoading, refetch,
@@ -263,6 +272,43 @@ function TeamDetails({ navigation, route }) {
     }
   }, [Colors.error500, Colors.neutral100, Colors.neutral300, Colors.primary500, Colors.success500, Colors.warning500, t]);
 
+  const getExternalSyncModeMeta = useCallback((mode, status = 'synced') => {
+    switch (mode) {
+      case 'connect':
+        return {
+          accentColor: Colors.primary500,
+          label: t('teamDetails.external.mode.connect', 'Configuration initiale'),
+        };
+      case 'daily':
+        return {
+          accentColor: Colors.success500,
+          label: t('teamDetails.external.mode.daily', 'Synchronisation auto quotidienne'),
+        };
+      case 'hot_window':
+        return {
+          accentColor: Colors.warning500,
+          label: t('teamDetails.external.mode.hotWindow', 'Synchronisation auto autour des matchs'),
+        };
+      case 'manual':
+        return {
+          accentColor: Colors.neutral100,
+          label: t('teamDetails.external.mode.manual', 'Synchronisation manuelle'),
+        };
+      default:
+        return {
+          accentColor: status === 'error' ? Colors.error500 : Colors.primary500,
+          label: t('teamDetails.external.mode.unknown', 'Synchronisation'),
+        };
+    }
+  }, [
+    Colors.error500,
+    Colors.neutral100,
+    Colors.primary500,
+    Colors.success500,
+    Colors.warning500,
+    t,
+  ]);
+
   const formatExternalSyncDate = useCallback((value) => {
     if (!value) return null;
     const parsed = new Date(value);
@@ -300,6 +346,8 @@ function TeamDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['eventMatchStats', updatedEventId] });
     });
     refetch();
+    queryClient.invalidateQueries({ queryKey: ['get-me'] });
+    refetchUserData?.();
 
     if (syncReport && typeof syncReport === 'object') {
       openExternalSyncReport(syncReport);
@@ -310,7 +358,7 @@ function TeamDetails({ navigation, route }) {
       t('common.success', 'Succes'),
       t('teamDetails.external.syncCompleted', 'Classement et calendrier synchronises.'),
     );
-  }, [getSyncPayload, openExternalSyncReport, queryClient, refetch, t, teamId]);
+  }, [getSyncPayload, openExternalSyncReport, queryClient, refetch, refetchUserData, t, teamId]);
 
   const allMembers = useMemo(() => {
     const allTrainers = team?.trainers || [];
@@ -486,6 +534,11 @@ function TeamDetails({ navigation, route }) {
   });
 
   // Handler for FFBB URL configuration
+  const openExternalSourceSetupModal = useCallback(() => {
+    setActiveTab('standings');
+    setShowFFBBUrlModal(true);
+  }, []);
+
   const handleSetFFBBUrl = async () => {
     if (!ffbbUrl || !teamId) return;
     setFfbbLoading(true);
@@ -524,12 +577,59 @@ function TeamDetails({ navigation, route }) {
   };
 
   // Handler for FFBB team selection
+  const submitExternalCompetitionSelection = useCallback(async (selectedTeam) => {
+    if (!teamId) return;
+
+    const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
+    setShowFFBBTeamModal(false);
+    applyExternalSyncFeedback(result);
+  }, [applyExternalSyncFeedback, ffbbUrl, teamId]);
+
   const handleSelectFFBBTeam = async (/** @type {ExternalTeamOption} */ selectedTeam) => {
     if (!teamId) return;
+
+    const normalizedExistingUrl = String(team?.externalStandingUrl || '').trim();
+    const normalizedNextUrl = String(ffbbUrl || '').trim();
+    const normalizedExistingTeamId = String(team?.externalTeamId || '').trim();
+    const normalizedSelectedTeamId = String(selectedTeam?.externalTeamId || '').trim();
+    const normalizedExistingTeamName = String(team?.externalTeamName || '').trim().toLowerCase();
+    const normalizedSelectedTeamName = String(selectedTeam?.externalTeamName || '').trim().toLowerCase();
+    const shouldConfirmReplacement = Boolean(
+      normalizedExistingUrl
+      && (
+        normalizedExistingUrl !== normalizedNextUrl
+        || normalizedExistingTeamId !== normalizedSelectedTeamId
+        || normalizedExistingTeamName !== normalizedSelectedTeamName
+      )
+    );
+
+    if (shouldConfirmReplacement) {
+      Alert.alert(
+        t('teamDetails.external.replaceTitle', 'Remplacer la source externe ?'),
+        t(
+          'teamDetails.external.replaceDescription',
+          "Cette equipe a deja une source configuree. La nouvelle source remplacera l'ancienne configuration.",
+        ),
+        [
+          {
+            style: 'cancel',
+            text: t('common.cancel', 'Annuler'),
+          },
+          {
+            onPress: () => {
+              submitExternalCompetitionSelection(selectedTeam).catch((caughtError) => {
+                Alert.alert(t('common.error'), getErrorMessage(caughtError));
+              });
+            },
+            text: t('common.confirm', 'Valider'),
+          },
+        ],
+      );
+      return;
+    }
+
     try {
-      const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
-      setShowFFBBTeamModal(false);
-      applyExternalSyncFeedback(result);
+      await submitExternalCompetitionSelection(selectedTeam);
     } catch (caughtError) {
       Alert.alert(t('common.error'), getErrorMessage(caughtError));
     }
@@ -573,10 +673,46 @@ function TeamDetails({ navigation, route }) {
     () => getExternalSyncStatusMeta(team?.externalSyncStatus),
     [getExternalSyncStatusMeta, team?.externalSyncStatus],
   );
+  const externalSyncModeMeta = useMemo(
+    () => getExternalSyncModeMeta(externalSyncReport?.mode, team?.externalSyncStatus),
+    [externalSyncReport?.mode, getExternalSyncModeMeta, team?.externalSyncStatus],
+  );
   const externalSyncSummary = useMemo(() => {
     const summary = externalSyncReport?.eventSyncSummary;
     return summary && typeof summary === 'object' ? summary : null;
   }, [externalSyncReport]);
+  const externalSyncHistory = useMemo(() => {
+    const history = Array.isArray(externalSyncReport?.history)
+      ? externalSyncReport.history.filter((entry) => entry && typeof entry === 'object')
+      : [];
+
+    if (history.length) {
+      return history.slice(0, 3);
+    }
+
+    if (!externalSyncReport?.syncedAt || !externalSyncReport?.mode) {
+      return [];
+    }
+
+    return [{
+      archivedFuture: externalSyncSummary?.archivedFuture || 0,
+      created: externalSyncSummary?.created || 0,
+      errorsCount: Array.isArray(externalSyncReport?.errors) ? externalSyncReport.errors.length : 0,
+      mode: externalSyncReport.mode,
+      provider: externalSyncReport.provider || team?.externalProvider || null,
+      scoreUpdated: externalSyncSummary?.scoreUpdated || 0,
+      status: team?.externalSyncStatus || 'synced',
+      syncedAt: externalSyncReport.syncedAt,
+      unchanged: externalSyncSummary?.unchanged || 0,
+      updated: externalSyncSummary?.updated || 0,
+      warningsCount: Array.isArray(externalSyncReport?.warnings) ? externalSyncReport.warnings.length : 0,
+    }];
+  }, [
+    externalSyncReport,
+    externalSyncSummary,
+    team?.externalProvider,
+    team?.externalSyncStatus,
+  ]);
   const externalSyncUpdatedLabel = useMemo(
     () => formatExternalSyncDate(
       externalSyncReport?.syncedAt || team?.externalSyncUpdatedAt || team?.externalDataLastUpdate,
@@ -605,9 +741,22 @@ function TeamDetails({ navigation, route }) {
     () => String(externalSyncReport?.provider || team?.externalProvider || '').toUpperCase() || null,
     [externalSyncReport?.provider, team?.externalProvider],
   );
+  const externalCompetitionEligible = useMemo(
+    () => Boolean(currentUserTeamSummary?.externalCompetitionEligible),
+    [currentUserTeamSummary?.externalCompetitionEligible],
+  );
+  const externalConfigUpdatedLabel = useMemo(
+    () => formatExternalSyncDate(team?.externalConfigUpdatedAt),
+    [formatExternalSyncDate, team?.externalConfigUpdatedAt],
+  );
+  const externalConfigUpdatedByLabel = useMemo(() => {
+    const firstname = String(team?.externalConfigUpdatedBy?.firstname || '').trim();
+    const lastname = String(team?.externalConfigUpdatedBy?.lastname || '').trim();
+    return [firstname, lastname].filter(Boolean).join(' ').trim() || null;
+  }, [team?.externalConfigUpdatedBy?.firstname, team?.externalConfigUpdatedBy?.lastname]);
   const canConfigureFFBB = useMemo(
-    () => !!(canManageTeam && team?.club?.documentId && (isMyTeam || canEditClub(team.club.documentId))),
-    [canEditClub, canManageTeam, isMyTeam, team?.club?.documentId],
+    () => !!(teamId && isMyTeam && externalCompetitionEligible),
+    [externalCompetitionEligible, isMyTeam, teamId],
   );
   const showExternalSyncCard = useMemo(
     () => !!(
@@ -616,9 +765,11 @@ function TeamDetails({ navigation, route }) {
       || externalSyncReport
       || team?.externalCompetitionName
       || team?.externalTeamName
+      || externalCompetitionEligible
     ),
     [
       canConfigureFFBB,
+      externalCompetitionEligible,
       externalSyncReport,
       team?.externalCompetitionName,
       team?.externalStandingUrl,
@@ -1160,6 +1311,23 @@ function TeamDetails({ navigation, route }) {
   }, [team?.externalStandingUrl]);
 
   useEffect(() => {
+    if (!openExternalSourceSetup || !canConfigureFFBB) return;
+
+    openExternalSourceSetupModal();
+    navigation.setParams({
+      ...route?.params,
+      openExternalSourceSetup: false,
+      source: undefined,
+    });
+  }, [
+    canConfigureFFBB,
+    navigation,
+    openExternalSourceSetup,
+    openExternalSourceSetupModal,
+    route?.params,
+  ]);
+
+  useEffect(() => {
     setSelectedMonthKey(null);
     setSelectedUpcomingMatchKey(null);
   }, [team?.documentId, team?.externalDataLastUpdate, team?.externalSyncUpdatedAt]);
@@ -1358,9 +1526,19 @@ function TeamDetails({ navigation, route }) {
               {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
             </Text>
           ) : null}
+          {externalConfigUpdatedLabel ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.lastConfigUpdate', 'Lien mis a jour')}: {externalConfigUpdatedLabel}
+            </Text>
+          ) : null}
+          {externalConfigUpdatedByLabel ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.lastConfigUpdateBy', 'Mis a jour par')}: {externalConfigUpdatedByLabel}
+            </Text>
+          ) : null}
           {externalSyncReport?.mode ? (
             <Text style={[Fonts.p4, Fonts.primary100]}>
-              {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncReport.mode}
+              {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncModeMeta.label}
             </Text>
           ) : null}
         </View>
@@ -1449,12 +1627,72 @@ function TeamDetails({ navigation, route }) {
           </View>
         ) : null}
 
+        {externalSyncHistory.length ? (
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+              {t('teamDetails.external.historyTitle', 'Dernieres synchronisations')}
+            </Text>
+            {externalSyncHistory.map((entry, index) => {
+              const historyModeMeta = getExternalSyncModeMeta(entry?.mode, entry?.status);
+              const historyDateLabel = formatExternalSyncDate(entry?.syncedAt);
+              const historySummary = [
+                `${t('teamDetails.external.summary.created', 'Crees')}: ${entry?.created || 0}`,
+                `${t('teamDetails.external.summary.updated', 'Mis a jour')}: ${entry?.updated || 0}`,
+                `${t('teamDetails.external.summary.scoreUpdated', 'Scores importes')}: ${entry?.scoreUpdated || 0}`,
+              ].join('  •  ');
+              const historyFlags = [
+                entry?.warningsCount
+                  ? `${entry.warningsCount} ${t('teamDetails.external.history.warnings', 'avertissements')}`
+                  : null,
+                entry?.errorsCount
+                  ? `${entry.errorsCount} ${t('teamDetails.external.history.errors', 'erreurs')}`
+                  : null,
+              ].filter(Boolean).join('  •  ');
+
+              return (
+                <View
+                  key={`${entry?.syncedAt || 'history'}-${entry?.mode || index}`}
+                  style={[
+                    ApplicationStyle.borderRadius16,
+                    Spaces.padding[12],
+                    Spaces.gap[4],
+                    {
+                      backgroundColor: `${historyModeMeta.accentColor}14`,
+                      borderColor: `${historyModeMeta.accentColor}33`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: historyModeMeta.accentColor }]}>
+                    {historyModeMeta.label}
+                  </Text>
+                  {historyDateLabel ? (
+                    <Text style={[Fonts.p4, Fonts.primary100]}>
+                      {historyDateLabel}
+                    </Text>
+                  ) : null}
+                  <Text style={[Fonts.p4, Fonts.neutral00]}>
+                    {historySummary}
+                  </Text>
+                  {historyFlags ? (
+                    <Text style={[Fonts.p4, Fonts.primary100]}>
+                      {historyFlags}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
           {canConfigureFFBB ? (
             <Button
-              onPress={() => setShowFFBBUrlModal(true)}
+              onPress={openExternalSourceSetupModal}
               style={{ flexGrow: 1 }}
-              title={t('teamDetails.external.actions.source', 'Source')}
+              title={team?.externalStandingUrl
+                ? t('teamDetails.external.actions.editSource', 'Modifier la source')
+                : t('teamDetails.external.actions.addSource', 'Ajouter une source')}
               variant="SecondaryLight"
             />
           ) : null}
@@ -3111,6 +3349,11 @@ function TeamDetails({ navigation, route }) {
               {externalSyncUpdatedLabel ? (
                 <Text style={[Fonts.p3, Fonts.primary100]}>
                   {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
+                </Text>
+              ) : null}
+              {externalSyncReport?.mode ? (
+                <Text style={[Fonts.p3, Fonts.primary100]}>
+                  {t('teamDetails.external.lastMode', 'Origine')}: {externalSyncModeMeta.label}
                 </Text>
               ) : null}
 

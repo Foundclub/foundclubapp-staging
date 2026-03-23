@@ -1549,6 +1549,9 @@ export default {
       participationDeclined: 'Refusee',
     },
   },
+  onboarding: {
+    optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
+  },
   onboardingAffiliation: {
     a11y: {
       backHint: 'Revient à l\'étape précédente de l\'onboarding.',
@@ -2129,6 +2132,13 @@ export default {
         },
         description: 'Vous êtes sur le point de quitter l\'équipe. Une fois cette action validée vous ne pourrez plus participer aux entraînements et matchs.',
         title: 'Êtes-vous sûr·e de vouloir quitter cette équipe ?',
+      },
+    },
+    external: {
+      prompt: {
+        cta: 'Ajouter le classement',
+        description: "Vous pouvez ajouter le lien du classement de votre ligue pour retrouver directement dans l'application votre classement, votre calendrier et vos statistiques.",
+        title: 'Ajoutez le classement de votre ligue',
       },
     },
     myTitle: 'Mon équipe',

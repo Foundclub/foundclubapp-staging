@@ -57,6 +57,23 @@ const normalizeUserReference = (userRef) => {
   };
 };
 
+const normalizeDocumentIds = (values) => {
+  const sourceValues = Array.isArray(values) ? values : [values];
+
+  return Array.from(new Set(sourceValues.map((value) => {
+    if (!value) return undefined;
+
+    if (typeof value === 'object') {
+      const documentId = typeof value.documentId === 'string' ? value.documentId.trim() : '';
+      const fallbackId = typeof value.id === 'string' ? value.id.trim() : '';
+      return documentId || fallbackId || undefined;
+    }
+
+    const normalizedValue = String(value).trim();
+    return normalizedValue || undefined;
+  }).filter(Boolean)));
+};
+
 const buildCandidateFilter = (userRef) => {
   const { documentId, id } = normalizeUserReference(userRef);
   if (documentId) {
@@ -175,16 +192,35 @@ export const getRecruitmentAd = async (adId) => {
 
 /**
  * Get my recruitment ads (as a coach)
+ * @param {{
+ *  authorDocumentId?: string,
+ *  teamIds?: Array<string | number | { documentId?: string, id?: string | number }>
+ * }} [filters]
  * @returns {Promise<Array>} Array of my ads
  */
-export const getMyRecruitmentAds = async () => {
+export const getMyRecruitmentAds = async (filters = {}) => {
   try {
+    const normalizedAuthorDocumentId = typeof filters.authorDocumentId === 'string'
+      ? filters.authorDocumentId.trim()
+      : '';
+    const normalizedTeamIds = normalizeDocumentIds(filters.teamIds);
+    const requestFilters = {};
+
+    if (normalizedTeamIds.length > 0) {
+      requestFilters.team = {
+        documentId: normalizedTeamIds.length === 1
+          ? normalizedTeamIds[0]
+          : { $in: normalizedTeamIds },
+      };
+    } else if (normalizedAuthorDocumentId) {
+      requestFilters.author = {
+        documentId: normalizedAuthorDocumentId,
+      };
+    }
+
     const response = await client.get('/recruitment-ads', {
       params: {
-        filters: {
-          // The backend should filter by author = current user
-          // We'll rely on the controller to handle this
-        },
+        filters: requestFilters,
         populate: [
           'team',
           'team.club',

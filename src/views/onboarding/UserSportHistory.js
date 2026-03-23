@@ -7,6 +7,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -99,6 +100,7 @@ function UserSportHistory({ navigation }) {
       </View>
 
       <View style={[Spaces.gap[16]]}>
+        <OnboardingOptionalHint />
         <Button
           onPress={handleNext}
           title={t('common.actions.next', 'Suivant')}

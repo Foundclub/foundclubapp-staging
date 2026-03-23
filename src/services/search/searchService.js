@@ -214,6 +214,7 @@ export const searchReservations = async (params = {}, options = {}) => {
  *  level?: string | string[];
  *  includeInactive?: boolean;
  *  authorDocumentId?: string;
+ *  teamIds?: string | string[];
  * }} params
  * @param options
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
@@ -231,6 +232,7 @@ export const searchRecruitment = async (params = {}, options = {}) => {
     level: normalizeCategoryOrLevel(params.level),
     section: extractDocumentId(params.section) || toStringOrUndefined(params.section),
     sport: toStringOrUndefined(params.sport),
+    teamIds: normalizeArrayIds(params.teamIds),
   }, options);
 };
 

@@ -26,6 +26,7 @@ import Button from '@/components/atoms/button/Button';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -152,15 +153,21 @@ function UserAffiliationGuideContent({ navigation }) {
       );
     },
     onSuccess: () => {
+      setIsNotFoundModalVisible(false);
+      setRequestedName('');
+      setComment('');
       Alert.alert(
-        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyée'),
+        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyee'),
         t(
           'onboardingAffiliation.feedback.requestSentDescription',
-          'Votre demande a été envoyée aux superadmins. Vous recevrez une notification.',
+          'Votre demande a ete envoyee aux superadmins. Vous recevrez une notification.',
         ),
+        [{
+          onPress: handleContinueLater,
+          text: t('common.actions.ok', 'OK'),
+        }],
+        { cancelable: false },
       );
-      setIsNotFoundModalVisible(false);
-      setComment('');
     },
   });
 
@@ -849,6 +856,7 @@ function UserAffiliationGuideContent({ navigation }) {
             />
           </OnboardingWrapper>
 
+          <OnboardingOptionalHint />
           <Button
             accessibilityHint={t(
               'onboardingAffiliation.a11y.continueLaterHint',

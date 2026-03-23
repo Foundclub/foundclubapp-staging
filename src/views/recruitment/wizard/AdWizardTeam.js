@@ -1,8 +1,12 @@
 import { useIsFocused } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator, Image, Text, TouchableOpacity, View,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  ActivityIndicator, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -17,9 +21,33 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getTeamById } from '@/services/team/teamService';
 
-import { getImageUrl } from '@/utils/imageUrl';
-
 import { useAdWizard } from './AdWizardContext';
+
+const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
+
+const mergeTeamSummary = (previousTeam, nextTeam) => ({
+  ...previousTeam,
+  ...nextTeam,
+  activities: nextTeam?.activities?.length ? nextTeam.activities : previousTeam?.activities,
+  category: nextTeam?.category || previousTeam?.category,
+  club: nextTeam?.club || previousTeam?.club,
+  level: nextTeam?.level || previousTeam?.level,
+  section: nextTeam?.section || previousTeam?.section,
+});
+
+const dedupeTeams = (teams) => {
+  const teamsByKey = new Map();
+
+  teams.forEach((team) => {
+    const teamKey = getTeamKey(team);
+    if (!teamKey) return;
+
+    const previousTeam = teamsByKey.get(teamKey);
+    teamsByKey.set(teamKey, previousTeam ? mergeTeamSummary(previousTeam, team) : team);
+  });
+
+  return Array.from(teamsByKey.values());
+};
 
 /**
  *
@@ -29,9 +57,8 @@ import { useAdWizard } from './AdWizardContext';
  */
 function AdWizardTeam({ navigation, route }) {
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Colors, Fonts, Spaces,
   } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useAdWizard();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
@@ -41,24 +68,7 @@ function AdWizardTeam({ navigation, route }) {
   const [loadingTeamId, setLoadingTeamId] = useState(null);
 
   // Handle pre-passed event (e.g. from EventDetails)
-  useEffect(() => {
-    if (route.params?.event && !state.event && !loading && isFocused) {
-      console.log('[AdWizardTeam] Pre-selecting event:', route.params.event.documentId);
-      dispatch({ payload: route.params.event, type: 'SET_EVENT' });
-      if (route.params.event.team) {
-        handleSelectTeam(route.params.event.team);
-      }
-    }
-  }, [route.params?.event, isFocused]);
-
-  // Get user's teams (both myTeams and trainedTeams for coaches)
-  const userTeams = [
-    ...(userData?.myTeams || []),
-    ...(userData?.trainedTeams || []),
-  ];
-
-  // Fetch complete team data and navigate
-  const handleSelectTeam = async (team) => {
+  const handleSelectTeam = useCallback(async (team) => {
     try {
       setLoading(true);
       setLoadingTeamId(team.documentId);
@@ -81,7 +91,23 @@ function AdWizardTeam({ navigation, route }) {
         setLoadingTeamId(null);
       }
     }
-  };
+  }, [dispatch, isFocused, navigation]);
+
+  useEffect(() => {
+    if (route.params?.event && !state.event && !loading && isFocused) {
+      console.log('[AdWizardTeam] Pre-selecting event:', route.params.event.documentId);
+      dispatch({ payload: route.params.event, type: 'SET_EVENT' });
+      if (route.params.event.team) {
+        handleSelectTeam(route.params.event.team);
+      }
+    }
+  }, [dispatch, handleSelectTeam, isFocused, loading, route.params?.event, state.event]);
+
+  // Get user's teams (both myTeams and trainedTeams for coaches)
+  const userTeams = useMemo(() => dedupeTeams([
+    ...(userData?.myTeams || []),
+    ...(userData?.trainedTeams || []),
+  ]), [userData?.myTeams, userData?.trainedTeams]);
 
   // If user has only one team, auto-select and navigate
   useEffect(() => {
@@ -91,7 +117,7 @@ function AdWizardTeam({ navigation, route }) {
     if (isFocused && userTeams.length === 1 && !state.team && !loading) {
       handleSelectTeam(userTeams[0]);
     }
-  }, [userTeams, state.team, loading, isFocused]);
+  }, [handleSelectTeam, isFocused, loading, state.team, userTeams]);
 
   // No teams state
   if (userTeams.length === 0) {
@@ -129,15 +155,22 @@ function AdWizardTeam({ navigation, route }) {
         {userTeams.map((team) => {
           const isSelected = state.team?.documentId === team.documentId;
           const isLoading = loadingTeamId === team.documentId;
+          const teamKey = getTeamKey(team) || `${team.name}-${team.club?.name || 'team'}`;
 
           const clubName = team.club?.name || '';
           const clubLogo = team.club?.logo?.url;
+          const teamMetaBadges = [
+            team.activities?.[0]?.name,
+            team.section?.name,
+            team.category?.name,
+            team.level?.name,
+          ].filter(Boolean);
 
           return (
             <TouchableOpacity
               activeOpacity={0.8}
               disabled={loading}
-              key={team.documentId || team.id}
+              key={teamKey}
               onPress={() => handleSelectTeam(team)}
               style={[
                 Spaces.padding[16],
@@ -166,8 +199,8 @@ function AdWizardTeam({ navigation, route }) {
                     imageStyle={{ borderRadius: 28 }}
                     imageUrl={clubLogo}
                     size={56}
-                    variant="logo"
                     style={{ borderRadius: 28 }}
+                    variant="logo"
                   />
                 ) : (
                   <TeamShield
@@ -189,25 +222,34 @@ function AdWizardTeam({ navigation, route }) {
                   </Text>
                 )}
 
-                {/* Sport badge */}
-                {(team.activities?.[0]?.name) && (
-                  <View style={{ flexDirection: 'row', marginTop: 8 }}>
-                    <View style={{
-                      backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                      borderRadius: 6,
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                    }}
-                    >
-                      <Text style={[Fonts.p3Bold, {
-                        color: isSelected ? Colors.neutral900 : Colors.neutral200,
-                        fontSize: 10,
-                        textTransform: 'uppercase',
-                      }]}
+                {teamMetaBadges.length > 0 && (
+                  <View style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    marginTop: 8,
+                  }}
+                  >
+                    {teamMetaBadges.map((badgeLabel) => (
+                      <View
+                        key={`${teamKey}-${badgeLabel}`}
+                        style={{
+                          backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700,
+                          borderRadius: 6,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                        }}
                       >
-                        {team.activities?.[0]?.name}
-                      </Text>
-                    </View>
+                        <Text style={[Fonts.p3Bold, {
+                          color: isSelected ? Colors.neutral900 : Colors.neutral200,
+                          fontSize: 10,
+                          textTransform: 'uppercase',
+                        }]}
+                        >
+                          {badgeLabel}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>

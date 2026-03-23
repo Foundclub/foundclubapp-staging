@@ -1,12 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
-import {
-  format, isThisWeek, isToday, isYesterday,
-} from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { isThisWeek, isToday, isYesterday } from 'date-fns';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Platform, Text, ToastAndroid, TouchableOpacity, View,
+  Alert,
+  FlatList,
+  Platform,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -19,7 +22,12 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
-import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
+import {
+  formatNotificationRelativeTime,
+  getNotificationIcon,
+  NOTIFICATION_EMPTY_STATE_BODY,
+  NOTIFICATION_EMPTY_STATE_TITLE,
+} from '@/utils/notifications/notificationPresentation';
 import { normalizeNotificationType, NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { useNotificationController } from '@/hooks/useNotificationController';
@@ -51,21 +59,6 @@ const groupNotificationsByDate = (/** @type {NotificationItem[]} */ notification
   });
 
   return groups;
-};
-
-const getRelativeTime = (/** @type {string | Date} */ dateStr) => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "À l'instant";
-  if (diffMins < 60) return `Il y a ${diffMins} min`;
-  if (diffHours < 24) return `Il y a ${diffHours}h`;
-  if (diffDays < 7) return `Il y a ${diffDays}j`;
-  return format(date, 'dd MMM', { locale: fr });
 };
 
 /**
@@ -102,8 +95,8 @@ function NotificationList() {
   const getStableItemKey = useCallback((/** @type {NotificationItem} */ notification, /** @type {number} */ index) => (
     String(
       notification.documentId
-            || notification.id
-            || `${notification.type || 'notification'}-${notification.createdAt || index}`,
+      || notification.id
+      || `${notification.type || 'notification'}-${notification.createdAt || index}`,
     )
   ), []);
 
@@ -209,7 +202,7 @@ function NotificationList() {
         width: 80,
       }}
     >
-      <Text style={{ color: '#FFF', fontWeight: '600' }}>🗑️</Text>
+      <Text style={{ color: '#FFF', fontWeight: '600' }}>{'\u{1F5D1}\u{FE0F}'}</Text>
     </TouchableOpacity>
   ), [Colors, handleDelete]);
 
@@ -231,7 +224,11 @@ function NotificationList() {
         width: 80,
       }}
     >
-      <Text style={{ color: '#FFF', fontWeight: '600' }}>✓ Lu</Text>
+      <Text style={{ color: '#FFF', fontWeight: '600' }}>
+        {'\u2713'}
+        {' '}
+        Lu
+      </Text>
     </TouchableOpacity>
   ), [Colors, markAsRead]);
 
@@ -305,7 +302,7 @@ function NotificationList() {
                   {notification.title}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginLeft: 8 }]}>
-                  {getRelativeTime(notification.createdAt || new Date())}
+                  {formatNotificationRelativeTime(notification.createdAt || new Date())}
                 </Text>
               </View>
               <Text
@@ -399,28 +396,35 @@ function NotificationList() {
         data={sections}
         keyExtractor={(item) => item.key}
         ListEmptyComponent={
-                    !isLoading ? (
-                      <View style={{ alignItems: 'center', marginTop: 60 }}>
-                        <Text style={{ fontSize: 48, marginBottom: 16 }}>🔔</Text>
-                        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                          Aucune notification
-                        </Text>
-                        <Text style={[Fonts.p2, {
-                          color: Colors.neutral00, marginTop: 8, opacity: 0.7, textAlign: 'center',
-                        }]}
-                        >
-                          Les nouvelles notifications appara?tront ici
-                        </Text>
-                      </View>
-                    ) : null
-                }
+          !isLoading ? (
+            <View style={{ alignItems: 'center', marginTop: 60 }}>
+              <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F514}'}</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                {NOTIFICATION_EMPTY_STATE_TITLE}
+              </Text>
+              <Text
+                style={[
+                  Fonts.p2,
+                  {
+                    color: Colors.neutral00,
+                    marginTop: 8,
+                    opacity: 0.7,
+                    textAlign: 'center',
+                  },
+                ]}
+              >
+                {NOTIFICATION_EMPTY_STATE_BODY}
+              </Text>
+            </View>
+          ) : null
+        }
         ListFooterComponent={
-                    isFetchingNextPage ? (
-                      <View style={{ alignItems: 'center', padding: 16 }}>
-                        <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Chargement...</Text>
-                      </View>
-                    ) : null
-                }
+          isFetchingNextPage ? (
+            <View style={{ alignItems: 'center', padding: 16 }}>
+              <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Chargement...</Text>
+            </View>
+          ) : null
+        }
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.3}
         onRefresh={refreshNotifications}

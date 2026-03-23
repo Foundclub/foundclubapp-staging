@@ -13,8 +13,8 @@ import {
 } from '@/services/notification/notificationService';
 
 const PAGE_SIZE = 20;
-const NOTIFICATIONS_QUERY_KEY = ['notifications'];
-const UNREAD_COUNT_QUERY_KEY = ['notifications', 'unread-count'];
+export const NOTIFICATIONS_QUERY_KEY = ['notifications'];
+export const UNREAD_COUNT_QUERY_KEY = ['notifications', 'unread-count'];
 const NOTIFICATIONS_STALE_MS = 10000;
 const UNREAD_POLL_MS = 30000;
 const FOCUS_REFRESH_THROTTLE_MS = 8000;

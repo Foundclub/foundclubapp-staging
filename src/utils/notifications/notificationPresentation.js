@@ -5,6 +5,7 @@ const TEAM_ICON_TYPES = new Set([
   NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST,
   NOTIFICATION_TYPES.NEW_TEAM,
   NOTIFICATION_TYPES.RSVP_ALERT,
+  NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED,
   NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST,
   NOTIFICATION_TYPES.TEAM_REQUEST,
 ]);
@@ -73,3 +74,32 @@ export const getNotificationIcon = (type) => {
   if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return '\u{1F50E}';
   return '\u{1F514}';
 };
+
+/**
+ * @param {string | Date | number | undefined | null} dateInput
+ * @returns {string}
+ */
+export const formatNotificationRelativeTime = (dateInput) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "A l'instant";
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours} h`;
+  if (diffDays < 7) return `Il y a ${diffDays} j`;
+
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+  });
+};
+
+export const NOTIFICATION_EMPTY_STATE_TITLE = 'Aucune notification';
+export const NOTIFICATION_EMPTY_STATE_BODY = 'Les nouvelles notifications apparaitront ici.';

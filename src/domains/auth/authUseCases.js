@@ -9,7 +9,7 @@ import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 const SPORTS_WITH_POSITIONS = Object.keys(SPORTS_POSITIONS).map((s) => s.toLowerCase());
 
 export const USER_ROLES = /** @type {const} */({
-  coach: 'Entraîneur',
+  coach: 'Entraineur',
   new: 'Authenticated',
   player: 'Joueur',
   president: 'Dirigeant',
@@ -27,13 +27,26 @@ export const getUserRoleKey = (roleName) => {
 
   if (!normalized || normalized === 'authenticated') return 'new';
   if (normalized.includes('super')) return 'superAdmin';
-  if (normalized.includes('dirigeant') || normalized.includes('president') || normalized.includes('clubadmin')) {
+  if (
+    normalized.includes('dirigeant')
+    || normalized.includes('president')
+    || normalized.includes('clubadmin')
+  ) {
     return 'president';
   }
   if (normalized.includes('entra') || normalized.includes('coach')) return 'coach';
   if (normalized.includes('joueur') || normalized === 'player') return 'player';
   return 'new';
 };
+
+export const findRoleByKey = (roles, roleNameOrKey) => {
+  const expectedRoleKey = getUserRoleKey(roleNameOrKey);
+  return roles?.find((role) => getUserRoleKey(role?.type || role?.name) === expectedRoleKey);
+};
+
+export const getRoleDocumentIdByKey = (roles, roleNameOrKey) => (
+  findRoleByKey(roles, roleNameOrKey)?.documentId || ''
+);
 
 export const getAuthTokens = () => {
   const runtimeSnapshot = getAuthRuntimeSnapshot();
@@ -120,7 +133,11 @@ export const getOnboardingViews = ({
           { canShow: true, index: 10, route: RouteNames.UserCategory },
           { canShow: true, index: 11, route: RouteNames.UserSportHistory },
           { canShow: true, index: 12, route: RouteNames.UserClubSearch },
-          { canShow: shouldShowAffiliationGuide, index: 13, route: RouteNames.UserAffiliationGuide },
+          {
+            canShow: shouldShowAffiliationGuide,
+            index: 13,
+            route: RouteNames.UserAffiliationGuide,
+          },
           { canShow: true, index: 14, route: RouteNames.Welcome },
         ];
       case 'president':
@@ -180,7 +197,7 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserSport && preferredSport) {
       return Object.assign(view, { canShow: false });
     }
-    // Skip position if sport doesn't have positions (only football, basketball, handball, volleyball, rugby have positions)
+    // Skip position if sport does not expose dedicated positions in the app.
     if (view.route === RouteNames.UserPosition) {
       if (position) {
         return Object.assign(view, { canShow: false });
@@ -339,6 +356,7 @@ export const NOTIFICATION_TYPES = {
 
   // Teams
   NEW_TEAM: 'newTeam',
+  TEAM_EXTERNAL_SOURCE_UPDATED: 'teamExternalSourceUpdated',
   TEAM_MEMBERSHIP_REQUEST: 'teamMembershipRequest',
   TEAM_REQUEST: 'teamRequest',
 

@@ -17,6 +17,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
 import useTheme from '@/theme/themeContext';
 
@@ -126,34 +127,19 @@ function EventCardNew({
   const { userData } = useAuth();
   const { haveIAlreadyJoined } = useEvent();
 
+  const participationState = getCurrentUserEventParticipationState({
+    missings: item?.missings,
+    participationRequests: item?.participationRequests,
+    participations: item?.participations,
+    user: userData,
+  });
+
   // Check if user has already joined (for reservations)
   const alreadyJoined = haveIAlreadyJoined({
     participations: item?.participations,
     userId: userData?.documentId,
   });
-  const doesRequestBelongToCurrentUser = (request) => {
-    if (userData?.documentId && request?.user?.documentId) {
-      return request.user.documentId === userData.documentId;
-    }
-
-    if (userData?.id != null && request?.user?.id != null) {
-      return String(request.user.id) === String(userData.id);
-    }
-
-    return false;
-  };
-  const hasPendingRequest = (item?.participationRequests || []).some((request) => {
-    if (request?.isActive === false || request?.participationStatus !== 'pending') {
-      return false;
-    }
-    return doesRequestBelongToCurrentUser(request);
-  });
-  const hasAcceptedRequest = (item?.participationRequests || []).some((request) => {
-    if (request?.isActive === false || request?.participationStatus !== 'accepted') {
-      return false;
-    }
-    return doesRequestBelongToCurrentUser(request);
-  });
+  const { hasAcceptedRequest, hasPendingRequest } = participationState;
 
   // Booking status for reservations
   const bookingStatus = item?.bookingStatus || 'open';

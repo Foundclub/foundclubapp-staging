@@ -9,6 +9,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -111,6 +112,7 @@ function UserAvatar({ navigation }) {
       </View>
 
       <View style={[Spaces.gap[16]]}>
+        <OnboardingOptionalHint />
         <Button
           disabled={!hasSelectedAvatar || updateUserMutation.isPending}
           isLoading={updateUserMutation.isPending}

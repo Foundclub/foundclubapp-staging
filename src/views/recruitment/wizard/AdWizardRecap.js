@@ -1,6 +1,6 @@
+import { CommonActions } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import React, { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo, useState } from 'react';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
@@ -20,13 +20,57 @@ import { useAdWizard } from './AdWizardContext';
 /**
  *
  * @param root0
+ * @param root0.Colors
+ * @param root0.Fonts
+ * @param root0.icon
+ * @param root0.label
+ * @param root0.value
+ */
+function GridItem({
+  Colors,
+  Fonts,
+  icon,
+  label,
+  value,
+}) {
+  return (
+    <View style={{ marginBottom: 24, paddingRight: 8, width: '50%' }}>
+      <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
+        {label}
+      </Text>
+      <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+        {icon && (
+        <View style={{
+          alignItems: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: 8,
+          height: 24,
+          justifyContent: 'center',
+          marginRight: 10,
+          width: 24,
+        }}
+        >
+          <Text style={{ fontSize: 13 }}>{icon}</Text>
+        </View>
+        )}
+        <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, fontSize: 15 }]}>
+          {value || 'Non défini'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ *
+ * @param root0
  * @param root0.navigation
  */
 function AdWizardRecap({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useAdWizard();
   const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Calculate total players
   const totalPlayers = useMemo(() => state.positions.reduce((sum, p) => sum + p.quantity, 0), [state.positions]);
@@ -34,27 +78,21 @@ function AdWizardRecap({ navigation }) {
   // Mutation
   const createAdMutation = useMutation({
     mutationFn: createRecruitmentAd,
-    onError: (error) => {
-      console.error('[AdWizardRecap] Création error:', error);
-      Alert.alert('Erreur', 'Impossible de créer l\'annonce. Veuillez réessayer.');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
-      queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] });
-
-      // Android Fabric issue: Alert.alert fails if not attached to Activity.
-      // We navigate immediately instead of showing an alert.
-
-      // Reset wizard state
-      dispatch({ type: 'RESET' });
-
-      // Navigate to dedicated recruitment search -> ads with timestamp to force refresh
-      navigation.navigate(RouteNames.SearchRecruitment, {
-        initialRecruitmentTab: 'annonces',
-        timestamp: Date.now(), // Unique value to force useEffect in RecrutementListContent
-      });
-    },
   });
+
+  const resetToHome = () => {
+    const parentNavigation = navigation.getParent?.();
+
+    if (parentNavigation?.dispatch) {
+      parentNavigation.dispatch(CommonActions.reset({
+        index: 0,
+        routes: [{ name: RouteNames.HomeTab }],
+      }));
+      return;
+    }
+
+    navigation.navigate(RouteNames.HomeTab);
+  };
 
   const handleSubmit = async () => {
     if (!state.positions?.length) {
@@ -62,77 +100,44 @@ function AdWizardRecap({ navigation }) {
       return;
     }
 
-    const promises = state.positions.map((pos) => {
-      // Use numeric IDs for relations if available, fallback to documentId or undefined
-      const adData = {
-        // Required fields
-        position: pos.name,
-        quantity: pos.quantity,
-        team: state.team?.documentId || state.team?.id,
-        type: state.event ? 'ponctuel' : 'saison',
-
-        // Optional fields
-        address: state.address || undefined,
-        description: state.description || undefined,
-        validationMode: state.event ? state.validationMode : 'auto',
-
-        // Relations
-        category: state.category?.documentId || state.category?.id,
-        event: state.event?.documentId || state.event?.id,
-        level: state.minLevel?.documentId || state.minLevel?.id,
-        section: state.section?.documentId || state.section?.id,
-      };
-
-      // Fallback log if IDs are missing (should not happen if flow works)
-      if (!adData.team) console.warn('[AdWizardRecap] Missing team ID', state.team);
-
-      return createAdMutation.mutateAsync(adData);
-    });
-
     try {
-      await Promise.all(promises);
+      setIsSubmitting(true);
+
+      await Promise.all(state.positions.map((pos) => {
+        const adData = {
+          address: state.address || undefined,
+          category: state.category?.documentId || state.category?.id,
+          description: state.description || undefined,
+          event: state.event?.documentId || state.event?.id,
+          level: state.minLevel?.documentId || state.minLevel?.id,
+          position: pos.name,
+          quantity: pos.quantity,
+          section: state.section?.documentId || state.section?.id,
+          team: state.team?.documentId || state.team?.id,
+          type: state.event ? 'ponctuel' : 'saison',
+          validationMode: state.event ? state.validationMode : 'auto',
+        };
+
+        if (!adData.team) console.warn('[AdWizardRecap] Missing team ID', state.team);
+
+        return createAdMutation.mutateAsync(adData);
+      }));
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] }),
+        queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] }),
+      ]);
+
+      dispatch({ type: 'RESET' });
+      resetToHome();
     } catch (e) {
+      console.error('[AdWizardRecap] Creation error:', e);
+      Alert.alert('Erreur', 'Impossible de créer l\'annonce. Veuillez réessayer.');
       console.error('[AdWizardRecap] Promise.all failed:', e);
-      // Handled by mutation onError
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  // Render grid item for info
-  /**
-   *
-   * @param root0
-   * @param root0.icon
-   * @param root0.label
-   * @param root0.value
-   */
-  function GridItem({ icon, label, value }) {
-    return (
-      <View style={{ marginBottom: 24, paddingRight: 8, width: '50%' }}>
-        <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-          {label}
-        </Text>
-        <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-          {icon && (
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)', // Subtle background for icon
-            borderRadius: 8,
-            height: 24,
-            justifyContent: 'center',
-            marginRight: 10,
-            width: 24,
-          }}
-          >
-            <Text style={{ fontSize: 13 }}>{icon}</Text>
-          </View>
-          )}
-          <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, fontSize: 15 }]}>
-            {value || 'Non défini'}
-          </Text>
-        </View>
-      </View>
-    );
-  }
 
   const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
 
@@ -143,7 +148,7 @@ function AdWizardRecap({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextLoading={createAdMutation.isPending}
+      isNextLoading={isSubmitting}
       nextLabel="Créer l'annonce"
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
@@ -188,27 +193,37 @@ function AdWizardRecap({ navigation }) {
           }}
           >
             <GridItem
-              icon="⚽"
+              Colors={Colors}
+              Fonts={Fonts}
+              icon="S"
               label="Sport"
               value={sportName}
             />
             <GridItem
-              icon="👥"
+              Colors={Colors}
+              Fonts={Fonts}
+              icon="Se"
               label="Section"
               value={state.section?.name}
             />
             <GridItem
-              icon="🏷️"
+              Colors={Colors}
+              Fonts={Fonts}
+              icon="C"
               label="Catégorie"
               value={state.category?.name}
             />
             <GridItem
-              icon="📊"
+              Colors={Colors}
+              Fonts={Fonts}
+              icon="N"
               label="Niveau"
               value={state.minLevel?.name}
             />
             <GridItem
-              icon="📍"
+              Colors={Colors}
+              Fonts={Fonts}
+              icon="L"
               label="Lieu"
               value={displayAddress}
             />
@@ -237,9 +252,9 @@ function AdWizardRecap({ navigation }) {
             </View>
 
             <View style={[Spaces.gap[10]]}>
-              {state.positions.map((pos, index) => (
+              {state.positions.map((pos) => (
                 <View
-                  key={index}
+                  key={`${pos.name}-${pos.quantity}`}
                   style={{
                     alignItems: 'center',
                     backgroundColor: '#333333',
@@ -277,13 +292,13 @@ function AdWizardRecap({ navigation }) {
             }}
             >
               <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 12 }}>
-                <Text style={{ fontSize: 18, marginRight: 8 }}>📅</Text>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>i</Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                  Lié à l'événement
+                  Lie a l&apos;evenement
                 </Text>
               </View>
               <Text style={[Fonts.h4, { color: Colors.neutral00, marginLeft: 30 }]}>
-                {state.event.name || state.event.type?.name || 'Événement'}
+                {state.event.name || state.event.type?.name || 'Evenement'}
               </Text>
             </View>
           )}
@@ -329,7 +344,7 @@ function AdWizardRecap({ navigation }) {
             <Text style={{ color: Colors.neutral900, fontSize: 14, fontWeight: 'bold' }}>i</Text>
           </View>
           <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1, lineHeight: 18 }]}>
-            L'annonce sera visible par tous les joueurs correspondant à ce profil.
+            L&apos;annonce sera visible par tous les joueurs correspondant a ce profil.
           </Text>
         </View>
       </ScrollView>
@@ -338,4 +353,3 @@ function AdWizardRecap({ navigation }) {
 }
 
 export default AdWizardRecap;
-

@@ -34,6 +34,7 @@ import {
   getPlanningItemDate,
   getPlanningItemSecondaryLabel,
   getPlanningTypeLabel,
+  isPlanningPendingParticipation,
 } from '@/utils/planning/planningSlots';
 
 const DEFAULT_HOUR_HEIGHT = 60;
@@ -141,6 +142,7 @@ function PlanningWeekTimelineView({
 }) {
   const { Colors, Fonts } = useTheme();
   const [internalDate, setInternalDate] = useState(getPlanningDefaultDate());
+  const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
   const currentDate = propDate || internalDate;
   const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
@@ -388,6 +390,15 @@ function PlanningWeekTimelineView({
 
     return counts;
   }, [weekDays, weekEvents]);
+  const pendingEventDayKeys = useMemo(() => new Set(
+    weekEvents
+      .filter((event) => isPlanningPendingParticipation(event))
+      .map((event) => {
+        const eventDate = getPlanningItemDate(event);
+        return eventDate ? getDayKey(eventDate) : null;
+      })
+      .filter(Boolean),
+  ), [weekEvents]);
 
   const dateRangeText = useMemo(() => {
     const start = format(weekDays[0], 'd MMM', { locale: fr });
@@ -495,6 +506,8 @@ function PlanningWeekTimelineView({
               const color = getEventColor(event, Colors.primary500);
               const primaryLabel = getPrimaryPlanningLabel(event);
               const contextLabel = getPlanningContextLabel(event);
+              const isPendingParticipation = isPlanningPendingParticipation(event);
+              const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
               return (
                 <TouchableOpacity
                   key={event.documentId || `${getDayKey(weekDays[index])}-${getPlanningDisplayTitle(event)}`}
@@ -502,7 +515,11 @@ function PlanningWeekTimelineView({
                   style={[
                     styles.untimedCard,
                     compactFullscreen ? styles.compactUntimedCard : null,
-                    { backgroundColor: hexToRgba(color, 0.18), borderColor: hexToRgba(color, 0.32), borderLeftColor: color },
+                    {
+                      backgroundColor: hexToRgba(cardAccentColor, 0.18),
+                      borderColor: hexToRgba(cardAccentColor, 0.32),
+                      borderLeftColor: cardAccentColor,
+                    },
                   ]}
                 >
                   <Text
@@ -517,6 +534,11 @@ function PlanningWeekTimelineView({
                   >
                     {primaryLabel}
                   </Text>
+                  {isPendingParticipation ? (
+                    <View style={[styles.pendingInlineBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.35) }]}>
+                      <Text style={[styles.pendingInlineBadgeText, { color: pendingAccentColor }]}>En attente</Text>
+                    </View>
+                  ) : null}
                   {contextLabel ? (
                     <Text numberOfLines={2} style={[Fonts.p3Bold, styles.untimedCardText, { color: Colors.neutral00 }]}>
                       {contextLabel}
@@ -604,6 +626,7 @@ function PlanningWeekTimelineView({
               const dayKey = getDayKey(day);
               const isTodayColumn = isSameDay(day, nowReference);
               const eventCount = dayEventCounts.get(dayKey) || 0;
+              const hasPendingEvent = pendingEventDayKeys.has(dayKey);
               let badgeBackground = 'transparent';
 
               if (isTodayColumn) {
@@ -625,11 +648,37 @@ function PlanningWeekTimelineView({
                     {format(day, 'EEE', { locale: fr }).replace('.', '')}
                   </Text>
                   <View style={styles.dayBadgeWrapper}>
-                    <View style={[styles.dayBadge, compactFullscreen ? styles.compactDayBadge : null, { backgroundColor: badgeBackground }]}>
-                      <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>{format(day, 'd')}</Text>
+                    <View
+                      style={[
+                        styles.dayBadge,
+                        compactFullscreen ? styles.compactDayBadge : null,
+                        { backgroundColor: badgeBackground },
+                      ]}
+                    >
+                      <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>
+                        {format(day, 'd')}
+                      </Text>
                       {eventCount > 0 && !isTodayColumn ? (
-                        <View style={[styles.dayCountBadge, { backgroundColor: Colors.primary500, borderColor: Colors.neutral700 }]}>
+                        <View
+                          style={[
+                            styles.dayCountBadge,
+                            {
+                              backgroundColor: Colors.primary500,
+                              borderColor: Colors.neutral700,
+                            },
+                          ]}
+                        >
                           <Text style={styles.dayCountText}>{eventCount}</Text>
+                        </View>
+                      ) : null}
+                      {hasPendingEvent ? (
+                        <View
+                          style={[
+                            styles.pendingDayBadge,
+                            { backgroundColor: pendingAccentColor },
+                          ]}
+                        >
+                          <Text style={styles.pendingDayBadgeText}>!</Text>
                         </View>
                       ) : null}
                     </View>
@@ -728,6 +777,8 @@ function PlanningWeekTimelineView({
                         }
 
                         const color = event.color || Colors.primary500;
+                        const isPendingParticipation = isPlanningPendingParticipation(event);
+                        const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
                         const isCompact = event.height < 62;
                         const isTiny = event.height < 38;
                         const title = getPlanningDisplayTitle(event);
@@ -760,9 +811,9 @@ function PlanningWeekTimelineView({
                             key={event.documentId || `${event.dayIndex}-${event.top}`}
                             onPress={() => onEventPress?.(event)}
                             style={[styles.eventCard, {
-                              backgroundColor: hexToRgba(color, 0.15),
-                              borderColor: hexToRgba(color, 0.28),
-                              borderLeftColor: color,
+                              backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
+                              borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
+                              borderLeftColor: cardAccentColor,
                               borderLeftWidth: mode === 'week' ? 2 : 3,
                               height: event.height - 2,
                               justifyContent: isTiny ? 'center' : 'flex-start',
@@ -773,6 +824,16 @@ function PlanningWeekTimelineView({
                               width: `${width}%`,
                             }]}
                           >
+                            {isPendingParticipation ? (
+                              <View style={[styles.pendingCornerDot, { backgroundColor: pendingAccentColor }]} />
+                            ) : null}
+                            {isPendingParticipation ? (
+                              <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
+                                <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
+                                  {isTiny ? 'Attente' : 'En attente'}
+                                </Text>
+                              </View>
+                            ) : null}
                             <Text
                               adjustsFontSizeToFit={showPrimaryAsType}
                               minimumFontScale={primaryMinimumFontScale}
@@ -910,6 +971,8 @@ function PlanningWeekTimelineView({
                       }
 
                       const color = event.color || Colors.primary500;
+                      const isPendingParticipation = isPlanningPendingParticipation(event);
+                      const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
                       const isCompact = event.height < 62;
                       const isTiny = event.height < 38;
                       const title = getPlanningDisplayTitle(event);
@@ -942,9 +1005,9 @@ function PlanningWeekTimelineView({
                           key={event.documentId || `${event.dayIndex}-${event.top}`}
                           onPress={() => onEventPress?.(event)}
                           style={[styles.eventCard, {
-                            backgroundColor: hexToRgba(color, 0.15),
-                            borderColor: hexToRgba(color, 0.28),
-                            borderLeftColor: color,
+                            backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
+                            borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
+                            borderLeftColor: cardAccentColor,
                             borderLeftWidth: mode === 'week' ? 2 : 3,
                             height: event.height - 2,
                             justifyContent: isTiny ? 'center' : 'flex-start',
@@ -955,6 +1018,16 @@ function PlanningWeekTimelineView({
                             width: `${width}%`,
                           }]}
                         >
+                          {isPendingParticipation ? (
+                            <View style={[styles.pendingCornerDot, { backgroundColor: pendingAccentColor }]} />
+                          ) : null}
+                          {isPendingParticipation ? (
+                            <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
+                              <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
+                                {isTiny ? 'Attente' : 'En attente'}
+                              </Text>
+                            </View>
+                          ) : null}
                           <Text
                             adjustsFontSizeToFit={showPrimaryAsType}
                             minimumFontScale={primaryMinimumFontScale}
@@ -1081,6 +1154,56 @@ const styles = StyleSheet.create({
   },
   panel: {
     borderRadius: 18, borderWidth: 1, overflow: 'hidden', paddingHorizontal: 8,
+  },
+  pendingCornerDot: {
+    borderRadius: 999,
+    height: 7,
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    width: 7,
+  },
+  pendingDayBadge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 12,
+    justifyContent: 'center',
+    left: -3,
+    position: 'absolute',
+    top: -3,
+    width: 12,
+  },
+  pendingDayBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '800',
+    lineHeight: 8,
+  },
+  pendingEventBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  pendingEventBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    lineHeight: 10,
+  },
+  pendingInlineBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  pendingInlineBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
   },
   scrollContent: { paddingBottom: 50, paddingTop: 6 },
   summaryArrow: {

@@ -149,6 +149,9 @@ export const getTeamById = async (teamId) => {
             },
           },
         },
+        externalConfigUpdatedBy: {
+          populate: '*',
+        },
         level: {
           populate: '*',
         },

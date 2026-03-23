@@ -20,6 +20,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -430,10 +431,17 @@ function EventDetails({ navigation, route }) {
     [allEventParticipations],
   );
 
-  const hasPendingRequest = useMemo(() => activeEventParticipations.some(
-    (participation) => participation.participationStatus === 'pending'
-      && participation.user.documentId === userData?.documentId,
-  ), [activeEventParticipations, userData?.documentId]);
+  const currentUserParticipationState = useMemo(
+    () => getCurrentUserEventParticipationState({
+      missings: event?.missings,
+      participationRequests: activeEventParticipations,
+      participations: event?.participations,
+      user: userData,
+    }),
+    [activeEventParticipations, event?.missings, event?.participations, userData],
+  );
+
+  const { hasAcceptedRequest, hasPendingRequest } = currentUserParticipationState;
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
@@ -1666,6 +1674,7 @@ function EventDetails({ navigation, route }) {
       <View>
         <EventAnswerButtons
           event={event}
+          hasAcceptedRequest={hasAcceptedRequest}
           hasPendingRequest={hasPendingRequest}
           onCancel={canEdit ? handleCancelEvent : undefined}
           onDecline={() => handleDeclineEvent(event)}

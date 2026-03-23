@@ -1,21 +1,13 @@
 import { AppRegistry } from 'react-native';
 
 import { name as appName } from './app.json';
-import { DISABLE_NOTIFICATIONS_BOOTSTRAP } from './src/constants/runtimeFlags';
+import { ENABLE_PUSH_NOTIFICATIONS } from './src/constants/runtimeFlags';
 import {
   persistBootError,
   readPersistedBootError,
 } from './src/utils/bootDiagnostics';
 
-const parseBooleanFlag = (rawValue) => {
-  if (typeof rawValue !== 'string') return false;
-  const normalized = rawValue.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-};
-
-const isNotificationsBootstrapDisabled = DISABLE_NOTIFICATIONS_BOOTSTRAP || parseBooleanFlag(
-  process.env.FC_DISABLE_NOTIFICATIONS_BOOTSTRAP,
-);
+const isNotificationsBootstrapDisabled = !ENABLE_PUSH_NOTIFICATIONS;
 
 const logBoot = (step, meta) => {
   if (meta === undefined) {
@@ -82,6 +74,7 @@ if (isNotificationsBootstrapDisabled) {
   logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_DISABLED_BY_FLAG');
 } else {
   try {
+    // eslint-disable-next-line global-require
     const { registerBackgroundHandler } = require('./src/services/notificationBackgroundHandler');
     registerBackgroundHandler();
     logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_ENABLED');
@@ -95,6 +88,7 @@ if (isNotificationsBootstrapDisabled) {
 
 let App;
 try {
+  // eslint-disable-next-line global-require
   App = require('./src/App').default;
   logBoot('BOOT_APP_MODULE_READY');
 } catch (error) {

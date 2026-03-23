@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   Modal,
   Platform,
@@ -17,52 +17,12 @@ import useTheme from '@/theme/themeContext';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
-import { getNotificationIcon } from '@/utils/notifications/notificationPresentation';
-
-/**
- * @typedef {{
- *   id?: string | number;
- *   documentId?: string;
- *   read?: boolean;
- *   data?: Record<string, any>;
- *   type?: string;
- *   title?: string;
- *   body?: string;
- *   createdAt?: string;
- * }} NotificationPopupItem
- */
-
-/**
- * @typedef {{
- *   isVisible: boolean;
- *   onClose: () => void;
- *   notifications?: NotificationPopupItem[];
- *   onMarkAsRead?: (documentId: string) => Promise<void> | void;
- *   onMarkAllAsRead?: () => Promise<void> | void;
- *   onRefresh?: () => void;
- * }} NotificationPopupProps
- */
-
-/**
- * @param {string | Date | number | undefined | null} dateInput
- * @returns {string}
- */
-const getRelativeTime = (dateInput) => {
-  if (!dateInput) return '';
-  const date = new Date(dateInput);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "À l'instant";
-  if (diffMins < 60) return `${diffMins} min`;
-  if (diffHours < 24) return `${diffHours}h`;
-  return `${diffDays}j`;
-};
+import {
+  formatNotificationRelativeTime,
+  getNotificationIcon,
+  NOTIFICATION_EMPTY_STATE_BODY,
+  NOTIFICATION_EMPTY_STATE_TITLE,
+} from '@/utils/notifications/notificationPresentation';
 
 /**
  * @param {string | undefined | null} color
@@ -228,29 +188,29 @@ function NotificationPopup({
             <View style={{ alignItems: 'center', flexDirection: 'row' }}>
               <Text style={[Fonts.h4Bold || { fontSize: 16, fontWeight: 'bold' }, { color: textPrimary }]}>
                 Notifications
-                    </Text>
+              </Text>
               {unreadCount > 0 ? (
                 <View
-                    style={{
-                        backgroundColor: popupBorder,
-                        borderRadius: 10,
-                        marginLeft: 8,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                      }}
-                  >
-                    <Text style={{ color: textPrimary, fontSize: 11, fontWeight: '600' }}>
-                        {unreadCount}
-                      </Text>
-                  </View>
+                  style={{
+                    backgroundColor: popupBorder,
+                    borderRadius: 10,
+                    marginLeft: 8,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text style={{ color: textPrimary, fontSize: 11, fontWeight: '600' }}>
+                    {unreadCount}
+                  </Text>
+                </View>
               ) : null}
             </View>
 
             {unreadCount > 0 ? (
               <TouchableOpacity onPress={handleMarkAllAsRead}>
                 <Text style={[Fonts.p3Bold || { fontWeight: '600' }, { color: popupBorder }]}>
-                    Tout lire
-                      </Text>
+                  Tout lire
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -259,75 +219,83 @@ function NotificationPopup({
             {recentNotifications.length === 0 ? (
               <View style={{ alignItems: 'center', padding: 24 }}>
                 <Text style={{
-                    color: textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 8,
-                  }}
-                  >
-BELL
-                  </Text>
+                  color: textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 8,
+                }}
+                >
+                  {'\u{1F514}'}
+                </Text>
                 <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
-                    Aucune notification
-                        </Text>
+                  {NOTIFICATION_EMPTY_STATE_TITLE}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.p3 || { fontSize: 14 },
+                    { color: textMuted, marginTop: 6, textAlign: 'center' },
+                  ]}
+                >
+                  {NOTIFICATION_EMPTY_STATE_BODY}
+                </Text>
               </View>
             ) : (
               recentNotifications.map((notif, index) => {
                 const icon = getNotificationIcon(notif.type);
                 return (
                   <TouchableOpacity
-                      key={notif.documentId || notif.id || index}
-                      onPress={() => handlePressNotification(notif)}
-                      style={[
-                          Spaces.padding[12],
-                          {
-                            backgroundColor: notif.read ? 'transparent' : unreadItemBackground,
-                            borderBottomColor: itemDivider,
-                            borderBottomWidth: 1,
-                            borderLeftColor: popupBorder,
-                            borderLeftWidth: notif.read ? 0 : 3,
-                            flexDirection: 'row',
-                          },
-                        ]}
+                    key={notif.documentId || notif.id || index}
+                    onPress={() => handlePressNotification(notif)}
+                    style={[
+                      Spaces.padding[12],
+                      {
+                        backgroundColor: notif.read ? 'transparent' : unreadItemBackground,
+                        borderBottomColor: itemDivider,
+                        borderBottomWidth: 1,
+                        borderLeftColor: popupBorder,
+                        borderLeftWidth: notif.read ? 0 : 3,
+                        flexDirection: 'row',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: iconBackground,
+                        borderRadius: 16,
+                        height: 32,
+                        justifyContent: 'center',
+                        marginRight: 10,
+                        width: 32,
+                      }}
                     >
+                      <Text style={{ fontSize: 14 }}>{icon}</Text>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text numberOfLines={1} style={[notif.read ? Fonts.p3 : Fonts.p3Bold, { color: textPrimary, flex: 1, fontSize: 14 }]}>
+                          {notif.title || 'Notification'}
+                        </Text>
+                        <Text style={{ color: textMuted, fontSize: 10, marginLeft: 8 }}>
+                          {formatNotificationRelativeTime(notif.createdAt)}
+                        </Text>
+                      </View>
+                      <Text numberOfLines={1} style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary }]}>
+                        {notif.body}
+                      </Text>
+                    </View>
+
+                    {!notif.read ? (
                       <View
-                          style={{
-                              alignItems: 'center',
-                              backgroundColor: iconBackground,
-                              borderRadius: 16,
-                              height: 32,
-                              justifyContent: 'center',
-                              marginRight: 10,
-                              width: 32,
-                            }}
-                        >
-                          <Text style={{ fontSize: 14 }}>{icon}</Text>
-                        </View>
-
-                      <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                              <Text numberOfLines={1} style={[notif.read ? Fonts.p3 : Fonts.p3Bold, { color: textPrimary, flex: 1, fontSize: 14 }]}>
-                                  {notif.title || 'Notification'}
-                                </Text>
-                              <Text style={{ color: textMuted, fontSize: 10, marginLeft: 8 }}>
-                                  {getRelativeTime(notif.createdAt)}
-                                </Text>
-                            </View>
-                          <Text numberOfLines={1} style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary }]}>
-                              {notif.body}
-                            </Text>
-                        </View>
-
-                      {!notif.read ? (
-                          <View
-                              style={{
-                                  backgroundColor: popupBorder,
-                                  borderRadius: 3,
-                                  height: 6,
-                                  marginLeft: 4,
-                                  marginTop: 4,
-                                  width: 6,
-                                }}
-                            />
-                        ) : null}
-                    </TouchableOpacity>
+                        style={{
+                          backgroundColor: popupBorder,
+                          borderRadius: 3,
+                          height: 6,
+                          marginLeft: 4,
+                          marginTop: 4,
+                          width: 6,
+                        }}
+                      />
+                    ) : null}
+                  </TouchableOpacity>
                 );
               })
             )}

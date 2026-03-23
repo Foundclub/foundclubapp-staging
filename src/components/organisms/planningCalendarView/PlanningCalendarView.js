@@ -22,6 +22,7 @@ import {
   getPlanningDisplayTitle,
   getPlanningItemDate,
   getPlanningTypeLabel,
+  isPlanningPendingParticipation,
 } from '@/utils/planning/planningSlots';
 
 LocaleConfig.locales.fr = {
@@ -96,6 +97,7 @@ function PlanningCalendarDay({
   if (!dateString) return null;
 
   const dayEvents = eventsByDate.get(dateString) || [];
+  const hasPendingEvent = dayEvents.some((event) => isPlanningPendingParticipation(event));
   const uniqueColors = [...new Set(
     dayEvents
       .map((event) => resolveFacilityPlanningColor(event?.facility) || colors.primary500)
@@ -136,6 +138,12 @@ function PlanningCalendarDay({
         >
           {date.day}
         </Text>
+
+        {hasPendingEvent ? (
+          <View style={[styles.pendingDayBadge, { backgroundColor: colors.warning500 || colors.gold500 || '#F5A623' }]}>
+            <Text style={styles.pendingDayBadgeText}>!</Text>
+          </View>
+        ) : null}
 
         <View style={styles.dayMarkersRow}>
           {uniqueColors.map((color) => (
@@ -228,6 +236,8 @@ function PlanningCalendarView({
     const accentColor = resolveFacilityPlanningColor(item?.facility) || Colors.primary500;
     const typeLabel = getPlanningTypeLabel(item);
     const facilityName = item?.facility?.name || null;
+    const isPendingParticipation = isPlanningPendingParticipation(item);
+    const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
     const timeLabel = item?.startTime && item?.endTime
       ? `${String(item.startTime).slice(0, 5)} - ${String(item.endTime).slice(0, 5)}`
       : t('planning.labels.noTime', 'Sans horaire');
@@ -252,6 +262,22 @@ function PlanningCalendarView({
           {getPlanningDisplayTitle(item)}
         </Text>
 
+        {isPendingParticipation ? (
+          <View
+            style={[
+              styles.pendingStatusPill,
+              {
+                backgroundColor: hexToRgba(pendingAccentColor, 0.16),
+                borderColor: hexToRgba(pendingAccentColor, 0.4),
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: pendingAccentColor }]}>
+              {t('planning.status.pendingParticipation', 'Demande en attente')}
+            </Text>
+          </View>
+        ) : null}
+
         {typeLabel ? (
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
             {typeLabel}
@@ -273,11 +299,14 @@ function PlanningCalendarView({
     ApplicationStyle.backgroundColor.primary700,
     ApplicationStyle.borderRadius24,
     Colors.neutral300,
+    Colors.gold500,
     Colors.primary500,
+    Colors.warning500,
     Fonts.neutral00,
     Fonts.p1Bold,
     Fonts.p3,
     Fonts.p3Bold,
+    Fonts.p4Bold,
     Spaces.marginBottom,
     Spaces.padding,
     onEventPress,
@@ -420,6 +449,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 3,
     minHeight: 10,
+  },
+  pendingDayBadge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 12,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    top: 0,
+    width: 12,
+  },
+  pendingDayBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '800',
+    lineHeight: 8,
+  },
+  pendingStatusPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
 });
 

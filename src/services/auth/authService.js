@@ -77,9 +77,14 @@ const appTeamSummarySchema = Joi.object({
   category: appEntitySummarySchema.optional(),
   club: appClubSummarySchema.optional(),
   documentId: Joi.string().allow(null, '').optional(),
+  externalCompetitionEligible: Joi.boolean().allow(null).optional(),
+  externalProvider: Joi.string().valid('fff', 'ffbb').allow(null, '').optional(),
+  externalStandingUrl: Joi.string().allow(null, '').optional(),
+  externalSyncStatus: Joi.string().allow(null, '').optional(),
   id: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null).optional(),
   level: appEntitySummarySchema.optional(),
   name: Joi.string().allow(null, '').optional(),
+  section: appEntitySummarySchema.optional(),
 }).allow(null);
 
 const publicUserSchema = Joi.object({

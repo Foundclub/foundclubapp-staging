@@ -1,5 +1,3 @@
-import React from 'react';
-
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
@@ -37,7 +35,11 @@ function MyEventList({ navigation, route }) {
     >
       {multisportClub ? (
         <ScreenContainer bgImage="bg2">
-          <CMPlanningContent cmId={multisportClub.documentId} navigation={navigation} />
+          <CMPlanningContent
+            cmId={multisportClub.documentId}
+            navigation={navigation}
+            showTopHeader
+          />
         </ScreenContainer>
       ) : (
         <ParticipantEventList navigation={navigation} />

@@ -69,7 +69,7 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user', 'event', 'sourceTeam'],
+    populate: ['user', 'user.avatar', 'event', 'sourceTeam'],
     sort: ['updatedAt:desc', 'createdAt:desc'],
   };
 

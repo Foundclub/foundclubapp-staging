@@ -189,6 +189,32 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
 
 const formatAdsCountLabel = (count) => `${count} annonce${count > 1 ? 's' : ''}`;
 
+const getManagedTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
+
+const mergeManagedTeamSummary = (previousTeam, nextTeam) => ({
+  ...previousTeam,
+  ...nextTeam,
+  activities: nextTeam?.activities?.length ? nextTeam.activities : previousTeam?.activities,
+  category: nextTeam?.category || previousTeam?.category,
+  club: nextTeam?.club || previousTeam?.club,
+  level: nextTeam?.level || previousTeam?.level,
+  section: nextTeam?.section || previousTeam?.section,
+});
+
+const dedupeManagedTeams = (teams) => {
+  const teamsByKey = new Map();
+
+  teams.forEach((team) => {
+    const teamKey = getManagedTeamKey(team);
+    if (!teamKey) return;
+
+    const previousTeam = teamsByKey.get(teamKey);
+    teamsByKey.set(teamKey, previousTeam ? mergeManagedTeamSummary(previousTeam, team) : team);
+  });
+
+  return Array.from(teamsByKey.values());
+};
+
 /**
  * Recrutement List Content - Main component for recruitment marketplace
  * Shows different content based on user role:
@@ -216,6 +242,14 @@ function RecrutementListContent({ initialTab, timestamp }) {
   const isCoachOrAdmin = roleName === USER_ROLES.coach
     || roleName === USER_ROLES.president
     || roleName === USER_ROLES.superAdmin;
+  const managedTeams = React.useMemo(() => dedupeManagedTeams([
+    ...(userData?.myTeams || []),
+    ...(userData?.trainedTeams || []),
+  ]), [userData?.myTeams, userData?.trainedTeams]);
+  const managedTeamIds = React.useMemo(
+    () => managedTeams.map((team) => getManagedTeamKey(team)).filter(Boolean),
+    [managedTeams],
+  );
 
   // State
   const [activeTab, setActiveTab] = useState(initialTab || 'profils'); // 'profils' or 'annonces'
@@ -346,10 +380,13 @@ function RecrutementListContent({ initialTab, timestamp }) {
     if (!isRefresh) setLoading(true);
     try {
       const searchTerm = adSearchValue?.trim();
+      const ownerFilters = managedTeamIds.length > 0
+        ? { teamIds: managedTeamIds }
+        : { authorDocumentId: userData?.documentId };
       let data = [];
       if (searchTerm && searchTerm.length >= 2) {
         const response = await searchRecruitment({
-          authorDocumentId: userData?.documentId,
+          ...ownerFilters,
           includeInactive: true,
           page: 1,
           pageSize: 30,
@@ -358,7 +395,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
         });
         data = mapSearchPayload(response);
       } else {
-        data = await getMyRecruitmentAds();
+        data = await getMyRecruitmentAds(ownerFilters);
       }
       setMyAds(data || []);
     } catch (error) {
@@ -366,7 +403,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
     } finally {
       if (!isRefresh) setLoading(false);
     }
-  }, [adSearchValue, isCoachOrAdmin, userData?.documentId]);
+  }, [adSearchValue, isCoachOrAdmin, managedTeamIds, userData?.documentId]);
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -567,18 +604,27 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   // Render content for Coach - Annonces tab
   const renderAnnoncesContent = () => {
-    const userTeams = [
-      ...(userData?.myTeams || []),
-      ...(userData?.trainedTeams || []),
-    ];
-    console.log('[CreateAd] Available teams:', userTeams.map((t) => t?.name));
-
     const annoncesHeader = (
       <View style={[Spaces.gap[12], Spaces.marginBottom[4]]}>
+        <View style={{
+          backgroundColor: recruitmentSurface,
+          borderColor: recruitmentBorderSoft,
+          borderRadius: 16,
+          borderWidth: 1,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+        }}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+            Mes annonces
+          </Text>
+          <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
+            Consultez et gérez les annonces publiées pour vos équipes.
+          </Text>
+        </View>
         <TouchableOpacity
           onPress={() => {
-            console.log('[CreateAd] Button pressed, navigating to AdWizardStack');
-            nav.navigate('AdWizardStack');
+            nav.navigate(RouteNames.AdWizardStack);
           }}
           style={[
             Spaces.padding[16],
@@ -597,7 +643,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
           filterNumber={filtersCount}
           handleSearchField={setAdSearchValue}
           openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
-          placeholder="Rechercher une annonce..."
+          placeholder="Rechercher dans mes annonces..."
           searchDefaultValue={adSearchValue}
         />
         {adSearchValue?.trim()?.length >= 2 ? (
@@ -618,7 +664,9 @@ function RecrutementListContent({ initialTab, timestamp }) {
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
         ListEmptyComponent={(
           <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
-            Aucune annonce créée
+            {managedTeamIds.length > 0
+              ? 'Aucune annonce publiée pour vos équipes'
+              : 'Aucune annonce créée'}
           </Text>
         )}
         ListHeaderComponent={annoncesHeader}
@@ -677,6 +725,10 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   const playerIntroText = React.useMemo(() => {
     if (matchingAds.length > 0) {
+      if (matchingAds.length === 1) {
+        return '1 annonce correspond à ton profil et apparaît en premier.';
+      }
+
       return `${String(formatAdsCountLabel(matchingAds.length))} correspondent à ton profil et apparaissent en premier.`;
     }
 
@@ -844,7 +896,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
               </Text>
               <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
                 {hasProfileSignals
-                  ? "Les annonces compatibles restent d?j? en t?te. Active le filtre pour n'afficher que celles-ci."
+                  ? "Les annonces compatibles restent déjà en tête. Active le filtre pour n'afficher que celles-ci."
                   : 'Ajoute tes infos sportives pour faire remonter automatiquement les meilleures annonces.'}
               </Text>
             </View>

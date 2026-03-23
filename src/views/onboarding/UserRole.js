@@ -7,6 +7,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getRoleDocumentIdByKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -64,9 +65,13 @@ function UserRole({ navigation }) {
    * @param {string} selectedRole
    */
   const handleSelection = (selectedRole) => {
-    const newRole = roles?.find((r) => r.name === selectedRole)?.documentId || '';
+    const newRole = getRoleDocumentIdByKey(roles, selectedRole);
     setRole((currentRole) => (newRole === currentRole ? '' : newRole));
   };
+
+  const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
+  const coachRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.coach);
+  const presidentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.president);
 
   return (
     <ScreenContainer
@@ -99,17 +104,17 @@ function UserRole({ navigation }) {
         <WithDataWrapper error={rolesError?.message} isLoading={rolesLoading}>
           <View style={[Spaces.gap[24]]}>
             <TabButton
-              isActive={role === roles?.find((r) => r.name === USER_ROLES.player)?.documentId}
+              isActive={role === playerRoleId}
               onPress={() => handleSelection(USER_ROLES.player)}
               title={t('profile.fields.types.player')}
             />
             <TabButton
-              isActive={role === roles?.find((r) => r.name === USER_ROLES.coach)?.documentId}
+              isActive={role === coachRoleId}
               onPress={() => handleSelection(USER_ROLES.coach)}
               title={t('profile.fields.types.coach')}
             />
             <TabButton
-              isActive={role === roles?.find((r) => r.name === USER_ROLES.president)?.documentId}
+              isActive={role === presidentRoleId}
               onPress={() => handleSelection(USER_ROLES.president)}
               title={t('profile.fields.types.president')}
             />

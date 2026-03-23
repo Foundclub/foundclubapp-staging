@@ -132,7 +132,8 @@ function PrivateNavigator() {
   }
 
   return userData?.documentId ? (
-    <Stack.Navigator id={undefined} initialRouteName={initialRouteName} key={userData?.documentId} screenOptions={commonOptions}>
+    <>
+      <Stack.Navigator id={undefined} initialRouteName={initialRouteName} key={userData?.documentId} screenOptions={commonOptions}>
       <Stack.Screen
         component={PrivateTabNavigator}
         name={RouteNames.HomeTab}
@@ -696,7 +697,8 @@ function PrivateNavigator() {
         />
       ) : null}
 
-    </Stack.Navigator>
+      </Stack.Navigator>
+    </>
   ) : null;
 }
 

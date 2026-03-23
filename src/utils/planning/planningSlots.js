@@ -126,6 +126,9 @@ export const normalizePlanningItem = (item) => {
     leagueMatch: Boolean(item.leagueMatch || item.league_match),
     locationDetails: item.locationDetails || null,
     name: item.name || item.eventName || null,
+    participationStatus: typeof item.participationStatus === 'string'
+      ? item.participationStatus.trim().toLowerCase()
+      : null,
     raw: item,
     startAt: item.startAt || item.date || null,
     startTime: item.startTime || null,
@@ -140,6 +143,23 @@ export const normalizePlanningItems = (items) => (
   Array.isArray(items)
     ? items.map((item) => normalizePlanningItem(item)).filter(Boolean)
     : []
+);
+
+export const getPlanningParticipationStatus = (item) => {
+  let rawStatus = '';
+
+  if (typeof item?.participationStatus === 'string') {
+    rawStatus = item.participationStatus;
+  } else if (typeof item?.raw?.participationStatus === 'string') {
+    rawStatus = item.raw.participationStatus;
+  }
+
+  const normalizedStatus = String(rawStatus || '').trim().toLowerCase();
+  return normalizedStatus || null;
+};
+
+export const isPlanningPendingParticipation = (item) => (
+  getPlanningParticipationStatus(item) === 'pending'
 );
 
 export const getPlanningItemDate = (item) => {

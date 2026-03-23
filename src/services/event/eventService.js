@@ -162,6 +162,7 @@ export const getEventById = async (documentId) => {
         'missings',
         'participations.avatar',
         'participationRequests.user',
+        'participationRequests.user.avatar',
         'facility',
         'team.club.sponsor',
         'team.club.sponsor.logo'],
@@ -599,6 +600,7 @@ export const getEvents = async (params = {}) => {
       'facility',
       'invitedTeams',
       'participationRequests.user',
+      'participationRequests.user.avatar',
       'league_match',
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending

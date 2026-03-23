@@ -11,6 +11,7 @@ import usePlaces from '@/domains/places/usePlaces';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -113,6 +114,7 @@ function UserAddress({ navigation }) {
         </View>
 
         <View style={[Spaces.gap[16]]}>
+          <OnboardingOptionalHint />
           <Button
             disabled={!address || updateUserMutation.isPending}
             isLoading={updateUserMutation.isPending}

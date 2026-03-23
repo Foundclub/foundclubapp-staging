@@ -34,14 +34,21 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const invalidatePersonalPlanning = () => {
     queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
   };
+  const invalidateEventParticipationState = () => {
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    if (eventId) {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
+    }
+    invalidatePersonalPlanning();
+  };
 
   // --- Participation Mutations ---
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      invalidatePersonalPlanning();
+      invalidateEventParticipationState();
       refetch();
       refetchParticipations();
     },
@@ -50,8 +57,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const acceptParticipationMutation = useMutation({
     mutationFn: acceptEventParticipation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      invalidatePersonalPlanning();
+      invalidateEventParticipationState();
       refetch();
       refetchParticipations();
     },
@@ -60,8 +66,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const declineParticipationMutation = useMutation({
     mutationFn: declineEventParticipation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      invalidatePersonalPlanning();
+      invalidateEventParticipationState();
+      refetch();
       refetchParticipations();
     },
   });
@@ -75,8 +81,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      invalidatePersonalPlanning();
+      invalidateEventParticipationState();
       refetch();
       refetchParticipations();
     },
@@ -85,8 +90,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const missingEventMutation = useMutation({
     mutationFn: missingEvent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      invalidatePersonalPlanning();
+      invalidateEventParticipationState();
       refetch();
       refetchParticipations();
     },

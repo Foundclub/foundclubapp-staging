@@ -36,12 +36,14 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
+import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+
 import { useAppMode } from '@/context/AppModeContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 
@@ -220,6 +222,12 @@ function HomeHubContent({ auth, navigation, route }) {
   const cmId = userData?.multisportClubs?.[0]?.documentId;
   const isTutorialCenterVisible = activeTutorialModal === 'center';
   const isFeatureTutorialPickerVisible = activeTutorialModal === 'feature';
+  const isExternalCompetitionPromptEnabled = isFocused
+    && !isOnboardingActive
+    && !homeHubTutorial.shouldForceStart
+    && homeHubTutorial.entryGateChoice !== 'pending'
+    && activeTutorialModal === null
+    && !isEntryGateVisible;
 
   const legacySearchTarget = useMemo(() => resolveLegacySearchTarget(routeParams), [routeParams]);
 
@@ -461,9 +469,9 @@ function HomeHubContent({ auth, navigation, route }) {
   }, []);
 
   const runPendingNavigation = useCallback((delayMs) => {
-    if (!isFocused) return;
+    if (!isFocused) return undefined;
     const navigateAction = pendingNavigationActionRef.current;
-    if (!navigateAction) return;
+    if (!navigateAction) return undefined;
     pendingNavigationActionRef.current = null;
     tutorialDebugLog('homehub.runPendingNavigation', { delayMs });
 
@@ -616,6 +624,14 @@ function HomeHubContent({ auth, navigation, route }) {
           });
         });
         return;
+      case TutorialIds.LOGOUT_CONFIRMATION:
+        navigateAfterClosingModals(() => {
+          navigation.navigate(RouteNames.ProfileStack, {
+            params: tutorialParams,
+            screen: RouteNames.Profile,
+          });
+        });
+        return;
       case TutorialIds.MESSAGING:
         navigateAfterClosingModals(() => {
           navigation.navigate(RouteNames.HomeTab, { params: tutorialParams, screen: RouteNames.Chat });
@@ -688,14 +704,7 @@ function HomeHubContent({ auth, navigation, route }) {
             source: 'home',
           });
         });
-        return;
-      case TutorialIds.LOGOUT_CONFIRMATION:
-        navigateAfterClosingModals(() => {
-          navigation.navigate(RouteNames.ProfileStack, {
-            params: tutorialParams,
-            screen: RouteNames.Profile,
-          });
-        });
+        break;
 
       default:
     }
@@ -749,6 +758,12 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const handleAddRecruitmentAd = useCallback(() => {
     navigation.navigate(RouteNames.AdWizardStack);
+  }, [navigation]);
+
+  const handleOpenMyRecruitmentAds = useCallback(() => {
+    navigation.navigate(RouteNames.SearchRecruitment, {
+      initialRecruitmentTab: 'annonces',
+    });
   }, [navigation]);
 
   const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
@@ -956,6 +971,26 @@ function HomeHubContent({ auth, navigation, route }) {
             },
           ),
         },
+        {
+          accentColor: Colors.primary500,
+          icon: 'running',
+          key: 'manage-my-ads',
+          onPress: handleOpenMyRecruitmentAds,
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consultez et gérez les annonces de vos équipes.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
+          tutorial: makeTutorial(
+            'manageMyAds',
+            6,
+            'Mes annonces',
+            'Retrouvez rapidement les annonces déjà publiées pour vos équipes.',
+            {
+              nextAction: 'scrollDown',
+              nextLabel: scrollDownLabel,
+              onNext: scrollToSearchSection,
+            },
+          ),
+        },
       ];
     }
 
@@ -1016,6 +1051,26 @@ function HomeHubContent({ auth, navigation, route }) {
             },
           ),
         },
+        {
+          accentColor: Colors.primary500,
+          icon: 'running',
+          key: 'manage-my-ads',
+          onPress: handleOpenMyRecruitmentAds,
+          subtitle: t('homeHub.cards.manage.myAds.subtitle', 'Consultez et gérez les annonces de vos équipes.'),
+          subtitleLines: 2,
+          title: t('homeHub.cards.manage.myAds.title', 'Mes annonces'),
+          tutorial: makeTutorial(
+            'manageMyAds',
+            6,
+            'Mes annonces',
+            'Retrouvez rapidement les annonces déjà publiées pour vos équipes.',
+            {
+              nextAction: 'scrollDown',
+              nextLabel: scrollDownLabel,
+              onNext: scrollToSearchSection,
+            },
+          ),
+        },
       ];
     }
 
@@ -1024,6 +1079,7 @@ function HomeHubContent({ auth, navigation, route }) {
     Colors.primary500,
     handleAddEvent,
     handleAddRecruitmentAd,
+    handleOpenMyRecruitmentAds,
     handleOpenManageClub,
     handleOpenRequestsHub,
     isCoach,
@@ -1035,54 +1091,61 @@ function HomeHubContent({ auth, navigation, route }) {
   ]);
 
   /** @type {HomeCard[]} */
-  const searchCards = useMemo(() => ([
-    {
-      accentColor: Colors.primary500,
-      icon: 'calendar',
-      key: 'search-events',
-      onPress: () => navigation.navigate(RouteNames.SearchEvents),
-      subtitle: t('homeHub.cards.search.events.subtitle'),
-      title: t('homeHub.cards.search.events.title'),
-      tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouvez des événements sportifs en utilisant les filtres de recherche.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'shield',
-      key: 'search-clubs',
-      onPress: () => navigation.navigate(RouteNames.SearchClubs),
-      subtitle: t('homeHub.cards.search.clubs.subtitle'),
-      title: t('homeHub.cards.search.clubs.title'),
-      tutorial: makeTutorial('searchClubs', 11, 'Rechercher un club', 'Explorez les clubs et ouvrez leur fiche détaillée.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'stadium',
-      key: 'search-reservations',
-      onPress: () => navigation.navigate(RouteNames.SearchReservations),
-      subtitle: t('homeHub.cards.search.reservations.subtitle'),
-      title: t('homeHub.cards.search.reservations.title'),
-      tutorial: makeTutorial('searchReservations', 12, 'Rechercher une réservation', 'Accédez aux réservations et filtrez selon votre activité.'),
-    },
-    {
-      accentColor: Colors.primary500,
-      icon: 'running',
-      key: 'search-ads',
-      onPress: () => navigation.navigate(RouteNames.SearchRecruitment, { initialRecruitmentTab: 'annonces' }),
-      subtitle: t('homeHub.cards.search.ads.subtitle'),
-      title: t('homeHub.cards.search.ads.title'),
-      tutorial: makeTutorial(
-        'searchAds',
-        13,
-        'Rechercher des annonces',
-        'Consultez les annonces de recrutement et les profils disponibles.',
-        {
-          nextAction: 'scrollDown',
-          nextLabel: scrollDownLabel,
-          onNext: scrollToLeagueSection,
-        },
-      ),
-    },
-  ]), [Colors.primary500, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t]);
+  const searchCards = useMemo(() => {
+    const cards = [
+      {
+        accentColor: Colors.primary500,
+        icon: 'calendar',
+        key: 'search-events',
+        onPress: () => navigation.navigate(RouteNames.SearchEvents),
+        subtitle: t('homeHub.cards.search.events.subtitle'),
+        title: t('homeHub.cards.search.events.title'),
+        tutorial: makeTutorial('searchEvents', 10, 'Rechercher un evenement', 'Trouvez des evenements sportifs en utilisant les filtres de recherche.'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'shield',
+        key: 'search-clubs',
+        onPress: () => navigation.navigate(RouteNames.SearchClubs),
+        subtitle: t('homeHub.cards.search.clubs.subtitle'),
+        title: t('homeHub.cards.search.clubs.title'),
+        tutorial: makeTutorial('searchClubs', 11, 'Rechercher un club', 'Explorez les clubs et ouvrez leur fiche detaillee.'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'stadium',
+        key: 'search-reservations',
+        onPress: () => navigation.navigate(RouteNames.SearchReservations),
+        subtitle: t('homeHub.cards.search.reservations.subtitle'),
+        title: t('homeHub.cards.search.reservations.title'),
+        tutorial: makeTutorial('searchReservations', 12, 'Rechercher une reservation', 'Accedez aux reservations et filtrez selon votre activite.'),
+      },
+    ];
+
+    if (!hasManageSection) {
+      cards.push({
+        accentColor: Colors.primary500,
+        icon: 'running',
+        key: 'search-ads',
+        onPress: () => navigation.navigate(RouteNames.SearchRecruitment, { initialRecruitmentTab: 'annonces' }),
+        subtitle: t('homeHub.cards.search.ads.subtitle'),
+        title: t('homeHub.cards.search.ads.title'),
+        tutorial: makeTutorial(
+          'searchAds',
+          13,
+          'Rechercher des annonces',
+          'Consultez les annonces de recrutement et les profils disponibles.',
+          {
+            nextAction: 'scrollDown',
+            nextLabel: scrollDownLabel,
+            onNext: scrollToLeagueSection,
+          },
+        ),
+      });
+    }
+
+    return cards;
+  }, [Colors.primary500, hasManageSection, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t]);
 
   /** @type {HomeCard[]} */
   const leagueCards = useMemo(() => ([
@@ -1404,7 +1467,7 @@ function HomeHubContent({ auth, navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t(
                 'homeHubTutorial.entry.description',
-                'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l\'application par vous même.',
+                'Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l\'application par vous-même.',
               )}
             </Text>
             <View style={[Spaces.gap[8], Spaces.marginTop[4]]}>
@@ -1422,6 +1485,11 @@ function HomeHubContent({ auth, navigation, route }) {
           </View>
         </View>
       ) : null}
+
+      <ExternalCompetitionPromptGate
+        enabled={isExternalCompetitionPromptEnabled}
+        userData={userData}
+      />
     </ScreenContainer>
   );
 }

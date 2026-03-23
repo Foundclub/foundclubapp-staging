@@ -34,7 +34,7 @@ const getMessagingInstanceSafe = () => {
  * @param {Record<string, any>} data
  * @returns {string}
  */
-const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel événement';
+const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel evenement';
 
 /**
  * @param {any} remoteMessage
@@ -43,7 +43,7 @@ const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.t
  */
 const resolvePushBody = (remoteMessage, data) => remoteMessage?.notification?.body
   || data?.body
-  || 'Repondez rapidement: present ou absent.';
+  || 'Repondez rapidement : present ou absent.';
 
 // This handler must be outside of the React lifecycle to handle background/quit state messages
 export const registerBackgroundHandler = () => {
@@ -51,7 +51,7 @@ export const registerBackgroundHandler = () => {
   handlersRegistered = true;
 
   ensureNotificationActionSetup().catch((error) => {
-    notificationsBgLogger.warn('Failed to setup action catégories', error);
+    notificationsBgLogger.warn('Failed to setup action categories', error);
   });
 
   const messagingInstance = getMessagingInstanceSafe();

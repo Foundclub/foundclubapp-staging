@@ -74,6 +74,25 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
  */
 
 /**
+ * @param {User | undefined} user
+ * @returns {string}
+ */
+function getUserDisplayName(user) {
+  const firstname = String(user?.firstname || '').trim();
+  const lastname = String(user?.lastname || '').trim();
+  const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+  if (fullName) return fullName;
+
+  const username = String(user?.username || '').trim();
+  if (username && !/^[+()\d\s-]{8,}$/.test(username)) return username;
+
+  const phoneNumber = String(user?.phoneNumber || user?.phone || '').trim();
+  if (phoneNumber) return phoneNumber;
+
+  return 'Utilisateur';
+}
+
+/**
  * @param {EventParticipantsProps} props
  */
 function EventParticipants({
@@ -147,7 +166,7 @@ function EventParticipants({
         />
         <View style={{ flex: 1 }}>
           <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
-            {`${participation.user.firstname || ''} ${participation.user.lastname || ''}`.trim()}
+            {getUserDisplayName(participation.user)}
           </Text>
           {participation?.sourceTeam?.name ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -506,7 +525,7 @@ function ParticipantItem({
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
           />
           <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-            {`${player.firstname || ''} ${player.lastname || ''}`.trim()}
+            {getUserDisplayName(player)}
           </Text>
         </View>
         <View

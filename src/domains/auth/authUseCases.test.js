@@ -1,6 +1,7 @@
 import {
   getAuthTokens,
   getOnboardingViews,
+  getRoleDocumentIdByKey,
   getUserRoleKey,
   USER_ROLES,
 } from '@/domains/auth/authUseCases';
@@ -68,6 +69,18 @@ describe('authUseCases', () => {
       expect(getUserRoleKey('President')).toBe('president');
       expect(getUserRoleKey('Dirigeant')).toBe('president');
       expect(getUserRoleKey('ClubAdmin')).toBe('president');
+    });
+
+    it('finds coach role document id from role aliases and backend type', () => {
+      const roles = [
+        { documentId: 'role-player', name: 'Joueur', type: 'joueur' },
+        { documentId: 'role-coach', name: 'Entraineur', type: 'entraineur' },
+        { documentId: 'role-president', name: 'Dirigeant', type: 'dirigeant' },
+      ];
+
+      expect(getRoleDocumentIdByKey(roles, USER_ROLES.coach)).toBe('role-coach');
+      expect(getRoleDocumentIdByKey(roles, 'Entraîneur')).toBe('role-coach');
+      expect(getRoleDocumentIdByKey(roles, 'coach')).toBe('role-coach');
     });
 
     it('returns empty views when onboarding is marked completed', () => {

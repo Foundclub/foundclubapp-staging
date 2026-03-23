@@ -5,16 +5,23 @@ import {
   getToken,
   onMessage,
   onNotificationOpenedApp,
+  onTokenRefresh,
   requestPermission,
 } from '@react-native-firebase/messaging';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import {
-  Alert, Linking, PermissionsAndroid, Platform,
+  Alert,
+  AppState,
+  Linking,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
 
 import useAuth from '@/domains/auth/useAuth';
+import { useAppContext } from '@/store/appContext';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { addDeviceToken } from '@/services/auth/authService';
 import {
@@ -29,6 +36,7 @@ import {
 } from '@/services/notificationActions/rsvpActions';
 
 import { createLogger } from '@/utils/logger/logger';
+import { isDuplicateNotificationKey } from '@/utils/notifications/notificationDedupe';
 import {
   getNotificationOpenKey,
   normalizeNotificationPayload,
@@ -36,42 +44,16 @@ import {
 } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
-import { RouteNames } from '../navigation/routeNames';
-import { useAppContext } from '../store/appContext';
+import { ENABLE_PUSH_NOTIFICATIONS, ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
+import { NOTIFICATIONS_QUERY_KEY, UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 
 const notificationsLogger = createLogger('notifications');
-
-// Create a storage instance for notifications
-/** @type {MMKV | null} */
-let notificationStorageInstance = null;
-
-/** @returns {MMKV} */
-const getNotificationStorage = () => {
-  if (!notificationStorageInstance) {
-    notificationStorageInstance = new MMKV({
-      id: 'notifications-storage',
-    });
-  }
-  return notificationStorageInstance;
-};
-
-const notificationStorage = {
-  /** @param {string} key */
-  getString: (key) => getNotificationStorage().getString(key),
-  /**
-   * @param {string} key @param {string | number | boolean} value
-   * @param value
-   */
-  set: (key, value) => getNotificationStorage().set(key, value),
-  /** @param {string} key */
-  contains: (key) => getNotificationStorage().contains(key),
-};
 
 /**
  * @param {import('react').MutableRefObject<Set<string>>} ref
  * @param {string} key
  */
-const rememberNotificationKey = (ref, key) => {
+const rememberRuntimeKey = (ref, key) => {
   if (!key) return;
   ref.current.add(key);
   if (ref.current.size <= 100) return;
@@ -82,28 +64,12 @@ const rememberNotificationKey = (ref, key) => {
 };
 
 /**
- * Check if a notification is a duplicate based on its messageId
- * @param {string} [messageId]
- * @returns {boolean}
- */
-const isNotificationDuplicate = (messageId) => {
-  if (!messageId) return false;
-  const lastNotificationId = notificationStorage.getString('last-notification-id');
-  if (lastNotificationId === messageId) {
-    return true;
-  }
-  notificationStorage.set('last-notification-id', messageId);
-  return false;
-};
-
-/**
  * @param {string | number | Date} dateInput
  * @returns {string | null}
  */
 const formatDateForGoogleCalendar = (dateInput) => {
   const date = new Date(dateInput);
   if (Number.isNaN(date.getTime())) return null;
-  /** @param {number} value */
   const pad = (value) => String(value).padStart(2, '0');
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
@@ -124,7 +90,7 @@ const isNotifeeApiAvailable = () => {
       && typeof notifee.onForegroundEvent === 'function'
       && typeof notifee.getInitialNotification === 'function',
     );
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -154,12 +120,7 @@ const requestUserPermission = async () => {
       notificationsLogger.warn('[FCM] requestPermission API unavailable on this runtime.');
       return;
     }
-    try {
-      // Then request permission
-      await requestPermission(messagingInstance);
-    } catch (error) {
-      throw new Error(`Failed to request permission: ${error}`);
-    }
+    await requestPermission(messagingInstance);
   }
 
   if (Platform.OS === 'android') {
@@ -168,8 +129,7 @@ const requestUserPermission = async () => {
 };
 
 /**
- * Display notification when app is open
- * @param {{title: string, body: string, data: any}} param - Notification data
+ * @param {{title: string, body: string, data: any}} param0
  * @returns {Promise<void>}
  */
 const onDisplayNotification = async ({ body, data, title }) => {
@@ -183,32 +143,21 @@ const onDisplayNotification = async ({ body, data, title }) => {
     await ensureNotificationActionSetup();
 
     if (isEventRsvpActionablePayload(normalizedData)) {
-      await displayEventRsvpActionableNotification({
-        body,
-        data: normalizedData,
-        title,
-      });
+      await displayEventRsvpActionableNotification({ body, data: normalizedData, title });
       return;
     }
 
     if (isChatReplyActionablePayload(normalizedData)) {
-      await displayChatReplyActionableNotification({
-        body,
-        data: normalizedData,
-        title,
-      });
+      await displayChatReplyActionableNotification({ body, data: normalizedData, title });
       return;
     }
 
     if (title || body) {
-      // Display a notification
       await notifee.displayNotification({
         android: {
           channelId: 'default',
           importance: 4,
-          pressAction: {
-            id: 'default',
-          },
+          pressAction: { id: 'default' },
           smallIcon: 'ic_notification',
           sound: 'default',
         },
@@ -232,22 +181,18 @@ const onDisplayNotification = async ({ body, data, title }) => {
 };
 
 /**
- * Handle notifications for the application
  * @param {{
  *  navigate: (routeName: string, params?: Record<string, unknown>) => boolean | void;
  *  onSmartNotification?: (payload: any) => void;
- * }} props - The props
- * @inheritdoc
+ * }} props
  */
 const useNotifications = ({ navigate, onSmartNotification }) => {
-  // hooks
   const [{ pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
+  const queryClient = useQueryClient();
 
   const { mutate: saveTokenMutation } = useMutation({
-    meta: {
-      preventToastError: true,
-    },
+    meta: { preventToastError: true },
     mutationFn: addDeviceToken,
     onError: (error) => {
       const typedError = /** @type {any} */ (error);
@@ -265,30 +210,90 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
   });
 
-  // api calls
-  const saveToken = useCallback((/** @type {string} */token) => {
-    if (token) {
-      notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
-      saveTokenMutation(token);
-    }
+  const saveToken = useCallback((token) => {
+    if (!token) return;
+    notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
+    saveTokenMutation(token);
   }, [saveTokenMutation]);
 
-  const smartNotifEnabled = useRef((() => {
-    const raw = process.env.LEAGUE_SMART_NOTIF_V1;
-    if (typeof raw === 'string' && raw.length > 0) {
-      return raw.trim().toLowerCase() === 'true';
-    }
-    return __DEV__;
-  })());
+  const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
   const queuedNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const tokenSyncInFlightRef = useRef(false);
+  const lastTokenSyncAtRef = useRef(0);
+  const hasSynced = useRef(false);
+
+  const invalidateNotificationQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+  }, [queryClient]);
 
   useEffect(() => {
     ensureNotificationActionSetup().catch((error) => {
       notificationsLogger.warn('[Notifications] Failed to setup notification actions:', error);
     });
   }, []);
+
+  const syncTokenIfNeeded = useCallback(async (reason = 'manual') => {
+    if (!ENABLE_PUSH_NOTIFICATIONS || !userData) {
+      return;
+    }
+
+    const now = Date.now();
+    if (tokenSyncInFlightRef.current || (now - lastTokenSyncAtRef.current < 30000 && reason !== 'token_refresh')) {
+      return;
+    }
+
+    tokenSyncInFlightRef.current = true;
+    lastTokenSyncAtRef.current = now;
+
+    try {
+      notificationsLogger.debug(`[FCM] Starting token retrieval. reason=${reason}`);
+      const messagingInstance = getMessagingInstanceSafe();
+      if (!messagingInstance) {
+        notificationsLogger.warn('[FCM] Token retrieval skipped: messaging unavailable.');
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        notificationsLogger.debug('[FCM] iOS detected - requesting permissions...');
+        await requestUserPermission();
+        const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
+        notificationsLogger.debug('[FCM] Device registered for remote messages:', registered);
+        if (!registered) {
+          await messagingInstance.registerDeviceForRemoteMessages();
+          notificationsLogger.debug('[FCM] Device registered successfully');
+        }
+      } else {
+        const permissionGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        notificationsLogger.debug('[FCM] Android permission granted:', permissionGranted);
+        if (!permissionGranted) {
+          await requestUserPermission();
+        }
+      }
+
+      notificationsLogger.debug('[FCM] Getting FCM token...');
+      const token = await getToken(messagingInstance);
+      notificationsLogger.debug('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
+      if (!token) {
+        throw new Error('Failed to get FCM token');
+      }
+      saveToken(token);
+    } catch (err) {
+      const typedError = /** @type {any} */ (err);
+      const errorMessage = typeof typedError === 'string' ? typedError : typedError?.message || JSON.stringify(typedError);
+      if (errorMessage.includes('FIS_AUTH_ERROR')) {
+        notificationsLogger.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in local). Notifications skipped.');
+      } else {
+        notificationsLogger.error('[FCM] Error retrieving token:', typedError);
+      }
+    } finally {
+      tokenSyncInFlightRef.current = false;
+    }
+  }, [saveToken, userData]);
 
   /**
    * @typedef {{
@@ -305,7 +310,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
    * }} NotificationData
    */
 
-  const openCalendarFromNotification = useCallback(async (/** @type {NotificationData} */ notificationData) => {
+  const openCalendarFromNotification = useCallback(async (notificationData) => {
     const startIso = notificationData?.matchDate || notificationData?.date;
     const startDate = startIso ? new Date(startIso) : new Date();
     const endDate = new Date(startDate.getTime() + (60 * 60 * 1000));
@@ -314,9 +319,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!startParam || !endParam) return;
 
     const text = encodeURIComponent(`Match FoundClub League - ${notificationData?.teamName || 'Squad'}`);
-    const details = encodeURIComponent(`Match confirmé contre ${notificationData?.opponentName || 'adversaire'}`);
+    const details = encodeURIComponent(`Match confirme contre ${notificationData?.opponentName || 'adversaire'}`);
     const location = encodeURIComponent(notificationData?.venue || notificationData?.location || '');
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&détails=${details}&location=${location}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
     try {
       await Linking.openURL(url);
     } catch (error) {
@@ -324,16 +329,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
   }, []);
 
-  const maybePromptAddToCalendar = useCallback((/** @type {NotificationData | undefined} */ notificationData) => {
+  const maybePromptAddToCalendar = useCallback((notificationData) => {
     if (!notificationData || notificationData.type !== NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) return;
     const key = notificationData.matchId || notificationData.dedupeKey;
-    if (!key) return;
-    if (promptedCalendarMatchesRef.current.has(key)) return;
+    if (!key || promptedCalendarMatchesRef.current.has(key)) return;
     promptedCalendarMatchesRef.current.add(key);
 
     Alert.alert(
-      'Match confirmé',
-      'Ajouter ce match à votre agenda ?',
+      'Match confirme',
+      'Ajouter ce match a votre agenda ?',
       [
         { style: 'cancel', text: 'Plus tard' },
         {
@@ -344,8 +348,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     );
   }, [openCalendarFromNotification]);
 
-  // methods
-  const handleNavigateOnOpen = useCallback((/** @type {any} */ remoteMessageData) => {
+  const handleNavigateOnOpen = useCallback((remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
     const notificationOpenKey = getNotificationOpenKey(notificationData);
     notificationsLogger.debug('[useNotifications] handleNavigateOnOpen triggered with:', notificationData);
@@ -355,7 +358,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     const markHandled = () => {
-      rememberNotificationKey(handledNotificationKeysRef, notificationOpenKey);
+      rememberRuntimeKey(handledNotificationKeysRef, notificationOpenKey);
       queuedNotificationKeysRef.current.delete(notificationOpenKey);
     };
 
@@ -369,10 +372,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
 
     if (notificationData.type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
-      maybePromptAddToCalendar(/** @type {NotificationData} */ (notificationData));
+      maybePromptAddToCalendar(notificationData);
     }
 
-    const tryNavigate = (/** @type {string} */ routeName, /** @type {Record<string, unknown> | undefined} */ params) => {
+    const tryNavigate = (routeName, params) => {
       const navigated = navigate(routeName, params);
       if (navigated === false) {
         const fallback = navigate(RouteNames.NotificationList);
@@ -395,10 +398,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const handled = tryNavigate(destination.route, destination.params || {});
     if (handled) {
       markHandled();
+      invalidateNotificationQueries();
     }
     notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
     return handled;
-  }, [navigate, maybePromptAddToCalendar]);
+  }, [invalidateNotificationQueries, maybePromptAddToCalendar, navigate]);
 
   const smartForegroundTypes = useRef(new Set([
     NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER,
@@ -422,32 +426,32 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     NOTIFICATION_TYPES.MATCH_FOUND,
   ]));
 
-  // listeners
-  // Handle foreground notif display
   useEffect(() => {
-    const messagingInstance = getMessagingInstanceSafe();
+    const messagingInstance = ENABLE_PUSH_NOTIFICATIONS ? getMessagingInstanceSafe() : null;
     if (!messagingInstance) {
-      notificationsLogger.warn('[Notifications] Foreground FCM listener disabled: messaging unavailable.');
+      notificationsLogger.warn('[Notifications] Foreground FCM listener disabled: messaging unavailable or disabled.');
       return undefined;
     }
 
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-      // Skip notification display for message types that shouldn't show in foreground
-      const skipTypes = [
-        '',
-        // NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
-        // NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE,
-        // NOTIFICATION_TYPES.NEW_WHISPER,
-      ];
+      invalidateNotificationQueries();
 
       const messageType = normalizedData?.type;
-      if (messageType && typeof messageType === 'string' && skipTypes.includes(messageType)) {
+      if (!messageType && !remoteMessage?.notification?.title && !remoteMessage?.notification?.body) {
         return;
       }
 
       if (messageType === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) {
-        maybePromptAddToCalendar(/** @type {NotificationData} */ (normalizedData));
+        maybePromptAddToCalendar(normalizedData);
+      }
+
+      const dedupeKey = getNotificationOpenKey({
+        ...(normalizedData || {}),
+        notificationId: normalizedData?.notificationId || remoteMessage?.messageId,
+      });
+      if (isDuplicateNotificationKey(dedupeKey)) {
+        return;
       }
 
       const shouldUseSmartForeground = Boolean(
@@ -455,41 +459,29 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         && onSmartNotification
         && (
           messageType === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER
-          || (
-            smartNotifEnabled.current
-            && smartForegroundTypes.current.has(messageType)
-          )
+          || (smartNotifEnabled.current && smartForegroundTypes.current.has(messageType))
         ),
       );
 
       if (shouldUseSmartForeground) {
         onSmartNotification({
           ...normalizedData,
-          body: remoteMessage.notification?.body || '',
-          title: remoteMessage.notification?.title || '',
+          body: remoteMessage.notification?.body || normalizedData?.body || '',
+          title: remoteMessage.notification?.title || normalizedData?.title || '',
         });
         return;
       }
 
-      // Check for duplicate notifications using messageId
-      const { messageId } = remoteMessage;
-      if (isNotificationDuplicate(messageId)) {
-        return;
-      }
-
-      const fallbackBody = typeof normalizedData?.body === 'string' ? normalizedData.body : '';
-      const fallbackTitle = typeof normalizedData?.title === 'string' ? normalizedData.title : '';
-
       onDisplayNotification({
-        body: remoteMessage.notification?.body || fallbackBody,
+        body: remoteMessage.notification?.body || normalizedData?.body || '',
         data: remoteMessage.data || {},
-        title: remoteMessage.notification?.title || fallbackTitle,
+        title: remoteMessage.notification?.title || normalizedData?.title || '',
       });
     });
-    return typeof unsubscribe === 'function' ? unsubscribe : undefined;
-  }, [onSmartNotification, maybePromptAddToCalendar]);
 
-  // open notification when app is in foreground
+    return typeof unsubscribe === 'function' ? unsubscribe : undefined;
+  }, [invalidateNotificationQueries, maybePromptAddToCalendar, onSmartNotification]);
+
   useEffect(() => {
     if (!isNotifeeApiAvailable()) {
       notificationsLogger.warn('[Notifications] Foreground Notifee listener disabled: notifee unavailable.');
@@ -504,6 +496,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           pressActionId: detail?.pressAction?.id,
         });
         if (chatReplyResult?.handled) {
+          invalidateNotificationQueries();
           if (detail.notification?.id) {
             await notifee.cancelNotification(detail.notification.id);
           }
@@ -515,92 +508,27 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           pressActionId: detail?.pressAction?.id,
         });
         if (result?.handled && detail.notification?.id) {
+          invalidateNotificationQueries();
           await notifee.cancelNotification(detail.notification.id);
         }
         return;
       }
 
-      if (type === EventType.PRESS) {
-        if (detail.notification?.data?.type) {
-          handleNavigateOnOpen(
-            normalizeNotificationPayload(detail.notification.data),
-          );
-        }
+      if (type === EventType.PRESS && detail.notification?.data?.type) {
+        invalidateNotificationQueries();
+        handleNavigateOnOpen(normalizeNotificationPayload(detail.notification.data));
       }
     });
-  }, [handleNavigateOnOpen]);
+  }, [handleNavigateOnOpen, invalidateNotificationQueries]);
 
-  const hasSynced = useRef(false);
-
-  // Get FCM token
   useEffect(() => {
-    const retreiveFCMToken = async () => {
-      try {
-        notificationsLogger.debug('[FCM] Starting token retrieval...');
-        const messagingInstance = getMessagingInstanceSafe();
-        if (!messagingInstance) {
-          notificationsLogger.warn('[FCM] Token retrieval skipped: messaging unavailable.');
-          return;
-        }
-
-        if (Platform.OS === 'ios') {
-          notificationsLogger.debug('[FCM] iOS détectéd - requesting permissions...');
-          // Ensure device is registered and has permissions
-          const permResult = await requestUserPermission();
-          notificationsLogger.debug('[FCM] Permission result:', permResult);
-
-          // Double check registration
-          const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
-          notificationsLogger.debug('[FCM] Device registered for remote messages:', registered);
-          if (!registered) {
-            notificationsLogger.debug('[FCM] Registering device for remote messages...');
-            await messagingInstance.registerDeviceForRemoteMessages();
-            notificationsLogger.debug('[FCM] Device registered successfully');
-          }
-        } else {
-          // For Android, just request permission
-          const permissionGranted = await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-          );
-          notificationsLogger.debug('[FCM] Android permission granted:', permissionGranted);
-          if (!permissionGranted) {
-            await requestUserPermission();
-          }
-        }
-
-        // Finally get FCM token
-        notificationsLogger.debug('[FCM] Getting FCM token...');
-        const token = await getToken(messagingInstance);
-        notificationsLogger.debug('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
-        if (token) {
-          notificationsLogger.debug('[FCM] Saving token to backend...');
-          saveToken(token);
-        } else {
-          throw new Error('Failed to get FCM token');
-        }
-      } catch (err) {
-        const typedError = /** @type {any} */ (err);
-        const errorMessage = typeof typedError === 'string' ? typedError : typedError?.message || JSON.stringify(typedError);
-        if (errorMessage.includes('FIS_AUTH_ERROR')) {
-          notificationsLogger.warn('[FCM] Firebase Auth failed (SHA-1 mismatch in Local). Notifications skipped.');
-        } else {
-          notificationsLogger.error('[FCM] Error retrieving token:', typedError);
-        }
-        // Do not throw error here to prevent app crash
-        // throw new Error(`Failed to retrieve token: ${err}`);
-      }
-    };
-
     notificationsLogger.debug('[FCM] useEffect triggered - userData:', !!userData, 'hasSynced:', hasSynced.current);
-    if (userData && !hasSynced.current) {
+    if (ENABLE_PUSH_NOTIFICATIONS && userData && !hasSynced.current) {
       hasSynced.current = true;
-      retreiveFCMToken();
+      syncTokenIfNeeded('login');
     }
 
-    const queuePendingNotification = (
-      /** @type {Record<string, any> | undefined | null} */ payload,
-      /** @type {string} */ source,
-    ) => {
+    const queuePendingNotification = (payload, source) => {
       const normalizedPayload = normalizeNotificationPayload(payload || {});
       if (normalizedPayload?.type) {
         const notificationOpenKey = getNotificationOpenKey(normalizedPayload);
@@ -612,7 +540,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           return;
         }
 
-        rememberNotificationKey(queuedNotificationKeysRef, notificationOpenKey);
+        rememberRuntimeKey(queuedNotificationKeysRef, notificationOpenKey);
         notificationsLogger.debug(`[FCM] Storing pending notification from ${source} key=${notificationOpenKey}`);
         dispatch({
           payload: normalizedPayload,
@@ -621,30 +549,28 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
     };
 
-    const messagingInstance = getMessagingInstanceSafe();
+    const messagingInstance = ENABLE_PUSH_NOTIFICATIONS ? getMessagingInstanceSafe() : null;
     if (!messagingInstance) {
-      notificationsLogger.warn('[Notifications] Messaging unavailable. Boot listeners skipped.');
+      notificationsLogger.warn('[Notifications] Messaging unavailable or disabled. Boot listeners skipped.');
       return undefined;
     }
 
-    // Check for initial notification (Cold Start) - Firebase remote push
     if (typeof messagingInstance.getInitialNotification === 'function') {
       messagingInstance.getInitialNotification().then((remoteMessage) => {
-        if (remoteMessage) {
-          notificationsLogger.debug('[FCM] App opened from QUIT state by notification:', remoteMessage);
-          const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-          queuePendingNotification(normalizedData, 'fcm');
-        }
+        if (!remoteMessage) return;
+        invalidateNotificationQueries();
+        notificationsLogger.debug('[FCM] App opened from QUIT state by notification:', remoteMessage);
+        queuePendingNotification(normalizeNotificationPayload(remoteMessage.data || {}), 'fcm');
       }).catch((error) => {
         notificationsLogger.warn('[FCM] getInitialNotification failed:', error);
       });
     }
 
-    // Handle app opened from BACKGROUND state by Firebase remote push.
     const unsubscribeNotificationOpened = onNotificationOpenedApp(
       messagingInstance,
       (remoteMessage) => {
         if (!remoteMessage) return;
+        invalidateNotificationQueries();
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
         if (normalizedData?.type) {
           notificationsLogger.debug(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
@@ -653,26 +579,39 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       },
     );
 
-    // Check Notifee initial notification (local/actionable notifications)
     if (isNotifeeApiAvailable()) {
       notifee.getInitialNotification().then((initialNotification) => {
-        const normalizedData = normalizeNotificationPayload(
-          initialNotification?.notification?.data || {},
+        queuePendingNotification(
+          normalizeNotificationPayload(initialNotification?.notification?.data || {}),
+          'notifee',
         );
-        queuePendingNotification(normalizedData, 'notifee');
       }).catch((error) => {
         notificationsLogger.warn('[Notifications] notifee.getInitialNotification failed:', error);
       });
     }
 
-    // Consume pending open intent captured by background headless handler
     const storedPending = consumePendingOpenNotification();
     queuePendingNotification(storedPending, 'storage');
 
+    const unsubscribeTokenRefresh = onTokenRefresh(messagingInstance, async (token) => {
+      if (!token) return;
+      notificationsLogger.debug('[FCM] Token refreshed by Firebase runtime');
+      saveToken(token);
+    });
+
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        syncTokenIfNeeded('app_active');
+        invalidateNotificationQueries();
+      }
+    });
+
     return () => {
       unsubscribeNotificationOpened();
+      unsubscribeTokenRefresh();
+      appStateSubscription?.remove?.();
     };
-  }, [saveToken, userData, dispatch]);
+  }, [dispatch, invalidateNotificationQueries, saveToken, syncTokenIfNeeded, userData]);
 
   useEffect(() => {
     if (!pendingNotification?.type) return undefined;
@@ -694,4 +633,5 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     saveToken,
   };
 };
+
 export default useNotifications;

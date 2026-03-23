@@ -78,15 +78,29 @@
  *   venueEnriched?: number,
  *   venueFallbackUsed?: number
  * }} [eventSyncSummary]
- * @property {'connect' | 'manual' | 'scheduled'} [mode]
+ * @property {'connect' | 'daily' | 'hot_window' | 'manual'} [mode]
  * @property {'fff' | 'ffbb'} [provider]
  * @property {{ externalTeamId?: string | null, externalTeamName?: string | null } | null} [selectedTeam]
  * @property {ExternalSyncReportItem[]} [skippedMatches]
  * @property {ExternalSyncReportItem[]} [scoreUpdatedEvents]
  * @property {number} [standingCount]
  * @property {string} [syncedAt]
- * @property {ExternalSyncReportItem[]} [updatedEvents]
- * @property {ExternalSyncReportItem[]} [archivedFutureEvents]
+  * @property {ExternalSyncReportItem[]} [updatedEvents]
+  * @property {ExternalSyncReportItem[]} [archivedFutureEvents]
+ * @property {Array<{
+ *   archivedFuture?: number,
+ *   competitionName?: string | null,
+ *   created?: number,
+ *   errorsCount?: number,
+ *   mode?: 'connect' | 'daily' | 'hot_window' | 'manual',
+ *   provider?: 'fff' | 'ffbb',
+ *   scoreUpdated?: number,
+ *   status?: 'error' | 'synced' | 'synced_with_warnings',
+ *   syncedAt?: string,
+ *   unchanged?: number,
+ *   updated?: number,
+ *   warningsCount?: number
+ * }>} [history]
  * @property {string[]} [warnings]
  */
 

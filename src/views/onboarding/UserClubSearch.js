@@ -11,6 +11,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -136,6 +137,7 @@ function UserClubSearch({ navigation }) {
       </View>
 
       <View style={[Spaces.gap[16]]}>
+        <OnboardingOptionalHint />
         <Button
           disabled={isLooking === null}
           isLoading={updateUserMutation.isPending}

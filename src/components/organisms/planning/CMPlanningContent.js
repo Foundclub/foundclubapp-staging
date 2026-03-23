@@ -1,12 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import {
+  isAfter,
+  isSameDay,
+  startOfDay,
+} from 'date-fns';
+import {
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import DateSlider from '@/components/molecules/dateSlider/DateSlider';
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFullscreenButton';
@@ -21,15 +38,29 @@ import { getCMClubs, getCMPlanning } from '@/services/multisportClub/multisportC
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
+  getPlanningItemDate,
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
 /** @typedef {{ documentId?: string; name?: string; planningColor?: string }} NamedEntity */
 
-function CMPlanningContent({ cmId, navigation }) {
+/**
+ * CM planning screen content with timeline and event list.
+ *
+ * @param {object} props
+ * @param {string} props.cmId
+ * @param {import('@react-navigation/native').NavigationProp<any>} props.navigation
+ * @param {boolean} [props.showTopHeader]
+ * @returns {import('react').ReactElement}
+ */
+function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
   } = useTheme();
   const { t } = useTranslation();
 
@@ -37,6 +68,9 @@ function CMPlanningContent({ cmId, navigation }) {
   const [selectedFacilityId, setSelectedFacilityId] = useState(/** @type {string | null} */ (null));
   const [viewMode, setViewMode] = useState('week');
   const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
+  const [listStartDate, setListStartDate] = useState(getPlanningDefaultDate());
+  const [listAnchorY, setListAnchorY] = useState(0);
+  const scrollRef = useRef(null);
 
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
@@ -69,13 +103,46 @@ function CMPlanningContent({ cmId, navigation }) {
       sectionId: selectedSectionId || undefined,
       to: planningRange.to,
     }),
-    queryKey: ['cm-planning', cmId, planningRange.from, planningRange.to, viewMode, selectedSectionId, selectedFacilityId],
+    queryKey: [
+      'cm-planning',
+      cmId,
+      planningRange.from,
+      planningRange.to,
+      viewMode,
+      selectedSectionId,
+      selectedFacilityId,
+    ],
   });
 
   const events = useMemo(
     () => normalizePlanningItems(planningData?.data || []),
     [planningData?.data],
   );
+
+  const sortedListEvents = useMemo(() => {
+    const compareDate = startOfDay(listStartDate);
+
+    return [...events]
+      .filter((event) => {
+        const eventDate = getPlanningItemDate(event);
+        if (!eventDate) return false;
+        return isSameDay(eventDate, compareDate) || isAfter(eventDate, compareDate);
+      })
+      .sort((left, right) => {
+        const leftDate = getPlanningItemDate(left);
+        const rightDate = getPlanningItemDate(right);
+
+        if (!leftDate || !rightDate) return 0;
+
+        if (leftDate.getTime() !== rightDate.getTime()) {
+          return leftDate.getTime() - rightDate.getTime();
+        }
+
+        const leftStart = String(left?.startTime || '');
+        const rightStart = String(right?.startTime || '');
+        return leftStart.localeCompare(rightStart, 'fr');
+      });
+  }, [events, listStartDate]);
 
   const viewOptions = useMemo(() => ([
     { label: t('planning.mode.weekShort', 'Semaine'), value: 'week' },
@@ -85,6 +152,7 @@ function CMPlanningContent({ cmId, navigation }) {
 
   const handleEventPress = (event) => {
     if (!event?.documentId) return;
+
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
@@ -110,10 +178,63 @@ function CMPlanningContent({ cmId, navigation }) {
     });
   };
 
+  const handleSummaryPress = () => {
+    scrollRef.current?.scrollTo({
+      animated: true,
+      y: Math.max(0, listAnchorY - 16),
+    });
+  };
+
+  const planningView = viewMode === 'month' ? (
+    <PlanningCalendarView
+      currentDate={currentDate}
+      events={events}
+      onDateSelect={setCurrentDate}
+      onEventPress={handleEventPress}
+    />
+  ) : (
+    <PlanningWeekTimelineView
+      currentDate={currentDate}
+      events={events}
+      expandToContent
+      mode={viewMode}
+      onDateChange={setCurrentDate}
+      onEventPress={handleEventPress}
+      onSummaryPress={handleSummaryPress}
+      scrollEnabled={false}
+    />
+  );
+
   return (
-    <View style={[Alignments.fill, Spaces.paddingVertical[24]]}>
-      <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16], Spaces.gap[12]]}>
-        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12 }}>
+    <ScrollView
+      contentContainerStyle={[Spaces.paddingVertical[24], Spaces.paddingBottom[40], Spaces.gap[24]]}
+      ref={scrollRef}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[Spaces.paddingHorizontal[16], Spaces.gap[12]]}>
+        {showTopHeader ? (
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.marginBottom[4]]}>
+            <LeagueHeaderSwitch />
+            <View style={[Alignments.row, Alignments.alignCenter]}>
+              <NotificationBadge />
+              <ProfileButton />
+            </View>
+          </View>
+        ) : null}
+
+        <View style={[Spaces.gap[4]]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('planning.cm.title', 'Mon planning')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.primary100]}>
+            {t(
+              'planning.cm.description',
+              'Retrouvez le planning des sections et la liste des événements de votre club.',
+            )}
+          </Text>
+        </View>
+
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
@@ -177,26 +298,64 @@ function CMPlanningContent({ cmId, navigation }) {
       <WithDataWrapper
         error={error?.message}
         isLoading={isLoading}
-        wrapperStyle={[{ flex: 1 }]}
+        wrapperStyle={[Spaces.paddingHorizontal[16], Spaces.gap[24]]}
       >
-        {viewMode === 'month' ? (
-          <PlanningCalendarView
-            currentDate={currentDate}
-            events={events}
-            onDateSelect={setCurrentDate}
-            onEventPress={handleEventPress}
-          />
-        ) : (
-          <PlanningWeekTimelineView
-            currentDate={currentDate}
-            events={events}
-            mode={viewMode}
-            onDateChange={setCurrentDate}
-            onEventPress={handleEventPress}
-          />
-        )}
+        <View style={[Spaces.gap[24]]}>
+          {planningView}
+
+          <View
+            onLayout={(event) => setListAnchorY(event.nativeEvent.layout.y)}
+            style={[Spaces.gap[12]]}
+          >
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.h3, Fonts.neutral00]}>
+                {t('planning.eventsFrom', 'Évènements à partir de')}
+              </Text>
+              <DateSlider
+                onDateSelected={setListStartDate}
+                selectedDate={listStartDate}
+              />
+            </View>
+
+            {sortedListEvents.length ? (
+              <View style={[Spaces.gap[16]]}>
+                {sortedListEvents.map((event) => (
+                  <EventCardNew
+                    item={event}
+                    key={event.documentId || `${event.id || 'event'}-${event.startAt || event.date || ''}`}
+                    onDecline={() => {}}
+                    onJoin={() => {}}
+                    onLogin={() => {}}
+                    onParticipate={() => {}}
+                    onPress={() => handleEventPress(event)}
+                    useFacilityAccentColor
+                  />
+                ))}
+              </View>
+            ) : (
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary700,
+                  ApplicationStyle.borderRadius24,
+                  Spaces.padding[16],
+                  Spaces.gap[6],
+                ]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('planning.cm.emptyListTitle', 'Aucun événement dans cette liste')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.primary100]}>
+                  {t(
+                    'planning.cm.emptyListDescription',
+                    'Changez la date ou les filtres pour afficher d’autres événements.',
+                  )}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
       </WithDataWrapper>
-    </View>
+    </ScrollView>
   );
 }
 

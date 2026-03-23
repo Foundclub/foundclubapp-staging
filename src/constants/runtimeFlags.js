@@ -1,32 +1,42 @@
-import { Platform } from 'react-native';
-
 const parseBooleanFlag = (rawValue) => {
   if (typeof rawValue !== 'string') return false;
   const normalized = rawValue.trim().toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 };
 
-const forceNotificationsBootstrapDisabled = parseBooleanFlag(
+const legacyForceNotificationsBootstrapDisabled = parseBooleanFlag(
   process.env.FC_DISABLE_NOTIFICATIONS_BOOTSTRAP,
 );
-const forceNotificationsBootstrapEnabled = parseBooleanFlag(
+const legacyForceNotificationsBootstrapEnabled = parseBooleanFlag(
   process.env.FC_ENABLE_NOTIFICATIONS_BOOTSTRAP,
 );
-const defaultNotificationsBootstrapDisabled = Platform.OS === 'ios';
+const explicitPushNotificationsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_PUSH_NOTIFICATIONS,
+);
+const explicitSmartNotificationsEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_SMART_NOTIFICATIONS,
+);
+const explicitNotificationTestTriggerEnabled = parseBooleanFlag(
+  process.env.FC_ENABLE_NOTIFICATION_TEST_TRIGGER,
+);
 
-let notificationsBootstrapPolicy = 'enabled-by-default';
-let disableNotificationsBootstrap = false;
+const enablePushNotifications = legacyForceNotificationsBootstrapDisabled
+  ? false
+  : Boolean(explicitPushNotificationsEnabled || legacyForceNotificationsBootstrapEnabled);
+const enableSmartNotifications = explicitSmartNotificationsEnabled;
 
-if (forceNotificationsBootstrapEnabled) {
-  notificationsBootstrapPolicy = 'force-enabled-by-env';
-  disableNotificationsBootstrap = false;
-} else if (forceNotificationsBootstrapDisabled) {
-  notificationsBootstrapPolicy = 'force-disabled-by-env';
-  disableNotificationsBootstrap = true;
-} else if (defaultNotificationsBootstrapDisabled) {
-  notificationsBootstrapPolicy = 'disabled-by-default-on-ios';
-  disableNotificationsBootstrap = true;
+let notificationsBootstrapPolicy = 'disabled-by-default';
+
+if (enablePushNotifications) {
+  notificationsBootstrapPolicy = explicitPushNotificationsEnabled
+    ? 'enabled-by-explicit-flag'
+    : 'enabled-by-legacy-flag';
+} else if (legacyForceNotificationsBootstrapDisabled) {
+  notificationsBootstrapPolicy = 'disabled-by-legacy-flag';
 }
 
-export const DISABLE_NOTIFICATIONS_BOOTSTRAP = disableNotificationsBootstrap;
+export const ENABLE_PUSH_NOTIFICATIONS = enablePushNotifications;
+export const ENABLE_SMART_NOTIFICATIONS = enableSmartNotifications;
+export const ENABLE_NOTIFICATION_TEST_TRIGGER = explicitNotificationTestTriggerEnabled;
+export const DISABLE_NOTIFICATIONS_BOOTSTRAP = !enablePushNotifications;
 export const NOTIFICATIONS_BOOTSTRAP_POLICY = notificationsBootstrapPolicy;

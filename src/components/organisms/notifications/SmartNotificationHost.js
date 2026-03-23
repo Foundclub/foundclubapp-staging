@@ -17,6 +17,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
+import { ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
 const AUTO_HIDE_SNACKBAR_MS = 3200;
@@ -25,13 +26,6 @@ const AUTO_HIDE_SNACKBAR_MS = 3200;
  *
  */
 function SmartNotificationHost() {
-  const smartNotifEnabled = (() => {
-    const raw = process.env.LEAGUE_SMART_NOTIF_V1;
-    if (typeof raw === 'string' && raw.length > 0) {
-      return raw.trim().toLowerCase() === 'true';
-    }
-    return __DEV__;
-  })();
   const { Colors, Fonts } = useTheme();
   const {
     activeRecap,
@@ -49,7 +43,7 @@ function SmartNotificationHost() {
   }, [activeSnackbar, dismissSnackbar, isLineupReminder]);
 
   // Lineup reminder popup must stay available even when smart league snackbars are feature-flagged off.
-  if (!smartNotifEnabled && !isLineupReminder) return null;
+  if (!ENABLE_SMART_NOTIFICATIONS && !isLineupReminder) return null;
 
   const handleOpenFromPayload = (payload) => {
     const destination = resolveNotificationDestination(payload);
@@ -79,10 +73,10 @@ function SmartNotificationHost() {
             ]}
           >
             <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              {activeSnackbar.title || 'Notification League'}
+              {activeSnackbar.title || 'Notification league'}
             </Text>
             <Text numberOfLines={2} style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              {activeSnackbar.body || 'Nouvelle mise à jour.'}
+              {activeSnackbar.body || 'Nouvelle mise a jour.'}
             </Text>
           </Pressable>
         </View>
