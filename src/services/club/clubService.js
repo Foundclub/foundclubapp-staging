@@ -6,6 +6,18 @@ import client from '../client';
 /**
  * Club validation schema
  */
+const extractRelationDocumentId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value.trim() || null;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'object') {
+    if (typeof value.documentId === 'string' && value.documentId.trim()) return value.documentId.trim();
+    if (typeof value.id === 'string' && value.id.trim()) return value.id.trim();
+    if (typeof value.id === 'number' && Number.isFinite(value.id)) return String(value.id);
+  }
+  return null;
+};
+
 const activitySchema = Joi.object({
   name: Joi.string().required(),
 });
@@ -267,8 +279,12 @@ export const updateClub = async (clubData) => {
     const formData = new FormData();
     const clubDataCopy = {
       ...clubData,
-      activites: clubData.activites?.map(({ documentId }) => documentId) || undefined,
-      members: clubData.members?.map(({ documentId }) => documentId) || undefined,
+      activites: Array.isArray(clubData.activites)
+        ? clubData.activites.map(extractRelationDocumentId).filter(Boolean)
+        : undefined,
+      members: Array.isArray(clubData.members)
+        ? clubData.members.map(extractRelationDocumentId).filter(Boolean)
+        : undefined,
     };
 
     // Log club logo info
@@ -365,7 +381,7 @@ export const updateClub = async (clubData) => {
     // Handle teams data
     if (clubDataCopy.teams && Array.isArray(clubDataCopy.teams)) {
       clubDataCopy.teams.forEach((team, index) => {
-        formData.append(`teams[${index}]`, team?.documentId || '');
+        formData.append(`teams[${index}]`, extractRelationDocumentId(team) || '');
       });
 
       // Remove the teams from clubDataCopy as we've handled them separately
