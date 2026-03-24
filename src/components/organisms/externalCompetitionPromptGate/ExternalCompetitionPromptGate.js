@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -77,10 +78,20 @@ function ExternalCompetitionPromptGate({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
   const [dismissedSessionKey, setDismissedSessionKey] = useState('');
   const [visible, setVisible] = useState(false);
 
   const sessionKey = getNormalizedString(userData?.documentId);
+  const isLandscape = viewportWidth > viewportHeight;
+  const overlayHorizontalPadding = isLandscape ? 16 : 24;
+  const overlayVerticalPadding = isLandscape ? 10 : 24;
+  const dialogMaxHeight = isLandscape
+    ? Math.max(320, viewportHeight - (overlayVerticalPadding * 2))
+    : viewportHeight * 0.78;
+  const dialogMaxWidth = isLandscape
+    ? Math.min(Math.max(560, viewportWidth - (overlayHorizontalPadding * 2)), 760)
+    : 420;
   const teamsNeedingExternalSource = useMemo(
     () => getTeamsNeedingExternalSource(userData),
     [userData],
@@ -151,6 +162,83 @@ function ExternalCompetitionPromptGate({
     return null;
   }
 
+  const renderPromptHeader = () => (
+    <>
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+        {t(
+          'teamDetails.external.prompt.title',
+          'Ajoutez le classement de votre ligue',
+        )}
+      </Text>
+      <Text
+        style={[
+          Fonts.p2,
+          Fonts.primary100,
+          {
+            lineHeight: isLandscape ? 22 : 24,
+            marginTop: 10,
+            paddingRight: 4,
+          },
+        ]}
+      >
+        {t(
+          'teamDetails.external.prompt.description',
+          'Vous pouvez ajouter le lien du classement de votre ligue pour '
+            + "retrouver directement dans l'application votre classement, "
+            + 'votre calendrier et vos statistiques.',
+        )}
+      </Text>
+    </>
+  );
+
+  const renderTeamCard = (team) => {
+    const activityLabel = getNormalizedString(team?.activities?.[0]?.name);
+    const clubLabel = getNormalizedString(team?.club?.name);
+
+    return (
+      <View
+        key={team?.documentId || team?.id}
+        style={[
+          ApplicationStyle.borderRadius16,
+          {
+            backgroundColor: `${Colors.primary500}14`,
+            borderColor: `${Colors.primary500}33`,
+            borderWidth: 1,
+            gap: isLandscape ? 12 : 14,
+            paddingHorizontal: isLandscape ? 16 : 18,
+            paddingVertical: isLandscape ? 16 : 18,
+          },
+        ]}
+      >
+        <View style={{ gap: 6 }}>
+          <Text style={[Fonts.p1Bold, Fonts.neutral00, { lineHeight: 22 }]}>
+            {team?.name || t('common.team', 'Equipe')}
+          </Text>
+          {activityLabel ? (
+            <Text style={[Fonts.p3, Fonts.primary500, { lineHeight: 18 }]}>
+              {activityLabel}
+            </Text>
+          ) : null}
+          {clubLabel ? (
+            <Text style={[Fonts.p3, Fonts.primary100, { lineHeight: 18 }]}>
+              {clubLabel}
+            </Text>
+          ) : null}
+        </View>
+
+        <Button
+          onPress={() => handleOpenTeamSetup(team)}
+          style={{ marginTop: 2 }}
+          title={t(
+            'teamDetails.external.prompt.cta',
+            'Ajouter le classement',
+          )}
+          variant="Primary"
+        />
+      </View>
+    );
+  };
+
   return (
     <Modal
       animationType="fade"
@@ -162,7 +250,10 @@ function ExternalCompetitionPromptGate({
         style={[
           Alignments.fill,
           Alignments.justifyCenter,
-          Spaces.padding[24],
+          {
+            paddingHorizontal: overlayHorizontalPadding,
+            paddingVertical: overlayVerticalPadding,
+          },
           {
             backgroundColor: 'rgba(0,0,0,0.72)',
           },
@@ -175,128 +266,112 @@ function ExternalCompetitionPromptGate({
             {
               borderColor: `${Colors.primary500}33`,
               borderWidth: 1,
-              maxHeight: '78%',
-              maxWidth: 420,
+              maxHeight: dialogMaxHeight,
+              maxWidth: dialogMaxWidth,
               overflow: 'hidden',
               width: '100%',
             },
           ]}
         >
-          <View
-            style={[
-              Spaces.paddingHorizontal[24],
-              {
-                paddingBottom: 18,
-                paddingTop: 24,
-              },
-            ]}
-          >
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-              {t(
-                'teamDetails.external.prompt.title',
-                'Ajoutez le classement de votre ligue',
-              )}
-            </Text>
-            <Text
-              style={[
-                Fonts.p2,
-                Fonts.primary100,
-                {
-                  lineHeight: 24,
-                  marginTop: 10,
-                  paddingRight: 4,
-                },
-              ]}
+          {isLandscape ? (
+            <ScrollView
+              contentContainerStyle={{
+                padding: 20,
+              }}
+              showsVerticalScrollIndicator={false}
             >
-              {t(
-                'teamDetails.external.prompt.description',
-                'Vous pouvez ajouter le lien du classement de votre ligue pour '
-                  + "retrouver directement dans l'application votre classement, "
-                  + 'votre calendrier et vos statistiques.',
-              )}
-            </Text>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={[
-              Spaces.gap[14],
-              Spaces.paddingHorizontal[24],
-              {
-                paddingBottom: 20,
-              },
-            ]}
-            showsVerticalScrollIndicator={false}
-          >
-            {teamsNeedingExternalSource.map((team) => {
-              const activityLabel = getNormalizedString(team?.activities?.[0]?.name);
-              const clubLabel = getNormalizedString(team?.club?.name);
-
-              return (
+              <View
+                style={[
+                  Alignments.row,
+                  {
+                    alignItems: 'flex-start',
+                    gap: 18,
+                  },
+                ]}
+              >
                 <View
-                  key={team?.documentId || team?.id}
-                  style={[
-                    ApplicationStyle.borderRadius16,
-                    {
-                      paddingHorizontal: 18,
-                      paddingVertical: 18,
-                    },
-                    {
-                      backgroundColor: `${Colors.primary500}14`,
-                      borderColor: `${Colors.primary500}33`,
-                      borderWidth: 1,
-                      gap: 14,
-                    },
-                  ]}
+                  style={{
+                    flex: 0.95,
+                    minWidth: 0,
+                    paddingRight: 4,
+                  }}
                 >
-                  <View style={{ gap: 6 }}>
-                    <Text style={[Fonts.p1Bold, Fonts.neutral00, { lineHeight: 22 }]}>
-                      {team?.name || t('common.team', 'Equipe')}
-                    </Text>
-                    {activityLabel ? (
-                      <Text style={[Fonts.p3, Fonts.primary500, { lineHeight: 18 }]}>
-                        {activityLabel}
-                      </Text>
-                    ) : null}
-                    {clubLabel ? (
-                      <Text style={[Fonts.p3, Fonts.primary100, { lineHeight: 18 }]}>
-                        {clubLabel}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <Button
-                    onPress={() => handleOpenTeamSetup(team)}
-                    style={{ marginTop: 2 }}
-                    title={t(
-                      'teamDetails.external.prompt.cta',
-                      'Ajouter le classement',
-                    )}
-                    variant="Primary"
-                  />
+                  {renderPromptHeader()}
                 </View>
-              );
-            })}
-          </ScrollView>
 
-          <View
-            style={[
-              Spaces.paddingHorizontal[24],
-              {
-                borderTopColor: `${Colors.primary500}1F`,
-                borderTopWidth: 1,
-                paddingBottom: 24,
-                paddingTop: 16,
-              },
-            ]}
-          >
-            <Button
-              onPress={handleDismiss}
-              style={{ width: '100%' }}
-              textStyle={{ letterSpacing: 0.2 }}
-              title={t('common.later', 'Plus tard')}
-              variant="Secondary"
-            />
-          </View>
+                <View
+                  style={{
+                    flex: 1.05,
+                    gap: 12,
+                    minWidth: 0,
+                  }}
+                >
+                  {teamsNeedingExternalSource.map(renderTeamCard)}
+
+                  <View
+                    style={{
+                      paddingTop: 2,
+                    }}
+                  >
+                    <Button
+                      onPress={handleDismiss}
+                      style={{ width: '100%' }}
+                      textStyle={{ letterSpacing: 0.2 }}
+                      title={t('common.later', 'Plus tard')}
+                      variant="Secondary"
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          ) : (
+            <>
+              <View
+                style={[
+                  Spaces.paddingHorizontal[24],
+                  {
+                    paddingBottom: 18,
+                    paddingTop: 24,
+                  },
+                ]}
+              >
+                {renderPromptHeader()}
+              </View>
+
+              <ScrollView
+                contentContainerStyle={[
+                  Spaces.gap[14],
+                  Spaces.paddingHorizontal[24],
+                  {
+                    paddingBottom: 20,
+                  },
+                ]}
+                showsVerticalScrollIndicator={false}
+              >
+                {teamsNeedingExternalSource.map(renderTeamCard)}
+              </ScrollView>
+
+              <View
+                style={[
+                  Spaces.paddingHorizontal[24],
+                  {
+                    borderTopColor: `${Colors.primary500}1F`,
+                    borderTopWidth: 1,
+                    paddingBottom: 24,
+                    paddingTop: 16,
+                  },
+                ]}
+              >
+                <Button
+                  onPress={handleDismiss}
+                  style={{ width: '100%' }}
+                  textStyle={{ letterSpacing: 0.2 }}
+                  title={t('common.later', 'Plus tard')}
+                  variant="Secondary"
+                />
+              </View>
+            </>
+          )}
         </View>
       </View>
     </Modal>

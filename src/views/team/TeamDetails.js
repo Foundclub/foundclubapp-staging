@@ -167,11 +167,86 @@ function TeamDetails({ navigation, route }) {
    * @returns {string}
    */
   const getErrorMessage = (sourceError, fallback = 'Erreur') => {
-    if (sourceError && typeof sourceError === 'object' && 'message' in sourceError && typeof sourceError.message === 'string') {
-      return sourceError.message;
-    }
     if (typeof sourceError === 'string') return sourceError;
+
+    if (sourceError && typeof sourceError === 'object') {
+      const typedError = /** @type {any} */ (sourceError);
+      const detailError = typedError?.details?.error;
+      if (typeof detailError === 'string' && detailError.trim()) {
+        return detailError.trim();
+      }
+
+      const responseDetailError = typedError?.response?.data?.details?.error
+        || typedError?.response?.data?.error?.details?.error;
+      if (typeof responseDetailError === 'string' && responseDetailError.trim()) {
+        return responseDetailError.trim();
+      }
+
+      const responseMessage = typedError?.response?.data?.message
+        || typedError?.response?.data?.error?.message;
+      if (typeof responseMessage === 'string' && responseMessage.trim()) {
+        return responseMessage.trim();
+      }
+
+      if (typeof typedError.message === 'string' && typedError.message.trim()) {
+        return typedError.message.trim();
+      }
+    }
+
     return fallback;
+  };
+
+  /**
+   * @param {unknown} sourceError
+   * @returns {{ code: string | null, message: string, remainingSeconds: number | null, status: number | null }}
+   */
+  const getApiErrorMeta = (sourceError) => {
+    if (!sourceError || typeof sourceError !== 'object') {
+      return {
+        code: null,
+        message: getErrorMessage(sourceError),
+        remainingSeconds: null,
+        status: null,
+      };
+    }
+
+    const typedError = /** @type {any} */ (sourceError);
+    const responseData = typedError?.response?.data;
+    const responseError = responseData?.error;
+    const responseDetails = responseError?.details || responseData?.details || {};
+    const directDetails = typedError?.details || {};
+    const code = [
+      typedError?.code,
+      directDetails?.code,
+      responseData?.code,
+      responseDetails?.code,
+    ]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .find(Boolean) || null;
+
+    const remainingSecondsCandidate = [
+      typedError?.remainingSeconds,
+      directDetails?.remainingSeconds,
+      responseData?.remainingSeconds,
+      responseDetails?.remainingSeconds,
+    ]
+      .map((value) => Number(value))
+      .find((value) => Number.isFinite(value) && value >= 0);
+
+    const statusCandidate = [
+      typedError?.status,
+      responseData?.status,
+      responseError?.status,
+    ]
+      .map((value) => Number(value))
+      .find((value) => Number.isFinite(value) && value > 0);
+
+    return {
+      code,
+      message: getErrorMessage(sourceError),
+      remainingSeconds: Number.isFinite(remainingSecondsCandidate) ? remainingSecondsCandidate : null,
+      status: Number.isFinite(statusCandidate) ? statusCandidate : null,
+    };
   };
 
   const normalizeTeamName = (value) => String(value || '')
@@ -520,12 +595,20 @@ function TeamDetails({ navigation, route }) {
   const refreshScrapingMutation = useMutation({
     mutationFn: refreshExternalCompetition,
     onError: (/** @type {ApiError} */ err) => {
-      const apiError = err;
-      if (apiError?.response?.data?.code === 'RATE_LIMITED') {
-        const seconds = apiError.response.data.remainingSeconds || 0;
+      const apiError = getApiErrorMeta(err);
+      if (apiError.code === 'RATE_LIMITED') {
+        const seconds = apiError.remainingSeconds || 0;
         Alert.alert(t('common.error'), t('teamDetails.ffbb.rateLimit', `Veuillez patienter ${seconds} secondes.`));
+      } else if (apiError.code === 'TEAM_TRAINER_REQUIRED' || apiError.status === 403) {
+        Alert.alert(
+          t('common.error'),
+          apiError.message || t('teamDetails.external.staffOnly', "Seul un entraineur assigne a cette equipe ou un dirigeant du club peut lancer l'import."),
+        );
       } else {
-        Alert.alert(t('common.error'), t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise a jour : ${getErrorMessage(apiError)}`));
+        Alert.alert(
+          t('common.error'),
+          t('teamDetails.alerts.scrapingError.description', `Erreur lors de la mise a jour : ${apiError.message}`),
+        );
       }
     },
     onSuccess: (result) => {
@@ -566,10 +649,10 @@ function TeamDetails({ navigation, route }) {
       setFfbbTeamsList(normalizedCandidates);
       setShowFFBBUrlModal(false);
       setShowFFBBTeamModal(true);
-    } catch (error) {
+    } catch (caughtError) {
       Alert.alert(
         t('common.error'),
-        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(error),
+        t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(caughtError),
       );
     } finally {
       setFfbbLoading(false);
@@ -600,7 +683,7 @@ function TeamDetails({ navigation, route }) {
         normalizedExistingUrl !== normalizedNextUrl
         || normalizedExistingTeamId !== normalizedSelectedTeamId
         || normalizedExistingTeamName !== normalizedSelectedTeamName
-      )
+      ),
     );
 
     if (shouldConfirmReplacement) {
@@ -648,8 +731,8 @@ function TeamDetails({ navigation, route }) {
       setShowFFBBErrorModal(false);
       setFfbbErrorDescription('');
       Alert.alert(t('common.success'), t('teamDetails.ffbb.errorReported', 'Signalement envoye, merci !'));
-    } catch (error) {
-      Alert.alert(t('common.error'), getErrorMessage(error));
+    } catch (caughtError) {
+      Alert.alert(t('common.error'), getErrorMessage(caughtError));
     } finally {
       setFfbbLoading(false);
     }
@@ -754,9 +837,24 @@ function TeamDetails({ navigation, route }) {
     const lastname = String(team?.externalConfigUpdatedBy?.lastname || '').trim();
     return [firstname, lastname].filter(Boolean).join(' ').trim() || null;
   }, [team?.externalConfigUpdatedBy?.firstname, team?.externalConfigUpdatedBy?.lastname]);
+  const isAssignedTrainerForCurrentTeam = useMemo(
+    () => Boolean(
+      teamId
+      && (currentUser?.trainedTeams || []).some((trainedTeam) => trainedTeam?.documentId === teamId),
+    ),
+    [currentUser?.trainedTeams, teamId],
+  );
+  const isClubManagerForCurrentTeam = useMemo(
+    () => Boolean(team?.club?.documentId && canEditClub(team.club.documentId)),
+    [canEditClub, team?.club?.documentId],
+  );
+  const canManageCurrentTeamExternalSync = useMemo(
+    () => isAssignedTrainerForCurrentTeam || isClubManagerForCurrentTeam,
+    [isAssignedTrainerForCurrentTeam, isClubManagerForCurrentTeam],
+  );
   const canConfigureFFBB = useMemo(
-    () => !!(teamId && isMyTeam && externalCompetitionEligible),
-    [externalCompetitionEligible, isMyTeam, teamId],
+    () => !!(teamId && canManageCurrentTeamExternalSync && externalCompetitionEligible),
+    [canManageCurrentTeamExternalSync, externalCompetitionEligible, teamId],
   );
   const showExternalSyncCard = useMemo(
     () => !!(
@@ -777,8 +875,8 @@ function TeamDetails({ navigation, route }) {
     ],
   );
   const canRefreshExternalSync = useMemo(
-    () => !!(canManageTeam && teamId && team?.externalStandingUrl),
-    [canManageTeam, team?.externalStandingUrl, teamId],
+    () => !!(canManageCurrentTeamExternalSync && teamId && team?.externalStandingUrl),
+    [canManageCurrentTeamExternalSync, team?.externalStandingUrl, teamId],
   );
   const showStandingsTab = useMemo(
     () => !!(isMyTeam || hasStandingData || canConfigureFFBB),
@@ -801,7 +899,7 @@ function TeamDetails({ navigation, route }) {
     () => Boolean(
       isMyTeam
       || teamPerformanceStats?.totals
-      || (Array.isArray(teamPerformanceStats?.players) && teamPerformanceStats.players.length > 0)
+      || (Array.isArray(teamPerformanceStats?.players) && teamPerformanceStats.players.length > 0),
     ),
     [isMyTeam, teamPerformanceStats?.players, teamPerformanceStats?.totals],
   );
