@@ -10,7 +10,12 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetAdminStats, useGetLeagueDisputes, useGetPendingClubClaims } from '@/services/admin/adminQueries';
+import {
+  useGetAdminStats,
+  useGetLeagueDisputes,
+  useGetPendingClubClaims,
+  useGetPendingClubOnboardingRequests,
+} from '@/services/admin/adminQueries';
 import { useGetEvents } from '@/services/event/eventQueries';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
@@ -55,6 +60,16 @@ function AdminDashboard() {
   } = useGetPendingClubClaims();
 
   const claimsCount = claimsData?.meta?.pagination?.total || 0;
+  const {
+    data: clubOnboardingData,
+    refetch: refetchClubOnboarding,
+  } = useGetPendingClubOnboardingRequests({
+    pagination: {
+      page: 1,
+      pageSize: 1,
+    },
+  });
+  const clubOnboardingCount = clubOnboardingData?.meta?.pagination?.total || 0;
   const disputeCountParams = useMemo(() => ({
     pagination: { page: 1, pageSize: 1 },
   }), []);
@@ -71,8 +86,9 @@ function AdminDashboard() {
       refetchFeatured();
       refetchStats();
       refetchClaims();
+      refetchClubOnboarding();
       refetchLeagueDisputes();
-    }, [refetchFeatured, refetchStats, refetchClaims, refetchLeagueDisputes]),
+    }, [refetchClaims, refetchClubOnboarding, refetchFeatured, refetchLeagueDisputes, refetchStats]),
   );
 
   /**
@@ -157,6 +173,13 @@ function AdminDashboard() {
             onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
             title="Revendications"
             value={claimsCount}
+          />
+
+          <DashboardCard
+            color={Colors.primary500}
+            onPress={() => navigation.navigate(RouteNames.AdminClubOnboardingList)}
+            title="Clubs a onboarder"
+            value={clubOnboardingCount}
           />
 
           <DashboardCard

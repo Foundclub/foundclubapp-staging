@@ -25,6 +25,8 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
+const PERSONAL_PLANNING_STALE_MS = 15 * 1000;
+
 /**
  * Personal planning content.
  * @param {{ onSummaryPress?: () => void }} props
@@ -49,6 +51,7 @@ function PersonalPlanningContainer({ onSummaryPress }) {
   const { data: eventsData, isLoading } = useQuery({
     queryFn: () => getMyPlanning(planningRange),
     queryKey: ['planning', 'personal', planningRange.from, planningRange.to],
+    staleTime: PERSONAL_PLANNING_STALE_MS,
   });
 
   const viewOptions = useMemo(() => ([

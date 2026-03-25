@@ -13,6 +13,7 @@ import {
   getClubClaimsRequestList,
   getLeagueDisputes,
   getPendingClubClaims,
+  getPendingClubOnboardingRequests,
   processAffiliationHelpRequest,
   refuseAffiliationHelpRequest,
   refuseClubClaim,
@@ -34,7 +35,7 @@ export const useGetClubClaimsRequestList = (params) => useQuery({
 /**
  * Hook to get single claim request
  * @param {string} documentId
- * @param {'claim'|'club_not_found'|'team_not_found'} [requestType]
+ * @param {'claim'|'club_creation'|'club_not_found'|'team_not_found'} [requestType]
  * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>}
  */
 export const useGetClubClaimRequest = (documentId, requestType) => useQuery({
@@ -115,6 +116,16 @@ export const useGetAdminStats = () => useQuery({
 export const useGetPendingClubClaims = () => useQuery({
   queryFn: getPendingClubClaims,
   queryKey: ['admin', 'claims', 'pending'],
+});
+
+/**
+ * Hook to get pending club onboarding requests.
+ * @param {object} params
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>}
+ */
+export const useGetPendingClubOnboardingRequests = (params) => useQuery({
+  queryFn: () => getPendingClubOnboardingRequests(params),
+  queryKey: buildNormalizedQueryKey(['admin', 'club-onboarding'], params),
 });
 
 // ================== ADMIN USERS ==================

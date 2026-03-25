@@ -118,14 +118,6 @@ export const applyOptimisticPollVote = ({
     return { changed: false, nextComposition: poll };
   }
 
-  const currentSelection = options
-    .filter((option) => getPollVoters(option).includes(normalizedUserId))
-    .map((option) => String(option?.id || ''));
-
-  if (!poll.allowMultipleVotes && currentSelection.length === 1 && currentSelection[0] === targetOptionId) {
-    return { changed: false, nextComposition: poll };
-  }
-
   let changed = false;
 
   const nextOptions = options.map((option) => {
@@ -135,11 +127,15 @@ export const applyOptimisticPollVote = ({
     let nextVoters = optionVoters;
 
     if (poll.allowMultipleVotes) {
-      if (isTargetOption && !hasCurrentUser) {
-        nextVoters = [...optionVoters, normalizedUserId];
+      if (isTargetOption) {
+        nextVoters = hasCurrentUser
+          ? optionVoters.filter((value) => value !== normalizedUserId)
+          : [...optionVoters, normalizedUserId];
       }
-    } else if (isTargetOption && !hasCurrentUser) {
-      nextVoters = [...optionVoters, normalizedUserId];
+    } else if (isTargetOption) {
+      nextVoters = hasCurrentUser
+        ? optionVoters.filter((value) => value !== normalizedUserId)
+        : [...optionVoters, normalizedUserId];
     } else if (!isTargetOption && hasCurrentUser) {
       nextVoters = optionVoters.filter((value) => value !== normalizedUserId);
     }

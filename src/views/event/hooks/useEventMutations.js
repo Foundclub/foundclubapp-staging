@@ -5,11 +5,13 @@ import { Alert } from 'react-native';
 
 import {
   cancelEvent,
+  declareSelfLate,
   markCoachArrival,
   markSelfArrival,
   missingEvent,
   remindUnansweredPlayers,
   requestFeatured,
+  resetCoachAttendance,
   updateCoachLateMinutes,
   updateEvent,
 } from '@/services/event/eventService';
@@ -248,10 +250,45 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
   });
 
+  const selfLateMutation = useMutation({
+    mutationFn: ({ eventId: targetEventId, payload }) => declareSelfLate(targetEventId, payload),
+    onError: (error) => {
+      Alert.alert(
+        t('common.error'),
+        error?.message || "Impossible d'enregistrer votre retard.",
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teamStats'] });
+      refetch();
+      refetchParticipations();
+    },
+  });
+
   const coachArrivalMutation = useMutation({
     mutationFn: ({ eventId: targetEventId, payload, userId }) => markCoachArrival(targetEventId, userId, payload),
     onError: () => {
       Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivée.");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      invalidatePersonalPlanning();
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teamStats'] });
+      refetch();
+      refetchParticipations();
+    },
+  });
+
+  const resetAttendanceMutation = useMutation({
+    mutationFn: ({ eventId: targetEventId, userId }) => resetCoachAttendance(targetEventId, userId),
+    onError: () => {
+      Alert.alert(t('common.error'), 'Impossible de reinitialiser le pointage.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -310,7 +347,9 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     remindEventMutation,
     reportEventMutation,
     requestFeaturedMutation,
+    resetAttendanceMutation,
     selfArrivalMutation,
+    selfLateMutation,
     sosAlertMutation,
     updateEventMutation,
     updateEventNoNavMutation,

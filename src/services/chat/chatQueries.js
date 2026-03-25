@@ -8,6 +8,8 @@ import {
   getChats,
 } from './chatService';
 
+const CHATS_STALE_MS = 10 * 1000;
+
 /**
  * React Query hook to fetch messages
  * @param {{
@@ -40,6 +42,7 @@ export const useGetChats = (params, options) => useInfiniteQuery({
     currentUserTeamIds: params?.currentUserTeamIds,
     pageSize: params?.pageSize,
   }),
+  staleTime: CHATS_STALE_MS,
   ...options,
 });
 

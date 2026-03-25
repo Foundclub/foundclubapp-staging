@@ -1,6 +1,4 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -28,13 +26,11 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 function EventMessageBubble({
   event,
-  isMe,
   onDecline = () => {},
   onJoin = () => {},
   onParticipate = () => {},
 }) {
   const { Spaces } = useTheme();
-  const { t } = useTranslation();
   const navigation = useNavigation();
 
   if (!event) return null;
@@ -51,6 +47,7 @@ function EventMessageBubble({
     <View style={[{ width: 300 }, Spaces.marginTop[4]]}>
       <EventCardNew
         item={event}
+        mode="share"
         onDecline={onDecline}
         onJoin={onJoin}
         onLogin={() => {}}

@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  FlatList,
   Image,
   Keyboard,
   Modal,
@@ -28,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
+import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -154,7 +156,9 @@ function TeamDetails({ navigation, route }) {
   const [ffbbUrl, setFfbbUrl] = useState('');
   const [ffbbTeamsList, setFfbbTeamsList] = useState(/** @type {ExternalTeamOption[]} */ ([]));
   const [latestExternalSyncReport, setLatestExternalSyncReport] = useState(null);
-  const [ffbbLoading, setFfbbLoading] = useState(false);
+  const [externalCompetitionPhase, setExternalCompetitionPhase] = useState(
+    /** @type {'idle' | 'previewing' | 'connecting' | 'refreshing' | 'reporting'} */ ('idle'),
+  );
   const [ffbbErrorType, setFfbbErrorType] = useState('wrong_data');
   const [ffbbErrorDescription, setFfbbErrorDescription] = useState('');
   const [teamClubLogoRatio, setTeamClubLogoRatio] = useState(1);
@@ -265,6 +269,42 @@ function TeamDetails({ navigation, route }) {
   };
 
   const getSyncPayload = useCallback((result) => result?.data || result || {}, []);
+
+  const isExternalCompetitionPreviewing = externalCompetitionPhase === 'previewing';
+  const isExternalCompetitionConnecting = externalCompetitionPhase === 'connecting';
+  const isExternalCompetitionRefreshing = externalCompetitionPhase === 'refreshing';
+  const isExternalCompetitionReporting = externalCompetitionPhase === 'reporting';
+  const isExternalCompetitionFlowLocked = isExternalCompetitionPreviewing || isExternalCompetitionConnecting;
+  const isExternalCompetitionPhaseActive = externalCompetitionPhase !== 'idle';
+
+  const externalCompetitionLoadingMeta = useMemo(() => {
+    if (isExternalCompetitionConnecting) {
+      return {
+        description: t(
+          'teamDetails.external.loading.connectingDescription',
+          'Nous recuperons le classement, le calendrier et les donnees associees.',
+        ),
+        title: t('teamDetails.external.loading.connectingTitle', 'Connexion de votre equipe'),
+      };
+    }
+
+    return {
+      description: t(
+        'teamDetails.external.loading.previewingDescription',
+        'Nous recuperons la liste des equipes disponibles.',
+      ),
+      title: t('teamDetails.external.loading.previewingTitle', 'Analyse de la competition'),
+    };
+  }, [isExternalCompetitionConnecting, t]);
+
+  const showExternalCompetitionLoadingOverlay = isExternalCompetitionFlowLocked;
+
+  const notifyExternalCompetitionFlowLocked = useCallback(() => {
+    Alert.alert(
+      t('teamDetails.external.loading.waitTitle', 'Chargement en cours'),
+      t('teamDetails.external.loading.waitDescription', 'Merci de patienter pendant la recuperation des donnees.'),
+    );
+  }, [t]);
 
   const teamClubLogoUrl = useMemo(
     () => getImageUrl(team?.club?.logo?.url),
@@ -611,6 +651,12 @@ function TeamDetails({ navigation, route }) {
         );
       }
     },
+    onMutate: () => {
+      setExternalCompetitionPhase('refreshing');
+    },
+    onSettled: () => {
+      setExternalCompetitionPhase((currentPhase) => (currentPhase === 'refreshing' ? 'idle' : currentPhase));
+    },
     onSuccess: (result) => {
       applyExternalSyncFeedback(result);
     },
@@ -618,15 +664,20 @@ function TeamDetails({ navigation, route }) {
 
   // Handler for FFBB URL configuration
   const openExternalSourceSetupModal = useCallback(() => {
+    if (isExternalCompetitionFlowLocked) {
+      notifyExternalCompetitionFlowLocked();
+      return;
+    }
     setActiveTab('standings');
     setShowFFBBUrlModal(true);
-  }, []);
+  }, [isExternalCompetitionFlowLocked, notifyExternalCompetitionFlowLocked]);
 
   const handleSetFFBBUrl = async () => {
-    if (!ffbbUrl || !teamId) return;
-    setFfbbLoading(true);
+    if (!ffbbUrl || !teamId || isExternalCompetitionPhaseActive) return;
+    Keyboard.dismiss();
+    setExternalCompetitionPhase('previewing');
     try {
-      const result = await previewExternalCompetition(teamId, ffbbUrl);
+      const result = await previewExternalCompetition(teamId, ffbbUrl, 'team-candidates');
       const payload = result?.data || result || {};
       const candidates = Array.isArray(payload.teamCandidates) ? payload.teamCandidates : [];
       const normalizedCandidates = candidates
@@ -638,7 +689,6 @@ function TeamDetails({ navigation, route }) {
         .sort((a, b) => a.externalTeamName.localeCompare(b.externalTeamName, 'fr'));
 
       if (!normalizedCandidates.length) {
-        setShowFFBBUrlModal(false);
         Alert.alert(
           t('common.error'),
           t('teamDetails.ffbb.noCandidate', 'Aucune equipe detectee depuis cette source.'),
@@ -655,21 +705,26 @@ function TeamDetails({ navigation, route }) {
         t('teamDetails.ffbb.urlError', 'Erreur lors de la configuration: ') + getErrorMessage(caughtError),
       );
     } finally {
-      setFfbbLoading(false);
+      setExternalCompetitionPhase('idle');
     }
   };
 
   // Handler for FFBB team selection
   const submitExternalCompetitionSelection = useCallback(async (selectedTeam) => {
-    if (!teamId) return;
+    if (!teamId || isExternalCompetitionPhaseActive) return;
 
-    const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
-    setShowFFBBTeamModal(false);
-    applyExternalSyncFeedback(result);
-  }, [applyExternalSyncFeedback, ffbbUrl, teamId]);
+    setExternalCompetitionPhase('connecting');
+    try {
+      const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
+      setShowFFBBTeamModal(false);
+      applyExternalSyncFeedback(result);
+    } finally {
+      setExternalCompetitionPhase('idle');
+    }
+  }, [applyExternalSyncFeedback, ffbbUrl, isExternalCompetitionPhaseActive, teamId]);
 
   const handleSelectFFBBTeam = async (/** @type {ExternalTeamOption} */ selectedTeam) => {
-    if (!teamId) return;
+    if (!teamId || isExternalCompetitionPhaseActive) return;
 
     const normalizedExistingUrl = String(team?.externalStandingUrl || '').trim();
     const normalizedNextUrl = String(ffbbUrl || '').trim();
@@ -720,8 +775,8 @@ function TeamDetails({ navigation, route }) {
 
   // Handler for FFBB error reporting
   const handleReportError = async () => {
-    if (!teamId) return;
-    setFfbbLoading(true);
+    if (!teamId || isExternalCompetitionPhaseActive) return;
+    setExternalCompetitionPhase('reporting');
     try {
       await createFFBBErrorReport({
         description: ffbbErrorDescription,
@@ -734,7 +789,7 @@ function TeamDetails({ navigation, route }) {
     } catch (caughtError) {
       Alert.alert(t('common.error'), getErrorMessage(caughtError));
     } finally {
-      setFfbbLoading(false);
+      setExternalCompetitionPhase('idle');
     }
   };
 
@@ -1296,10 +1351,10 @@ function TeamDetails({ navigation, route }) {
   }, [filteredPlayers, navigation, team?.activities, team?.documentId, team?.name]);
 
   const handleSyncStandings = useCallback(() => {
-    if (!teamId || refreshScrapingMutation.isPending) return;
+    if (!teamId || refreshScrapingMutation.isPending || isExternalCompetitionPhaseActive) return;
 
     refreshScrapingMutation.mutate(teamId);
-  }, [refreshScrapingMutation, teamId]);
+  }, [isExternalCompetitionPhaseActive, refreshScrapingMutation, teamId]);
 
   const showEditAction = canManageTeam
     && isMyClub
@@ -1377,6 +1432,15 @@ function TeamDetails({ navigation, route }) {
     }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam]),
   );
 
+  useEffect(() => navigation.addListener('beforeRemove', (event) => {
+    if (!isExternalCompetitionFlowLocked) {
+      return;
+    }
+
+    event.preventDefault();
+    notifyExternalCompetitionFlowLocked();
+  }), [isExternalCompetitionFlowLocked, navigation, notifyExternalCompetitionFlowLocked]);
+
   useEffect(() => {
     if (!showPerformanceTabs && activeTab !== 'infos') {
       if (!(showStatsTab && activeTab === 'stats')) {
@@ -1447,7 +1511,15 @@ function TeamDetails({ navigation, route }) {
     const isActive = activeTab === key;
     return (
       <TouchableOpacity
-        onPress={onPress || (() => setActiveTab(key))}
+        disabled={isExternalCompetitionFlowLocked}
+        onPress={() => {
+          if (isExternalCompetitionFlowLocked) {
+            notifyExternalCompetitionFlowLocked();
+            return;
+          }
+
+          (onPress || (() => setActiveTab(key)))();
+        }}
         style={[
           Alignments.alignCenter,
           Alignments.justifyCenter,
@@ -1461,6 +1533,7 @@ function TeamDetails({ navigation, route }) {
           isActive
             ? { backgroundColor: Colors.primary500 }
             : null,
+          isExternalCompetitionFlowLocked ? { opacity: 0.8 } : null,
         ]}
       >
         <Text
@@ -1786,6 +1859,7 @@ function TeamDetails({ navigation, route }) {
         <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
           {canConfigureFFBB ? (
             <Button
+              disabled={isExternalCompetitionPhaseActive}
               onPress={openExternalSourceSetupModal}
               style={{ flexGrow: 1 }}
               title={team?.externalStandingUrl
@@ -1796,7 +1870,8 @@ function TeamDetails({ navigation, route }) {
           ) : null}
           {canRefreshExternalSync ? (
             <Button
-              isLoading={refreshScrapingMutation.isPending}
+              disabled={isExternalCompetitionFlowLocked}
+              isLoading={isExternalCompetitionRefreshing || refreshScrapingMutation.isPending}
               onPress={handleSyncStandings}
               style={{ flexGrow: 1 }}
               title={t('teamDetails.external.actions.sync', 'Synchroniser')}
@@ -1813,6 +1888,7 @@ function TeamDetails({ navigation, route }) {
           ) : null}
           {canManageTeam ? (
             <Button
+              disabled={isExternalCompetitionPhaseActive}
               onPress={() => setShowFFBBErrorModal(true)}
               style={{ flexGrow: 1 }}
               title={t('teamDetails.external.actions.reportBug', 'Signaler')}
@@ -2311,7 +2387,8 @@ function TeamDetails({ navigation, route }) {
                 </Text>
                 {canConfigureFFBB && (
                 <Button
-                  onPress={() => setShowFFBBUrlModal(true)}
+                  disabled={isExternalCompetitionPhaseActive}
+                  onPress={openExternalSourceSetupModal}
                   title={t('teamDetails.ffbb.configure', 'Configurer le classement externe')}
                   variant="Primary"
                 />
@@ -3089,7 +3166,7 @@ function TeamDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       {hasTeamActionsPanel ? (
-        <View style={[Spaces.marginTop[12], Spaces.paddingBottom[24], Spaces.paddingHorizontal[16]]}>
+        <View style={[Spaces.marginTop[12], Spaces.paddingBottom[24], Spaces.paddingHorizontal[16], Spaces.gap[12]]}>
           <View
             style={[
               ApplicationStyle.backgroundColor.primary700,
@@ -3101,7 +3178,11 @@ function TeamDetails({ navigation, route }) {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => setIsTeamActionsPanelOpen((previousValue) => !previousValue)}
-              style={[Spaces.paddingTop[10], Spaces.paddingBottom[12], Spaces.gap[10]]}
+              style={[
+                Spaces.paddingTop[10],
+                Spaces.paddingBottom[12],
+                Spaces.gap[10],
+              ]}
             >
               <View style={[Alignments.alignCenter]}>
                 <View
@@ -3115,7 +3196,7 @@ function TeamDetails({ navigation, route }) {
               </View>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                  {t('teamDetails.actions.panelTitle', "Actions d'equipe")}
+                  {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
                 </Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                   {isTeamActionsPanelOpen
@@ -3273,7 +3354,13 @@ function TeamDetails({ navigation, route }) {
       {/* FFBB URL Configuration Modal */}
       <Modal
         animationType="slide"
-        onRequestClose={() => setShowFFBBUrlModal(false)}
+        onRequestClose={() => {
+          if (isExternalCompetitionFlowLocked) {
+            notifyExternalCompetitionFlowLocked();
+            return;
+          }
+          setShowFFBBUrlModal(false);
+        }}
         transparent
         visible={showFFBBUrlModal}
       >
@@ -3291,6 +3378,7 @@ function TeamDetails({ navigation, route }) {
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isExternalCompetitionPhaseActive}
               onChangeText={setFfbbUrl}
               placeholder="https://epreuves.fff.fr/... ou https://competitions.ffbb.com/..."
               placeholderTextColor="#888"
@@ -3305,13 +3393,21 @@ function TeamDetails({ navigation, route }) {
             />
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <Button
-                onPress={() => setShowFFBBUrlModal(false)}
+                disabled={isExternalCompetitionFlowLocked}
+                onPress={() => {
+                  if (isExternalCompetitionFlowLocked) {
+                    notifyExternalCompetitionFlowLocked();
+                    return;
+                  }
+                  setShowFFBBUrlModal(false);
+                }}
                 style={{ flex: 1 }}
                 title={t('common.cancel', 'Annuler')}
                 variant="Secondary"
               />
               <Button
-                isLoading={ffbbLoading}
+                disabled={isExternalCompetitionPhaseActive}
+                isLoading={isExternalCompetitionPreviewing}
                 onPress={handleSetFFBBUrl}
                 style={{ flex: 1 }}
                 title={t('common.confirm', 'Valider')}
@@ -3325,7 +3421,13 @@ function TeamDetails({ navigation, route }) {
       {/* FFBB Team Selection Modal */}
       <Modal
         animationType="slide"
-        onRequestClose={() => setShowFFBBTeamModal(false)}
+        onRequestClose={() => {
+          if (isExternalCompetitionFlowLocked) {
+            notifyExternalCompetitionFlowLocked();
+            return;
+          }
+          setShowFFBBTeamModal(false);
+        }}
         transparent
         visible={showFFBBTeamModal}
       >
@@ -3337,28 +3439,98 @@ function TeamDetails({ navigation, route }) {
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.selectTeam', 'Selectionnez votre equipe')}
             </Text>
-            <ScrollView style={Spaces.marginBottom[16]}>
-              {ffbbTeamsList.map((ffbbTeam, index) => (
+            <FlatList
+              contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[4]]}
+              data={ffbbTeamsList}
+              keyboardShouldPersistTaps="handled"
+              keyExtractor={(item, index) => item.externalTeamId || item.externalTeamName || String(index)}
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  key={ffbbTeam.externalTeamId || ffbbTeam.externalTeamName || index}
-                  onPress={() => handleSelectFFBBTeam(ffbbTeam)}
+                  disabled={isExternalCompetitionFlowLocked}
+                  onPress={() => handleSelectFFBBTeam(item)}
                   style={[
-                    Alignments.row, Alignments.alignCenter,
+                    Alignments.row,
+                    Alignments.alignCenter,
                     Spaces.padding[12],
                     ApplicationStyle.borderRadius12,
                     { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
-                    Spaces.marginBottom[8],
+                    isExternalCompetitionFlowLocked ? { opacity: 0.72 } : null,
                   ]}
                 >
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{ffbbTeam.externalTeamName}</Text>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.externalTeamName}</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+              showsVerticalScrollIndicator={false}
+              style={[Spaces.marginBottom[16], { maxHeight: 320 }]}
+            />
             <Button
-              onPress={() => setShowFFBBTeamModal(false)}
+              disabled={isExternalCompetitionFlowLocked}
+              onPress={() => {
+                if (isExternalCompetitionFlowLocked) {
+                  notifyExternalCompetitionFlowLocked();
+                  return;
+                }
+                setShowFFBBTeamModal(false);
+              }}
               title={t('common.cancel', 'Annuler')}
               variant="Secondary"
             />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={notifyExternalCompetitionFlowLocked}
+        transparent
+        visible={showExternalCompetitionLoadingOverlay}
+      >
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 18, 24, 0.78)',
+            flex: 1,
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius24,
+              Spaces.padding[24],
+              Spaces.gap[16],
+              {
+                borderColor: `${Colors.primary500}44`,
+                borderWidth: 1,
+                maxWidth: 360,
+                width: '84%',
+              },
+            ]}
+          >
+            <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+              <View
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  {
+                    borderColor: `${Colors.primary500}40`,
+                    borderWidth: 1,
+                    height: 64,
+                    width: 64,
+                  },
+                ]}
+              >
+                <Loader color={Colors.primary500} size="large" />
+              </View>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+                {externalCompetitionLoadingMeta.title}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.primary100, Fonts.textCenter]}>
+                {externalCompetitionLoadingMeta.description}
+              </Text>
+            </View>
           </View>
         </View>
       </Modal>
@@ -3544,7 +3716,13 @@ function TeamDetails({ navigation, route }) {
       {/* FFBB Error Report Modal */}
       <Modal
         animationType="slide"
-        onRequestClose={() => setShowFFBBErrorModal(false)}
+        onRequestClose={() => {
+          if (isExternalCompetitionReporting) {
+            notifyExternalCompetitionFlowLocked();
+            return;
+          }
+          setShowFFBBErrorModal(false);
+        }}
         transparent
         visible={showFFBBErrorModal}
       >
@@ -3620,13 +3798,15 @@ function TeamDetails({ navigation, route }) {
 
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <Button
+                disabled={isExternalCompetitionPhaseActive}
                 onPress={() => setShowFFBBErrorModal(false)}
                 style={{ flex: 1 }}
                 title={t('common.cancel', 'Annuler')}
                 variant="Secondary"
               />
               <Button
-                isLoading={ffbbLoading}
+                disabled={isExternalCompetitionPhaseActive}
+                isLoading={isExternalCompetitionReporting}
                 onPress={handleReportError}
                 style={{ flex: 1 }}
                 title={t('common.send', 'Envoyer')}

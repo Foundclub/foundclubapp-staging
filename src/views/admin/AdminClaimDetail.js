@@ -1,5 +1,7 @@
+/* eslint-disable no-underscore-dangle, react/jsx-one-expression-per-line, no-nested-ternary */
+
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
@@ -20,6 +22,8 @@ import {
   useRefuseClubClaim,
 } from '@/services/admin/adminQueries';
 
+const normalizeComparableValue = (value) => String(value || '').trim().toLowerCase();
+
 /**
  *
  */
@@ -39,6 +43,7 @@ function AdminClaimDetail() {
 
   const request = requestResponse?.data;
   const isAffiliationHelp = !!request?.__isAffiliationHelp;
+  const isClubCreation = request?.requestKind === 'club_creation';
   const [adminNote, setAdminNote] = useState('');
 
   useEffect(() => {
@@ -48,16 +53,35 @@ function AdminClaimDetail() {
 
   const requester = useMemo(() => {
     const user = request?.user || {};
-    const firstname = user?.firstname || request?.holderFirstname || '';
-    const lastname = user?.lastname || request?.holderLastname || '';
+    const fallbackToHolder = !isClubCreation;
     return {
       avatar: user?.avatar?.url,
-      email: user?.email || '',
-      firstname,
-      lastname,
-      phoneNumber: user?.phoneNumber || request?.holderPhone || '',
+      email: user?.email || (fallbackToHolder ? request?.holderEmail || '' : ''),
+      firstname: user?.firstname || (fallbackToHolder ? request?.holderFirstname || '' : ''),
+      lastname: user?.lastname || (fallbackToHolder ? request?.holderLastname || '' : ''),
+      phoneNumber: user?.phoneNumber || (fallbackToHolder ? request?.holderPhone || '' : ''),
     };
-  }, [request]);
+  }, [isClubCreation, request]);
+
+  const managerContact = useMemo(() => ({
+    email: request?.holderEmail || '',
+    firstname: request?.holderFirstname || '',
+    lastname: request?.holderLastname || '',
+    phoneNumber: request?.holderPhone || '',
+  }), [request]);
+
+  const shouldShowRequesterCard = useMemo(() => {
+    if (!isAffiliationHelp) return true;
+    if (!isClubCreation) return true;
+    if (!request?.user) return false;
+
+    const sameName = normalizeComparableValue(requester.firstname) === normalizeComparableValue(managerContact.firstname)
+      && normalizeComparableValue(requester.lastname) === normalizeComparableValue(managerContact.lastname);
+    const samePhone = normalizeComparableValue(requester.phoneNumber) === normalizeComparableValue(managerContact.phoneNumber);
+    const sameEmail = normalizeComparableValue(requester.email) === normalizeComparableValue(managerContact.email);
+
+    return !(sameName && samePhone && sameEmail);
+  }, [isAffiliationHelp, isClubCreation, managerContact, request?.user, requester.email, requester.firstname, requester.lastname, requester.phoneNumber]);
 
   const requestDate = request?.createdAt
     ? new Date(request.createdAt).toLocaleDateString()
@@ -74,7 +98,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
           },
           onSuccess: () => {
-            Alert.alert('Succès', 'Demande traitée.');
+            Alert.alert('Succes', 'Demande traitee.');
             navigation.goBack();
           },
         },
@@ -87,7 +111,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
       },
       onSuccess: () => {
-        Alert.alert('Succès', 'Demande acceptée.');
+        Alert.alert('Succes', 'Demande acceptee.');
         navigation.goBack();
       },
     });
@@ -104,7 +128,7 @@ function AdminClaimDetail() {
             Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
           },
           onSuccess: () => {
-            Alert.alert('Succès', 'Demande refusée.');
+            Alert.alert('Succes', 'Demande refusee.');
             navigation.goBack();
           },
         },
@@ -117,7 +141,7 @@ function AdminClaimDetail() {
         Alert.alert('Erreur', error?.message || 'Une erreur est survenue');
       },
       onSuccess: () => {
-        Alert.alert('Succès', 'Demande rejetée.');
+        Alert.alert('Succes', 'Demande rejetee.');
         navigation.goBack();
       },
     });
@@ -127,7 +151,7 @@ function AdminClaimDetail() {
     Alert.alert(
       'Confirmer',
       isAffiliationHelp
-        ? 'Traiter cette demande introuvable ?'
+        ? 'Traiter cette demande superadmin ?'
         : "Voulez-vous vraiment accepter cette demande ? L'utilisateur deviendra proprietaire du club.",
       [
         { style: 'cancel', text: 'Annuler' },
@@ -168,80 +192,112 @@ function AdminClaimDetail() {
       title="Detail demande"
     >
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
-          <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-            Demandeur
-          </Text>
-          <View style={[Alignments.row, Alignments.alignCenter]}>
-            <ProfileAvatar imageUrl={requester?.avatar} size={60} />
-            <View style={Spaces.marginLeft[16]}>
-              <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-                {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
-              </Text>
-              {requester?.email ? (
-                <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.email}</Text>
-              ) : null}
-              <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.phoneNumber || '-'}</Text>
-            </View>
-          </View>
-        </View>
-
-        {isAffiliationHelp ? (
+        {!isAffiliationHelp || shouldShowRequesterCard ? (
           <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-              Demande affiliation
+              Demandeur
             </Text>
-            <View style={[Spaces.gap[10]]}>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Type: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.__typeLabel}</Text>
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Nom recherché: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.clubName || '-'}</Text>
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Source: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.source || '-'}</Text>
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Recherche initiale: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {request?.searchContext?.currentQuery || '-'}
-                                      </Text>
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Date: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>{requestDate}</Text>
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Commentaire: 
-{' '}
-<Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.comment || '-'}</Text>
-              </Text>
+            <View style={[Alignments.row, Alignments.alignCenter]}>
+              <ProfileAvatar imageUrl={requester?.avatar} size={60} />
+              <View style={Spaces.marginLeft[16]}>
+                <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
+                  {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
+                </Text>
+                {requester?.email ? (
+                  <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.email}</Text>
+                ) : null}
+                <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.phoneNumber || '-'}</Text>
+              </View>
             </View>
           </View>
+        ) : null}
+
+        {isAffiliationHelp ? (
+          <>
+            {isClubCreation ? (
+              <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
+                <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
+                  Dirigeant a contacter
+                </Text>
+                <View style={[Spaces.gap[10]]}>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    Nom:{' '}
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {[managerContact.firstname, managerContact.lastname].filter(Boolean).join(' ').trim() || '-'}
+                    </Text>
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    Telephone:{' '}
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{managerContact.phoneNumber || '-'}</Text>
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    Email:{' '}
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{managerContact.email || '-'}</Text>
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
+              <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
+                {isClubCreation ? 'Club a onboarder' : 'Demande affiliation'}
+              </Text>
+              <View style={[Spaces.gap[10]]}>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Type:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.__typeLabel}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Club:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.clubName || '-'}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Source:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.source || '-'}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Ecran:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.screen || '-'}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Role:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.role || '-'}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Cible:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.target || '-'}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Recherche initiale:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {request?.searchContext?.currentQuery || request?.searchContext?.clubId || '-'}
+                  </Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Date:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{requestDate}</Text>
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  Commentaire:{' '}
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.comment || '-'}</Text>
+                </Text>
+              </View>
+            </View>
+          </>
         ) : (
           <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-              Club revendiqué
+              Club revendique
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter]}>
               <ProfileAvatar imageUrl={request?.club?.logo?.url} size={60} variant="logo" />
               <View style={Spaces.marginLeft[16]}>
                 <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{request?.club?.name}</Text>
                 <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>
-                    {request?.club?.city}
-                    {' '}
-                    (
-{request?.club?.postalCode}
-                    )
-                        </Text>
+                  {request?.club?.city}
+                  {' '}
+                  ({request?.club?.postalCode})
+                </Text>
               </View>
             </View>
           </View>

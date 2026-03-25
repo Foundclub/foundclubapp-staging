@@ -22,6 +22,7 @@ import {
   PermissionsAndroid,
   Platform,
   ScrollView,
+  Share,
   StatusBar,
   Text,
   TextInput,
@@ -55,6 +56,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
+import DocumentMessageBubble from '@/components/molecules/documentMessageBubble/DocumentMessageBubble';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import EventShareBubble from '@/components/molecules/eventShareBubble/EventShareBubble';
@@ -85,6 +87,13 @@ import { createEventParticipation } from '@/services/eventParticipation/eventPar
 import { cancelMatch, confirmMatch, updateMatch } from '@/services/league/leagueMatchService';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
 
+import {
+  getDocumentCaption,
+  getDocumentDisplayName,
+  getDocumentPreviewText,
+  getPrimaryDocumentAttachment,
+  isDocumentAttachment,
+} from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
 
@@ -789,6 +798,7 @@ function Conversation({ navigation, route }) {
   const queryClient = useQueryClient();
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {{ documentId?: string; team?: Team } | undefined} */ (undefined));
+  const [selectedDocumentActionMessage, setSelectedDocumentActionMessage] = useState(null);
 
   useEffect(() => {
     voiceRecordingStateRef.current = voiceRecordingState;
@@ -890,6 +900,122 @@ function Conversation({ navigation, route }) {
       sendTypingStop(chatId);
     }
   };
+
+  const createLocalUploadId = useCallback(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    [],
+  );
+
+  const buildLocalPendingAttachment = useCallback((asset, attachmentId) => ({
+    documentId: attachmentId,
+    id: attachmentId,
+    mime: String(asset?.type || 'application/octet-stream'),
+    name: String(asset?.fileName || 'piece-jointe'),
+    uri: String(asset?.uri || ''),
+  }), []);
+
+  const buildLocalPendingMessage = useCallback(({
+    attachments = [],
+    clientMessageId = '',
+    composition = undefined,
+    createdAt = new Date().toISOString(),
+    event = undefined,
+    message = '',
+    replyTo = null,
+  }) => ({
+    attachments: Array.isArray(attachments) ? attachments : [],
+    chat: { documentId: chatId },
+    clientMessageId: String(clientMessageId || '').trim(),
+    composition,
+    createdAt,
+    event,
+    failed: false,
+    message: String(message || ''),
+    pending: true,
+    readBy: [],
+    replyTo,
+    sender: {
+      avatar: userData?.avatar,
+      documentId: userData?.documentId || 'me',
+      firstname: userData?.firstname || '',
+      lastname: userData?.lastname || '',
+    },
+  }), [chatId, userData?.avatar, userData?.documentId, userData?.firstname, userData?.lastname]);
+
+  const upsertLocalPendingMessage = useCallback((messageId, messagePayload) => {
+    const safeMessageId = String(messageId || '').trim();
+    if (!safeMessageId || !chatId) return;
+
+    const normalizedMessage = {
+      ...messagePayload,
+      documentId: safeMessageId,
+      id: safeMessageId,
+    };
+
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (oldData) => {
+      if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
+        return {
+          pageParams: [null],
+          pages: [{
+            data: [normalizedMessage],
+            meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+          }],
+        };
+      }
+
+      let hasUpdatedExistingMessage = false;
+      const nextPages = oldData.pages.map((page) => {
+        const pageData = Array.isArray(page?.data) ? page.data : [];
+        const nextData = pageData.map((message) => {
+          const currentId = String(message?.documentId || message?.id || '').trim();
+          if (currentId !== safeMessageId) return message;
+          hasUpdatedExistingMessage = true;
+          return {
+            ...message,
+            ...normalizedMessage,
+            documentId: safeMessageId,
+            id: safeMessageId,
+          };
+        });
+        return { ...page, data: nextData };
+      });
+
+      if (hasUpdatedExistingMessage) {
+        return { ...oldData, pages: nextPages };
+      }
+
+      const firstPage = nextPages[0];
+      const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
+      return {
+        ...oldData,
+        pages: [{
+          ...firstPage,
+          data: [normalizedMessage, ...firstPageData],
+        }, ...nextPages.slice(1)],
+      };
+    });
+  }, [chatId, queryClient]);
+
+  const removeLocalPendingMessage = useCallback((messageId) => {
+    const safeMessageId = String(messageId || '').trim();
+    if (!safeMessageId || !chatId) return;
+
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (oldData) => {
+      if (!oldData?.pages) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) => ({
+          ...page,
+          data: Array.isArray(page?.data)
+            ? page.data.filter((message) => {
+              const currentId = String(message?.documentId || message?.id || '').trim();
+              return currentId !== safeMessageId;
+            })
+            : [],
+        })),
+      };
+    });
+  }, [chatId, queryClient]);
 
   const uploadAttachmentAssetWithFetch = useCallback(async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
@@ -1075,7 +1201,13 @@ function Conversation({ navigation, route }) {
 
   const uploadAndSendAttachment = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
-    /** @type {{ caption?: string; replyTo?: { documentId?: string } | null }} */ options = {},
+    /** @type {{
+     *  caption?: string;
+     *  clientMessageId?: string;
+     *  createdAt?: string;
+     *  optimisticMessageId?: string;
+     *  replyTo?: { documentId?: string } | null;
+     * }} */ options = {},
   ) => {
     if (uploadInFlightRef.current) {
       logAttachmentDebug('uploadAndSendAttachment skipped: upload already in progress', {
@@ -1147,6 +1279,117 @@ function Conversation({ navigation, route }) {
       return true;
     } catch (error) {
       logAttachmentDebug('uploadAndSendAttachment exception', {
+        chatId,
+        code: error?.code,
+        error: error?.message || error,
+        responseData: error?.response?.data,
+        responseStatus: error?.response?.status,
+      });
+      conversationLogger.warn('Attachment upload failed', error);
+      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
+      return false;
+    } finally {
+      uploadInFlightRef.current = false;
+      setIsUploading(false);
+    }
+  };
+
+  const uploadAndSendAttachmentWithPlaceholder = async (
+    /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
+    /** @type {{
+     *  caption?: string;
+     *  clientMessageId?: string;
+     *  createdAt?: string;
+     *  optimisticMessageId?: string;
+     *  replyTo?: { documentId?: string } | null;
+     * }} */ options = {},
+  ) => {
+    if (uploadInFlightRef.current) {
+      logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder skipped: upload already in progress', {
+        asset: describeAsset(asset),
+        chatId,
+      });
+      return false;
+    }
+
+    if (!asset?.uri || !chatId) {
+      logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder skipped: missing asset uri or chatId', {
+        asset: describeAsset(asset),
+        chatId,
+      });
+      return false;
+    }
+
+    const safeClientMessageId = String(options?.clientMessageId || '').trim();
+    const safeOptimisticMessageId = String(options?.optimisticMessageId || '').trim();
+    const safeCreatedAt = String(options?.createdAt || '').trim() || new Date().toISOString();
+
+    try {
+      uploadInFlightRef.current = true;
+      setIsUploading(true);
+      logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder begin', {
+        asset: describeAsset(asset),
+        captionLength: String(options?.caption || '').trim().length,
+        chatId,
+        hasReplyTo: Boolean(options?.replyTo?.documentId),
+      });
+      const uploadedFiles = await uploadAttachmentAsset(asset);
+      if (uploadedFiles.length === 0) {
+        if (safeOptimisticMessageId) {
+          removeLocalPendingMessage(safeOptimisticMessageId);
+        }
+        Alert.alert('Erreur', "Aucune pièce jointe n'a pu être envoyée.");
+        return false;
+      }
+
+      const uploadedMime = uploadedFiles?.[0]?.mime || asset.type || '';
+      const uploadedName = uploadedFiles?.[0]?.name || asset.fileName || 'pièce-jointe';
+      const isImageAttachment = typeof uploadedMime === 'string'
+        && uploadedMime.startsWith('image/');
+
+      const normalizedCaption = String(options?.caption || '').trim();
+      const fallbackText = isImageAttachment ? '' : `Pièce jointe : ${uploadedName}`;
+      const messageText = normalizedCaption || fallbackText;
+
+      if (safeOptimisticMessageId) {
+        upsertLocalPendingMessage(safeOptimisticMessageId, buildLocalPendingMessage({
+          attachments: uploadedFiles,
+          clientMessageId: safeClientMessageId,
+          createdAt: safeCreatedAt,
+          message: messageText,
+          replyTo: options?.replyTo || null,
+        }));
+      }
+
+      const optimisticMessageId = sendMessage(chatId, messageText, {
+        attachments: uploadedFiles,
+        clientMessageId: safeClientMessageId || undefined,
+        optimisticMessageId: safeOptimisticMessageId || undefined,
+        replyTo: options?.replyTo || null,
+        sender: userData,
+        skipOptimistic: Boolean(safeOptimisticMessageId),
+      });
+
+      if (!optimisticMessageId) {
+        if (safeOptimisticMessageId) {
+          removeLocalPendingMessage(safeOptimisticMessageId);
+        }
+        Alert.alert('Erreur', 'Connexion messagerie indisponible. Réessayez dans quelques secondes.');
+        return false;
+      }
+
+      logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder success', {
+        chatId,
+        messageLength: messageText.length,
+        optimisticMessageId,
+        uploadedFiles: describeUploadItems(uploadedFiles),
+      });
+      return true;
+    } catch (error) {
+      if (safeOptimisticMessageId) {
+        removeLocalPendingMessage(safeOptimisticMessageId);
+      }
+      logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder exception', {
         chatId,
         code: error?.code,
         error: error?.message || error,
@@ -1787,52 +2030,117 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, resolveEventLocationLabel, sendMessage, userData]);
 
-  const resolveMessageEventPayload = useCallback((message) => {
-    const eventPayload = message?.event;
-    if (eventPayload && typeof eventPayload === 'object') {
-      const eventDocumentId = String(eventPayload?.documentId || eventPayload?.id || '').trim();
-      if (eventDocumentId) {
-        sharedEventPreviewByIdRef.current.set(eventDocumentId, eventPayload);
-      }
-      return eventPayload;
-    }
-
-    const eventDocumentId = String(eventPayload || '').trim();
-    if (eventDocumentId) {
-      const cachedEvent = sharedEventPreviewByIdRef.current.get(eventDocumentId);
-      if (cachedEvent) return cachedEvent;
-    }
-
-    const composition = message?.composition;
-    if (composition?.type !== 'event_share') return null;
-
-    const compositionEventPreview = composition?.eventPreview;
-    if (compositionEventPreview && typeof compositionEventPreview === 'object') {
-      const previewDocumentId = String(
-        compositionEventPreview?.documentId
-        || composition?.eventDocumentId
-        || '',
-      ).trim();
-      if (previewDocumentId) {
-        sharedEventPreviewByIdRef.current.set(previewDocumentId, compositionEventPreview);
-      }
-      return compositionEventPreview;
-    }
-
-    const compositionEventDocumentId = String(composition?.eventDocumentId || '').trim();
-    if (!compositionEventDocumentId) return null;
-
-    const fallbackEvent = {
-      date: composition?.eventDate || null,
-      documentId: compositionEventDocumentId,
-      locationDetails: composition?.locationLabel || '',
-      name: composition?.eventName || 'Événement',
-      team: composition?.teamName ? { name: composition?.teamName } : null,
-      type: { name: 'Événement' },
-    };
-    sharedEventPreviewByIdRef.current.set(compositionEventDocumentId, fallbackEvent);
-    return fallbackEvent;
+  const hasMeaningfulEventValue = useCallback((value) => {
+    if (value == null) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
   }, []);
+
+  const preferEventValue = useCallback((primaryValue, fallbackValue) => (
+    hasMeaningfulEventValue(primaryValue) ? primaryValue : fallbackValue
+  ), [hasMeaningfulEventValue]);
+
+  const mergeNamedEventEntity = useCallback((previewEntity, payloadEntity) => {
+    if (!hasMeaningfulEventValue(previewEntity) && !hasMeaningfulEventValue(payloadEntity)) return null;
+    if (!hasMeaningfulEventValue(previewEntity)) return payloadEntity;
+    if (!hasMeaningfulEventValue(payloadEntity) || typeof payloadEntity !== 'object') return previewEntity;
+
+    return {
+      ...previewEntity,
+      ...payloadEntity,
+    };
+  }, [hasMeaningfulEventValue]);
+
+  const mergeSharedEventPayload = useCallback((previewEvent, payloadEvent) => {
+    if (!hasMeaningfulEventValue(previewEvent) && !hasMeaningfulEventValue(payloadEvent)) return null;
+    if (!hasMeaningfulEventValue(previewEvent)) return payloadEvent;
+    if (!hasMeaningfulEventValue(payloadEvent) || typeof payloadEvent !== 'object') return previewEvent;
+
+    const previewTeam = previewEvent?.team;
+    const payloadTeam = payloadEvent?.team;
+
+    return {
+      ...previewEvent,
+      ...payloadEvent,
+      club: mergeNamedEventEntity(previewEvent?.club, payloadEvent?.club),
+      facility: mergeNamedEventEntity(previewEvent?.facility, payloadEvent?.facility),
+      location: preferEventValue(payloadEvent?.location, previewEvent?.location),
+      locationDetails: preferEventValue(payloadEvent?.locationDetails, previewEvent?.locationDetails),
+      name: preferEventValue(payloadEvent?.name, previewEvent?.name || 'Evenement'),
+      team: (!hasMeaningfulEventValue(previewTeam) && !hasMeaningfulEventValue(payloadTeam))
+        ? null
+        : {
+          ...(previewTeam || {}),
+          ...(payloadTeam || {}),
+          activities: preferEventValue(payloadTeam?.activities, previewTeam?.activities || []),
+          category: preferEventValue(payloadTeam?.category, previewTeam?.category),
+          club: mergeNamedEventEntity(previewTeam?.club, payloadTeam?.club),
+          level: preferEventValue(payloadTeam?.level, previewTeam?.level),
+          name: preferEventValue(payloadTeam?.name, previewTeam?.name),
+          section: preferEventValue(payloadTeam?.section, previewTeam?.section),
+        },
+      type: mergeNamedEventEntity(previewEvent?.type, payloadEvent?.type)
+        || { name: previewEvent?.type?.name || payloadEvent?.type?.name || 'Evenement' },
+    };
+  }, [
+    hasMeaningfulEventValue,
+    mergeNamedEventEntity,
+    preferEventValue,
+  ]);
+
+  const resolveMessageEventPayload = useCallback((message) => {
+    const composition = message?.composition;
+    const eventPayload = message?.event;
+    const eventDocumentId = String(
+      eventPayload?.documentId
+      || eventPayload?.id
+      || eventPayload
+      || composition?.eventDocumentId
+      || '',
+    ).trim();
+
+    const cachedEvent = eventDocumentId
+      ? sharedEventPreviewByIdRef.current.get(eventDocumentId)
+      : null;
+
+    const compositionEventPreview = composition?.type === 'event_share'
+      && composition?.eventPreview
+      && typeof composition?.eventPreview === 'object'
+      ? composition.eventPreview
+      : null;
+
+    const fallbackEvent = composition?.type === 'event_share' && eventDocumentId
+      ? {
+        date: composition?.eventDate || null,
+        documentId: eventDocumentId,
+        locationDetails: composition?.locationLabel || '',
+        name: composition?.eventName || 'Evenement',
+        team: composition?.teamName ? { name: composition?.teamName } : null,
+        type: { name: 'Evenement' },
+      }
+      : null;
+
+    const previewBase = compositionEventPreview || cachedEvent || fallbackEvent;
+
+    if (eventPayload && typeof eventPayload === 'object') {
+      const resolvedEvent = composition?.type === 'event_share'
+        ? mergeSharedEventPayload(previewBase, eventPayload)
+        : eventPayload;
+      if (eventDocumentId && resolvedEvent) {
+        sharedEventPreviewByIdRef.current.set(eventDocumentId, resolvedEvent);
+      }
+      return resolvedEvent;
+    }
+
+    if (previewBase && eventDocumentId) {
+      sharedEventPreviewByIdRef.current.set(eventDocumentId, previewBase);
+      return previewBase;
+    }
+
+    return null;
+  }, [mergeSharedEventPayload]);
 
   const handleOpenPublicEventPicker = useCallback(() => {
     if (!chatId) return;
@@ -2371,7 +2679,7 @@ function Conversation({ navigation, route }) {
     const updatedComposition = { ...message.composition, status };
 
     // Update local cache immediately (Optimistic)
-    queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
       const targetMessageId = String(message.documentId || message._id || message.id || '');
       return {
@@ -2687,6 +2995,150 @@ function Conversation({ navigation, route }) {
     }
   }, [fetchAttachmentUrlById, resolveMediaUri, isImageAttachmentMessage, getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments]);
 
+  const resolveAttachmentActionUrl = useCallback(async (attachment) => {
+    if (!attachment || typeof attachment !== 'object') return '';
+
+    let resolvedUrl = resolveMediaUri(
+      attachment?.url
+      || attachment?.uri
+      || attachment?.formats?.large?.url
+      || attachment?.formats?.medium?.url
+      || attachment?.formats?.small?.url
+      || attachment?.formats?.thumbnail?.url
+      || attachment?.previewUrl,
+    );
+
+    if (!resolvedUrl && attachment?.id) {
+      resolvedUrl = await fetchAttachmentUrlById(attachment.id);
+    }
+
+    return resolvedUrl || '';
+  }, [fetchAttachmentUrlById, resolveMediaUri]);
+
+  const openAttachmentActionUrl = useCallback(async (resolvedUrl, attachmentLabel = '') => {
+    if (!resolvedUrl) {
+      Alert.alert(
+        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
+        t('conversation.attachments.unavailableDescription', 'Ce document ne peut pas etre ouvert pour le moment.'),
+      );
+      return false;
+    }
+
+    try {
+      await Linking.openURL(resolvedUrl);
+      return true;
+    } catch (error) {
+      logAttachmentDebug('openAttachmentActionUrl failed', {
+        attachmentLabel,
+        error: error?.message || error,
+        resolvedUrl,
+      });
+      conversationLogger.warn('Failed to open attachment action URL', error);
+      Alert.alert(
+        t('conversation.attachments.openErrorTitle', 'Ouverture impossible'),
+        t('conversation.attachments.openErrorDescription', 'Le document n a pas pu etre ouvert.'),
+      );
+      return false;
+    }
+  }, [logAttachmentDebug, t]);
+
+  const toDocumentActionMessage = useCallback((message) => {
+    const normalizedAttachments = normalizeMessageAttachments(message?.attachments);
+    const primaryDocumentAttachment = getPrimaryDocumentAttachment(normalizedAttachments);
+    if (!primaryDocumentAttachment) return null;
+
+    return {
+      ...message,
+      attachments: normalizedAttachments,
+    };
+  }, [normalizeMessageAttachments]);
+
+  const closeDocumentActionMenu = useCallback(() => {
+    setSelectedDocumentActionMessage(null);
+  }, []);
+
+  const openDocumentActionMenu = useCallback((message) => {
+    const actionableMessage = toDocumentActionMessage(message);
+    if (!actionableMessage) return;
+    setSelectedDocumentActionMessage(actionableMessage);
+  }, [toDocumentActionMessage]);
+
+  const openDocumentAttachmentFromMessage = useCallback(async (message) => {
+    const actionableMessage = toDocumentActionMessage(message);
+    if (!actionableMessage) return false;
+
+    const primaryDocumentAttachment = getPrimaryDocumentAttachment(actionableMessage.attachments);
+    const resolvedUrl = await resolveAttachmentActionUrl(primaryDocumentAttachment);
+    const attachmentLabel = getDocumentDisplayName(primaryDocumentAttachment);
+    return openAttachmentActionUrl(resolvedUrl, attachmentLabel);
+  }, [openAttachmentActionUrl, resolveAttachmentActionUrl, toDocumentActionMessage]);
+
+  const downloadDocumentAttachmentFromMessage = useCallback(async (message) => (
+    openDocumentAttachmentFromMessage(message)
+  ), [openDocumentAttachmentFromMessage]);
+
+  const shareDocumentAttachmentFromMessage = useCallback(async (message) => {
+    const actionableMessage = toDocumentActionMessage(message);
+    if (!actionableMessage) return false;
+
+    const primaryDocumentAttachment = getPrimaryDocumentAttachment(actionableMessage.attachments);
+    const resolvedUrl = await resolveAttachmentActionUrl(primaryDocumentAttachment);
+    const attachmentLabel = getDocumentDisplayName(primaryDocumentAttachment);
+    if (!resolvedUrl) {
+      Alert.alert(
+        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
+        t('conversation.attachments.shareUnavailableDescription', 'Ce document ne peut pas etre partage pour le moment.'),
+      );
+      return false;
+    }
+
+    try {
+      await Share.share({
+        message: `${attachmentLabel}\n${resolvedUrl}`,
+        title: attachmentLabel,
+        url: resolvedUrl,
+      });
+      return true;
+    } catch (error) {
+      logAttachmentDebug('shareDocumentAttachmentFromMessage failed', {
+        attachmentLabel,
+        error: error?.message || error,
+        resolvedUrl,
+      });
+      conversationLogger.warn('Failed to share attachment URL', error);
+      Alert.alert(
+        t('conversation.attachments.shareErrorTitle', 'Partage impossible'),
+        t('conversation.attachments.shareErrorDescription', 'Le document n a pas pu etre partage.'),
+      );
+      return false;
+    }
+  }, [logAttachmentDebug, resolveAttachmentActionUrl, t, toDocumentActionMessage]);
+
+  const handleOpenSelectedDocumentAttachment = useCallback(async () => {
+    const selectedDocumentMessage = selectedDocumentActionMessage;
+    closeDocumentActionMenu();
+    await openDocumentAttachmentFromMessage(selectedDocumentMessage);
+  }, [closeDocumentActionMenu, openDocumentAttachmentFromMessage, selectedDocumentActionMessage]);
+
+  const handleDownloadSelectedDocumentAttachment = useCallback(async () => {
+    const selectedDocumentMessage = selectedDocumentActionMessage;
+    closeDocumentActionMenu();
+    await downloadDocumentAttachmentFromMessage(selectedDocumentMessage);
+  }, [closeDocumentActionMenu, downloadDocumentAttachmentFromMessage, selectedDocumentActionMessage]);
+
+  const handleShareSelectedDocumentAttachment = useCallback(async () => {
+    const selectedDocumentMessage = selectedDocumentActionMessage;
+    closeDocumentActionMenu();
+    await shareDocumentAttachmentFromMessage(selectedDocumentMessage);
+  }, [closeDocumentActionMenu, selectedDocumentActionMessage, shareDocumentAttachmentFromMessage]);
+
+  const handleRetrySelectedDocumentAttachment = useCallback(() => {
+    if (!selectedDocumentActionMessage) return;
+    const selectedDocumentMessage = selectedDocumentActionMessage;
+    closeDocumentActionMenu();
+    retryFailedMessage(chatId, selectedDocumentMessage);
+  }, [chatId, closeDocumentActionMenu, retryFailedMessage, selectedDocumentActionMessage]);
+
   const renderMessageImage = useCallback((messageImageProps) => {
     const rawMessage = messageImageProps?.currentMessage || {};
     const safeMessage = {
@@ -2725,6 +3177,16 @@ function Conversation({ navigation, route }) {
       </TouchableOpacity>
     );
   }, [getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments]);
+
+  const selectedDocumentActionAttachment = useMemo(() => (
+    getPrimaryDocumentAttachment(
+      normalizeMessageAttachments(selectedDocumentActionMessage?.attachments),
+    )
+  ), [normalizeMessageAttachments, selectedDocumentActionMessage?.attachments]);
+
+  const selectedDocumentActionPreview = useMemo(() => (
+    getDocumentPreviewText(normalizeMessageAttachments(selectedDocumentActionMessage?.attachments))
+  ), [normalizeMessageAttachments, selectedDocumentActionMessage?.attachments]);
 
   const clearPendingMediaDraft = () => {
     setPendingMediaDraft(null);
@@ -2801,12 +3263,36 @@ function Conversation({ navigation, route }) {
       return;
     }
 
+    const localUploadId = createLocalUploadId();
+    const optimisticMessageId = `temp-upload-${localUploadId}`;
+    const clientMessageId = `cmid-upload-${localUploadId}`;
+    const createdAt = new Date().toISOString();
+    const replyToPayload = replyingTo ? { documentId: replyingTo.documentId } : null;
+    const voiceComposition = {
+      durationMs: pendingVoiceDraft.durationMs || 0,
+      mime: pendingVoiceDraft.mime || 'audio/mp4',
+      size: pendingVoiceDraft.size || 0,
+      type: 'voice_note',
+      version: 1,
+      waveform: pendingVoiceDraft.waveform || [],
+    };
+
+    upsertLocalPendingMessage(optimisticMessageId, buildLocalPendingMessage({
+      attachments: [buildLocalPendingAttachment(normalizedVoiceAsset, `${optimisticMessageId}-attachment`)],
+      clientMessageId,
+      composition: voiceComposition,
+      createdAt,
+      message: String(composerText || '').trim(),
+      replyTo: replyToPayload,
+    }));
+
     try {
       uploadInFlightRef.current = true;
       setIsUploading(true);
       const uploadedFiles = await uploadAttachmentAsset(normalizedVoiceAsset);
 
       if (!uploadedFiles.length) {
+        removeLocalPendingMessage(optimisticMessageId);
         throw new Error('VOICE_UPLOAD_FAILED');
       }
       logVoiceDiagnostic('send-upload-succeeded', {
@@ -2814,25 +3300,37 @@ function Conversation({ navigation, route }) {
         uploadedFiles: describeUploadItems(uploadedFiles),
       });
 
-      const optimisticMessageId = sendMessage(chatId, String(composerText || '').trim(), {
+      const uploadedVoiceComposition = {
+        ...voiceComposition,
+        mime: pendingVoiceDraft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
+        size: pendingVoiceDraft.size || uploadedFiles?.[0]?.size || 0,
+      };
+
+      upsertLocalPendingMessage(optimisticMessageId, buildLocalPendingMessage({
         attachments: uploadedFiles,
-        composition: {
-          durationMs: pendingVoiceDraft.durationMs || 0,
-          mime: pendingVoiceDraft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
-          size: pendingVoiceDraft.size || uploadedFiles?.[0]?.size || 0,
-          type: 'voice_note',
-          version: 1,
-          waveform: pendingVoiceDraft.waveform || [],
-        },
-        replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+        clientMessageId,
+        composition: uploadedVoiceComposition,
+        createdAt,
+        message: String(composerText || '').trim(),
+        replyTo: replyToPayload,
+      }));
+
+      const queuedMessageId = sendMessage(chatId, String(composerText || '').trim(), {
+        attachments: uploadedFiles,
+        clientMessageId,
+        composition: uploadedVoiceComposition,
+        optimisticMessageId,
+        replyTo: replyToPayload,
         sender: userData,
+        skipOptimistic: true,
       });
-      if (!optimisticMessageId) {
+      if (!queuedMessageId) {
+        removeLocalPendingMessage(optimisticMessageId);
         throw new Error('VOICE_SOCKET_UNAVAILABLE');
       }
       logVoiceDiagnostic('send-socket-queued', {
         chatId,
-        optimisticMessageId,
+        optimisticMessageId: queuedMessageId,
       });
 
       await clearPendingVoiceDraft();
@@ -2840,6 +3338,9 @@ function Conversation({ navigation, route }) {
       setComposerText('');
       sendTypingStop(chatId);
     } catch (error) {
+      if (String(error?.message || '') !== 'VOICE_SOCKET_UNAVAILABLE') {
+        removeLocalPendingMessage(optimisticMessageId);
+      }
       conversationLogger.warn('Failed to send pending voice draft', error);
       logVoiceDiagnostic('send-failed', {
         chatId,
@@ -2875,6 +3376,17 @@ function Conversation({ navigation, route }) {
       });
       return;
     }
+    if (!isSocketConnected || !socket) {
+      logAttachmentDebug('sendPendingMediaDraft skipped: socket unavailable', {
+        chatId,
+        socketConnected: Boolean(isSocketConnected && socket),
+      });
+      Alert.alert(
+        'Envoi impossible',
+        'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+      );
+      return;
+    }
 
     logAttachmentDebug('sendPendingMediaDraft start', {
       asset: describeAsset(pendingMediaDraft.asset),
@@ -2884,9 +3396,32 @@ function Conversation({ navigation, route }) {
       socketConnected: Boolean(isSocketConnected),
     });
 
-    const sent = await uploadAndSendAttachment(pendingMediaDraft.asset, {
+    const localUploadId = createLocalUploadId();
+    const optimisticMessageId = `temp-upload-${localUploadId}`;
+    const clientMessageId = `cmid-upload-${localUploadId}`;
+    const createdAt = new Date().toISOString();
+    const localAsset = pendingMediaDraft.asset;
+    const localMime = String(localAsset?.type || '').trim();
+    const localName = String(localAsset?.fileName || '').trim() || 'pièce-jointe';
+    const isLocalImage = localMime.startsWith('image/');
+    const normalizedCaption = String(composerText || '').trim();
+    const previewText = normalizedCaption || (isLocalImage ? '' : `Pièce jointe : ${localName}`);
+    const replyToPayload = replyingTo ? { documentId: replyingTo.documentId } : null;
+
+    upsertLocalPendingMessage(optimisticMessageId, buildLocalPendingMessage({
+      attachments: [buildLocalPendingAttachment(localAsset, `${optimisticMessageId}-attachment`)],
+      clientMessageId,
+      createdAt,
+      message: previewText,
+      replyTo: replyToPayload,
+    }));
+
+    const sent = await uploadAndSendAttachmentWithPlaceholder(localAsset, {
       caption: composerText,
-      replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+      clientMessageId,
+      createdAt,
+      optimisticMessageId,
+      replyTo: replyToPayload,
     });
 
     if (!sent) {
@@ -2947,7 +3482,7 @@ function Conversation({ navigation, route }) {
 
     if (!changed) return;
 
-    queryClient.setQueryData(['chat-messages', chatId], (/** @type {any} */ oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
 
       return {
@@ -3497,6 +4032,16 @@ function Conversation({ navigation, route }) {
                 isMe={!isLeft}
                 message={currentMessage.message}
               />
+              {currentMessage.failed ? (
+                <Text style={[Fonts.p4Bold, { color: Colors.error500, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                  {t('common.retry', 'Réessayer')}
+                </Text>
+              ) : null}
+              {currentMessage.pending ? (
+                <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                  {t('conversation.sending', 'Envoi en cours...')}
+                </Text>
+              ) : null}
             </View>
           ),
         );
@@ -3531,6 +4076,68 @@ function Conversation({ navigation, route }) {
       || currentMessage?.replyTo?.text
       || t('conversation.replyPreview.defaultText', 'Message'),
     );
+    const replyPreviewNode = currentMessage.replyTo ? (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
+        style={{
+          backgroundColor: 'rgba(1,179,244,0.12)',
+          borderColor: Colors.primary700,
+          borderRadius: 8,
+          borderWidth: 1,
+          marginBottom: 4,
+          marginHorizontal: 12,
+          marginTop: marginTop + 4,
+          padding: 8,
+        }}
+      >
+        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+          {t('conversation.replyPreview.label', 'Réponse à')}
+          {' '}
+          {replyAuthorName}
+        </Text>
+        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
+          {replyPreviewText}
+        </Text>
+      </TouchableOpacity>
+    ) : null;
+    const normalizedCurrentAttachments = normalizeMessageAttachments(currentMessage?.attachments);
+    const hasDocumentAttachment = normalizedCurrentAttachments.some((attachment) => (
+      isDocumentAttachment(attachment)
+    ));
+
+    if (hasDocumentAttachment) {
+      const actionableMessage = {
+        ...currentMessage,
+        attachments: normalizedCurrentAttachments,
+      };
+      const documentCaption = getDocumentCaption(
+        currentMessage?.message || currentMessage?.text || '',
+        normalizedCurrentAttachments,
+      );
+
+      return wrapWithMessageInteractions(
+        currentMessage,
+        (
+          <View style={{ opacity: isPending ? 0.5 : 1 }}>
+            {replyPreviewNode}
+            <View style={{ marginBottom, marginTop: currentMessage.replyTo ? 2 : marginTop }}>
+              <DocumentMessageBubble
+                attachments={normalizedCurrentAttachments}
+                caption={documentCaption}
+                failed={isFailed}
+                isMe={!isLeft}
+                onDownload={() => downloadDocumentAttachmentFromMessage(actionableMessage)}
+                onOpen={() => openDocumentActionMenu(actionableMessage)}
+                onRetry={() => retryFailedMessage(chatId, actionableMessage)}
+                onShare={() => shareDocumentAttachmentFromMessage(actionableMessage)}
+                pending={isPending}
+              />
+            </View>
+          </View>
+        ),
+      );
+    }
 
     return wrapWithMessageInteractions(
       currentMessage,
@@ -4710,6 +5317,7 @@ function Conversation({ navigation, route }) {
 
         <BottomModal
           close={() => setIsEventShareModalVisible(false)}
+          hideCloseButton
           isVisible={isEventShareModalVisible}
         >
           <View style={[Spaces.gap[12], { maxHeight: 560 }]}>
@@ -4755,6 +5363,70 @@ function Conversation({ navigation, route }) {
               onPress={handleOpenPublicEventPicker}
               title={t('conversation.shareEvent.sharePublicAction', 'Partager un événement public')}
               variant="SecondaryLight"
+            />
+          </View>
+        </BottomModal>
+
+        <BottomModal
+          close={closeDocumentActionMenu}
+          isVisible={Boolean(selectedDocumentActionMessage)}
+        >
+          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              {t('conversation.documentActions.title', 'Actions du document')}
+            </Text>
+            {selectedDocumentActionAttachment ? (
+              <View
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Spaces.paddingHorizontal[16],
+                  Spaces.paddingVertical[14],
+                  {
+                    backgroundColor: 'rgba(10, 28, 38, 0.94)',
+                    borderColor: 'rgba(1,179,244,0.28)',
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {getDocumentDisplayName(selectedDocumentActionAttachment)}
+                </Text>
+                {selectedDocumentActionPreview ? (
+                  <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+                    {selectedDocumentActionPreview}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+            <Button
+              disabled={!selectedDocumentActionAttachment}
+              onPress={handleOpenSelectedDocumentAttachment}
+              title={t('conversation.documentActions.open', 'Ouvrir')}
+              variant="SecondaryLight"
+            />
+            <Button
+              disabled={!selectedDocumentActionAttachment}
+              onPress={handleDownloadSelectedDocumentAttachment}
+              title={t('conversation.documentActions.download', 'Télécharger')}
+              variant="SecondaryLight"
+            />
+            <Button
+              disabled={!selectedDocumentActionAttachment}
+              onPress={handleShareSelectedDocumentAttachment}
+              title={t('conversation.documentActions.share', 'Partager')}
+              variant="SecondaryLight"
+            />
+            {selectedDocumentActionMessage?.failed ? (
+              <Button
+                onPress={handleRetrySelectedDocumentAttachment}
+                title={t('common.retry', 'Réessayer')}
+                variant="Secondary"
+              />
+            ) : null}
+            <Button
+              onPress={closeDocumentActionMenu}
+              title={t('common.close', 'Fermer')}
+              variant="PrimaryLight"
             />
           </View>
         </BottomModal>

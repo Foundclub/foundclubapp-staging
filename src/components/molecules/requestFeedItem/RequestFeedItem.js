@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -39,6 +39,7 @@ const getActionLabel = (action, t) => {
  *  item: import('@/domains/requests/requestMappers').RequestHubItem;
  *  isBusy?: boolean;
  *  onPrimaryPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
+ *  onRequesterPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onSecondaryPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  * }} props
  */
@@ -46,6 +47,7 @@ function RequestFeedItem({
   isBusy = false,
   item,
   onPrimaryPress,
+  onRequesterPress,
   onSecondaryPress,
 }) {
   const {
@@ -57,7 +59,83 @@ function RequestFeedItem({
   } = useTheme();
   const { t } = useTranslation();
   const requesterAvatarUrl = item?.meta?.requesterAvatarUrl || '';
+  const requesterId = item?.meta?.requesterId || '';
+  const requesterName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
+  const sourceTeamName = item?.meta?.sourceTeamName || '';
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
+  const isEventParticipationRequest = item?.type === 'event'
+    && Boolean(requesterId || requesterName || requesterAvatarUrl);
+  const canOpenRequesterProfile = Boolean(requesterId && onRequesterPress);
+  const renderRequesterWrapper = (children) => {
+    const wrapperStyle = [Alignments.row, Alignments.alignCenter, Spaces.gap[12]];
+
+    if (canOpenRequesterProfile) {
+      return (
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          onPress={() => onRequesterPress && onRequesterPress(item)}
+          style={wrapperStyle}
+        >
+          {children}
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={wrapperStyle}>
+        {children}
+      </View>
+    );
+  };
+
+  let bodyContent = (
+    <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+      {item?.subtitle}
+    </Text>
+  );
+
+  if (isMembershipRequest) {
+    bodyContent = renderRequesterWrapper(
+      <>
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={requesterAvatarUrl}
+          size={40}
+        />
+        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+          {item?.subtitle}
+        </Text>
+      </>,
+    );
+  } else if (isEventParticipationRequest) {
+    bodyContent = (
+      <View style={[Spaces.gap[10]]}>
+        {renderRequesterWrapper(
+          <>
+            <ProfileAvatar
+              enablePreview={false}
+              imageUrl={requesterAvatarUrl}
+              size={40}
+            />
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {requesterName}
+              </Text>
+              {sourceTeamName ? (
+                <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>
+                  {sourceTeamName}
+                </Text>
+              ) : null}
+            </View>
+          </>,
+        )}
+        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+          {item?.subtitle}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -72,7 +150,14 @@ function RequestFeedItem({
         },
       ]}
     >
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
+      <View
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween,
+          Spaces.gap[8],
+        ]}
+      >
         <Text numberOfLines={2} style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]}>
           {item?.title}
         </Text>
@@ -94,22 +179,26 @@ function RequestFeedItem({
         </View>
       </View>
 
-      {isMembershipRequest ? (
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
-          <ProfileAvatar
-            enablePreview={false}
-            imageUrl={requesterAvatarUrl}
-            size={40}
+      {bodyContent}
+
+      {canOpenRequesterProfile ? (
+        <View>
+          <Button
+            accessibilityHint={t(
+              'requestsHub.actions.viewProfileHint',
+              'Ouvre le profil du demandeur',
+            )}
+            accessibilityLabel={t(
+              'requestsHub.actions.viewProfile',
+              'Voir le profil',
+            )}
+            disabled={isBusy}
+            onPress={() => onRequesterPress && onRequesterPress(item)}
+            title={t('requestsHub.actions.viewProfile', 'Voir le profil')}
+            variant="Secondary"
           />
-          <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
-            {item?.subtitle}
-          </Text>
         </View>
-      ) : (
-        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
-          {item?.subtitle}
-        </Text>
-      )}
+      ) : null}
 
       <View style={[Alignments.row, Spaces.gap[12]]}>
         {item?.actions?.secondary ? (

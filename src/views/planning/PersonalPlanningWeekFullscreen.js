@@ -45,6 +45,8 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
+const PERSONAL_PLANNING_STALE_MS = 15 * 1000;
+
 const FULLSCREEN_SOURCE_TYPES = {
   club: 'club',
   clubShared: 'clubShared',
@@ -163,7 +165,10 @@ function PlanningWeekFullscreen() {
     sectionId,
     sourceType,
   }), [clubId, cmId, facilityId, planningRange, sectionId, sourceType]);
-  const { data, isFetching, isLoading } = useQuery(planningQuery);
+  const { data, isFetching, isLoading } = useQuery({
+    staleTime: PERSONAL_PLANNING_STALE_MS,
+    ...planningQuery,
+  });
 
   const events = normalizePlanningItems(data?.data || []);
   const weekLabel = useMemo(() => {

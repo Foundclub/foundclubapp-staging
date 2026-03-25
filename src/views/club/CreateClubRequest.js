@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -16,12 +17,15 @@ import Input from '@/components/molecules/input/Input';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { createClubRequest } from '@/services/clubRequest/clubRequestService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
 const defaultValues = {
   clubName: '',
+  holderEmail: '',
   holderFirstname: '',
   holderLastname: '',
   holderPhone: '',
@@ -29,10 +33,17 @@ const defaultValues = {
 
 const clubRequestSchema = Joi.object({
   clubName: Joi.string().required(),
+  holderEmail: Joi.string().allow(''),
   holderFirstname: Joi.string().required(),
   holderLastname: Joi.string().required(),
-  holderPhone: Joi.string().required(),
+  holderPhone: Joi.string().allow(''),
 });
+
+const isValidEmail = (value) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedValue);
+};
 
 /**
  * Club creation screen component. Allows users to create a new club.
@@ -42,6 +53,7 @@ const clubRequestSchema = Joi.object({
 function CreateClubRequest({ navigation }) {
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
+  const { userData } = useAuth();
 
   const {
     control,
@@ -71,7 +83,41 @@ function CreateClubRequest({ navigation }) {
    * @param {typeof defaultValues} data
    */
   const handleFormSubmit = (data) => {
-    createClubMutation.mutate(data);
+    const holderPhone = String(data?.holderPhone || '').trim();
+    const holderEmail = String(data?.holderEmail || '').trim().toLowerCase();
+
+    if (!holderPhone && !holderEmail) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'createClubRequest.alerts.contactRequired',
+          'Ajoutez au moins un numero de telephone ou un email pour le dirigeant.',
+        ),
+      );
+      return;
+    }
+
+    if (!isValidEmail(holderEmail)) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('createClubRequest.alerts.invalidEmail', 'L\'adresse email du dirigeant est invalide.'),
+      );
+      return;
+    }
+
+    createClubMutation.mutate({
+      ...data,
+      holderEmail,
+      holderPhone,
+      requestKind: 'club_creation',
+      searchContext: {
+        clubId: null,
+        role: String(userData?.role?.name || 'unknown').trim(),
+        screen: RouteNames.CreateClub,
+        target: 'manual_club_creation',
+      },
+      source: 'manual',
+    });
   };
 
   return (
@@ -167,6 +213,31 @@ function CreateClubRequest({ navigation }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   onBlur={onBlur}
                   onChange={onChange}
+                  ref={ref}
+                  value={value}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="holderEmail"
+              render={({
+                field: {
+                  name, onBlur, onChange, ref, value,
+                },
+              }) => (
+                <Input
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  enterKeyHint="done"
+                  error={getFieldError({ errors: formErrors, fieldName: name })}
+                  inputMode="email"
+                  keyboardType="email-address"
+                  label={t('createClubRequest.fields.holderEmail.label', 'Email du dirigeant')}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  onSubmitEditing={handleSubmit(handleFormSubmit)}
+                  placeholder={t('createClubRequest.fields.holderEmail.placeholder', 'Email du dirigeant')}
                   ref={ref}
                   value={value}
                 />

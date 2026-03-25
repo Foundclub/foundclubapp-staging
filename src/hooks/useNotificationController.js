@@ -67,14 +67,17 @@ const removeNotificationFromPages = (data, documentId) => {
  */
 const findNotificationByDocumentId = (data, documentId) => {
   if (!data?.pages || !documentId) return null;
-  for (const page of data.pages) {
-    const found = (page?.data || []).find((item) => item?.documentId === documentId);
-    if (found) return found;
-  }
-  return null;
+  return data.pages
+    .flatMap((page) => page?.data || [])
+    .find((item) => item?.documentId === documentId) || null;
 };
 
-export const useNotificationController = () => {
+export const useNotificationController = (options = {}) => {
+  const {
+    notificationsEnabled = true,
+    unreadCountEnabled = true,
+    unreadPollMs = UNREAD_POLL_MS,
+  } = options;
   const queryClient = useQueryClient();
   const lastFocusRefreshAtRef = useRef(0);
 
@@ -87,6 +90,7 @@ export const useNotificationController = () => {
     isLoading,
     refetch,
   } = useInfiniteQuery({
+    enabled: notificationsEnabled,
     getNextPageParam: (/** @type {NotificationPage | undefined} */ lastPage) => {
       if (!lastPage?.meta?.pagination) return undefined;
       const page = Number(lastPage.meta.pagination.page || 1);
@@ -108,9 +112,10 @@ export const useNotificationController = () => {
 
   // Fetch unread count
   const { data: unreadCountData } = useQuery({
+    enabled: unreadCountEnabled,
     queryFn: getUnreadCount,
     queryKey: UNREAD_COUNT_QUERY_KEY,
-    refetchInterval: UNREAD_POLL_MS,
+    refetchInterval: unreadCountEnabled ? unreadPollMs : false,
     refetchIntervalInBackground: false,
     refetchOnMount: false,
     staleTime: NOTIFICATIONS_STALE_MS,
@@ -124,15 +129,23 @@ export const useNotificationController = () => {
   // Refetch on focus
   useFocusEffect(
     useCallback(() => {
+      if (!notificationsEnabled && !unreadCountEnabled) {
+        return undefined;
+      }
+
       const now = Date.now();
       if (now - lastFocusRefreshAtRef.current < FOCUS_REFRESH_THROTTLE_MS) {
         return undefined;
       }
       lastFocusRefreshAtRef.current = now;
-      refetch();
-      queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      if (notificationsEnabled) {
+        refetch();
+      }
+      if (unreadCountEnabled) {
+        queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      }
       return undefined;
-    }, [refetch, queryClient]),
+    }, [notificationsEnabled, queryClient, refetch, unreadCountEnabled]),
   );
 
   // Mark as read mutation
@@ -276,8 +289,12 @@ export const useNotificationController = () => {
     notifications,
     refetch,
     refreshNotifications: () => {
-      refetch();
-      queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      if (notificationsEnabled) {
+        refetch();
+      }
+      if (unreadCountEnabled) {
+        queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      }
     },
     unreadCount: (/** @type {UnreadCountData | undefined} */ (unreadCountData))?.count || 0,
   };

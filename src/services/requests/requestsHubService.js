@@ -1,6 +1,7 @@
 import {
   buildRequestHubCounts,
   mapClubMembershipRequestToHubItem,
+  mapEventParticipationRequestToHubItem,
   mapEventValidationRequestToHubItem,
   mapFeaturedRequestToHubItem,
   mapTeamMembershipRequestToHubItem,
@@ -50,7 +51,7 @@ const fetchAllPages = async (fetchPage) => {
   let currentPage = 1;
   const collected = [];
 
-  while (true) {
+  for (;;) {
     // eslint-disable-next-line no-await-in-loop
     const response = await fetchPage(currentPage);
     const pageItems = Array.isArray(response?.data) ? response.data : [];
@@ -103,6 +104,14 @@ const fetchFeaturedRequests = async (cmId) => {
   const response = await getPendingFeaturedRequests(cmId);
   return Array.isArray(response?.data) ? response.data : [];
 };
+
+const getPendingParticipationRequests = (event) => (
+  Array.isArray(event?.participationRequests)
+    ? event.participationRequests.filter(
+      (request) => request?.participationStatus === 'pending' && request?.isActive !== false,
+    )
+    : []
+);
 
 /**
  * @param {Partial<RequestsHubContext>} rawContext
@@ -175,11 +184,20 @@ export const getRequestsHubData = async (rawContext = {}) => {
     }
 
     if (source.key === 'event') {
-      items.push(
-        ...entries
-          .filter((event) => event?.validationMode === 'manual')
-          .map(mapEventValidationRequestToHubItem),
-      );
+      entries
+        .filter((event) => event?.validationMode === 'manual')
+        .forEach((event) => {
+          const pendingRequests = getPendingParticipationRequests(event);
+
+          if (pendingRequests.length > 0) {
+            items.push(
+              ...pendingRequests.map((request) => mapEventParticipationRequestToHubItem(event, request)),
+            );
+            return;
+          }
+
+          items.push(mapEventValidationRequestToHubItem(event));
+        });
     }
 
     if (source.key === 'featured') {

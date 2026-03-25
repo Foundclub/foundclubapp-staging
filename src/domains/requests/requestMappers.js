@@ -40,7 +40,9 @@ const resolveRequesterName = (requester = {}) => {
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
 
   if (fullName) return fullName;
-  return normalizeString(requester?.displayName || requester?.username) || fallbackRequesterName;
+  return normalizeString(
+    requester?.displayName || requester?.username || requester?.phoneNumber || requester?.phone,
+  ) || fallbackRequesterName;
 };
 
 const toStableTime = (value) => {
@@ -85,7 +87,7 @@ const resolveRequesterAvatarUrl = (requester = {}) => {
  */
 export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(request?.team?.name) || 'Équipe';
+  const teamName = normalizeString(request?.team?.name) || 'Ãƒâ€°quipe';
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
@@ -105,7 +107,7 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     },
     status: 'pending',
     subtitle: `${requesterName} souhaite rejoindre ${teamName}.`,
-    title: 'Demande adhésion équipe',
+    title: 'Demande adhÃƒÂ©sion ÃƒÂ©quipe',
     type: 'team',
   };
 };
@@ -156,8 +158,8 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
  */
 export const mapEventValidationRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const teamName = normalizeString(event?.team?.name) || 'Équipe';
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Événement';
+  const teamName = normalizeString(event?.team?.name) || 'Ãƒâ€°quipe';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Ãƒâ€°vÃƒÂ©nement';
   const startDate = toIsoString(event?.date);
 
   return {
@@ -172,18 +174,53 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: 'Validation événement',
+    title: 'Validation ÃƒÂ©vÃƒÂ©nement',
     type: 'event',
   };
 };
 
 /**
  * @param {Record<string, any>} event
+ * @param {Record<string, any>} request
  * @returns {RequestHubItem}
  */
+export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) => {
+  const eventId = String(event?.documentId || event?.id || '');
+  const requestId = String(request?.documentId || request?.id || '');
+  const teamName = normalizeString(event?.team?.name) || 'Equipe';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
+  const requester = request?.requester || request?.user || {};
+  const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
+    || resolveRequesterAvatarUrl(request?.user || {});
+  const sourceTeamName = normalizeString(request?.sourceTeam?.name);
+
+  return {
+    actions: { primary: 'validate', secondary: 'reject' },
+    createdAt: toIsoString(request?.createdAt || request?.updatedAt || event?.createdAt || event?.date),
+    id: `event:${eventId}:participation:${requestId}`,
+    meta: {
+      eventId,
+      eventName,
+      participationRequestId: requestId,
+      raw: event,
+      rawParticipationRequest: request,
+      requesterAvatarUrl,
+      requesterId: normalizeString(requester?.documentId || request?.user?.documentId),
+      requesterName,
+      sourceTeamName,
+      teamName,
+    },
+    status: 'pending',
+    subtitle: `${eventName} - ${teamName}`,
+    title: 'Validation evenement',
+    type: 'event',
+  };
+};
+
 export const mapFeaturedRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Événement';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Ãƒâ€°vÃƒÂ©nement';
   const clubName = normalizeString(event?.team?.club?.name) || 'Club';
 
   return {
@@ -197,8 +234,8 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
       raw: event,
     },
     status: 'pending',
-    subtitle: `${clubName} demande une mise à la une.`,
-    title: `Mise à la une - ${eventName}`,
+    subtitle: `${clubName} demande une mise a la une.`,
+    title: `Mise a la une - ${eventName}`,
     type: 'featured',
   };
 };

@@ -1,5 +1,10 @@
 import { storage } from '@/store/appContext';
 
+import {
+  getDocumentPreviewText,
+  isDocumentAttachment,
+} from '@/utils/documentAttachment';
+
 /**
  * Get the storage key for the last read message timestamp of a chat
  * @param {string} chatId - The chat ID
@@ -74,15 +79,16 @@ export const getConversationName = ({
 export const getChatMessagePreview = (message) => {
   if (!message) return '';
 
-  const text = String(message?.message || '').trim();
-  if (text) return text;
+  const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+  const documentPreviewText = getDocumentPreviewText(attachments);
+  if (documentPreviewText) return documentPreviewText;
 
   const compositionType = String(message?.composition?.type || '').trim().toLowerCase();
   switch (compositionType) {
     case 'contact_share':
-      return 'Contact partagé';
+      return 'Contact partage';
     case 'event_share':
-      return 'Événement partage';
+      return 'Evenement partage';
     case 'location_share':
       return 'Localisation';
     case 'poll':
@@ -95,11 +101,15 @@ export const getChatMessagePreview = (message) => {
       break;
   }
 
-  if (Array.isArray(message?.attachments) && message.attachments.length > 0) {
-    const firstMime = String(message.attachments?.[0]?.mime || '').toLowerCase();
+  const text = String(message?.message || '').trim();
+  if (text) return text;
+
+  if (attachments.length > 0) {
+    const firstMime = String(attachments?.[0]?.mime || '').toLowerCase();
     if (firstMime.startsWith('image/')) return 'Photo';
     if (firstMime.startsWith('audio/')) return 'Note vocale';
-    return 'Pièce jointe';
+    if (attachments.some((attachment) => isDocumentAttachment(attachment))) return 'Fichier';
+    return 'Piece jointe';
   }
 
   return '';

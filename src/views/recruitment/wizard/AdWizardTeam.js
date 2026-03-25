@@ -25,6 +25,54 @@ import { useAdWizard } from './AdWizardContext';
 
 const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
 
+const getEntityLabel = (value) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    return String(value?.name || value?.label || '').trim();
+  }
+  return '';
+};
+
+const normalizeComparableText = (value) => String(value || '')
+  .trim()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]/g, '')
+  .toLowerCase();
+
+const formatSectionLabel = (value) => {
+  const normalized = normalizeComparableText(value);
+  if (!normalized) return '';
+  if (['homme', 'male', 'masculin', 'masculine'].includes(normalized)) return 'Masculin';
+  if (['female', 'feminin', 'feminine', 'femme'].includes(normalized)) return 'Féminin';
+  if (['mixed', 'mixte'].includes(normalized)) return 'Mixte';
+  return String(value || '').trim();
+};
+
+const getTeamIdentityKeys = (team) => {
+  const keys = [];
+  const documentId = String(team?.documentId || '').trim();
+  const numericId = String(team?.id || '').trim();
+
+  if (documentId) keys.push(`doc:${documentId}`);
+  if (numericId) keys.push(`id:${numericId}`);
+
+  const compositeKey = [
+    normalizeComparableText(team?.name),
+    normalizeComparableText(team?.club?.documentId || team?.club?.id || team?.club?.name),
+    normalizeComparableText(formatSectionLabel(getEntityLabel(team?.section))),
+    normalizeComparableText(getEntityLabel(team?.category)),
+    normalizeComparableText(getEntityLabel(team?.level)),
+  ].join('|');
+
+  if (compositeKey.replace(/\|/g, '')) {
+    keys.push(`meta:${compositeKey}`);
+  }
+
+  return keys;
+};
+
 const mergeTeamSummary = (previousTeam, nextTeam) => ({
   ...previousTeam,
   ...nextTeam,
@@ -36,17 +84,32 @@ const mergeTeamSummary = (previousTeam, nextTeam) => ({
 });
 
 const dedupeTeams = (teams) => {
-  const teamsByKey = new Map();
+  const uniqueTeams = [];
+  const teamIndexesByKey = new Map();
 
   teams.forEach((team) => {
-    const teamKey = getTeamKey(team);
-    if (!teamKey) return;
+    const identityKeys = getTeamIdentityKeys(team);
+    if (!identityKeys.length) return;
 
-    const previousTeam = teamsByKey.get(teamKey);
-    teamsByKey.set(teamKey, previousTeam ? mergeTeamSummary(previousTeam, team) : team);
+    const existingIndex = identityKeys.reduce((foundIndex, identityKey) => (
+      foundIndex !== null ? foundIndex : (teamIndexesByKey.has(identityKey) ? teamIndexesByKey.get(identityKey) : null)
+    ), null);
+
+    if (existingIndex !== null && existingIndex !== undefined) {
+      uniqueTeams[existingIndex] = mergeTeamSummary(uniqueTeams[existingIndex], team);
+      identityKeys.forEach((identityKey) => {
+        teamIndexesByKey.set(identityKey, existingIndex);
+      });
+      return;
+    }
+
+    const nextIndex = uniqueTeams.push(team) - 1;
+    identityKeys.forEach((identityKey) => {
+      teamIndexesByKey.set(identityKey, nextIndex);
+    });
   });
 
-  return Array.from(teamsByKey.values());
+  return uniqueTeams;
 };
 
 /**
@@ -159,11 +222,14 @@ function AdWizardTeam({ navigation, route }) {
 
           const clubName = team.club?.name || '';
           const clubLogo = team.club?.logo?.url;
+          const sectionLabel = formatSectionLabel(getEntityLabel(team.section));
+          const categoryLabel = getEntityLabel(team.category);
+          const levelLabel = getEntityLabel(team.level);
+          const sportLabel = getEntityLabel(team.activities?.[0]?.name);
           const teamMetaBadges = [
-            team.activities?.[0]?.name,
-            team.section?.name,
-            team.category?.name,
-            team.level?.name,
+            categoryLabel,
+            levelLabel,
+            sportLabel,
           ].filter(Boolean);
 
           return (
@@ -215,6 +281,16 @@ function AdWizardTeam({ navigation, route }) {
                 <Text style={[Fonts.h4, { color: Colors.neutral00, marginBottom: 4 }]}>
                   {team.name}
                 </Text>
+
+                {sectionLabel ? (
+                  <Text style={[Fonts.p2Bold, {
+                    color: isSelected ? Colors.primary300 || Colors.primary500 : Colors.neutral100,
+                    marginBottom: clubName ? 2 : 0,
+                  }]}
+                  >
+                    {sectionLabel}
+                  </Text>
+                ) : null}
 
                 {clubName && (
                   <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>

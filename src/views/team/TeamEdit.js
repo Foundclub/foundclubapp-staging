@@ -94,7 +94,7 @@ function TeamEdit({ navigation, route }) {
   const { data: sections } = useGetSections();
 
   const {
-    Alignments, Spaces,
+    Alignments, Colors, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
@@ -595,6 +595,8 @@ function TeamEdit({ navigation, route }) {
               disabled={teamMutation.isPending}
               isLoading={deleteTeamMutation.isPending}
               onPress={handleDeleteTeam}
+              style={{ backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 }}
+              textStyle={{ color: Colors.error500 }}
               title={t('teamEdit.actions.deleteTeam', 'Supprimer l\'équipe')}
               variant="Secondary"
             />

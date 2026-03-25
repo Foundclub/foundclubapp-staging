@@ -1,5 +1,7 @@
+/* eslint-disable no-underscore-dangle */
+
 import { useNavigation } from '@react-navigation/native';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -92,9 +94,15 @@ function AdminClaimList() {
             || [item?.holderFirstname, item?.holderLastname].filter(Boolean).join(' ').trim()
             || 'Utilisateur';
     const date = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
-    const subtitle = item?.__isAffiliationHelp
-      ? `Recherche: ${item?.clubName || 'non précisé'}`
-      : `Revendique: ${item?.club?.name || 'club inconnu'}`;
+
+    let subtitle = `Revendique: ${item?.club?.name || 'club inconnu'}`;
+    if (item?.__isAffiliationHelp) {
+      if (item?.requestKind === 'club_creation') {
+        subtitle = `Club a onboarder: ${item?.clubName || 'non precise'}`;
+      } else {
+        subtitle = `Recherche: ${item?.clubName || 'non precise'}`;
+      }
+    }
 
     return (
       <View
@@ -185,7 +193,7 @@ function AdminClaimList() {
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
             <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les revendications et demandes "introuvable" apparaîtront ici.
+              Les revendications et demandes superadmin apparaitront ici.
             </Text>
           </View>
         ) : null}

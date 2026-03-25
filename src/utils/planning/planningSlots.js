@@ -6,7 +6,12 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
+import {
+  getShortAddress,
+  normalizeLocationInput,
+} from '@/utils/location';
 import {
   getParisNowAsDeviceDate,
   toDeviceDateFromParisInstant,
@@ -17,6 +22,34 @@ const normalizeText = (value) => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase();
+
+const formatClock = (value) => String(value || '').split(':').slice(0, 2).join(':');
+
+const buildTimeLabel = (item) => {
+  const start = formatClock(item?.startTime);
+  const end = formatClock(item?.endTime);
+
+  if (start && end && start !== end) {
+    return `${start} - ${end}`;
+  }
+
+  return start || end || '';
+};
+
+const normalizeMatchContext = (matchContext) => {
+  if (!matchContext || typeof matchContext !== 'object') return null;
+
+  const homeAway = matchContext.homeAway === 'home' || matchContext.homeAway === 'away'
+    ? matchContext.homeAway
+    : null;
+
+  return {
+    homeAway,
+    isMatch: Boolean(matchContext.isMatch),
+    myTeamName: typeof matchContext.myTeamName === 'string' ? matchContext.myTeamName : null,
+    opponentName: typeof matchContext.opponentName === 'string' ? matchContext.opponentName : null,
+  };
+};
 
 export const toPlanningApiDate = (value) => format(value, 'yyyy-MM-dd');
 export const getPlanningDefaultDate = () => getParisNowAsDeviceDate();
@@ -68,6 +101,7 @@ const normalizeTeam = (team) => {
 
   return {
     documentId: team.documentId || team.id || null,
+    externalTeamName: team.externalTeamName || null,
     name: team.name || null,
   };
 };
@@ -105,6 +139,7 @@ export const normalizePlanningItem = (item) => {
   const typeLabel = getPlanningTypeLabel(item);
   const team = normalizeTeam(item.team);
   const facility = normalizeFacility(item.facility || item.installation);
+  const matchContext = normalizeMatchContext(item.matchContext);
 
   return {
     club: item.club
@@ -124,7 +159,9 @@ export const normalizePlanningItem = (item) => {
     kind: inferPlanningKind(item, typeLabel),
     league_match: Boolean(item.leagueMatch || item.league_match),
     leagueMatch: Boolean(item.leagueMatch || item.league_match),
+    location: item.location || null,
     locationDetails: item.locationDetails || null,
+    matchContext,
     name: item.name || item.eventName || null,
     participationStatus: typeof item.participationStatus === 'string'
       ? item.participationStatus.trim().toLowerCase()
@@ -178,4 +215,91 @@ export const getPlanningItemSecondaryLabel = (item) => {
   if (teamName && teamName !== title) return teamName;
   if (facilityName && facilityName !== title) return facilityName;
   return null;
+};
+
+export const getPlanningLocationLabel = (item) => {
+  const facilityName = String(item?.facility?.name || '').trim();
+  if (facilityName) return facilityName;
+
+  const shortAddress = getShortAddress(item?.locationDetails);
+  if (shortAddress) return shortAddress;
+
+  const normalizedLocation = normalizeLocationInput(item?.location || item?.raw?.location);
+  if (normalizedLocation?.label) return normalizedLocation.label;
+  if (normalizedLocation?.address) return normalizedLocation.address;
+  if (normalizedLocation?.city) return normalizedLocation.city;
+  return '';
+};
+
+export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) => {
+  const title = getPlanningDisplayTitle(item);
+  const typeLabel = getPlanningTypeLabel(item);
+  const teamName = String(item?.team?.name || '').trim();
+  const locationLabel = getPlanningLocationLabel(item);
+  const matchContext = normalizeMatchContext(item?.matchContext || item?.raw?.matchContext);
+  const planningDate = getPlanningItemDate(item);
+  const dateLabel = planningDate ? format(planningDate, 'EEE d MMM', { locale: fr }) : '';
+  const timeLabel = buildTimeLabel(item);
+  const secondaryDateTimeLabel = [dateLabel, timeLabel].filter(Boolean).join(' • ');
+  const compactDateTimeLabel = timeLabel || dateLabel || '';
+
+  const defaultPrimaryLabel = typeLabel || title || 'Evenement';
+  const defaultContextLabel = (() => {
+    const secondaryLabel = getPlanningItemSecondaryLabel(item);
+
+    if (secondaryLabel && secondaryLabel !== defaultPrimaryLabel) {
+      return secondaryLabel;
+    }
+
+    if (title && title !== defaultPrimaryLabel) {
+      return title;
+    }
+
+    return null;
+  })();
+  const defaultMetaLabel = [title]
+    .filter(
+      (value) => value
+        && value !== defaultPrimaryLabel
+        && value !== defaultContextLabel
+        && value !== locationLabel,
+    )
+    .join(' - ');
+
+  const focusedTeamName = String(matchContext?.myTeamName || teamName || '').trim();
+  if (profile === 'teamFocused' && focusedTeamName) {
+    const isMatchCard = Boolean(matchContext?.isMatch || item?.leagueMatch || item?.league_match);
+    const primaryLabel = isMatchCard
+      ? String(matchContext?.opponentName || focusedTeamName || title || 'Match').trim()
+      : focusedTeamName;
+    const quaternaryMetaLabel = [
+      typeLabel && typeLabel !== primaryLabel ? typeLabel : null,
+      focusedTeamName && isMatchCard && focusedTeamName !== primaryLabel ? focusedTeamName : null,
+      !isMatchCard && title && title !== primaryLabel ? title : null,
+    ].filter(Boolean).join(' · ');
+
+    return {
+      compactDateTimeLabel,
+      contextLabel: null,
+      isMatchCard,
+      isTeamFocusedCard: true,
+      primaryLabel,
+      quaternaryMetaLabel,
+      secondaryDateTimeLabel,
+      tertiaryLocationLabel: locationLabel,
+      typeLabel,
+    };
+  }
+
+  return {
+    compactDateTimeLabel,
+    contextLabel: defaultContextLabel,
+    isMatchCard: Boolean(matchContext?.isMatch || item?.leagueMatch || item?.league_match),
+    isTeamFocusedCard: false,
+    primaryLabel: defaultPrimaryLabel,
+    quaternaryMetaLabel: defaultMetaLabel,
+    secondaryDateTimeLabel,
+    tertiaryLocationLabel: locationLabel,
+    typeLabel,
+  };
 };

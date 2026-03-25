@@ -1,5 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 
 import useAuth from '@/domains/auth/useAuth';
 import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
@@ -25,6 +30,7 @@ import {
 } from '@/services/chat/chatService';
 
 import { createLogger } from '@/utils/logger/logger';
+import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import useSocket, { EVENTS } from '@/hooks/useSocket';
 
@@ -83,8 +89,24 @@ const getSenderEntityId = (message) => (
 const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
-  const { userData } = useAuth();
+  const { allMyTeams, userData } = useAuth();
   const pendingTimeoutsRef = useRef(new Map());
+  const safeTeamIds = useMemo(() => Array.from(
+    new Set(
+      (Array.isArray(allMyTeams) ? allMyTeams : [])
+        .map((team) => normalizeChatId(team?.documentId || ''))
+        .filter(Boolean),
+    ),
+  ), [allMyTeams]);
+  const chatsLookupFilters = useMemo(() => ({
+    currentUserClubId: userData?.club?.documentId,
+    currentUserId: userData?.documentId,
+    currentUserTeamIds: safeTeamIds,
+  }), [safeTeamIds, userData?.club?.documentId, userData?.documentId]);
+  const chatsLookupQueryKey = useMemo(
+    () => buildNormalizedQueryKey('chats', chatsLookupFilters),
+    [chatsLookupFilters],
+  );
 
   const clearPendingTimeout = useCallback((tempMessageId) => {
     const timeoutId = pendingTimeoutsRef.current.get(tempMessageId);
@@ -95,7 +117,7 @@ const useMessaging = (currentChatId) => {
   }, []);
 
   const markMessageState = useCallback((chatId, messageId, patch) => {
-    queryClient.setQueryData(['chat-messages', chatId], (oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (oldData) => {
       if (!oldData?.pages) return oldData;
       return {
         ...oldData,
@@ -118,6 +140,48 @@ const useMessaging = (currentChatId) => {
     pendingTimeoutsRef.current.clear();
   }, []);
 
+  const getCachedChatsForLookup = useCallback(() => {
+    const queryEntries = queryClient.getQueriesData({ queryKey: ['chats'] });
+    const seenChatIds = new Set();
+    const chats = [];
+
+    queryEntries.forEach(([, value]) => {
+      let pages = [];
+      if (Array.isArray(value?.pages)) {
+        pages = value.pages;
+      } else if (Array.isArray(value?.data)) {
+        pages = [{ data: value.data }];
+      }
+
+      pages.forEach((page) => {
+        const pageChats = Array.isArray(page?.data) ? page.data : [];
+        pageChats.forEach((chat) => {
+          const chatId = normalizeChatId(chat?.documentId || '');
+          if (!chatId || seenChatIds.has(chatId)) return;
+          seenChatIds.add(chatId);
+          chats.push(chat);
+        });
+      });
+    });
+
+    return chats;
+  }, [queryClient]);
+
+  const loadChatsForLookup = useCallback(async () => {
+    const cachedChats = getCachedChatsForLookup();
+    if (cachedChats.length > 0) {
+      return cachedChats;
+    }
+
+    const response = await queryClient.fetchQuery({
+      queryFn: () => getChats(1, 20, chatsLookupFilters),
+      queryKey: chatsLookupQueryKey,
+      staleTime: 15000,
+    });
+
+    return Array.isArray(response?.data) ? response.data : [];
+  }, [chatsLookupFilters, chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
+
   /**
    * Update the last read message timestamp for a chat
    * @param {string} chatId - The chat ID
@@ -134,8 +198,8 @@ const useMessaging = (currentChatId) => {
    */
   const handleNewMessage = useCallback((/** @type {ChatMessage} */ message) => {
     // Add new message to chat messages cache
-    queryClient.setQueryData(
-      ['chat-messages', message.chat?.documentId],
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', message.chat?.documentId] },
       (/** @type {any} */ oldData) => {
         const formattedMessage = {
           attachments: message.attachments, // Handle attachments
@@ -260,8 +324,8 @@ const useMessaging = (currentChatId) => {
     );
     if (!deletedMessageId) return;
 
-    queryClient.setQueryData(
-      ['chat-messages', chatDocumentId],
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', chatDocumentId] },
       (/** @type {any} */ oldData) => {
         if (!oldData || !oldData.pages) return oldData;
         return {
@@ -294,8 +358,8 @@ const useMessaging = (currentChatId) => {
     );
     if (!chatDocumentId || !messageDocumentId) return;
 
-    queryClient.setQueryData(
-      ['chat-messages', chatDocumentId],
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', chatDocumentId] },
       (oldData) => {
         if (!oldData?.pages) return oldData;
         return {
@@ -325,7 +389,7 @@ const useMessaging = (currentChatId) => {
     const readerId = normalizeChatId(payload?.userDocumentId);
     if (!chatDocumentId || !readerId) return;
 
-    queryClient.setQueryData(['chat-messages', chatDocumentId], (oldData) => {
+    queryClient.setQueriesData({ queryKey: ['chat-messages', chatDocumentId] }, (oldData) => {
       if (!oldData?.pages) return oldData;
 
       const lastSeenMessageId = normalizeChatId(payload?.lastSeenMessageId || '');
@@ -557,8 +621,8 @@ const useMessaging = (currentChatId) => {
       return null;
     }
 
-    // Optimistic Update
-    const tempId = `temp-${Date.now()}`;
+    const tempId = normalizeChatId(extraData?.optimisticMessageId || '') || `temp-${Date.now()}`;
+    const shouldSkipOptimistic = Boolean(extraData?.skipOptimistic && tempId);
     const optimisticMessage = {
       attachments: extraData.attachments || [],
       chat: { documentId: safeChatId },
@@ -576,34 +640,36 @@ const useMessaging = (currentChatId) => {
       sender: { documentId: 'me', ...extraData.sender }, // We need current user info here
     };
 
-    // Update Cache Immediately
-    queryClient.setQueryData(
-      ['chat-messages', safeChatId],
-      (/** @type {any} */ oldData) => {
-        // Safe check for valid pages structure, init if absolutely missing
-        if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
+    if (!shouldSkipOptimistic) {
+      // Update Cache Immediately
+      queryClient.setQueriesData(
+        { queryKey: ['chat-messages', safeChatId] },
+        (/** @type {any} */ oldData) => {
+          // Safe check for valid pages structure, init if absolutely missing
+          if (!oldData || !oldData.pages || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
+            return {
+              pageParams: [null],
+              pages: [{
+                data: [optimisticMessage],
+                meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+              }],
+            };
+          }
+
+          // Safe access to first page data
+          const firstPage = oldData.pages[0];
+          const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
+
           return {
-            pageParams: [null],
+            ...oldData,
             pages: [{
-              data: [optimisticMessage],
-              meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
-            }],
+              ...firstPage,
+              data: [optimisticMessage, ...firstPageData],
+            }, ...oldData.pages.slice(1)],
           };
-        }
-
-        // Safe access to first page data
-        const firstPage = oldData.pages[0];
-        const firstPageData = Array.isArray(firstPage?.data) ? firstPage.data : [];
-
-        return {
-          ...oldData,
-          pages: [{
-            ...firstPage,
-            data: [optimisticMessage, ...firstPageData],
-          }, ...oldData.pages.slice(1)],
-        };
-      },
-    );
+        },
+      );
+    }
 
     socket.emit(EVENTS.SEND_MESSAGE, {
       attachments: extraData.attachments,
@@ -659,30 +725,32 @@ const useMessaging = (currentChatId) => {
     }, 10000);
     pendingTimeoutsRef.current.set(tempId, timeoutId);
 
-    // Update chat list to show latest message AND unarchive
-    queryClient.setQueriesData(
-      { queryKey: ['chats'] },
-      (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
-        if (!oldData?.pages) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page) => ({
-            ...page,
-            data: Array.isArray(page.data) ? page.data.map((chat) => {
-              if (chat.documentId === safeChatId) {
-                return {
-                  ...chat,
-                  archivedBy: [], // Force unarchive
-                  messages: [optimisticMessage],
-                  updatedAt: optimisticMessage.createdAt,
-                };
-              }
-              return chat;
-            }) : [],
-          })),
-        };
-      },
-    );
+    if (!shouldSkipOptimistic) {
+      // Update chat list to show latest message AND unarchive
+      queryClient.setQueriesData(
+        { queryKey: ['chats'] },
+        (/** @type {{ pages?: Array<{ data: Chat[] }> }} */ oldData) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              data: Array.isArray(page.data) ? page.data.map((chat) => {
+                if (chat.documentId === safeChatId) {
+                  return {
+                    ...chat,
+                    archivedBy: [], // Force unarchive
+                    messages: [optimisticMessage],
+                    updatedAt: optimisticMessage.createdAt,
+                  };
+                }
+                return chat;
+              }) : [],
+            })),
+          };
+        },
+      );
+    }
     return tempId;
   }, [socket, isConnected, queryClient, markMessageState, clearPendingTimeout, handleNewMessage]);
 
@@ -745,7 +813,7 @@ const useMessaging = (currentChatId) => {
 
     if (failedMessageId) {
       clearPendingTimeout(failedMessageId);
-      queryClient.setQueryData(['chat-messages', safeChatId], (oldData) => {
+      queryClient.setQueriesData({ queryKey: ['chat-messages', safeChatId] }, (oldData) => {
         if (!oldData?.pages) return oldData;
         return {
           ...oldData,
@@ -799,13 +867,10 @@ const useMessaging = (currentChatId) => {
 
     // Check existing chats by ensuring we have the data
     try {
-      const chatsData = await queryClient.ensureQueryData({
-        queryFn: () => getChats(),
-        queryKey: ['chats'],
-      });
+      const chatsData = await loadChatsForLookup();
 
-      if (chatsData?.data) {
-        const existingChat = chatsData.data.find((/** @type {any} */ chat) => {
+      if (Array.isArray(chatsData)) {
+        const existingChat = chatsData.find((/** @type {any} */ chat) => {
           if (!chat?.participants || !Array.isArray(chat.participants)) return false;
 
           const chatParticipants = chat.participants
@@ -870,13 +935,10 @@ const useMessaging = (currentChatId) => {
   const startTeamChat = async (teamId) => {
     // Check existing chats by ensuring we have the data
     try {
-      const chatsData = await queryClient.ensureQueryData({
-        queryFn: () => getChats(),
-        queryKey: ['chats'],
-      });
+      const chatsData = await loadChatsForLookup();
 
-      if (chatsData?.data) {
-        const existingChat = chatsData.data.find(
+      if (Array.isArray(chatsData)) {
+        const existingChat = chatsData.find(
           (/** @type {any} */ chat) => chat.team?.documentId === teamId,
         );
         if (existingChat) return existingChat;
@@ -898,13 +960,10 @@ const useMessaging = (currentChatId) => {
   const startClubChat = async (clubId) => {
     // Check existing chats by ensuring we have the data
     try {
-      const chatsData = await queryClient.ensureQueryData({
-        queryFn: () => getChats(),
-        queryKey: ['chats'],
-      });
+      const chatsData = await loadChatsForLookup();
 
-      if (chatsData?.data) {
-        const existingChat = chatsData.data.find(
+      if (Array.isArray(chatsData)) {
+        const existingChat = chatsData.find(
           (/** @type {any} */ chat) => chat.club?.documentId === clubId,
         );
         if (existingChat) return existingChat;

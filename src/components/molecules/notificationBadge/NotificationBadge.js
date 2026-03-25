@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Image, StyleSheet, Text, TouchableOpacity, Vibration,
 } from 'react-native';
@@ -26,15 +26,18 @@ function NotificationBadge({
   withDefaultMargin = true,
 } = {}) {
   const { Colors, Images } = useTheme();
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+  const shouldLoadNotifications = !onPress && isPopupVisible;
   const {
+    isLoading,
     markAllAsRead,
     markAsRead,
     notifications,
-    refreshNotifications,
     unreadCount,
-  } = useNotificationController();
-  const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+  } = useNotificationController({
+    notificationsEnabled: shouldLoadNotifications,
+  });
 
   // Animation values
   const scaleValue = useRef(new Animated.Value(1)).current;
@@ -57,7 +60,7 @@ function NotificationBadge({
       ]).start();
     }
     setPrevUnreadCount(unreadCount);
-  }, [unreadCount, prevUnreadCount]);
+  }, [pulseValue, rotateValue, unreadCount, prevUnreadCount]);
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, { toValue: 0.85, useNativeDriver: true }).start();
@@ -139,12 +142,12 @@ function NotificationBadge({
 
       {!onPress && (
       <NotificationPopup
+        isLoading={isLoading}
         isVisible={isPopupVisible}
         notifications={notifications}
         onClose={handleClose}
         onMarkAllAsRead={markAllAsRead}
         onMarkAsRead={markAsRead}
-        onRefresh={refreshNotifications}
       />
       )}
     </>

@@ -425,7 +425,8 @@ export default {
     poll: {
       bubble: {
         anonymousBadge: 'Sondage anonyme',
-        detailsHint: 'Appuie sur une option pour voter, ou sur la carte pour les détails.',
+        detailsHint: 'Appuie sur une option pour voter ou modifier ton vote. '
+          + 'Appuie a nouveau pour le retirer, ou ouvre la carte pour les details.',
         questionFallback: 'Question',
         selectedBadge: 'Votre vote',
       },
@@ -446,7 +447,9 @@ export default {
         title: 'Détail du sondage',
         visibleVotes: 'Votes visibles',
         voteCount: 'Nombre de votes',
-        voteHint: 'Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage n est pas anonyme.',
+        voteHint: 'Selectionnez une option pour voter ou modifier votre vote. '
+          + 'Appuyez a nouveau dessus pour retirer votre vote. '
+          + "Le detail des votants s'affiche quand le sondage n'est pas anonyme.",
         votesByOption: 'Votes par option',
       },
       errors: {

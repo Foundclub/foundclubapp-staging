@@ -157,10 +157,11 @@ function EventDetails({ navigation, route }) {
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
-  const [lateModalMode, setLateModalMode] = useState(/** @type {'mark' | 'edit'} */ ('mark'));
+  const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
   const [lateModalUser, setLateModalUser] = useState(/** @type {User | null} */ (null));
   const [lateModalMinutes, setLateModalMinutes] = useState('0');
   const [lateModalArrivedAt, setLateModalArrivedAt] = useState(/** @type {string | null} */ (null));
+  const [lateModalNote, setLateModalNote] = useState('');
   const [elapsedSinceServerNowMs, setElapsedSinceServerNowMs] = useState(0);
   const [selfArrivalMarkedLocal, setSelfArrivalMarkedLocal] = useState(false);
 
@@ -330,16 +331,34 @@ function EventDetails({ navigation, route }) {
 
   const attendanceByUserId = useMemo(() => {
     const items = /** @type {any[]} */ (attendancePayload?.data?.items || []);
-    /** @type {Record<string, { arrivedAt?: string | null, lateMinutes?: number | null, source?: string | null, manualOverride?: boolean }>} */
+    /**
+     * @type {Record<string, {
+     * arrivedAt?: string | null,
+     * declaredAt?: string | null,
+     * declaredLateMinutes?: number | null,
+     * declarationSource?: string | null,
+     * lateMinutes?: number | null,
+     * source?: string | null,
+     * manualOverride?: boolean,
+     * note?: string | null,
+     * updatedAt?: string | null,
+     * updatedBy?: { firstname?: string, lastname?: string } | null
+      }>} */
     const map = {};
     items.forEach((item) => {
       const userDocId = item?.user?.documentId;
       if (!userDocId) return;
       map[userDocId] = {
         arrivedAt: item?.attendance?.arrivedAt || null,
+        declarationSource: item?.attendance?.declarationSource || null,
+        declaredAt: item?.attendance?.declaredAt || null,
+        declaredLateMinutes: item?.attendance?.declaredLateMinutes || 0,
         lateMinutes: item?.attendance?.lateMinutes || 0,
         manualOverride: Boolean(item?.attendance?.manualOverride),
+        note: item?.attendance?.note || null,
         source: item?.attendance?.source || null,
+        updatedAt: item?.attendance?.updatedAt || null,
+        updatedBy: item?.attendance?.updatedBy || null,
       };
     });
     return map;
@@ -353,21 +372,29 @@ function EventDetails({ navigation, route }) {
 
   const hasSelfArrived = Boolean(myAttendance?.arrivedAt || selfArrivalMarkedLocal);
 
-  const selfArrivalTiming = useMemo(() => {
+  const selfAttendanceStatus = useMemo(() => {
     if (!canSelfMarkArrival || !eventStartAt) {
-      return { isLate: false, message: '' };
+      return null;
     }
 
+    const eventStartMs = eventStartAt.getTime();
+    if (Number.isNaN(eventStartMs)) return null;
+
     if (myAttendance?.arrivedAt) {
-      const eventStartMs = eventStartAt.getTime();
       const arrivedAtMs = new Date(myAttendance.arrivedAt).getTime();
       const hasValidArrival = !Number.isNaN(arrivedAtMs);
 
       if (hasValidArrival && arrivedAtMs < eventStartMs) {
         const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
         return {
-          isLate: false,
-          message: `Arrivee enregistree : ${earlyMinutes} min en avance.`,
+          accentColor: Colors.success500 || '#22c55e',
+          badgeBackgroundColor: `${Colors.success500 || '#22c55e'}22`,
+          badgeLabel: 'Arrive en avance',
+          badgeTextColor: Colors.success500 || '#22c55e',
+          description: `${earlyMinutes} min avant le debut de l'evenement.`,
+          hasArrived: true,
+          primaryAction: null,
+          secondaryAction: null,
         };
       }
 
@@ -376,37 +403,99 @@ function EventDetails({ navigation, route }) {
         ? Math.max(1, Math.ceil((arrivedAtMs - eventStartMs) / 60000))
         : 0;
       const lateMinutes = Math.max(lateMinutesFromRecord, lateMinutesFromDiff);
+
       if (lateMinutes > 0) {
         return {
-          isLate: true,
-          message: `Arrivee enregistree : +${lateMinutes} min de retard.`,
+          accentColor: Colors.warning500 || '#f59e0b',
+          badgeBackgroundColor: `${Colors.warning500 || '#f59e0b'}22`,
+          badgeLabel: `Arrive +${lateMinutes} min`,
+          badgeTextColor: Colors.warning500 || '#f59e0b',
+          description: 'Votre arrivee reelle a bien ete enregistree.',
+          hasArrived: true,
+          primaryAction: null,
+          secondaryAction: null,
         };
       }
 
       return {
-        isLate: false,
-        message: 'Arrivee enregistree a l\'heure.',
+        accentColor: Colors.success500 || '#22c55e',
+        badgeBackgroundColor: `${Colors.success500 || '#22c55e'}22`,
+        badgeLabel: 'Arrive',
+        badgeTextColor: Colors.success500 || '#22c55e',
+        description: 'Vous etes signale present a l\'heure.',
+        hasArrived: true,
+        primaryAction: null,
+        secondaryAction: null,
       };
     }
 
-    const diffMs = eventStartAt.getTime() - serverNowMs;
+    const declaredLateMinutes = Math.max(0, Number(myAttendance?.declaredLateMinutes || 0));
+    if (declaredLateMinutes > 0) {
+      return {
+        accentColor: Colors.warning500 || '#f59e0b',
+        badgeBackgroundColor: `${Colors.warning500 || '#f59e0b'}22`,
+        badgeLabel: `Retard annonce +${declaredLateMinutes} min`,
+        badgeTextColor: Colors.warning500 || '#f59e0b',
+        description: 'Votre retard est signale. Confirmez votre arrivee une fois sur place.',
+        hasArrived: false,
+        primaryAction: {
+          title: 'Mettre a jour',
+          type: 'declare-late',
+        },
+        secondaryAction: {
+          title: 'Je suis arrive',
+          type: 'arrived',
+        },
+      };
+    }
+
+    const diffMs = eventStartMs - serverNowMs;
     if (diffMs > 0) {
       const minutesLeft = Math.max(1, Math.ceil(diffMs / 60000));
       return {
-        isLate: false,
-        message: `Il vous reste ${minutesLeft} min pour ne pas etre en retard.`,
+        accentColor: Colors.primary500,
+        badgeBackgroundColor: `${Colors.primary500}22`,
+        badgeLabel: 'Aucun signalement',
+        badgeTextColor: Colors.primary500,
+        description: `Il vous reste ${minutesLeft} min pour signaler votre arrivee ou votre retard.`,
+        hasArrived: false,
+        primaryAction: {
+          title: 'Je suis arrive',
+          type: 'arrived',
+        },
+        secondaryAction: {
+          title: 'Je serai en retard',
+          type: 'declare-late',
+        },
       };
     }
 
-    const lateMinutes = Math.max(1, Math.ceil(Math.abs(diffMs) / 60000));
+    const liveLateMinutes = Math.max(1, Math.ceil(Math.abs(diffMs) / 60000));
     return {
-      isLate: true,
-      message: `Vous avez ${lateMinutes} min de retard.`,
+      accentColor: Colors.error500 || '#f87171',
+      badgeBackgroundColor: `${Colors.error500 || '#f87171'}22`,
+      badgeLabel: `En attente +${liveLateMinutes} min`,
+      badgeTextColor: Colors.error500 || '#f87171',
+      description: 'Le debut est passe. Signalez votre retard ou confirmez votre arrivee.',
+      hasArrived: false,
+      primaryAction: {
+        title: 'Je suis arrive',
+        type: 'arrived',
+      },
+      secondaryAction: {
+        title: 'Je serai en retard',
+        type: 'declare-late',
+      },
     };
   }, [
     canSelfMarkArrival,
+    Colors.error500,
+    Colors.primary500,
+    Colors.success500,
+    Colors.warning500,
     eventStartAt,
     myAttendance?.arrivedAt,
+    myAttendance?.declaredLateMinutes,
     myAttendance?.lateMinutes,
     serverNowMs,
   ]);
@@ -1510,13 +1599,13 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.score?.waitingOfficial,
   ]);
 
-  const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'mark' | 'edit'} */ mode) => {
+  const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'coach_mark' | 'coach_edit'} */ mode) => {
     if (!targetUser?.documentId) return;
 
     const nowIso = new Date(serverNowMs).toISOString();
     const existing = attendanceByUserId[targetUser.documentId];
     const defaultArrival = existing?.arrivedAt || nowIso;
-    const defaultMinutes = mode === 'edit'
+    const defaultMinutes = mode === 'coach_edit'
       ? Number(existing?.lateMinutes || 0)
       : computeLateMinutes(nowIso);
 
@@ -1524,24 +1613,50 @@ function EventDetails({ navigation, route }) {
     setLateModalUser(targetUser);
     setLateModalArrivedAt(defaultArrival);
     setLateModalMinutes(String(Math.max(0, defaultMinutes)));
+    setLateModalNote(String(existing?.note || ''));
     setIsLateModalVisible(true);
   }, [attendanceByUserId, computeLateMinutes, serverNowMs]);
 
+  const openSelfLateModal = useCallback(() => {
+    const currentUser = userData
+      ? {
+        avatar: userData.avatar,
+        documentId: userData.documentId,
+        firstname: userData.firstname,
+        lastname: userData.lastname,
+      }
+      : null;
+    if (!currentUser?.documentId) return;
+
+    const existing = attendanceByUserId[currentUser.documentId];
+    setLateModalMode(existing?.declaredLateMinutes ? 'player_update' : 'player_declare');
+    setLateModalUser(currentUser);
+    setLateModalArrivedAt(null);
+    setLateModalMinutes(String(Math.max(0, Number(existing?.declaredLateMinutes || 10))));
+    setLateModalNote('');
+    setIsLateModalVisible(true);
+  }, [attendanceByUserId, userData]);
+
   const closeLateModal = useCallback(() => {
     setIsLateModalVisible(false);
-    setLateModalMode('mark');
+    setLateModalMode('coach_mark');
     setLateModalUser(null);
     setLateModalMinutes('0');
     setLateModalArrivedAt(null);
+    setLateModalNote('');
   }, []);
 
   const handleCoachMarkArrival = useCallback((/** @type {User | null | undefined} */ targetUser) => {
-    openCoachLateModal(targetUser, 'mark');
+    openCoachLateModal(targetUser, 'coach_mark');
   }, [openCoachLateModal]);
 
   const handleCoachEditLate = useCallback((/** @type {User | null | undefined} */ targetUser) => {
-    openCoachLateModal(targetUser, 'edit');
+    openCoachLateModal(targetUser, 'coach_edit');
   }, [openCoachLateModal]);
+
+  const handleSetLatePreset = useCallback((value) => {
+    setLateModalMinutes(String(value));
+  }, []);
 
   const handleSaveLateModal = useCallback(() => {
     if (!eventId || !lateModalUser?.documentId) return;
@@ -1552,12 +1667,26 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
+    if (lateModalMode === 'player_declare' || lateModalMode === 'player_update') {
+      /** @type {any} */ (mutations.selfLateMutation).mutate(
+        {
+          eventId,
+          payload: {
+            lateMinutes: Math.floor(parsedMinutes),
+          },
+        },
+        { onSuccess: () => closeLateModal() },
+      );
+      return;
+    }
+
     const payload = {
       arrivedAt: lateModalArrivedAt || new Date().toISOString(),
       lateMinutes: Math.floor(parsedMinutes),
+      note: lateModalNote.trim() || null,
     };
 
-    if (lateModalMode === 'mark') {
+    if (lateModalMode === 'coach_mark') {
       /** @type {any} */ (mutations.coachArrivalMutation).mutate(
         { eventId, payload, userId: lateModalUser.documentId },
         { onSuccess: () => closeLateModal() },
@@ -1575,11 +1704,21 @@ function EventDetails({ navigation, route }) {
     lateModalArrivedAt,
     lateModalMinutes,
     lateModalMode,
+    lateModalNote,
     lateModalUser?.documentId,
     mutations.coachArrivalMutation,
+    mutations.selfLateMutation,
     mutations.updateLateMinutesMutation,
     t,
   ]);
+
+  const handleResetLateModal = useCallback(() => {
+    if (!eventId || !lateModalUser?.documentId) return;
+    /** @type {any} */ (mutations.resetAttendanceMutation).mutate(
+      { eventId, userId: lateModalUser.documentId },
+      { onSuccess: () => closeLateModal() },
+    );
+  }, [closeLateModal, eventId, lateModalUser?.documentId, mutations.resetAttendanceMutation]);
 
   const handleSelfArrival = useCallback(() => {
     if (!eventId) {
@@ -1832,8 +1971,60 @@ function EventDetails({ navigation, route }) {
     });
   }, [fromEventCreation, navigation, renderHeaderLeft, renderHeaderRight]);
 
+  const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';
+  const isPlayerLateModal = lateModalMode === 'player_declare' || lateModalMode === 'player_update';
+  const lateModalAttendance = lateModalUser?.documentId
+    ? attendanceByUserId[lateModalUser.documentId]
+    : null;
+  const canResetLateModal = isCoachLateModal && Boolean(
+    lateModalAttendance?.arrivedAt
+    || lateModalAttendance?.declaredLateMinutes
+    || lateModalAttendance?.manualOverride
+    || lateModalAttendance?.note,
+  );
   const isLateModalLoading = mutations.coachArrivalMutation.isPending
-    || mutations.updateLateMinutesMutation.isPending;
+    || mutations.updateLateMinutesMutation.isPending
+    || mutations.selfLateMutation.isPending
+    || mutations.resetAttendanceMutation.isPending;
+  let lateModalTitle = 'Corriger le retard';
+  let lateModalDescription = 'Mettez a jour le retard reel ou reinitialisez le pointage.';
+  let lateModalPrimaryActionTitle = 'Enregistrer';
+
+  if (isPlayerLateModal) {
+    lateModalTitle = lateModalMode === 'player_update' ? 'Mettre a jour mon retard' : 'Je serai en retard';
+    lateModalDescription = 'Signalez votre retard avant d\'arriver. Vous confirmerez ensuite votre arrivee reelle.';
+    lateModalPrimaryActionTitle = 'Enregistrer mon retard';
+  } else if (lateModalMode === 'coach_mark') {
+    lateModalTitle = 'Pointer l\'arrivee';
+    lateModalDescription = 'Pointez l\'arrivee et ajustez le retard si necessaire.';
+    lateModalPrimaryActionTitle = 'Pointer l\'arrivee';
+  }
+
+  const renderSelfAttendanceActionButton = (action, variant = 'Primary') => {
+    if (!action) return null;
+
+    if (action.type === 'arrived') {
+      return (
+        <Button
+          disabled={mutations.selfArrivalMutation.isPending}
+          icon="check"
+          isLoading={mutations.selfArrivalMutation.isPending}
+          onPress={handleSelfArrival}
+          title={action.title}
+          variant={variant}
+        />
+      );
+    }
+
+    return (
+      <Button
+        disabled={isLateModalLoading}
+        onPress={openSelfLateModal}
+        title={action.title}
+        variant={variant}
+      />
+    );
+  };
 
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[32], Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
@@ -1865,6 +2056,56 @@ function EventDetails({ navigation, route }) {
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
               <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
+            </View>
+          ) : null}
+
+          {canSelfMarkArrival && selfAttendanceStatus ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivee</Text>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                  {
+                    borderColor: selfAttendanceStatus.accentColor,
+                  },
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Presence evenement</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>
+                      {selfAttendanceStatus.description}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      Spaces.paddingHorizontal[12],
+                      Spaces.paddingVertical[6],
+                      {
+                        backgroundColor: selfAttendanceStatus.badgeBackgroundColor,
+                        borderRadius: 999,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: selfAttendanceStatus.badgeTextColor }]}>
+                      {selfAttendanceStatus.badgeLabel}
+                    </Text>
+                  </View>
+                </View>
+
+                {!selfAttendanceStatus.hasArrived ? (
+                  <View style={[Spaces.gap[8]]}>
+                    {renderSelfAttendanceActionButton(selfAttendanceStatus.primaryAction, 'Primary')}
+                    {selfAttendanceStatus.secondaryAction ? (
+                      renderSelfAttendanceActionButton(selfAttendanceStatus.secondaryAction, 'SecondaryLight')
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
             </View>
           ) : null}
 
@@ -2061,31 +2302,6 @@ function EventDetails({ navigation, route }) {
       </ScrollView>
 
       <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
-        {canSelfMarkArrival && selfArrivalTiming.message ? (
-          <Text
-            style={[
-              Fonts.p2,
-              Fonts.textCenter,
-              selfArrivalTiming.isLate
-                ? { color: Colors.error500 || '#f87171' }
-                : Fonts.primary100,
-            ]}
-          >
-            {selfArrivalTiming.message}
-          </Text>
-        ) : null}
-        {canSelfMarkArrival && (
-          <Button
-            disabled={mutations.selfArrivalMutation.isPending}
-            icon="check"
-            isLoading={mutations.selfArrivalMutation.isPending}
-            onPress={handleSelfArrival}
-            title={hasSelfArrived
-              ? t('eventDetails.actions.selfArrivalDone', 'Arrivee enregistree')
-              : t('eventDetails.actions.selfArrival', 'Je suis arrive')}
-            variant="SecondaryLight"
-          />
-        )}
         {userData?.role?.name === USER_ROLES.superAdmin && event?.featuredRequestStatus === 'pending'
           ? (
             <View style={[Alignments.row, Spaces.gap[16]]}>
@@ -2242,14 +2458,10 @@ function EventDetails({ navigation, route }) {
                 >
                   <View style={[Spaces.gap[4]]}>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                      {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markTitle', 'Confirmer l\'arrivee')
-                        : t('eventDetails.late.editTitle', 'Modifier le retard')}
+                      {lateModalTitle}
                     </Text>
                     <Text style={[Fonts.p2, Fonts.neutral200]}>
-                      {lateModalMode === 'mark'
-                        ? t('eventDetails.late.markDescription', 'Confirmez l\'arrivee puis ajustez le retard si besoin.')
-                        : t('eventDetails.late.editDescription', 'Modifiez le retard en minutes pour ce participant.')}
+                      {lateModalDescription}
                     </Text>
                   </View>
 
@@ -2263,7 +2475,7 @@ function EventDetails({ navigation, route }) {
                     ]}
                   >
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {t('eventDetails.late.playerLabel', 'Joueur')}
+                      {isPlayerLateModal ? 'Participant' : t('eventDetails.late.playerLabel', 'Joueur')}
                     </Text>
                     <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
                       {lateModalUser
@@ -2276,6 +2488,17 @@ function EventDetails({ navigation, route }) {
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                       {t('eventDetails.late.minutesLabel', 'Minutes de retard')}
                     </Text>
+                    <View style={[Alignments.row, Spaces.gap[8]]}>
+                      {[5, 10, 15].map((preset) => (
+                        <Button
+                          key={`late-preset-${preset}`}
+                          onPress={() => handleSetLatePreset(preset)}
+                          size="sm"
+                          title={`+${preset}`}
+                          variant="SecondaryLight"
+                        />
+                      ))}
+                    </View>
                     <TextInput
                       keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
                       maxLength={3}
@@ -2293,9 +2516,44 @@ function EventDetails({ navigation, route }) {
                       value={lateModalMinutes}
                     />
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {t('eventDetails.late.helper', '0 = a l\'heure. Ajustez la valeur si necessaire avant validation.')}
+                      {isPlayerLateModal
+                        ? 'Annoncez le retard estime. Vous confirmerez ensuite votre arrivee reelle.'
+                        : t('eventDetails.late.helper', '0 = a l\'heure. Ajustez la valeur si necessaire avant validation.')}
                     </Text>
                   </View>
+
+                  {isCoachLateModal ? (
+                    <View style={[Spaces.gap[8]]}>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                        Note staff
+                      </Text>
+                      <TextInput
+                        multiline
+                        onChangeText={setLateModalNote}
+                        placeholder="Facultatif"
+                        placeholderTextColor={Colors.neutral400}
+                        selectionColor={Colors.primary500}
+                        style={[
+                          ApplicationStyle.input,
+                          ApplicationStyle.backgroundColor.neutral800,
+                          ApplicationStyle.borderColor.neutral600,
+                          Fonts.p2,
+                          Fonts.neutral00,
+                          { minHeight: 88, textAlignVertical: 'top' },
+                        ]}
+                        value={lateModalNote}
+                      />
+                    </View>
+                  ) : null}
+
+                  {canResetLateModal ? (
+                    <Button
+                      disabled={isLateModalLoading}
+                      onPress={handleResetLateModal}
+                      title="Reinitialiser le pointage"
+                      variant="Secondary"
+                    />
+                  ) : null}
 
                   <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[8]]}>
                     <Button
@@ -2309,7 +2567,7 @@ function EventDetails({ navigation, route }) {
                       isLoading={isLateModalLoading}
                       onPress={handleSaveLateModal}
                       style={{ flex: 1 }}
-                      title={t('common.confirm', 'Enregistrer')}
+                      title={lateModalPrimaryActionTitle}
                       variant="Primary"
                     />
                   </View>

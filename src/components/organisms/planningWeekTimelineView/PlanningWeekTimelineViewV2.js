@@ -32,9 +32,9 @@ import {
   getPlanningDefaultDate,
   getPlanningDisplayTitle,
   getPlanningItemDate,
-  getPlanningItemSecondaryLabel,
   getPlanningTypeLabel,
   isPlanningPendingParticipation,
+  resolvePlanningCardContent,
 } from '@/utils/planning/planningSlots';
 
 const DEFAULT_HOUR_HEIGHT = 60;
@@ -90,31 +90,10 @@ const getEventColor = (event, fallbackColor) => {
   return PALETTE[Math.abs(hash) % PALETTE.length] || fallbackColor;
 };
 
-const getPrimaryPlanningLabel = (event) => (
-  getPlanningTypeLabel(event)
-  || getPlanningDisplayTitle(event)
-  || 'Événement'
-);
-
-const getPlanningContextLabel = (event) => {
-  const primaryLabel = getPrimaryPlanningLabel(event);
-  const secondaryLabel = getPlanningItemSecondaryLabel(event);
-  const titleLabel = getPlanningDisplayTitle(event);
-
-  if (secondaryLabel && secondaryLabel !== primaryLabel) {
-    return secondaryLabel;
-  }
-
-  if (titleLabel && titleLabel !== primaryLabel) {
-    return titleLabel;
-  }
-
-  return null;
-};
-
 /**
  *
  * @param root0
+ * @param root0.cardDisplayProfile
  * @param root0.currentDate
  * @param root0.events
  * @param root0.mode
@@ -128,6 +107,7 @@ const getPlanningContextLabel = (event) => {
  * @param root0.showUntimedSection
  */
 function PlanningWeekTimelineView({
+  cardDisplayProfile = 'default',
   compactFullscreen = false,
   currentDate: propDate,
   events = [],
@@ -451,6 +431,177 @@ function PlanningWeekTimelineView({
     onSummaryPress?.();
   };
 
+  const renderOverflowCard = (event, left, width) => (
+    <TouchableOpacity
+      key={event.key}
+      onPress={() => handleOverflowPress(event.dayDate)}
+      style={[styles.overflowCard, {
+        borderColor: 'rgba(255,255,255,0.12)',
+        height: Math.max(event.height - 2, minEventHeight),
+        left: `${left}%`,
+        top: event.top + 1,
+        width: `${width}%`,
+      }]}
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontSize: mode === 'week' ? 10 : 11 }]}>
+        +
+        {event.count}
+      </Text>
+      <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>plus</Text>
+    </TouchableOpacity>
+  );
+
+  const renderTimedEventCard = (event, left, width) => {
+    const color = event.color || Colors.primary500;
+    const isPendingParticipation = isPlanningPendingParticipation(event);
+    const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
+    const isCompact = event.height < 62;
+    const isTiny = event.height < 38;
+    const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
+    const {
+      compactDateTimeLabel,
+      contextLabel,
+      isTeamFocusedCard,
+      primaryLabel,
+      quaternaryMetaLabel,
+      secondaryDateTimeLabel,
+      tertiaryLocationLabel,
+      typeLabel,
+    } = cardContent;
+    let secondaryLabel = contextLabel;
+    if (isTeamFocusedCard) {
+      secondaryLabel = isTiny ? compactDateTimeLabel : secondaryDateTimeLabel;
+    }
+    let tertiaryLabel = null;
+    if (isTeamFocusedCard) {
+      tertiaryLabel = tertiaryLocationLabel;
+    } else if (
+      tertiaryLocationLabel
+      && tertiaryLocationLabel !== contextLabel
+      && tertiaryLocationLabel !== primaryLabel
+    ) {
+      tertiaryLabel = tertiaryLocationLabel;
+    }
+
+    const metaLabel = quaternaryMetaLabel;
+    const showPrimaryAsType = !isTeamFocusedCard && Boolean(typeLabel);
+    const canShowSecondary = isTeamFocusedCard
+      ? Boolean(secondaryLabel)
+      : !isCompact && Boolean(secondaryLabel);
+    const canShowTertiary = isTeamFocusedCard
+      ? !isTiny && Boolean(tertiaryLabel)
+      : !isCompact && Boolean(tertiaryLabel);
+    const canShowMeta = !isCompact && Boolean(metaLabel);
+
+    let primaryFontSize = 10;
+    if (mode === 'week') {
+      if (isTeamFocusedCard) {
+        primaryFontSize = isTiny ? 9 : 10;
+      } else {
+        primaryFontSize = isTiny ? 8 : 9;
+      }
+    } else if (isTiny) {
+      primaryFontSize = 9;
+    }
+
+    let secondaryFontSize = mode === 'week' ? 10 : 11;
+    if (isTeamFocusedCard) {
+      secondaryFontSize = mode === 'week' ? 8 : 9;
+    }
+    let primaryMinimumFontScale = 0.8;
+    let primaryPaddingHorizontal = mode === 'week' ? 4 : 6;
+    if (showPrimaryAsType) {
+      primaryMinimumFontScale = mode === 'week' ? 0.52 : 0.58;
+      primaryPaddingHorizontal = mode === 'week' ? 3 : 4;
+    } else if (isTeamFocusedCard) {
+      primaryMinimumFontScale = mode === 'week' ? 0.72 : 0.78;
+    }
+
+    return (
+      <TouchableOpacity
+        key={event.documentId || `${event.dayIndex}-${event.top}`}
+        onPress={() => onEventPress?.(event)}
+        style={[styles.eventCard, {
+          backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
+          borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
+          borderLeftColor: cardAccentColor,
+          borderLeftWidth: mode === 'week' ? 2 : 3,
+          height: event.height - 2,
+          justifyContent: isTiny ? 'center' : 'flex-start',
+          left: `${left}%`,
+          paddingHorizontal: primaryPaddingHorizontal,
+          paddingVertical: mode === 'week' ? 4 : 6,
+          top: event.top + 1,
+          width: `${width}%`,
+        }]}
+      >
+        {isPendingParticipation ? (
+          <View style={[styles.pendingCornerDot, { backgroundColor: pendingAccentColor }]} />
+        ) : null}
+        {isPendingParticipation ? (
+          <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
+            <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
+              {isTiny ? 'Attente' : 'En attente'}
+            </Text>
+          </View>
+        ) : null}
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={primaryMinimumFontScale}
+          numberOfLines={1}
+          style={[Fonts.p3Bold, {
+            color: showPrimaryAsType ? color : Colors.neutral00,
+            flexShrink: 1,
+            fontSize: primaryFontSize,
+            letterSpacing: showPrimaryAsType ? 0.35 : 0,
+            lineHeight: primaryFontSize + 2,
+            marginBottom: canShowSecondary ? 2 : 0,
+          }]}
+        >
+          {primaryLabel}
+        </Text>
+        {canShowSecondary ? (
+          <Text
+            numberOfLines={1}
+            style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
+              color: Colors.neutral00,
+              fontSize: secondaryFontSize,
+              lineHeight: mode === 'week' ? secondaryFontSize + 2 : secondaryFontSize + 2,
+              marginTop: 2,
+            }]}
+          >
+            {secondaryLabel}
+          </Text>
+        ) : null}
+        {canShowTertiary ? (
+          <Text
+            numberOfLines={1}
+            style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
+              color: isTeamFocusedCard ? Colors.neutral200 : color,
+              fontSize: 9,
+              marginTop: 2,
+            }]}
+          >
+            {tertiaryLabel}
+          </Text>
+        ) : null}
+        {!isTiny && !isTeamFocusedCard ? (
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
+            {`${formatClock(event.startTime)} - ${formatClock(event.endTime)}`}
+          </Text>
+        ) : null}
+        {canShowMeta ? (
+          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
+            {metaLabel}
+          </Text>
+        ) : null}
+        {event.leagueMatch || event.league_match ? (
+          <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
   const flingLeft = Gesture.Fling().direction(Directions.LEFT).onEnd(() => {
     'worklet';
 
@@ -504,10 +655,16 @@ function PlanningWeekTimelineView({
           <View key={getDayKey(weekDays[index])} style={styles.untimedDayColumn}>
             {dayEvents.slice(0, 2).map((event) => {
               const color = getEventColor(event, Colors.primary500);
-              const primaryLabel = getPrimaryPlanningLabel(event);
-              const contextLabel = getPlanningContextLabel(event);
+              const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
+              const { isTeamFocusedCard, primaryLabel } = cardContent;
+              const contextLabel = isTeamFocusedCard
+                ? (cardContent.tertiaryLocationLabel || cardContent.quaternaryMetaLabel || null)
+                : cardContent.contextLabel;
               const isPendingParticipation = isPlanningPendingParticipation(event);
               const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
+              const textTransform = isTeamFocusedCard || !getPlanningTypeLabel(event)
+                ? 'none'
+                : 'uppercase';
               return (
                 <TouchableOpacity
                   key={event.documentId || `${getDayKey(weekDays[index])}-${getPlanningDisplayTitle(event)}`}
@@ -525,11 +682,11 @@ function PlanningWeekTimelineView({
                   <Text
                     numberOfLines={1}
                     style={[Fonts.p4Bold, {
-                      color,
+                      color: isTeamFocusedCard ? Colors.neutral00 : color,
                       fontSize: 10,
-                      letterSpacing: 0.35,
+                      letterSpacing: isTeamFocusedCard ? 0 : 0.35,
                       marginBottom: contextLabel ? 2 : 0,
-                      textTransform: getPlanningTypeLabel(event) ? 'uppercase' : 'none',
+                      textTransform,
                     }]}
                   >
                     {primaryLabel}
@@ -755,133 +912,10 @@ function PlanningWeekTimelineView({
                         const width = (event.widthPercent || 100) * (dayWidth / 100);
 
                         if (event.displayType === 'overflow') {
-                          return (
-                            <TouchableOpacity
-                              key={event.key}
-                              onPress={() => handleOverflowPress(event.dayDate)}
-                              style={[styles.overflowCard, {
-                                borderColor: 'rgba(255,255,255,0.12)',
-                                height: Math.max(event.height - 2, minEventHeight),
-                                left: `${left}%`,
-                                top: event.top + 1,
-                                width: `${width}%`,
-                              }]}
-                            >
-                              <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontSize: mode === 'week' ? 10 : 11 }]}>
-                                +
-                                {event.count}
-                              </Text>
-                              <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>plus</Text>
-                            </TouchableOpacity>
-                          );
+                          return renderOverflowCard(event, left, width);
                         }
 
-                        const color = event.color || Colors.primary500;
-                        const isPendingParticipation = isPlanningPendingParticipation(event);
-                        const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
-                        const isCompact = event.height < 62;
-                        const isTiny = event.height < 38;
-                        const title = getPlanningDisplayTitle(event);
-                        const primaryLabel = getPrimaryPlanningLabel(event);
-                        const contextLabel = getPlanningContextLabel(event);
-                        const facilityName = event.facility?.name || null;
-                        const typeLabel = getPlanningTypeLabel(event);
-                        const metaLabel = [title]
-                          .filter((value) => value && value !== primaryLabel && value !== contextLabel && value !== facilityName)
-                          .join(' - ');
-                        const timeLabel = `${formatClock(event.startTime)} - ${formatClock(event.endTime)}`;
-                        let primaryFontSize = 10;
-                        if (mode === 'week') {
-                          primaryFontSize = isTiny ? 8 : 9;
-                        } else if (isTiny) {
-                          primaryFontSize = 9;
-                        }
-
-                        const contextFontSize = mode === 'week' ? 10 : 11;
-                        const showPrimaryAsType = Boolean(typeLabel);
-                        let primaryMinimumFontScale = 0.8;
-                        let primaryPaddingHorizontal = mode === 'week' ? 4 : 6;
-                        if (showPrimaryAsType) {
-                          primaryMinimumFontScale = mode === 'week' ? 0.52 : 0.58;
-                          primaryPaddingHorizontal = mode === 'week' ? 3 : 4;
-                        }
-
-                        return (
-                          <TouchableOpacity
-                            key={event.documentId || `${event.dayIndex}-${event.top}`}
-                            onPress={() => onEventPress?.(event)}
-                            style={[styles.eventCard, {
-                              backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
-                              borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
-                              borderLeftColor: cardAccentColor,
-                              borderLeftWidth: mode === 'week' ? 2 : 3,
-                              height: event.height - 2,
-                              justifyContent: isTiny ? 'center' : 'flex-start',
-                              left: `${left}%`,
-                              paddingHorizontal: primaryPaddingHorizontal,
-                              paddingVertical: mode === 'week' ? 4 : 6,
-                              top: event.top + 1,
-                              width: `${width}%`,
-                            }]}
-                          >
-                            {isPendingParticipation ? (
-                              <View style={[styles.pendingCornerDot, { backgroundColor: pendingAccentColor }]} />
-                            ) : null}
-                            {isPendingParticipation ? (
-                              <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
-                                <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
-                                  {isTiny ? 'Attente' : 'En attente'}
-                                </Text>
-                              </View>
-                            ) : null}
-                            <Text
-                              adjustsFontSizeToFit={showPrimaryAsType}
-                              minimumFontScale={primaryMinimumFontScale}
-                              numberOfLines={1}
-                              style={[Fonts.p3Bold, {
-                                color: showPrimaryAsType ? color : Colors.neutral00,
-                                flexShrink: 1,
-                                fontSize: primaryFontSize,
-                                letterSpacing: showPrimaryAsType ? 0.35 : 0,
-                                lineHeight: primaryFontSize + 2,
-                                marginBottom: !isCompact && contextLabel ? 2 : 0,
-                              }]}
-                            >
-                              {primaryLabel}
-                            </Text>
-                            {!isCompact && contextLabel ? (
-                              <Text
-                                numberOfLines={mode === 'week' ? 1 : 2}
-                                style={[Fonts.p3Bold, {
-                                  color: Colors.neutral00,
-                                  fontSize: contextFontSize,
-                                  lineHeight: mode === 'week' ? 12 : 13,
-                                  marginTop: 2,
-                                }]}
-                              >
-                                {contextLabel}
-                              </Text>
-                            ) : null}
-                            {!isCompact && facilityName && facilityName !== contextLabel && facilityName !== primaryLabel ? (
-                              <Text numberOfLines={1} style={[Fonts.p3Bold, { color, fontSize: 9, marginTop: 2 }]}>
-                                {facilityName}
-                              </Text>
-                            ) : null}
-                            {!isTiny ? (
-                              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
-                                {timeLabel}
-                              </Text>
-                            ) : null}
-                            {!isCompact && metaLabel ? (
-                              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
-                                {metaLabel}
-                              </Text>
-                            ) : null}
-                            {event.leagueMatch || event.league_match ? (
-                              <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
-                            ) : null}
-                          </TouchableOpacity>
-                        );
+                        return renderTimedEventCard(event, left, width);
                       })}
                     </View>
                   </View>
@@ -949,133 +983,10 @@ function PlanningWeekTimelineView({
                       const width = (event.widthPercent || 100) * (dayWidth / 100);
 
                       if (event.displayType === 'overflow') {
-                        return (
-                          <TouchableOpacity
-                            key={event.key}
-                            onPress={() => handleOverflowPress(event.dayDate)}
-                            style={[styles.overflowCard, {
-                              borderColor: 'rgba(255,255,255,0.12)',
-                              height: Math.max(event.height - 2, minEventHeight),
-                              left: `${left}%`,
-                              top: event.top + 1,
-                              width: `${width}%`,
-                            }]}
-                          >
-                            <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontSize: mode === 'week' ? 10 : 11 }]}>
-                              +
-                              {event.count}
-                            </Text>
-                            <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>plus</Text>
-                          </TouchableOpacity>
-                        );
+                        return renderOverflowCard(event, left, width);
                       }
 
-                      const color = event.color || Colors.primary500;
-                      const isPendingParticipation = isPlanningPendingParticipation(event);
-                      const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
-                      const isCompact = event.height < 62;
-                      const isTiny = event.height < 38;
-                      const title = getPlanningDisplayTitle(event);
-                      const primaryLabel = getPrimaryPlanningLabel(event);
-                      const contextLabel = getPlanningContextLabel(event);
-                      const facilityName = event.facility?.name || null;
-                      const typeLabel = getPlanningTypeLabel(event);
-                      const metaLabel = [title]
-                        .filter((value) => value && value !== primaryLabel && value !== contextLabel && value !== facilityName)
-                        .join(' - ');
-                      const timeLabel = `${formatClock(event.startTime)} - ${formatClock(event.endTime)}`;
-                      let primaryFontSize = 10;
-                      if (mode === 'week') {
-                        primaryFontSize = isTiny ? 8 : 9;
-                      } else if (isTiny) {
-                        primaryFontSize = 9;
-                      }
-
-                      const contextFontSize = mode === 'week' ? 10 : 11;
-                      const showPrimaryAsType = Boolean(typeLabel);
-                      let primaryMinimumFontScale = 0.8;
-                      let primaryPaddingHorizontal = mode === 'week' ? 4 : 6;
-                      if (showPrimaryAsType) {
-                        primaryMinimumFontScale = mode === 'week' ? 0.52 : 0.58;
-                        primaryPaddingHorizontal = mode === 'week' ? 3 : 4;
-                      }
-
-                      return (
-                        <TouchableOpacity
-                          key={event.documentId || `${event.dayIndex}-${event.top}`}
-                          onPress={() => onEventPress?.(event)}
-                          style={[styles.eventCard, {
-                            backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
-                            borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
-                            borderLeftColor: cardAccentColor,
-                            borderLeftWidth: mode === 'week' ? 2 : 3,
-                            height: event.height - 2,
-                            justifyContent: isTiny ? 'center' : 'flex-start',
-                            left: `${left}%`,
-                            paddingHorizontal: primaryPaddingHorizontal,
-                            paddingVertical: mode === 'week' ? 4 : 6,
-                            top: event.top + 1,
-                            width: `${width}%`,
-                          }]}
-                        >
-                          {isPendingParticipation ? (
-                            <View style={[styles.pendingCornerDot, { backgroundColor: pendingAccentColor }]} />
-                          ) : null}
-                          {isPendingParticipation ? (
-                            <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
-                              <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
-                                {isTiny ? 'Attente' : 'En attente'}
-                              </Text>
-                            </View>
-                          ) : null}
-                          <Text
-                            adjustsFontSizeToFit={showPrimaryAsType}
-                            minimumFontScale={primaryMinimumFontScale}
-                            numberOfLines={1}
-                            style={[Fonts.p3Bold, {
-                              color: showPrimaryAsType ? color : Colors.neutral00,
-                              flexShrink: 1,
-                              fontSize: primaryFontSize,
-                              letterSpacing: showPrimaryAsType ? 0.35 : 0,
-                              lineHeight: primaryFontSize + 2,
-                              marginBottom: !isCompact && contextLabel ? 2 : 0,
-                            }]}
-                          >
-                            {primaryLabel}
-                          </Text>
-                          {!isCompact && contextLabel ? (
-                            <Text
-                              numberOfLines={mode === 'week' ? 1 : 2}
-                              style={[Fonts.p3Bold, {
-                                color: Colors.neutral00,
-                                fontSize: contextFontSize,
-                                lineHeight: mode === 'week' ? 12 : 13,
-                                marginTop: 2,
-                              }]}
-                            >
-                              {contextLabel}
-                            </Text>
-                          ) : null}
-                          {!isCompact && facilityName && facilityName !== contextLabel && facilityName !== primaryLabel ? (
-                            <Text numberOfLines={1} style={[Fonts.p3Bold, { color, fontSize: 9, marginTop: 2 }]}>
-                              {facilityName}
-                            </Text>
-                          ) : null}
-                          {!isTiny ? (
-                            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
-                              {timeLabel}
-                            </Text>
-                          ) : null}
-                          {!isCompact && metaLabel ? (
-                            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
-                              {metaLabel}
-                            </Text>
-                          ) : null}
-                          {event.leagueMatch || event.league_match ? (
-                            <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
-                          ) : null}
-                        </TouchableOpacity>
-                      );
+                      return renderTimedEventCard(event, left, width);
                     })}
                   </View>
                 </View>

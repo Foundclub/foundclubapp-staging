@@ -206,7 +206,7 @@ function ParticipantEventList({ navigation }) {
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item.reservation)}
             onPress={() => navigation.navigate(RouteNames.ReservationDetails, { reservationId: item.reservation.documentId })}
-            useFacilityAccentColor={item?.reservation?.sessionStatus === 'open'}
+            useFacilityAccentColor
           />
         </View>
       );
@@ -214,13 +214,14 @@ function ParticipantEventList({ navigation }) {
     return (
       <View style={[Spaces.marginBottom[16]]}>
         <EventCardNew
+          displayProfile="teamFocused"
           item={item}
           onDecline={() => {}}
           onJoin={() => handleJoinEvent(item)}
           onLogin={() => {}}
           onParticipate={() => handleParticipateToEvent(item)}
           onPress={() => handleEventPress(item)}
-          useFacilityAccentColor={item?.sessionStatus === 'open'}
+          useFacilityAccentColor
         />
       </View>
     );

@@ -9,6 +9,8 @@ import {
   getChats,
 } from './chatService';
 
+const CHATS_STALE_MS = 10 * 1000;
+
 const hasFunction = (value) => typeof value === 'function';
 
 const useFallbackGetChats = (params, options) => useInfiniteQuery({
@@ -30,6 +32,7 @@ const useFallbackGetChats = (params, options) => useInfiniteQuery({
     currentUserTeamIds: params?.currentUserTeamIds,
     pageSize: params?.pageSize,
   }),
+  staleTime: CHATS_STALE_MS,
   ...options,
 });
 

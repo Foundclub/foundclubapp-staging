@@ -370,7 +370,9 @@ function PollDetails({ navigation, route }) {
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {t(
               'conversation.poll.details.voteHint',
-              "Sélectionnez une option pour voter. Le détail des votants est affiché quand le sondage n'est pas anonyme.",
+              'Selectionnez une option pour voter ou modifier votre vote. '
+                + 'Appuyez a nouveau dessus pour retirer votre vote. '
+                + 'Le detail des votants s\'affiche quand le sondage n\'est pas anonyme.',
             )}
           </Text>
         </View>

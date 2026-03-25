@@ -34,6 +34,70 @@ const chatSchema = Joi.object({
   updatedAt: Joi.date().required(),
 }).required();
 
+const chatListPopulate = {
+  archivedBy: {
+    fields: ['documentId'],
+  },
+  club: {
+    fields: ['documentId', 'name'],
+    populate: {
+      logo: {
+        fields: ['url'],
+      },
+    },
+  },
+  league_match: {
+    fields: ['documentId', 'date'],
+  },
+  messages: {
+    fields: ['documentId', 'message', 'createdAt', 'updatedAt', 'composition'],
+    populate: {
+      attachments: {
+        fields: ['documentId', 'mime', 'name'],
+      },
+      sender: {
+        fields: ['documentId', 'firstname', 'lastname'],
+        populate: {
+          avatar: {
+            fields: ['url'],
+          },
+        },
+      },
+    },
+    sort: ['createdAt:desc'],
+  },
+  multisportClub: {
+    fields: ['documentId', 'name'],
+    populate: {
+      admins: {
+        fields: ['documentId'],
+      },
+      logo: {
+        fields: ['url'],
+      },
+    },
+  },
+  participants: {
+    fields: ['documentId', 'firstname', 'lastname'],
+    populate: {
+      avatar: {
+        fields: ['url'],
+      },
+    },
+  },
+  pinnedBy: {
+    fields: ['documentId'],
+  },
+  team: {
+    fields: ['documentId', 'name'],
+    populate: {
+      logo: {
+        fields: ['url'],
+      },
+    },
+  },
+};
+
 /**
  * Get all chats for the current user
  * @param {number} [page] - The page number
@@ -110,45 +174,7 @@ export const getChats = async (page = 1, pageSize = 20, filters = {}) => {
         page,
         pageSize,
       },
-      populate: {
-        archivedBy: {
-          populate: ['avatar'],
-        },
-        club: {
-          populate: {
-            logo: true,
-          },
-        },
-        groupAdmins: {
-          populate: ['avatar'],
-        },
-        league_match: {
-          populate: {
-            team_a: { populate: ['captain'] },
-            team_b: { populate: ['captain'] },
-            winner: true,
-          },
-        },
-        messages: {
-          populate: ['sender', 'sender.avatar', 'attachments', 'replyTo', 'replyTo.sender', 'replyTo.sender.avatar', 'event'],
-          sort: ['createdAt:desc'],
-        },
-        multisportClub: {
-          populate: {
-            admins: true,
-            logo: true,
-          },
-        },
-        participants: {
-          populate: ['avatar'],
-        },
-        pinnedBy: {
-          populate: ['avatar'],
-        },
-        team: {
-          populate: true,
-        },
-      },
+      populate: chatListPopulate,
       sort: [
         // Sort by type: league_match(l) > ...
         // We will rely on updatedAt primarily, but could prioritize types if needed.

@@ -33,6 +33,10 @@ import {
   updateEvent,
 } from '@/services/event/eventService';
 import {
+  acceptEventParticipation,
+  declineEventParticipation,
+} from '@/services/eventParticipation/eventParticipationService';
+import {
   getRequestsHubQueryKey,
   useRequestsHubData,
 } from '@/services/requests/requestsHubQueries';
@@ -118,12 +122,14 @@ function RequestsHub({ navigation, route }) {
     }
   }, [activeFilter, availableFilters]);
 
-  const items = requestsQuery?.data?.items || [];
-  const filteredItems = useMemo(() => (
-    activeFilter === 'all'
-      ? items
-      : items.filter((item) => item?.type === activeFilter)
-  ), [activeFilter, items]);
+  const filteredItems = useMemo(() => {
+    const items = requestsQuery?.data?.items || [];
+    return (
+      activeFilter === 'all'
+        ? items
+        : items.filter((item) => item?.type === activeFilter)
+    );
+  }, [activeFilter, requestsQuery?.data?.items]);
 
   const invalidateRequests = useCallback(async () => {
     await Promise.all([
@@ -188,6 +194,7 @@ function RequestsHub({ navigation, route }) {
 
     const requestId = item?.meta?.requestId;
     const eventId = item?.meta?.eventId;
+    const participationRequestId = item?.meta?.participationRequestId;
 
     if (action === 'reject' && item?.type === 'event' && actionPosition === 'secondary') {
       Alert.alert(
@@ -244,15 +251,22 @@ function RequestsHub({ navigation, route }) {
       }
 
       if (item?.type === 'event') {
-        if (!eventId) throw new Error('Missing event identifier');
-        if (action === 'validate') {
-          await updateEvent({
-            documentId: eventId,
-            eventData: { validationMode: 'auto' },
-          });
-        }
-        if (action === 'reject') {
-          await cancelEvent({ documentId: eventId });
+        if (participationRequestId) {
+          if (action === 'validate') await acceptEventParticipation(participationRequestId);
+          if (action === 'reject') {
+            await declineEventParticipation({ requestId: participationRequestId });
+          }
+        } else {
+          if (!eventId) throw new Error('Missing event identifier');
+          if (action === 'validate') {
+            await updateEvent({
+              documentId: eventId,
+              eventData: { validationMode: 'auto' },
+            });
+          }
+          if (action === 'reject') {
+            await cancelEvent({ documentId: eventId });
+          }
         }
       }
 
@@ -280,6 +294,21 @@ function RequestsHub({ navigation, route }) {
   const handleSecondaryPress = useCallback((item) => {
     runItemAction(item, 'secondary');
   }, [runItemAction]);
+
+  const handleRequesterPress = useCallback((item) => {
+    const requesterId = String(item?.meta?.requesterId || '').trim();
+    if (!requesterId) return;
+
+    if (requesterId === userData?.documentId) {
+      navigation.navigate(RouteNames.ProfileStack);
+      return;
+    }
+
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId: requesterId },
+      screen: RouteNames.UserDetails,
+    });
+  }, [navigation, userData?.documentId]);
 
   const filterChips = useMemo(() => ([
     { key: 'all', label: t('requestsHub.filters.all', 'Toutes') },
@@ -361,9 +390,9 @@ function RequestsHub({ navigation, route }) {
 
         {sourceErrors.length > 0 ? (
           <View style={[Spaces.gap[8], Spaces.marginBottom[8]]}>
-            {sourceErrors.map((sourceError, index) => (
+            {sourceErrors.map((sourceError) => (
               <View
-                key={`${sourceError?.source || 'source'}-${index}`}
+                key={`${sourceError?.source || 'source'}-${sourceError?.message || 'message'}`}
                 style={[
                   ApplicationStyle.borderRadius12,
                   ApplicationStyle.borderWidth1,
@@ -421,6 +450,7 @@ function RequestsHub({ navigation, route }) {
               isBusy={processingItemId === item.id}
               item={item}
               onPrimaryPress={handlePrimaryPress}
+              onRequesterPress={handleRequesterPress}
               onSecondaryPress={handleSecondaryPress}
             />
           )}
@@ -432,4 +462,3 @@ function RequestsHub({ navigation, route }) {
 }
 
 export default RequestsHub;
-

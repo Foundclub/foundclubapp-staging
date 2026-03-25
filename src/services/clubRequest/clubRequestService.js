@@ -13,7 +13,7 @@ export const createClubRequest = async (clubRequestData) => {
 };
 
 /**
- * Get pending "not found" affiliation help requests.
+ * Get pending affiliation help requests.
  * @param {object} [params]
  * @returns {Promise<any>}
  */
@@ -26,7 +26,7 @@ export const getPendingAffiliationHelpRequests = async (params = {}) => {
           { state: 'pending' },
         ],
         requestKind: {
-          $in: ['club_not_found', 'team_not_found'],
+          $in: ['club_not_found', 'team_not_found', 'club_creation'],
         },
       },
       pagination: {
@@ -34,6 +34,53 @@ export const getPendingAffiliationHelpRequests = async (params = {}) => {
         pageSize: 100,
       },
       populate: ['user', 'user.avatar', 'processedBy'],
+      sort: ['createdAt:desc'],
+      ...params,
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Get pending club onboarding requests created by the current user.
+ * @param {string} userDocumentId
+ * @param {object} [params]
+ * @returns {Promise<any>}
+ */
+export const getPendingClubCreationRequests = async (userDocumentId, params = {}) => {
+  if (!userDocumentId) {
+    return {
+      data: [],
+      meta: {
+        pagination: {
+          page: 1,
+          pageCount: 0,
+          pageSize: 100,
+          total: 0,
+        },
+      },
+    };
+  }
+
+  const response = await client.get('/club-requests', {
+    params: {
+      filters: {
+        $or: [
+          { state: 'En attente' },
+          { state: 'pending' },
+        ],
+        requestKind: 'club_creation',
+        user: {
+          documentId: {
+            $eq: userDocumentId,
+          },
+        },
+      },
+      pagination: {
+        page: 1,
+        pageSize: 100,
+      },
+      populate: ['user', 'processedBy'],
       sort: ['createdAt:desc'],
       ...params,
     },

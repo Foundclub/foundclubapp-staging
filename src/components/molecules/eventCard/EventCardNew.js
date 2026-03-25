@@ -77,11 +77,50 @@ const getDisplayLabel = (value) => {
   return '';
 };
 
+const normalizeComparableText = (value) => String(value || '')
+  .trim()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]/g, '')
+  .toLowerCase();
+
+const stripMatchPrefix = (value) => String(value || '')
+  .trim()
+  .replace(/^vs\b\.?\s*/i, '')
+  .trim();
+
 const formatEventDateLabel = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const formatted = format(date, 'EEEE dd MMMM', { locale: fr });
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
+
+const resolveTeamFocusedPrimaryTitle = ({
+  clubName,
+  eventTitle,
+  invitedTeamNames,
+  isMatchEvent,
+  teamName,
+  matchContext,
+}) => {
+  if (!isMatchEvent) {
+    return teamName || clubName || 'Equipe';
+  }
+
+  const opponentFromContext = stripMatchPrefix(matchContext?.opponentName);
+  if (opponentFromContext) return opponentFromContext;
+
+  const opponentFromTitle = stripMatchPrefix(eventTitle);
+  if (opponentFromTitle) return opponentFromTitle;
+
+  const normalizedTeamName = normalizeComparableText(teamName);
+  const invitedOpponent = invitedTeamNames.find((name) => (
+    normalizeComparableText(name) && normalizeComparableText(name) !== normalizedTeamName
+  ));
+  if (invitedOpponent) return invitedOpponent;
+
+  return teamName || clubName || 'Match';
 };
 
 /**
@@ -98,10 +137,12 @@ const formatEventDateLabel = (value) => {
  * @param props.onValidate
  * @param props.showClubHeader
  * @param {'default' | 'share'} [props.mode]
+ * @param {'default' | 'teamFocused'} [props.displayProfile]
  * @param {boolean} [props.useFacilityAccentColor]
  */
 function EventCardNew({
   actionLabel,
+  displayProfile = 'default',
   item,
   mode = 'default',
   onDecline,
@@ -173,6 +214,7 @@ function EventCardNew({
   const isReservation = typeName.toLowerCase().includes('réservation') || typeName.toLowerCase().includes('reservation');
   const isMatchEvent = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('match');
   const isShareMode = mode === 'share';
+  const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
   const backgroundImage = getBackgroundImage(typeName);
   const headerTitle = getHeaderTitle(typeName);
 
@@ -212,19 +254,35 @@ function EventCardNew({
   const matchDisplay = isMatchEvent ? resolveExternalMatchDisplay(item) : { contextLabel: '', title: '' };
   const eventTitle = matchDisplay.title;
   const matchContextLabel = matchDisplay.contextLabel;
-  const primaryTitle = isMatchEvent && eventTitle ? eventTitle : clubName;
-  const secondaryTitle = isMatchEvent && eventTitle
+  const defaultPrimaryTitle = isMatchEvent && eventTitle ? eventTitle : clubName;
+  const defaultSecondaryTitle = isMatchEvent && eventTitle
     ? [matchContextLabel, clubName].filter(Boolean).join(' - ')
     : teamName;
   const teamSection = getDisplayLabel(item?.team?.section || item?.section);
   const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
   const teamCategory = getDisplayLabel(item?.team?.category || item?.category);
-  const teamMetaLine = [teamCategory, teamSection, teamLevel]
+  const defaultTeamMetaLine = [teamCategory, teamSection, teamLevel]
     .filter((value) => !!value)
     .join(' • ');
   const invitedTeamNames = (item?.invitedTeams || [])
     .map((team) => team?.name)
     .filter(Boolean);
+  const primaryTitle = isTeamFocusedCard
+    ? resolveTeamFocusedPrimaryTitle({
+      clubName,
+      eventTitle,
+      invitedTeamNames,
+      isMatchEvent,
+      matchContext: item?.matchContext,
+      teamName,
+    })
+    : defaultPrimaryTitle;
+  const secondaryTitle = isTeamFocusedCard
+    ? [teamName, clubName].filter((value, index, values) => value && values.indexOf(value) === index).join(' • ')
+    : defaultSecondaryTitle;
+  const teamMetaLine = isTeamFocusedCard
+    ? [typeName, matchContextLabel, defaultTeamMetaLine].filter(Boolean).join(' • ')
+    : defaultTeamMetaLine;
   const facilityAccentColor = useFacilityAccentColor ? resolveFacilityPlanningColor(item?.facility) : null;
   const containerAccentStyle = facilityAccentColor ? { borderColor: facilityAccentColor } : null;
   const headerAccentStyle = facilityAccentColor
@@ -236,6 +294,39 @@ function EventCardNew({
   const headerTextAccentStyle = facilityAccentColor ? { color: facilityAccentColor } : null;
   const locationIconAccentStyle = facilityAccentColor ? { tintColor: facilityAccentColor } : null;
   const locationTextAccentStyle = facilityAccentColor ? { color: facilityAccentColor } : null;
+  const resolvedHeaderContainerStyle = [
+    styles.headerContainer,
+    isTeamFocusedCard && styles.headerContainerTeamFocused,
+    headerAccentStyle,
+  ];
+  const resolvedHeaderTextStyle = [
+    styles.headerText,
+    isTeamFocusedCard && styles.headerTextTeamFocused,
+    headerTextAccentStyle,
+  ];
+  const resolvedPrimaryTitleStyle = [
+    styles.clubName,
+    showClubHeader && { fontSize: 20 },
+    isTeamFocusedCard && styles.clubNameTeamFocused,
+  ];
+  const resolvedSecondaryTitleStyle = [
+    styles.category,
+    isTeamFocusedCard && styles.categoryTeamFocused,
+  ];
+  const resolvedTeamMetaStyle = [
+    styles.teamMetaInline,
+    isTeamFocusedCard && styles.teamMetaInlineTeamFocused,
+  ];
+  const resolvedLocationTextStyle = [
+    styles.detailText,
+    locationTextAccentStyle,
+    isTeamFocusedCard && styles.detailTextTeamFocused,
+  ];
+  const resolvedSportTextStyle = [
+    styles.detailText,
+    isTeamFocusedCard && styles.detailTextSecondary,
+    { flex: 0, textAlign: 'right' },
+  ];
 
   return (
 
@@ -262,8 +353,8 @@ function EventCardNew({
         {/* Non-interactive Content (Passes touches to background Pressable) */}
         <View pointerEvents="none">
           {/* Header: Event Type or Sport for Réservations */}
-          <View style={[styles.headerContainer, headerAccentStyle]}>
-            <Text style={[styles.headerText, headerTextAccentStyle]}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
+          <View style={resolvedHeaderContainerStyle}>
+            <Text style={resolvedHeaderTextStyle}>{isReservation ? sportName.toUpperCase() : headerTitle}</Text>
           </View>
 
           {/* Club / Team Info */}
@@ -286,10 +377,10 @@ function EventCardNew({
               )}
             </View>
             <View style={styles.clubTextContainer}>
-              <Text numberOfLines={2} style={[styles.clubName, showClubHeader && { fontSize: 20 }]}>{primaryTitle}</Text>
-              {secondaryTitle ? <Text numberOfLines={1} style={styles.category}>{secondaryTitle}</Text> : null}
-              {teamMetaLine ? <Text numberOfLines={1} style={styles.teamMetaInline}>{teamMetaLine}</Text> : null}
-              {invitedTeamNames.length > 0 ? (
+              <Text numberOfLines={2} style={resolvedPrimaryTitleStyle}>{primaryTitle}</Text>
+              {secondaryTitle ? <Text numberOfLines={1} style={resolvedSecondaryTitleStyle}>{secondaryTitle}</Text> : null}
+              {teamMetaLine ? <Text numberOfLines={1} style={resolvedTeamMetaStyle}>{teamMetaLine}</Text> : null}
+              {!isTeamFocusedCard && invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={styles.invitedTeamsInline}>
                   {`équipes invitées: ${invitedTeamNames.join(', ')}`}
                 </Text>
@@ -415,13 +506,13 @@ function EventCardNew({
                 <View style={styles.detailRow}>
                     <View style={styles.detailLeft}>
                       <Image source={Images.pin} style={[styles.icon, locationIconAccentStyle]} />
-                      <Text numberOfLines={1} style={[styles.detailText, locationTextAccentStyle]}>
+                      <Text numberOfLines={1} style={resolvedLocationTextStyle}>
                             {locationText || 'Lieu non défini'}
                           </Text>
                     </View>
                     <View style={styles.detailRightStandard}>
                       <Image source={Images.running} style={styles.icon} />
-                      <Text numberOfLines={1} style={[styles.detailText, { flex: 0, textAlign: 'right' }]}>{sportName}</Text>
+                      <Text numberOfLines={1} style={resolvedSportTextStyle}>{sportName}</Text>
                     </View>
                   </View>
               </>
@@ -538,6 +629,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  categoryTeamFocused: {
+    color: '#D6E7EE',
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 12,
+    marginTop: 3,
+  },
   clubInfoContainer: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -552,6 +649,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800', // Extra bold
     lineHeight: 22,
+  },
+  clubNameTeamFocused: {
+    fontSize: 20,
+    lineHeight: 24,
   },
   clubTextContainer: {
     flex: 1,
@@ -651,6 +752,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Medium',
     fontSize: 13,
   },
+  detailTextSecondary: {
+    color: '#A9C6D5',
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 12,
+  },
+  detailTextTeamFocused: {
+    color: '#EAF8FF',
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 14,
+  },
   fillGaugeBackground: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 4,
@@ -681,12 +792,24 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     width: '100%',
   },
+  headerContainerTeamFocused: {
+    backgroundColor: 'rgba(1, 179, 244, 0.07)',
+    borderColor: 'rgba(1, 179, 244, 0.55)',
+    borderWidth: 1,
+    marginBottom: 8,
+    paddingVertical: 2,
+  },
   headerText: {
     color: '#01B3F4',
     fontFamily: 'Montserrat-Bold',
     fontSize: 13,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+  },
+  headerTextTeamFocused: {
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 11,
+    letterSpacing: 0.4,
   },
   icon: {
     height: 16,
@@ -759,6 +882,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
     fontSize: 12,
     marginTop: 3,
+  },
+  teamMetaInlineTeamFocused: {
+    color: '#A9C6D5',
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 11,
+    marginTop: 4,
   },
   timeText: {
     color: '#EAF8FF',

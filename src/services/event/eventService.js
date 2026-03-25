@@ -163,6 +163,7 @@ export const getEventById = async (documentId) => {
         'participations.avatar',
         'participationRequests.user',
         'participationRequests.user.avatar',
+        'participationRequests.sourceTeam',
         'facility',
         'team.club.sponsor',
         'team.club.sponsor.logo'],
@@ -601,6 +602,7 @@ export const getEvents = async (params = {}) => {
       'invitedTeams',
       'participationRequests.user',
       'participationRequests.user.avatar',
+      'participationRequests.sourceTeam',
       'league_match',
     ],
     sort: params.sort ? [params.sort] : ['date:asc'], // Sort by date ascending
@@ -813,11 +815,22 @@ export const getEventAttendance = async (eventId) => {
 /**
  * Player self-arrival on an event.
  * @param {string} eventId
- * @param {{ arrivedAt?: string, note?: string }} [payload]
+ * @param {{ note?: string }} [payload]
  * @returns {Promise<any>}
  */
 export const markSelfArrival = async (eventId, payload = {}) => {
   const response = await client.post(`/events/${eventId}/attendance/self-arrival`, payload);
+  return response.data;
+};
+
+/**
+ * Player declares or updates a late arrival before arriving.
+ * @param {string} eventId
+ * @param {{ lateMinutes: number }} payload
+ * @returns {Promise<any>}
+ */
+export const declareSelfLate = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/attendance/self-late`, payload);
   return response.data;
 };
 
@@ -842,6 +855,17 @@ export const markCoachArrival = async (eventId, userId, payload = {}) => {
  */
 export const updateCoachLateMinutes = async (eventId, userId, payload) => {
   const response = await client.patch(`/events/${eventId}/attendance/${userId}/late`, payload);
+  return response.data;
+};
+
+/**
+ * Coach resets attendance data for a participant.
+ * @param {string} eventId
+ * @param {string} userId
+ * @returns {Promise<any>}
+ */
+export const resetCoachAttendance = async (eventId, userId) => {
+  const response = await client.patch(`/events/${eventId}/attendance/${userId}/reset`);
   return response.data;
 };
 

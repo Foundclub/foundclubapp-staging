@@ -31,7 +31,17 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
  * @property {User[]} notAnswered
  */
 /**
- * @typedef {{ arrivedAt?: string | null, lateMinutes?: number | null, source?: string | null, manualOverride?: boolean }} AttendanceState
+ * @typedef {{
+ *   arrivedAt?: string | null,
+ *   declaredAt?: string | null,
+ *   declaredLateMinutes?: number | null,
+ *   declarationSource?: string | null,
+ *   lateMinutes?: number | null,
+ *   source?: string | null,
+ *   manualOverride?: boolean,
+ *   note?: string | null,
+ *   updatedBy?: { firstname?: string, lastname?: string } | null
+ * }} AttendanceState
  */
 /**
  * @typedef {{
@@ -92,6 +102,93 @@ function getUserDisplayName(user) {
   return 'Utilisateur';
 }
 
+const getStaffDisplayName = (user) => {
+  const firstname = String(user?.firstname || '').trim();
+  const lastname = String(user?.lastname || '').trim();
+  return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
+};
+
+const resolveAttendanceBadge = ({
+  allowLiveLate = false,
+  attendance,
+  eventStartAt,
+  nowMs,
+  statusKind = 'participating',
+}) => {
+  const hasArrived = Boolean(attendance?.arrivedAt);
+  const lateMinutes = Math.max(0, Number(attendance?.lateMinutes || 0));
+  const declaredLateMinutes = Math.max(0, Number(attendance?.declaredLateMinutes || 0));
+
+  let runningLateMinutes = 0;
+  if (!hasArrived && allowLiveLate && eventStartAt && typeof nowMs === 'number') {
+    const eventStartMs = eventStartAt.getTime();
+    if (!Number.isNaN(eventStartMs) && nowMs > eventStartMs) {
+      runningLateMinutes = Math.max(1, Math.ceil((nowMs - eventStartMs) / 60000));
+    }
+  }
+
+  if (statusKind === 'missing') {
+    return {
+      backgroundColor: '#EF444422',
+      textColor: '#fca5a5',
+      title: 'Absent',
+      value: null,
+    };
+  }
+
+  if (statusKind === 'not_answered') {
+    return {
+      backgroundColor: '#33415566',
+      textColor: '#cbd5e1',
+      title: 'Sans reponse',
+      value: null,
+    };
+  }
+
+  if (hasArrived) {
+    if (lateMinutes > 0) {
+      return {
+        backgroundColor: '#F59E0B22',
+        textColor: '#fbbf24',
+        title: 'Arrive',
+        value: `+${lateMinutes} min`,
+      };
+    }
+
+    return {
+      backgroundColor: '#16A34A22',
+      textColor: '#4ade80',
+      title: 'Arrive',
+      value: null,
+    };
+  }
+
+  if (declaredLateMinutes > 0) {
+    return {
+      backgroundColor: '#F9731622',
+      textColor: '#fdba74',
+      title: 'Retard annonce',
+      value: `+${declaredLateMinutes} min`,
+    };
+  }
+
+  if (runningLateMinutes > 0) {
+    return {
+      backgroundColor: '#F59E0B22',
+      textColor: '#fbbf24',
+      title: 'En attente',
+      value: `+${runningLateMinutes} min`,
+    };
+  }
+
+  return {
+    backgroundColor: '#33415566',
+    textColor: '#cbd5e1',
+    title: 'En attente',
+    value: null,
+  };
+};
+
 /**
  * @param {EventParticipantsProps} props
  */
@@ -135,8 +232,7 @@ function EventParticipants({
         onMarkArrival={onCoachMarkArrival}
         onPress={handleUserPress}
         player={player}
-        showLateBadge={options.showLateBadge !== false}
-        statusLabel={options.statusLabel}
+        statusKind={options.statusKind || 'participating'}
         styles={{
           Alignments, ApplicationStyle, Colors, Fonts, Spaces,
         }}
@@ -272,6 +368,7 @@ function EventParticipants({
             allowLiveLate: true,
             keyPrefix: `${section.key}-present`,
             showCoachActions: section.allowCoachActions ?? canEdit,
+            statusKind: 'participating',
           },
         )}
 
@@ -281,7 +378,7 @@ function EventParticipants({
           {
             allowLiveLate: false,
             keyPrefix: `${section.key}-missing`,
-            showLateBadge: false,
+            statusKind: 'missing',
             statusLabel: t('eventDetails.participationStatus.missing'),
           },
         )}
@@ -299,7 +396,7 @@ function EventParticipants({
             {section.notAnswered.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-not-answered`,
-              showLateBadge: false,
+              statusKind: 'not_answered',
               statusLabel: t('eventDetails.participationStatus.notAnswered'),
             }))}
           </>
@@ -321,14 +418,14 @@ function EventParticipants({
               allowLiveLate: false,
               keyPrefix: `${section.key}-hist-present`,
               showCoachActions: false,
-              showLateBadge: false,
+              statusKind: 'participating',
               statusLabel: t('eventDetails.participationStatus.participating'),
             }))}
             {historicalMissing.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-hist-missing`,
               showCoachActions: false,
-              showLateBadge: false,
+              statusKind: 'missing',
               statusLabel: t('eventDetails.participationStatus.missing'),
             }))}
           </View>
@@ -366,6 +463,7 @@ function EventParticipants({
               allowLiveLate: true,
               keyPrefix: 'legacy-present',
               showCoachActions: canEdit,
+              statusKind: 'participating',
             },
           )}
           {renderStatusGroup(
@@ -374,7 +472,7 @@ function EventParticipants({
             {
               allowLiveLate: false,
               keyPrefix: 'legacy-missing',
-              showLateBadge: false,
+              statusKind: 'missing',
               statusLabel: t('eventDetails.participationStatus.missing'),
             },
           )}
@@ -391,7 +489,7 @@ function EventParticipants({
               {(participationsByStatus.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
-                showLateBadge: false,
+                statusKind: 'not_answered',
                 statusLabel: t('eventDetails.participationStatus.notAnswered'),
               }))}
             </>
@@ -404,6 +502,7 @@ function EventParticipants({
       allowLiveLate: true,
       keyPrefix: 'fallback',
       showCoachActions: canEdit,
+      statusKind: 'participating',
     }));
   };
 
@@ -454,8 +553,7 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
- * showLateBadge?: boolean,
- * statusLabel?: string,
+ * statusKind?: 'participating' | 'missing' | 'not_answered',
  * styles: any
  * }} props
  */
@@ -469,34 +567,21 @@ function ParticipantItem({
   onMarkArrival,
   onPress,
   player,
-  showLateBadge = true,
-  statusLabel,
+  statusKind = 'participating',
   styles,
 }) {
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = styles;
-
-  const hasArrived = Boolean(attendance?.arrivedAt);
-  const storedLateMinutes = Math.max(0, Number(attendance?.lateMinutes || 0));
-  let lateMinutes = storedLateMinutes;
-
-  if (allowLiveLate && !hasArrived && eventStartAt && typeof nowMs === 'number') {
-    const eventStartMs = eventStartAt.getTime();
-    if (!Number.isNaN(eventStartMs) && nowMs > eventStartMs) {
-      const runningLateMinutes = Math.max(1, Math.ceil((nowMs - eventStartMs) / 60000));
-      lateMinutes = Math.max(storedLateMinutes, runningLateMinutes);
-    }
-  }
-
-  const lateLabel = lateMinutes > 0 ? `+${lateMinutes} min` : '0 min';
-  const badgeLabel = showLateBadge ? 'Retard' : (statusLabel || 'Statut');
-  let badgeBackgroundColor = '#33415566';
-  let badgeTextColor = '#cbd5e1';
-  if (showLateBadge) {
-    badgeBackgroundColor = lateMinutes > 0 ? '#F59E0B22' : '#16A34A22';
-    badgeTextColor = lateMinutes > 0 ? '#fbbf24' : '#4ade80';
-  }
+  const badge = resolveAttendanceBadge({
+    allowLiveLate,
+    attendance,
+    eventStartAt,
+    nowMs,
+    statusKind,
+  });
+  const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
+  const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivee';
 
   return (
     <View
@@ -534,15 +619,15 @@ function ParticipantItem({
             Spaces.paddingVertical[4],
             ApplicationStyle.borderRadius12,
             Alignments.alignCenter,
-            { backgroundColor: badgeBackgroundColor },
+            { backgroundColor: badge.backgroundColor },
           ]}
         >
-          <Text style={[Fonts.p4, { color: badgeTextColor }]}>
-            {badgeLabel}
+          <Text style={[Fonts.p4, { color: badge.textColor }]}>
+            {badge.title}
           </Text>
-          {showLateBadge ? (
-            <Text style={[Fonts.p4Bold, { color: badgeTextColor }]}>
-              {lateLabel}
+          {badge.value ? (
+            <Text style={[Fonts.p4Bold, { color: badge.textColor }]}>
+              {badge.value}
             </Text>
           ) : null}
         </View>
@@ -553,17 +638,39 @@ function ParticipantItem({
           <Button
             onPress={() => onMarkArrival && onMarkArrival(player)}
             size="sm"
-            title="Arrive"
+            title={primaryCoachActionTitle}
             variant="Primary"
           />
           <Button
-            icon="edit"
             onPress={() => onEditLate && onEditLate(player)}
             size="sm"
+            title="Modifier"
             variant="SecondaryLight"
           />
         </View>
       )}
+
+      {hasStaffMeta ? (
+        <View style={[Spaces.gap[4]]}>
+          {attendance?.manualOverride ? (
+            <Text style={[Fonts.p4, Fonts.warning400]}>
+              Correction manuelle staff
+            </Text>
+          ) : null}
+          {attendance?.updatedBy ? (
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              Corrige par
+              {' '}
+              {getStaffDisplayName(attendance.updatedBy)}
+            </Text>
+          ) : null}
+          {attendance?.note ? (
+            <Text style={[Fonts.p4, Fonts.neutral200]}>
+              {attendance.note}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -133,17 +133,29 @@ describe('pollUseCases', () => {
       expect(result.nextComposition.updatedAt).toEqual(expect.any(String));
     });
 
-    test('returns no-op when the same single-vote option is selected', () => {
+    test('removes the current selection when the same single-vote option is selected again', () => {
       const result = applyOptimisticPollVote({
         currentUserId: 'user-1',
         optionId: 'opt-1',
         poll: basePoll,
       });
 
-      expect(result).toEqual({
-        changed: false,
-        nextComposition: basePoll,
-      });
+      expect(result.changed).toBe(true);
+      expect(result.nextComposition.options).toEqual([
+        {
+          id: 'opt-1',
+          label: 'Oui',
+          voteCount: 0,
+          voters: [],
+        },
+        {
+          id: 'opt-2',
+          label: 'Non',
+          voteCount: 0,
+          voters: [],
+        },
+      ]);
+      expect(result.nextComposition.updatedAt).toEqual(expect.any(String));
     });
 
     test('adds multiple votes without duplicates for multi-vote polls', () => {
@@ -185,6 +197,48 @@ describe('pollUseCases', () => {
           voters: ['user-1'],
         },
       ]);
+    });
+
+    test('removes an existing vote for multi-vote polls when tapping the same option again', () => {
+      const result = applyOptimisticPollVote({
+        currentUserId: 'user-1',
+        optionId: 'opt-1',
+        poll: {
+          ...basePoll,
+          allowMultipleVotes: true,
+          options: [
+            {
+              id: 'opt-1',
+              label: 'Oui',
+              voteCount: 2,
+              voters: ['user-1', 'user-2'],
+            },
+            {
+              id: 'opt-2',
+              label: 'Non',
+              voteCount: 1,
+              voters: ['user-1'],
+            },
+          ],
+        },
+      });
+
+      expect(result.changed).toBe(true);
+      expect(result.nextComposition.options).toEqual([
+        {
+          id: 'opt-1',
+          label: 'Oui',
+          voteCount: 1,
+          voters: ['user-2'],
+        },
+        {
+          id: 'opt-2',
+          label: 'Non',
+          voteCount: 1,
+          voters: ['user-1'],
+        },
+      ]);
+      expect(result.nextComposition.updatedAt).toEqual(expect.any(String));
     });
 
     test('returns no-op when nothing changes', () => {

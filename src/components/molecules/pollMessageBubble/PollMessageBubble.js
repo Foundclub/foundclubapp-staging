@@ -359,7 +359,8 @@ function PollMessageBubble({
           <Text style={[Fonts.p4, { color: Colors.neutral300 }, styles.detailsHint]}>
             {t(
               'conversation.poll.bubble.detailsHint',
-              'Appuie sur une option pour voter, ou sur la carte pour les details.',
+              'Appuie sur une option pour voter ou modifier ton vote. '
+                + 'Appuie a nouveau pour le retirer, ou ouvre la carte pour les details.',
             )}
           </Text>
         ) : null}

@@ -4,6 +4,7 @@ import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
 import AdminClaimList from '@/views/admin/AdminClaimList';
 import AdminClubDetail from '@/views/admin/AdminClubDetail';
 import AdminClubList from '@/views/admin/AdminClubList';
+import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
@@ -87,6 +88,14 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Détail Demande',
+        }}
+      />
+      <Stack.Screen
+        component={AdminClubOnboardingList}
+        name={RouteNames.AdminClubOnboardingList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Clubs a onboarder',
         }}
       />
       <Stack.Screen

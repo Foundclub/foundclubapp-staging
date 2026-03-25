@@ -431,12 +431,13 @@ export const removePlayerFromTeam = async (teamId, playerId) => {
  * Preview external competition data (provider auto-detection: FFF/FFBB)
  * @param {string} teamId
  * @param {string} url
+ * @param {'team-candidates' | 'full'} [mode]
  * @returns {Promise<object>}
  */
-export const previewExternalCompetition = async (teamId, url) => {
+export const previewExternalCompetition = async (teamId, url, mode = 'team-candidates') => {
   const response = await client.post(
     `/teams/${teamId}/external-competition/preview`,
-    { url },
+    { mode, url },
     { timeout: 45000 },
   );
   return response.data;

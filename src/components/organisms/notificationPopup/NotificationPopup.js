@@ -1,5 +1,4 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect } from 'react';
 import {
   Modal,
   Platform,
@@ -56,25 +55,22 @@ const withAlpha = (color, alpha) => {
  * @returns {import('react').ReactElement | null}
  */
 function NotificationPopup({
+  isLoading,
   isVisible,
   notifications,
   onClose,
   onMarkAllAsRead,
   onMarkAsRead,
-  onRefresh,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (!isVisible) return;
-    if (onRefresh) onRefresh();
-  }, [isVisible, onRefresh]);
-
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const recentNotifications = safeNotifications.slice(0, 8);
   const unreadCount = safeNotifications.filter((n) => !n.read).length;
+  const shouldShowLoading = Boolean(isLoading) && recentNotifications.length === 0;
+  const shouldShowEmpty = !shouldShowLoading && recentNotifications.length === 0;
 
   const popupBackground = Colors?.neutral900 || '#121212';
   const popupBorder = Colors?.primary500 || '#01B3F4';
@@ -149,6 +145,101 @@ function NotificationPopup({
     }
   };
 
+  let popupContent = null;
+  if (shouldShowLoading) {
+    popupContent = (
+      <View style={{ alignItems: 'center', padding: 24 }}>
+        <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
+          Chargement des notifications...
+        </Text>
+      </View>
+    );
+  } else if (shouldShowEmpty) {
+    popupContent = (
+      <View style={{ alignItems: 'center', padding: 24 }}>
+        <Text style={{
+          color: textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 8,
+        }}
+        >
+          {'\u{1F514}'}
+        </Text>
+        <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
+          {NOTIFICATION_EMPTY_STATE_TITLE}
+        </Text>
+        <Text
+          style={[
+            Fonts.p3 || { fontSize: 14 },
+            { color: textMuted, marginTop: 6, textAlign: 'center' },
+          ]}
+        >
+          {NOTIFICATION_EMPTY_STATE_BODY}
+        </Text>
+      </View>
+    );
+  } else {
+    popupContent = recentNotifications.map((notif, index) => {
+      const icon = getNotificationIcon(notif.type);
+      return (
+        <TouchableOpacity
+          key={notif.documentId || notif.id || index}
+          onPress={() => handlePressNotification(notif)}
+          style={[
+            Spaces.padding[12],
+            {
+              backgroundColor: notif.read ? 'transparent' : unreadItemBackground,
+              borderBottomColor: itemDivider,
+              borderBottomWidth: 1,
+              borderLeftColor: popupBorder,
+              borderLeftWidth: notif.read ? 0 : 3,
+              flexDirection: 'row',
+            },
+          ]}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: iconBackground,
+              borderRadius: 16,
+              height: 32,
+              justifyContent: 'center',
+              marginRight: 10,
+              width: 32,
+            }}
+          >
+            <Text style={{ fontSize: 14 }}>{icon}</Text>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text numberOfLines={1} style={[notif.read ? Fonts.p3 : Fonts.p3Bold, { color: textPrimary, flex: 1, fontSize: 14 }]}>
+                {notif.title || 'Notification'}
+              </Text>
+              <Text style={{ color: textMuted, fontSize: 10, marginLeft: 8 }}>
+                {formatNotificationRelativeTime(notif.createdAt)}
+              </Text>
+            </View>
+            <Text numberOfLines={1} style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary }]}>
+              {notif.body}
+            </Text>
+          </View>
+
+          {!notif.read ? (
+            <View
+              style={{
+                backgroundColor: popupBorder,
+                borderRadius: 3,
+                height: 6,
+                marginLeft: 4,
+                marginTop: 4,
+                width: 6,
+              }}
+            />
+          ) : null}
+        </TouchableOpacity>
+      );
+    });
+  }
+
   return (
     <Modal
       animationType="fade"
@@ -216,89 +307,7 @@ function NotificationPopup({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
-            {recentNotifications.length === 0 ? (
-              <View style={{ alignItems: 'center', padding: 24 }}>
-                <Text style={{
-                  color: textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 8,
-                }}
-                >
-                  {'\u{1F514}'}
-                </Text>
-                <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
-                  {NOTIFICATION_EMPTY_STATE_TITLE}
-                </Text>
-                <Text
-                  style={[
-                    Fonts.p3 || { fontSize: 14 },
-                    { color: textMuted, marginTop: 6, textAlign: 'center' },
-                  ]}
-                >
-                  {NOTIFICATION_EMPTY_STATE_BODY}
-                </Text>
-              </View>
-            ) : (
-              recentNotifications.map((notif, index) => {
-                const icon = getNotificationIcon(notif.type);
-                return (
-                  <TouchableOpacity
-                    key={notif.documentId || notif.id || index}
-                    onPress={() => handlePressNotification(notif)}
-                    style={[
-                      Spaces.padding[12],
-                      {
-                        backgroundColor: notif.read ? 'transparent' : unreadItemBackground,
-                        borderBottomColor: itemDivider,
-                        borderBottomWidth: 1,
-                        borderLeftColor: popupBorder,
-                        borderLeftWidth: notif.read ? 0 : 3,
-                        flexDirection: 'row',
-                      },
-                    ]}
-                  >
-                    <View
-                      style={{
-                        alignItems: 'center',
-                        backgroundColor: iconBackground,
-                        borderRadius: 16,
-                        height: 32,
-                        justifyContent: 'center',
-                        marginRight: 10,
-                        width: 32,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14 }}>{icon}</Text>
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Text numberOfLines={1} style={[notif.read ? Fonts.p3 : Fonts.p3Bold, { color: textPrimary, flex: 1, fontSize: 14 }]}>
-                          {notif.title || 'Notification'}
-                        </Text>
-                        <Text style={{ color: textMuted, fontSize: 10, marginLeft: 8 }}>
-                          {formatNotificationRelativeTime(notif.createdAt)}
-                        </Text>
-                      </View>
-                      <Text numberOfLines={1} style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary }]}>
-                        {notif.body}
-                      </Text>
-                    </View>
-
-                    {!notif.read ? (
-                      <View
-                        style={{
-                          backgroundColor: popupBorder,
-                          borderRadius: 3,
-                          height: 6,
-                          marginLeft: 4,
-                          marginTop: 4,
-                          width: 6,
-                        }}
-                      />
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })
-            )}
+            {popupContent}
           </ScrollView>
 
           <TouchableOpacity

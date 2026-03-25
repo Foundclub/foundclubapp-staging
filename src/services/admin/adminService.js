@@ -22,15 +22,35 @@ export const getAdminStats = async () => {
 
 export const ADMIN_CLAIM_ITEM_TYPES = Object.freeze({
   CLAIM: 'claim',
+  CLUB_CREATION: 'club_creation',
   CLUB_NOT_FOUND: 'club_not_found',
   TEAM_NOT_FOUND: 'team_not_found',
 });
 
-const HELP_KINDS = [ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND, ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND];
+const HELP_KINDS = [
+  ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION,
+  ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND,
+  ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND,
+];
+const CLAIM_HELP_KINDS = [
+  ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND,
+  ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND,
+];
+
+const buildPendingClubRequestFilters = (requestKinds) => ({
+  $or: [
+    { state: 'En attente' },
+    { state: 'pending' },
+  ],
+  requestKind: Array.isArray(requestKinds)
+    ? { $in: requestKinds }
+    : requestKinds,
+});
 
 const toBadgeLabel = (kind) => {
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION) return 'CLUB A ONBOARDER';
   if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND) return 'CLUB INTROUVABLE';
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'Équipe INTROUVABLE';
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'Ã‰quipe INTROUVABLE';
   return 'REVENDICATION';
 };
 
@@ -44,8 +64,8 @@ const sortByCreatedAtDesc = (a, b) => toTimestamp(b?.createdAt) - toTimestamp(a?
 const normalizeHelpState = (state) => {
   const normalized = String(state || '').trim().toLowerCase();
   if (normalized === 'en attente' || normalized === 'pending') return 'pending';
-  if (normalized === 'traitée' || normalized === 'traitee' || normalized === 'processed') return 'processed';
-  if (normalized === 'refusée' || normalized === 'refusee' || normalized === 'refused') return 'refused';
+  if (normalized === 'traitÃ©e' || normalized === 'traitee' || normalized === 'processed') return 'processed';
+  if (normalized === 'refusÃ©e' || normalized === 'refusee' || normalized === 'refused') return 'refused';
   return normalized || 'pending';
 };
 
@@ -105,6 +125,7 @@ export const getPendingClubClaims = async () => {
       },
     }),
     getPendingAffiliationHelpRequests({
+      filters: buildPendingClubRequestFilters(CLAIM_HELP_KINDS),
       pagination: {
         page: 1,
         pageSize: 1,
@@ -150,6 +171,7 @@ export const getClubClaimsRequestList = async (params = {}) => {
       },
     }),
     getPendingAffiliationHelpRequests({
+      filters: buildPendingClubRequestFilters(CLAIM_HELP_KINDS),
       pagination: {
         page: 1,
         pageSize: 200,
@@ -184,9 +206,29 @@ export const getClubClaimsRequestList = async (params = {}) => {
 };
 
 /**
+ * Get dedicated club onboarding request count.
+ * @returns {Promise<any>}
+ */
+export const getPendingClubOnboardingRequests = async (params = {}) => {
+  const result = await getPendingAffiliationHelpRequests({
+    filters: buildPendingClubRequestFilters(ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION),
+    pagination: {
+      page: 1,
+      pageSize: 100,
+    },
+    ...params,
+  });
+
+  return {
+    ...result,
+    data: (result?.data || []).map(mapHelpRequestToAdminItem),
+  };
+};
+
+/**
  * Get single club claim request
  * @param {string} documentId
- * @param {'claim'|'club_not_found'|'team_not_found'} [requestType]
+ * @param {'claim'|'club_creation'|'club_not_found'|'team_not_found'} [requestType]
  * @returns {Promise<any>}
  */
 export const getClubClaimRequest = async (documentId, requestType = undefined) => {
@@ -419,7 +461,7 @@ export const getLeagueDisputes = async (params = {}) => {
  */
 export const resolveLeagueDispute = async (matchId, payload) => {
   const response = await client.post(`/league-matches/${matchId}/resolve-dispute`, {
-    reason: payload.reason || 'Décision SuperAdmin',
+    reason: payload.reason || 'DÃ©cision SuperAdmin',
     score_a: Number.parseInt(String(payload.scoreA), 10),
     score_b: Number.parseInt(String(payload.scoreB), 10),
   });
