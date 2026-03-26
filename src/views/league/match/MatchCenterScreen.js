@@ -852,92 +852,210 @@ function MatchCenterScreen() {
   }
 
   const renderMatchCardContent = () => {
-    if (viewState === 'initializing') {
-      return (
-        <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <ActivityIndicator color={Colors.gold500 || '#D4AF37'} size="large" />
-          <Text style={[Fonts.h3, { color: Colors.neutral00, marginTop: 16, textAlign: 'center' }]}>
-            INITIALISATION...
-          </Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-            Lancement du protocole de match.
-          </Text>
+    const leagueGold = Colors.gold500 || '#D4AF37';
+    const missionPanelStyle = {
+      backgroundColor: 'rgba(6, 16, 26, 0.94)',
+      borderColor: 'rgba(1, 179, 244, 0.24)',
+      borderRadius: 22,
+      borderWidth: 1,
+      paddingHorizontal: 20,
+      paddingVertical: 22,
+      width: '100%',
+    };
+    const supportCardStyle = {
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderColor: 'rgba(255,255,255,0.08)',
+      borderRadius: 16,
+      borderWidth: 1,
+      marginTop: 18,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      width: '100%',
+    };
+
+    const renderMissionState = ({
+      accentColor,
+      actions,
+      eyebrow,
+      helper,
+      renderIcon,
+      subtitle,
+      title,
+      children,
+    }) => (
+      <View style={{ alignItems: 'center', paddingVertical: 10, width: '100%' }}>
+        <View style={{
+          alignItems: 'center',
+          backgroundColor: `${accentColor}1A`,
+          borderColor: `${accentColor}66`,
+          borderRadius: 999,
+          borderWidth: 1,
+          flexDirection: 'row',
+          marginBottom: 18,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+        }}
+        >
+          <View style={{
+            backgroundColor: accentColor,
+            borderRadius: 4,
+            height: 8,
+            marginRight: 8,
+            width: 8,
+          }}
+          />
+          <Text style={[Fonts.p3Bold, { color: accentColor, letterSpacing: 1.2 }]}>{eyebrow}</Text>
         </View>
-      );
+
+        <View style={missionPanelStyle}>
+          <View style={{
+            alignItems: 'center',
+            alignSelf: 'center',
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            borderColor: `${accentColor}88`,
+            borderRadius: 42,
+            borderWidth: 2,
+            height: 84,
+            justifyContent: 'center',
+            marginBottom: 18,
+            shadowColor: accentColor,
+            shadowOffset: { height: 6, width: 0 },
+            shadowOpacity: 0.22,
+            shadowRadius: 14,
+            width: 84,
+          }}
+          >
+            {renderIcon?.()}
+          </View>
+
+          <Text style={[Fonts.p3Bold, {
+            color: accentColor,
+            letterSpacing: 1.4,
+            marginBottom: 8,
+            textAlign: 'center',
+            textTransform: 'uppercase',
+          }]}
+          >
+            {subtitle}
+          </Text>
+
+          <Text style={[Fonts.h2, {
+            color: Colors.neutral00,
+            marginBottom: 10,
+            textAlign: 'center',
+            textTransform: 'uppercase',
+          }]}
+          >
+            {title}
+          </Text>
+
+          <Text style={[Fonts.p2, {
+            color: Colors.primary500,
+            lineHeight: 22,
+            textAlign: 'center',
+          }]}
+          >
+            {helper}
+          </Text>
+
+          {(children || actions) && (
+            <View style={supportCardStyle}>
+              {children}
+              {actions ? <View style={{ marginTop: children ? 14 : 0 }}>{actions}</View> : null}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+
+    if (viewState === 'initializing') {
+      return renderMissionState({
+        accentColor: leagueGold,
+        eyebrow: 'PROTOCOLE LEAGUE',
+        helper: 'Lancement du protocole de match et synchronisation des signaux de la rencontre.',
+        renderIcon: () => <ActivityIndicator color={leagueGold} size="large" />,
+        subtitle: 'Mise en place',
+        title: 'Initialisation',
+      });
     }
 
     if (viewState === 'searching_start') {
-      return (
-        <View style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral800,
-            borderColor: Colors.primary500,
-            borderRadius: 40,
-            borderWidth: 2,
-            height: 80,
-            justifyContent: 'center',
-            marginBottom: 24,
-            width: 80,
-          }}
-          >
-            <ActivityIndicator color={Colors.primary500} size="large" />
-          </View>
-          <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8, textAlign: 'center' }]}>
-            LANCEMENT DU SCAN
-          </Text>
-          <Text style={[Fonts.p1, { color: Colors.primary500, marginBottom: 16, textAlign: 'center' }]}>
-            Analyse de la zone de recherche...
-          </Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-            Nous identifions les adversaires potentiels.
-          </Text>
-        </View>
-      );
+      return renderMissionState({
+        accentColor: Colors.primary500,
+        eyebrow: 'SCAN MATCHMAKING',
+        helper: 'Nous analysons votre zone, vos creneaux et les disponibilites compatibles.',
+        renderIcon: () => <ActivityIndicator color={Colors.primary500} size="large" />,
+        subtitle: 'Analyse reseau',
+        title: 'Lancement du scan',
+      });
     }
 
     if (viewState === 'connection_error') {
-      return (
-        <View style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral800,
-            borderColor: Colors.error500,
-            borderRadius: 40,
-            borderWidth: 2,
-            height: 80,
-            justifyContent: 'center',
-            marginBottom: 24,
-            width: 80,
-          }}
-          >
-            <Text style={{ fontSize: 32 }}>!</Text>
+      return renderMissionState({
+        accentColor: Colors.error500,
+        actions: (
+          <View>
+            <Button
+              onPress={() => {
+                setViewState('radar');
+              }}
+              title="REESSAYER"
+              variant="Primary"
+            />
+            <Button
+              onPress={() => {
+                setViewState('locker_room');
+                setMatchRequest(null);
+              }}
+              style={{ marginTop: 12 }}
+              title="ANNULER"
+              variant="Secondary"
+            />
           </View>
-          <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8, textAlign: 'center' }]}>
-            CONNEXION PERDUE
-          </Text>
-          <Text style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-            Impossible de joindre le serveur.
-          </Text>
+        ),
+        eyebrow: 'ALERTE RESEAU',
+        helper: 'La connexion au serveur League a ete interrompue. Vous pouvez relancer le scan ou revenir au vestiaire.',
+        renderIcon: () => <Text style={{ color: Colors.error500, fontSize: 34, fontWeight: '700' }}>!</Text>,
+        subtitle: 'Signal interrompu',
+        title: 'Connexion perdue',
+      });
+    }
+
+    if (viewState === 'radar') {
+      return renderMissionState({
+        accentColor: leagueGold,
+        actions: (
           <Button
-            onPress={() => {
-              setViewState('radar');
-            }}
-            title="REESSAYER"
-            variant="Primary"
-          />
-          <Button
-            onPress={() => {
-              // Reset everything
-              setViewState('locker_room');
-              setMatchRequest(null);
-            }}
-            style={{ marginTop: 12 }}
+            disabled={loading}
+            onPress={handleCancelSearch}
             title="ANNULER"
             variant="Secondary"
           />
-        </View>
-      );
+        ),
+        children: (
+          <>
+            <Text style={[Fonts.p3Bold, {
+              color: Colors.neutral200,
+              letterSpacing: 1.2,
+              marginBottom: 10,
+              textAlign: 'center',
+            }]}
+            >
+              {searchStatus}
+            </Text>
+            <SearchCountdown
+              createdAt={matchRequest?.createdAt}
+              onExpired={handleCancelSearch}
+              serverNow={pollingServerNow || matchmakingServerNow}
+            />
+          </>
+        ),
+        eyebrow: 'RADAR ACTIF',
+        helper: 'Nous cherchons une equipe compatible dans votre zone et sur vos plages partagees.',
+        renderIcon: () => <Text style={{ color: leagueGold, fontSize: 28 }}>{radarIcon}</Text>,
+        subtitle: 'Balayage en cours',
+        title: 'Recherche active',
+      });
     }
 
     if (viewState === 'radar') {
@@ -973,6 +1091,444 @@ function MatchCenterScreen() {
             title="ANNULER"
             variant="Secondary"
           />
+        </View>
+      );
+    }
+
+    if (viewState === 'match_found') {
+      if (currentMatch && shouldShowNextMatchCard(currentMatch, currentMatch?.event)) {
+        return (
+          <NextMatchCard
+            event={currentMatch?.event}
+            match={currentMatch}
+            myTeamId={getEntityDocumentId(mySquad)}
+            onPress={() => navigateToLeagueMatchDetails(navigation, currentMatch)}
+            onRefresh={loadMatchCenter}
+          />
+        );
+      }
+
+      /** @type {Record<string, string>} */
+      const anonymousDayMap = {
+        friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
+      };
+      const formatAnonymousHour = (/** @type {string | undefined | null} */ value) => (value ? value.substring(0, 5) : '?');
+      const parseAnonymousValue = (/** @type {unknown} */ value) => {
+        if (value && typeof value === 'object') return value;
+        if (typeof value !== 'string') return value;
+        try {
+          return JSON.parse(value);
+        } catch (_error) {
+          return value;
+        }
+      };
+      const cleanAnonymousLabel = (/** @type {unknown} */ value) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        return trimmed.split('(')[0].trim();
+      };
+      const opponentHomeBase = parseAnonymousValue(opponentDetails?.home_base);
+      const opponentLocation = parseAnonymousValue(opponentDetails?.location);
+      const opponentHomeAddress = parseAnonymousValue(opponentHomeBase?.address);
+      const opponentCityCandidates = [
+        opponentHomeBase?.city,
+        opponentHomeAddress?.city,
+        opponentHomeAddress?.properties?.city,
+        opponentHomeAddress?.properties?.context,
+        opponentHomeAddress?.label,
+        opponentHomeAddress?.address,
+        opponentHomeBase?.label,
+        opponentLocation?.city,
+        opponentLocation?.label,
+        opponentDetails?.city,
+      ];
+      const opponentCity = opponentCityCandidates
+        .map((candidate) => cleanAnonymousLabel(candidate))
+        .find(Boolean)
+        || ((opponentHomeBase?.lat || opponentHomeBase?.lng || opponentLocation?.lat || opponentLocation?.lng)
+          ? 'Zone approximative'
+          : 'Zone inconnue');
+      const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0)
+        ? `+/- ${opponentDetails.radius} km`
+        : 'Rayon standard';
+      const parsedDivision = Number.parseInt(String(opponentDetails?.division), 10);
+      const anonymousDivision = Number.isFinite(parsedDivision)
+        ? Math.max(1, Math.min(5, parsedDivision))
+        : '?';
+      const recurringDayKey = String(opponentDetails?.recurring_day || currentMatch?.recurring_day || '').toLowerCase();
+      const recurringDayLabel = anonymousDayMap[recurringDayKey] || recurringDayKey || '?';
+      const recurringStart = formatAnonymousHour(opponentDetails?.recurring_start_hour || currentMatch?.recurring_start_hour);
+      const recurringEnd = formatAnonymousHour(opponentDetails?.recurring_end_hour || currentMatch?.recurring_end_hour);
+      const sportData = opponentDetails?.sport;
+      const sportLabel = typeof sportData === 'string'
+        ? sportData
+        : sportData?.label || sportData?.name || 'Sport';
+      const categoryData = opponentDetails?.category;
+      const categoryLabel = typeof categoryData === 'string'
+        ? categoryData
+        : categoryData?.label || categoryData?.name || 'Senior';
+      const matchCommonSlots = Array.isArray(currentMatch?.common_slots) ? currentMatch.common_slots : [];
+      const commonSlotsSummary = matchCommonSlots
+        .map((slot) => {
+          const dayLabel = anonymousDayMap[String(slot?.day || '').toLowerCase()] || slot?.day || '';
+          const startLabel = toHourMinute(slot?.startHour || slot?.start_hour) || '?';
+          const endLabel = toHourMinute(slot?.endHour || slot?.end_hour) || '?';
+          return dayLabel ? `${dayLabel} ${startLabel}-${endLabel}` : null;
+        })
+        .filter(Boolean);
+
+      return (
+        <View style={{ alignItems: 'center', paddingVertical: 10, width: '100%' }}>
+          <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 16 }}>
+            <View style={{
+              alignItems: 'center',
+              backgroundColor: `${Colors.primary500}1A`,
+              borderColor: `${Colors.primary500}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              flexDirection: 'row',
+              marginRight: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+            >
+              <View style={{
+                backgroundColor: Colors.primary500,
+                borderRadius: 4,
+                height: 8,
+                marginRight: 8,
+                width: 8,
+              }}
+              />
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500, letterSpacing: 1.1 }]}>MATCH TROUVE</Text>
+            </View>
+            <View style={{
+              backgroundColor: `${leagueGold}1A`,
+              borderColor: `${leagueGold}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+            >
+              <Text style={[Fonts.p3Bold, { color: leagueGold, letterSpacing: 1.1 }]}>
+                DIV
+                {' '}
+                {anonymousDivision}
+              </Text>
+            </View>
+          </View>
+
+          <View style={missionPanelStyle}>
+            <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 18 }}>
+              <View style={{
+                alignItems: 'center',
+                backgroundColor: `${leagueGold}14`,
+                borderColor: `${leagueGold}80`,
+                borderRadius: 44,
+                borderWidth: 2,
+                height: 88,
+                justifyContent: 'center',
+                marginRight: 16,
+                shadowColor: leagueGold,
+                shadowOffset: { height: 6, width: 0 },
+                shadowOpacity: 0.18,
+                shadowRadius: 14,
+                width: 88,
+              }}
+              >
+                <Text style={{
+                  color: Colors.neutral00,
+                  fontSize: 36,
+                  fontWeight: '700',
+                  lineHeight: 40,
+                }}
+                >
+                  ?
+                </Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p3Bold, {
+                  color: leagueGold,
+                  letterSpacing: 1.4,
+                  marginBottom: 6,
+                  textTransform: 'uppercase',
+                }]}
+                >
+                  {swordsIcon}
+                  {' '}
+                  Duel confirme
+                </Text>
+                <Text style={[Fonts.h2, {
+                  color: Colors.neutral00,
+                  marginBottom: 6,
+                  textTransform: 'uppercase',
+                }]}
+                >
+                  Equipe adverse
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
+                  {sportLabel}
+                  {' - '}
+                  {categoryLabel}
+                </Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
+                  Le profil reste masque tant que le premier contact n&apos;est pas engage dans le chat.
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginBottom: 14 }}>
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 16,
+                borderWidth: 1,
+                flex: 1,
+                marginRight: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+              }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={LocationIcon}
+                  style={{
+                    height: 18,
+                    marginBottom: 8,
+                    tintColor: leagueGold,
+                    width: 18,
+                  }}
+                />
+                <Text style={[Fonts.p3Bold, {
+                  color: Colors.neutral300,
+                  letterSpacing: 1.1,
+                  marginBottom: 4,
+                  textTransform: 'uppercase',
+                }]}
+                >
+                  Zone
+                </Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{opponentCity}</Text>
+                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>{radiusDisplay}</Text>
+              </View>
+
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 16,
+                borderWidth: 1,
+                flex: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+              }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={ClockIcon}
+                  style={{
+                    height: 18,
+                    marginBottom: 8,
+                    tintColor: Colors.primary500,
+                    width: 18,
+                  }}
+                />
+                <Text style={[Fonts.p3Bold, {
+                  color: Colors.neutral300,
+                  letterSpacing: 1.1,
+                  marginBottom: 4,
+                  textTransform: 'uppercase',
+                }]}
+                >
+                  Creneau phare
+                </Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{recurringDayLabel}</Text>
+                <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
+                  {recurringStart}
+                  {' - '}
+                  {recurringEnd}
+                </Text>
+              </View>
+            </View>
+
+            {commonSlotsSummary.length > 0 && (
+              <View style={supportCardStyle}>
+                <Text style={[Fonts.p3Bold, {
+                  color: Colors.neutral200,
+                  letterSpacing: 1.2,
+                  marginBottom: 10,
+                  textTransform: 'uppercase',
+                }]}
+                >
+                  Creneaux en commun
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+                  {commonSlotsSummary.slice(0, 6).map((slotLabel) => (
+                    <View
+                      key={slotLabel}
+                      style={{
+                        backgroundColor: `${Colors.primary500}12`,
+                        borderColor: `${Colors.primary500}38`,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        marginBottom: 8,
+                        marginHorizontal: 4,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={[Fonts.p3, { color: Colors.primary500 }]}>{slotLabel}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={{
+              backgroundColor: `${leagueGold}12`,
+              borderColor: `${leagueGold}2A`,
+              borderRadius: 16,
+              borderWidth: 1,
+              marginTop: 16,
+              paddingHorizontal: 14,
+              paddingVertical: 14,
+            }}
+            >
+              <Text style={[Fonts.p3Bold, {
+                color: leagueGold,
+                letterSpacing: 1.2,
+                marginBottom: 8,
+                textTransform: 'uppercase',
+              }]}
+              >
+                Prochaine etape
+              </Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
+                Le match correspond a vos criteres. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
+              </Text>
+            </View>
+          </View>
+
+          <Button
+            onPress={() => {
+              if (currentMatch && currentMatch.chat) {
+                const chatId = getEntityDocumentId(currentMatch.chat);
+                if (!currentMatch.proposed_venue) {
+                  setIsProposalModalVisible(true);
+                } else {
+                  const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
+                  navigation.navigate('Conversation', {
+                    chatId,
+                    subTitle: 'Match de Ligue',
+                    title: opponentName,
+                  });
+                }
+              } else {
+                Alert.alert('Erreur', "Le chat n'est pas encore pret. Reessayez dans quelques secondes.");
+              }
+            }}
+            style={{
+              backgroundColor: leagueGold,
+              marginTop: 18,
+              shadowColor: leagueGold,
+              shadowOpacity: 0.24,
+              shadowRadius: 12,
+              width: '100%',
+            }}
+            textStyle={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}
+            title="OUVRIR LE CHAT"
+            variant="Primary"
+          />
+
+          {areSameEntityId(getEntityDocumentId(mySquad?.captain), getEntityDocumentId(userData)) && (
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  'Annuler le match ?',
+                  'Etes-vous sur de vouloir annuler ce match ? Votre equipe reviendra en mode recherche.',
+                  [
+                    { style: 'cancel', text: 'Non' },
+                    {
+                      onPress: async () => {
+                        try {
+                          const currentMatchId = getEntityDocumentId(currentMatch);
+                          if (currentMatchId) {
+                            const { cancelMatch } = await import('../../../services/league/leagueMatchService');
+                            await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
+
+                            setViewState('searching_start');
+                            setTimeout(async () => {
+                              try {
+                                const userLoc = userData?.location ? (typeof userData.location === 'string' ? JSON.parse(userData.location) : userData.location) : { lat: 48.8566, lng: 2.3522 };
+                                const fallbackSlotIds = (selectedSlotIds && selectedSlotIds.length > 0)
+                                  ? selectedSlotIds
+                                  : toDocumentIdList(squadSlots);
+                                if (fallbackSlotIds.length === 0) {
+                                  throw new Error('Ajoutez puis selectionnez au moins un creneau pour relancer la recherche.');
+                                }
+                                await MatchmakingService.triggerSearch(
+                                  getEntityDocumentId(mySquad),
+                                  fallbackSlotIds,
+                                  { location: userLoc, radius: searchRadius },
+                                );
+                                loadMatchCenter();
+                              } catch (error) {
+                                console.error('Restart search failed', error);
+                                Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
+                                loadMatchCenter();
+                              }
+                            }, 500);
+                          }
+                        } catch (error) {
+                          console.error('Cancel/Restart error:', error);
+                          Alert.alert('Erreur', "Impossible d'annuler le match.");
+                        }
+                      },
+                      text: 'Annuler et relancer',
+                    },
+                    {
+                      onPress: async () => {
+                        try {
+                          const currentMatchId = getEntityDocumentId(currentMatch);
+                          if (currentMatchId) {
+                            const { cancelMatch } = await import('../../../services/league/leagueMatchService');
+                            await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
+                            Alert.alert('Match annule', 'Vous pouvez relancer une recherche.');
+                            loadMatchCenter();
+                          }
+                        } catch (error) {
+                          console.error('Cancel match error:', error);
+                          Alert.alert('Erreur', "Impossible d'annuler le match.");
+                        }
+                      },
+                      style: 'destructive',
+                      text: 'Annuler seulement',
+                    },
+                  ],
+                );
+              }}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.03)',
+                borderColor: `${Colors.error500}2E`,
+                borderRadius: 14,
+                borderWidth: 1,
+                marginTop: 16,
+                paddingVertical: 14,
+                width: '100%',
+              }}
+            >
+              <Text style={[Fonts.p2, {
+                color: Colors.error500,
+                textAlign: 'center',
+                textTransform: 'uppercase',
+              }]}
+              >
+                Annuler le match
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     }

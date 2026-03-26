@@ -44,6 +44,33 @@ export const getEventMatchStats = async (eventId, teamId) => {
 
 /**
  * @param {string} eventId
+ * @param {string | undefined} teamId
+ * @returns {Promise<any>}
+ */
+export const getEventMyMatchResponse = async (eventId, teamId) => {
+  const response = await client.get(`/events/${eventId}/my-match-response`, {
+    params: teamId ? { teamId } : undefined,
+  });
+  return unwrapResponse(response);
+};
+
+/**
+ * @param {string} eventId
+ * @param {Record<string, any>} payload
+ * @returns {Promise<any>}
+ */
+export const saveEventMyMatchResponse = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/my-match-response`, {
+    data: {
+      ...payload,
+      teamId: payload?.teamId || null,
+    },
+  });
+  return unwrapResponse(response);
+};
+
+/**
+ * @param {string} eventId
  * @param {{ teamId?: string, scoreFor?: number, scoreAgainst?: number, playerLines?: any[] }} payload
  * @returns {Promise<any>}
  */
@@ -84,6 +111,33 @@ export const submitEventMatchStats = async (eventId, payload) => {
 export const getLeagueMatchStats = async (matchId, teamId) => {
   const response = await client.get(`/league-matches/${matchId}/match-stats`, {
     params: teamId ? { teamId } : undefined,
+  });
+  return unwrapResponse(response);
+};
+
+/**
+ * @param {string} matchId
+ * @param {string | undefined} teamId
+ * @returns {Promise<any>}
+ */
+export const getLeagueMyMatchResponse = async (matchId, teamId) => {
+  const response = await client.get(`/league-matches/${matchId}/my-match-response`, {
+    params: teamId ? { teamId } : undefined,
+  });
+  return unwrapResponse(response);
+};
+
+/**
+ * @param {string} matchId
+ * @param {Record<string, any>} payload
+ * @returns {Promise<any>}
+ */
+export const saveLeagueMyMatchResponse = async (matchId, payload) => {
+  const response = await client.post(`/league-matches/${matchId}/my-match-response`, {
+    data: {
+      ...payload,
+      teamId: payload?.teamId || null,
+    },
   });
   return unwrapResponse(response);
 };

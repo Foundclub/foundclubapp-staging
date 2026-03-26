@@ -23,6 +23,8 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   useGetEventMatchStats,
   useGetLeagueMatchStats,
@@ -82,12 +84,13 @@ const buildInitialLines = (players, report, sport) => {
   return (Array.isArray(players) ? players : []).map((player) => {
     const playerKey = getLineKey(player);
     const existing = existingMap.get(playerKey) || null;
-    const payload = existing?.sportPayload || {};
+    const suggestedPayload = player?.suggestedStats?.sportPayload || {};
+    const payload = existing?.sportPayload || suggestedPayload;
     const baseLine = {
       key: playerKey || `player:${Math.random().toString(36).slice(2)}`,
       label: player?.label || [player?.firstname, player?.lastname].filter(Boolean).join(' ').trim() || player?.manualPlayerName || 'Joueur',
       manualPlayerName: player?.isManual ? (player?.label || player?.manualPlayerName || '') : (existing?.manualPlayerName || null),
-      minutesPlayed: String(existing?.minutesPlayed ?? 0),
+      minutesPlayed: String(existing?.minutesPlayed ?? player?.suggestedStats?.minutesPlayed ?? 0),
       userDocumentId: player?.documentId || existing?.userDocumentId || null,
     };
 
@@ -119,6 +122,40 @@ const serializeLine = (line, sport) => {
   }
 
   return serialized;
+};
+
+const buildInitialCoachReviews = (players, report) => {
+  const existingReviews = Array.isArray(report?.coachPlayerReviews) ? report.coachPlayerReviews : [];
+  const existingReviewMap = new Map(
+    existingReviews.map((review) => [
+      review?.userDocumentId || review?.manualPlayerName || review?.label,
+      review,
+    ]),
+  );
+
+  return (Array.isArray(players) ? players : []).map((player) => {
+    const reviewKey = player?.documentId || player?.manualPlayerName || player?.label;
+    const existing = existingReviewMap.get(reviewKey) || null;
+    return {
+      comment: existing?.comment || '',
+      key: reviewKey,
+      label: player?.label || 'Joueur',
+      playerResponse: Array.isArray(report?.playerResponses)
+        ? report.playerResponses.find((entry) => entry?.userDocumentId === player?.documentId) || null
+        : null,
+      rating: existing?.rating ?? null,
+      userDocumentId: player?.documentId || null,
+    };
+  });
+};
+
+const serializeCoachReview = (review) => {
+  if (!review?.comment && (review?.rating === null || review?.rating === undefined)) return null;
+  return {
+    comment: String(review?.comment || '').trim() || null,
+    rating: review?.rating ?? null,
+    userDocumentId: review?.userDocumentId || undefined,
+  };
 };
 
 const isLineCompleted = (line, sport) => {
@@ -294,6 +331,12 @@ const buildMatchStatsConsistencyIssues = ({
   return issues;
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
+ */
 function MatchStatsEditor({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -347,6 +390,9 @@ function MatchStatsEditor({ navigation, route }) {
   const [scoreFor, setScoreFor] = useState('');
   const [scoreAgainst, setScoreAgainst] = useState('');
   const [playerLines, setPlayerLines] = useState([]);
+  const [collectiveRating, setCollectiveRating] = useState(null);
+  const [collectiveComment, setCollectiveComment] = useState('');
+  const [coachReviews, setCoachReviews] = useState([]);
 
   useEffect(() => {
     const reportKey = [
@@ -375,6 +421,15 @@ function MatchStatsEditor({ navigation, route }) {
         : String(statsPayload.score.scoreAgainst),
     );
     setPlayerLines(buildInitialLines(statsPayload?.availablePlayers, statsPayload?.report, sport));
+    setCollectiveRating(statsPayload?.report?.collectiveRating ?? null);
+    setCollectiveComment(statsPayload?.report?.collectiveComment || '');
+    setCoachReviews(buildInitialCoachReviews(
+      statsPayload?.availablePlayers,
+      {
+        ...(statsPayload?.report || {}),
+        playerResponses: statsPayload?.playerResponses || [],
+      },
+    ));
   }, [requestedTeamId, sport, statsPayload]);
 
   const completedPlayers = useMemo(
@@ -462,13 +517,30 @@ function MatchStatsEditor({ navigation, route }) {
   }, [eventId, matchId, queryClient, requestedTeamId, sourceType]);
 
   const buildPayload = useCallback(() => ({
+    coachPlayerReviews: coachReviews.map(serializeCoachReview).filter(Boolean),
+    collectiveComment: collectiveComment.trim() || null,
+    collectiveRating,
     playerLines: playerLines.map((line) => serializeLine(line, sport)),
     ...(sourceType === 'event' ? {
       scoreAgainst: hasScore ? Number.parseInt(scoreAgainst, 10) : undefined,
       scoreFor: hasScore ? Number.parseInt(scoreFor, 10) : undefined,
     } : {}),
     ...(requestedTeamId ? { teamId: requestedTeamId } : {}),
-  }), [hasScore, playerLines, requestedTeamId, scoreAgainst, scoreFor, sourceType, sport]);
+  }), [coachReviews, collectiveComment, collectiveRating, hasScore, playerLines, requestedTeamId, scoreAgainst, scoreFor, sourceType, sport]);
+
+  const redirectToReviewScreen = useCallback(() => {
+    if (sourceType === 'event' && eventId) {
+      navigation.replace(RouteNames.EventDetails, { eventId });
+      return;
+    }
+
+    if (sourceType === 'league' && matchId) {
+      navigation.replace(RouteNames.LeagueMatchDetails, { matchId });
+      return;
+    }
+
+    navigation.goBack();
+  }, [eventId, matchId, navigation, sourceType]);
 
   const saveDraftMutation = useMutation({
     mutationFn: () => {
@@ -506,7 +578,7 @@ function MatchStatsEditor({ navigation, route }) {
         isReviewRequired
           ? 'Le rapport a ete mis a jour apres la synchronisation du score officiel.'
           : 'Les statistiques du match sont maintenant finalisees.',
-        [{ onPress: () => navigation.goBack(), text: 'OK' }],
+        [{ onPress: redirectToReviewScreen, text: 'OK' }],
       );
     },
   });
@@ -515,6 +587,12 @@ function MatchStatsEditor({ navigation, route }) {
     setPlayerLines((current) => current.map((line) => (line.key === lineKey
       ? { ...line, [field]: value }
       : line)));
+  }, []);
+
+  const updateCoachReview = useCallback((reviewKey, field, value) => {
+    setCoachReviews((current) => current.map((review) => (review.key === reviewKey
+      ? { ...review, [field]: value }
+      : review)));
   }, []);
 
   const getLineFieldMaxValue = useCallback((currentLines, lineKey, field) => {
@@ -786,7 +864,7 @@ function MatchStatsEditor({ navigation, route }) {
       >
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <View style={[Alignments.alignCenter, { flex: 1 }, Spaces.gap[4]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{initialTitle}</Text>
           {teamName ? <Text style={[Fonts.p2, Fonts.neutral100]}>{teamName}</Text> : null}
         </View>
         <View style={{ width: 44 }} />
@@ -810,10 +888,10 @@ function MatchStatsEditor({ navigation, route }) {
           ]}
         >
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rapport post-match</Text>
+            <Text style={[Fonts.p4Bold, Fonts.primary500]}>Bilan equipe</Text>
             <Text style={[Fonts.h2Bold, Fonts.neutral00]}>{matchLabel}</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {sourceType === 'event' ? 'Rapport stats evenement' : 'Rapport stats ligue'}
+              {sourceType === 'event' ? "Bilan collectif de l'evenement" : 'Bilan collectif du match ligue'}
             </Text>
           </View>
 
@@ -988,6 +1066,164 @@ function MatchStatsEditor({ navigation, route }) {
             </View>
 
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Bilan collectif</Text>
+                <Text style={[Fonts.p3, Fonts.neutral100]}>
+                  Donne une note d equipe sur 10 et un commentaire collectif visible par ton groupe.
+                </Text>
+              </View>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
+                  const isActive = collectiveRating === value;
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      onPress={() => setCollectiveRating(value)}
+                      style={[
+                        Spaces.paddingHorizontal[12],
+                        Spaces.paddingVertical[10],
+                        {
+                          backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
+                          borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          minWidth: 44,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p3Bold, isActive ? Fonts.primary100 : Fonts.neutral00, Fonts.textCenter]}>
+                        {value}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TextInput
+                multiline
+                numberOfLines={4}
+                onChangeText={setCollectiveComment}
+                placeholder="Ressenti collectif, dynamique du groupe, points forts, points a travailler..."
+                placeholderTextColor={Colors.neutral400}
+                style={[
+                  Fonts.p2,
+                  Fonts.neutral00,
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius20,
+                  Spaces.padding[16],
+                  {
+                    borderColor: counterBorderColor,
+                    borderWidth: 1,
+                    minHeight: 120,
+                    textAlignVertical: 'top',
+                  },
+                ]}
+                value={collectiveComment}
+              />
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius20,
+                  Spaces.padding[12],
+                  {
+                    borderColor: counterBorderColor,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                  {`${statsPayload?.report?.responseCompletionCount ?? 0}/${statsPayload?.report?.responseEligibleCount ?? playerLines.length} joueurs ont repondu`}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Retours individuels optionnels</Text>
+                <Text style={[Fonts.p3, Fonts.neutral100]}>
+                  Tu peux ajouter une note et un commentaire prive a chaque joueur si tu le souhaites.
+                </Text>
+              </View>
+              {coachReviews.length ? coachReviews.map((review) => (
+                <View
+                  key={review.key}
+                  style={[
+                    Spaces.padding[sectionPadding],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: playerCardSurfaceColor,
+                      borderColor: counterBorderColor,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{review.label}</Text>
+                      <Text style={[Fonts.p4, Fonts.neutral100]}>
+                        {review?.playerResponse?.stateLabel || 'Pas encore de retour joueur'}
+                      </Text>
+                    </View>
+                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[6], { justifyContent: 'flex-end', maxWidth: 180 }]}>
+                      {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
+                        const isActive = review.rating === value;
+                        return (
+                          <TouchableOpacity
+                            key={`${review.key}-${value}`}
+                            onPress={() => updateCoachReview(review.key, 'rating', value)}
+                            style={[
+                              Spaces.paddingHorizontal[10],
+                              Spaces.paddingVertical[6],
+                              {
+                                backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
+                                borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
+                                borderRadius: 14,
+                                borderWidth: 1,
+                                minWidth: 36,
+                              },
+                            ]}
+                          >
+                            <Text style={[Fonts.p4Bold, isActive ? Fonts.primary100 : Fonts.neutral00, Fonts.textCenter]}>
+                              {value}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <TextInput
+                    multiline
+                    numberOfLines={3}
+                    onChangeText={(value) => updateCoachReview(review.key, 'comment', value)}
+                    placeholder="Commentaire prive pour ce joueur"
+                    placeholderTextColor={Colors.neutral400}
+                    style={[
+                      Fonts.p3,
+                      Fonts.neutral00,
+                      ApplicationStyle.backgroundColor.primary900,
+                      ApplicationStyle.borderRadius20,
+                      Spaces.padding[14],
+                      {
+                        borderColor: counterBorderColor,
+                        borderWidth: 1,
+                        minHeight: 94,
+                        textAlignVertical: 'top',
+                      },
+                    ]}
+                    value={review.comment}
+                  />
+                </View>
+              )) : (
+                <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius20, Spaces.padding[20], Spaces.gap[8]]}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible.</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
+                    Les retours individuels apparaitront ici des que la liste joueur sera disponible.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
               <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                 <View style={[Spaces.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Stats joueurs</Text>
@@ -1013,78 +1249,107 @@ function MatchStatsEditor({ navigation, route }) {
                 </View>
               </View>
 
-              {playerLines.length ? playerLines.map((line) => (
-                <View
-                  key={line.key}
-                  style={[
-                    Spaces.padding[sectionPadding],
-                    Spaces.gap[14],
-                    {
-                      backgroundColor: playerCardSurfaceColor,
-                      borderColor: counterBorderColor,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
-                      <Text style={[Fonts.p4, Fonts.neutral100]}>
-                        {line.userDocumentId ? 'Joueur FoundClub' : 'Joueur manuel'}
-                      </Text>
+              {playerLines.length ? playerLines.map((line) => {
+                const isQuantitativeLockedByPlayer = Boolean(
+                  line?.playerResponse?.status === 'submitted'
+                  && line?.playerResponse?.quantitativeState === 'completed',
+                );
+                const lineInputsDisabled = isReadOnly || isQuantitativeLockedByPlayer;
+
+                return (
+                  <View
+                    key={line.key}
+                    style={[
+                      Spaces.padding[sectionPadding],
+                      Spaces.gap[14],
+                      {
+                        backgroundColor: playerCardSurfaceColor,
+                        borderColor: counterBorderColor,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          {line.userDocumentId ? 'Joueur FoundClub' : 'Joueur manuel'}
+                        </Text>
+                      </View>
+                      {normalizeSport(sport) === 'football' ? (
+                        <TouchableOpacity
+                          disabled={lineInputsDisabled}
+                          onPress={() => updateLineValue(line.key, 'cleanSheet', !line.cleanSheet)}
+                          style={[
+                            Spaces.paddingHorizontal[10],
+                            Spaces.paddingVertical[6],
+                            {
+                              backgroundColor: line.cleanSheet ? `${Colors.primary500}2B` : pillSurfaceColor,
+                              borderColor: line.cleanSheet ? `${Colors.primary200}C7` : counterBorderColor,
+                              borderRadius: 14,
+                              borderWidth: 1,
+                              opacity: lineInputsDisabled ? 0.55 : 1,
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Clean sheet</Text>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
-                    {normalizeSport(sport) === 'football' ? (
-                      <TouchableOpacity
-                        disabled={isReadOnly}
-                        onPress={() => updateLineValue(line.key, 'cleanSheet', !line.cleanSheet)}
+
+                    {isQuantitativeLockedByPlayer ? (
+                      <View
                         style={[
-                          Spaces.paddingHorizontal[10],
-                          Spaces.paddingVertical[6],
+                          ApplicationStyle.backgroundColor.primary900,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          Spaces.gap[4],
                           {
-                            backgroundColor: line.cleanSheet ? `${Colors.primary500}2B` : pillSurfaceColor,
-                            borderColor: line.cleanSheet ? `${Colors.primary200}C7` : counterBorderColor,
-                            borderRadius: 14,
+                            borderColor: counterBorderColor,
                             borderWidth: 1,
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Clean sheet</Text>
-                      </TouchableOpacity>
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Quantites verrouillees</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          Ce joueur a deja valide ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.
+                        </Text>
+                      </View>
                     ) : null}
-                  </View>
 
-                  <View>
-                    {renderCounterField({
-                      containerStyle: { flex: 1 },
-                      disabled: isReadOnly,
-                      label: 'Minutes jouees',
-                      onChangeText: (value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
-                      onDecrement: () => adjustLineValue(line.key, 'minutesPlayed', -1),
-                      onIncrement: () => adjustLineValue(line.key, 'minutesPlayed', 1),
-                      value: line.minutesPlayed,
-                    })}
-                  </View>
-
-                  {playerStatRows.map((row) => (
-                    <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, Spaces.gap[12]]}>
-                      {row.map((field) => (
-                        <View key={field.key} style={{ flex: 1 }}>
-                          {renderCounterField({
-                            containerStyle: { flex: 1 },
-                            disabled: isReadOnly,
-                            label: field.label,
-                            onChangeText: (value) => updateLineNumericValue(line.key, field.key, value),
-                            onDecrement: () => adjustLineValue(line.key, field.key, -1),
-                            onIncrement: () => adjustLineValue(line.key, field.key, 1),
-                            value: line[field.key],
-                          })}
-                        </View>
-                      ))}
+                    <View>
+                      {renderCounterField({
+                        containerStyle: { flex: 1 },
+                        disabled: lineInputsDisabled,
+                        label: 'Minutes jouees',
+                        onChangeText: (value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
+                        onDecrement: () => adjustLineValue(line.key, 'minutesPlayed', -1),
+                        onIncrement: () => adjustLineValue(line.key, 'minutesPlayed', 1),
+                        value: line.minutesPlayed,
+                      })}
                     </View>
-                  ))}
-                </View>
-              )) : (
+
+                    {playerStatRows.map((row) => (
+                      <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, Spaces.gap[12]]}>
+                        {row.map((field) => (
+                          <View key={field.key} style={{ flex: 1 }}>
+                            {renderCounterField({
+                              containerStyle: { flex: 1 },
+                              disabled: lineInputsDisabled,
+                              label: field.label,
+                              onChangeText: (value) => updateLineNumericValue(line.key, field.key, value),
+                              onDecrement: () => adjustLineValue(line.key, field.key, -1),
+                              onIncrement: () => adjustLineValue(line.key, field.key, 1),
+                              value: line[field.key],
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                );
+              }) : (
                 <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius20, Spaces.padding[20], Spaces.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>

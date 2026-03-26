@@ -19,6 +19,7 @@ import { useGetTeams } from '@/services/team/teamQueries';
 import { sortTeamsForDisplay } from '@/utils/teamSort';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -34,7 +35,7 @@ function EventWizardTeam({ navigation }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const [searchQuery, setSearchQuery] = useState('');
 
   const trainedTeamIds = new Set(
@@ -107,7 +108,7 @@ function EventWizardTeam({ navigation }) {
   return (
     <WizardStepLayout
       onBack={() => navigation.goBack()}
-      stepCount={10}
+      stepCount={getEventWizardStepCount(state)}
       stepIndex={2}
       subtitle={t('eventWizard.steps.team.subtitle')}
       title={t('eventWizard.steps.team.title')}

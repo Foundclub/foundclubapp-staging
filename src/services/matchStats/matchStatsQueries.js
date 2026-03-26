@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getEventMatchResult,
   getEventMatchStats,
+  getEventMyMatchResponse,
   getLeagueMatchStats,
+  getLeagueMyMatchResponse,
   getPendingMatchStatsPrompts,
   getPersonalStats,
   getTeamPerformanceStats,
@@ -23,10 +25,24 @@ export const useGetEventMatchStats = (eventId, teamId, options = {}) => useQuery
   ...options,
 });
 
+export const useGetEventMyMatchResponse = (eventId, teamId, options = {}) => useQuery({
+  enabled: Boolean(eventId),
+  queryFn: () => getEventMyMatchResponse(eventId, teamId),
+  queryKey: ['eventMyMatchResponse', eventId, teamId || 'auto'],
+  ...options,
+});
+
 export const useGetLeagueMatchStats = (matchId, teamId, options = {}) => useQuery({
   enabled: Boolean(matchId),
   queryFn: () => getLeagueMatchStats(matchId, teamId),
   queryKey: ['leagueMatchStats', matchId, teamId || 'auto'],
+  ...options,
+});
+
+export const useGetLeagueMyMatchResponse = (matchId, teamId, options = {}) => useQuery({
+  enabled: Boolean(matchId),
+  queryFn: () => getLeagueMyMatchResponse(matchId, teamId),
+  queryKey: ['leagueMyMatchResponse', matchId, teamId || 'auto'],
   ...options,
 });
 

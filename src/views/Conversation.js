@@ -2911,9 +2911,14 @@ function Conversation({ navigation, route }) {
 
       const senderAvatarUrl = msg.sender?.avatar?.url || '';
       const avatarUrl = resolveMediaUri(senderAvatarUrl);
+      const stableMessageId = String(
+        msg?.documentId
+        || msg?.id
+        || `${msg?.createdAt || 'message'}-${msg?.sender?.documentId || msg?.sender?.id || 'system'}`,
+      ).trim();
 
       return {
-        _id: msg.id,
+        _id: stableMessageId,
         attachments: normalizedAttachments,
         composition: msg.composition,
         createdAt: new Date(msg.createdAt),

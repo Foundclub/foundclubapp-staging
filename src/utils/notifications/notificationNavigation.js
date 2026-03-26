@@ -32,6 +32,8 @@ import {
  *  notificationId?: string | number,
  *  dedupeKey?: string,
  *  matchId?: string | number,
+ *  sourceDocumentId?: string | number,
+ *  sourceType?: string,
  *  adId?: string | number,
  * }} NotificationPayload
  */
@@ -206,6 +208,39 @@ const eventDetailsDestination = (eventId) => {
   return {
     params: {
       params: { eventId: safeEventId },
+      screen: RouteNames.EventDetails,
+    },
+    route: RouteNames.EventStack,
+  };
+};
+
+/**
+ * @param {NotificationPayload} payload
+ */
+const coachReportPublishedDestination = (payload) => {
+  const sourceType = String(payload.sourceType || '').trim().toLowerCase();
+  const sourceDocumentId = normalizeEntityId(
+    firstDefinedValue(payload.sourceDocumentId, payload.matchId, payload.eventId),
+  );
+
+  if (!sourceDocumentId) return null;
+
+  if (sourceType === 'league_match' || sourceType === 'league') {
+    return {
+      params: {
+        focusSection: 'coachFeedback',
+        matchId: sourceDocumentId,
+      },
+      route: RouteNames.LeagueMatchDetails,
+    };
+  }
+
+  return {
+    params: {
+      params: {
+        eventId: sourceDocumentId,
+        focusSection: 'coachFeedback',
+      },
       screen: RouteNames.EventDetails,
     },
     route: RouteNames.EventStack,
@@ -418,6 +453,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : null;
 
+    case NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
     case NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED:
@@ -434,6 +470,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.RESERVATION_COMPLETE:
     case NOTIFICATION_TYPES.RESERVATION_PLAYER_JOINED:
     case NOTIFICATION_TYPES.RESERVATION_SOS_ALERT:
+      if (type === NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED) {
+        return coachReportPublishedDestination(payload);
+      }
       if (type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER) {
         return eventLineupDestination(payload.eventId)
           || eventDetailsDestination(payload.eventId);

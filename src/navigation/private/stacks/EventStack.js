@@ -7,6 +7,7 @@ import EventFilters from '@/views/event/EventFilters';
 import TacticalBoardScreen from '@/views/event/TacticalBoardScreen';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
+import EventWizardDetectionSlots from '@/views/event/wizard/EventWizardDetectionSlots';
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
@@ -18,6 +19,7 @@ import EventWizardValidationMode from '@/views/event/wizard/EventWizardValidatio
 import EventWizardVisibility from '@/views/event/wizard/EventWizardVisibility';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
 import PendingMatchStatsScreen from '@/views/matchStats/PendingMatchStatsScreen';
+import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
 import TacticalBoardV2 from '@/views/tactical_v2/TacticalBoard';
 import TacticalSelectionV2 from '@/views/tactical_v2/TacticalSelection';
 
@@ -88,6 +90,11 @@ function EventStack() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          component={PlayerMatchResponseScreen}
+          name={RouteNames.PlayerMatchResponse}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           component={PendingMatchStatsScreen}
           name={RouteNames.PendingMatchStats}
           options={{ headerShown: false }}
@@ -127,6 +134,11 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardParticipants}
           name={RouteNames.EventWizardParticipants}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={EventWizardDetectionSlots}
+          name={RouteNames.EventWizardDetectionSlots}
           options={{ headerShown: false }}
         />
         <Stack.Screen

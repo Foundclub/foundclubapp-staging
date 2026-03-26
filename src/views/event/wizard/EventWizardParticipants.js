@@ -15,6 +15,11 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
+import {
+  getEventWizardStepCount,
+  shouldExplainDetectionSlotsDisabled,
+  shouldShowDetectionSlotsStep,
+} from './eventWizardDetectionUtils';
 
 const MIN_PARTICIPANTS = 1;
 const MAX_PARTICIPANTS = 200;
@@ -59,6 +64,15 @@ function EventWizardParticipants({ navigation }) {
 
   const clampedCapacity = clampParticipants(capacityValue);
   const clampedTotalPlayers = clampParticipants(totalPlayersValue);
+  const normalizedCapacity = capacityMode === 'unlimited' ? null : clampedCapacity;
+  const normalizedTotalPlayers = isReservation ? clampedTotalPlayers : null;
+  const projectedState = {
+    ...state,
+    capacity: normalizedCapacity,
+    totalPlayers: normalizedTotalPlayers,
+  };
+  const shouldShowDetectionStep = shouldShowDetectionSlotsStep(projectedState);
+  const shouldShowDetectionDisabledHint = shouldExplainDetectionSlotsDisabled(projectedState);
 
   const hasInvalidPlayersConfig = (
     isReservation
@@ -99,9 +113,6 @@ function EventWizardParticipants({ navigation }) {
   ]);
 
   const handleNext = () => {
-    const normalizedCapacity = capacityMode === 'unlimited' ? null : clampedCapacity;
-    const normalizedTotalPlayers = isReservation ? clampedTotalPlayers : null;
-
     if (
       isReservation
       && normalizedCapacity !== null
@@ -125,7 +136,11 @@ function EventWizardParticipants({ navigation }) {
       },
       type: 'SET_PARTICIPANTS',
     });
-    navigation.navigate(RouteNames.EventWizardValidationMode);
+    navigation.navigate(
+      shouldShowDetectionStep
+        ? RouteNames.EventWizardDetectionSlots
+        : RouteNames.EventWizardValidationMode,
+    );
   };
 
   return (
@@ -133,7 +148,7 @@ function EventWizardParticipants({ navigation }) {
       isNextDisabled={hasInvalidPlayersConfig}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={10}
+      stepCount={getEventWizardStepCount(projectedState)}
       stepIndex={7}
       subtitle={t(
         'eventWizard.steps.participants.subtitle',
@@ -322,6 +337,23 @@ function EventWizardParticipants({ navigation }) {
             'Tu pourras encore modifier ces valeurs avant la création finale.',
           )}
         </Text>
+
+        {shouldShowDetectionDisabledHint ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], surfaceStyle]}>
+            <Text style={[Fonts.p3Bold, Fonts.gold500]}>
+              {t(
+                'eventWizard.steps.detectionSlots.recurrenceHintTitle',
+                'Postes par detection indisponibles',
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
+              {t(
+                'eventWizard.steps.detectionSlots.recurrenceHintBody',
+                'Les postes recherches sont disponibles uniquement sur une detection simple, non recurrente.',
+              )}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </WizardStepLayout>
   );

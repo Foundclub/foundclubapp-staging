@@ -9,6 +9,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
+import {
+  getEventWizardStepCount,
+  getEventWizardValidationStepIndex,
+} from './eventWizardDetectionUtils';
 
 /**
  *
@@ -88,8 +92,8 @@ function EventWizardValidationMode({ navigation }) {
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={10}
-      stepIndex={8}
+      stepCount={getEventWizardStepCount(state)}
+      stepIndex={getEventWizardValidationStepIndex(state)}
       subtitle={t('eventWizard.steps.validation.subtitle', "Définis comment valider les présences à l'événement.")}
       title={t('eventWizard.steps.validation.title', 'Mode de validation')}
     >

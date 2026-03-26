@@ -12,6 +12,7 @@ import RankingScreen from '@/views/league/ranking/RankingScreen';
 import SquadFiltersScreen from '@/views/league/search/SquadFiltersScreen';
 import SquadSearchScreen from '@/views/league/search/SquadSearchScreen';
 import MatchStatsEditor from '@/views/matchStats/MatchStatsEditor';
+import PlayerMatchResponseScreen from '@/views/matchStats/PlayerMatchResponseScreen';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -49,6 +50,11 @@ export default function LeagueNavigator() {
       <Stack.Screen
         component={MatchStatsEditor}
         name={RouteNames.MatchStatsEditor}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        component={PlayerMatchResponseScreen}
+        name={RouteNames.PlayerMatchResponse}
         options={{ headerShown: false }}
       />
       <Stack.Screen

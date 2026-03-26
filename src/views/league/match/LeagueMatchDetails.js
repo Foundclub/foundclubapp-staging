@@ -44,7 +44,10 @@ import {
   fetchMatch,
   markVenueBooked,
 } from '@/services/league/leagueMatchService';
-import { useGetLeagueMatchStats } from '@/services/matchStats/matchStatsQueries';
+import {
+  useGetLeagueMatchStats,
+  useGetLeagueMyMatchResponse,
+} from '@/services/matchStats/matchStatsQueries';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 
@@ -87,8 +90,12 @@ const getRequiredPlayersForSport = (sportValue) => {
  */
 function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
+  const highlightedSection = route?.params?.focusSection || null;
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
+  const leagueCardTextColor = Colors.primary500;
+  const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
+  const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
 
   const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -164,6 +171,13 @@ function LeagueMatchDetails({ navigation, route }) {
   } = useGetLeagueMatchStats(matchId, myTeamId || undefined, {
     enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
   });
+  const {
+    data: leagueMyMatchResponsePayload,
+    isFetching: isLeagueMyMatchResponseFetching,
+    refetch: refetchLeagueMyMatchResponse,
+  } = useGetLeagueMyMatchResponse(matchId, myTeamId || undefined, {
+    enabled: Boolean(matchId && myTeamId && String(match?.status || '').toLowerCase() === 'valid'),
+  });
 
   const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), userId);
   const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), userId);
@@ -179,11 +193,17 @@ function LeagueMatchDetails({ navigation, route }) {
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
   const leagueStatsReport = leagueMatchStatsPayload?.report || null;
+  const leaguePlayerCollectiveRating = leagueMatchStatsPayload?.playerCollectiveRating || null;
+  const leagueMyCoachReview = leagueMatchStatsPayload?.myCoachReview || null;
+  const leagueMyMatchResponse = leagueMyMatchResponsePayload?.response || null;
+  const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
+  const hasLeagueCoachReview = leagueMyCoachReview?.rating != null || Boolean(leagueMyCoachReview?.comment);
   const isLeagueStatsFinal = leagueStatsReport?.status === 'final';
   const isLeagueStatsReviewRequired = Boolean(leagueStatsReport?.needsReview);
   const isLeagueStatsCompleted = isLeagueStatsFinal && !isLeagueStatsReviewRequired;
   const canViewLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canView || teamSide);
-  const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage || teamSide);
+  const canManageLeagueStats = Boolean(leagueMatchStatsPayload?.permissions?.canManage);
+  const canRespondMyLeagueStats = Boolean(leagueMyMatchResponsePayload?.permissions?.canRespond || teamSide);
   const canSubmitScore = useMemo(
     () => isCaptain && ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase),
     [isCaptain, matchPhase],
@@ -199,6 +219,53 @@ function LeagueMatchDetails({ navigation, route }) {
     () => Boolean(addressLabel && normalizeComparableText(addressLabel) !== normalizeComparableText(venueLabel)),
     [addressLabel, venueLabel],
   );
+  const teamContextMeta = useMemo(() => {
+    if (teamSide === 'a') {
+      return {
+        backgroundColor: 'rgba(1, 179, 244, 0.16)',
+        borderColor: 'rgba(1, 179, 244, 0.35)',
+        label: 'DOMICILE',
+        subtitle: 'Tu joues chez toi',
+        textColor: Colors.primary500,
+      };
+    }
+
+    if (teamSide === 'b') {
+      return {
+        backgroundColor: 'rgba(255, 215, 0, 0.12)',
+        borderColor: 'rgba(255, 215, 0, 0.28)',
+        label: 'EXTERIEUR',
+        subtitle: 'Deplacement League',
+        textColor: Colors.gold500,
+      };
+    }
+
+    return null;
+  }, [Colors.gold500, Colors.primary500, teamSide]);
+  const remainingPlayers = useMemo(
+    () => Math.max(requiredPlayers - participationCount, 0),
+    [participationCount, requiredPlayers],
+  );
+  const isRosterFull = participationCount >= requiredPlayers;
+  const presenceHelperText = useMemo(() => {
+    if (hasConfirmed) {
+      return `Tu es compte dans la feuille de match (${participationCount}/${requiredPlayers}).`;
+    }
+
+    if (isRosterFull) {
+      return 'L effectif est complet pour le moment. Tu peux rester absent ou attendre une place.';
+    }
+
+    if (remainingPlayers <= 1) {
+      return 'Derniere place disponible pour ton equipe.';
+    }
+
+    return `${remainingPlayers} places encore disponibles pour ton equipe.`;
+  }, [hasConfirmed, isRosterFull, participationCount, remainingPlayers, requiredPlayers]);
+  const presencePrimaryTitle = useMemo(() => {
+    if (isRosterFull) return `Effectif complet (${participationCount}/${requiredPlayers})`;
+    return `Confirmer ma presence (${participationCount}/${requiredPlayers})`;
+  }, [isRosterFull, participationCount, requiredPlayers]);
 
   const formattedDate = useMemo(() => {
     if (!match?.date) return 'Date a definir';
@@ -236,6 +303,64 @@ function LeagueMatchDetails({ navigation, route }) {
     return 250;
   }, [canShowCaptainCancel, canShowCaptainPrimary, hasBottomPresenceBar, isCaptain]);
   const isScoreToSubmitBadge = statusConfig.label === 'Score a saisir';
+  const heroStatusMeta = useMemo(() => {
+    if (isScoreToSubmitBadge || canSubmitScore) {
+      return {
+        accentColor: Colors.gold500,
+        icon: Images.edit,
+        label: 'Action capitaine',
+        text: 'Le score final doit etre saisi pour debloquer le bilan League.',
+      };
+    }
+
+    if (normalizedStatus === 'scheduled' && !isVenueBooked) {
+      return {
+        accentColor: Colors.warning500,
+        icon: Images.stadium,
+        label: 'Terrain a confirmer',
+        text: 'Le terrain doit encore etre confirme avant le coup d envoi.',
+      };
+    }
+
+    if (normalizedStatus === 'scheduled') {
+      return {
+        accentColor: Colors.primary500,
+        icon: Images.clock,
+        label: 'Avant match',
+        text: 'Les confirmations de presence restent ouvertes avant le debut.',
+      };
+    }
+
+    if (normalizedStatus === 'valid') {
+      return {
+        accentColor: Colors.success500,
+        icon: Images.check,
+        label: 'Resultat valide',
+        text: 'Le match est verrouille avec son score officiel.',
+      };
+    }
+
+    return {
+      accentColor: Colors.primary500,
+      icon: Images.flag,
+      label: 'Statut League',
+      text: 'Le suivi League reste disponible dans les sections ci-dessous.',
+    };
+  }, [
+    Colors.gold500,
+    Colors.primary500,
+    Colors.success500,
+    Colors.warning500,
+    Images.check,
+    Images.clock,
+    Images.edit,
+    Images.flag,
+    Images.stadium,
+    canSubmitScore,
+    isScoreToSubmitBadge,
+    isVenueBooked,
+    normalizedStatus,
+  ]);
   const leagueStatsAction = useMemo(() => {
     if (normalizedStatus !== 'valid') {
       return {
@@ -266,15 +391,15 @@ function LeagueMatchDetails({ navigation, route }) {
     if (canManageLeagueStats) {
       return {
         disabled: false,
-        subtitle: 'Temps de jeu et stats cles a completer pour ton equipe.',
-        title: 'Saisir les stats du match',
+        subtitle: 'Note collective, retours coach et stats manquantes a completer pour ton equipe.',
+        title: 'Finaliser le bilan equipe',
       };
     }
 
     return {
       disabled: true,
-      subtitle: 'Les membres de ton equipe peuvent encore finaliser ce rapport.',
-      title: "En attente de l'equipe",
+      subtitle: 'Le bilan equipe est encore en cours de finalisation.',
+      title: 'En attente du bilan',
     };
   }, [
     canManageLeagueStats,
@@ -297,10 +422,10 @@ function LeagueMatchDetails({ navigation, route }) {
     }
 
     if (canManageLeagueStats) {
-      return 'Complete les stats de ton equipe maintenant que le score est valide.';
+      return 'Complete le bilan collectif, les retours individuels et les stats manquantes maintenant que le score est valide.';
     }
 
-    return 'Les membres de ton equipe peuvent encore finaliser ce rapport.';
+    return 'Le bilan equipe est encore en cours de finalisation.';
   }, [canManageLeagueStats, isLeagueStatsFinal, isLeagueStatsReviewRequired, normalizedStatus]);
   const leagueStatsStatusMeta = useMemo(() => {
     if (isLeagueStatsReviewRequired) {
@@ -342,6 +467,91 @@ function LeagueMatchDetails({ navigation, route }) {
     if (isLeagueStatsCompleted) return 'Voir';
     return 'Ouvrir';
   }, [isLeagueStatsCompleted, isLeagueStatsReviewRequired]);
+  const myLeagueMatchResponseStatusMeta = useMemo(() => {
+    if (leagueMyMatchResponse?.status === 'draft') {
+      return {
+        backgroundColor: `${Colors.primary500}20`,
+        borderColor: `${Colors.primary500}45`,
+        label: 'Brouillon',
+        textColor: Colors.primary500,
+      };
+    }
+
+    if (leagueMyMatchResponse?.status === 'submitted') {
+      if (leagueMyMatchResponse?.participation === 'not_involved') {
+        return {
+          backgroundColor: `${Colors.neutral00}14`,
+          borderColor: `${Colors.neutral00}24`,
+          label: 'Non concerne',
+          textColor: Colors.neutral00,
+        };
+      }
+
+      if (leagueMyMatchResponse?.quantitativeState === 'unknown') {
+        return {
+          backgroundColor: `${Colors.gold500}20`,
+          borderColor: `${Colors.gold500}45`,
+          label: 'Je ne sais pas',
+          textColor: Colors.gold500,
+        };
+      }
+
+      return {
+        backgroundColor: `${Colors.success500}20`,
+        borderColor: `${Colors.success500}45`,
+        label: 'Envoye',
+        textColor: Colors.success500,
+      };
+    }
+
+    return {
+      backgroundColor: `${Colors.primary500}20`,
+      borderColor: `${Colors.primary500}45`,
+      label: 'A faire',
+      textColor: Colors.primary500,
+    };
+  }, [
+    Colors.gold500,
+    Colors.neutral00,
+    Colors.primary500,
+    Colors.success500,
+    leagueMyMatchResponse,
+  ]);
+  const myLeagueMatchResponseSummary = useMemo(() => {
+    if (leagueMyMatchResponse?.status === 'submitted') {
+      if (leagueMyMatchResponse?.participation === 'not_involved') {
+        return 'Tu as indique ne pas etre concerne par ce match.';
+      }
+
+      if (leagueMyMatchResponse?.participation === 'present_no_play') {
+        return 'Tu as indique que tu etais la sans jouer.';
+      }
+
+      if (leagueMyMatchResponse?.quantitativeState === 'unknown') {
+        return 'Ton ressenti est enregistre, sans stats quantitatives.';
+      }
+
+      return 'Tes stats personnelles et ta note sont enregistrees.';
+    }
+
+    if (leagueMyMatchResponse?.status === 'draft') {
+      return 'Ton brouillon perso post-match attend encore une validation.';
+    }
+
+    return 'Renseigne ton retour individuel, puis ajoute une note sur 10.';
+  }, [leagueMyMatchResponse]);
+  const myLeagueMatchResponseButtonTitle = useMemo(() => {
+    if (leagueMyMatchResponse?.status === 'draft') return 'Reprendre';
+    if (leagueMyMatchResponse?.status === 'submitted') return 'Voir';
+    return 'Renseigner';
+  }, [leagueMyMatchResponse]);
+  const renderSectionHeader = useCallback((title, accentColor = leagueCardTextColor) => (
+    <View style={styles.sectionHeaderRow}>
+      <View style={[styles.sectionHeaderDot, { backgroundColor: accentColor }]} />
+      <Text style={[Fonts.h4, styles.sectionHeaderText, { color: accentColor }]}>{title}</Text>
+      <View style={[styles.sectionHeaderLine, { backgroundColor: `${accentColor}33` }]} />
+    </View>
+  ), [Fonts.h4, leagueCardTextColor]);
 
   const handleConfirmParticipation = async () => {
     if (!teamSide) return;
@@ -450,9 +660,33 @@ function LeagueMatchDetails({ navigation, route }) {
       sport: myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport || 'football',
       teamId: myTeamId,
       teamName: myTeam?.name || null,
-      title: 'Stats du match',
+      title: 'Bilan equipe',
     });
   }, [match?.team_a?.name, match?.team_a?.sport, match?.team_b?.name, match?.team_b?.sport, matchId, myTeam?.name, myTeam?.sport, myTeamId, navigation]);
+  const handleOpenMyMatchResponse = useCallback(() => {
+    if (!myTeamId) return;
+
+    navigation.navigate(RouteNames.PlayerMatchResponse, {
+      matchId,
+      matchLabel: `${match?.team_a?.name || 'Equipe A'} VS ${match?.team_b?.name || 'Equipe B'}`,
+      sourceType: 'league',
+      sport: leagueMyMatchResponsePayload?.sport || myTeam?.sport || match?.team_a?.sport || match?.team_b?.sport || 'football',
+      teamId: myTeamId,
+      teamName: myTeam?.name || null,
+      title: 'Mon retour post-match',
+    });
+  }, [
+    leagueMyMatchResponsePayload?.sport,
+    match?.team_a?.name,
+    match?.team_a?.sport,
+    match?.team_b?.name,
+    match?.team_b?.sport,
+    matchId,
+    myTeam?.name,
+    myTeam?.sport,
+    myTeamId,
+    navigation,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -508,11 +742,11 @@ function LeagueMatchDetails({ navigation, route }) {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h4, styles.headerTitle, { color: Colors.neutral100 }]}>Details du match</Text>
+          <Text style={[Fonts.h4, styles.headerTitle, { color: leagueCardTextColor }]}>Details du match</Text>
           <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
         <View style={styles.centered}>
-          <Text style={[Fonts.p1, { color: Colors.neutral500 }]}>Match introuvable</Text>
+          <Text style={[Fonts.p1, { color: leagueCardTextColor }]}>Match introuvable</Text>
         </View>
       </ScreenContainer>
     );
@@ -549,6 +783,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 setRefreshing(true);
                 if (myTeamId && normalizedStatus === 'valid') {
                   refetchLeagueMatchStats();
+                  refetchLeagueMyMatchResponse();
                 }
                 loadMatch();
               }}
@@ -563,7 +798,34 @@ function LeagueMatchDetails({ navigation, route }) {
               <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral00 }]}>{match.team_a?.name || 'Equipe A'}</Text>
             </View>
 
-            <View style={styles.scoreColumn}>
+            <View
+              style={[
+                styles.scoreColumn,
+                {
+                  backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                  borderColor: 'rgba(1, 179, 244, 0.24)',
+                  shadowColor: Colors.primary500,
+                },
+              ]}
+            >
+              {teamContextMeta ? (
+                <View
+                  style={[
+                    styles.heroContextPill,
+                    {
+                      backgroundColor: teamContextMeta.backgroundColor,
+                      borderColor: teamContextMeta.borderColor,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.label, { color: teamContextMeta.textColor }]}>
+                    {teamContextMeta.label}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 6 }]}>
+                {match.score_a !== null && match.score_b !== null ? 'SCORE' : 'MATCH'}
+              </Text>
               {match.score_a !== null && match.score_b !== null ? (
                 <Text style={[Fonts.h1, { color: Colors.neutral00, fontSize: 32 }]}>
                   {match.score_a}
@@ -584,19 +846,54 @@ function LeagueMatchDetails({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.label, { color: statusConfig.color, textTransform: 'uppercase' }]}>
-                  {statusConfig.label}
+                <View style={styles.statusBadgeContent}>
+                  <Image
+                    source={heroStatusMeta.icon}
+                    style={{
+                      height: 12,
+                      marginRight: 6,
+                      tintColor: statusConfig.color,
+                      width: 12,
+                    }}
+                  />
+                  <Text style={[Fonts.label, { color: statusConfig.color, textTransform: 'uppercase' }]}>
+                    {statusConfig.label}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 8 }]}>
+                {match.score_a !== null && match.score_b !== null ? 'Tableau officiel' : 'En attente du resultat'}
+              </Text>
+              <View
+                style={[
+                  styles.heroStatusSupportCard,
+                  {
+                    backgroundColor: `${heroStatusMeta.accentColor}12`,
+                    borderColor: `${heroStatusMeta.accentColor}30`,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: heroStatusMeta.accentColor, marginBottom: 4 }]}>
+                  {heroStatusMeta.label}
+                </Text>
+                <Text style={[Fonts.p4, { color: leagueCardTextColor, textAlign: 'center' }]}>
+                  {heroStatusMeta.text}
                 </Text>
               </View>
+              {teamContextMeta?.subtitle ? (
+                <Text style={[Fonts.p4, { color: teamContextMeta.textColor, marginTop: 6, textAlign: 'center' }]}>
+                  {teamContextMeta.subtitle}
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.teamColumn}>
               {isAnonymous ? (
                 <>
                   <View style={[styles.mysteryShield, { borderColor: Colors.gold500 }]}>
-                    <Text style={{ color: Colors.neutral200, fontSize: 30 }}>?</Text>
+                    <Text style={{ color: leagueCardTextColor, fontSize: 30 }}>?</Text>
                   </View>
-                  <Text style={[Fonts.h4, styles.teamName, { color: Colors.neutral500, fontStyle: 'italic' }]}>
+                  <Text style={[Fonts.h4, styles.teamName, { color: leagueCardTextColor, fontStyle: 'italic' }]}>
                     Mystere
                   </Text>
                 </>
@@ -610,23 +907,48 @@ function LeagueMatchDetails({ navigation, route }) {
           </View>
 
           <LeagueCard isGold>
-            <View style={styles.infoRow}>
-              <Image source={Images.calendar} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
-              <Text style={[Fonts.p1, { color: Colors.neutral00, flex: 1, marginLeft: 12 }]}>
-                {formattedDate}
-              </Text>
-            </View>
-            <View style={[styles.separator, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-
-            <View style={styles.infoRow}>
-              <Image source={Images.pin} style={{ height: 20, tintColor: Colors.gold500, width: 20 }} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{venueLabel}</Text>
-                {showAddressLine ? (
-                  <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 4 }]}>
-                    {addressLabel}
+            <View style={styles.infoStack}>
+              <View
+                style={[
+                  styles.infoPill,
+                  {
+                    backgroundColor: leagueGoldSurface,
+                    borderColor: 'rgba(255, 215, 0, 0.18)',
+                  },
+                ]}
+              >
+                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.14)' }]}>
+                  <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                </View>
+                <View style={styles.infoTextWrap}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Date et heure</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                    {formattedDate}
                   </Text>
-                ) : null}
+                </View>
+              </View>
+
+              <View
+                style={[
+                  styles.infoPill,
+                  {
+                    backgroundColor: leagueAccentSurface,
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                  },
+                ]}
+              >
+                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
+                  <Image source={Images.pin} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                </View>
+                <View style={styles.infoTextWrap}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Lieu</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{venueLabel}</Text>
+                  {showAddressLine ? (
+                    <Text style={[Fonts.p2, { color: leagueCardTextColor, marginTop: 4 }]}>
+                      {addressLabel}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
             </View>
 
@@ -638,8 +960,16 @@ function LeagueMatchDetails({ navigation, route }) {
                     ENJEUX DU MATCH (ELO)
                   </Text>
                   <View style={styles.eloRow}>
-                    <View style={styles.eloTeam}>
-                      <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{match.team_a?.name}</Text>
+                    <View
+                      style={[
+                        styles.eloTeam,
+                        {
+                          backgroundColor: leagueGoldSurface,
+                          borderColor: 'rgba(255, 215, 0, 0.16)',
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{match.team_a?.name}</Text>
                       <Text style={[Fonts.p1, { color: Colors.success500 }]}>
                         +
                         {eloPrediction.winA}
@@ -648,8 +978,16 @@ function LeagueMatchDetails({ navigation, route }) {
                       </Text>
                     </View>
                     <View style={[styles.verticalSep, { backgroundColor: 'rgba(255,255,255,0.16)' }]} />
-                    <View style={styles.eloTeam}>
-                      <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
+                    <View
+                      style={[
+                        styles.eloTeam,
+                        {
+                          backgroundColor: leagueAccentSurface,
+                          borderColor: 'rgba(1, 179, 244, 0.16)',
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
                       <Text style={[Fonts.p1, { color: Colors.success500 }]}>
                         +
                         {eloPrediction.winB}
@@ -663,11 +1001,162 @@ function LeagueMatchDetails({ navigation, route }) {
             ) : null}
           </LeagueCard>
 
+          {teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
+            <>
+              {renderSectionHeader('Mes stats')}
+              <LeagueCard>
+                <View style={{ gap: 12 }}>
+                  <View
+                    style={[
+                      styles.responseHeroCard,
+                      {
+                        backgroundColor: leagueAccentSurface,
+                        borderColor: 'rgba(1, 179, 244, 0.2)',
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>RETOUR INDIVIDUEL</Text>
+                      <Text style={[Fonts.h1, styles.responseLargeScore, { color: Colors.neutral00 }]}>
+                        {leagueMyMatchResponse?.selfRating ? `${leagueMyMatchResponse.selfRating}/10` : 'A completer'}
+                      </Text>
+                      <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>
+                        {leagueMyMatchResponse?.selfRating ? 'Note personnelle' : 'Renseigne ton ressenti de match'}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: myLeagueMatchResponseStatusMeta.backgroundColor,
+                        borderColor: myLeagueMatchResponseStatusMeta.borderColor,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: myLeagueMatchResponseStatusMeta.textColor }]}>
+                        {myLeagueMatchResponseStatusMeta.label}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
+                    {myLeagueMatchResponseSummary}
+                  </Text>
+
+                  {leagueMyMatchResponse?.teamRating ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: 16,
+                        padding: 12,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                        {`Le match de l equipe : ${leagueMyMatchResponse.teamRating}/10`}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {leagueMyMatchResponse?.selfComment ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: 16,
+                        padding: 12,
+                      }}
+                    >
+                      <Text numberOfLines={3} style={[Fonts.p4, { color: leagueCardTextColor }]}>
+                        {leagueMyMatchResponse.selfComment}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Button
+                    disabled={isLeagueMyMatchResponseFetching}
+                    onPress={handleOpenMyMatchResponse}
+                    size="small"
+                    title={myLeagueMatchResponseButtonTitle}
+                    variant="Secondary"
+                  />
+                </View>
+              </LeagueCard>
+            </>
+          ) : null}
+
+          {teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
+            <>
+              {renderSectionHeader('Mon retour coach', Colors.gold500)}
+              <LeagueCard style={isCoachFeedbackHighlighted ? { borderColor: Colors.gold500, borderWidth: 2 } : null}>
+                <View style={{ gap: 12 }}>
+                  <View
+                    style={[
+                      styles.responseHeroCard,
+                      {
+                        backgroundColor: 'rgba(255, 215, 0, 0.08)',
+                        borderColor: 'rgba(255, 215, 0, 0.18)',
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.responseTitleRow}>
+                        <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>RETOUR INDIVIDUEL</Text>
+                        <View style={styles.coachTag}>
+                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>COACH</Text>
+                        </View>
+                      </View>
+                      <Text style={[Fonts.h1, styles.responseLargeScore, { color: Colors.neutral00 }]}>
+                        {leagueMyCoachReview?.rating != null ? `${leagueMyCoachReview.rating}/10` : 'En attente'}
+                      </Text>
+                      <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>
+                        {hasLeagueCoachReview ? 'Evaluation publiee' : 'Retour pas encore disponible'}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: hasLeagueCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
+                        borderColor: hasLeagueCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: hasLeagueCoachReview ? Colors.success500 : Colors.gold500 }]}>
+                        {hasLeagueCoachReview ? 'Disponible' : 'Pas encore partage'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
+                    {hasLeagueCoachReview
+                      ? 'Le coach a publie un retour individuel pour ton match.'
+                      : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
+                  </Text>
+
+                  {leagueMyCoachReview?.comment ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: 16,
+                        padding: 12,
+                      }}
+                    >
+                      <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>
+                        {leagueMyCoachReview.comment}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </LeagueCard>
+            </>
+          ) : null}
+
           {canViewLeagueStats ? (
             <>
-              <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
-                Stats du match
-              </Text>
+              {renderSectionHeader('Stats du match')}
               <LeagueCard>
                 <View style={{ gap: 12 }}>
                   <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
@@ -696,9 +1185,80 @@ function LeagueMatchDetails({ navigation, route }) {
                     </View>
                   </View>
 
-                  <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                  <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                     {leagueStatsSummaryText}
                   </Text>
+
+                  {leagueStatsReport?.collectiveRating || leaguePlayerCollectiveRating?.average != null ? (
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      {leagueStatsReport?.collectiveRating ? (
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: 16,
+                            flex: 1,
+                            gap: 4,
+                            padding: 12,
+                          }}
+                        >
+                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Note coach</Text>
+                          <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                            {`${leagueStatsReport.collectiveRating}/10`}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {leaguePlayerCollectiveRating?.average != null ? (
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderRadius: 16,
+                            flex: 1,
+                            gap: 4,
+                            padding: 12,
+                          }}
+                        >
+                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Ressenti joueurs</Text>
+                          <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                            {`${leaguePlayerCollectiveRating.average}/10`}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {leagueStatsReport?.collectiveComment ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: 16,
+                        padding: 12,
+                      }}
+                    >
+                      <Text numberOfLines={3} style={[Fonts.p4, { color: leagueCardTextColor }]}>
+                        {leagueStatsReport.collectiveComment}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {(leagueStatsReport?.responseEligibleCount || leagueStatsReport?.responseCompletionCount || leaguePlayerCollectiveRating?.count) ? (
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderRadius: 16,
+                        gap: 4,
+                        padding: 12,
+                      }}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                        {`${leagueStatsReport?.responseCompletionCount ?? leaguePlayerCollectiveRating?.count ?? 0}/${leagueStatsReport?.responseEligibleCount ?? leaguePlayerCollectiveRating?.eligibleCount ?? 0} joueurs ont repondu`}
+                      </Text>
+                      {leaguePlayerCollectiveRating?.count ? (
+                        <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>
+                          {`${leaguePlayerCollectiveRating.count} note${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} collective${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} prise${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} en compte`}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
 
                   {leagueStatsReport ? (
                     <View style={{ flexDirection: 'row', gap: 16 }}>
@@ -710,7 +1270,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           padding: 12,
                         }}
                       >
-                        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Version</Text>
+                        <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Version</Text>
                         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                           {`v${Number(leagueStatsReport?.version || 1)}`}
                         </Text>
@@ -723,7 +1283,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           padding: 12,
                         }}
                       >
-                        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Publication</Text>
+                        <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Publication</Text>
                         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                           {leagueStatsReport?.finalizedAt
                             ? new Date(leagueStatsReport.finalizedAt).toLocaleString('fr-FR')
@@ -761,50 +1321,58 @@ function LeagueMatchDetails({ navigation, route }) {
             </>
           ) : null}
 
-          <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
-            Compositions (
-            {match.participations_a?.length || 0}
-            {' '}
-            vs
-            {' '}
-            {match.participations_b?.length || 0}
-            )
-          </Text>
+          {renderSectionHeader(
+            `Compositions (${match.participations_a?.length || 0} vs ${match.participations_b?.length || 0})`,
+          )}
 
           <LeagueCard>
-            <View style={styles.compoRow}>
-              <View style={{ flex: 1 }}>
+            <View style={[styles.compoRow, { gap: 12 }]}>
+              <View
+                style={[
+                  styles.compoColumn,
+                  {
+                    backgroundColor: leagueGoldSurface,
+                    borderColor: 'rgba(255, 215, 0, 0.18)',
+                  },
+                ]}
+              >
                 <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
                 {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
                   <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
                     <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
-                    <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
+                    <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
                     {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
                   </View>
                 ))}
                 {(!match.participations_a || match.participations_a.length === 0) ? (
-                  <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                  <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
                 ) : null}
               </View>
 
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 16, width: 1 }} />
-
-              <View style={{ flex: 1 }}>
-                <Text style={[Fonts.label, { color: Colors.neutral300, marginBottom: 12 }]}>
+              <View
+                style={[
+                  styles.compoColumn,
+                  {
+                    backgroundColor: leagueAccentSurface,
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                  },
+                ]}
+              >
+                <Text style={[Fonts.label, { color: leagueCardTextColor, marginBottom: 12 }]}>
                   {isAnonymous ? 'Adversaire' : match.team_b?.name}
                 </Text>
                 {isAnonymous ? (
-                  <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Masque</Text>
+                  <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Masque</Text>
                 ) : (
                   <>
                     {(match.participations_b || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
                       <View key={`${getEntityDocumentId(p) || i}-b`} style={styles.playerRow}>
-                        <View style={[styles.dot, { backgroundColor: Colors.neutral300 }]} />
-                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{getParticipantDisplayName(p)}</Text>
+                        <View style={[styles.dot, { backgroundColor: leagueCardTextColor }]} />
+                        <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
                       </View>
                     ))}
                     {(!match.participations_b || match.participations_b.length === 0) ? (
-                      <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>Aucun joueur</Text>
+                      <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>Aucun joueur</Text>
                     ) : null}
                   </>
                 )}
@@ -814,13 +1382,30 @@ function LeagueMatchDetails({ navigation, route }) {
 
           {isCaptain && (canShowCaptainPrimary || canShowCaptainCancel) ? (
             <>
-              <Text style={[Fonts.h4, styles.sectionTitle, { color: Colors.neutral100 }]}>
-                Zone Capitaine
-              </Text>
+              {renderSectionHeader('Zone Capitaine')}
               <LeagueCard>
+                <View
+                  style={[
+                    styles.captainHeroCard,
+                    {
+                      backgroundColor: leagueAccentSurface,
+                      borderColor: 'rgba(1, 179, 244, 0.22)',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+                    PRIORITE MATCH
+                  </Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    Valide les actions terrain et score pour debloquer le suivi League.
+                  </Text>
+                </View>
                 {canSubmitScore || isScoreLockedByTime ? (
                   <Button
                     disabled={actionLoading}
+                    icon="edit"
+                    iconColor={isScoreLockedByTime ? Colors.neutral300 : Colors.neutral00}
+                    iconPosition="before"
                     onPress={handleGoToScoreEntry}
                     style={{
                       backgroundColor: isScoreLockedByTime ? 'rgba(255,255,255,0.08)' : Colors.primary500,
@@ -833,13 +1418,16 @@ function LeagueMatchDetails({ navigation, route }) {
                   />
                 ) : null}
                 {isScoreLockedByTime ? (
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 12 }]}>
+                  <Text style={[Fonts.p3, { color: leagueCardTextColor, marginBottom: 12 }]}>
                     Le score sera disponible apres l&apos;heure de debut du match (+1 min).
                   </Text>
                 ) : null}
                 {normalizedStatus === 'scheduled' && !isVenueBooked ? (
                   <Button
                     disabled={actionLoading}
+                    icon="stadium"
+                    iconColor={Colors.primary900}
+                    iconPosition="before"
                     onPress={handleMarkVenueBooked}
                     style={{ backgroundColor: Colors.gold500, marginBottom: 10 }}
                     textStyle={{ color: Colors.primary900 }}
@@ -866,14 +1454,80 @@ function LeagueMatchDetails({ navigation, route }) {
         {teamSide && normalizedStatus === 'scheduled' ? (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarContent}>
+              <View
+                style={[
+                  styles.presenceSummaryCard,
+                  hasConfirmed
+                    ? {
+                      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                      borderColor: 'rgba(34, 197, 94, 0.28)',
+                    }
+                    : {
+                      backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                      borderColor: 'rgba(1, 179, 244, 0.22)',
+                    },
+                ]}
+              >
+                <View style={styles.presenceSummaryHeader}>
+                  <View style={styles.presenceSummaryTitleRow}>
+                    <View
+                      style={[
+                        styles.presenceSummaryDot,
+                        { backgroundColor: hasConfirmed ? Colors.success500 : Colors.primary500 },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        Fonts.p2Bold,
+                        {
+                          color: hasConfirmed ? Colors.success500 : Colors.neutral00,
+                        },
+                      ]}
+                    >
+                      {hasConfirmed ? 'Presence confirmee' : 'Disponibilite match'}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.presenceCountPill,
+                      {
+                        backgroundColor: hasConfirmed ? 'rgba(34, 197, 94, 0.14)' : 'rgba(1, 179, 244, 0.14)',
+                        borderColor: hasConfirmed ? 'rgba(34, 197, 94, 0.24)' : 'rgba(1, 179, 244, 0.24)',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        Fonts.p4Bold,
+                        {
+                          color: hasConfirmed ? Colors.success500 : leagueCardTextColor,
+                        },
+                      ]}
+                    >
+                      {participationCount}
+                      /
+                      {requiredPlayers}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 10 }]}>
+                  {presenceHelperText}
+                </Text>
+              </View>
               {hasConfirmed ? (
-                <View style={styles.confirmedRow}>
-                  <Text style={[Fonts.p1, { color: Colors.success500 }]}>Presence confirmee</Text>
+                <View style={styles.confirmedActionsRow}>
                   <Button
                     disabled={actionLoading}
+                    icon="close"
+                    iconColor={Colors.error500}
+                    iconPosition="before"
                     onPress={handleDeclineParticipation}
                     size="small"
-                    style={{ backgroundColor: 'transparent', borderColor: Colors.error500, minWidth: 132 }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: Colors.error500,
+                      minWidth: 156,
+                    }}
                     textStyle={{ color: Colors.error500 }}
                     title="Passer absent"
                     variant="Secondary"
@@ -883,18 +1537,32 @@ function LeagueMatchDetails({ navigation, route }) {
                 <View style={styles.presenceActionsRow}>
                   <Button
                     disabled={actionLoading}
+                    icon="close"
+                    iconColor={Colors.error500}
+                    iconPosition="before"
                     onPress={handleDeclineParticipation}
-                    style={{ backgroundColor: 'transparent', borderColor: Colors.error500, flex: 1 }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      borderColor: Colors.error500,
+                      flex: 0.92,
+                    }}
                     textStyle={{ color: Colors.error500 }}
                     title="Absent"
                     variant="Secondary"
                   />
                   <Button
-                    disabled={actionLoading || participationCount >= requiredPlayers}
+                    disabled={actionLoading || isRosterFull}
+                    icon="check"
+                    iconColor={isRosterFull ? Colors.neutral300 : Colors.primary900}
+                    iconPosition="before"
                     onPress={handleConfirmParticipation}
-                    style={{ backgroundColor: Colors.gold500, flex: 1.35 }}
-                    textStyle={{ color: Colors.primary900 }}
-                    title={`Present (${participationCount}/${requiredPlayers})`}
+                    style={{
+                      backgroundColor: isRosterFull ? 'rgba(255,255,255,0.08)' : Colors.gold500,
+                      borderColor: isRosterFull ? 'rgba(255,255,255,0.16)' : Colors.gold500,
+                      flex: 1.4,
+                    }}
+                    textStyle={{ color: isRosterFull ? Colors.neutral300 : Colors.primary900 }}
+                    title={presencePrimaryTitle}
                     variant="Primary"
                   />
                 </View>
@@ -914,7 +1582,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <View style={{ gap: 16, paddingBottom: 12 }}>
             <View style={{ gap: 4 }}>
               <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Stats de fin de match</Text>
-              <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+              <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                 {isLeagueStatsReviewRequired
                   ? 'Le score officiel a change. Verifie les lignes puis republie ce rapport.'
                   : 'Le score est valide. Tu peux maintenant completer le temps de jeu et les stats cles de ton equipe.'}
@@ -922,7 +1590,7 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
 
             <LeagueCard>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Equipe concernee</Text>
+              <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>Equipe concernee</Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
                 {myTeam?.name || 'Mon equipe'}
               </Text>
@@ -961,17 +1629,31 @@ const styles = StyleSheet.create({
   bottomBar: {
     backgroundColor: 'rgba(10, 28, 43, 0.96)',
     borderTopColor: 'rgba(1, 179, 244, 0.25)',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     bottom: 0,
+    elevation: 18,
     left: 0,
     paddingBottom: 30,
     paddingHorizontal: 16,
     paddingTop: 12,
     position: 'absolute',
     right: 0,
+    shadowColor: '#000',
+    shadowOffset: { height: -10, width: 0 },
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
   },
   bottomBarContent: {
     width: '100%',
+  },
+  captainHeroCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   centered: {
     alignItems: 'center',
@@ -988,13 +1670,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 36,
   },
+  coachTag: {
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.25)',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  compoColumn: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 140,
+    padding: 14,
+  },
   compoRow: {
     flexDirection: 'row',
   },
-  confirmedRow: {
-    alignItems: 'center',
+  confirmedActionsRow: {
+    alignItems: 'flex-end',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     width: '100%',
   },
   dot: {
@@ -1009,11 +1706,16 @@ const styles = StyleSheet.create({
   eloRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-around',
   },
   eloTeam: {
     alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
     flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
   },
   header: {
     alignItems: 'center',
@@ -1040,6 +1742,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+  heroContextPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
   heroSection: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1047,10 +1756,40 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginTop: 10,
   },
+  heroStatusSupportCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    width: '100%',
+  },
+  infoIconWrap: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  infoPill: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
     paddingVertical: 8,
+  },
+  infoStack: {
+    gap: 10,
+  },
+  infoTextWrap: {
+    flex: 1,
+    marginLeft: 12,
   },
   mysteryShield: {
     alignItems: 'center',
@@ -1072,6 +1811,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     width: '100%',
+  },
+  presenceCountPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  presenceSummaryCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  presenceSummaryDot: {
+    borderRadius: 999,
+    height: 10,
+    width: 10,
+  },
+  presenceSummaryHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  presenceSummaryTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
   },
   progressChip: {
     borderRadius: 999,
@@ -1099,10 +1866,56 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderColor: 'rgba(255,255,255,0.16)',
   },
+  responseHeroCard: {
+    alignItems: 'flex-start',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+  },
+  responseLargeScore: {
+    fontSize: 34,
+    lineHeight: 38,
+  },
+  responseTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   scoreColumn: {
     alignItems: 'center',
+    borderRadius: 28,
+    borderWidth: 1,
     justifyContent: 'center',
+    minHeight: 132,
+    paddingHorizontal: 10,
+    paddingVertical: 16,
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
     width: '40%',
+  },
+  sectionHeaderDot: {
+    borderRadius: 999,
+    height: 10,
+    marginRight: 10,
+    width: 10,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: 1,
+    marginLeft: 12,
+  },
+  sectionHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
+    marginTop: 24,
+  },
+  sectionHeaderText: {
+    letterSpacing: 0.4,
   },
   sectionTitle: {
     marginBottom: 12,
@@ -1118,6 +1931,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  statusBadgeContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   teamColumn: {
     alignItems: 'center',

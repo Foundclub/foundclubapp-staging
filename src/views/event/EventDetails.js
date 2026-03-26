@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useCallback, useEffect, useLayoutEffect, useMemo, useState,
 } from 'react';
@@ -46,10 +47,15 @@ import {
 } from '@/services/event/eventQueries';
 import { exportEventParticipants } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
-import { useGetEventMatchStats } from '@/services/matchStats/matchStatsQueries';
+import {
+  useGetEventMatchStats,
+  useGetEventMyMatchResponse,
+} from '@/services/matchStats/matchStatsQueries';
+import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 
+import EventDetectionSlots from './components/EventDetectionSlots';
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
@@ -69,6 +75,11 @@ import { useEventMutations } from './hooks/useEventMutations';
 /** @typedef {{ documentId?: string; updatedAt?: string; participationStatus?: string; isActive?: boolean; sourceTeam?: { documentId?: string; name?: string }; user: User }} EventParticipation */
 
 const START_TIME_RE = /^(\d{1,2}):(\d{2})/;
+const normalizeEventTypeLabel = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
 
 /**
  * @param {User | null | undefined} user
@@ -145,6 +156,7 @@ const resolveEventStartAt = (event) => {
 function EventDetails({ navigation, route }) {
   const { eventId } = route?.params ?? {};
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
+  const highlightedSection = route?.params?.focusSection || null;
 
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
@@ -169,6 +181,7 @@ function EventDetails({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { canEditEvent, canManageEvent, userData } = useAuth();
   const { sendMessage } = useMessaging();
 
@@ -531,6 +544,57 @@ function EventDetails({ navigation, route }) {
   );
 
   const { hasAcceptedRequest, hasPendingRequest } = currentUserParticipationState;
+  const isDetectionEvent = useMemo(
+    () => normalizeEventTypeLabel(event?.type?.name).includes('detection'),
+    [event?.type?.name],
+  );
+  const detectionRecruitmentAds = useMemo(() => {
+    if (!isDetectionEvent || !Array.isArray(event?.recruitmentAds)) return [];
+    return event.recruitmentAds.filter((recruitmentAd) => {
+      if (!recruitmentAd?.position) return false;
+      if (!recruitmentAd?.event?.documentId) return true;
+      return recruitmentAd.event.documentId === event?.documentId;
+    });
+  }, [event?.documentId, event?.recruitmentAds, isDetectionEvent]);
+  const currentUserDetectionParticipation = useMemo(() => {
+    const currentUserDocumentId = userData?.documentId;
+    if (!currentUserDocumentId) return null;
+
+    return activeEventParticipations.find((participation) => (
+      participation?.user?.documentId === currentUserDocumentId
+      && participation?.recruitmentAd?.documentId
+      && ['accepted', 'pending'].includes(String(participation?.participationStatus || '').toLowerCase())
+    )) || null;
+  }, [activeEventParticipations, userData?.documentId]);
+  const detectionSlots = useMemo(() => (
+    detectionRecruitmentAds.map((slot) => {
+      const relatedParticipations = activeEventParticipations.filter(
+        (participation) => participation?.recruitmentAd?.documentId === slot?.documentId,
+      );
+      const acceptedCount = relatedParticipations.filter(
+        (participation) => participation?.participationStatus === 'accepted',
+      ).length;
+      const pendingCount = relatedParticipations.filter(
+        (participation) => participation?.participationStatus === 'pending',
+      ).length;
+      const candidatesCount = Math.max(
+        Array.isArray(slot?.candidates) ? slot.candidates.length : 0,
+        acceptedCount + pendingCount,
+      );
+      const quantity = Math.max(1, Number(slot?.quantity || 1));
+      const remaining = Math.max(0, quantity - acceptedCount);
+
+      return {
+        ...slot,
+        acceptedCount,
+        candidatesCount,
+        isComplete: remaining <= 0,
+        pendingCount,
+        quantity,
+        remaining,
+      };
+    })
+  ), [activeEventParticipations, detectionRecruitmentAds]);
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
@@ -798,6 +862,27 @@ function EventDetails({ navigation, route }) {
       participating: participatingPlayers,
     };
   }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
+  const applyToDetectionSlotMutation = useMutation({
+    mutationFn: (slotDocumentId) => applyToRecruitmentAd(slotDocumentId),
+    onError: (mutationError) => {
+      const message = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.message
+        || mutationError?.message
+        || 'Impossible de candidater sur ce poste pour le moment.';
+      Alert.alert('Detection', message);
+    },
+    onSuccess: (result, slotDocumentId) => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', slotDocumentId] });
+      queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+      Alert.alert(
+        'Detection',
+        result?.message || 'Votre candidature a bien ete envoyee sur ce poste.',
+      );
+    },
+  });
 
   const canRequestFeatured = useMemo(() => {
     const hasParentMultisport = Boolean(event?.team?.club?.parentMultisport);
@@ -822,6 +907,20 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.EventEdit,
     });
   }, [eventId, navigation]);
+
+  const handleApplyToDetectionSlot = useCallback((slot) => {
+    const slotDocumentId = slot?.documentId;
+    if (!slotDocumentId || applyToDetectionSlotMutation.isPending) return;
+    applyToDetectionSlotMutation.mutate(slotDocumentId);
+  }, [applyToDetectionSlotMutation]);
+
+  const handleOpenDetectionSlot = useCallback((slot) => {
+    if (!slot?.documentId) return;
+    navigation.navigate(RouteNames.RecruitmentAdDetails, {
+      ad: slot,
+      adId: slot.documentId,
+    });
+  }, [navigation]);
 
   const handleJoinEvent = () => setIsJoinModalVisible(true);
 
@@ -1159,6 +1258,18 @@ function EventDetails({ navigation, route }) {
   );
 
   const {
+    data: myMatchResponsePayload,
+    isFetching: isMyMatchResponseFetching,
+    refetch: refetchMyMatchResponse,
+  } = useGetEventMyMatchResponse(
+    eventId || '',
+    compositionTeamId || undefined,
+    {
+      enabled: Boolean(eventId && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished),
+    },
+  );
+
+  const {
     data: convocationPayload,
     refetch: refetchConvocation,
   } = useGetEventConvocation(
@@ -1170,11 +1281,17 @@ function EventDetails({ navigation, route }) {
   );
 
   const matchStatsReport = matchStatsPayload?.report || null;
+  const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
+  const myCoachReview = matchStatsPayload?.myCoachReview || null;
+  const myMatchResponse = myMatchResponsePayload?.response || null;
+  const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
+  const hasMyCoachReview = myCoachReview?.rating != null || Boolean(myCoachReview?.comment);
+  const canRespondMyMatchStats = Boolean(myMatchResponsePayload?.permissions?.canRespond || isTeamMember);
   const isMatchStatsFinal = matchStatsReport?.status === 'final';
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
   const isMatchStatsCompleted = isMatchStatsFinal && !isMatchStatsReviewRequired;
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
-  const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage || isTeamMember);
+  const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
     if (!matchStatsPayload?.score?.available) {
       return 'Score a completer';
@@ -1436,6 +1553,69 @@ function EventDetails({ navigation, route }) {
     if (isMatchStatsCompleted) return 'Voir';
     return 'Ouvrir';
   }, [isMatchStatsCompleted, isMatchStatsReviewRequired]);
+  const myMatchResponseStatusMeta = useMemo(() => {
+    if (myMatchResponse?.status === 'draft') {
+      return {
+        backgroundColor: `${Colors.primary500}20`,
+        borderColor: `${Colors.primary500}45`,
+        label: 'Brouillon',
+        textColor: Colors.primary500,
+      };
+    }
+    if (myMatchResponse?.status === 'submitted') {
+      if (myMatchResponse?.participation === 'not_involved') {
+        return {
+          backgroundColor: `${Colors.neutral00}14`,
+          borderColor: `${Colors.neutral00}24`,
+          label: 'Non concerne',
+          textColor: Colors.neutral00,
+        };
+      }
+      if (myMatchResponse?.quantitativeState === 'unknown') {
+        return {
+          backgroundColor: `${Colors.gold500}20`,
+          borderColor: `${Colors.gold500}45`,
+          label: 'Je ne sais pas',
+          textColor: Colors.gold500,
+        };
+      }
+      return {
+        backgroundColor: `${Colors.success500}20`,
+        borderColor: `${Colors.success500}45`,
+        label: 'Envoye',
+        textColor: Colors.success500,
+      };
+    }
+    return {
+      backgroundColor: `${Colors.primary500}20`,
+      borderColor: `${Colors.primary500}45`,
+      label: 'A faire',
+      textColor: Colors.primary500,
+    };
+  }, [Colors.gold500, Colors.neutral00, Colors.primary500, Colors.success500, myMatchResponse]);
+  const myMatchResponseSummary = useMemo(() => {
+    if (myMatchResponse?.status === 'submitted') {
+      if (myMatchResponse?.participation === 'not_involved') {
+        return 'Tu as indique ne pas etre concerne par ce match.';
+      }
+      if (myMatchResponse?.participation === 'present_no_play') {
+        return 'Tu as indique que tu etais la sans jouer.';
+      }
+      if (myMatchResponse?.quantitativeState === 'unknown') {
+        return 'Ton ressenti est enregistre, sans stats quantitatives.';
+      }
+      return 'Tes stats personnelles et ta note sont enregistrees.';
+    }
+    if (myMatchResponse?.status === 'draft') {
+      return 'Ton brouillon perso post-match attend encore une validation.';
+    }
+    return 'Renseigne ton retour individuel, puis ajoute une note sur 10.';
+  }, [myMatchResponse]);
+  const myMatchResponseButtonTitle = useMemo(() => {
+    if (myMatchResponse?.status === 'draft') return 'Reprendre';
+    if (myMatchResponse?.status === 'submitted') return 'Voir';
+    return 'Renseigner';
+  }, [myMatchResponse]);
   const matchStatsPromptMessage = useMemo(() => {
     if (matchStatsPayload?.score?.available) {
       if (isMatchStatsReviewRequired) {
@@ -1548,7 +1728,29 @@ function EventDetails({ navigation, route }) {
       sport: matchStatsPayload?.sport || compositionSport,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
-      title: compositionEventLabel,
+      title: 'Bilan equipe',
+    });
+  }, [
+    compositionEditorTeam?.name,
+    compositionSport,
+    compositionTeamId,
+    eventId,
+    matchStatsPayload?.sport,
+    matchStatsPayload?.team?.name,
+    navigation,
+  ]);
+
+  const openMyMatchResponse = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.PlayerMatchResponse, {
+      eventId,
+      matchLabel: compositionEventLabel,
+      sourceType: 'event',
+      sport: myMatchResponsePayload?.sport || matchStatsPayload?.sport || compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || myMatchResponsePayload?.team?.name || matchStatsPayload?.team?.name || null,
+      title: 'Mon retour post-match',
     });
   }, [
     compositionEditorTeam?.name,
@@ -1558,6 +1760,8 @@ function EventDetails({ navigation, route }) {
     eventId,
     matchStatsPayload?.sport,
     matchStatsPayload?.team?.name,
+    myMatchResponsePayload?.sport,
+    myMatchResponsePayload?.team?.name,
     navigation,
   ]);
 
@@ -1928,6 +2132,9 @@ function EventDetails({ navigation, route }) {
         refetchMatchStats();
       }
       if (isMatchEvent && isTeamMember && compositionTeamId) {
+        refetchMyMatchResponse();
+      }
+      if (isMatchEvent && isTeamMember && compositionTeamId) {
         refetchConvocation();
       }
     }, [
@@ -1937,6 +2144,7 @@ function EventDetails({ navigation, route }) {
       isMatchEvent,
       canManageMatchStats,
       refetchMatchStats,
+      refetchMyMatchResponse,
       isTeamMember,
       refetch,
       refetchAttendance,
@@ -2042,6 +2250,7 @@ function EventDetails({ navigation, route }) {
               if (canAccessAttendance) refetchAttendance();
               if (isMatchEvent && canEdit && compositionTeamId) refetchTeamComposition();
               if (isMatchEvent && compositionTeamId && (canManageMatchStats || isTeamMember)) refetchMatchStats();
+              if (isMatchEvent && isTeamMember && compositionTeamId) refetchMyMatchResponse();
               if (isMatchEvent && isTeamMember && compositionTeamId) refetchConvocation();
             }}
             refreshing={isLoading}
@@ -2109,6 +2318,19 @@ function EventDetails({ navigation, route }) {
             </View>
           ) : null}
 
+          {detectionSlots.length > 0 ? (
+            <EventDetectionSlots
+              canEdit={canEdit}
+              currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
+              currentUserSlotId={currentUserDetectionParticipation?.recruitmentAd?.documentId || ''}
+              currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
+              isApplyingSlotId={applyToDetectionSlotMutation.variables || ''}
+              onApply={handleApplyToDetectionSlot}
+              onOpenSlot={handleOpenDetectionSlot}
+              slots={detectionSlots}
+            />
+          ) : null}
+
           <EventParticipants
             attendanceByUserId={attendanceByUserId}
             canApprovePendingRequests={canApprovePendingRequests}
@@ -2129,6 +2351,154 @@ function EventDetails({ navigation, route }) {
             pendingParticipations={pendingParticipations}
             teamParticipationSections={teamParticipationSections}
           />
+
+          {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.borderColor.primary500,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                      {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A completer'}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      Spaces.paddingHorizontal[10],
+                      Spaces.paddingVertical[6],
+                      {
+                        backgroundColor: myMatchResponseStatusMeta.backgroundColor,
+                        borderColor: myMatchResponseStatusMeta.borderColor,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: myMatchResponseStatusMeta.textColor }]}>
+                      {myMatchResponseStatusMeta.label}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {myMatchResponseSummary}
+                </Text>
+
+                {myMatchResponse?.teamRating ? (
+                  <View
+                    style={[
+                      ApplicationStyle.backgroundColor.primary700,
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                      {`Le match de l equipe : ${myMatchResponse.teamRating}/10`}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {myMatchResponse?.selfComment ? (
+                  <View
+                    style={[
+                      ApplicationStyle.backgroundColor.primary700,
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                    ]}
+                  >
+                    <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
+                      {myMatchResponse.selfComment}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <Button
+                  disabled={isMyMatchResponseFetching}
+                  onPress={openMyMatchResponse}
+                  size="sm"
+                  title={myMatchResponseButtonTitle}
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.borderColor.primary500,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                  isCoachFeedbackHighlighted
+                    ? {
+                      borderColor: Colors.primary200,
+                      borderWidth: 2,
+                    }
+                    : null,
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel du coach</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                      {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : 'En attente'}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      Spaces.paddingHorizontal[10],
+                      Spaces.paddingVertical[6],
+                      {
+                        backgroundColor: hasMyCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
+                        borderColor: hasMyCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
+                      {hasMyCoachReview ? 'Disponible' : 'Pas encore partage'}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {hasMyCoachReview
+                    ? 'Le coach a publie un retour individuel pour ton match.'
+                    : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
+                </Text>
+
+                {myCoachReview?.comment ? (
+                  <View
+                    style={[
+                      ApplicationStyle.backgroundColor.primary700,
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                    ]}
+                  >
+                    <Text style={[Fonts.p4, Fonts.neutral100]}>
+                      {myCoachReview.comment}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
 
           {isMatchEvent && compositionTeamId && canViewMatchStats ? (
             <View style={[Spaces.gap[12]]}>
@@ -2169,6 +2539,73 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {matchStatsSummaryText}
                 </Text>
+
+                {matchStatsReport?.collectiveRating || playerCollectiveRating?.average != null ? (
+                  <View style={[Alignments.row, Spaces.gap[12]]}>
+                    {matchStatsReport?.collectiveRating ? (
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          Spaces.gap[4],
+                          { flex: 1 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Note coach</Text>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${matchStatsReport.collectiveRating}/10`}</Text>
+                      </View>
+                    ) : null}
+                    {playerCollectiveRating?.average != null ? (
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius16,
+                          Spaces.padding[12],
+                          Spaces.gap[4],
+                          { flex: 1 },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Ressenti joueurs</Text>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${playerCollectiveRating.average}/10`}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {matchStatsReport?.collectiveComment ? (
+                  <View
+                    style={[
+                      ApplicationStyle.backgroundColor.primary700,
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                    ]}
+                  >
+                    <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
+                      {matchStatsReport.collectiveComment}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {(matchStatsReport?.responseEligibleCount || matchStatsReport?.responseCompletionCount || playerCollectiveRating?.count) ? (
+                  <View
+                    style={[
+                      ApplicationStyle.backgroundColor.primary700,
+                      ApplicationStyle.borderRadius16,
+                      Spaces.padding[12],
+                      Spaces.gap[4],
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                      {`${matchStatsReport?.responseCompletionCount ?? playerCollectiveRating?.count ?? 0}/${matchStatsReport?.responseEligibleCount ?? playerCollectiveRating?.eligibleCount ?? 0} joueurs ont repondu`}
+                    </Text>
+                    {playerCollectiveRating?.count ? (
+                      <Text style={[Fonts.p4, Fonts.neutral100]}>
+                        {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
 
                 {matchStatsReport ? (
                   <View style={[Alignments.row, Spaces.gap[12]]}>

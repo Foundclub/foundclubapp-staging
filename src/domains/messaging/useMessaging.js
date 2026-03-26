@@ -81,6 +81,14 @@ const getSenderEntityId = (message) => (
   normalizeChatId(message?.sender?.documentId || message?.sender?.id || message?.user?._id || '')
 );
 
+const hasCachedChatMessages = (queryData) => (
+  Boolean(
+    queryData
+    && Array.isArray(queryData?.pages)
+    && queryData.pages.some((page) => Array.isArray(page?.data) && page.data.length > 0),
+  )
+);
+
 /**
  * Custom hook to handle messaging functionality
  * @param {string} [currentChatId] - The current chat ID
@@ -209,7 +217,7 @@ const useMessaging = (currentChatId) => {
           createdAt: message.createdAt,
           documentId: message.documentId,
           event: message.event,
-          id: message.id,
+          id: message.id || message.documentId,
           message: message.message,
           readBy: message.readBy, // Handle readBy
           replyTo: message.replyTo, // Handle reply
@@ -266,9 +274,10 @@ const useMessaging = (currentChatId) => {
         // Check if message already exists in the first page (dedup)
         const firstPage = cleanPages[0];
         const firstPageData = firstPage?.data || [];
+        const formattedMessageId = normalizeChatId(getMessageEntityId(formattedMessage));
 
         const messageExists = firstPageData.some(
-          (/** @type {{ id: string }} */ msg) => msg.id === formattedMessage.id,
+          (msg) => normalizeChatId(getMessageEntityId(msg)) === formattedMessageId,
         );
 
         if (messageExists) {
@@ -303,6 +312,7 @@ const useMessaging = (currentChatId) => {
                   ...chat,
                   archivedBy: [], // Force unarchive locally
                   messages: [message],
+                  updatedAt: message?.updatedAt || message?.createdAt || chat.updatedAt,
                 };
               }
               return chat;
@@ -439,7 +449,12 @@ const useMessaging = (currentChatId) => {
   }, [queryClient]);
 
   const handleJoined = useCallback((/** @type {JoinData} */ data) => {
-    queryClient.invalidateQueries({ queryKey: ['chat-messages', data.chatDocumentId] });
+    const matchingQueries = queryClient.getQueriesData({ queryKey: ['chat-messages', data.chatDocumentId] });
+    const alreadyHasMessages = matchingQueries.some(([, queryData]) => hasCachedChatMessages(queryData));
+
+    if (!alreadyHasMessages) {
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', data.chatDocumentId] });
+    }
   }, [queryClient]);
 
   // Subscribe to chat events when socket is available

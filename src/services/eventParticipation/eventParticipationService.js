@@ -7,7 +7,13 @@ export const eventParticipationSchema = Joi.object({
   event: Joi.object().required(),
   isActive: Joi.boolean().allow(null).optional(),
   participationStatus: Joi.string().valid('pending', 'accepted', 'declined', 'missing').required(),
+  position: Joi.string().allow('', null).optional(),
   reason: Joi.string().allow('', null),
+  recruitmentAd: Joi.object({
+    documentId: Joi.string().allow(null).optional(),
+    position: Joi.string().allow('', null).optional(),
+    quantity: Joi.number().allow(null).optional(),
+  }).allow(null).optional(),
   sourceTeam: Joi.object({
     documentId: Joi.string().allow(null).optional(),
     name: Joi.string().allow('', null).optional(),
@@ -69,7 +75,7 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user', 'user.avatar', 'event', 'sourceTeam'],
+    populate: ['user', 'user.avatar', 'event', 'sourceTeam', 'recruitmentAd'],
     sort: ['updatedAt:desc', 'createdAt:desc'],
   };
 

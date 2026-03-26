@@ -39,6 +39,7 @@ const createInitialState = () => {
     startTime: start,
     // Step 5: Participants
     capacity: null,
+    detectionSlots: [],
     totalPlayers: null,
     // Step 6: Validation mode
     validationMode: 'auto',
@@ -62,6 +63,8 @@ function eventWizardReducer(state, action) {
   switch (action.type) {
     case 'RESET':
       return createInitialState();
+    case 'SET_DETECTION_SLOTS':
+      return { ...state, detectionSlots: action.payload };
     case 'SET_INVITES':
       return { ...state, invitedTeams: action.payload };
     case 'SET_LOCATION':
@@ -71,15 +74,24 @@ function eventWizardReducer(state, action) {
         location: action.payload.location,
       };
     case 'SET_LOGISTICS':
-      return { ...state, ...action.payload };
+      return {
+        ...state,
+        ...action.payload,
+        detectionSlots: action.payload?.isRecurrent ? [] : state.detectionSlots,
+      };
     case 'SET_META':
       return { ...state, ...action.payload };
     case 'SET_PARTICIPANTS':
       return { ...state, ...action.payload };
     case 'SET_TEAM':
-      return { ...state, invitedTeams: [], team: action.payload };
+      return {
+        ...state,
+        detectionSlots: [],
+        invitedTeams: [],
+        team: action.payload,
+      };
     case 'SET_TYPE':
-      return { ...state, type: action.payload };
+      return { ...state, detectionSlots: [], type: action.payload };
     case 'SET_VALIDATION_MODE':
       return { ...state, validationMode: action.payload };
     default:

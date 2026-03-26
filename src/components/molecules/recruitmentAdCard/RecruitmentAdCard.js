@@ -1,13 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
 import {
   Image,
   ImageBackground,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -15,12 +12,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
-import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
@@ -38,6 +35,12 @@ import MatchIndicator from '@/components/atoms/matchIndicator/MatchIndicator';
 // Asset: Same as EventCardNew (fallback/other)
 const CARD_BACKGROUND = require('@/assets/background-card-event/card-autre.png');
 
+const normalizeTypeLabel = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
+
 // ... (imports)
 
 /**
@@ -50,7 +53,7 @@ const CARD_BACKGROUND = require('@/assets/background-card-event/card-autre.png')
 function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
   const navigation = useNavigation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Colors, Fonts, Images,
   } = useTheme();
   const { getClubInitials } = useClub();
   const { userData } = useAuth(); // Get user data for match calculation
@@ -88,10 +91,12 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
 
   // Section
   const sectionName = ad.section?.name || ad.section;
+  const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
+  const detectionDateLabel = ad?.event?.date
+    ? formatDateWithDayPrefix(new Date(ad.event.date))
+    : '';
 
   // Sponsors
-  const sponsors = club?.sponsor ? [club.sponsor] : [];
-
   // Owner specifics
   const candidatesCount = ad.candidates?.length || 0;
   const statusInfo = ad.isActive
@@ -177,18 +182,18 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
               <View style={styles.clubLogoContainer}>
                 {clubLogo ? (
                   <ProfileAvatar
-                        imageStyle={{ borderRadius: 24 }}
-                        imageUrl={clubLogo}
-                        size={48}
-                        variant="logo"
-                        style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
-                      />
+                    imageStyle={{ borderRadius: 24 }}
+                    imageUrl={clubLogo}
+                    size={48}
+                    style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
+                    variant="logo"
+                  />
                 ) : (
-                      <TeamShield
-                          initials={clubName ? getClubInitials(clubName) : ''}
-                          isSmall
-                          size={48}
-                        />
+                  <TeamShield
+                    initials={clubName ? getClubInitials(clubName) : ''}
+                    isSmall
+                    size={48}
+                  />
                 )}
               </View>
               <View style={styles.clubTextContainer}>
@@ -197,14 +202,36 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
                   {team?.name ? <Text numberOfLines={1} style={styles.category}>{team.name}</Text> : null}
                   {/* Sport Badge if available */}
                   <View style={{
-                        backgroundColor: `${Colors.primary500}20`, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
-                      }}
-                      >
-                        <Text style={[Fonts.p4Bold, { color: Colors.primary500, fontSize: 10, textTransform: 'uppercase' }]}>
-                            {ad.sport || team?.sport || 'Football'}
-                          </Text>
-                      </View>
+                    backgroundColor: `${Colors.primary500}20`, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
+                  }}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: Colors.primary500, fontSize: 10, textTransform: 'uppercase' }]}>
+                      {ad.sport || team?.sport || 'Football'}
+                    </Text>
+                  </View>
                 </View>
+                {isDetectionLinked ? (
+                  <View
+                    style={{
+                      alignItems: 'center',
+                      alignSelf: 'flex-start',
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      borderColor: `${Colors.primary500}55`,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      flexDirection: 'row',
+                      gap: 6,
+                      marginTop: 6,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                    }}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Detection</Text>
+                    {detectionDateLabel ? (
+                      <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{detectionDateLabel}</Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             </View>
 
@@ -217,17 +244,17 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
                 <View style={styles.detailItem}>
                   <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
                   <Text numberOfLines={1} style={styles.detailText}>
-                        {levelName}
-                      </Text>
+                    {levelName}
+                  </Text>
                 </View>
                 {/* Category + Section (Right) */}
                 <View style={[styles.detailItem, { justifyContent: 'flex-end' }]}>
                   <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
                   <Text numberOfLines={1} style={[styles.detailText, { flex: 0, textAlign: 'right' }]}>
-                        {categoryName}
-                        {' '}
-                        {sectionName ? `• ${sectionName}` : ''}
-                      </Text>
+                    {categoryName}
+                    {' '}
+                    {sectionName ? `• ${sectionName}` : ''}
+                  </Text>
                 </View>
               </View>
 
@@ -236,8 +263,8 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
                 <View style={[styles.detailItem, { width: '100%' }]}>
                   <Image source={Images.pin} style={[styles.icon, { tintColor: Colors.primary500 }]} />
                   <Text numberOfLines={2} style={[styles.detailText, { flex: 1 }]}>
-                        {(typeof ad.address === 'object' ? ad.address?.label : ad.address) || address || 'Lieu non précisé'}
-                      </Text>
+                    {(typeof ad.address === 'object' ? ad.address?.label : ad.address) || address || 'Lieu non précisé'}
+                  </Text>
                 </View>
               </View>
 
@@ -259,27 +286,28 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
               >
                 <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
                   <View style={{
-                        backgroundColor: statusInfo.color, borderRadius: 4, height: 8, width: 8,
-                      }}
-                      />
+                    backgroundColor: statusInfo.color, borderRadius: 4, height: 8, width: 8,
+                  }}
+                  />
                   <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{statusInfo.text}</Text>
                 </View>
                 <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
                   {candidatesCount}
                   {' '}
-                  candidat{candidatesCount > 1 ? 's' : ''}
+                  candidat
+                  {candidatesCount > 1 ? 's' : ''}
                 </Text>
               </View>
             ) : (
               <View
                 style={[
-                      styles.reservationButton,
-                      { backgroundColor: Colors.primary500 },
-                    ]}
+                  styles.reservationButton,
+                  { backgroundColor: Colors.primary500 },
+                ]}
               >
                 <Text style={[styles.reservationButtonText, { color: Colors.neutral900 }]}>
-                      Postuler
-                            </Text>
+                  Postuler
+                </Text>
               </View>
             )}
           </View>

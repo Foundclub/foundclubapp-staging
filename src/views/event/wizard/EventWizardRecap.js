@@ -22,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createEventsSequentially, rollbackEventsByCancel } from '@/services/event/eventService';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardRecapStepIndex, getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 const getErrorCode = (error) => (
   error?.response?.data?.error?.details?.code
@@ -39,6 +40,7 @@ const buildWizardFormData = (wizardState) => {
     capacity: wizardState.capacity ?? null,
     date: format(eventDate, 'dd/MM/yyyy'),
     description: wizardState.description || '',
+    detectionSlots: Array.isArray(wizardState.detectionSlots) ? wizardState.detectionSlots : [],
     endTime: format(end, 'HH:mm'),
     facility: wizardState.facility,
     invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
@@ -147,6 +149,8 @@ function EventWizardRecap({ navigation }) {
     ? t('eventEdit.fields.validationMode.options.manual')
     : t('eventEdit.fields.validationMode.options.auto');
   const invitedCount = state.invitedTeams?.length || 0;
+  const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
+  const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
   const hasType = Boolean(state.type?.name);
   const hasTeam = Boolean(state.team?.name);
   const hasDate = Boolean(state.date);
@@ -330,8 +334,8 @@ function EventWizardRecap({ navigation }) {
         nextLabel={t('eventWizard.recap.actions.createShort', 'Créer')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
-        stepCount={10}
-        stepIndex={10}
+        stepCount={getEventWizardStepCount(state)}
+        stepIndex={getEventWizardRecapStepIndex(state)}
         subtitle={t('eventWizard.steps.recap.subtitle')}
         title={t('eventWizard.steps.recap.title')}
       >
@@ -507,6 +511,50 @@ function EventWizardRecap({ navigation }) {
               </View>
             </View>
           </View>
+
+          {detectionSlots.length > 0 ? (
+            <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>
+                  {t('eventWizard.steps.detectionSlots.title', 'Postes recherches')}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.navigate(RouteNames.EventWizardDetectionSlots)}>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'eventWizard.steps.detectionSlots.recapSummary',
+                  '{{count}} place(s) cible au total',
+                  { count: detectionSlotsTotal },
+                )}
+              </Text>
+
+              <View style={[Spaces.gap[8]]}>
+                {detectionSlots.map((slot) => (
+                  <View
+                    key={`${slot.position}-${slot.quantity}`}
+                    style={[
+                      ApplicationStyle.card,
+                      Alignments.row,
+                      Alignments.justifySpaceBetween,
+                      Alignments.alignCenter,
+                      Spaces.paddingHorizontal[12],
+                      Spaces.paddingVertical[10],
+                      {
+                        backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                        borderColor: 'rgba(1, 179, 244, 0.20)',
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>{slot.position}</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.primary500]}>{`x${slot.quantity}`}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>

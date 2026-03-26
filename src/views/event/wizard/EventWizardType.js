@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -21,6 +20,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -39,7 +39,7 @@ function EventWizardType({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { dispatch } = useEventWizard();
+  const { dispatch, state } = useEventWizard();
   const { data: eventTypes, isLoading } = useGetEventTypes();
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
@@ -69,7 +69,7 @@ function EventWizardType({ navigation, route }) {
     >
       <WizardStepLayout
         onBack={() => navigation.goBack()}
-        stepCount={10}
+        stepCount={getEventWizardStepCount(state)}
         stepIndex={1}
         subtitle={t('eventWizard.steps.type.subtitle')}
         title={t('eventWizard.steps.type.title')}

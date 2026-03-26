@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import React, {
+import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import {
@@ -28,6 +28,7 @@ import { getMatch, requestRematch } from '@/services/league/leagueMatchService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -42,6 +43,7 @@ const normalizeComparableText = (value) => String(value || '')
  * @returns {string}
  */
 const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
+
 /**
  * @param {LeagueMatch | null} match
  * @returns {string}
@@ -49,15 +51,20 @@ const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'L
 const resolveAddressLabel = (match) => match?.location?.address || match?.address || '';
 
 /**
- *
+ * @returns {import('react').ReactElement}
  */
 function PastMatchDetails() {
   const { Colors, Fonts, Images } = useTheme();
+  const leagueCardTextColor = Colors.primary500;
+  const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
+  const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
   const route = /** @type {any} */ (useRoute());
   const navigation = /** @type {any} */ (useNavigation());
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
-  const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined} */ (route.params);
+  const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined } */ (
+    route.params
+  );
   const matchId = routeParams?.matchId ? String(routeParams.matchId) : '';
   const myTeamId = routeParams?.myTeamId ? String(routeParams.myTeamId) : '';
 
@@ -71,6 +78,7 @@ function PastMatchDetails() {
       setLoading(false);
       return;
     }
+
     try {
       const data = await getMatch(matchId);
       setMatch(/** @type {LeagueMatch | null} */ (data || null));
@@ -91,18 +99,19 @@ function PastMatchDetails() {
   const teamA = match?.team_a;
   const teamB = match?.team_b;
   const teamAId = getEntityDocumentId(teamA);
-  const teamBId = getEntityDocumentId(teamB);
 
   const isUserInTeamA = useMemo(() => {
     if (!teamA || !currentUserId) return false;
     return areSameEntityId(getEntityDocumentId(teamA?.captain), currentUserId)
-            || (teamA?.roster || []).some((/** @type {User} */ member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
-  }, [teamA, currentUserId]);
+      || (teamA?.roster || []).some(
+        (/** @type {User} */ member) => areSameEntityId(getEntityDocumentId(member), currentUserId),
+      );
+  }, [currentUserId, teamA]);
 
   const isTeamA = useMemo(() => {
     if (myTeamId) return areSameEntityId(teamAId, myTeamId);
     return isUserInTeamA;
-  }, [myTeamId, teamAId, isUserInTeamA]);
+  }, [isUserInTeamA, myTeamId, teamAId]);
 
   const myTeam = isTeamA ? teamA : teamB;
   const opponent = isTeamA ? teamB : teamA;
@@ -121,6 +130,7 @@ function PastMatchDetails() {
         label: 'VICTOIRE',
       };
     }
+
     if (myScoreValue < oppScoreValue) {
       return {
         borderColor: 'rgba(255, 40, 79, 0.55)',
@@ -153,13 +163,29 @@ function PastMatchDetails() {
     () => Boolean(addressLabel && normalizeComparableText(addressLabel) !== normalizeComparableText(venueLabel)),
     [addressLabel, venueLabel],
   );
+  const teamContextMeta = useMemo(() => (isTeamA
+    ? {
+      backgroundColor: 'rgba(1, 179, 244, 0.16)',
+      borderColor: 'rgba(1, 179, 244, 0.35)',
+      label: 'DOMICILE',
+      textColor: Colors.primary500,
+    }
+    : {
+      backgroundColor: 'rgba(255, 215, 0, 0.12)',
+      borderColor: 'rgba(255, 215, 0, 0.28)',
+      label: 'EXTERIEUR',
+      textColor: Colors.gold500,
+    }), [Colors.gold500, Colors.primary500, isTeamA]);
 
   const eloInfo = useMemo(() => {
     const current = Number(myTeam?.elo || 1200);
     const opponentElo = Number(opponent?.elo || 1200);
     const expectedWin = 1 / (1 + 10 ** ((opponentElo - current) / 400));
-    const actualScore = myScoreValue > oppScoreValue ? 1 : myScoreValue < oppScoreValue ? 0 : 0.5;
+    let actualScore = 0.5;
+    if (myScoreValue > oppScoreValue) actualScore = 1;
+    if (myScoreValue < oppScoreValue) actualScore = 0;
     const delta = Math.round(32 * (actualScore - expectedWin));
+
     return {
       after: current,
       before: current - delta,
@@ -167,10 +193,24 @@ function PastMatchDetails() {
     };
   }, [myScoreValue, myTeam?.elo, oppScoreValue, opponent?.elo]);
 
+  const resultSummaryText = useMemo(() => {
+    if (myScoreValue > oppScoreValue) return 'Tu remportes ce duel League.';
+    if (myScoreValue < oppScoreValue) return 'Le match a bascule du cote adverse.';
+    return 'Les deux equipes repartent dos a dos.';
+  }, [myScoreValue, oppScoreValue]);
+
   const canRematch = useMemo(() => {
     const isCaptain = areSameEntityId(getEntityDocumentId(myTeam?.captain), currentUserId);
     return Boolean(isCaptain && match?.status === 'valid');
   }, [currentUserId, match?.status, myTeam?.captain]);
+
+  const renderSectionHeader = useCallback((title, accentColor = leagueCardTextColor) => (
+    <View style={styles.sectionHeaderRow}>
+      <View style={[styles.sectionHeaderDot, { backgroundColor: accentColor }]} />
+      <Text style={[Fonts.h4, styles.sectionHeaderText, { color: accentColor }]}>{title}</Text>
+      <View style={[styles.sectionHeaderLine, { backgroundColor: `${accentColor}33` }]} />
+    </View>
+  ), [Fonts.h4, leagueCardTextColor]);
 
   const handleRematch = () => {
     const myTeamDocId = getEntityDocumentId(myTeam);
@@ -183,7 +223,7 @@ function PastMatchDetails() {
 
     Alert.alert(
       'Demander une revanche',
-      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette équipe'} ?`,
+      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette equipe'} ?`,
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -192,8 +232,8 @@ function PastMatchDetails() {
             try {
               const result = await requestRematch(myTeamDocId, opponentDocId, matchId);
               Alert.alert(
-                result?.matched ? 'Match cree' : 'Demande envoyée',
-                result?.message || 'Votre demande a bien été envoyée.',
+                result?.matched ? 'Match cree' : 'Demande envoyee',
+                result?.message || 'Votre demande a bien ete envoyee.',
               );
               if (result?.matched) {
                 navigation.goBack();
@@ -227,16 +267,18 @@ function PastMatchDetails() {
       <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.centered}>
-            <Text style={[Fonts.p2, { color: Colors.neutral400 }]}>Match introuvable</Text>
+            <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>Match introuvable</Text>
           </View>
         </SafeAreaView>
       </ScreenContainer>
     );
   }
 
-  const goalsByPlayer = /** @type {Array<[string, number]>} */ (match?.player_goals && typeof match.player_goals === 'object'
-    ? Object.entries(match.player_goals)
-    : []);
+  const goalsByPlayer = /** @type {Array<[string, number]>} */ (
+    match?.player_goals && typeof match.player_goals === 'object'
+      ? Object.entries(match.player_goals)
+      : []
+  );
 
   return (
     <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
@@ -251,7 +293,7 @@ function PastMatchDetails() {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.neutral100 }]}>Match termine</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Match termine</Text>
           <View style={styles.headerSide} />
         </View>
 
@@ -268,6 +310,9 @@ function PastMatchDetails() {
             <Text style={[Fonts.p2Bold, { color: resultConfig.color, letterSpacing: 0.8 }]}>
               {resultConfig.label}
             </Text>
+            <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 6, textAlign: 'center' }]}>
+              {resultSummaryText}
+            </Text>
           </View>
 
           <LeagueCard isGold style={styles.scoreCard}>
@@ -275,51 +320,111 @@ function PastMatchDetails() {
               <View style={styles.teamBlock}>
                 <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} isGold size={62} />
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamA?.name || 'Équipe A'}
+                  {teamA?.name || 'Equipe A'}
                 </Text>
               </View>
 
-              <View style={styles.scoreBlock}>
-                <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_a ?? '-'}</Text>
-                <Text style={[Fonts.h2, { color: Colors.neutral300, marginHorizontal: 10 }]}>-</Text>
-                <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_b ?? '-'}</Text>
+              <View
+                style={[
+                  styles.scoreHeroCard,
+                  {
+                    backgroundColor: resultConfig.chipBg,
+                    borderColor: resultConfig.borderColor,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.heroContextPill,
+                    {
+                      backgroundColor: teamContextMeta.backgroundColor,
+                      borderColor: teamContextMeta.borderColor,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.label, { color: teamContextMeta.textColor }]}>
+                    {teamContextMeta.label}
+                  </Text>
+                </View>
+                <View style={styles.scoreBlock}>
+                  <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_a ?? '-'}</Text>
+                  <Text style={[Fonts.h2, { color: Colors.neutral300, marginHorizontal: 10 }]}>-</Text>
+                  <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>{match?.score_b ?? '-'}</Text>
+                </View>
+                <Text style={[Fonts.p4Bold, { color: resultConfig.color, marginTop: 8 }]}>Score officialise</Text>
               </View>
 
               <View style={styles.teamBlock}>
                 {opponent?.crest?.url ? (
                   <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={styles.opponentCrest} />
                 ) : (
-                    <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
+                  <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
                 )}
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamB?.name || 'Équipe B'}
+                  {teamB?.name || 'Equipe B'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.cardDivider} />
 
-            <View style={styles.infoRow}>
-              <Image source={Images.calendar} style={[styles.infoIcon, { tintColor: Colors.primary500 }]} />
-              <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>{formattedDate}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Image source={Images.pin} style={[styles.infoIcon, { tintColor: Colors.primary500 }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{venueLabel}</Text>
-                {showAddressLine ? (
-                  <Text style={[Fonts.p3, { color: Colors.neutral400, marginTop: 2 }]}>{addressLabel}</Text>
-                ) : null}
+            <View style={styles.infoStack}>
+              <View
+                style={[
+                  styles.infoPill,
+                  {
+                    backgroundColor: leagueGoldSurface,
+                    borderColor: 'rgba(255, 215, 0, 0.18)',
+                  },
+                ]}
+              >
+                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.14)' }]}>
+                  <Image source={Images.calendar} style={[styles.infoIcon, { tintColor: Colors.gold500 }]} />
+                </View>
+                <View style={styles.infoTextWrap}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Date et heure</Text>
+                  <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>{formattedDate}</Text>
+                </View>
+              </View>
+
+              <View
+                style={[
+                  styles.infoPill,
+                  {
+                    backgroundColor: leagueAccentSurface,
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                  },
+                ]}
+              >
+                <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
+                  <Image source={Images.pin} style={[styles.infoIcon, { tintColor: Colors.primary500 }]} />
+                </View>
+                <View style={styles.infoTextWrap}>
+                  <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Lieu du match</Text>
+                  <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>{venueLabel}</Text>
+                  {showAddressLine ? (
+                    <Text style={[Fonts.p4, { color: leagueCardTextColor, marginTop: 4 }]}>{addressLabel}</Text>
+                  ) : null}
+                </View>
               </View>
             </View>
           </LeagueCard>
 
+          {renderSectionHeader('Impact ELO')}
           <LeagueCard style={styles.eloCard}>
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral100, marginBottom: 12 }]}>Impact ELO</Text>
             <View style={styles.eloRow}>
-              <View style={styles.eloCol}>
-                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Avant</Text>
-                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>{eloInfo.before}</Text>
+              <View
+                style={[
+                  styles.eloCol,
+                  styles.eloStatCard,
+                  {
+                    backgroundColor: leagueAccentSurface,
+                    borderColor: 'rgba(1, 179, 244, 0.22)',
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: leagueCardTextColor }]}>Avant</Text>
+                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 6 }]}>{eloInfo.before}</Text>
               </View>
 
               <View
@@ -331,46 +436,63 @@ function PastMatchDetails() {
                   },
                 ]}
               >
+                <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Delta</Text>
                 <Text style={[Fonts.h3, { color: resultConfig.color }]}>
                   {eloInfo.delta > 0 ? '+' : ''}
                   {eloInfo.delta}
                 </Text>
               </View>
 
-              <View style={styles.eloCol}>
-                <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Après</Text>
-                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>{eloInfo.after}</Text>
+              <View
+                style={[
+                  styles.eloCol,
+                  styles.eloStatCard,
+                  {
+                    backgroundColor: leagueGoldSurface,
+                    borderColor: 'rgba(255, 215, 0, 0.22)',
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Apres</Text>
+                <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 6 }]}>{eloInfo.after}</Text>
               </View>
             </View>
           </LeagueCard>
 
           {goalsByPlayer.length > 0 ? (
-            <LeagueCard style={styles.goalsCard}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral100, marginBottom: 10 }]}>Buteurs</Text>
-              {goalsByPlayer.map(([playerId, goals], index) => (
-                <View
-                  key={playerId}
-                  style={[
+            <>
+              {renderSectionHeader('Buteurs', Colors.gold500)}
+              <LeagueCard style={styles.goalsCard}>
+                {goalsByPlayer.map(([playerId, goals], index) => (
+                  <View
+                    key={playerId}
+                    style={[
                       styles.goalRow,
                       {
                         borderBottomColor: 'rgba(255,255,255,0.09)',
                         borderBottomWidth: index === goalsByPlayer.length - 1 ? 0 : 1,
                       },
                     ]}
-                >
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
-                      Joueur{playerId.slice(0, 8)}
+                  >
+                    <Text style={[Fonts.p3, { color: leagueCardTextColor, flex: 1 }]}>
+                      Joueur
+                      {' '}
+                      {playerId.slice(0, 8)}
                       ...
-</Text>
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{goals}</Text>
-                </View>
-              ))}
-            </LeagueCard>
+                    </Text>
+                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{goals}</Text>
+                  </View>
+                ))}
+              </LeagueCard>
+            </>
           ) : null}
 
           {canRematch ? (
             <Button
               disabled={requestingRematch}
+              icon="flag"
+              iconColor={Colors.primary900}
+              iconPosition="before"
               isLoading={requestingRematch}
               onPress={handleRematch}
               style={{ backgroundColor: Colors.gold500, marginTop: 6 }}
@@ -407,9 +529,10 @@ const styles = StyleSheet.create({
   },
   eloDelta: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     justifyContent: 'center',
+    minHeight: 92,
     minWidth: 84,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -417,7 +540,16 @@ const styles = StyleSheet.create({
   eloRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 12,
     justifyContent: 'space-between',
+  },
+  eloStatCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 92,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   goalRow: {
     alignItems: 'center',
@@ -425,7 +557,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   goalsCard: {
-    marginTop: 10,
+    marginTop: 0,
   },
   headerBackButton: {
     marginLeft: 0,
@@ -449,15 +581,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+  heroContextPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
   infoIcon: {
     height: 16,
-    marginRight: 10,
     width: 16,
   },
-  infoRow: {
-    alignItems: 'flex-start',
+  infoIconWrap: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  infoPill: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: 'row',
-    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  infoStack: {
+    gap: 10,
+  },
+  infoTextWrap: {
+    flex: 1,
+    marginLeft: 12,
   },
   matchupRow: {
     alignItems: 'center',
@@ -474,6 +629,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     marginBottom: 12,
+    paddingHorizontal: 14,
     paddingVertical: 9,
   },
   safeArea: {
@@ -488,6 +644,16 @@ const styles = StyleSheet.create({
   scoreCard: {
     marginBottom: 10,
   },
+  scoreHeroCard: {
+    alignItems: 'center',
+    borderRadius: 24,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 132,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    width: '40%',
+  },
   screenContainer: {
     paddingHorizontal: 0,
   },
@@ -495,6 +661,26 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  sectionHeaderDot: {
+    borderRadius: 999,
+    height: 10,
+    marginRight: 10,
+    width: 10,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: 1,
+    marginLeft: 12,
+  },
+  sectionHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 12,
+    marginTop: 24,
+  },
+  sectionHeaderText: {
+    letterSpacing: 0.4,
   },
   teamBlock: {
     alignItems: 'center',

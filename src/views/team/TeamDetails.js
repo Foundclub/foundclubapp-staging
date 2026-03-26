@@ -41,6 +41,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -954,9 +955,10 @@ function TeamDetails({ navigation, route }) {
     () => Boolean(
       isMyTeam
       || teamPerformanceStats?.totals
+      || (Array.isArray(teamPerformanceStats?.pendingMatches) && teamPerformanceStats.pendingMatches.length > 0)
       || (Array.isArray(teamPerformanceStats?.players) && teamPerformanceStats.players.length > 0),
     ),
-    [isMyTeam, teamPerformanceStats?.players, teamPerformanceStats?.totals],
+    [isMyTeam, teamPerformanceStats?.pendingMatches, teamPerformanceStats?.players, teamPerformanceStats?.totals],
   );
   const primaryActivityLabel = useMemo(
     () => String(team?.activities?.[0]?.name || '').trim(),
@@ -1070,6 +1072,10 @@ function TeamDetails({ navigation, route }) {
     () => (Array.isArray(teamPerformanceStats?.players) ? teamPerformanceStats.players : []),
     [teamPerformanceStats?.players],
   );
+  const pendingPerformanceMatches = useMemo(
+    () => (Array.isArray(teamPerformanceStats?.pendingMatches) ? teamPerformanceStats.pendingMatches : []),
+    [teamPerformanceStats?.pendingMatches],
+  );
 
   const performanceSummary = useMemo(() => {
     const totals = teamPerformanceStats?.totals || {};
@@ -1077,18 +1083,22 @@ function TeamDetails({ navigation, route }) {
 
     return {
       assists: Number(totals?.assists || 0),
+      averageCollectiveRating: totals?.averageCollectiveRating ?? null,
       cleanSheets: Number(totals?.cleanSheets || 0),
       goals: Number(totals?.goals || 0),
       matches: Number(totals?.matchesPlayed || totals?.matches || 0),
       minutesPlayed: Number(totals?.minutesPlayed || 0),
+      playerCollectiveRatingAverage: totals?.playerCollectiveRatingAverage ?? null,
+      playerCollectiveRatingCount: Number(totals?.playerCollectiveRatingCount || 0),
       points: Number(totals?.points || 0),
       rebounds: Number(totals?.rebounds || 0),
+      recentReports: Array.isArray(teamPerformanceStats?.recentReports) ? teamPerformanceStats.recentReports : [],
       scoreAgainstTotal: Number(totals?.scoreAgainstTotal || 0),
       scoreForTotal: Number(totals?.scoreForTotal || 0),
       sport,
       threePointsMade: Number(totals?.threePointsMade || 0),
     };
-  }, [teamPerformanceStats?.sport, teamPerformanceStats?.totals]);
+  }, [teamPerformanceStats?.recentReports, teamPerformanceStats?.sport, teamPerformanceStats?.totals]);
 
     const canResetTeamStats = useMemo(
     () => Boolean(canManageTeam && isMyTeam),
@@ -1555,6 +1565,20 @@ function TeamDetails({ navigation, route }) {
     setShowExternalSyncReportModal(false);
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
+  const handleOpenPerformanceMatch = useCallback((sourceType, sourceDocumentId) => {
+    if (!sourceDocumentId) return;
+
+    if (String(sourceType || '').trim().toLowerCase() === 'league_match') {
+      navigateToLeagueMatchDetails(navigation, sourceDocumentId);
+      return;
+    }
+
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: sourceDocumentId },
       screen: RouteNames.EventDetails,
     });
   }, [navigation]);
@@ -2477,6 +2501,7 @@ function TeamDetails({ navigation, route }) {
                       _isMyHomeTeam: isMyHomeTeamById || isMyHomeTeamByName,
                       _isMyAwayTeam: isMyAwayTeamById || isMyAwayTeamByName,
                       _homeTeamId: homeTeamId,
+                      linkedEventDocumentIdResolved: match?.linkedEventDocumentId || null,
                       _awayTeamId: awayTeamId,
                       _roundLabel: roundLabel,
                     };
@@ -2851,15 +2876,24 @@ function TeamDetails({ navigation, route }) {
                                 ? match._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
                                 : '--:--';
 
+                              const canOpenLinkedEvent = Boolean(match?.linkedEventDocumentIdResolved);
+
                               return (
-                                <View
+                                <TouchableOpacity
+                                  activeOpacity={canOpenLinkedEvent ? 0.9 : 1}
+                                  disabled={!canOpenLinkedEvent}
                                   key={match._key}
+                                  onPress={() => {
+                                    if (!canOpenLinkedEvent) return;
+                                    handleOpenPerformanceMatch('event', match?.linkedEventDocumentIdResolved);
+                                  }}
                                   style={[
                                     Spaces.padding[12],
                                     Spaces.marginBottom[10],
                                     {
                                       backgroundColor: '#FFFFFF08', borderColor: '#FFFFFF14', borderRadius: 12, borderWidth: 1,
                                     },
+                                    canOpenLinkedEvent ? null : { opacity: 0.96 },
                                   ]}
                                 >
                                   <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[8]]}>
@@ -2918,7 +2952,7 @@ function TeamDetails({ navigation, route }) {
                                       ) : null}
                                     </View>
                                   </View>
-                                </View>
+                                </TouchableOpacity>
                               );
                             })}
                           </View>
@@ -3069,7 +3103,7 @@ function TeamDetails({ navigation, route }) {
                   <Text style={[Fonts.p4Bold, Fonts.primary500]}>Performance equipe</Text>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Recap du groupe</Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Lecture des stats match publiees pour l equipe et ses joueurs.
+                    Lecture des stats publiees de l equipe, avec prise en compte des reponses joueur quand elles sont disponibles.
                   </Text>
                 </View>
 
@@ -3114,6 +3148,167 @@ function TeamDetails({ navigation, route }) {
                   </Text>
                 </View>
 
+                {(performanceSummary.averageCollectiveRating !== null || performanceSummary.playerCollectiveRatingAverage !== null) ? (
+                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                    {performanceSummary.averageCollectiveRating !== null ? (
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius20,
+                          Spaces.padding[16],
+                          Spaces.gap[4],
+                          { flexGrow: 1, minWidth: '47%' },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Coach</Text>
+                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.averageCollectiveRating}/10`}</Text>
+                      </View>
+                    ) : null}
+                    {performanceSummary.playerCollectiveRatingAverage !== null ? (
+                      <View
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius20,
+                          Spaces.padding[16],
+                          Spaces.gap[4],
+                          { flexGrow: 1, minWidth: '47%' },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Joueurs</Text>
+                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.playerCollectiveRatingAverage}/10`}</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          {`${performanceSummary.playerCollectiveRatingCount} note${performanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''}`}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {pendingPerformanceMatches.length ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Reponses joueur en attente de validation equipe</Text>
+                    {pendingPerformanceMatches.map((pendingMatch) => (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        disabled={!pendingMatch?.sourceDocumentId}
+                        key={
+                          [pendingMatch?.sourceType, pendingMatch?.sourceDocumentId, pendingMatch?.lastSubmittedAt]
+                            .filter(Boolean)
+                            .join(':')
+                          || pendingMatch?.matchLabel
+                          || 'pending-match'
+                        }
+                        onPress={() => handleOpenPerformanceMatch(pendingMatch?.sourceType, pendingMatch?.sourceDocumentId)}
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius20,
+                          Spaces.padding[16],
+                          Spaces.gap[8],
+                          !pendingMatch?.sourceDocumentId ? { opacity: 0.92 } : null,
+                        ]}
+                      >
+                        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                              {pendingMatch?.matchLabel || 'Match'}
+                            </Text>
+                            <Text style={[Fonts.p4, Fonts.neutral100]}>
+                              {`${Number(pendingMatch?.submittedResponses || 0)}/${Number(pendingMatch?.eligibleCount || 0)} joueurs ont repondu`}
+                            </Text>
+                          </View>
+                          <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon equipe' : 'En attente du bilan equipe'}
+                              </Text>
+                            </View>
+                            {pendingMatch?.sourceDocumentId ? (
+                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ouvrir</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                        {pendingMatch?.lastSubmittedAt ? (
+                          <Text style={[Fonts.p4, Fonts.neutral100]}>
+                            {`Derniere reponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+
+                {performanceSummary.recentReports.length ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Derniers matchs renseignes</Text>
+                    {performanceSummary.recentReports.map((report) => (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        disabled={!report?.sourceDocumentId}
+                        key={
+                          report?.documentId
+                          || [report?.sourceType, report?.sourceDocumentId, report?.finalizedAt]
+                            .filter(Boolean)
+                            .join(':')
+                          || report?.matchLabel
+                          || 'recent-report'
+                        }
+                        onPress={() => handleOpenPerformanceMatch(report?.sourceType, report?.sourceDocumentId)}
+                        style={[
+                          ApplicationStyle.backgroundColor.primary700,
+                          ApplicationStyle.borderRadius20,
+                          Spaces.padding[16],
+                          Spaces.gap[10],
+                          !report?.sourceDocumentId ? { opacity: 0.94 } : null,
+                        ]}
+                      >
+                        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                              {report?.matchLabel || 'Match'}
+                            </Text>
+                            <Text style={[Fonts.p4, Fonts.neutral100]}>
+                              {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
+                            </Text>
+                          </View>
+                          <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[6]]}>
+                              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                                {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
+                              </Text>
+                            </View>
+                            {report?.hasNewResponsesSincePublication ? (
+                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                                  {report?.newResponsesCount > 1
+                                    ? `${report.newResponsesCount} nouvelles reponses`
+                                    : 'Nouvelle reponse'}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                        <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                          {report?.collectiveRating !== null && report?.collectiveRating !== undefined ? (
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Coach ${report.collectiveRating}/10`}</Text>
+                            </View>
+                          ) : null}
+                          {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
+                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[10], Spaces.paddingVertical[8]]}>
+                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          {`${Number(report?.responseCompletionCount || 0)}/${Number(report?.responseEligibleCount || 0)} joueurs ont repondu`}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+
                 {(() => {
                   if (isTeamPerformanceLoading) {
                     return <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>Chargement des performances...</Text>;
@@ -3149,6 +3344,14 @@ function TeamDetails({ navigation, route }) {
                           </View>
                         ))}
                       </View>
+                    );
+                  }
+
+                  if (pendingPerformanceMatches.length) {
+                    return (
+                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                        Des reponses joueur existent deja pour des matchs en attente de publication equipe.
+                      </Text>
                     );
                   }
 

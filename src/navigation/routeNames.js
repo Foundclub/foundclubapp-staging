@@ -54,6 +54,7 @@ export const RouteNames = /** @type {const} */ ({
   NotificationDetails: 'NotificationDetails',
   NotificationList: 'NotificationList',
   PendingMatchStats: 'PendingMatchStats',
+  PlayerMatchResponse: 'PlayerMatchResponse',
   PollDetails: 'PollDetails',
   Profile: 'Profile',
   ProfileEdit: 'ProfileEdit',
@@ -117,6 +118,7 @@ export const RouteNames = /** @type {const} */ ({
 
   // Event Wizard
   EventWizardDescription: 'EventWizardDescription',
+  EventWizardDetectionSlots: 'EventWizardDetectionSlots',
   EventWizardInvites: 'EventWizardInvites',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardLogistics: 'EventWizardLogistics',

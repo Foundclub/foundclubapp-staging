@@ -24,6 +24,7 @@
  * @property {string[]} [myTeams] - User's teams filter
  * @property {string[]} [teamIds] - Team IDs filter
  * @property {any} [composition] - Tactical composition payload
+ * @property {Array<{position: string, quantity: number}>} [detectionSlots] - Optional detection slots
  */
 
 /**
@@ -54,6 +55,7 @@
  * @property {string} [endTime] - Event end time
  * @property {{ documentId?: string; name?: string; maxSlots?: number; planningColor?: string; color?: string }} [facility] - Selected facility
  * @property {Team[]} [invitedTeams] - Invited opponent teams
+ * @property {any[]} [recruitmentAds] - Recruitment ads linked to this event
  * @property {any} [reservation] - Reservation object if applicable
  */
 

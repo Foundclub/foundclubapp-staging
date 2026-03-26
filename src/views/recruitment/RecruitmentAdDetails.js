@@ -22,6 +22,8 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   applyToRecruitmentAd,
   deleteRecruitmentAd,
@@ -35,6 +37,11 @@ import { getShortAddress } from '@/utils/location';
 const BG_MATCH = require('@/assets/background-card-event/card-match.png');
 
 const getBackgroundImage = () => BG_MATCH;
+const normalizeTypeLabel = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
 
 const normalizeComparableId = (value) => {
   if (value === null || value === undefined) return '';
@@ -120,6 +127,10 @@ function RecruitmentAdDetails() {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+      if (ad?.event?.documentId) {
+        queryClient.invalidateQueries({ queryKey: ['event', ad.event.documentId] });
+        queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
+      }
       Alert.alert(
         'Candidature envoyee',
         result?.message || 'Ta candidature a bien ete envoyee.',
@@ -161,6 +172,8 @@ function RecruitmentAdDetails() {
   const address = getShortAddress(ad.city || club?.city || '');
   const sectionName = ad.section?.name || ad.section;
   const date = ad.createdAt ? formatDateWithDayPrefix(new Date(ad.createdAt)) : '';
+  const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
+  const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
 
   const handleViewCandidates = () => {
     if (candidates.length === 0) {
@@ -192,6 +205,14 @@ function RecruitmentAdDetails() {
 
   const handleEdit = () => {
     navigation.navigate('RecruitmentAdEdit', { ad, adId: ad.documentId });
+  };
+
+  const handleOpenDetection = () => {
+    if (!ad?.event?.documentId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: ad.event.documentId },
+      screen: RouteNames.EventDetails,
+    });
   };
 
   const handleDelete = () => {
@@ -309,6 +330,14 @@ function RecruitmentAdDetails() {
 
         <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24]]}>
           <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 24 }]}>
+            {isDetectionLinked ? (
+              <Tag
+                style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
+                text={detectionDate ? `Detection · ${detectionDate}` : 'Detection'}
+                textColor="primary500"
+                textStyle={{ fontWeight: '700' }}
+              />
+            ) : null}
             {address ? (
               <Tag
                 style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'transparent' }}
@@ -367,6 +396,16 @@ function RecruitmentAdDetails() {
           <Text style={[Fonts.p1, { color: Colors.neutral300, lineHeight: 26 }]}>
             {ad.description || 'Aucune description fournie pour cette annonce.'}
           </Text>
+
+          {isDetectionLinked && ad?.event?.documentId ? (
+            <View style={{ marginTop: 24 }}>
+              <Button
+                onPress={handleOpenDetection}
+                title="Ouvrir la detection"
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 

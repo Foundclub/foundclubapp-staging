@@ -477,6 +477,15 @@ function UserDetails({ navigation, route }) {
     selectedStatsSport,
     selectedTeamSummary,
   ]);
+  const recentCoachFeedback = useMemo(() => {
+    let items = [];
+    if (Array.isArray(personalStats?.recentCoachFeedback)) {
+      items = personalStats.recentCoachFeedback;
+    } else if (Array.isArray(personalStats?.coachComments)) {
+      items = personalStats.coachComments;
+    }
+    return items.slice(0, 5);
+  }, [personalStats?.coachComments, personalStats?.recentCoachFeedback]);
   const shouldShowSportFilter = availableStatSports.length > 1;
 
   const coachedTeams = useMemo(() => {
@@ -836,6 +845,67 @@ function UserDetails({ navigation, route }) {
               )}
             </View>
           </SectionCard>
+
+          {isSelfProfile ? (
+            <SectionCard
+              ApplicationStyle={ApplicationStyle}
+              Colors={Colors}
+              Fonts={Fonts}
+              Spaces={Spaces}
+              title="Retours du coach"
+            >
+              <View style={[Spaces.gap[12]]}>
+                {recentCoachFeedback.length ? recentCoachFeedback.map((feedback, index) => {
+                  const feedbackDate = feedback?.submittedAt ? parseDate(feedback.submittedAt) : null;
+                  return (
+                    <View
+                      key={`${feedback?.sourceType || 'feedback'}:${feedback?.sourceDocumentId || index}:${feedback?.submittedAt || 'no-date'}`}
+                      style={[
+                        ApplicationStyle.card,
+                        Spaces.padding[12],
+                        Spaces.gap[8],
+                        {
+                          backgroundColor: `${Colors.primary700}BF`,
+                          borderColor: `${Colors.primary500}52`,
+                        },
+                      ]}
+                    >
+                      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                        <View style={{ flex: 1 }}>
+                          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {feedback?.matchLabel || feedback?.teamName || 'Match'}
+                          </Text>
+                          <Text style={[Fonts.p4, Fonts.neutral200]}>
+                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : 'Date a confirmer'}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            Alignments.selfStart,
+                            Spaces.paddingHorizontal[10],
+                            Spaces.paddingVertical[6],
+                            ApplicationStyle.borderRadius16,
+                            { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}40`, borderWidth: 1 },
+                          ]}
+                        >
+                          <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                            {feedback?.rating != null ? `${feedback.rating}/10` : 'Commentaire'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral100]}>
+                        {feedback?.comment || 'Pas de commentaire detaille pour ce retour.'}
+                      </Text>
+                    </View>
+                  );
+                }) : (
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    Aucun retour individuel du coach pour le moment.
+                  </Text>
+                )}
+              </View>
+            </SectionCard>
+          ) : null}
 
           <UserHistorySection
             bestLevel={bestLevelValue || undefined}

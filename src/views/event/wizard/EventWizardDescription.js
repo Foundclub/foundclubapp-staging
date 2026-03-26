@@ -9,6 +9,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
+import {
+  getEventWizardDescriptionStepIndex,
+  getEventWizardStepCount,
+} from './eventWizardDetectionUtils';
 
 /**
  *
@@ -45,8 +49,8 @@ function EventWizardDescription({ navigation }) {
       onNext={handleNext}
       onSkip={handleNext}
       showSkip
-      stepCount={10}
-      stepIndex={9}
+      stepCount={getEventWizardStepCount(state)}
+      stepIndex={getEventWizardDescriptionStepIndex(state)}
       subtitle={t('eventWizard.steps.description.subtitle')}
       title={t('eventWizard.steps.description.title')}
     >

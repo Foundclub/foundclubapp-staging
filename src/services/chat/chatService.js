@@ -378,8 +378,25 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to fetch messages: ${errorToDisplay}`);
+    const rawData = Array.isArray(response?.data?.data) ? response.data.data : [];
+    const rawPagination = response?.data?.meta?.pagination || {};
+    chatServiceLogger.warn('Chat messages schema mismatch, using fallback payload', {
+      chatId,
+      error: error?.message || error,
+      length: rawData.length,
+      page,
+    });
+    return {
+      data: rawData,
+      meta: {
+        pagination: {
+          page: Number(rawPagination.page || page || 1),
+          pageCount: Number(rawPagination.pageCount || 1),
+          pageSize: Number(rawPagination.pageSize || pageSize || rawData.length || 0),
+          total: Number(rawPagination.total || rawData.length),
+        },
+      },
+    };
   }
 };
 

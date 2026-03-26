@@ -29,6 +29,7 @@ const BLOCKED_ROUTES = new Set([
   RouteNames.LeagueMatchDetails,
   RouteNames.MatchStatsEditor,
   RouteNames.PendingMatchStats,
+  RouteNames.PlayerMatchResponse,
 ]);
 
 const formatPromptDate = (value) => {
@@ -47,6 +48,15 @@ const formatPromptDate = (value) => {
 };
 
 const getPromptStatusMeta = (prompt, Colors) => {
+  if (prompt?.actionType === 'player_self_report') {
+    return {
+      backgroundColor: `${Colors.primary500}20`,
+      borderColor: `${Colors.primary500}45`,
+      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A repondre',
+      textColor: Colors.primary500,
+    };
+  }
+
   if (prompt?.reviewRequired) {
     return {
       backgroundColor: `${Colors.warning500}20`,
@@ -91,32 +101,41 @@ const getPromptStatusMeta = (prompt, Colors) => {
   };
 };
 
-const navigateToPendingMatchStats = (prompt) => {
+const navigateToPendingMatchStats = (prompt, overrides = {}) => {
   if (!prompt) return false;
 
-  const editorParams = {
+  const commonParams = {
     ...(prompt?.sourceType === 'event' ? { eventId: prompt?.eventId } : { matchId: prompt?.matchId }),
     matchLabel: prompt?.label || 'Match',
     sourceType: prompt?.sourceType === 'league' ? 'league' : 'event',
     sport: prompt?.sport || 'football',
     teamId: prompt?.team?.documentId || undefined,
     teamName: prompt?.team?.name || null,
-    title: 'Stats du match',
+  };
+  const targetScreen = prompt?.actionType === 'player_self_report'
+    ? RouteNames.PlayerMatchResponse
+    : RouteNames.MatchStatsEditor;
+  const screenParams = {
+    ...commonParams,
+    ...overrides,
+    actionType: prompt?.actionType || 'coach_team_review',
+    actorRole: prompt?.actorRole || 'player',
+    title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
   };
 
   if (prompt?.sourceType === 'league') {
     return navigate(RouteNames.LeagueHomeTab, {
       params: {
-        params: editorParams,
-        screen: RouteNames.MatchStatsEditor,
+        params: screenParams,
+        screen: targetScreen,
       },
       screen: RouteNames.LeagueDashboard,
     });
   }
 
   return navigate(RouteNames.EventStack, {
-    params: editorParams,
-    screen: RouteNames.MatchStatsEditor,
+    params: screenParams,
+    screen: targetScreen,
   });
 };
 
@@ -124,6 +143,9 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
   screen: RouteNames.PendingMatchStats,
 });
 
+/**
+ *
+ */
 function MatchStatsPromptHost() {
   const [{ auth }] = useAppContext();
   const queryClient = useQueryClient();
@@ -152,7 +174,7 @@ function MatchStatsPromptHost() {
   const isBlockedRoute = currentRouteName ? BLOCKED_ROUTES.has(currentRouteName) : false;
   const isCompactMobile = width < 390 || height < 760;
   const statusMeta = useMemo(() => getPromptStatusMeta(nextPrompt, Colors), [Colors, nextPrompt]);
-  const modalSnapPoint = isCompactMobile ? '80%' : '72%';
+  const modalSnapPoint = isCompactMobile ? '88%' : '82%';
   const sectionGap = isCompactMobile ? 16 : 24;
   const titleGap = isCompactMobile ? 12 : 16;
   const cardPadding = isCompactMobile ? 16 : 24;
@@ -175,6 +197,9 @@ function MatchStatsPromptHost() {
 
   const primaryActionTitle = useMemo(() => {
     if (!nextPrompt) return 'Ouvrir';
+    if (nextPrompt?.actionType === 'player_self_report') {
+      return nextPrompt?.state === 'draft' ? 'Reprendre ma reponse' : 'Renseigner mes stats';
+    }
     if (nextPrompt?.reviewRequired) return 'Mettre a jour apres score officiel';
     if (nextPrompt?.reportStatus === 'draft') return 'Reprendre le brouillon';
     if (nextPrompt?.score?.available) return 'Saisir les stats du match';
@@ -183,6 +208,12 @@ function MatchStatsPromptHost() {
 
   const helperText = useMemo(() => {
     if (!nextPrompt) return '';
+    if (nextPrompt?.actionType === 'player_self_report') {
+      if (nextPrompt?.state === 'draft') {
+        return 'Ton retour perso post-match est deja commence. Reprends-le quand tu veux pour finaliser tes stats et ta note.';
+      }
+      return 'Ton match est termine. Renseigne tes stats individuelles si tu les connais, puis laisse une note sur 10 et ton ressenti.';
+    }
     if (nextPrompt?.reviewRequired) {
       return 'Le score officiel a change apres une premiere saisie. Verifie les lignes puis republie la bonne version.';
     }
@@ -196,9 +227,14 @@ function MatchStatsPromptHost() {
   }, [nextPrompt]);
 
   const scoreLabel = useMemo(() => {
-    if (!nextPrompt?.score?.available) return 'Score a completer';
+    if (!nextPrompt?.score?.available) return nextPrompt?.actionType === 'player_self_report' ? 'Score en attente' : 'Score a completer';
     return `${nextPrompt?.score?.scoreFor ?? '-'} - ${nextPrompt?.score?.scoreAgainst ?? '-'}`;
   }, [nextPrompt]);
+  const promptSourceLabel = useMemo(() => {
+    if (nextPrompt?.actionType === 'player_self_report') return 'Retour perso';
+    if (nextPrompt?.sourceType === 'league') return 'Ligue';
+    return 'Evenement';
+  }, [nextPrompt?.actionType, nextPrompt?.sourceType]);
 
   const dismissPromptForSession = useCallback(() => {
     if (nextPrompt?.key) {
@@ -212,6 +248,12 @@ function MatchStatsPromptHost() {
 
     dismissPromptForSession();
     navigateToPendingMatchStats(nextPrompt);
+  }, [dismissPromptForSession, nextPrompt]);
+  const handleOpenUnknownStatsFlow = useCallback(() => {
+    if (!nextPrompt || nextPrompt?.actionType !== 'player_self_report') return;
+
+    dismissPromptForSession();
+    navigateToPendingMatchStats(nextPrompt, { forceUnknownStats: true });
   }, [dismissPromptForSession, nextPrompt]);
 
   useEffect(() => {
@@ -293,7 +335,9 @@ function MatchStatsPromptHost() {
       <View style={[Spaces.gap[sectionGap], Spaces.paddingBottom[isCompactMobile ? 20 : 24]]}>
         <View style={[Spaces.gap[titleGap]]}>
           <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rappel post-match</Text>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats de fin de match</Text>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {nextPrompt?.actionType === 'player_self_report' ? 'Ton match est termine' : 'Bilan de fin de match'}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: helperLineHeight, maxWidth: '96%' }]}>
             {helperText}
           </Text>
@@ -360,7 +404,7 @@ function MatchStatsPromptHost() {
               <View style={[{ minWidth: isCompactMobile ? 108 : 120 }, Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>Source</Text>
                 <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                  {nextPrompt?.sourceType === 'league' ? 'Ligue' : 'Evenement'}
+                  {promptSourceLabel}
                 </Text>
               </View>
             </View>
@@ -382,7 +426,7 @@ function MatchStatsPromptHost() {
               ]}
             >
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {`Il reste ${totalPending} rapports post-match a completer.`}
+                {`Il reste ${totalPending} actions post-match a completer.`}
               </Text>
             </View>
           </View>
@@ -395,6 +439,14 @@ function MatchStatsPromptHost() {
             title={primaryActionTitle}
             variant="Primary"
           />
+          {nextPrompt?.actionType === 'player_self_report' ? (
+            <Button
+              onPress={handleOpenUnknownStatsFlow}
+              style={modalButtonStyle}
+              title="Je ne sais pas mes stats"
+              variant="Secondary"
+            />
+          ) : null}
           {totalPending > 1 ? (
             <Button
               onPress={() => {

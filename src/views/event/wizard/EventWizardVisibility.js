@@ -9,6 +9,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 const VISIBILITY_OPTIONS = [
   {
@@ -56,7 +57,7 @@ function EventWizardVisibility({ navigation }) {
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={10}
+      stepCount={getEventWizardStepCount(state)}
       stepIndex={6}
       subtitle={t('eventWizard.steps.visibility.subtitle')}
       title={t('eventWizard.steps.visibility.title')}

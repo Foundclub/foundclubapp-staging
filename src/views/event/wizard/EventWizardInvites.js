@@ -17,6 +17,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getTeams } from '@/services/team/teamService';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -128,7 +129,7 @@ function EventWizardInvites({ navigation }) {
       onNext={handleNext}
       onSkip={handleSkip}
       showSkip
-      stepCount={10}
+      stepCount={getEventWizardStepCount(state)}
       stepIndex={3}
       subtitle={t('eventWizard.steps.invites.subtitle')}
       title={t('eventWizard.steps.invites.title')}

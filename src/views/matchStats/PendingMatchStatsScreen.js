@@ -34,6 +34,15 @@ const formatPromptDate = (value) => {
 };
 
 const getPromptStatusMeta = (prompt, Colors) => {
+  if (prompt?.actionType === 'player_self_report') {
+    return {
+      backgroundColor: `${Colors.primary500}20`,
+      borderColor: `${Colors.primary500}45`,
+      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A repondre',
+      textColor: Colors.primary500,
+    };
+  }
+
   if (prompt?.reviewRequired) {
     return {
       backgroundColor: `${Colors.warning500}20`,
@@ -79,6 +88,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
 };
 
 const getPromptPrimaryAction = (prompt) => {
+  if (prompt?.actionType === 'player_self_report') return prompt?.state === 'draft' ? 'Reprendre' : 'Renseigner';
   if (prompt?.reviewRequired) return 'Mettre a jour';
   if (prompt?.reportStatus === 'draft') return 'Reprendre';
   if (prompt?.score?.available) return 'Ouvrir';
@@ -91,6 +101,12 @@ const buildPromptScore = (prompt) => {
 };
 
 const getPromptActionSummary = (prompt) => {
+  if (prompt?.actionType === 'player_self_report') {
+    if (prompt?.state === 'draft') {
+      return 'Reprendre ton brouillon perso, finaliser tes stats et ta note de match.';
+    }
+    return 'Donner ton retour individuel post-match, avec stats perso et note sur 10.';
+  }
   if (prompt?.reviewRequired) {
     return 'Verifier puis republier les stats de cette equipe.';
   }
@@ -124,18 +140,32 @@ function PendingMatchStatsScreen({ navigation }) {
     () => (Array.isArray(pendingPayload?.items) ? pendingPayload.items : []),
     [pendingPayload?.items],
   );
+  const personalPromptItems = useMemo(
+    () => promptItems.filter((item) => item?.actionType === 'player_self_report'),
+    [promptItems],
+  );
+  const teamPromptItems = useMemo(
+    () => promptItems.filter((item) => item?.actionType !== 'player_self_report'),
+    [promptItems],
+  );
 
   const handleOpenPrompt = useCallback((prompt) => {
     if (!prompt) return;
 
-    navigation.navigate(RouteNames.MatchStatsEditor, {
+    const targetRoute = prompt?.actionType === 'player_self_report'
+      ? RouteNames.PlayerMatchResponse
+      : RouteNames.MatchStatsEditor;
+
+    navigation.navigate(targetRoute, {
       ...(prompt?.sourceType === 'league' ? { matchId: prompt?.matchId } : { eventId: prompt?.eventId }),
+      actionType: prompt?.actionType || 'coach_team_review',
+      actorRole: prompt?.actorRole || 'player',
       matchLabel: prompt?.label || 'Match',
       sourceType: prompt?.sourceType === 'league' ? 'league' : 'event',
       sport: prompt?.sport || 'football',
       teamId: prompt?.team?.documentId || undefined,
       teamName: prompt?.team?.name || null,
-      title: 'Stats du match',
+      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
     });
   }, [navigation]);
 
@@ -190,7 +220,9 @@ function PendingMatchStatsScreen({ navigation }) {
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[12], Spaces.gap[4]]}>
-          <Text style={[Fonts.p4Bold, Fonts.primary100]}>Action attendue</Text>
+          <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+            {item?.actionType === 'player_self_report' ? 'Mon action' : "Action d'equipe"}
+          </Text>
           <Text style={[Fonts.p3, Fonts.neutral100]}>
             {getPromptActionSummary(item)}
           </Text>
@@ -233,17 +265,22 @@ function PendingMatchStatsScreen({ navigation }) {
       >
         <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {`${promptItems.length} match${promptItems.length > 1 ? 's' : ''} a traiter`}
+          {`${promptItems.length} action${promptItems.length > 1 ? 's' : ''} a traiter`}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100]}>
-          Retrouve ici tous les rapports post-match encore a completer, republier ou verifier apres une mise a jour du score officiel.
+          Retrouve ici tes retours perso et les bilans equipe encore en attente apres les matchs.
         </Text>
       </View>
 
       <FlatList
         contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24], promptItems.length === 0 ? { flexGrow: 1 } : null]}
-        data={promptItems}
-        keyExtractor={(item, index) => String(item?.key || item?.eventId || item?.matchId || index)}
+        data={[
+          ...(personalPromptItems.length ? [{ key: 'header-personal', title: 'Pour moi', type: 'header' }] : []),
+          ...personalPromptItems.map((item) => ({ ...item, type: 'item' })),
+          ...(teamPromptItems.length ? [{ key: 'header-team', title: 'Pour mon equipe', type: 'header' }] : []),
+          ...teamPromptItems.map((item) => ({ ...item, type: 'item' })),
+        ]}
+        keyExtractor={(item, index) => String(item?.key || index)}
         ListEmptyComponent={(
           <View
             style={[
@@ -258,14 +295,23 @@ function PendingMatchStatsScreen({ navigation }) {
               { flex: 1, minHeight: 220 },
             ]}
           >
-            <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun rapport en attente</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Aucune action en attente</Text>
             <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-              Quand un match termine demandera encore une action, il apparaitra ici automatiquement.
+              Quand un match termine demandera encore une action, elle apparaitra ici automatiquement.
             </Text>
           </View>
         )}
         refreshControl={<RefreshControl onRefresh={refetch} refreshing={isFetching} tintColor={Colors.primary500} />}
-        renderItem={renderPromptCard}
+        renderItem={({ item }) => {
+          if (item?.type === 'header') {
+            return (
+              <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginTop[4]]}>
+                {item.title}
+              </Text>
+            );
+          }
+          return renderPromptCard({ item });
+        }}
         showsVerticalScrollIndicator={false}
       />
     </ScreenContainer>

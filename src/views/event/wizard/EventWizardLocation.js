@@ -10,6 +10,7 @@ import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySe
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
+import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
 /**
  *
@@ -49,7 +50,7 @@ function EventWizardLocation({ navigation }) {
       isNextDisabled={!canGoNext}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={10}
+      stepCount={getEventWizardStepCount(state)}
       stepIndex={5}
       subtitle={t('eventWizard.steps.location.subtitle')}
       title={t('eventWizard.steps.location.title')}

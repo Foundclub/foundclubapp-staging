@@ -361,6 +361,7 @@ export const NOTIFICATION_TYPES = {
   TEAM_REQUEST: 'teamRequest',
 
   // Events
+  COACH_REPORT_PUBLISHED: 'coachReportPublished',
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
   EVENT_CONVOCATION_PUBLISHED: 'eventConvocationPublished',

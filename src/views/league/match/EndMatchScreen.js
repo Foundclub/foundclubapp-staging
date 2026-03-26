@@ -1,6 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,10 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { getMatchDerivedPhase } from '@/views/league/match/utils/matchStatus';
 
-import { fetchMatch, submitMatchScore } from '@/services/league/leagueMatchService';
+import {
+  fetchMatch,
+  submitMatchScore,
+} from '@/services/league/leagueMatchService';
 import MatchmakingService from '@/services/league/MatchmakingService';
 import { getAvailableSlots } from '@/services/teamSlot/teamSlotService';
 
@@ -63,7 +66,9 @@ const hasForwardStatusProgression = (beforeStatus, afterStatus) => {
     return false;
   }
 
-  return Boolean(transitions[String(beforeStatus)]?.includes(String(afterStatus)));
+  return Boolean(
+    transitions[String(beforeStatus)]?.includes(String(afterStatus)),
+  );
 };
 
 /**
@@ -73,7 +78,12 @@ const hasForwardStatusProgression = (beforeStatus, afterStatus) => {
  * @param {string | number | undefined | null} scoreB
  * @returns {boolean}
  */
-const wasScorePersistedDespiteError = (previousMatch, refreshedMatch, scoreA, scoreB) => {
+const wasScorePersistedDespiteError = (
+  previousMatch,
+  refreshedMatch,
+  scoreA,
+  scoreB,
+) => {
   if (!refreshedMatch) {
     return false;
   }
@@ -97,8 +107,10 @@ const wasScorePersistedDespiteError = (previousMatch, refreshedMatch, scoreA, sc
     if (!submission) {
       return false;
     }
-    return parseScore(submission.score_a) === expectedA
-            && parseScore(submission.score_b) === expectedB;
+    return (
+      parseScore(submission.score_a) === expectedA
+      && parseScore(submission.score_b) === expectedB
+    );
   });
 
   const hasStatusProgression = hasForwardStatusProgression(
@@ -117,8 +129,8 @@ const DISPUTE_TYPES = [
 
 const hasSubmissionPayload = (submission) => Boolean(
   submission
-    && typeof submission === 'object'
-    && (submission.score_a !== undefined || submission.score_b !== undefined),
+      && typeof submission === 'object'
+      && (submission.score_a !== undefined || submission.score_b !== undefined),
 );
 
 /**
@@ -171,13 +183,30 @@ function EndMatchScreen() {
   const match = /** @type {LeagueMatch | null} */ (matchData || null);
 
   const matchPhase = getMatchDerivedPhase(match);
-  const isScoreSubmissionAllowed = ['disputed', 'pending_validation', 'waiting_score'].includes(matchPhase);
+  const isScoreSubmissionAllowed = [
+    'disputed',
+    'pending_validation',
+    'waiting_score',
+  ].includes(matchPhase);
   const scoreSubmissionBlockReason = "Le score ne peut pas être saisi à ce stade. Vérifiez que l'heure de début du match est dépassée.";
   const currentUserId = getEntityDocumentId(userData);
-  const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
-  const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
-  const ownSubmission = isCaptainA ? match?.submitted_score_team_a : isCaptainB ? match?.submitted_score_team_b : null;
-  const opponentSubmission = isCaptainA ? match?.submitted_score_team_b : isCaptainB ? match?.submitted_score_team_a : null;
+  const isCaptainA = areSameEntityId(
+    getEntityDocumentId(match?.team_a?.captain),
+    currentUserId,
+  );
+  const isCaptainB = areSameEntityId(
+    getEntityDocumentId(match?.team_b?.captain),
+    currentUserId,
+  );
+  let ownSubmission = null;
+  let opponentSubmission = null;
+  if (isCaptainA) {
+    ownSubmission = match?.submitted_score_team_a || null;
+    opponentSubmission = match?.submitted_score_team_b || null;
+  } else if (isCaptainB) {
+    ownSubmission = match?.submitted_score_team_b || null;
+    opponentSubmission = match?.submitted_score_team_a || null;
+  }
   const hasOwnSubmission = hasSubmissionPayload(ownSubmission);
   const hasOpponentSubmission = hasSubmissionPayload(opponentSubmission);
   const opponentScoreA = parseScore(opponentSubmission?.score_a);
@@ -185,6 +214,55 @@ function EndMatchScreen() {
   const [manualEntryEnabled, setManualEntryEnabled] = useState(true);
   const canShowManualForms = !hasOpponentSubmission || manualEntryEnabled || hasOwnSubmission;
   const shouldShowGuidedState = hasOpponentSubmission && !canShowManualForms;
+  const leagueCardTextColor = Colors.primary500;
+  const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
+  const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
+  let captainSideLabel = 'CAPITAINE';
+  if (isCaptainA) captainSideLabel = 'DOMICILE';
+  if (isCaptainB) captainSideLabel = 'EXTERIEUR';
+  const heroStatusMeta = useMemo(() => {
+    if (!isScoreSubmissionAllowed) {
+      return {
+        accentColor: Colors.warning500,
+        helper:
+          'Le score sera saisissable une fois la fenetre de validation ouverte.',
+        label: 'Fenetre fermee',
+      };
+    }
+
+    if (hasOpponentSubmission && !hasOwnSubmission) {
+      return {
+        accentColor: Colors.gold500,
+        helper:
+          'Le capitaine adverse a deja propose un score. Confirmez-le ou ouvrez un litige.',
+        label: 'Score adverse recu',
+      };
+    }
+
+    if (hasOwnSubmission) {
+      return {
+        accentColor: Colors.success500,
+        helper:
+          'Votre derniere saisie est enregistree. Vous pouvez encore la relire.',
+        label: 'Saisie en cours',
+      };
+    }
+
+    return {
+      accentColor: Colors.primary500,
+      helper:
+        'Renseignez le score final puis validez ou ouvrez un litige si necessaire.',
+      label: 'Score a saisir',
+    };
+  }, [
+    Colors.gold500,
+    Colors.primary500,
+    Colors.success500,
+    Colors.warning500,
+    hasOpponentSubmission,
+    hasOwnSubmission,
+    isScoreSubmissionAllowed,
+  ]);
 
   useEffect(() => {
     if (hasOpponentSubmission && !hasOwnSubmission) {
@@ -195,16 +273,22 @@ function EndMatchScreen() {
   }, [hasOpponentSubmission, hasOwnSubmission]);
 
   const getMyTeamFromMatch = () => {
-    const currentUserId = String(getEntityDocumentId(userData) || '');
-    if (!match || !currentUserId) return null;
+    const currentActorId = String(getEntityDocumentId(userData) || '');
+    if (!match || !currentActorId) return null;
 
-    const isCaptainA = areSameEntityId(getEntityDocumentId(match?.team_a?.captain), currentUserId);
-    const isCaptainB = areSameEntityId(getEntityDocumentId(match?.team_b?.captain), currentUserId);
-    if (isCaptainA) return match.team_a;
-    if (isCaptainB) return match.team_b;
+    const isActorCaptainA = areSameEntityId(
+      getEntityDocumentId(match?.team_a?.captain),
+      currentActorId,
+    );
+    const isActorCaptainB = areSameEntityId(
+      getEntityDocumentId(match?.team_b?.captain),
+      currentActorId,
+    );
+    if (isActorCaptainA) return match.team_a;
+    if (isActorCaptainB) return match.team_b;
 
-    const inRosterA = (match?.team_a?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
-    const inRosterB = (match?.team_b?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentUserId));
+    const inRosterA = (match?.team_a?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentActorId));
+    const inRosterB = (match?.team_b?.roster || []).some((member) => areSameEntityId(getEntityDocumentId(member), currentActorId));
     if (inRosterA) return match.team_a;
     if (inRosterB) return match.team_b;
 
@@ -218,11 +302,15 @@ function EndMatchScreen() {
     }
 
     const teamId = getEntityDocumentId(myTeam);
-    const homeBaseLocation = getLocationCoordinates(myTeam.home_base || myTeam.address);
+    const homeBaseLocation = getLocationCoordinates(
+      myTeam.home_base || myTeam.address,
+    );
     const userLocation = getLocationCoordinates(userData?.location);
     const location = homeBaseLocation || userLocation;
     if (!location) {
-      throw new Error('Aucune localisation validée trouvée. Configurez la base de votre squad.');
+      throw new Error(
+        'Aucune localisation validée trouvée. Configurez la base de votre squad.',
+      );
     }
     const homeBase = myTeam?.home_base && typeof myTeam.home_base === 'object'
       ? /** @type {{radius?: number}} */ (myTeam.home_base)
@@ -237,7 +325,10 @@ function EndMatchScreen() {
       throw new Error('Aucun créneau disponible pour relancer une recherche.');
     }
 
-    await MatchmakingService.triggerSearch(teamId, selectedSlotIds, { location, radius });
+    await MatchmakingService.triggerSearch(teamId, selectedSlotIds, {
+      location,
+      radius,
+    });
     queryClient.invalidateQueries({ queryKey: ['league-matches'] });
   };
 
@@ -255,10 +346,15 @@ function EndMatchScreen() {
           onPress: async () => {
             try {
               await relaunchSearchNow();
-              Alert.alert('Recherche relancée', 'La recherche d\'un nouvel adversaire a été lancée.');
+              Alert.alert(
+                'Recherche relancée',
+                "La recherche d'un nouvel adversaire a été lancée.",
+              );
             } catch (error) {
               const apiError = /** @type {any} */ (error);
-              const message = typeof error === 'string' ? error : apiError?.message || 'Relance impossible.';
+              const message = typeof error === 'string'
+                ? error
+                : apiError?.message || 'Relance impossible.';
               Alert.alert('Relance impossible', message);
             } finally {
               navigation.goBack();
@@ -271,7 +367,9 @@ function EndMatchScreen() {
   };
 
   const submitMutation = useMutation({
-    mutationFn: (/** @type {{scoreA: number, scoreB: number, dispute: boolean, proof: ProofPayload | null, disputeType: string | null, disputeComment: string | null}} */ data) => submitMatchScore(
+    mutationFn: (
+      /** @type {{scoreA: number, scoreB: number, dispute: boolean, proof: ProofPayload | null, disputeType: string | null, disputeComment: string | null}} */ data,
+    ) => submitMatchScore(
       matchId,
       data.scoreA,
       data.scoreB,
@@ -297,7 +395,9 @@ function EndMatchScreen() {
         if (recovered) {
           queryClient.invalidateQueries({ queryKey: ['league-matches'] });
           queryClient.invalidateQueries({ queryKey: ['league-match', matchId] });
-          const recoveredStatus = String(refreshedMatch?.status || '').toLowerCase();
+          const recoveredStatus = String(
+            refreshedMatch?.status || '',
+          ).toLowerCase();
           if (recoveredStatus === 'valid') {
             promptForSearchRelaunch();
           } else if (recoveredStatus === 'pending_validation') {
@@ -313,7 +413,9 @@ function EndMatchScreen() {
               [{ onPress: () => navigation.goBack(), text: 'OK' }],
             );
           } else {
-            Alert.alert('Score enregistré', 'Le score a été enregistré.', [{ onPress: () => navigation.goBack(), text: 'OK' }]);
+            Alert.alert('Score enregistré', 'Le score a été enregistré.', [
+              { onPress: () => navigation.goBack(), text: 'OK' },
+            ]);
           }
           return;
         }
@@ -322,7 +424,9 @@ function EndMatchScreen() {
       }
 
       const apiError = /** @type {any} */ (error);
-      const message = typeof error === 'string' ? error : apiError?.message || "Impossible d'envoyer le score.";
+      const message = typeof error === 'string'
+        ? error
+        : apiError?.message || "Impossible d'envoyer le score.";
       Alert.alert('Erreur', message);
     },
     onSuccess: (response) => {
@@ -352,15 +456,16 @@ function EndMatchScreen() {
         return;
       }
 
-      Alert.alert(
-        'Score enregistré',
-        'Le score a bien été envoyé.',
-        [{ onPress: () => navigation.goBack(), text: 'OK' }],
-      );
+      Alert.alert('Score enregistré', 'Le score a bien été envoyé.', [
+        { onPress: () => navigation.goBack(), text: 'OK' },
+      ]);
     },
   });
 
   const isNoShowDispute = dispute && disputeType === 'no_show';
+  let captureProofButtonTitle = 'Prendre une photo';
+  if (isNoShowDispute) captureProofButtonTitle = 'Prendre une photo (camera)';
+  if (proof) captureProofButtonTitle = 'Preuve ajoutee';
 
   const handlePickProofFromGallery = async () => {
     /** @type {import('react-native-image-picker').ImageLibraryOptions} */
@@ -417,7 +522,10 @@ function EndMatchScreen() {
       return;
     }
     if (isNoShowDispute && proof?.source !== 'camera') {
-      Alert.alert('Erreur', 'Pour un no-show, la preuve doit venir de la camera.');
+      Alert.alert(
+        'Erreur',
+        'Pour un no-show, la preuve doit venir de la camera.',
+      );
       return;
     }
 
@@ -458,13 +566,19 @@ function EndMatchScreen() {
     setter(sanitizeScoreInput(value));
   };
 
-  const incrementScore = (/** @type {string} */ score, /** @type {(value: string) => void} */ setter) => {
+  const incrementScore = (
+    /** @type {string} */ score,
+    /** @type {(value: string) => void} */ setter,
+  ) => {
     const current = Number.parseInt(score || '0', 10);
     const next = Number.isNaN(current) ? 1 : Math.min(current + 1, 99);
     setter(String(next));
   };
 
-  const decrementScore = (/** @type {string} */ score, /** @type {(value: string) => void} */ setter) => {
+  const decrementScore = (
+    /** @type {string} */ score,
+    /** @type {(value: string) => void} */ setter,
+  ) => {
     const current = Number.parseInt(score || '0', 10);
     const next = Number.isNaN(current) ? 0 : Math.max(current - 1, 0);
     setter(String(next));
@@ -500,12 +614,139 @@ function EndMatchScreen() {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.neutral100 }]}>Saisir le score</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>
+            Saisir le score
+          </Text>
           <View style={styles.headerSide} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={[Fonts.p2, styles.introText, { color: Colors.neutral300 }]}>Veuillez saisir le score final du match.</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <LeagueCard
+            isGold
+            style={[
+              styles.heroCard,
+              {
+                backgroundColor: 'rgba(10, 28, 43, 0.92)',
+                borderColor: `${heroStatusMeta.accentColor}45`,
+              },
+            ]}
+          >
+            <View style={styles.heroTopRow}>
+              <View
+                style={[
+                  styles.heroContextPill,
+                  {
+                    backgroundColor: isCaptainA
+                      ? leagueAccentSurface
+                      : leagueGoldSurface,
+                    borderColor: isCaptainA
+                      ? 'rgba(1, 179, 244, 0.35)'
+                      : 'rgba(255, 215, 0, 0.28)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    Fonts.label,
+                    { color: isCaptainA ? Colors.primary500 : Colors.gold500 },
+                  ]}
+                >
+                  {captainSideLabel}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.heroStatusPill,
+                  {
+                    backgroundColor: `${heroStatusMeta.accentColor}18`,
+                    borderColor: `${heroStatusMeta.accentColor}45`,
+                  },
+                ]}
+              >
+                <Text
+                  style={[Fonts.label, { color: heroStatusMeta.accentColor }]}
+                >
+                  {heroStatusMeta.label}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.heroMatchupRow}>
+              <View style={styles.heroTeamBlock}>
+                <TeamShield
+                  initials={String(teamA?.name?.substring(0, 2) || '?')}
+                  isGold
+                  size={60}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Fonts.p2Bold,
+                    styles.heroTeamName,
+                    { color: Colors.neutral100 },
+                  ]}
+                >
+                  {teamA?.name || 'Equipe A'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.heroScoreCenter,
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: 'rgba(1, 179, 244, 0.24)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    { color: leagueCardTextColor, marginBottom: 6 },
+                  ]}
+                >
+                  MATCH
+                </Text>
+                <Text style={[Fonts.h1Bold, { color: Colors.neutral00 }]}>
+                  {scoreA || '0'}
+                  {' '}
+                  -
+                  {scoreB || '0'}
+                </Text>
+              </View>
+
+              <View style={styles.heroTeamBlock}>
+                <TeamShield
+                  initials={String(teamB?.name?.substring(0, 2) || '?')}
+                  isGold
+                  size={60}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    Fonts.p2Bold,
+                    styles.heroTeamName,
+                    { color: Colors.neutral100 },
+                  ]}
+                >
+                  {teamB?.name || 'Equipe B'}
+                </Text>
+              </View>
+            </View>
+
+            <Text
+              style={[
+                Fonts.p3,
+                styles.introText,
+                { color: leagueCardTextColor },
+              ]}
+            >
+              {heroStatusMeta.helper}
+            </Text>
+          </LeagueCard>
 
           {!isScoreSubmissionAllowed ? (
             <LeagueCard
@@ -526,24 +767,52 @@ function EndMatchScreen() {
           ) : null}
 
           {hasOpponentSubmission ? (
-            <LeagueCard style={[styles.opponentScoreCard, leagueSurface]}>
-              <Text style={[Fonts.p3Bold, { color: Colors.warning500 || Colors.secondary500 || '#FACC15' }]}>
-                Score saisi par l'adversaire
-              </Text>
-              <Text style={[Fonts.h4, { color: Colors.neutral100, marginTop: 6 }]}>
+            <LeagueCard
+              style={[
+                styles.opponentScoreCard,
+                leagueSurface,
+                {
+                  backgroundColor: 'rgba(255, 215, 0, 0.08)',
+                  borderColor: 'rgba(255, 215, 0, 0.22)',
+                },
+              ]}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View
+                  style={[
+                    styles.miniHeaderDot,
+                    { backgroundColor: Colors.gold500 },
+                  ]}
+                />
+                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                  Score saisi par le capitaine adverse
+                </Text>
+              </View>
+              <Text
+                style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}
+              >
                 {`${opponentScoreA ?? '-'} - ${opponentScoreB ?? '-'}`}
               </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                Confirmez ce score si vous êtes d'accord, sinon ouvrez un litige.
+              <Text
+                style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
+              >
+                Confirmez ce score si vous êtes d&apos;accord, sinon ouvrez un
+                litige.
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button
+                  icon="check"
+                  iconColor={Colors.neutral00}
+                  iconPosition="before"
                   onPress={handleConfirmOpponentScore}
                   style={{ width: '100%' }}
                   title="Confirmer le score"
                   variant="Primary"
                 />
                 <Button
+                  icon="close"
+                  iconColor={Colors.error500}
+                  iconPosition="before"
                   onPress={handleDisputeOpponentScore}
                   style={{ borderColor: Colors.error500, width: '100%' }}
                   textStyle={{ color: Colors.error500 }}
@@ -555,77 +824,178 @@ function EndMatchScreen() {
           ) : null}
 
           {shouldShowGuidedState ? (
-            <LeagueCard style={[styles.guidedStateCard, leagueSurface]}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>En attente de votre decision</Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                Utilisez les boutons ci-dessus pour confirmer ou contester le score adverse.
+            <LeagueCard
+              style={[
+                styles.guidedStateCard,
+                leagueSurface,
+                {
+                  backgroundColor: leagueAccentSurface,
+                  borderColor: 'rgba(1, 179, 244, 0.22)',
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                En attente de votre decision
+              </Text>
+              <Text
+                style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
+              >
+                Utilisez les boutons ci-dessus pour confirmer ou contester le
+                score adverse.
               </Text>
             </LeagueCard>
           ) : null}
 
           {canShowManualForms ? (
             <LeagueCard style={[styles.scoreCard, leagueSurface]}>
+              <View style={styles.cardHeaderRow}>
+                <View
+                  style={[
+                    styles.miniHeaderDot,
+                    { backgroundColor: Colors.primary500 },
+                  ]}
+                />
+                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                  Saisie du score final
+                </Text>
+              </View>
               <View style={styles.scoreContainer}>
-                <View style={styles.teamColumn}>
-                  <TeamShield initials={String(teamA?.name?.substring(0, 2) || '?')} isGold size={64} />
-                  <Text numberOfLines={1} style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]}>{teamA?.name}</Text>
+                <View
+                  style={[
+                    styles.teamColumn,
+                    styles.scoreTeamCard,
+                    {
+                      backgroundColor: leagueAccentSurface,
+                      borderColor: 'rgba(1, 179, 244, 0.24)',
+                    },
+                  ]}
+                >
+                  <TeamShield
+                    initials={String(teamA?.name?.substring(0, 2) || '?')}
+                    isGold
+                    size={64}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.h4,
+                      styles.teamName,
+                      { color: Colors.neutral100 },
+                    ]}
+                  >
+                    {teamA?.name}
+                  </Text>
                   <TextInput
-                      style={[
-                          styles.scoreInput,
-                          {
-                            backgroundColor: 'rgba(255,255,255,0.08)',
-                            borderColor: 'rgba(255,255,255,0.22)',
-                            color: Colors.neutral00,
-                          },
-                        ]}
-                      keyboardType="number-pad"
-                      maxLength={2}
-                      onChangeText={handleScoreChange(setScoreA)}
-                      placeholder="0"
-                      placeholderTextColor={Colors.neutral500}
-                      value={scoreA}
-                    />
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    onChangeText={handleScoreChange(setScoreA)}
+                    placeholder="0"
+                    placeholderTextColor={Colors.neutral500}
+                    style={[
+                      styles.scoreInput,
+                      {
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'rgba(255,255,255,0.22)',
+                        color: Colors.neutral00,
+                      },
+                    ]}
+                    value={scoreA}
+                  />
                   <View style={styles.scoreActions}>
-                      <TouchableOpacity onPress={() => decrementScore(scoreA, setScoreA)} style={[styles.scoreStepper, { borderColor: Colors.primary500 }]}>
-                          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>-</Text>
-                        </TouchableOpacity>
-                      <TouchableOpacity onPress={() => incrementScore(scoreA, setScoreA)} style={[styles.scoreStepper, { borderColor: Colors.primary500 }]}>
-                          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>+</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => decrementScore(scoreA, setScoreA)}
+                      style={[
+                        styles.scoreStepper,
+                        { borderColor: Colors.primary500 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                        -
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => incrementScore(scoreA, setScoreA)}
+                      style={[
+                        styles.scoreStepper,
+                        { borderColor: Colors.primary500 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                        +
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.scoreSeparatorWrap}>
-                  <Text style={[Fonts.h2, { color: Colors.neutral300 }]}>-</Text>
+                  <Text style={[Fonts.h2, { color: Colors.gold500 }]}>VS</Text>
                 </View>
 
-                <View style={styles.teamColumn}>
-                  <TeamShield initials={String(teamB?.name?.substring(0, 2) || '?')} isGold size={64} />
-                  <Text numberOfLines={1} style={[Fonts.h4, styles.teamName, { color: Colors.neutral100 }]}>{teamB?.name}</Text>
+                <View
+                  style={[
+                    styles.teamColumn,
+                    styles.scoreTeamCard,
+                    {
+                      backgroundColor: leagueGoldSurface,
+                      borderColor: 'rgba(255, 215, 0, 0.24)',
+                    },
+                  ]}
+                >
+                  <TeamShield
+                    initials={String(teamB?.name?.substring(0, 2) || '?')}
+                    isGold
+                    size={64}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.h4,
+                      styles.teamName,
+                      { color: Colors.neutral100 },
+                    ]}
+                  >
+                    {teamB?.name}
+                  </Text>
                   <TextInput
-                      style={[
-                          styles.scoreInput,
-                          {
-                            backgroundColor: 'rgba(255,255,255,0.08)',
-                            borderColor: 'rgba(255,255,255,0.22)',
-                            color: Colors.neutral00,
-                          },
-                        ]}
-                      keyboardType="number-pad"
-                      maxLength={2}
-                      onChangeText={handleScoreChange(setScoreB)}
-                      placeholder="0"
-                      placeholderTextColor={Colors.neutral500}
-                      value={scoreB}
-                    />
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    onChangeText={handleScoreChange(setScoreB)}
+                    placeholder="0"
+                    placeholderTextColor={Colors.neutral500}
+                    style={[
+                      styles.scoreInput,
+                      {
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'rgba(255,255,255,0.22)',
+                        color: Colors.neutral00,
+                      },
+                    ]}
+                    value={scoreB}
+                  />
                   <View style={styles.scoreActions}>
-                      <TouchableOpacity onPress={() => decrementScore(scoreB, setScoreB)} style={[styles.scoreStepper, { borderColor: Colors.primary500 }]}>
-                          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>-</Text>
-                        </TouchableOpacity>
-                      <TouchableOpacity onPress={() => incrementScore(scoreB, setScoreB)} style={[styles.scoreStepper, { borderColor: Colors.primary500 }]}>
-                          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>+</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => decrementScore(scoreB, setScoreB)}
+                      style={[
+                        styles.scoreStepper,
+                        { borderColor: Colors.primary500 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                        -
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => incrementScore(scoreB, setScoreB)}
+                      style={[
+                        styles.scoreStepper,
+                        { borderColor: Colors.primary500 },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                        +
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </LeagueCard>
@@ -633,8 +1003,21 @@ function EndMatchScreen() {
 
           {canShowManualForms ? (
             <LeagueCard style={[styles.disputeCard, leagueSurface]}>
+              <View style={styles.cardHeaderRow}>
+                <View
+                  style={[
+                    styles.miniHeaderDot,
+                    { backgroundColor: Colors.error500 },
+                  ]}
+                />
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  Gestion du litige
+                </Text>
+              </View>
               <View style={styles.headerRow}>
-                <Text style={[Fonts.h4, { color: Colors.neutral100 }]}>Il y a un litige ?</Text>
+                <Text style={[Fonts.h4, { color: Colors.neutral100 }]}>
+                  Y a-t-il un litige ?
+                </Text>
                 <Switch
                   onValueChange={setDispute}
                   thumbColor={Colors.neutral100}
@@ -642,70 +1025,121 @@ function EndMatchScreen() {
                   value={dispute}
                 />
               </View>
-              <Text style={[Fonts.p3, { color: Colors.neutral400, marginTop: 6 }]}>Activez en cas de desaccord. Preuve optionnelle sauf no-show (camera obligatoire).</Text>
+              <Text
+                style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
+              >
+                Activez en cas de desaccord. Preuve optionnelle sauf no-show
+                (camera obligatoire).
+              </Text>
 
               {dispute ? (
                 <View style={styles.disputeContent}>
                   <View>
-                      <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>Type de litige</Text>
-                      <View style={styles.chipsRow}>
-                          {DISPUTE_TYPES.map((item) => (
-                              <TouchableOpacity
-                                  key={item.key}
-                                  onPress={() => setDisputeType(item.key)}
-                                  style={[
-                                      styles.disputeTypeChip,
-                                      {
-                                        backgroundColor: disputeType === item.key ? 'rgba(1,179,244,0.15)' : 'rgba(255,255,255,0.06)',
-                                        borderColor: disputeType === item.key ? Colors.primary500 : Colors.neutral600,
-                                      },
-                                    ]}
-                                >
-                                  <Text style={[Fonts.p3Bold, { color: disputeType === item.key ? Colors.primary500 : Colors.neutral300 }]}>{item.label}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-
-                  <View>
-                      <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>Commentaire (optionnel)</Text>
-                      <TextInput
-                          maxLength={500}
-                          multiline
-                          onChangeText={setDisputeComment}
-                          placeholder="Expliquez brievement le probleme"
-                          placeholderTextColor={Colors.neutral500}
+                    <Text
+                      style={[
+                        Fonts.p3,
+                        { color: leagueCardTextColor, marginBottom: 8 },
+                      ]}
+                    >
+                      Type de litige
+                    </Text>
+                    <View style={styles.chipsRow}>
+                      {DISPUTE_TYPES.map((item) => (
+                        <TouchableOpacity
+                          key={item.key}
+                          onPress={() => setDisputeType(item.key)}
                           style={[
-                              styles.commentInput,
+                            styles.disputeTypeChip,
+                            {
+                              backgroundColor:
+                                disputeType === item.key
+                                  ? 'rgba(1,179,244,0.15)'
+                                  : 'rgba(255,255,255,0.06)',
+                              borderColor:
+                                disputeType === item.key
+                                  ? Colors.primary500
+                                  : Colors.neutral600,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              Fonts.p3Bold,
                               {
-                                backgroundColor: 'rgba(255,255,255,0.06)',
-                                borderColor: Colors.neutral600,
-                                color: Colors.neutral100,
+                                color:
+                                  disputeType === item.key
+                                    ? Colors.primary500
+                                    : Colors.neutral300,
                               },
                             ]}
-                          textAlignVertical="top"
-                          value={disputeComment}
-                        />
+                          >
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
+                  </View>
+
+                  <View>
+                    <Text
+                      style={[
+                        Fonts.p3,
+                        { color: leagueCardTextColor, marginBottom: 8 },
+                      ]}
+                    >
+                      Commentaire (optionnel)
+                    </Text>
+                    <TextInput
+                      maxLength={500}
+                      multiline
+                      onChangeText={setDisputeComment}
+                      placeholder="Expliquez brievement le probleme"
+                      placeholderTextColor={Colors.neutral500}
+                      style={[
+                        styles.commentInput,
+                        {
+                          backgroundColor: 'rgba(255,255,255,0.06)',
+                          borderColor: Colors.neutral600,
+                          color: Colors.neutral100,
+                        },
+                      ]}
+                      textAlignVertical="top"
+                      value={disputeComment}
+                    />
+                  </View>
 
                   <Button
-                      onPress={handleCaptureProof}
-                      style={{ borderColor: Colors.primary500 }}
-                      title={proof ? 'Preuve ajoutee' : (isNoShowDispute ? 'Prendre une photo (camera)' : 'Prendre une photo')}
-                      variant={proof ? 'Primary' : 'Secondary'}
-                    />
+                    icon="camera"
+                    iconColor={proof ? Colors.neutral00 : Colors.primary500}
+                    iconPosition="before"
+                    onPress={handleCaptureProof}
+                    style={{ borderColor: Colors.primary500 }}
+                    title={captureProofButtonTitle}
+                    variant={proof ? 'Primary' : 'Secondary'}
+                  />
                   {!isNoShowDispute ? (
-                      <Button
-                          onPress={handlePickProofFromGallery}
-                          style={{ borderColor: Colors.neutral500 }}
-                          title="Importer depuis la galerie"
-                          variant="Secondary"
-                        />
-                    ) : null}
+                    <Button
+                      icon="plus"
+                      iconColor={Colors.neutral300}
+                      iconPosition="before"
+                      onPress={handlePickProofFromGallery}
+                      style={{ borderColor: Colors.neutral500 }}
+                      title="Importer depuis la galerie"
+                      variant="Secondary"
+                    />
+                  ) : null}
                   {isNoShowDispute ? (
-                      <Text style={[Fonts.p3, { color: Colors.neutral400 }]}>Pour un no-show, seule une preuve prise en direct est acceptée.</Text>
-                    ) : null}
-                  {proof ? <Image source={{ uri: proof.uri }} style={styles.proofPreview} /> : null}
+                    <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>
+                      Pour un no-show, seule une preuve prise en direct est
+                      acceptée.
+                    </Text>
+                  ) : null}
+                  {proof ? (
+                    <Image
+                      source={{ uri: proof.uri }}
+                      style={styles.proofPreview}
+                    />
+                  ) : null}
                 </View>
               ) : null}
             </LeagueCard>
@@ -714,10 +1148,23 @@ function EndMatchScreen() {
           {canShowManualForms ? (
             <Button
               disabled={submitMutation.isPending || !isScoreSubmissionAllowed}
+              icon="check"
+              iconColor={Colors.neutral00}
+              iconPosition="before"
               onPress={handleSubmit}
-              style={[styles.submitButton, { backgroundColor: Colors.primary500 }]}
+              style={[
+                styles.submitButton,
+                {
+                  backgroundColor: Colors.primary500,
+                  borderColor: Colors.primary500,
+                },
+              ]}
               textStyle={{ color: Colors.neutral00 }}
-              title={submitMutation.isPending ? 'Envoi en cours...' : 'Valider le score'}
+              title={
+                submitMutation.isPending
+                  ? 'Envoi en cours...'
+                  : 'Valider le score'
+              }
               variant="Primary"
             />
           ) : null}
@@ -728,6 +1175,11 @@ function EndMatchScreen() {
 }
 
 const styles = StyleSheet.create({
+  cardHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginBottom: 14,
+  },
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -790,9 +1242,58 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
   },
-  introText: {
-    marginBottom: 20,
+  heroCard: {
+    marginBottom: 18,
+  },
+  heroContextPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  heroMatchupRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  heroScoreCenter: {
+    alignItems: 'center',
+    borderRadius: 24,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    width: '40%',
+  },
+  heroStatusPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  heroTeamBlock: {
+    alignItems: 'center',
+    width: '28%',
+  },
+  heroTeamName: {
+    marginTop: 8,
     textAlign: 'center',
+  },
+  heroTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  introText: {
+    textAlign: 'center',
+  },
+  miniHeaderDot: {
+    borderRadius: 999,
+    height: 10,
+    marginRight: 10,
+    width: 10,
   },
   opponentScoreActions: {
     flexDirection: 'column',
@@ -820,6 +1321,7 @@ const styles = StyleSheet.create({
   scoreContainer: {
     alignItems: 'flex-start',
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
   },
   scoreInput: {
@@ -834,7 +1336,7 @@ const styles = StyleSheet.create({
   scoreSeparatorWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 58,
+    paddingTop: 68,
     width: 28,
   },
   scoreStepper: {
@@ -845,6 +1347,12 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     width: 42,
+  },
+  scoreTeamCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
   screenContainer: {
     paddingHorizontal: 0,
