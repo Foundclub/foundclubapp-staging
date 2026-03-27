@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -15,9 +16,10 @@ import { resolveLegacySearchTarget } from './searchRouteHelpers';
  */
 function SearchHubLegacyRedirect({ navigation, route }) {
   const { Alignments, Colors } = useTheme();
+  const { userData } = useAuth();
 
   useEffect(() => {
-    const target = resolveLegacySearchTarget(route?.params);
+    const target = resolveLegacySearchTarget(route?.params, userData);
 
     if (!target) {
       navigation.replace(RouteNames.SearchEvents);
@@ -25,7 +27,7 @@ function SearchHubLegacyRedirect({ navigation, route }) {
     }
 
     navigation.replace(target.routeName, target.params);
-  }, [navigation, route?.params]);
+  }, [navigation, route?.params, userData]);
 
   return (
     <ScreenContainer

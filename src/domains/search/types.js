@@ -1,5 +1,5 @@
 /**
- * @typedef {'event' | 'club' | 'reservation' | 'recruitment'} SearchEntityType
+ * @typedef {'event' | 'club' | 'profile' | 'reservation' | 'recruitment'} SearchEntityType
  */
 
 /**

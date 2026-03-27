@@ -20,10 +20,16 @@ import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  acceptEventParticipation,
+  declineEventParticipation,
+  getEventParticipations,
+} from '@/services/eventParticipation/eventParticipationService';
 import {
   applyToRecruitmentAd,
   deleteRecruitmentAd,
@@ -48,6 +54,47 @@ const normalizeComparableId = (value) => {
   return String(value).trim();
 };
 
+const getCandidateDisplayName = (participation) => {
+  const requesterName = String(participation?.requester?.displayName || '').trim();
+  if (requesterName) return requesterName;
+
+  const firstname = String(participation?.user?.firstname || '').trim();
+  const lastname = String(participation?.user?.lastname || '').trim();
+  const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+  if (fullName) return fullName;
+
+  return String(participation?.user?.phoneNumber || 'Candidat').trim();
+};
+
+const getParticipationStatusMeta = (status, colors) => {
+  const normalizedStatus = String(status || '').trim().toLowerCase();
+
+  if (normalizedStatus === 'accepted') {
+    return {
+      backgroundColor: `${colors.success500}18`,
+      borderColor: `${colors.success500}45`,
+      label: 'Accepte',
+      textColor: colors.success500,
+    };
+  }
+
+  if (normalizedStatus === 'declined') {
+    return {
+      backgroundColor: `${colors.error500}16`,
+      borderColor: `${colors.error500}45`,
+      label: 'Refuse',
+      textColor: colors.error500,
+    };
+  }
+
+  return {
+    backgroundColor: `${colors.warning500}18`,
+    borderColor: `${colors.warning500}45`,
+    label: 'En attente',
+    textColor: colors.warning500,
+  };
+};
+
 function RecruitmentAdDetails() {
   const { params } = useRoute();
   const navigation = useNavigation();
@@ -69,6 +116,8 @@ function RecruitmentAdDetails() {
   });
 
   const ad = fetchedAd || params?.ad;
+  const eventDocumentId = String(ad?.event?.documentId || '').trim();
+  const recruitmentAdDocumentId = String(ad?.documentId || ad?.id || '').trim();
   const candidates = useMemo(
     () => (Array.isArray(ad?.candidates) ? ad.candidates : []),
     [ad?.candidates],
@@ -98,6 +147,39 @@ function RecruitmentAdDetails() {
 
     return allUserTeams.some((teamItem) => teamItem.documentId === adTeamId || teamItem.id === adTeamId);
   }, [userData, ad]);
+
+  const slotParticipationsQuery = useQuery({
+    enabled: Boolean(isOwner && eventDocumentId && recruitmentAdDocumentId),
+    queryFn: () => getEventParticipations(eventDocumentId, undefined, {
+      pageSize: 100,
+      recruitmentAdId: recruitmentAdDocumentId,
+    }),
+    queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId],
+  });
+
+  const slotParticipations = useMemo(() => {
+    const items = Array.isArray(slotParticipationsQuery?.data?.data)
+      ? slotParticipationsQuery.data.data
+      : [];
+
+    const weightByStatus = {
+      accepted: 1,
+      declined: 2,
+      pending: 0,
+    };
+
+    return [...items].sort((left, right) => {
+      const leftStatus = String(left?.participationStatus || '').trim().toLowerCase();
+      const rightStatus = String(right?.participationStatus || '').trim().toLowerCase();
+      const leftWeight = weightByStatus[leftStatus] ?? 99;
+      const rightWeight = weightByStatus[rightStatus] ?? 99;
+      if (leftWeight !== rightWeight) return leftWeight - rightWeight;
+
+      const leftDate = new Date(left?.updatedAt || left?.createdAt || 0).getTime();
+      const rightDate = new Date(right?.updatedAt || right?.createdAt || 0).getTime();
+      return rightDate - leftDate;
+    });
+  }, [slotParticipationsQuery?.data?.data]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteRecruitmentAd,
@@ -138,6 +220,46 @@ function RecruitmentAdDetails() {
     },
   });
 
+  const acceptParticipationMutation = useMutation({
+    mutationFn: acceptEventParticipation,
+    onError: (error) => {
+      const message = error?.response?.data?.error?.message
+        || error?.response?.data?.message
+        || error?.message
+        || 'Impossible d\'accepter cette candidature pour le moment.';
+      Alert.alert('Candidatures', message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+      if (eventDocumentId) {
+        queryClient.invalidateQueries({ queryKey: ['event', eventDocumentId] });
+        queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventDocumentId] });
+      }
+    },
+  });
+
+  const declineParticipationMutation = useMutation({
+    mutationFn: declineEventParticipation,
+    onError: (error) => {
+      const message = error?.response?.data?.error?.message
+        || error?.response?.data?.message
+        || error?.message
+        || 'Impossible de refuser cette candidature pour le moment.';
+      Alert.alert('Candidatures', message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+      if (eventDocumentId) {
+        queryClient.invalidateQueries({ queryKey: ['event', eventDocumentId] });
+        queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventDocumentId] });
+      }
+    },
+  });
+
   const confirmDelete = () => {
     deleteMutation.mutate(ad.documentId || ad.id);
   };
@@ -175,25 +297,6 @@ function RecruitmentAdDetails() {
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
 
-  const handleViewCandidates = () => {
-    if (candidates.length === 0) {
-      Alert.alert('Candidatures', 'Aucune candidature pour le moment.');
-      return;
-    }
-
-    const preview = candidates
-      .map((candidate, index) => {
-        const fullName = [candidate?.firstname, candidate?.lastname]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-        return `${index + 1}. ${fullName || candidate?.phoneNumber || 'Candidat'}`;
-      })
-      .join('\n');
-
-    Alert.alert('Candidatures', preview);
-  };
-
   const handleApply = () => {
     if (hasApplied) {
       Alert.alert('Candidature', 'Tu as deja postule a cette annonce.');
@@ -219,11 +322,193 @@ function RecruitmentAdDetails() {
     setIsDeleteModalVisible(true);
   };
 
+  const handleAcceptParticipation = (requestId) => {
+    if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
+    acceptParticipationMutation.mutate(requestId);
+  };
+
+  const handleDeclineParticipation = (requestId) => {
+    if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
+
+    Alert.alert(
+      'Refuser la candidature',
+      'Voulez-vous vraiment refuser cette candidature ?',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => declineParticipationMutation.mutate({ requestId }),
+          style: 'destructive',
+          text: 'Refuser',
+        },
+      ],
+    );
+  };
+
   let applyButtonTitle = 'Postuler';
   if (hasApplied) {
     applyButtonTitle = 'Deja postule';
   } else if (!ad.isActive) {
     applyButtonTitle = 'Annonce inactive';
+  }
+
+  let ownerCandidatesSection = null;
+
+  if (isOwner && isDetectionLinked) {
+    ownerCandidatesSection = (
+      <View style={{ marginBottom: 32 }}>
+        <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
+          Candidatures du poste (
+          {slotParticipations.length}
+          )
+        </Text>
+        {slotParticipationsQuery.isLoading ? (
+          <View style={styles.emptyCandidatesBox}>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Chargement des candidatures...</Text>
+          </View>
+        ) : null}
+
+        {!slotParticipationsQuery.isLoading && slotParticipations.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            {slotParticipations.map((participation) => {
+              const participationId = String(participation?.documentId || '').trim();
+              const status = String(participation?.participationStatus || '').trim().toLowerCase();
+              const statusMeta = getParticipationStatusMeta(status, Colors);
+              const requesterName = getCandidateDisplayName(participation);
+              const requesterPhone = String(participation?.requester?.phoneNumber || participation?.user?.phoneNumber || '').trim();
+              const sourceTeamName = String(participation?.sourceTeam?.name || '').trim();
+              const isPending = status === 'pending';
+              const isAcceptLoading = acceptParticipationMutation.isPending
+                && acceptParticipationMutation.variables === participationId;
+              const isDeclineLoading = declineParticipationMutation.isPending
+                && declineParticipationMutation.variables?.requestId === participationId;
+              const isProcessing = isAcceptLoading || isDeclineLoading;
+
+              return (
+                <View
+                  key={participationId || requesterName}
+                  style={[
+                    styles.candidateCard,
+                    {
+                      backgroundColor: 'rgba(1,179,244,0.08)',
+                      borderColor: 'rgba(1,179,244,0.22)',
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                      <ProfileAvatar
+                        imageStyle={{ borderRadius: 40 }}
+                        imageUrl={participation?.user?.avatar?.url}
+                        size={42}
+                        style={{
+                          borderColor: Colors.primary500,
+                          borderRadius: 42,
+                          borderWidth: 1,
+                        }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text numberOfLines={2} style={[Fonts.p1Bold, { color: Colors.neutral100 }]}>
+                          {requesterName}
+                        </Text>
+                        {sourceTeamName ? (
+                          <Text style={[Fonts.p4, { color: Colors.primary500, marginTop: 4 }]}>
+                            {sourceTeamName}
+                          </Text>
+                        ) : null}
+                        {requesterPhone ? (
+                          <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}>
+                            {requesterPhone}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.candidateStatusBadge,
+                        {
+                          backgroundColor: statusMeta.backgroundColor,
+                          borderColor: statusMeta.borderColor,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+                        {statusMeta.label}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {isPending ? (
+                    <View style={[Alignments.row, Alignments.justifyEnd, Spaces.gap[8], { marginTop: 12 }]}>
+                      <Button
+                        disabled={isProcessing}
+                        isLoading={isAcceptLoading}
+                        onPress={() => handleAcceptParticipation(participationId)}
+                        size="sm"
+                        title="Accepter"
+                        variant="Primary"
+                      />
+                      <Button
+                        disabled={isProcessing}
+                        isLoading={isDeclineLoading}
+                        onPress={() => handleDeclineParticipation(participationId)}
+                        size="sm"
+                        title="Refuser"
+                        variant="Secondary"
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {!slotParticipationsQuery.isLoading && slotParticipations.length === 0 ? (
+          <View style={styles.emptyCandidatesBox}>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  } else if (isOwner) {
+    ownerCandidatesSection = (
+      <View style={{ marginBottom: 32 }}>
+        <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
+          Candidatures (
+          {candidates.length}
+          )
+        </Text>
+        {candidates.length > 0 ? (
+          <View>
+            <View style={{ marginBottom: 12 }}>
+              {candidates.slice(0, 3).map((candidate) => {
+                const candidateKey = candidate?.documentId || candidate?.id || candidate?.phoneNumber;
+                const candidateName = [candidate?.firstname, candidate?.lastname]
+                  .filter(Boolean)
+                  .join(' ')
+                  .trim() || candidate?.phoneNumber || 'Candidat';
+
+                return (
+                  <Text
+                    key={String(candidateKey)}
+                    style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 6 }]}
+                  >
+                    -
+                    {' '}
+                    {candidateName}
+                  </Text>
+                );
+              })}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.emptyCandidatesBox}>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
+          </View>
+        )}
+      </View>
+    );
   }
 
   return (
@@ -348,49 +633,7 @@ function RecruitmentAdDetails() {
             ) : null}
           </View>
 
-          {isOwner && (
-            <View style={{ marginBottom: 32 }}>
-              <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
-                Candidatures (
-                {candidates.length}
-                )
-              </Text>
-              {candidates.length > 0 ? (
-                <View>
-                  <View style={{ marginBottom: 12 }}>
-                    {candidates.slice(0, 3).map((candidate) => {
-                      const candidateKey = candidate?.documentId || candidate?.id || candidate?.phoneNumber;
-                      const candidateName = [candidate?.firstname, candidate?.lastname]
-                        .filter(Boolean)
-                        .join(' ')
-                        .trim() || candidate?.phoneNumber || 'Candidat';
-
-                      return (
-                        <Text
-                          key={String(candidateKey)}
-                          style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 6 }]}
-                        >
-                          -
-                          {' '}
-                          {candidateName}
-                        </Text>
-                      );
-                    })}
-                  </View>
-                  <Button
-                    onPress={handleViewCandidates}
-                    style={{ backgroundColor: Colors.primary500 }}
-                    title="Voir les candidats"
-                    variant="Primary"
-                  />
-                </View>
-              ) : (
-                <View style={styles.emptyCandidatesBox}>
-                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
-                </View>
-              )}
-            </View>
-          )}
+          {ownerCandidatesSection}
 
           <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>Description</Text>
           <Text style={[Fonts.p1, { color: Colors.neutral300, lineHeight: 26 }]}>
@@ -474,6 +717,17 @@ function RecruitmentAdDetails() {
 }
 
 const styles = StyleSheet.create({
+  candidateCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+  },
+  candidateStatusBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   clubLogo: {
     borderColor: '#FFFFFF',
     borderRadius: 50,

@@ -15,6 +15,9 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * @param {string} props.eventId - ID of the event to join
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} props.onClose - Function to call when closing the modal
+ * @param {(() => void) | undefined} [props.onConfirm] - Optional custom confirm handler
+ * @param {boolean} [props.isSubmitting] - Optional loading state for custom confirm handler
+ * @param {string} [props.contextNote] - Optional contextual note shown above the base declaration
  * @param {import('@tanstack/react-query').UseMutationResult<EventParticipation,
  * Error, {user: string, event: string, reason?: string},
  * unknown>} props.createEventParticipationMutation - Mutation for creating event participation
@@ -23,10 +26,13 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  */
 function JoinEventModal({
   clubName,
+  contextNote,
   createEventParticipationMutation,
   eventId,
+  isSubmitting = false,
   isVisible,
   onClose,
+  onConfirm,
 }) {
   const [acceptResponsibility, setAcceptResponsibility] = useState(false);
   const [acceptConditions, setAcceptConditions] = useState(false);
@@ -54,14 +60,30 @@ function JoinEventModal({
   }, [onClose]);
 
   const handleConfirmParticipation = useCallback(() => {
-    if (eventId && acceptResponsibility && acceptConditions && userData?.documentId) {
+    if (!acceptResponsibility || !acceptConditions || !userData?.documentId) return;
+
+    if (onConfirm) {
+      onConfirm();
+      handleClose();
+      return;
+    }
+
+    if (eventId) {
       createEventParticipationMutation.mutate({
         event: eventId,
         user: userData.documentId,
       });
       handleClose(); // Force close on confirm
     }
-  }, [eventId, acceptResponsibility, acceptConditions, userData, createEventParticipationMutation, handleClose]);
+  }, [
+    eventId,
+    acceptResponsibility,
+    acceptConditions,
+    userData,
+    onConfirm,
+    createEventParticipationMutation,
+    handleClose,
+  ]);
 
   return (
     <BottomModal
@@ -70,6 +92,7 @@ function JoinEventModal({
         <View style={[Spaces.gap[16]]}>
           <Button
             disabled={!acceptResponsibility || !acceptConditions}
+            isLoading={isSubmitting || createEventParticipationMutation?.isPending}
             onPress={handleConfirmParticipation}
             title={t('eventList.joinModal.actions.confirm')}
             variant="Primary"
@@ -91,6 +114,24 @@ function JoinEventModal({
       snapPoints={['90%']}
     >
       <View style={[Spaces.gap[32]]}>
+        {contextNote ? (
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              {
+                borderColor: 'rgba(1, 179, 244, 0.24)',
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {contextNote}
+            </Text>
+          </View>
+        ) : null}
+
         <Text style={[Fonts.p1, Fonts.neutral00]}>
           {t('eventList.joinModal.description', { clubName })}
         </Text>

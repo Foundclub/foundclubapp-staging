@@ -46,6 +46,7 @@ import PlanningWeekFullscreen from '@/views/planning/PersonalPlanningWeekFullscr
 import PollDetails from '@/views/PollDetails';
 import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
+import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import RequestsHub from '@/views/requests/RequestsHub';
 import MissingPlayersView from '@/views/reservation/MissingPlayersView';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
@@ -217,6 +218,14 @@ function PrivateNavigator() {
       <Stack.Screen
         component={MercatoFilters}
         name={RouteNames.MercatoFilters}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={RecruitmentAdFilters}
+        name={RouteNames.RecruitmentAdFilters}
         options={{
           ...commonOptions,
           headerTitle: '',

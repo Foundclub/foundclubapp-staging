@@ -256,6 +256,7 @@ const initStore = {
   mercatoFilters: undefined,
   onboardingViews: undefined,
   pendingNotification: null,
+  recruitmentAdFilters: undefined,
   reservationFilters: undefined,
   returnSessionDocumentId: undefined,
   squadFilters: undefined,

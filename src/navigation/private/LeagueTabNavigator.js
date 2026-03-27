@@ -5,6 +5,8 @@ import { Image, Text, View } from 'react-native';
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+
+import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 // screens
 import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
 import Messaging from '@/views/Messaging';
@@ -31,6 +33,18 @@ export default function LeagueTabNavigator() {
   const { userData } = useAuth();
   const { unreadCount } = useUnreadMessages();
   const insets = useSafeAreaInsets();
+  const { data: myLeagueTeams } = useGetMyLeagueTeam(userData?.documentId || '', {
+    enabled: Boolean(userData?.documentId),
+    staleTime: 30_000,
+  });
+
+  const squadRequestsBadge = Array.isArray(myLeagueTeams)
+    ? myLeagueTeams.reduce((total, squad) => {
+      const isCaptain = String(squad?.captain?.documentId || '') === String(userData?.documentId || '');
+      if (!isCaptain) return total;
+      return total + Number(squad?.join_requests?.length || 0);
+    }, 0)
+    : 0;
 
   // Gold badge renderer (reused logic, updated style)
   const renderTabBarIcon = ({ badge, color, source }) => (
@@ -101,6 +115,7 @@ export default function LeagueTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions({
             activeColor: Colors.gold500,
+            badge: squadRequestsBadge,
             bottomInset: insets.bottom,
             icon: Images.strokeShield,
             label: 'Squad',

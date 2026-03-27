@@ -176,9 +176,10 @@ function BottomModal({
   const contentBottomPadding = useMemo(
     () => {
       const keyboardOffset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
-      return (footerComponent ? 16 : 40) + keyboardOffset;
+      const safeAreaOffset = useSafeAreaBottomInset ? insets.bottom : 0;
+      return (footerComponent ? 16 : 40) + keyboardOffset + safeAreaOffset;
     },
-    [footerComponent, keyboardBehavior, keyboardHeight],
+    [footerComponent, insets.bottom, keyboardBehavior, keyboardHeight, useSafeAreaBottomInset],
   );
 
   return (

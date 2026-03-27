@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, {
+import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -22,9 +23,18 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  useGetInvitedLeagueTeams,
+  useGetMyLeagueTeam,
+  useGetPendingLeagueTeams,
+} from '@/services/leagueTeam/leagueTeamQueries';
 import { searchSquads } from '@/services/leagueTeam/leagueTeamService';
 
 import { normalizeLocationInput } from '@/utils/location';
+
+/**
+ * @typedef {'joined' | 'invited' | 'pending' | 'available'} SearchSquadStatus
+ */
 
 /**
  * @param {unknown} value
@@ -44,12 +54,97 @@ const readFilterValue = (value) => {
  * @returns {string | null}
  */
 const getSectionLabel = (value) => {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
   if (!normalized) return null;
   if (normalized === 'male' || normalized === 'masculin') return 'Masculin';
-  if (normalized === 'female' || normalized === 'feminin' || normalized === 'féminin') return 'Feminin';
+  if (normalized === 'female' || normalized === 'feminin') return 'Feminin';
   if (normalized === 'mixed' || normalized === 'mixte') return 'Mixte';
   return String(value || '');
+};
+
+/**
+ * @param {SearchSquadStatus} status
+ * @param {Record<string, any>} Colors
+ * @returns {{
+ *   accentColor: string,
+ *   actionLabel: string,
+ *   badgeLabel: string,
+ *   badgeTextColor: string,
+ *   helperLabel: string,
+ *   surfaceColor: string,
+ * }}
+ */
+const getStatusConfig = (status, Colors) => {
+  const warningColor = Colors.warning500 || Colors.gold500;
+  const successColor = Colors.success500 || '#2ED47A';
+
+  if (status === 'joined') {
+    return {
+      accentColor: successColor,
+      actionLabel: 'Voir ma squad',
+      badgeLabel: 'MEMBRE',
+      badgeTextColor: successColor,
+      helperLabel: 'Vous faites deja partie de cette squad.',
+      surfaceColor: `${successColor}14`,
+    };
+  }
+
+  if (status === 'invited') {
+    return {
+      accentColor: Colors.gold500,
+      actionLabel: 'Repondre a l invitation',
+      badgeLabel: 'INVITATION',
+      badgeTextColor: Colors.gold500,
+      helperLabel: 'Une invitation vous attend sur cette squad.',
+      surfaceColor: `${Colors.gold500}16`,
+    };
+  }
+
+  if (status === 'pending') {
+    return {
+      accentColor: warningColor,
+      actionLabel: 'Voir la demande',
+      badgeLabel: 'EN ATTENTE',
+      badgeTextColor: warningColor,
+      helperLabel: 'Votre demande est en attente de validation.',
+      surfaceColor: `${warningColor}14`,
+    };
+  }
+
+  return {
+    accentColor: Colors.primary500,
+    actionLabel: 'Voir la squad',
+    badgeLabel: 'DISPONIBLE',
+    badgeTextColor: Colors.primary500,
+    helperLabel: 'Squad ouverte aux nouveaux joueurs.',
+    surfaceColor: `${Colors.primary500}14`,
+  };
+};
+
+/**
+ * @param {SearchSquadStatus} status
+ * @returns {number}
+ */
+const getStatusPriority = (status) => {
+  if (status === 'invited') return 0;
+  if (status === 'pending') return 1;
+  if (status === 'available') return 2;
+  return 3;
+};
+
+/**
+ * @param {SearchSquadStatus} status
+ * @returns {string}
+ */
+const getStatusFooterLabel = (status) => {
+  if (status === 'joined') return 'Acces rapide a votre squad League';
+  if (status === 'invited') return 'Invitation a traiter en priorite';
+  if (status === 'pending') return 'Le capitaine doit encore vous repondre';
+  return 'Ouvrez la fiche pour voir les details et rejoindre';
 };
 
 /**
@@ -59,6 +154,7 @@ function SquadSearchScreen() {
   const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
+  const { userData } = useAuth();
 
   const [{ squadFilters }] = useAppContext();
 
@@ -66,6 +162,84 @@ function SquadSearchScreen() {
   const [squads, setSquads] = useState(/** @type {any[]} */ ([]));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const currentUserId = String(userData?.documentId || '').trim();
+
+  const { data: joinedSquads } = useGetMyLeagueTeam(currentUserId, {
+    enabled: Boolean(currentUserId),
+    staleTime: 30_000,
+  });
+
+  const { data: pendingSquads } = useGetPendingLeagueTeams(currentUserId, {
+    enabled: Boolean(currentUserId),
+    staleTime: 30_000,
+  });
+
+  const { data: invitedSquads } = useGetInvitedLeagueTeams(currentUserId, {
+    enabled: Boolean(currentUserId),
+    staleTime: 30_000,
+  });
+
+  const squadStatusById = useMemo(() => {
+    /** @type {Map<string, SearchSquadStatus>} */
+    const statusMap = new Map();
+
+    (joinedSquads || []).forEach((team) => {
+      const teamId = String(team?.documentId || '').trim();
+      if (teamId) statusMap.set(teamId, 'joined');
+    });
+
+    (invitedSquads || []).forEach((team) => {
+      const teamId = String(team?.documentId || '').trim();
+      if (teamId && !statusMap.has(teamId)) statusMap.set(teamId, 'invited');
+    });
+
+    (pendingSquads || []).forEach((team) => {
+      const teamId = String(team?.documentId || '').trim();
+      if (teamId && !statusMap.has(teamId)) statusMap.set(teamId, 'pending');
+    });
+
+    return statusMap;
+  }, [invitedSquads, joinedSquads, pendingSquads]);
+
+  const decoratedSquads = useMemo(() => squads
+    .map((team) => {
+      const teamId = String(team?.documentId || team?.id || '').trim();
+      return {
+        ...team,
+        membershipStatus: squadStatusById.get(teamId) || 'available',
+      };
+    })
+    .sort((leftTeam, rightTeam) => {
+      const leftStatus = /** @type {SearchSquadStatus} */ (leftTeam?.membershipStatus || 'available');
+      const rightStatus = /** @type {SearchSquadStatus} */ (rightTeam?.membershipStatus || 'available');
+      const priorityDelta = getStatusPriority(leftStatus) - getStatusPriority(rightStatus);
+      if (priorityDelta !== 0) return priorityDelta;
+
+      const leftName = String(leftTeam?.name || '').trim();
+      const rightName = String(rightTeam?.name || '').trim();
+      return leftName.localeCompare(rightName, 'fr', { sensitivity: 'base' });
+    }), [squadStatusById, squads]);
+
+  const statusSummary = useMemo(() => {
+    const counts = decoratedSquads.reduce((accumulator, team) => {
+      const status = /** @type {SearchSquadStatus} */ (team?.membershipStatus || 'available');
+      accumulator[status] += 1;
+      return accumulator;
+    }, /** @type {Record<SearchSquadStatus, number>} */ ({
+      available: 0,
+      invited: 0,
+      joined: 0,
+      pending: 0,
+    }));
+
+    const parts = [];
+    if (counts.joined > 0) parts.push(`${counts.joined} deja membre${counts.joined > 1 ? 's' : ''}`);
+    if (counts.invited > 0) parts.push(`${counts.invited} invitation${counts.invited > 1 ? 's' : ''}`);
+    if (counts.pending > 0) parts.push(`${counts.pending} demande${counts.pending > 1 ? 's' : ''} en attente`);
+
+    return parts.join(' · ');
+  }, [decoratedSquads]);
 
   const activeFiltersLabel = useMemo(() => {
     const chips = [];
@@ -97,7 +271,7 @@ function SquadSearchScreen() {
       setSquads(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error('[SquadSearch] search failed:', error);
-      setErrorMessage('Erreur de recherche. Réessayez.');
+      setErrorMessage('Erreur de recherche. Reessayez.');
       setSquads([]);
     } finally {
       setIsLoading(false);
@@ -126,8 +300,10 @@ function SquadSearchScreen() {
       || normalizedHomeBase?.label
       || normalizedHomeBase?.address
       || 'Ville inconnue';
+    const membershipStatus = /** @type {SearchSquadStatus} */ (item?.membershipStatus || 'available');
+    const statusConfig = getStatusConfig(membershipStatus, Colors);
     const sportLabel = item?.sport || 'Sport';
-    const categoryLabel = item?.category || 'Catégorie';
+    const categoryLabel = item?.category || 'Categorie';
     const sectionLabel = getSectionLabel(item?.section);
     const divisionLabel = `Div ${item?.division || '?'}`;
 
@@ -138,15 +314,31 @@ function SquadSearchScreen() {
           navigation.navigate(RouteNames.SquadDetails, { teamId });
         }}
         style={{
-          backgroundColor: 'rgba(10, 28, 43, 0.86)',
-          borderColor: 'rgba(1, 179, 244, 0.28)',
+          backgroundColor: 'rgba(10, 28, 43, 0.90)',
+          borderColor: `${statusConfig.accentColor}4D`,
           borderRadius: 14,
           borderWidth: 1,
           marginBottom: 12,
           padding: 14,
         }}
       >
-        <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{item?.name || 'Squad'}</Text>
+        <View style={{ alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={[Fonts.h4, { color: Colors.neutral00, flex: 1, paddingRight: 12 }]}>{item?.name || 'Squad'}</Text>
+          <View
+            style={{
+              backgroundColor: statusConfig.surfaceColor,
+              borderColor: `${statusConfig.accentColor}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: statusConfig.badgeTextColor }]}>
+              {statusConfig.badgeLabel}
+            </Text>
+          </View>
+        </View>
 
         <View style={{ alignItems: 'center', flexDirection: 'row', marginTop: 8 }}>
           <Image
@@ -159,6 +351,10 @@ function SquadSearchScreen() {
             {cityLabel}
           </Text>
         </View>
+
+        <Text style={[Fonts.p3, { color: statusConfig.badgeTextColor, marginTop: 8 }]}>
+          {statusConfig.helperLabel}
+        </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 }}>
           <View style={{
@@ -217,6 +413,36 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{divisionLabel}</Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            alignItems: 'center',
+            borderTopColor: `${statusConfig.accentColor}2D`,
+            borderTopWidth: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginTop: 12,
+            paddingTop: 12,
+          }}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.neutral200, flex: 1, paddingRight: 12 }]}>
+            {getStatusFooterLabel(membershipStatus)}
+          </Text>
+          <View
+            style={{
+              backgroundColor: statusConfig.surfaceColor,
+              borderColor: `${statusConfig.accentColor}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: statusConfig.badgeTextColor }]}>
+              {statusConfig.actionLabel}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -305,6 +531,28 @@ function SquadSearchScreen() {
           </View>
         ) : null}
 
+        {statusSummary ? (
+          <View style={{
+            backgroundColor: 'rgba(1, 179, 244, 0.10)',
+            borderColor: 'rgba(1, 179, 244, 0.28)',
+            borderRadius: 10,
+            borderWidth: 1,
+            marginTop: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+          }}
+          >
+            <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+              Statuts detectes:
+              {' '}
+              {statusSummary}
+            </Text>
+            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
+              Les invitations et demandes en attente remontent en premier.
+            </Text>
+          </View>
+        ) : null}
+
         {errorMessage ? (
           <View style={{
             backgroundColor: 'rgba(239, 68, 68, 0.16)',
@@ -337,7 +585,7 @@ function SquadSearchScreen() {
         ) : (
           <FlatList
             contentContainerStyle={{ paddingBottom: 28, paddingTop: 16 }}
-            data={squads}
+            data={decoratedSquads}
             keyboardShouldPersistTaps="handled"
             keyExtractor={(item, index) => String(item?.documentId || item?.id || `squad-${index}`)}
             ListEmptyComponent={(
@@ -353,10 +601,10 @@ function SquadSearchScreen() {
               }}
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  Aucune squad trouvée
+                  Aucune squad trouvee
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-                  Essaie avec d'autres filtres ou un autre nom de squad.
+                  Essaie avec d&apos;autres filtres ou un autre nom de squad.
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate(RouteNames.SquadFilters)}

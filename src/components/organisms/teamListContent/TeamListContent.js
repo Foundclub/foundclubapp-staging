@@ -29,7 +29,11 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetMyLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
+import {
+  useGetInvitedLeagueTeams,
+  useGetMyLeagueTeam,
+  useGetPendingLeagueTeams,
+} from '@/services/leagueTeam/leagueTeamQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
 
 import { sortTeamsForDisplay } from '@/utils/teamSort';
@@ -139,27 +143,85 @@ function TeamListContent({
 
   const {
     data: leagueData,
+    error: leagueError,
     isLoading: isLoadingLeague,
     refetch: refetchLeague,
   } = useGetMyLeagueTeam(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
+
+  const {
+    data: invitedLeagueData,
+    error: invitedLeagueError,
+    isLoading: isLoadingInvitedLeague,
+    refetch: refetchInvitedLeague,
+  } = useGetInvitedLeagueTeams(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
+
+  const {
+    data: pendingLeagueData,
+    error: pendingLeagueError,
+    isLoading: isLoadingPendingLeague,
+    refetch: refetchPendingLeague,
+  } = useGetPendingLeagueTeams(userData?.documentId || '', { enabled: isLeagueMode && !!userData });
 
   const teams = useMemo(() => {
     if (isLeagueMode) return (leagueData || []).filter(Boolean);
     return classicData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
   }, [classicData, leagueData, isLeagueMode]);
 
-  const isLoadingTeams = isLeagueMode ? isLoadingLeague : isLoadingClassic;
-  const refetchTeams = isLeagueMode ? refetchLeague : refetchClassic;
-  const error = isLeagueMode ? null : classicError;
-
-  const { myTeams, otherTeams, pendingTeams } = useMemo(() => {
-    if (!userData) return { myTeams: [], otherTeams: [], pendingTeams: [] };
-
+  const isLoadingTeams = isLeagueMode
+    ? (isLoadingLeague || isLoadingInvitedLeague || isLoadingPendingLeague)
+    : isLoadingClassic;
+  const refetchTeams = useCallback(() => {
     if (isLeagueMode) {
+      return Promise.all([refetchLeague(), refetchInvitedLeague(), refetchPendingLeague()]);
+    }
+    return refetchClassic();
+  }, [isLeagueMode, refetchClassic, refetchInvitedLeague, refetchLeague, refetchPendingLeague]);
+  const error = isLeagueMode ? (leagueError || invitedLeagueError || pendingLeagueError) : classicError;
+
+  const {
+    invitedTeams,
+    myTeams,
+    otherTeams,
+    pendingTeams,
+  } = useMemo(() => {
+    if (!userData) {
       return {
-        myTeams: teams,
+        invitedTeams: [],
+        myTeams: [],
         otherTeams: [],
         pendingTeams: [],
+      };
+    }
+
+    if (isLeagueMode) {
+      const joinedIds = new Set(
+        (teams || [])
+          .map((/** @type {Team} */ team) => team?.documentId)
+          .filter((documentId) => typeof documentId === 'string' && documentId.length > 0),
+      );
+      const pendingIds = new Set(
+        (pendingLeagueData || [])
+          .map((/** @type {Team} */ team) => team?.documentId)
+          .filter((documentId) => typeof documentId === 'string' && documentId.length > 0),
+      );
+      const pendingLeagueTeams = (pendingLeagueData || [])
+        .filter(Boolean)
+        .filter((/** @type {Team} */ team) => {
+          const documentId = String(team?.documentId || '');
+          return documentId.length > 0 && !joinedIds.has(documentId);
+        });
+      const invitedLeagueTeams = (invitedLeagueData || [])
+        .filter(Boolean)
+        .filter((/** @type {Team} */ team) => {
+          const documentId = String(team?.documentId || '');
+          return documentId.length > 0 && !joinedIds.has(documentId) && !pendingIds.has(documentId);
+        });
+
+      return {
+        invitedTeams: sortTeamsForDisplay(invitedLeagueTeams),
+        myTeams: sortTeamsForDisplay(teams),
+        otherTeams: [],
+        pendingTeams: sortTeamsForDisplay(pendingLeagueTeams),
       };
     }
 
@@ -196,11 +258,12 @@ function TeamListContent({
     });
 
     return {
+      invitedTeams: [],
       myTeams: sortTeamsForDisplay(my),
       otherTeams: sortTeamsForDisplay(other),
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
-  }, [isLeagueMode, teams, userData]);
+  }, [invitedLeagueData, isLeagueMode, pendingLeagueData, teams, userData]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -263,12 +326,26 @@ function TeamListContent({
     [insets.bottom, isLeagueMode],
   );
 
-  const renderTeamCard = useCallback((/** @type {Team} */ item, isPending = false) => {
+  const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {
+    const isPending = stateVariant === 'pending';
+    const isInvitation = stateVariant === 'invited';
     const pendingBorderColor = Colors.warning500 || Colors.gold500;
-    const cardAccentColor = isPending ? pendingBorderColor : Colors.primary500;
+    const invitationBorderColor = Colors.gold500 || Colors.primary500;
+    let cardAccentColor = Colors.primary500;
+    if (isPending) {
+      cardAccentColor = pendingBorderColor;
+    } else if (isInvitation) {
+      cardAccentColor = invitationBorderColor;
+    }
     const cardPadding = isCompactScreen ? 14 : 18;
     const sportLabel = item?.activities?.[0]?.name || item?.sport;
     const isLeagueCard = isLeagueMode;
+    let stateLabel = '';
+    if (isPending) {
+      stateLabel = 'EN ATTENTE';
+    } else if (isInvitation) {
+      stateLabel = 'INVITATION';
+    }
 
     const activityTag = sportLabel ? (
       <Tag
@@ -445,6 +522,26 @@ function TeamListContent({
 
     const renderLeagueContent = () => (
       <View style={[Alignments.fullWidth, { flex: 1, position: 'relative' }]}>
+        {stateLabel ? (
+          <View
+            style={{
+              backgroundColor: `${cardAccentColor}20`,
+              borderColor: cardAccentColor,
+              borderRadius: 999,
+              borderWidth: 1,
+              left: 0,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              position: 'absolute',
+              top: 0,
+              zIndex: 2,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: cardAccentColor }]}>
+              {stateLabel}
+            </Text>
+          </View>
+        ) : null}
         <View style={{
           position: 'absolute', right: 0, top: 0, zIndex: 2,
         }}
@@ -592,14 +689,33 @@ function TeamListContent({
         />
       </View>
 
-      {pendingTeams.length > 0 ? (
+      {invitedTeams.length > 0 ? (
         <View>
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16]]}>
+            Invitations recues
+          </Text>
+          {invitedTeams.map((team) => (
+            <View key={`invited-${team.documentId}`}>
+              {renderTeamCard(team, 'invited')}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {pendingTeams.length > 0 ? (
+        <View>
+          <Text style={[
+            Fonts.h3,
+            Fonts.neutral00,
+            Spaces.marginBottom[16],
+            invitedTeams.length > 0 && Spaces.marginTop[24],
+          ]}
+          >
             Demandes en attente
           </Text>
           {pendingTeams.map((team) => (
-            <View key={team.documentId}>
-              {renderTeamCard(team, true)}
+            <View key={`pending-${team.documentId}`}>
+              {renderTeamCard(team, 'pending')}
             </View>
           ))}
         </View>
@@ -607,19 +723,19 @@ function TeamListContent({
 
       {myTeams.length > 0 ? (
         <View>
-          <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], pendingTeams.length > 0 && Spaces.marginTop[24]]}>
+          <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
             Mes équipes
           </Text>
           {myTeams.map((team) => (
-            <View key={team.documentId}>
-              {renderTeamCard(team, false)}
+            <View key={`joined-${team.documentId}`}>
+              {renderTeamCard(team)}
             </View>
           ))}
         </View>
       ) : null}
 
       {otherTeams.length > 0 ? (
-        <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0) && Spaces.marginTop[24]]}>
+        <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
           Autres équipes du club
         </Text>
       ) : null}
@@ -629,6 +745,7 @@ function TeamListContent({
     Fonts,
     Spaces,
     handleOpenFilters,
+    invitedTeams,
     isLeagueMode,
     myTeams,
     navigation,
@@ -678,7 +795,7 @@ function TeamListContent({
             data={otherTeams}
             estimatedItemSize={200}
             keyExtractor={(item) => item?.documentId || 'unknown'}
-            ListEmptyComponent={myTeams.length === 0 ? renderEmptyList : null}
+            ListEmptyComponent={myTeams.length === 0 && pendingTeams.length === 0 && invitedTeams.length === 0 ? renderEmptyList : null}
             ListHeaderComponent={headerComponent}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}

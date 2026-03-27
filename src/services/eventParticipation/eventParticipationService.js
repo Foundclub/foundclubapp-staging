@@ -41,6 +41,8 @@ export const createEventParticipation = async (eventParticipationData) => {
  *   page?: number;
  *   pageSize?: number;
  *   includeInactive?: boolean;
+ *   recruitmentAdId?: string;
+ *   participationStatus?: string | string[];
  * }} [params]
  * @returns {Promise<{data: EventParticipation[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -50,7 +52,16 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
     includeInactive = false,
     page,
     pageSize,
+    participationStatus,
+    recruitmentAdId,
   } = params;
+
+  let participationStatusFilter;
+  if (Array.isArray(participationStatus)) {
+    participationStatusFilter = { $in: participationStatus };
+  } else if (participationStatus) {
+    participationStatusFilter = { $eq: participationStatus };
+  }
 
   const activeFilter = includeInactive
     ? undefined
@@ -67,6 +78,10 @@ export const getEventParticipations = async (eventId, userId, params = {}) => {
       event: {
         documentId: eventId,
       },
+      participationStatus: participationStatusFilter,
+      recruitmentAd: recruitmentAdId ? {
+        documentId: { $eq: recruitmentAdId },
+      } : undefined,
       user: userId ? {
         documentId: { $eq: userId },
       } : undefined,

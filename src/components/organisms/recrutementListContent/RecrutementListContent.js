@@ -5,23 +5,26 @@ import {
   ActivityIndicator, FlatList, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  getAppliedFilterCount,
+  getRecruitmentRoleMode,
+  sanitizeRecruitmentTabForRole,
+} from '@/domains/search/recruitmentFlow';
 import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 // Components
 import Loader from '@/components/atoms/loader/Loader';
-import MercatoCard from '@/components/molecules/mercatoCard/MercatoCard';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
+import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 // Services
 import { useAppContext } from '@/store/appContext';
 
 import { getMyApplications, getMyRecruitmentAds, getRecruitmentAds } from '@/services/recruitment/recruitmentService';
 import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/services/search/searchService';
-import { searchUsers } from '@/services/user/userService';
 
 /**
  * @typedef {{ id?: string | number; documentId?: string; [key: string]: any }} MercatoUser
@@ -237,11 +240,9 @@ function RecrutementListContent({ initialTab, timestamp }) {
   const navigation = useNavigation();
   const nav = /** @type {any} */ (navigation);
   const { userData } = useAuth();
-  const [{ mercatoFilters }] = useAppContext();
-  const roleName = userData?.role?.name;
-  const isCoachOrAdmin = roleName === USER_ROLES.coach
-    || roleName === USER_ROLES.president
-    || roleName === USER_ROLES.superAdmin;
+  const [{ recruitmentAdFilters }] = useAppContext();
+  const recruitmentMode = getRecruitmentRoleMode(userData);
+  const isCoachOrAdmin = recruitmentMode === 'staff';
   const managedTeams = React.useMemo(() => dedupeManagedTeams([
     ...(userData?.myTeams || []),
     ...(userData?.trainedTeams || []),
@@ -252,59 +253,30 @@ function RecrutementListContent({ initialTab, timestamp }) {
   );
 
   // State
-  const [activeTab, setActiveTab] = useState(initialTab || 'profils'); // 'profils' or 'annonces'
-  const [users, setUsers] = useState(/** @type {MercatoUser[]} */ ([]));
+  const [activeTab, setActiveTab] = useState(
+    sanitizeRecruitmentTabForRole(initialTab, userData),
+  );
   const [ads, setAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myAds, setMyAds] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [myApplications, setMyApplications] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
   const [adSearchValue, setAdSearchValue] = useState('');
   const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
+  const adFiltersCount = React.useMemo(
+    () => getAppliedFilterCount(recruitmentAdFilters, ['q']),
+    [recruitmentAdFilters],
+  );
+  const hasAdFilters = adFiltersCount > 0;
 
   // Handle external tab switching (e.g. from creation wizard)
   useEffect(() => {
-    if (initialTab && initialTab !== activeTab) {
+    const nextTab = sanitizeRecruitmentTabForRole(initialTab, userData);
+    if (nextTab !== activeTab) {
       console.log('[RecrutementListContent] initialTab changed to:', initialTab);
-      setActiveTab(initialTab);
+      setActiveTab(nextTab);
     }
-  }, [activeTab, initialTab]);
-
-  // Handle forced refresh from navigation params (timestamp)
-  useEffect(() => {
-    if (timestamp) {
-      console.log('[RecrutementListContent] Forced refresh triggered by timestamp:', timestamp);
-      if (isCoachOrAdmin) {
-        if (activeTab === 'annonces') fetchMyAds(true);
-        // If activeTab is 'profils', we probably don't need to refresh profiles if coming from ad creation
-        // But if user meant to switch tab, the above useEffect handles the switch,
-        // and then the useEffect on [activeTab] handles the fetch.
-        // However, if we were ALREADY on 'annonces', useEffect[activeTab] won't fire.
-        // So we strictly refresh 'annonces' here if active.
-      } else {
-        // Player logic if needed
-      }
-    }
-  }, [timestamp, isCoachOrAdmin, activeTab, fetchMyAds]); // Dependencies: timestamp changes, so it runs.
-
-  // Fetch users (for coaches searching players)
-  const fetchUsers = useCallback(async (isRefresh = false) => {
-    if (!isCoachOrAdmin) return;
-    if (!isRefresh) setLoading(true);
-    try {
-      const data = await searchUsers({
-        isLookingForClub: true,
-        q: searchValue,
-        ...mercatoFilters,
-      });
-      setUsers(data || []);
-    } catch (error) {
-      console.error('[RecrutementListContent] Error fetching users:', error);
-    } finally {
-      if (!isRefresh) setLoading(false);
-    }
-  }, [searchValue, mercatoFilters, isCoachOrAdmin]);
+  }, [activeTab, initialTab, userData]);
 
   // State for pagination (ads)
   const [adsPage, setAdsPage] = useState(1);
@@ -321,12 +293,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
       const searchTerm = adSearchValue?.trim();
       let newAds = [];
       let meta = {};
-      if (searchTerm && searchTerm.length >= 2) {
+      if ((searchTerm && searchTerm.length >= 2) || hasAdFilters) {
         const response = await searchRecruitment({
+          ...recruitmentAdFilters,
           page,
           pageSize: 10,
-          q: searchTerm,
-          sort: 'relevance',
+          ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
         });
         newAds = mapSearchPayload(response);
         meta = response.meta || {};
@@ -365,7 +337,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
       if (page === 1 && !isRefresh) setLoading(false);
       else if (page > 1) setAdsLoadingMore(false);
     }
-  }, [adSearchValue, isCoachOrAdmin]);
+  }, [adSearchValue, hasAdFilters, isCoachOrAdmin, recruitmentAdFilters]);
 
   // Load more ads Handler
   const handleLoadMoreAds = useCallback(() => {
@@ -384,14 +356,14 @@ function RecrutementListContent({ initialTab, timestamp }) {
         ? { teamIds: managedTeamIds }
         : { authorDocumentId: userData?.documentId };
       let data = [];
-      if (searchTerm && searchTerm.length >= 2) {
+      if ((searchTerm && searchTerm.length >= 2) || hasAdFilters) {
         const response = await searchRecruitment({
           ...ownerFilters,
+          ...recruitmentAdFilters,
           includeInactive: true,
           page: 1,
           pageSize: 30,
-          q: searchTerm,
-          sort: 'relevance',
+          ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
         });
         data = mapSearchPayload(response);
       } else {
@@ -403,7 +375,16 @@ function RecrutementListContent({ initialTab, timestamp }) {
     } finally {
       if (!isRefresh) setLoading(false);
     }
-  }, [adSearchValue, isCoachOrAdmin, managedTeamIds, userData?.documentId]);
+  }, [adSearchValue, hasAdFilters, isCoachOrAdmin, managedTeamIds, recruitmentAdFilters, userData?.documentId]);
+
+  // Handle forced refresh from navigation params (timestamp)
+  useEffect(() => {
+    if (!timestamp) return;
+    console.log('[RecrutementListContent] Forced refresh triggered by timestamp:', timestamp);
+    if (isCoachOrAdmin && activeTab === 'annonces') {
+      fetchMyAds(true);
+    }
+  }, [activeTab, fetchMyAds, isCoachOrAdmin, timestamp]);
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -422,9 +403,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
   // Effect to fetch data based on tab
   useEffect(() => {
     if (isCoachOrAdmin) {
-      if (activeTab === 'profils') {
-        fetchUsers();
-      } else {
+      if (activeTab === 'annonces') {
         fetchMyAds();
       }
     } else if (activeTab === 'candidatures') {
@@ -432,15 +411,13 @@ function RecrutementListContent({ initialTab, timestamp }) {
     } else {
       fetchAdsForPlayer(1, false);
     }
-  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, fetchUsers, isCoachOrAdmin]);
+  }, [activeTab, fetchAdsForPlayer, fetchMyAds, fetchMyApplications, isCoachOrAdmin]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       if (isCoachOrAdmin) {
-        if (activeTab === 'profils') {
-          await fetchUsers(true);
-        } else {
+        if (activeTab === 'annonces') {
           await fetchMyAds(true);
         }
       } else if (activeTab === 'candidatures') {
@@ -453,7 +430,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
     } finally {
       setRefreshing(false);
     }
-  }, [activeTab, isCoachOrAdmin, fetchUsers, fetchMyAds, fetchMyApplications, fetchAdsForPlayer]);
+  }, [activeTab, isCoachOrAdmin, fetchMyAds, fetchMyApplications, fetchAdsForPlayer]);
 
   // Handle card press (navigate to user details)
   const handleUserCardPress = (/** @type {MercatoUser} */ user) => {
@@ -467,15 +444,6 @@ function RecrutementListContent({ initialTab, timestamp }) {
   const handleAdCardPress = (/** @type {RecruitmentAdItem} */ ad, isOwnerContext = false) => {
     nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
   };
-
-  // Filters count
-  const activeMercatoFilters = /** @type {Record<string, any>} */ (mercatoFilters || {});
-  const filtersCount = Object.keys(activeMercatoFilters).filter((key) => {
-    const value = activeMercatoFilters[key];
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === 'object' && value !== null) return !!value.value;
-    return !!value;
-  }).length;
 
   // Render Coach TopTabs - Centered with underline indicator
   const renderCoachTabs = () => (
@@ -563,45 +531,6 @@ function RecrutementListContent({ initialTab, timestamp }) {
     </View>
   );
 
-  // Render content for Coach - Profils tab
-  const renderProfilsContent = () => (
-    <View style={{ flex: 1 }}>
-      <View style={[Spaces.marginBottom[16], Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-        <View style={{ flex: 1 }}>
-          <SearchComponent
-            filterNumber={filtersCount}
-            handleSearchField={setSearchValue}
-            openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
-            placeholder="Rechercher un profil..."
-            searchDefaultValue={searchValue}
-          />
-        </View>
-      </View>
-      {loading ? (
-        <Loader />
-      ) : (
-        <FlatList
-          contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
-          data={users}
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(item) => String(item.id || Math.random())}
-          ListEmptyComponent={(
-            <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
-              Aucun profil trouvé
-            </Text>
-          )}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          renderItem={({ item }) => (
-            <MercatoCard onPress={handleUserCardPress} user={item} />
-          )}
-          showsVerticalScrollIndicator={false}
-          style={{ flex: 1 }}
-        />
-      )}
-    </View>
-  );
-
   // Render content for Coach - Annonces tab
   const renderAnnoncesContent = () => {
     const annoncesHeader = (
@@ -640,9 +569,9 @@ function RecrutementListContent({ initialTab, timestamp }) {
           </Text>
         </TouchableOpacity>
         <SearchComponent
-          filterNumber={filtersCount}
+          filterNumber={adFiltersCount}
           handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
+          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
           placeholder="Rechercher dans mes annonces..."
           searchDefaultValue={adSearchValue}
         />
@@ -961,9 +890,9 @@ function RecrutementListContent({ initialTab, timestamp }) {
           Recherche et filtres
         </Text>
         <SearchComponent
-          filterNumber={filtersCount}
+          filterNumber={adFiltersCount}
           handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.MercatoFilters)}
+          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
           placeholder="Rechercher une annonce..."
           searchDefaultValue={adSearchValue}
         />
@@ -1058,7 +987,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
           Spaces.paddingVertical[12],
           Spaces.paddingHorizontal[24],
           {
-            backgroundColor: activeTab === 'annonces' || activeTab === 'profils' ? recruitmentSurfaceStrong : 'transparent',
+            backgroundColor: activeTab === 'annonces' ? recruitmentSurfaceStrong : 'transparent',
             borderRadius: 10,
             flex: 1,
           },
@@ -1067,13 +996,13 @@ function RecrutementListContent({ initialTab, timestamp }) {
         <Text style={[
           Fonts.p2Bold,
           {
-            color: activeTab === 'annonces' || activeTab === 'profils' ? Colors.primary500 : Colors.neutral500,
+            color: activeTab === 'annonces' ? Colors.primary500 : Colors.neutral500,
           },
         ]}
         >
           Annonces
         </Text>
-        {(activeTab === 'annonces' || activeTab === 'profils') && (
+        {activeTab === 'annonces' && (
           <View style={{
             backgroundColor: Colors.primary500,
             borderRadius: 2,
@@ -1166,7 +1095,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
       {isCoachOrAdmin ? (
         <View style={{ flex: 1 }}>
           {renderCoachTabs()}
-          {activeTab === 'profils' ? renderProfilsContent() : renderAnnoncesContent()}
+          {activeTab === 'profils' ? (
+            <RecruitmentProfilesList
+              bottomPadding={140}
+              onUserPress={handleUserCardPress}
+            />
+          ) : renderAnnoncesContent()}
         </View>
       ) : (
         <View style={{ flex: 1 }}>

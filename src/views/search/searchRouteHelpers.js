@@ -1,4 +1,5 @@
 import { RouteNames } from '@/navigation/routeNames';
+import { VALID_RECRUITMENT_TABS, sanitizeRecruitmentTabForRole } from '@/domains/search/recruitmentFlow';
 
 const SEARCH_TYPE_TO_ROUTE = /** @type {const} */ ({
   clubs: RouteNames.SearchClubs,
@@ -6,12 +7,6 @@ const SEARCH_TYPE_TO_ROUTE = /** @type {const} */ ({
   recrutement: RouteNames.SearchRecruitment,
   reservations: RouteNames.SearchReservations,
 });
-
-export const VALID_RECRUITMENT_TABS = /** @type {const} */ ([
-  'annonces',
-  'candidatures',
-  'profils',
-]);
 
 /**
  * @param {unknown} tab
@@ -64,9 +59,10 @@ export function hasLegacySearchParams(params) {
 
 /**
  * @param {Record<string, unknown> | undefined} params
+ * @param {unknown} [userOrRole]
  * @returns {{ routeName: string; params?: Record<string, unknown> } | null}
  */
-export function resolveLegacySearchTarget(params) {
+export function resolveLegacySearchTarget(params, userOrRole) {
   if (!hasLegacySearchParams(params)) return null;
 
   const initialSearchType = params?.initialSearchType
@@ -76,9 +72,11 @@ export function resolveLegacySearchTarget(params) {
   const routeName = SEARCH_TYPE_TO_ROUTE[normalizedType];
 
   if (routeName === RouteNames.SearchRecruitment) {
-    const initialRecruitmentTab = normalizeRecruitmentTab(
-      params?.initialRecruitmentTab
-        || (params?.initialTab === 'mercato' ? 'profils' : 'annonces'),
+    const requestedRecruitmentTab = params?.initialRecruitmentTab
+      || (params?.initialTab === 'mercato' ? 'profils' : undefined);
+    const initialRecruitmentTab = sanitizeRecruitmentTabForRole(
+      requestedRecruitmentTab,
+      userOrRole,
     );
 
     return {

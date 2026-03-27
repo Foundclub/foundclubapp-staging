@@ -209,6 +209,9 @@ export default function appReducer(state, action) {
     case 'SET_MERCATO_FILTERS': {
       return { ...state, mercatoFilters: action.payload };
     }
+    case 'SET_RECRUITMENT_AD_FILTERS': {
+      return { ...state, recruitmentAdFilters: action.payload };
+    }
     case 'SET_ONBOARDING_VIEWS': {
       return { ...state, onboardingViews: action.payload };
     }

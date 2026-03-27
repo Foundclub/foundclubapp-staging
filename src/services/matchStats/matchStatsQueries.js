@@ -6,6 +6,7 @@ import {
   getEventMyMatchResponse,
   getLeagueMatchStats,
   getLeagueMyMatchResponse,
+  getLeagueTeamPerformanceStats,
   getPendingMatchStatsPrompts,
   getPersonalStats,
   getTeamPerformanceStats,
@@ -58,6 +59,14 @@ export const useGetTeamPerformanceStats = (teamId, options = {}) => useQuery({
   enabled: Boolean(teamId),
   queryFn: () => getTeamPerformanceStats(teamId),
   queryKey: ['teamPerformanceStats', teamId],
+  staleTime: 1000 * 60 * 5,
+  ...options,
+});
+
+export const useGetLeagueTeamPerformanceStats = (teamId, options = {}) => useQuery({
+  enabled: Boolean(teamId),
+  queryFn: () => getLeagueTeamPerformanceStats(teamId),
+  queryKey: ['leagueTeamPerformanceStats', teamId],
   staleTime: 1000 * 60 * 5,
   ...options,
 });

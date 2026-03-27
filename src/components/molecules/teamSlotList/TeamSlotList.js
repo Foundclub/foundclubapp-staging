@@ -61,6 +61,7 @@ const getStatus = (count, t) => {
  * @param {string} [props.currentUserId]
  * @param {'carousel' | 'list'} [props.layout]
  * @param {'responsive' | 'fixed'} [props.cardWidthMode]
+ * @param {'default' | 'league'} [props.surfaceTone]
  * @param {boolean} [props.showMemberHelperText]
  * @returns {import('react').ReactElement}
  */
@@ -74,48 +75,72 @@ export default function TeamSlotList({
   onAddSlot,
   onCheckIn,
   onSlotPress,
+  preferListOnCompact = false,
   showMemberHelperText = true,
   slots = [],
+  surfaceTone = 'default',
 }) {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
   const { width: viewportWidth } = useWindowDimensions();
+  const effectiveLayout = preferListOnCompact && layout === 'carousel' && viewportWidth < 390
+    ? 'list'
+    : layout;
 
   const slotCardWidth = useMemo(() => {
-    if (layout === 'list') return '100%';
+    if (effectiveLayout === 'list') return '100%';
     if (cardWidthMode === 'fixed') return 198;
     const horizontalPadding = 56;
     const calculatedWidth = viewportWidth - horizontalPadding;
-    return Math.max(188, Math.min(246, calculatedWidth));
-  }, [cardWidthMode, layout, viewportWidth]);
+    return Math.max(204, Math.min(252, calculatedWidth));
+  }, [cardWidthMode, effectiveLayout, viewportWidth]);
 
-  const isCarouselLayout = layout === 'carousel';
-  const cardTone = {
-    addBg: `${Colors.gold500}1F`,
-    addBorder: `${Colors.gold500}6B`,
-    emptyBg: `${Colors.primary900}CC`,
-    emptyBorder: `${Colors.primary500}33`,
-    slotBg: `${Colors.primary900}E0`,
-    slotBorderDefault: `${Colors.primary500}47`,
-    slotBorderReady: `${Colors.gold500}73`,
-    statusBg: `${Colors.neutral00}14`,
-    statusBorder: `${Colors.neutral00}29`,
-    trackBg: `${Colors.neutral00}1F`,
-    unavailableBg: `${Colors.primary500}1F`,
-    unavailableBorder: `${Colors.primary500}52`,
-  };
+  const isCarouselLayout = effectiveLayout === 'carousel';
+  const cardTone = useMemo(() => {
+    if (surfaceTone === 'league') {
+      return {
+        addBg: 'rgba(10, 28, 43, 0.84)',
+        addBorder: 'rgba(1, 179, 244, 0.24)',
+        emptyBg: 'rgba(10, 28, 43, 0.84)',
+        emptyBorder: 'rgba(1, 179, 244, 0.24)',
+        slotBg: 'rgba(10, 28, 43, 0.84)',
+        slotBorderDefault: 'rgba(1, 179, 244, 0.24)',
+        slotBorderReady: `${Colors.success500}55`,
+        statusBg: `${Colors.primary500}12`,
+        statusBorder: `${Colors.primary500}24`,
+        trackBg: `${Colors.primary100}22`,
+        unavailableBg: 'rgba(10, 28, 43, 0.84)',
+        unavailableBorder: 'rgba(1, 179, 244, 0.24)',
+      };
+    }
+
+    return {
+      addBg: `${Colors.primary500}18`,
+      addBorder: `${Colors.primary500}52`,
+      emptyBg: `${Colors.primary700}F0`,
+      emptyBorder: `${Colors.primary500}30`,
+      slotBg: `${Colors.primary700}F6`,
+      slotBorderDefault: `${Colors.primary500}42`,
+      slotBorderReady: `${Colors.success500}55`,
+      statusBg: `${Colors.primary500}12`,
+      statusBorder: `${Colors.primary500}24`,
+      trackBg: `${Colors.primary100}22`,
+      unavailableBg: `${Colors.primary500}1F`,
+      unavailableBorder: `${Colors.primary500}52`,
+    };
+  }, [Colors.primary100, Colors.primary500, Colors.primary700, Colors.success500, surfaceTone]);
 
   return (
-    <View style={{ marginTop: 24 }}>
+    <View style={{ marginTop: 20 }}>
       <View style={{
         alignItems: 'flex-start',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 12,
+        marginBottom: 16,
       }}
       >
-        <Text style={[Fonts.h3, {
-          color: Colors.gold500, flex: 1, flexShrink: 1, paddingRight: 10,
+        <Text style={[Fonts.h3Bold, {
+          color: Colors.neutral00, flex: 1, flexShrink: 1, paddingRight: 12,
         }]}
         >
           {t('teamSlotList.title', 'Disponibilités (créneaux)')}
@@ -131,10 +156,10 @@ export default function TeamSlotList({
               flexShrink: 0,
               marginLeft: 8,
               paddingHorizontal: 12,
-              paddingVertical: 6,
+              paddingVertical: 10,
             }}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+            <Text style={[Fonts.p2Bold, { color: Colors.primary100 }]}>
               {t('teamSlotList.add', '+ Ajouter')}
             </Text>
           </TouchableOpacity>
@@ -149,7 +174,7 @@ export default function TeamSlotList({
               flexShrink: 0,
               marginLeft: 8,
               paddingHorizontal: 12,
-              paddingVertical: 6,
+              paddingVertical: 10,
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
@@ -163,7 +188,7 @@ export default function TeamSlotList({
         <View style={{
           backgroundColor: cardTone.emptyBg,
           borderColor: cardTone.emptyBorder,
-          borderRadius: 12,
+          borderRadius: 14,
           borderWidth: 1,
           padding: 14,
         }}
@@ -174,7 +199,7 @@ export default function TeamSlotList({
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingRight: 6 }}
+          contentContainerStyle={{ paddingRight: isCarouselLayout ? 4 : 0 }}
           horizontal={isCarouselLayout}
           showsHorizontalScrollIndicator={false}
         >
@@ -206,11 +231,11 @@ export default function TeamSlotList({
                   borderColor: status.tone === 'ready'
                     ? cardTone.slotBorderReady
                     : cardTone.slotBorderDefault,
-                  borderRadius: 14,
+                  borderRadius: 16,
                   borderWidth: 1,
-                  marginBottom: isCarouselLayout ? 0 : 10,
-                  marginRight: isCarouselLayout ? 10 : 0,
-                  padding: 12,
+                  marginBottom: isCarouselLayout ? 0 : 12,
+                  marginRight: isCarouselLayout ? 12 : 0,
+                  padding: 14,
                   width: slotCardWidth,
                 }}
               >
@@ -218,10 +243,10 @@ export default function TeamSlotList({
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'space-between',
-                  marginBottom: 8,
+                  marginBottom: 12,
                 }}
                 >
-                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                  <Text numberOfLines={1} style={[Fonts.h4Bold, { color: Colors.neutral00, flex: 1, paddingRight: 8 }]}>
                     {dayMap[slot?.recurrence_day] || slot?.recurrence_day || 'Jour'}
                   </Text>
                   <View style={{
@@ -229,7 +254,7 @@ export default function TeamSlotList({
                     borderColor: cardTone.statusBorder,
                     borderRadius: 999,
                     borderWidth: 1,
-                    paddingHorizontal: 8,
+                    paddingHorizontal: 7,
                     paddingVertical: 3,
                   }}
                   >
@@ -237,15 +262,15 @@ export default function TeamSlotList({
                   </View>
                 </View>
 
-                <Text style={[Fonts.h3, { color: Colors.gold500, marginBottom: 10 }]}>
+                <Text style={[Fonts.h3Bold, { color: Colors.primary100, marginBottom: 12 }]}>
                   {formatHour(slot?.start_hour)}
                   {' '}
                   -
                   {formatHour(slot?.end_hour)}
                 </Text>
 
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 6 }]}>
                     {t('teamSlotList.confirmedPlayers', 'Joueurs confirmés')}
                     :
                     {' '}
@@ -262,7 +287,7 @@ export default function TeamSlotList({
                   }}
                   >
                     <View style={{
-                      backgroundColor: progressRatio >= 1 ? Colors.gold500 : Colors.primary500,
+                      backgroundColor: progressRatio >= 1 ? Colors.success500 : Colors.primary500,
                       borderRadius: 999,
                       height: 6,
                       width: `${progressRatio * 100}%`,
@@ -276,16 +301,16 @@ export default function TeamSlotList({
                     onPress={() => onCheckIn?.(slot)}
                     style={{
                       alignItems: 'center',
-                      backgroundColor: checkedIn ? Colors.primary500 : 'transparent',
+                      backgroundColor: checkedIn ? Colors.primary500 : `${Colors.primary500}16`,
                       borderColor: Colors.primary500,
                       borderRadius: 999,
                       borderWidth: 1,
                       justifyContent: 'center',
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
                     }}
                   >
-                    <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary500 }]}>
+                    <Text style={[Fonts.p2Bold, { color: checkedIn ? Colors.neutral00 : Colors.primary100 }]}>
                       {checkedIn
                         ? t('teamSlotList.cta.removePresence', 'Retirer ma présence')
                         : t('teamSlotList.cta.confirmPresence', 'Je suis présent')}
@@ -293,15 +318,15 @@ export default function TeamSlotList({
                   </TouchableOpacity>
                 ) : null}
                 {isMember && actionsEnabled && showMemberHelperText ? (
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, paddingTop: 8, textAlign: 'center' }]}>
+                  <Text style={[Fonts.p3, { color: Colors.neutral200, paddingTop: 8, textAlign: 'center' }]}>
                     {t('teamSlotList.memberHelp', 'Touchez pour confirmer votre présence.')}
                   </Text>
                 ) : null}
                 {isMember && !actionsEnabled ? (
                   <Text
                     style={[Fonts.p3, {
-                      color: Colors.neutral300,
-                      paddingVertical: 8,
+                      color: Colors.neutral200,
+                      paddingVertical: 10,
                       textAlign: 'center',
                     }]}
                   >
@@ -309,7 +334,7 @@ export default function TeamSlotList({
                   </Text>
                 ) : null}
                 {!isMember ? (
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, paddingVertical: 8, textAlign: 'center' }]}>
+                  <Text style={[Fonts.p3, { color: Colors.neutral200, paddingVertical: 10, textAlign: 'center' }]}>
                     {t('teamSlotList.joinHint', 'Rejoindre la squad pour participer.')}
                   </Text>
                 ) : null}

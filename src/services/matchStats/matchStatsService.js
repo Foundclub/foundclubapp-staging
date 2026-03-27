@@ -191,6 +191,15 @@ export const getTeamPerformanceStats = async (teamId) => {
 };
 
 /**
+ * @param {string} teamId
+ * @returns {Promise<any>}
+ */
+export const getLeagueTeamPerformanceStats = async (teamId) => {
+  const response = await client.get(`/league-teams/${teamId}/performance-stats`);
+  return unwrapResponse(response);
+};
+
+/**
  * @returns {Promise<any>}
  */
 export const getPendingMatchStatsPrompts = async () => {

@@ -7,6 +7,7 @@
  * @property {ClubFilters} [clubFilters] - The filters for the club.
  * @property {TeamFilters} [teamFilters] - The filters for teams.
  * @property {MercatoFilters} [mercatoFilters] - Recruitment marketplace filters.
+ * @property {RecruitmentAdFilters} [recruitmentAdFilters] - Recruitment ad filters.
  * @property {ReservationFilters} [reservationFilters] - Reservation filters.
  * @property {SquadFilters} [squadFilters] - League squad filters.
  * @property {EventFilters} [eventFilters] - The filters for events.
@@ -29,8 +30,8 @@
  * @typedef {'SET_AUTHENTICATION' | 'DELETE_AUTHENTICATION' | 'LOGOUT_CURRENT_SESSION'
  * | 'REMOVE_SESSION_BY_DOCUMENT_ID' | 'SET_ACTIVE_SESSION'
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
- * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RESERVATION_FILTERS'
- * | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'
+ * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RECRUITMENT_AD_FILTERS'
+ * | 'SET_RESERVATION_FILTERS' | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'
  * | 'PREPARE_ADD_ACCOUNT' | 'CANCEL_ADD_ACCOUNT' | 'UPDATE_USER_DATA' | 'SET_PENDING_NOTIFICATION'} AppContextTypes
  */
 
@@ -90,6 +91,15 @@
  * @property {string} [type]
  * @property {string} [label]
  * @property {string} [alertDocumentId]
+ */
+
+/**
+ * @typedef {object} RecruitmentAdFilters
+ * @property {string} [sport]
+ * @property {string} [city]
+ * @property {string} [section]
+ * @property {string[]} [category]
+ * @property {string[]} [level]
  */
 
 /**

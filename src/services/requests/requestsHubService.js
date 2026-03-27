@@ -2,7 +2,6 @@ import {
   buildRequestHubCounts,
   mapClubMembershipRequestToHubItem,
   mapEventParticipationRequestToHubItem,
-  mapEventValidationRequestToHubItem,
   mapFeaturedRequestToHubItem,
   mapTeamMembershipRequestToHubItem,
   sortRequestHubItems,
@@ -189,14 +188,11 @@ export const getRequestsHubData = async (rawContext = {}) => {
         .forEach((event) => {
           const pendingRequests = getPendingParticipationRequests(event);
 
-          if (pendingRequests.length > 0) {
-            items.push(
-              ...pendingRequests.map((request) => mapEventParticipationRequestToHubItem(event, request)),
-            );
-            return;
-          }
+          if (!pendingRequests.length) return;
 
-          items.push(mapEventValidationRequestToHubItem(event));
+          items.push(
+            ...pendingRequests.map((request) => mapEventParticipationRequestToHubItem(event, request)),
+          );
         });
     }
 

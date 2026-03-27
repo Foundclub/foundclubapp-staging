@@ -1,0 +1,67 @@
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+
+export const STAFF_RECRUITMENT_TABS = /** @type {const} */ ([
+  'profils',
+  'annonces',
+]);
+
+export const PLAYER_RECRUITMENT_TABS = /** @type {const} */ ([
+  'annonces',
+  'candidatures',
+]);
+
+export const VALID_RECRUITMENT_TABS = /** @type {const} */ ([
+  ...STAFF_RECRUITMENT_TABS,
+  ...PLAYER_RECRUITMENT_TABS,
+]);
+
+const getRoleName = (userOrRole) => {
+  if (typeof userOrRole === 'string') return userOrRole;
+  if (userOrRole?.role?.name) return userOrRole.role.name;
+  if (userOrRole?.name) return userOrRole.name;
+  return '';
+};
+
+export const getRecruitmentRoleMode = (userOrRole) => {
+  const roleKey = getUserRoleKey(getRoleName(userOrRole));
+  if (roleKey === 'coach' || roleKey === 'president' || roleKey === 'superAdmin') {
+    return 'staff';
+  }
+  return 'player';
+};
+
+export const canAccessRecruitmentProfiles = (userOrRole) => (
+  getRecruitmentRoleMode(userOrRole) === 'staff'
+);
+
+export const getAllowedRecruitmentTabs = (userOrRole) => (
+  canAccessRecruitmentProfiles(userOrRole) ? STAFF_RECRUITMENT_TABS : PLAYER_RECRUITMENT_TABS
+);
+
+export const getDefaultRecruitmentTab = (userOrRole) => (
+  canAccessRecruitmentProfiles(userOrRole) ? 'profils' : 'annonces'
+);
+
+export const sanitizeRecruitmentTabForRole = (tab, userOrRole, fallbackTab = undefined) => {
+  const allowedTabs = getAllowedRecruitmentTabs(userOrRole);
+  const normalizedTab = typeof tab === 'string' ? tab.trim().toLowerCase() : '';
+  if (allowedTabs.includes(
+    /** @type {'annonces' | 'candidatures' | 'profils'} */ (normalizedTab),
+  )) {
+    return /** @type {'annonces' | 'candidatures' | 'profils'} */ (normalizedTab);
+  }
+
+  if (fallbackTab && allowedTabs.includes(fallbackTab)) {
+    return fallbackTab;
+  }
+
+  return getDefaultRecruitmentTab(userOrRole);
+};
+
+export const getAppliedFilterCount = (filters, excludedKeys = []) => Object.entries(filters || {}).filter(([key, value]) => {
+  if (excludedKeys.includes(key)) return false;
+  if (value === undefined || value === null || value === '') return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Boolean(value?.value || value?.label || value?.documentId || value?.id);
+  return true;
+}).length;

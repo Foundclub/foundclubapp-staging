@@ -152,6 +152,7 @@ export const RouteNames = /** @type {const} */ ({
   AdWizardValidation: 'AdWizardValidation',
   RecruitmentAdDetails: 'RecruitmentAdDetails',
   RecruitmentAdEdit: 'RecruitmentAdEdit',
+  RecruitmentAdFilters: 'RecruitmentAdFilters',
 
   // League Tabs (Gold Mode)
   LeagueDashboard: 'LeagueDashboard', // Dedicated screen name

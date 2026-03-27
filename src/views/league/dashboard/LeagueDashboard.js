@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -12,6 +12,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
@@ -21,7 +22,12 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getMatchHistory } from '@/services/league/leagueMatchService';
 import MatchmakingService from '@/services/league/MatchmakingService';
-import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
+import {
+  getInvitedLeagueTeams,
+  getMyLeagueTeam,
+  getPendingLeagueTeams,
+  getRanking,
+} from '@/services/leagueTeam/leagueTeamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 import { clampLeagueDivision, getNextDivisionTargetElo } from '@/utils/league/division';
@@ -45,11 +51,12 @@ const normalizeFormResult = (value) => {
 };
 
 const computeTeamForm = (team) => {
-  const rawSeries = Array.isArray(team?.recentResults)
-    ? team.recentResults
-    : Array.isArray(team?.form)
-      ? team.form
-      : [];
+  let rawSeries = [];
+  if (Array.isArray(team?.recentResults)) {
+    rawSeries = team.recentResults;
+  } else if (Array.isArray(team?.form)) {
+    rawSeries = team.form;
+  }
 
   if (!rawSeries.length) {
     return '---';
@@ -63,7 +70,7 @@ const computeTeamForm = (team) => {
  */
 function LeagueDashboard() {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const navigation = /** @type {any} */ (useNavigation());
@@ -71,6 +78,8 @@ function LeagueDashboard() {
   const [userTeam, setUserTeam] = useState(/** @type {Team | null} */ (null));
   const [matchHistory, setMatchHistory] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
   const [rankingData, setRankingData] = useState(/** @type {Team[]} */ ([]));
+  const [invitedSquads, setInvitedSquads] = useState(/** @type {Team[]} */ ([]));
+  const [pendingSquads, setPendingSquads] = useState(/** @type {Team[]} */ ([]));
   const [loading, setLoading] = useState(true);
   const [isSearchRunning, setIsSearchRunning] = useState(false);
   const leagueSurface = {
@@ -78,15 +87,26 @@ function LeagueDashboard() {
     borderColor: 'rgba(1, 179, 244, 0.22)',
   };
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     if (!userData) return;
     setLoading(true);
     try {
+      const userId = getEntityDocumentId(userData);
+      const [squads, invitationResults, pendingResults] = await Promise.all([
+        getMyLeagueTeam(userId),
+        getInvitedLeagueTeams(userId),
+        getPendingLeagueTeams(userId),
+      ]);
+
+      setInvitedSquads(Array.isArray(invitationResults) ? invitationResults : []);
+      setPendingSquads(Array.isArray(pendingResults) ? pendingResults : []);
+
       // 1. Get User Team
-      const squads = await getMyLeagueTeam(getEntityDocumentId(userData));
       const team = squads && squads.length > 0 ? squads[0] : null;
       setUserTeam(team);
       setIsSearchRunning(false);
+      setMatchHistory([]);
+      setRankingData([]);
 
       // 2. Load match history & Rankings if team exists
       if (team) {
@@ -113,17 +133,24 @@ function LeagueDashboard() {
       }
     } catch (error) {
       console.error('Dashboard Load Error:', error);
+      setInvitedSquads([]);
+      setPendingSquads([]);
       setIsSearchRunning(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userData]);
 
   useFocusEffect(
     useCallback(() => {
       loadDashboard();
-    }, [userData]),
+    }, [loadDashboard]),
   );
+
+  const isCaptainOnDashboard = getEntityDocumentId(userTeam?.captain) === getEntityDocumentId(userData);
+  const dashboardPendingRequestsCount = Array.isArray(userTeam?.join_requests)
+    ? userTeam.join_requests.length
+    : 0;
 
   const handleMatchPress = (/** @type {MatchHistoryEntry} */ match) => {
     navigation.navigate(RouteNames.PastMatchDetails, {
@@ -131,6 +158,16 @@ function LeagueDashboard() {
       myTeamId: getEntityDocumentId(userTeam),
     });
   };
+
+  const handleOpenSquadStatistics = useCallback(() => {
+    const squadId = getEntityDocumentId(userTeam);
+    if (!squadId) return;
+
+    navigation.navigate(RouteNames.SquadDetails, {
+      focusSection: 'statistics',
+      teamId: squadId,
+    });
+  }, [navigation, userTeam]);
 
   // --- Components ---
 
@@ -144,6 +181,130 @@ function LeagueDashboard() {
     </View>
   );
 
+  const renderSquadSignalCard = (/** @type {Team} */ squad, /** @type {'invited' | 'pending'} */ state) => {
+    const isInvitation = state === 'invited';
+    const accentColor = isInvitation ? Colors.gold500 : (Colors.warning500 || Colors.gold500);
+    const statusLabel = isInvitation ? 'INVITATION' : 'EN ATTENTE';
+    const helperLabel = isInvitation
+      ? 'Une squad vous attend deja. Repondez pour rejoindre la competition.'
+      : 'Votre demande a bien ete envoyee. Le capitaine doit encore repondre.';
+    const ctaLabel = isInvitation ? 'Voir l invitation' : 'Voir la demande';
+    const squadName = squad?.name || 'Squad League';
+    const divisionLabel = `Division ${clampLeagueDivision(squad?.division)}`;
+    const sportLabel = String(squad?.sport || 'Sport').trim();
+
+    return (
+      <TouchableOpacity
+        key={`${state}-${squad?.documentId || squad?.id || squadName}`}
+        onPress={() => navigation.navigate(RouteNames.SquadDetails, {
+          teamId: getEntityDocumentId(squad),
+        })}
+        style={{
+          backgroundColor: 'rgba(10, 28, 43, 0.90)',
+          borderColor: `${accentColor}45`,
+          borderRadius: 20,
+          borderWidth: 1,
+          marginBottom: 12,
+          padding: 16,
+          width: '100%',
+        }}
+      >
+        <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+          {squad?.crest?.url ? (
+            <ProfileAvatar
+              imageUrl={squad.crest.url}
+              shape="rounded"
+              size={54}
+              style={{
+                backgroundColor: Colors.neutral00,
+                borderColor: `${accentColor}55`,
+                borderRadius: 16,
+                borderWidth: 1,
+              }}
+              variant="logo"
+            />
+          ) : (
+            <LeagueCard
+              isGold={isInvitation}
+              style={{
+                alignItems: 'center',
+                backgroundColor: `${accentColor}14`,
+                borderColor: `${accentColor}45`,
+                borderRadius: 16,
+                borderWidth: 1,
+                height: 54,
+                justifyContent: 'center',
+                marginBottom: 0,
+                padding: 0,
+                width: 54,
+              }}
+            >
+              <Text style={[Fonts.p2Bold, { color: accentColor }]}>
+                {String(squadName).slice(0, 2).toUpperCase()}
+              </Text>
+            </LeagueCard>
+          )}
+
+          <View style={{ flex: 1, marginLeft: 12, paddingRight: 12 }}>
+            <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+              {squadName}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+              {sportLabel}
+              {' · '}
+              {divisionLabel}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: `${accentColor}14`,
+              borderColor: `${accentColor}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: accentColor }]}>{statusLabel}</Text>
+          </View>
+        </View>
+
+        <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 12 }]}>
+          {helperLabel}
+        </Text>
+
+        <View
+          style={{
+            alignItems: 'center',
+            borderTopColor: `${accentColor}28`,
+            borderTopWidth: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginTop: 12,
+            paddingTop: 12,
+          }}
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1, paddingRight: 12 }]}>
+            Signal League prioritaire
+          </Text>
+          <View
+            style={{
+              backgroundColor: `${accentColor}14`,
+              borderColor: `${accentColor}55`,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: accentColor }]}>{ctaLabel}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderNoTeamState = () => (
     <View style={{
       alignItems: 'center', flex: 1, justifyContent: 'center', marginTop: 60,
@@ -153,6 +314,7 @@ function LeagueDashboard() {
         alignItems: 'center', paddingVertical: 40, width: '100%', ...leagueSurface,
       }}
       >
+        {/* eslint-disable-next-line react/no-unescaped-entities */}
         <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>PRÊT À L'ACTION ?</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
           Crée ton équipe pour rejoindre la compétition officielle.
@@ -179,8 +341,60 @@ function LeagueDashboard() {
           variant="Primary"
         />
       </LeagueCard>
+      {(invitedSquads.length > 0 || pendingSquads.length > 0) ? (
+        <View style={{ marginTop: 8, width: '100%' }}>
+          <SectionHeader
+            subtitle="A TRAITER MAINTENANT"
+            title="SIGNAUX SQUAD"
+          />
+          {invitedSquads.map((squad) => renderSquadSignalCard(squad, 'invited'))}
+          {pendingSquads.map((squad) => renderSquadSignalCard(squad, 'pending'))}
+          <TouchableOpacity
+            onPress={() => navigation.navigate(RouteNames.LeagueSquadTab)}
+            style={{ alignItems: 'center', marginTop: 8 }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500, textDecorationLine: 'underline' }]}>
+              Ouvrir mon onglet Squad
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
+
+  const renderCaptainRequestsSignal = () => {
+    if (!isCaptainOnDashboard || dashboardPendingRequestsCount <= 0) return null;
+
+    return (
+      <LeagueCard
+        style={{
+          backgroundColor: 'rgba(127, 29, 29, 0.22)',
+          borderColor: 'rgba(239, 68, 68, 0.45)',
+          marginBottom: 24,
+        }}
+      >
+        <Text style={[Fonts.p3Bold, { color: Colors.error500, marginBottom: 8 }]}>
+          VALIDATION CAPITAINE
+        </Text>
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+          {dashboardPendingRequestsCount}
+          {' '}
+          demande
+          {dashboardPendingRequestsCount > 1 ? 's' : ''}
+          {' '}
+          attendent votre reponse
+        </Text>
+        <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16 }]}>
+          Ouvrez les demandes de votre squad pour accepter ou refuser les joueurs en attente.
+        </Text>
+        <Button
+          onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId: getEntityDocumentId(userTeam) })}
+          title="VOIR LES DEMANDES"
+          variant="Secondary"
+        />
+      </LeagueCard>
+    );
+  };
 
   const renderStats = () => (
     <LeagueCard style={leagueSurface}>
@@ -199,6 +413,26 @@ function LeagueDashboard() {
           <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
         </View>
+      </View>
+
+      <View
+        style={{
+          alignItems: 'center',
+          borderTopColor: 'rgba(255,255,255,0.08)',
+          borderTopWidth: 1,
+          marginTop: 16,
+          paddingTop: 16,
+        }}
+      >
+        <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
+          Retrouvez le classement League, les matchs recents et les statistiques post-match de votre squad.
+        </Text>
+        <Button
+          onPress={handleOpenSquadStatistics}
+          size="small"
+          title="VOIR LES STATISTIQUES DE LA SQUAD"
+          variant="Secondary"
+        />
       </View>
     </LeagueCard>
   );
@@ -264,7 +498,7 @@ function LeagueDashboard() {
             const rankedTeam = /** @type {LeaderboardEntry} */ (team);
             return (
               <View
-                key={index}
+                key={`rank-${rankedTeam.rank}-${rankedTeam.name}`}
                 style={{
                   alignItems: 'center',
                   backgroundColor: rankedTeam.isMe ? 'rgba(212, 175, 55, 0.14)' : 'transparent',
@@ -333,6 +567,8 @@ function LeagueDashboard() {
               })()}
               teamName={userTeam.name}
             />
+
+            {renderCaptainRequestsSignal()}
 
             {/* CTA Matchmaking */}
             <View style={{ marginVertical: 24 }}>

@@ -119,6 +119,60 @@ export const getMyLeagueTeam = async (userId) => {
 };
 
 /**
+ * Get league squads where the current user has a pending join request.
+ * @param {string} userId
+ * @returns {Promise<Team[]>}
+ */
+export const getPendingLeagueTeams = async (userId) => {
+  try {
+    const response = await client.get('/league-teams', {
+      params: {
+        filters: {
+          join_requests: {
+            documentId: {
+              $eq: userId,
+            },
+          },
+        },
+        populate: ['crest'],
+        sort: ['name:asc'],
+      },
+    });
+    return response.data?.data || [];
+  } catch (error) {
+    console.error('Error fetching pending league teams:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get league squads where the current user has a pending invitation.
+ * @param {string} userId
+ * @returns {Promise<Team[]>}
+ */
+export const getInvitedLeagueTeams = async (userId) => {
+  try {
+    const response = await client.get('/league-teams', {
+      params: {
+        filters: {
+          invitations: {
+            documentId: {
+              $eq: userId,
+            },
+          },
+        },
+        populate: ['crest'],
+        sort: ['name:asc'],
+      },
+    });
+    return response.data?.data || [];
+  } catch (error) {
+    console.error('Error fetching invited league teams:', error);
+    throw error;
+  }
+};
+
+/**
  * Check if team name is unique
  * @param {string} name
  * @returns {Promise<boolean>}
@@ -240,6 +294,7 @@ export const getLeagueTeamById = async (id) => {
           captain: { populate: ['avatar'] },
           cover: true,
           crest: true,
+          invitations: { populate: ['avatar'] },
           join_requests: { populate: ['avatar'] },
           roster: { populate: ['avatar'] },
           slots: { populate: ['participants'] },
@@ -677,21 +732,49 @@ export const searchSquads = async (filters) => {
  */
 export const requestToJoinSquad = async (teamId, userId) => {
   try {
-    // We need to fetch the current requests first to append the new one,
-    // OR use a custom endpoint if Strapi's default update replaces the relation.
-    // Here we assume we can just 'connect' via update/PUT if using Document Service API under the hood,
-    // but with standard REST populate, we often need to be careful.
-    // However, Strapi v4/v5 'connect' syntax in update usually works.
-
-    await client.put(`/league-teams/${teamId}`, {
+    await client.post(`/league-teams/${teamId}/request-join`, {
       data: {
-        join_requests: {
-          connect: [userId],
-        },
+        userId,
       },
     });
   } catch (error) {
     console.error('Error requesting to join squad:', error);
+    throw error;
+  }
+};
+
+/**
+ * Invite a user to join a squad
+ * @param {string} teamId
+ * @param {string} userId
+ */
+export const inviteUserToSquad = async (teamId, userId) => {
+  try {
+    await client.post(`/league-teams/${teamId}/invite`, {
+      data: {
+        userId,
+      },
+    });
+  } catch (error) {
+    console.error('Error inviting user to squad:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel a pending join request for a squad
+ * @param {string} teamId
+ * @param {string} userId
+ */
+export const cancelJoinRequest = async (teamId, userId) => {
+  try {
+    await client.post(`/league-teams/${teamId}/cancel-join-request`, {
+      data: {
+        userId,
+      },
+    });
+  } catch (error) {
+    console.error('Error cancelling join request:', error);
     throw error;
   }
 };
@@ -704,23 +787,34 @@ export const requestToJoinSquad = async (teamId, userId) => {
  */
 export const respondToJoinRequest = async (teamId, userId, accept) => {
   try {
-    const updateData = /** @type {Record<string, any>} */ ({
-      join_requests: {
-        disconnect: [userId],
+    await client.post(`/league-teams/${teamId}/respond-join-request`, {
+      data: {
+        accept,
+        userId,
       },
-    });
-
-    if (accept) {
-      updateData.roster = {
-        connect: [userId],
-      };
-    }
-
-    await client.put(`/league-teams/${teamId}`, {
-      data: updateData,
     });
   } catch (error) {
     console.error('Error responding to join request:', error);
+    throw error;
+  }
+};
+
+/**
+ * Respond to a squad invitation
+ * @param {string} teamId
+ * @param {string} userId
+ * @param {boolean} accept
+ */
+export const respondToSquadInvite = async (teamId, userId, accept) => {
+  try {
+    await client.post(`/league-teams/${teamId}/respond-invitation`, {
+      data: {
+        accept,
+        userId,
+      },
+    });
+  } catch (error) {
+    console.error('Error responding to squad invitation:', error);
     throw error;
   }
 };

@@ -87,7 +87,7 @@ const resolveRequesterAvatarUrl = (requester = {}) => {
  */
 export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(request?.team?.name) || 'Ãƒâ€°quipe';
+  const teamName = normalizeString(request?.team?.name) || 'Equipe';
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
@@ -107,7 +107,7 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     },
     status: 'pending',
     subtitle: `${requesterName} souhaite rejoindre ${teamName}.`,
-    title: 'Demande adhÃƒÂ©sion ÃƒÂ©quipe',
+    title: 'Demande adhesion equipe',
     type: 'team',
   };
 };
@@ -158,8 +158,8 @@ export const mapClubMembershipRequestToHubItem = (request = {}) => {
  */
 export const mapEventValidationRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const teamName = normalizeString(event?.team?.name) || 'Ãƒâ€°quipe';
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Ãƒâ€°vÃƒÂ©nement';
+  const teamName = normalizeString(event?.team?.name) || 'Equipe';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
   const startDate = toIsoString(event?.date);
 
   return {
@@ -174,7 +174,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: 'Validation ÃƒÂ©vÃƒÂ©nement',
+    title: 'Validation evenement',
     type: 'event',
   };
 };
@@ -220,7 +220,7 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
 
 export const mapFeaturedRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Ãƒâ€°vÃƒÂ©nement';
+  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
   const clubName = normalizeString(event?.team?.club?.name) || 'Club';
 
   return {

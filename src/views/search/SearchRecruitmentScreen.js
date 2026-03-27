@@ -1,4 +1,8 @@
 import useAuth from '@/domains/auth/useAuth';
+import {
+  canAccessRecruitmentProfiles,
+  sanitizeRecruitmentTabForRole,
+} from '@/domains/search/recruitmentFlow';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -6,17 +10,16 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
 
 import SearchScreenShell from './components/SearchScreenShell';
-import { normalizeRecruitmentTab } from './searchRouteHelpers';
-
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
 function SearchRecruitmentScreen({ navigation, route }) {
   const { userData } = useAuth();
-  const initialRecruitmentTab = normalizeRecruitmentTab(
+  const canSearchProfiles = canAccessRecruitmentProfiles(userData);
+  const initialRecruitmentTab = sanitizeRecruitmentTabForRole(
     route?.params?.initialRecruitmentTab,
-    'annonces',
+    userData,
   );
 
   return (
@@ -38,7 +41,9 @@ function SearchRecruitmentScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'D\u00e9couvre ici les annonces et profils de recrutement.',
+            description: canSearchProfiles
+              ? 'Retrouve ici les profils a recruter et les annonces de tes equipes.'
+              : 'Retrouve ici les annonces de recrutement et le suivi de tes candidatures.',
             id: 'search-recruitment-header',
             order: 1,
             title: 'Recherche recrutement',
@@ -52,7 +57,9 @@ function SearchRecruitmentScreen({ navigation, route }) {
         }}
       >
         <OnboardingWrapper
-          description="Utilisez les onglets Profils, Annonces et Candidatures pour naviguer dans le recrutement."
+          description={canSearchProfiles
+            ? 'Utilisez les onglets Profils et Mes annonces pour piloter votre recrutement.'
+            : 'Utilisez les onglets Annonces et Mes candidatures pour suivre vos opportunites.'}
           id="search-recruitment-content"
           order={3}
           spotlight={{

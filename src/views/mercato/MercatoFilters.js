@@ -143,6 +143,7 @@ function MercatoFilters({ navigation }) {
   React.useLayoutEffect(() => {
     if (!isAlertMode) {
       navigation.setOptions({
+        headerTitle: 'Filtres profils',
         headerRight: () => (
           <View style={{ alignItems: 'center', marginRight: 16 }}>
             <TouchableOpacity

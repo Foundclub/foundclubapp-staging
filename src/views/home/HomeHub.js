@@ -20,9 +20,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { USER_ROLES } from '@/domains/auth/authUseCases';
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
+import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
@@ -208,8 +209,9 @@ function HomeHubContent({ auth, navigation, route }) {
   });
 
   const roleName = userData?.role?.name;
-  const isCoach = roleName === USER_ROLES.coach;
-  const isPresident = roleName === USER_ROLES.president;
+  const roleKey = getUserRoleKey(roleName);
+  const isCoach = roleKey === 'coach';
+  const isPresident = roleKey === 'president';
   const hasManageSection = isCoach || isPresident;
   const routeParams = route?.params;
   const scrollBottomPadding = tabBarHeight + insets.bottom + 16;
@@ -229,7 +231,7 @@ function HomeHubContent({ auth, navigation, route }) {
     && activeTutorialModal === null
     && !isEntryGateVisible;
 
-  const legacySearchTarget = useMemo(() => resolveLegacySearchTarget(routeParams), [routeParams]);
+  const legacySearchTarget = useMemo(() => resolveLegacySearchTarget(routeParams, userData), [routeParams, userData]);
 
   const lastLegacyRedirectRef = useRef('');
   useEffect(() => {
@@ -680,7 +682,7 @@ function HomeHubContent({ auth, navigation, route }) {
         navigateAfterClosingModals(() => {
           navigation.navigate(RouteNames.SearchRecruitment, {
             ...tutorialParams,
-            initialRecruitmentTab: 'annonces',
+            initialRecruitmentTab: getDefaultRecruitmentTab(userData),
           });
         });
         return;
@@ -708,7 +710,7 @@ function HomeHubContent({ auth, navigation, route }) {
 
       default:
     }
-  }, [clubId, cmId, navigateAfterClosingModals, navigation, t, trainedTeamIds]);
+  }, [clubId, cmId, navigateAfterClosingModals, navigation, t, trainedTeamIds, userData]);
 
   const handleResetAllTutorials = useCallback(() => {
     Alert.alert(
@@ -1122,17 +1124,46 @@ function HomeHubContent({ auth, navigation, route }) {
       },
     ];
 
+    if (hasManageSection) {
+      cards.push({
+        accentColor: Colors.primary500,
+        icon: 'users',
+        key: 'search-profiles',
+        onPress: () => navigation.navigate(RouteNames.SearchRecruitment, {
+          initialRecruitmentTab: 'profils',
+        }),
+        subtitle: t(
+          'homeHub.cards.search.profiles.subtitle',
+          'Trouvez des profils ouverts a un club et lancez votre recrutement.',
+        ),
+        title: t('homeHub.cards.search.profiles.title', 'Rechercher des profils'),
+        tutorial: makeTutorial(
+          'searchProfiles',
+          13,
+          'Rechercher des profils',
+          'Accedez directement aux profils ouverts au recrutement pour vos equipes.',
+          {
+            nextAction: 'scrollDown',
+            nextLabel: scrollDownLabel,
+            onNext: scrollToLeagueSection,
+          },
+        ),
+      });
+    }
+
     if (!hasManageSection) {
       cards.push({
         accentColor: Colors.primary500,
         icon: 'running',
         key: 'search-ads',
-        onPress: () => navigation.navigate(RouteNames.SearchRecruitment, { initialRecruitmentTab: 'annonces' }),
+        onPress: () => navigation.navigate(RouteNames.SearchRecruitment, {
+          initialRecruitmentTab: getDefaultRecruitmentTab(userData),
+        }),
         subtitle: t('homeHub.cards.search.ads.subtitle'),
         title: t('homeHub.cards.search.ads.title'),
         tutorial: makeTutorial(
           'searchAds',
-          13,
+          14,
           'Rechercher des annonces',
           'Consultez les annonces de recrutement et les profils disponibles.',
           {
@@ -1145,7 +1176,7 @@ function HomeHubContent({ auth, navigation, route }) {
     }
 
     return cards;
-  }, [Colors.primary500, hasManageSection, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t]);
+  }, [Colors.primary500, hasManageSection, makeTutorial, navigation, scrollDownLabel, scrollToLeagueSection, t, userData]);
 
   /** @type {HomeCard[]} */
   const leagueCards = useMemo(() => ([

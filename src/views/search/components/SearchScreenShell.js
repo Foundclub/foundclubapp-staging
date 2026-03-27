@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+import useAuth from '@/domains/auth/useAuth';
+import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -51,6 +53,7 @@ function SearchScreenShell({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const { userData } = useAuth();
   const titleSideWidth = 44;
   const headerTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const switcherTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
@@ -105,10 +108,10 @@ function SearchScreenShell({
       }
 
       navigateTo(RouteNames.SearchRecruitment, {
-        initialRecruitmentTab: 'annonces',
+        initialRecruitmentTab: getDefaultRecruitmentTab(userData),
       });
     },
-    [activeType, navigation],
+    [activeType, navigation, userData],
   );
 
   return (

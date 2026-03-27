@@ -4,6 +4,8 @@ import {
   Alert, FlatList, Image, RefreshControl, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
+import { canAccessRecruitmentProfiles } from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -34,7 +36,9 @@ function SearchAlerts({ navigation }) {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const { userData } = useAuth();
   const [, appDispatch] = useAppContext();
+  const canUseProfileAlerts = canAccessRecruitmentProfiles(userData);
   const [alerts, setAlerts] = useState(/** @type {SearchAlertItem[]} */ ([]));
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,6 +89,7 @@ function SearchAlerts({ navigation }) {
   };
 
   const handleToggleActive = async (/** @type {SearchAlertItem} */ item) => {
+    if (item.type === 'mercato' && !canUseProfileAlerts) return;
     try {
       await updateSearchAlert(item.documentId, { isActive: !item.isActive });
       fetchAlerts();
@@ -110,6 +115,13 @@ function SearchAlerts({ navigation }) {
       appDispatch({ payload, type: 'SET_EVENT_FILTERS' });
       navigation.navigate(RouteNames.SearchEvents);
     } else if (alert.type === 'mercato') {
+      if (!canUseProfileAlerts) {
+        Alert.alert(
+          'Alerte profils indisponible',
+          'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraineur.',
+        );
+        return;
+      }
       const payload = {
         ...rawFilters,
         activity: rawFilters.activity || rawFilters.activityIds || [],
@@ -137,6 +149,13 @@ function SearchAlerts({ navigation }) {
         savedFilters: alert.filters,
       });
     } else if (alert.type === 'mercato') {
+      if (!canUseProfileAlerts) {
+        Alert.alert(
+          'Alerte profils indisponible',
+          'Cette alerte profils n est plus modifiable sur un compte joueur.',
+        );
+        return;
+      }
       navigation.navigate(RouteNames.MercatoFilters, {
         alertDocumentId: alert.documentId,
         alertLabel: alert.label,
@@ -147,6 +166,10 @@ function SearchAlerts({ navigation }) {
   };
 
   const handleCreateAlertPress = () => {
+    if (!canUseProfileAlerts) {
+      navigation.navigate(RouteNames.EventFilters, { createAlertMode: true });
+      return;
+    }
     setIsTypeModalVisible(true);
   };
 
@@ -155,9 +178,12 @@ function SearchAlerts({ navigation }) {
     if (type === 'event') {
       navigation.navigate(RouteNames.EventFilters, { createAlertMode: true });
     } else if (type === 'mercato') {
+      if (!canUseProfileAlerts) return;
       navigation.navigate(RouteNames.MercatoFilters, { createAlertMode: true });
     }
   };
+
+  const getAlertTypeLabel = (type) => (type === 'mercato' ? 'Alerte profils' : 'Alerte evenements');
 
   // Format filters into readable string with calendar icon
   const formatFilters = (/** @type {Record<string, any> | undefined} */ filters, /** @type {string} */ type) => {
@@ -223,8 +249,12 @@ function SearchAlerts({ navigation }) {
               tintColor={Colors.primary500}
             />
                     )}
-          renderItem={({ item }) => (
+          renderItem={({ item }) => {
+            const isProfileAlertUnavailable = item.type === 'mercato' && !canUseProfileAlerts;
+
+            return (
             <TouchableOpacity
+              disabled={isProfileAlertUnavailable}
               onPress={() => handleEditAlert(item)}
               style={[
                 {
@@ -235,6 +265,9 @@ function SearchAlerts({ navigation }) {
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
                 <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 6 }]}>
+                        {getAlertTypeLabel(item.type)}
+                      </Text>
                       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.label}</Text>
                       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { marginTop: 4 }]}>
                         <Image
@@ -245,8 +278,14 @@ function SearchAlerts({ navigation }) {
                             {formatFilters(item.filters, item.type)}
                           </Text>
                       </View>
+                      {isProfileAlertUnavailable ? (
+                        <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8 }]}>
+                          Disponible uniquement sur un compte dirigeant ou entraineur.
+                        </Text>
+                      ) : null}
                     </View>
                 <Switch
+                      disabled={isProfileAlertUnavailable}
                       onValueChange={() => handleToggleActive(item)}
                       thumbColor={Colors.neutral00}
                       trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
@@ -255,12 +294,14 @@ function SearchAlerts({ navigation }) {
               </View>
               <View style={[Alignments.row, Spaces.marginTop[12], Spaces.gap[8]]}>
                 <Button
+                      disabled={isProfileAlertUnavailable}
                       onPress={() => handleLaunchSearch(item)}
                       style={{ flex: 1 }}
                       title="Rechercher"
                       variant="Secondary"
                     />
                 <Button
+                      disabled={isProfileAlertUnavailable}
                       icon="edit"
                       onPress={() => handleEditAlert(item)}
                       variant="Secondary"
@@ -272,7 +313,8 @@ function SearchAlerts({ navigation }) {
                     />
               </View>
             </TouchableOpacity>
-          )}
+            );
+          }}
         />
       )}
 
@@ -311,11 +353,13 @@ function SearchAlerts({ navigation }) {
             title="Un événement / Une réservation ?"
             variant="Secondary"
           />
-          <Button
-            onPress={() => handleNavigateToFilters('mercato')}
-            title="Un profil (Joueur, Entraîneur) ?"
-            variant="Secondary"
-          />
+          {canUseProfileAlerts ? (
+            <Button
+              onPress={() => handleNavigateToFilters('mercato')}
+              title="Un profil ?"
+              variant="Secondary"
+            />
+          ) : null}
         </View>
       </BottomModal>
 

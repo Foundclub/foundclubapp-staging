@@ -194,6 +194,15 @@ function MatchStatsPromptHost() {
     ],
     [ApplicationStyle.borderRadius24, isCompactMobile],
   );
+  const footerButtonStyle = useMemo(
+    () => [
+      ...modalButtonStyle,
+      {
+        marginBottom: isCompactMobile ? 4 : 0,
+      },
+    ],
+    [isCompactMobile, modalButtonStyle],
+  );
 
   const primaryActionTitle = useMemo(() => {
     if (!nextPrompt) return 'Ouvrir';
@@ -326,9 +335,17 @@ function MatchStatsPromptHost() {
     <BottomModal
       close={dismissPromptForSession}
       contentContainerStyle={{
-        paddingBottom: isCompactMobile ? 32 : 40,
+        paddingBottom: isCompactMobile ? 20 : 24,
         paddingTop: isCompactMobile ? 10 : 14,
       }}
+      footerComponent={(
+        <Button
+          onPress={dismissPromptForSession}
+          style={footerButtonStyle}
+          title="Plus tard"
+          variant="Secondary"
+        />
+      )}
       isVisible={isVisible}
       snapPoints={[modalSnapPoint]}
     >
@@ -458,12 +475,6 @@ function MatchStatsPromptHost() {
               variant="Secondary"
             />
           ) : null}
-          <Button
-            onPress={dismissPromptForSession}
-            style={modalButtonStyle}
-            title="Plus tard"
-            variant="Secondary"
-          />
         </View>
       </View>
     </BottomModal>

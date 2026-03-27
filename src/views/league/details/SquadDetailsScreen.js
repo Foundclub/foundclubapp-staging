@@ -1,8 +1,11 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, ImageBackground, RefreshControl, ScrollView, Share, Text, TouchableOpacity, View,
+  Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
@@ -25,13 +28,147 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import {
-  deleteLeagueTeam, requestToJoinSquad, updateLeagueTeam,
+  cancelJoinRequest,
+  deleteLeagueTeam,
+  getRanking,
+  inviteUserToSquad,
+  requestToJoinSquad,
+  respondToSquadInvite,
+  updateLeagueTeam,
 } from '@/services/leagueTeam/leagueTeamService';
+import { useGetLeagueTeamPerformanceStats } from '@/services/matchStats/matchStatsQueries';
 import { createTeamSlot, deleteTeamSlot, updateTeamSlot } from '@/services/teamSlot/teamSlotService';
+import { searchScopedUsers } from '@/services/user/userService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
 import { normalizeLocationInput } from '@/utils/location';
+
+const slotDayLabels = {
+  friday: 'Vendredi',
+  monday: 'Lundi',
+  saturday: 'Samedi',
+  sunday: 'Dimanche',
+  thursday: 'Jeudi',
+  tuesday: 'Mardi',
+  wednesday: 'Mercredi',
+};
+
+const slotDayShortLabels = {
+  friday: 'Ven',
+  monday: 'Lun',
+  saturday: 'Sam',
+  sunday: 'Dim',
+  thursday: 'Jeu',
+  tuesday: 'Mar',
+  wednesday: 'Mer',
+};
+
+const slotWeekdayOrder = {
+  friday: 5,
+  monday: 1,
+  saturday: 6,
+  sunday: 0,
+  thursday: 4,
+  tuesday: 2,
+  wednesday: 3,
+};
+
+const formatSlotHour = (timeValue) => {
+  if (!timeValue || typeof timeValue !== 'string') return '--';
+  const [rawHour = '00', rawMinute = '00'] = timeValue.split(':');
+  const hour = Number.parseInt(rawHour, 10);
+  const minute = String(rawMinute).padStart(2, '0');
+  if (!Number.isFinite(hour)) return '--';
+  return `${hour}h${minute}`;
+};
+
+const resolveSlotStartMinutes = (timeValue) => {
+  if (!timeValue || typeof timeValue !== 'string') return Number.MAX_SAFE_INTEGER;
+  const [rawHour = '00', rawMinute = '00'] = timeValue.split(':');
+  const hour = Number.parseInt(rawHour, 10);
+  const minute = Number.parseInt(rawMinute, 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.MAX_SAFE_INTEGER;
+  return (hour * 60) + minute;
+};
+
+const resolveUpcomingSlot = (slots = []) => {
+  if (!Array.isArray(slots) || slots.length === 0) return null;
+
+  const now = new Date();
+  const currentWeekday = now.getDay();
+  const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+
+  const enriched = slots
+    .map((slot) => {
+      const recurrenceDay = String(slot?.recurrence_day || '').toLowerCase();
+      const dayOrder = slotWeekdayOrder[recurrenceDay];
+      if (dayOrder === undefined) return null;
+
+      let deltaDays = (dayOrder - currentWeekday + 7) % 7;
+      const startMinutes = resolveSlotStartMinutes(slot?.start_hour);
+      if (deltaDays === 0 && startMinutes <= currentMinutes) {
+        deltaDays = 7;
+      }
+
+      return {
+        ...slot,
+        deltaDays,
+        recurrenceDay,
+        startMinutes,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.deltaDays !== b.deltaDays) return a.deltaDays - b.deltaDays;
+      return a.startMinutes - b.startMinutes;
+    });
+
+  return enriched[0] || null;
+};
+
+const formatLeagueMatchDate = (value) => {
+  if (!value) return 'Date a definir';
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return 'Date a definir';
+  return parsed.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const getLeagueResultMeta = (result, Colors) => {
+  switch (String(result || '').trim().toLowerCase()) {
+    case 'draw':
+      return {
+        backgroundColor: `${Colors.warning500}16`,
+        borderColor: `${Colors.warning500}40`,
+        label: 'Nul',
+        textColor: Colors.warning500,
+      };
+    case 'loss':
+      return {
+        backgroundColor: `${Colors.error500}16`,
+        borderColor: `${Colors.error500}40`,
+        label: 'Defaite',
+        textColor: Colors.error500,
+      };
+    case 'win':
+      return {
+        backgroundColor: `${Colors.success500}16`,
+        borderColor: `${Colors.success500}40`,
+        label: 'Victoire',
+        textColor: Colors.success500,
+      };
+    default:
+      return {
+        backgroundColor: `${Colors.primary500}12`,
+        borderColor: `${Colors.primary500}30`,
+        label: 'En attente',
+        textColor: Colors.primary100,
+      };
+  }
+};
 
 /**
  * Squad Details Screen for FC League
@@ -39,23 +176,36 @@ import { normalizeLocationInput } from '@/utils/location';
  */
 function SquadDetailsScreen({ navigation, route }) {
   const { teamId } = route?.params ?? {};
+  const focusSection = route?.params?.focusSection || null;
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { userData: currentUser } = /** @type {{ userData: User | null }} */ (useAuth());
   const currentUserId = getEntityDocumentId(currentUser);
+  const currentRoleType = String(currentUser?.role?.type || '').trim().toLowerCase();
+  const currentRoleName = String(currentUser?.role?.name || '').trim().toLowerCase();
+  const isSuperAdminUser = currentRoleType === 'superadmin' || currentRoleName === 'superadmin';
+  const inviteScopeClubId = currentUser?.club?.documentId;
+  const inviteScopeMultisportId = currentUser?.multisportClubs?.[0]?.documentId || currentUser?.club?.parentMultisport?.documentId;
   const { getClubInitials } = useClub();
 
   // Use League Team Hook
   const { data: team, isLoading, refetch } = useGetLeagueTeam(teamId);
 
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
+  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
+  const [inviteSearchValue, setInviteSearchValue] = useState('');
+  const [inviteActionUserId, setInviteActionUserId] = useState('');
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingSlot, setEditingSlot] = useState(/** @type {LeagueSlot | null} */ (null));
 
   const [isCoverPreviewVisible, setIsCoverPreviewVisible] = useState(false);
+  const scrollRef = useRef(null);
+  const [sectionOffsets, setSectionOffsets] = useState({ effectif: 0, slots: 0, statistics: 0 });
+  const heroEntry = useRef(new Animated.Value(0)).current;
+  const bodyEntry = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -63,14 +213,73 @@ function SquadDetailsScreen({ navigation, route }) {
     }, [refetch]),
   );
 
+  useEffect(() => {
+    heroEntry.setValue(0);
+    bodyEntry.setValue(0);
+    Animated.sequence([
+      Animated.timing(heroEntry, {
+        duration: 220,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bodyEntry, {
+        delay: 40,
+        duration: 220,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [bodyEntry, heroEntry, team?.documentId]);
+
   const snapPoints = useMemo(() => ['85%'], []);
+  const inviteSnapPoints = useMemo(() => ['82%'], []);
 
   // Calculate isCaptain
   const isCaptain = useMemo(() => team?.captain?.documentId === currentUser?.documentId, [team, currentUser]);
 
   const isMember = useMemo(() => team?.roster?.some((/** @type {User} */ p) => p.documentId === currentUser?.documentId) || isCaptain, [team, currentUser, isCaptain]);
+  const canViewStatistics = Boolean(isMember);
 
   const hasPendingRequest = useMemo(() => team?.join_requests?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
+  const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
+  const shouldShowFixedJoinButton = !isCaptain && !isMember && !hasInvitation;
+  const fixedJoinButtonTitle = hasPendingRequest ? 'Demande en attente' : 'Demander a rejoindre';
+  const scrollBottomPadding = shouldShowFixedJoinButton ? 120 : 28;
+
+  const {
+    data: inviteSearchResults,
+    isFetching: isInviteSearchLoading,
+  } = useQuery({
+    enabled: isCaptain && isInviteModalVisible && Boolean(isSuperAdminUser || inviteScopeClubId || inviteScopeMultisportId),
+    queryFn: () => searchScopedUsers({
+      clubId: inviteScopeClubId,
+      isSuperAdmin: isSuperAdminUser,
+      limit: 80,
+      multisportId: inviteScopeMultisportId,
+      query: inviteSearchValue,
+    }),
+    queryKey: ['leagueSquadInviteSearch', teamId, inviteScopeClubId, inviteScopeMultisportId, isSuperAdminUser, inviteSearchValue],
+    staleTime: 15_000,
+  });
+
+  const {
+    data: leaguePerformanceStats,
+    isFetching: isLeaguePerformanceFetching,
+    refetch: refetchLeaguePerformanceStats,
+  } = useGetLeagueTeamPerformanceStats(teamId, {
+    enabled: Boolean(teamId && canViewStatistics),
+  });
+
+  const {
+    data: rankingData,
+    isFetching: isRankingFetching,
+    refetch: refetchRanking,
+  } = useQuery({
+    enabled: Boolean(canViewStatistics && team?.division),
+    queryFn: () => getRanking(team?.division),
+    queryKey: ['leagueDivisionRanking', team?.division],
+    staleTime: 60_000,
+  });
 
   const rosterCount = useMemo(() => {
     const uniqueIds = new Set();
@@ -94,19 +303,265 @@ function SquadDetailsScreen({ navigation, route }) {
     [normalizedHomeBase, t],
   );
 
+  const slotCount = useMemo(() => {
+    if (!Array.isArray(team?.slots)) return 0;
+    return team.slots.length;
+  }, [team?.slots]);
+  const nextSlot = useMemo(() => resolveUpcomingSlot(team?.slots || []), [team?.slots]);
+  const pendingRequestsCount = Number(team?.join_requests?.length || 0);
+  const inviteCandidateIdsToSkip = useMemo(() => new Set([
+    team?.captain?.documentId,
+    ...(Array.isArray(team?.roster) ? team.roster.map((player) => player?.documentId) : []),
+    ...(Array.isArray(team?.join_requests) ? team.join_requests.map((player) => player?.documentId) : []),
+    ...(Array.isArray(team?.invitations) ? team.invitations.map((player) => player?.documentId) : []),
+  ].filter((documentId) => typeof documentId === 'string' && documentId.length > 0)), [
+    team?.captain?.documentId,
+    team?.invitations,
+    team?.join_requests,
+    team?.roster,
+  ]);
+  const inviteCandidates = useMemo(() => {
+    const seenIds = new Set();
+    return (Array.isArray(inviteSearchResults) ? inviteSearchResults : [])
+      .filter(Boolean)
+      .filter((user) => {
+        const userId = getEntityDocumentId(user);
+        if (!userId || inviteCandidateIdsToSkip.has(userId) || seenIds.has(userId)) return false;
+        seenIds.add(userId);
+        return true;
+      });
+  }, [inviteCandidateIdsToSkip, inviteSearchResults]);
+  const nextSlotShortLabel = useMemo(() => {
+    if (!nextSlot) return 'A definir';
+    return `${slotDayShortLabels[nextSlot.recurrenceDay] || 'A venir'} · ${formatSlotHour(nextSlot?.start_hour)}`;
+  }, [nextSlot]);
+  const nextSlotLongLabel = useMemo(() => {
+    if (!nextSlot) return 'Ajoutez un creneau pour lancer votre rythme.';
+    return `${slotDayLabels[nextSlot.recurrenceDay] || 'Jour'} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
+  }, [nextSlot]);
+  const rosterPreviewMembers = useMemo(() => {
+    const preview = [];
+    if (team?.captain) preview.push(team.captain);
+    (team?.roster || []).forEach((player) => {
+      if (!player?.documentId || player.documentId === team?.captain?.documentId) return;
+      if (preview.some((entry) => entry?.documentId === player.documentId)) return;
+      preview.push(player);
+    });
+    return preview.slice(0, 4);
+  }, [team?.captain, team?.roster]);
+  const extraRosterCount = Math.max(0, rosterCount - rosterPreviewMembers.length);
+  const squadStatusChip = useMemo(() => {
+    if (isCaptain) return { label: 'Capitaine', tone: 'gold' };
+    if (hasInvitation) return { label: 'Invitation recue', tone: 'blue' };
+    if (hasPendingRequest) return { label: 'Demande en attente', tone: 'blue' };
+    if (isMember) return { label: 'Membre', tone: 'blue' };
+    return { label: 'Squad ouverte', tone: 'blue' };
+  }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
+  const heroSummaryLine = useMemo(() => {
+    const memberLabel = `${rosterCount} membre${rosterCount > 1 ? 's' : ''}`;
+    const slotLabel = slotCount > 0
+      ? `${slotCount} creneau${slotCount > 1 ? 'x' : ''} actif${slotCount > 1 ? 's' : ''}`
+      : 'Aucun creneau programme';
+    return `${memberLabel} · ${slotLabel}`;
+  }, [rosterCount, slotCount]);
+  const heroSupportingLine = useMemo(() => {
+    if (isCaptain && pendingRequestsCount > 0) {
+      return `${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} attend${pendingRequestsCount > 1 ? 'ent' : ''} votre validation.`;
+    }
+    if (nextSlot) return `Prochain rendez-vous ${nextSlotLongLabel}`;
+    if (hasInvitation) return 'Acceptez votre invitation pour rejoindre la squad et participer aux prochains creneaux.';
+    if (hasPendingRequest) return 'Votre demande est envoyee. Le capitaine peut encore vous valider.';
+    if (isMember) return 'Confirmez votre presence pour aider la squad a se mettre en action.';
+    return 'Rejoignez cette squad pour participer aux creneaux et au matchmaking.';
+  }, [hasInvitation, hasPendingRequest, isCaptain, isMember, nextSlot, nextSlotLongLabel, pendingRequestsCount]);
+  const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
+  const nextSlotRemainingCount = Math.max(0, 5 - nextSlotParticipantsCount);
+  const nextSlotStatus = useMemo(() => {
+    if (!nextSlot) {
+      return {
+        badge: 'Aucun creneau',
+        helper: 'Ajoutez un creneau pour donner un premier point de rendez-vous a la squad.',
+      };
+    }
+    if (nextSlotParticipantsCount >= 5) {
+      return {
+        badge: 'Pret a jouer',
+        helper: 'Le prochain creneau est complet. La squad a deja assez de monde pour se lancer.',
+      };
+    }
+    if (nextSlotParticipantsCount >= 3) {
+      return {
+        badge: 'Presque pret',
+        helper: `Encore ${nextSlotRemainingCount} presence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
+      };
+    }
+    return {
+      badge: 'A renforcer',
+      helper: `Seulement ${nextSlotParticipantsCount} presence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
+    };
+  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount]);
+  const rosterSignals = useMemo(() => {
+    const signals = [
+      {
+        key: 'members',
+        label: 'Membres',
+        value: `${rosterCount}`,
+      },
+    ];
+
+    if (isCaptain) {
+      signals.push({
+        key: 'requests',
+        label: 'Demandes',
+        value: `${pendingRequestsCount}`,
+      });
+      signals.push({
+        key: 'invitations',
+        label: 'Invitations',
+        value: `${Number(team?.invitations?.length || 0)}`,
+      });
+    } else {
+      signals.push({
+        key: 'captain',
+        label: 'Capitaine',
+        value: team?.captain ? `${team.captain.firstname || ''} ${team.captain.lastname || ''}`.trim() : 'A definir',
+      });
+      signals.push({
+        key: 'status',
+        label: 'Statut',
+        value: squadStatusChip.label,
+      });
+    }
+
+    return signals;
+  }, [isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.captain, team?.invitations?.length]);
+  const nextSlotActionLabel = useMemo(() => {
+    if (isCaptain) return 'Animer la squad';
+    if (isMember) return 'Confirmer ma presence';
+    return 'Rejoindre la squad';
+  }, [isCaptain, isMember]);
+  const leagueCardBg = 'rgba(10, 28, 43, 0.84)';
+  const leagueCardBorder = 'rgba(1, 179, 244, 0.24)';
+
   const uiTone = useMemo(() => ({
-    captainBadgeBg: `${Colors.gold500}24`,
-    captainBadgeBorder: `${Colors.gold500}73`,
-    cardStrokeGold: `${Colors.gold500}47`,
+    captainBadgeBg: `${Colors.gold500}20`,
+    captainBadgeBorder: `${Colors.gold500}55`,
+    cardStroke: leagueCardBorder,
     chipInfoBg: `${Colors.primary500}1F`,
     chipInfoBorder: `${Colors.primary500}61`,
-    editButtonBg: `${Colors.neutral900}A6`,
-    overlayBg: `${Colors.neutral900}66`,
+    editButtonBg: leagueCardBg,
+    editButtonBorder: leagueCardBorder,
+    insightCardBg: leagueCardBg,
+    insightCardBorder: leagueCardBorder,
+    overlayBg: `${Colors.primary900}B8`,
+    panelBg: leagueCardBg,
+    panelBorder: leagueCardBorder,
     playerBadgeBg: `${Colors.primary500}1F`,
-    playerBadgeBorder: `${Colors.primary500}59`,
-    rosterCaptainBorder: `${Colors.gold500}40`,
-    rosterPlayerBorder: `${Colors.primary500}33`,
-  }), [Colors]);
+    playerBadgeBorder: `${Colors.primary500}4D`,
+    quickActionBg: leagueCardBg,
+    quickActionBorder: leagueCardBorder,
+    rosterCaptainBg: leagueCardBg,
+    rosterCaptainBorder: leagueCardBorder,
+    rosterPlayerBg: leagueCardBg,
+    rosterPlayerBorder: leagueCardBorder,
+    summaryCardBg: leagueCardBg,
+    summaryCardBorder: leagueCardBorder,
+    topActionBg: leagueCardBg,
+    topActionBorder: leagueCardBorder,
+  }), [Colors, leagueCardBg, leagueCardBorder]);
+
+  const normalizedLeagueSport = useMemo(() => {
+    const rawSport = String(team?.sport || '').trim().toLowerCase();
+    if (rawSport.includes('padel')) return 'padel';
+    if (rawSport.includes('foot')) return 'football';
+    return null;
+  }, [team?.sport]);
+
+  const statisticsMode = leaguePerformanceStats?.mode || (normalizedLeagueSport === 'padel' ? 'padel_light' : 'football_full');
+  const isPadelStatisticsMode = statisticsMode === 'padel_light';
+  const statisticsModeLabel = isPadelStatisticsMode ? 'Padel light' : 'Football complet';
+
+  const rankingEntries = useMemo(
+    () => (Array.isArray(rankingData) ? rankingData : []),
+    [rankingData],
+  );
+
+  const squadRank = useMemo(() => {
+    if (!team?.documentId || !rankingEntries.length) return null;
+    const index = rankingEntries.findIndex((entry) => getEntityDocumentId(entry) === team.documentId);
+    return index >= 0 ? index + 1 : null;
+  }, [rankingEntries, team?.documentId]);
+
+  const recentLeagueMatches = useMemo(
+    () => (Array.isArray(leaguePerformanceStats?.recentMatches) ? leaguePerformanceStats.recentMatches : []),
+    [leaguePerformanceStats?.recentMatches],
+  );
+  const hasRecentLeagueMatches = recentLeagueMatches.length > 0;
+
+  const leaguePendingMatches = useMemo(
+    () => (Array.isArray(leaguePerformanceStats?.pendingMatches) ? leaguePerformanceStats.pendingMatches : []),
+    [leaguePerformanceStats?.pendingMatches],
+  );
+
+  const leagueRecentReports = useMemo(
+    () => (Array.isArray(leaguePerformanceStats?.recentReports) ? leaguePerformanceStats.recentReports : []),
+    [leaguePerformanceStats?.recentReports],
+  );
+
+  const leaguePerformancePlayers = useMemo(
+    () => (Array.isArray(leaguePerformanceStats?.players) ? leaguePerformanceStats.players : []),
+    [leaguePerformanceStats?.players],
+  );
+
+  const leaguePerformanceSummary = useMemo(() => {
+    const totals = leaguePerformanceStats?.totals || {};
+    return {
+      assists: Number(totals?.assists || 0),
+      averageCollectiveRating: totals?.averageCollectiveRating ?? null,
+      cleanSheets: Number(totals?.cleanSheets || 0),
+      goals: Number(totals?.goals || 0),
+      matches: Number(totals?.matchesPlayed || totals?.matches || 0),
+      minutesPlayed: Number(totals?.minutesPlayed || 0),
+      playerCollectiveRatingAverage: totals?.playerCollectiveRatingAverage ?? null,
+      playerCollectiveRatingCount: Number(totals?.playerCollectiveRatingCount || 0),
+      scoreAgainstTotal: Number(totals?.scoreAgainstTotal || 0),
+      scoreForTotal: Number(totals?.scoreForTotal || 0),
+      sport: leaguePerformanceStats?.sport || normalizedLeagueSport || 'football',
+    };
+  }, [leaguePerformanceStats?.sport, leaguePerformanceStats?.totals, normalizedLeagueSport]);
+
+  const competitionCards = useMemo(() => ([
+    {
+      key: 'division',
+      label: 'Division',
+      value: team?.division ? `DIV ${team.division}` : 'A definir',
+    },
+    {
+      key: 'elo',
+      label: 'ELO',
+      value: `${Number(team?.elo || 0)} pts`,
+    },
+    {
+      key: 'rank',
+      label: 'Classement',
+      value: squadRank ? `#${squadRank}` : 'En attente',
+    },
+    {
+      key: 'record',
+      label: 'Bilan',
+      value: `${Number(team?.wins || 0)}V ${Number(team?.draws || 0)}N ${Number(team?.losses || 0)}D`,
+    },
+    {
+      key: 'streak',
+      label: 'Serie',
+      value: Number(team?.streak || 0) === 0 ? 'Stable' : `${Number(team?.streak || 0) > 0 ? '+' : ''}${Number(team?.streak || 0)}`,
+    },
+    {
+      key: 'reliability',
+      label: 'Fiabilite',
+      value: `${Number(team?.reliability_score || 0)}%`,
+    },
+  ]), [squadRank, team?.division, team?.draws, team?.elo, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
 
   const handleShare = useCallback(() => {
     const squadId = team?.documentId || teamId;
@@ -121,7 +576,7 @@ function SquadDetailsScreen({ navigation, route }) {
     });
   }, [team?.documentId, team?.name, teamId]);
 
-  const handleRequestJoin = async () => {
+  const handleRequestJoin = useCallback(async () => {
     try {
       if (!teamId || !currentUserId) {
         Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
@@ -137,7 +592,77 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  };
+  }, [currentUserId, refetch, t, teamId]);
+
+  const handleCancelJoinRequest = useCallback(async () => {
+    try {
+      if (!teamId || !currentUserId) {
+        Alert.alert(t('common.error'), t('squad.join.cancelError', 'Impossible d\'annuler la demande.'));
+        return;
+      }
+      setIsUpdating(true);
+      await cancelJoinRequest(String(teamId || ''), currentUserId || '');
+      await refetch();
+      Alert.alert(
+        t('squad.join.cancelSuccessTitle', 'Demande annulée'),
+        t('squad.join.cancelSuccessMessage', 'Votre demande à rejoindre la squad a bien été annulée.'),
+      );
+    } catch (error) {
+      console.error(error);
+      Alert.alert(t('common.error'), t('squad.join.cancelError', 'Impossible d\'annuler la demande.'));
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [currentUserId, refetch, t, teamId]);
+
+  const handleRespondToInvitation = useCallback(async (accept) => {
+    try {
+      if (!teamId || !currentUserId) {
+        Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de repondre a l invitation.'));
+        return;
+      }
+
+      setIsUpdating(true);
+      await respondToSquadInvite(String(teamId || ''), currentUserId || '', accept);
+      await refetch();
+      Alert.alert(
+        accept
+          ? t('squad.invitation.acceptTitle', 'Invitation acceptee')
+          : t('squad.invitation.declineTitle', 'Invitation refusee'),
+        accept
+          ? t('squad.invitation.acceptMessage', 'Vous avez rejoint la squad.')
+          : t('squad.invitation.declineMessage', 'Vous avez decline cette invitation.'),
+      );
+    } catch (error) {
+      console.error(error);
+      Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de repondre a l invitation.'));
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [currentUserId, refetch, t, teamId]);
+
+  const handleInvitePlayer = useCallback(async (user) => {
+    const invitedUserId = getEntityDocumentId(user);
+    if (!teamId || !invitedUserId) return;
+
+    try {
+      setInviteActionUserId(invitedUserId);
+      await inviteUserToSquad(String(teamId || ''), invitedUserId);
+      await refetch();
+      Alert.alert(
+        t('squad.invitation.sentTitle', 'Invitation envoyee'),
+        t('squad.invitation.sentMessage', 'Le joueur a bien ete invite a rejoindre la squad.'),
+      );
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        t('common.error'),
+        t('squad.invitation.sendError', 'Impossible d inviter ce joueur pour le moment.'),
+      );
+    } finally {
+      setInviteActionUserId('');
+    }
+  }, [refetch, t, teamId]);
 
   /**
    * @param {'logo' | 'cover'} type
@@ -357,6 +882,66 @@ function SquadDetailsScreen({ navigation, route }) {
     }
   };
 
+  const handleScrollToSection = useCallback((sectionKey) => {
+    const targetOffset = sectionOffsets?.[sectionKey];
+    if (!Number.isFinite(targetOffset)) return;
+    scrollRef.current?.scrollTo?.({
+      animated: true,
+      y: Math.max(0, targetOffset - 24),
+    });
+  }, [sectionOffsets]);
+
+  const handleRegisterSection = useCallback((sectionKey, y) => {
+    setSectionOffsets((prev) => (
+      prev?.[sectionKey] === y
+        ? prev
+        : { ...prev, [sectionKey]: y }
+    ));
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      refetch(),
+      canViewStatistics ? refetchLeaguePerformanceStats() : Promise.resolve(null),
+      canViewStatistics && team?.division ? refetchRanking() : Promise.resolve(null),
+    ]);
+  }, [canViewStatistics, refetch, refetchLeaguePerformanceStats, refetchRanking, team?.division]);
+
+  const handleOpenStatisticsMatch = useCallback((matchDocumentId) => {
+    if (!matchDocumentId) return;
+    navigation.navigate(RouteNames.LeagueMatchDetails, { matchId: matchDocumentId });
+  }, [navigation]);
+
+  const handleOpenStatisticsScreen = useCallback(() => {
+    handleScrollToSection('statistics');
+  }, [handleScrollToSection]);
+
+  const handleOpenFullHistory = useCallback(() => {
+    navigation.navigate('MatchHistoryScreen');
+  }, [navigation]);
+
+  useEffect(() => {
+    let timeoutId = null;
+
+    if (focusSection && !(focusSection === 'statistics' && !canViewStatistics)) {
+      const targetOffset = sectionOffsets?.[focusSection];
+
+      if (Number.isFinite(targetOffset)) {
+        timeoutId = setTimeout(() => {
+          scrollRef.current?.scrollTo?.({
+            animated: true,
+            y: Math.max(0, targetOffset - 24),
+          });
+          navigation.setParams?.({ focusSection: undefined });
+        }, 80);
+      }
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [canViewStatistics, focusSection, navigation, sectionOffsets]);
+
   const handleDeleteTeam = useCallback(() => {
     const teamDisplayName = String(team?.name || '').trim() || t('squadDetails.defaultName', 'Équipe');
     Alert.alert(
@@ -390,6 +975,10 @@ function SquadDetailsScreen({ navigation, route }) {
     );
   }, [navigation, t, team?.name, teamId]);
 
+  const openRequests = useCallback(() => {
+    navigation.navigate(RouteNames.SquadRequests, { teamId });
+  }, [navigation, teamId]);
+
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
       t('squadDetails.actions.menuTitle', 'Actions équipe'),
@@ -397,11 +986,15 @@ function SquadDetailsScreen({ navigation, route }) {
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
+          onPress: () => setIsInviteModalVisible(true),
+          text: t('squadDetails.actions.invitePlayer', 'Inviter un joueur'),
+        },
+        {
           onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId }),
           text: t('squadDetails.actions.editTeam', 'Modifier l\'équipe'),
         },
         {
-          onPress: () => navigation.navigate(RouteNames.SquadRequests, { teamId }),
+          onPress: openRequests,
           text: t('squadDetails.actions.openRequests', 'Voir les demandes'),
         },
         {
@@ -411,83 +1004,217 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [handleDeleteTeam, navigation, t, teamId]);
+  }, [handleDeleteTeam, navigation, openRequests, t, teamId]);
 
-  const showJoinAction = !isMember && !isCaptain;
+  const dynamicSummaryLabel = useMemo(() => {
+    if (isCaptain) return 'Demandes';
+    if (team?.division) return 'Division';
+    return 'PTS';
+  }, [isCaptain, team?.division]);
+
+  const dynamicSummaryValue = useMemo(() => {
+    if (isCaptain) return `${pendingRequestsCount}`;
+    if (team?.division) return `DIV ${team.division}`;
+    return `${team?.elo || 0} PTS`;
+  }, [isCaptain, pendingRequestsCount, team?.division, team?.elo]);
+
+  const summaryCards = useMemo(() => [
+    {
+      key: 'members',
+      label: 'Effectif',
+      value: `${rosterCount}`,
+    },
+    {
+      key: 'slots',
+      label: 'Creneaux',
+      value: `${slotCount}`,
+    },
+    {
+      key: 'next',
+      label: 'Prochain',
+      value: nextSlotShortLabel,
+    },
+    {
+      key: 'dynamic',
+      label: dynamicSummaryLabel,
+      value: dynamicSummaryValue,
+    },
+  ], [dynamicSummaryLabel, dynamicSummaryValue, nextSlotShortLabel, rosterCount, slotCount]);
+
+  const actionCard = useMemo(() => {
+    if (isCaptain) {
+      let description = 'Ajoutez un premier creneau pour rendre la squad active.';
+      if (pendingRequestsCount > 0) {
+        description = `${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} attend${pendingRequestsCount > 1 ? 'ent' : ''} votre validation.`;
+      } else if (slotCount > 0) {
+        description = `Prochain creneau: ${nextSlotLongLabel}`;
+      }
+      const primaryLabel = slotCount > 0 ? 'Gerer les creneaux' : 'Ajouter un creneau';
+      const primaryPress = slotCount > 0
+        ? () => handleScrollToSection('slots')
+        : () => setIsSlotModalVisible(true);
+      const secondaryLabel = pendingRequestsCount > 0 ? 'Voir les demandes' : 'Inviter un joueur';
+      const secondaryPress = pendingRequestsCount > 0
+        ? openRequests
+        : () => setIsInviteModalVisible(true);
+
+      return {
+        description,
+        primaryLabel,
+        primaryPress,
+        secondaryLabel,
+        secondaryPress,
+        title: pendingRequestsCount > 0 ? 'Votre squad attend votre validation' : 'Pilotez votre squad',
+      };
+    }
+
+    if (isMember) {
+      return {
+        description: slotCount > 0
+          ? `Confirmez votre presence sur ${nextSlotLongLabel}.`
+          : 'Aucun creneau defini pour le moment. Revenez bientot ou contactez le capitaine.',
+        primaryLabel: slotCount > 0 ? 'Voir les creneaux' : 'Voir l effectif',
+        primaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
+        secondaryLabel: canViewStatistics ? 'Voir les stats' : 'Voir l effectif',
+        secondaryPress: canViewStatistics ? handleOpenStatisticsScreen : () => handleScrollToSection('effectif'),
+        title: 'Votre prochaine action',
+      };
+    }
+
+    if (hasInvitation) {
+      return {
+        description: 'Une invitation vous attend. Acceptez-la pour rejoindre la squad et participer aux prochains creneaux.',
+        primaryLabel: 'Accepter',
+        primaryPress: () => handleRespondToInvitation(true),
+        secondaryLabel: 'Refuser',
+        secondaryPress: () => handleRespondToInvitation(false),
+        title: 'Invitation recue',
+      };
+    }
+
+    if (hasPendingRequest) {
+      return {
+        description: 'Votre demande est bien envoyee. Vous pouvez deja consulter les creneaux et l effectif.',
+        primaryLabel: 'Annuler la demande',
+        primaryPress: handleCancelJoinRequest,
+        secondaryLabel: 'Voir les creneaux',
+        secondaryPress: () => handleScrollToSection('slots'),
+        title: 'Votre demande est en attente',
+      };
+    }
+
+    return {
+      description: slotCount > 0
+        ? `La squad vit deja autour de ${nextSlotLongLabel}. Rejoignez-la pour participer.`
+        : 'Rejoignez cette squad pour acceder aux creneaux et a l effectif complet.',
+      primaryLabel: 'Voir les creneaux',
+      primaryPress: () => handleScrollToSection('slots'),
+      secondaryLabel: 'Voir l effectif',
+      secondaryPress: () => handleScrollToSection('effectif'),
+      title: 'Rejoignez cette squad',
+    };
+  }, [
+    handleCancelJoinRequest,
+    handleRespondToInvitation,
+    handleScrollToSection,
+    hasInvitation,
+    hasPendingRequest,
+    isCaptain,
+    isMember,
+    nextSlotLongLabel,
+    openRequests,
+    pendingRequestsCount,
+    slotCount,
+    canViewStatistics,
+    handleOpenStatisticsScreen,
+  ]);
+
+  const sectionShortcuts = useMemo(() => {
+    const shortcuts = [];
+
+    if (canViewStatistics) {
+      shortcuts.push({
+        key: 'statistics',
+        label: 'Statistiques',
+        onPress: handleOpenStatisticsScreen,
+      });
+    }
+
+    shortcuts.push(
+      {
+        key: 'slots',
+        label: 'Creneaux',
+        onPress: () => handleScrollToSection('slots'),
+      },
+      {
+        key: 'effectif',
+        label: 'Effectif',
+        onPress: () => handleScrollToSection('effectif'),
+      },
+    );
+
+    if (isCaptain) {
+      shortcuts.push({
+        key: 'requests',
+        label: pendingRequestsCount > 0 ? `Demandes (${pendingRequestsCount})` : 'Demandes',
+        onPress: openRequests,
+      });
+    }
+
+    return shortcuts;
+  }, [canViewStatistics, handleOpenStatisticsScreen, handleScrollToSection, isCaptain, openRequests, pendingRequestsCount]);
+
+  const heroAnimatedStyle = useMemo(() => ({
+    opacity: heroEntry,
+    transform: [
+      {
+        translateY: heroEntry.interpolate({
+          inputRange: [0, 1],
+          outputRange: [14, 0],
+        }),
+      },
+    ],
+  }), [heroEntry]);
+
+  const bodyAnimatedStyle = useMemo(() => ({
+    opacity: bodyEntry,
+    transform: [
+      {
+        translateY: bodyEntry.interpolate({
+          inputRange: [0, 1],
+          outputRange: [20, 0],
+        }),
+      },
+    ],
+  }), [bodyEntry]);
 
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], { paddingBottom: 32 }]}
-        refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading || isUpdating} />}
+        contentContainerStyle={[Spaces.paddingVertical[12], Spaces.paddingHorizontal[4], { paddingBottom: scrollBottomPadding }]}
+        ref={scrollRef}
+        refreshControl={<RefreshControl onRefresh={handleRefresh} refreshing={isLoading || isUpdating || isLeaguePerformanceFetching || isRankingFetching} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 20, marginTop: 4 }]}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 16, marginTop: 4 }]}>
           <HeaderBackButton
             onPress={() => navigation.goBack()}
             style={{ marginLeft: 0 }}
             withDefaultMargin={false}
           />
-          <View style={[Alignments.row, Alignments.alignCenter]}>
-            {isCaptain ? (
-              <TouchableOpacity
-                onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId })}
-                style={{
-                  alignItems: 'center',
-                  borderRadius: 12,
-                  justifyContent: 'center',
-                  marginRight: 8,
-                  minHeight: 44,
-                  minWidth: 44,
-                  paddingHorizontal: 10,
-                }}
-              >
-                <View>
-                  <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
-                    {t('squadDetails.actions.requests', 'Demandes')}
-                  </Text>
-                  {team?.join_requests?.length > 0 ? (
-                    <View style={{
-                      backgroundColor: Colors.error500,
-                      borderRadius: 4,
-                      height: 8,
-                      position: 'absolute',
-                      right: -10,
-                      top: -5,
-                      width: 8,
-                    }}
-                    />
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            ) : null}
-            {isCaptain ? (
-              <TouchableOpacity
-                onPress={() => navigation.navigate(RouteNames.SquadEdit, { teamId })}
-                style={{
-                  alignItems: 'center',
-                  borderRadius: 12,
-                  justifyContent: 'center',
-                  marginRight: 8,
-                  minHeight: 44,
-                  minWidth: 44,
-                  paddingHorizontal: 10,
-                }}
-              >
-                <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                  {t('squadDetails.actions.edit', 'Modifier')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
             <TouchableOpacity
               onPress={handleShare}
               style={{
                 alignItems: 'center',
-                borderRadius: 12,
+                backgroundColor: uiTone.topActionBg,
+                borderColor: uiTone.topActionBorder,
+                borderRadius: 16,
+                borderWidth: 1,
                 justifyContent: 'center',
-                marginRight: isCaptain ? 8 : 0,
                 minHeight: 44,
                 minWidth: 44,
+                paddingHorizontal: 10,
               }}
             >
               <Image
@@ -495,290 +1222,1086 @@ function SquadDetailsScreen({ navigation, route }) {
                 style={[ApplicationStyle.icon24, { tintColor: Colors.primary500 }]}
               />
             </TouchableOpacity>
+            {isCaptain && pendingRequestsCount > 0 ? (
+              <TouchableOpacity
+                onPress={openRequests}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: `${Colors.error500}12`,
+                  borderColor: `${Colors.error500}45`,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  minHeight: 44,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  Demandes
+                </Text>
+                <View style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.error500,
+                  borderRadius: 999,
+                  height: 20,
+                  justifyContent: 'center',
+                  marginLeft: 8,
+                  minWidth: 20,
+                  paddingHorizontal: 6,
+                }}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {pendingRequestsCount}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
             {isCaptain ? (
               <TouchableOpacity
                 onPress={openCaptainActionsMenu}
                 style={{
                   alignItems: 'center',
-                  borderRadius: 12,
+                  backgroundColor: uiTone.topActionBg,
+                  borderColor: uiTone.topActionBorder,
+                  borderRadius: 16,
+                  borderWidth: 1,
                   justifyContent: 'center',
                   minHeight: 44,
                   minWidth: 44,
+                  paddingHorizontal: 10,
                 }}
               >
-                <Text style={[Fonts.h3, { color: Colors.primary500 }]}>...</Text>
+                <>
+                  <Text style={[Fonts.h3, { color: Colors.primary500 }]}>...</Text>
+                  {pendingRequestsCount > 0 ? (
+                    <View style={{
+                      backgroundColor: Colors.error500,
+                      borderRadius: 4,
+                      height: 8,
+                      position: 'absolute',
+                      right: 10,
+                      top: 10,
+                      width: 8,
+                    }}
+                    />
+                  ) : null}
+                </>
               </TouchableOpacity>
             ) : null}
           </View>
         </View>
 
         {/* Header / Identity */}
-        <View style={[Alignments.alignCenter, { marginBottom: 18, marginTop: 2 }]}>
-          <Text style={[Fonts.p2Bold, { color: Colors.gold500, letterSpacing: 0.8, marginBottom: 6 }]}>SQUAD</Text>
-          <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 4, textAlign: 'center' }]}>{team?.name}</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>{locationLabel}</Text>
+        <View style={[Alignments.alignCenter, { marginBottom: 20, marginTop: 4 }]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.primary500, letterSpacing: 1.2, marginBottom: 8 }]}>SQUAD</Text>
+          <Text style={[Fonts.h1Bold, { color: Colors.neutral00, marginBottom: 8, textAlign: 'center' }]}>{team?.name}</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>{locationLabel}</Text>
         </View>
 
-        {/* Join Action for Non-Members */}
-        {showJoinAction && (
-        <View style={[Alignments.alignCenter, { marginBottom: 30, marginTop: 8, width: '100%' }]}>
-          {hasPendingRequest ? (
-            <View style={{ backgroundColor: Colors.neutral800, borderRadius: 8, padding: 12 }}>
-              <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
-                {t('squadDetails.join.pending', 'Demande en attente...')}
-              </Text>
+        {isCaptain && pendingRequestsCount > 0 ? (
+          <TouchableOpacity
+            onPress={openRequests}
+            style={{
+              backgroundColor: `${Colors.error500}12`,
+              borderColor: `${Colors.error500}40`,
+              borderRadius: 18,
+              borderWidth: 1,
+              marginBottom: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+            }}
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={[Fonts.p2Bold, { color: Colors.error500, marginBottom: 4 }]}>
+                  Validation capitaine en attente
+                </Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+                  {pendingRequestsCount}
+                  {' '}
+                  demande
+                  {pendingRequestsCount > 1 ? 's' : ''}
+                  {' '}
+                  attendent votre reponse. Ouvrez la file pour accepter ou refuser rapidement.
+                </Text>
+              </View>
+              <View
+                style={{
+                  backgroundColor: `${Colors.error500}16`,
+                  borderColor: `${Colors.error500}45`,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                }}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Voir</Text>
+              </View>
             </View>
-          ) : (
-            <Button
-              isLoading={isUpdating}
-              onPress={handleRequestJoin}
-              style={{
-                alignSelf: 'center', marginTop: 6, maxWidth: 340, width: '100%',
-              }}
-              title={t('squadDetails.join.request', 'Demander à rejoindre')}
-              variant="Primary"
-            />
-          )}
-        </View>
-        )}
+          </TouchableOpacity>
+        ) : null}
 
         {/* Info Card */}
-        <TouchableOpacity
-          activeOpacity={team?.cover?.url ? 0.9 : 1}
-          onPress={() => {
-            if (team?.cover?.url) setIsCoverPreviewVisible(true);
-          }}
-          style={[
-            { marginBottom: 32, marginTop: showJoinAction ? 2 : 0 },
-            {
-              borderColor: uiTone.cardStrokeGold,
-              borderRadius: 16,
-              borderWidth: 1,
-              overflow: 'hidden',
-            }, // Ensure border radius clips background
-          ]}
-        >
-          <ImageBackground
-            imageStyle={{ opacity: 0.6 }} // Dim background image for readability
-            source={team?.cover?.url ? { uri: getImageUrl(team.cover.url) } : undefined}
+        <Animated.View style={heroAnimatedStyle}>
+          <TouchableOpacity
+            activeOpacity={team?.cover?.url ? 0.9 : 1}
+            onPress={() => {
+              if (team?.cover?.url) setIsCoverPreviewVisible(true);
+            }}
             style={[
-              !team?.cover?.url && ApplicationStyle.backgroundColor.primary700,
-              Spaces.padding[16],
-              Alignments.alignCenter,
-              { justifyContent: 'center', minHeight: 200 },
+              { marginBottom: 20, marginTop: 4 },
+              {
+                borderColor: uiTone.cardStroke,
+                borderRadius: 20,
+                borderWidth: 1,
+                overflow: 'hidden',
+              }, // Ensure border radius clips background
             ]}
           >
-            {/* Overlay for better readability if image exists */}
-            {team?.cover?.url && (
+            <ImageBackground
+              imageStyle={{ opacity: 0.6 }} // Dim background image for readability
+              source={team?.cover?.url ? { uri: getImageUrl(team.cover.url) } : undefined}
+              style={[
+                !team?.cover?.url && { backgroundColor: leagueCardBg },
+                Spaces.padding[20],
+                Alignments.alignCenter,
+                { justifyContent: 'center', minHeight: 204 },
+              ]}
+            >
+              {/* Overlay for better readability if image exists */}
+              {team?.cover?.url && (
               <View style={{
                 ...Alignments.absolute,
                 backgroundColor: uiTone.overlayBg,
                 zIndex: -1,
               }}
               />
-            )}
+              )}
 
-            {/* Edit Cover Button (If simple card or captain) */}
-            {isCaptain && (
-            <View style={{
-              left: 10, position: 'absolute', top: 10, zIndex: 10,
-            }}
-            >
-              <TouchableOpacity onPress={() => handleImageUpload('cover')} style={{ alignItems: 'center' }}>
-                {/* Plus icon */}
-                <View style={{
-                  backgroundColor: uiTone.editButtonBg,
-                  borderRadius: 20,
-                  padding: 8,
-                }}
-                >
-                  <Image
-                    source={Images.plus}
-                    style={[ApplicationStyle.icon16, { tintColor: Colors.primary500 }]}
-                  />
-                </View>
-              </TouchableOpacity>
-            </View>
-            )}
-
-            <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 12 }}>
-              {/* Logo or Shield (Using CREST for League Squad) */}
-              <View>
-                {team?.crest?.url ? (
-                  <ProfileAvatar
-                    imageUrl={team.crest.url}
-                    size={80}
-                    variant="logo"
-                    style={{ borderColor: Colors.gold500, borderRadius: 80, borderWidth: 2 }}
-                  />
-                ) : (
-                  <TeamShield
-                    initials={getClubInitials(team?.name || '')}
-                    isGold
-                    size={80}
-                  />
-                )}
-
-                {/* Add Logo Button (Next to shield as requested) */}
-                {isCaptain && !team?.crest?.url && (
-                <TouchableOpacity
-                  onPress={() => handleImageUpload('logo')}
-                  style={{
-                    backgroundColor: Colors.neutral800,
-                    borderColor: Colors.primary500,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    bottom: 0,
-                    padding: 6,
-                    position: 'absolute',
-                    right: -10,
-                  }}
-                >
-                  <Image
-                    source={Images.plus}
-                    style={[ApplicationStyle.icon16, { height: 12, tintColor: Colors.primary500, width: 12 }]}
-                  />
-                </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* League badges */}
-            <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
-              {team?.activities?.[0]?.name ? (
-                <View style={{
-                  backgroundColor: uiTone.chipInfoBg,
-                  borderColor: uiTone.chipInfoBorder,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                }}
-                >
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                    {String(team.activities[0].name).toUpperCase()}
-                  </Text>
-                </View>
-              ) : null}
-              {team?.division ? (
-                <DivisionBadge
-                  division={team.division}
-                  showChrome={false}
-                  showLabel={false}
-                  size={44}
-                />
-              ) : null}
-              {team?.elo ? (
-                <View style={{
-                  backgroundColor: uiTone.chipInfoBg,
-                  borderColor: uiTone.chipInfoBorder,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                }}
-                >
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                    {team.elo}
-                    {' '}
-                    PTS
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </ImageBackground>
-        </TouchableOpacity>
-
-        {/* Availability Slots */}
-        <View style={{ marginBottom: 28 }}>
-          <TeamSlotList
-            cardWidthMode="responsive"
-            currentUserId={currentUser?.documentId}
-            isCaptain={isCaptain}
-            isMember={Boolean(isMember)}
-            layout="carousel"
-            onAddSlot={() => setIsSlotModalVisible(true)}
-            onCheckIn={handleCheckIn}
-            onSlotPress={handleSlotPress}
-            showMemberHelperText
-            slots={team?.slots || []}
-          />
-        </View>
-
-        {/* Roster Preview */}
-        <View style={{ marginBottom: 24 }}>
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[12]]}>
-            <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
-              {t('squadDetails.roster.title', 'Effectif')}
-              {' ('}
-              {rosterCount}
-              )
-            </Text>
-          </View>
-
-          {/* Captain */}
-          {team?.captain && (
-          <View
-            key={team.captain.documentId}
-            style={[
-              Alignments.row, Alignments.alignCenter, Spaces.gap[12],
-              ApplicationStyle.backgroundColor.neutral800,
-              Spaces.padding[12],
-              ApplicationStyle.borderRadius12,
-              Spaces.marginBottom[8],
-              { borderColor: uiTone.rosterCaptainBorder, borderWidth: 1 },
-            ]}
-          >
-            <ProfileAvatar imageUrl={team.captain.avatar?.url} size={40} />
-            <View>
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                {team.captain.firstname}
-                {' '}
-                {team.captain.lastname}
-              </Text>
+              {/* Edit Cover Button (If simple card or captain) */}
+              {isCaptain && (
               <View style={{
-                alignSelf: 'flex-start',
-                backgroundColor: uiTone.captainBadgeBg,
-                borderColor: uiTone.captainBadgeBorder,
-                borderRadius: 999,
-                borderWidth: 1,
-                marginTop: 4,
-                paddingHorizontal: 10,
-                paddingVertical: 3,
+                left: 16, position: 'absolute', top: 16, zIndex: 10,
               }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                  {t('squadDetails.roster.captain', 'Capitaine')}
+                <TouchableOpacity onPress={() => handleImageUpload('cover')} style={{ alignItems: 'center' }}>
+                  {/* Plus icon */}
+                  <View style={{
+                    backgroundColor: uiTone.editButtonBg,
+                    borderColor: uiTone.editButtonBorder,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    padding: 8,
+                  }}
+                  >
+                    <Image
+                      source={Images.plus}
+                      style={[ApplicationStyle.icon16, { tintColor: Colors.primary500 }]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+              )}
+
+              <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 16 }}>
+                {/* Logo or Shield (Using CREST for League Squad) */}
+                <View>
+                  {team?.crest?.url ? (
+                    <ProfileAvatar
+                      imageUrl={team.crest.url}
+                      size={80}
+                      style={{ borderColor: Colors.primary200, borderRadius: 80, borderWidth: 2 }}
+                      variant="logo"
+                    />
+                  ) : (
+                    <TeamShield
+                      initials={getClubInitials(team?.name || '')}
+                      isGold
+                      size={80}
+                    />
+                  )}
+
+                  {/* Add Logo Button (Next to shield as requested) */}
+                  {isCaptain && !team?.crest?.url && (
+                  <TouchableOpacity
+                    onPress={() => handleImageUpload('logo')}
+                    style={{
+                      backgroundColor: uiTone.editButtonBg,
+                      borderColor: uiTone.editButtonBorder,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      bottom: 0,
+                      padding: 6,
+                      position: 'absolute',
+                      right: -10,
+                    }}
+                  >
+                    <Image
+                      source={Images.plus}
+                      style={[ApplicationStyle.icon16, { height: 12, tintColor: Colors.primary500, width: 12 }]}
+                    />
+                  </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* League badges */}
+              <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[12], { marginTop: 4 }]}>
+                {team?.activities?.[0]?.name ? (
+                  <View style={{
+                    backgroundColor: uiTone.chipInfoBg,
+                    borderColor: uiTone.chipInfoBorder,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                  }}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                      {String(team.activities[0].name).toUpperCase()}
+                    </Text>
+                  </View>
+                ) : null}
+                {team?.division ? (
+                  <DivisionBadge
+                    division={team.division}
+                    showChrome={false}
+                    showLabel={false}
+                    size={44}
+                  />
+                ) : null}
+                {team?.elo ? (
+                  <View style={{
+                    backgroundColor: uiTone.chipInfoBg,
+                    borderColor: uiTone.chipInfoBorder,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                  }}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                      {team.elo}
+                      {' '}
+                      PTS
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={{ alignItems: 'center', marginTop: 16, width: '100%' }}>
+                <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, Spaces.gap[8], { marginBottom: 10 }]}>
+                  <View style={{
+                    alignItems: 'center',
+                    alignSelf: 'center',
+                    backgroundColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBg : uiTone.chipInfoBg,
+                    borderColor: squadStatusChip.tone === 'gold' ? uiTone.captainBadgeBorder : uiTone.chipInfoBorder,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 11,
+                    paddingVertical: 6,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: squadStatusChip.tone === 'gold' ? Colors.gold500 : Colors.primary100 }]}>
+                      {squadStatusChip.label}
+                    </Text>
+                  </View>
+                  {pendingRequestsCount > 0 && isCaptain ? (
+                    <TouchableOpacity
+                      onPress={openRequests}
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: `${Colors.error500}12`,
+                        borderColor: `${Colors.error500}36`,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        paddingHorizontal: 11,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                        {pendingRequestsCount}
+                        {' '}
+                        demande
+                        {pendingRequestsCount > 1 ? 's' : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral100, marginBottom: 4, textAlign: 'center' }]}>
+                  {heroSummaryLine}
                 </Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14, textAlign: 'center' }]}>
+                  {heroSupportingLine}
+                </Text>
+
+                <View style={[Alignments.row, Alignments.alignCenter]}>
+                  <View style={[Alignments.row, Alignments.alignCenter]}>
+                    {rosterPreviewMembers.map((member, index) => (
+                      <View
+                        key={member?.documentId || `${index}`}
+                        style={{
+                          marginLeft: index === 0 ? 0 : -10,
+                        }}
+                      >
+                        <ProfileAvatar
+                          imageUrl={member?.avatar?.url}
+                          size={32}
+                          style={{
+                            backgroundColor: Colors.primary800,
+                            borderColor: Colors.primary700,
+                            borderWidth: 2,
+                          }}
+                        />
+                      </View>
+                    ))}
+                    {extraRosterCount > 0 ? (
+                      <View style={{
+                        alignItems: 'center',
+                        backgroundColor: `${Colors.primary500}12`,
+                        borderColor: `${Colors.primary500}36`,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        height: 32,
+                        justifyContent: 'center',
+                        marginLeft: 8,
+                        minWidth: 32,
+                        paddingHorizontal: 8,
+                      }}
+                      >
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>
+                          +
+                          {extraRosterCount}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
+                      {team?.captain ? 'Capitaine et effectif visibles' : 'Communaute en construction'}
+                    </Text>
+                    <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                      {rosterCount > 1
+                        ? `${rosterCount - 1} membre${rosterCount - 1 > 1 ? 's' : ''} autour du capitaine`
+                        : 'Ajoutez des membres pour faire vivre la squad'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View style={bodyAnimatedStyle}>
+          <View style={{ marginBottom: 20 }}>
+            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], Spaces.marginBottom[16]]}>
+              {summaryCards.map((item) => (
+                <View
+                  key={item.key}
+                  style={{
+                    backgroundColor: uiTone.summaryCardBg,
+                    borderColor: uiTone.summaryCardBorder,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    minWidth: '47%',
+                    padding: 14,
+                    width: '47%',
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{item.label}</Text>
+                  <Text numberOfLines={2} style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={{
+              backgroundColor: uiTone.quickActionBg,
+              borderColor: uiTone.quickActionBorder,
+              borderRadius: 18,
+              borderWidth: 1,
+              padding: 14,
+            }}
+            >
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>{actionCard.title}</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 14 }]}>{actionCard.description}</Text>
+              <View style={[Alignments.row, Spaces.gap[12]]}>
+                <Button
+                  isLoading={isUpdating}
+                  onPress={actionCard.primaryPress}
+                  size="sm"
+                  style={{ flex: 1 }}
+                  title={actionCard.primaryLabel}
+                  variant="Primary"
+                />
+                <Button
+                  isLoading={isUpdating}
+                  onPress={actionCard.secondaryPress}
+                  size="sm"
+                  style={{ flex: 1 }}
+                  title={actionCard.secondaryLabel}
+                  variant="Secondary"
+                />
               </View>
             </View>
-          </View>
-          )}
 
-          {/* Roster Players */}
-          {team?.roster?.filter((/** @type {User} */ p) => p.documentId !== team?.captain?.documentId).map((/** @type {User} */ player) => (
+            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], { marginTop: 14 }]}>
+              {sectionShortcuts.map((shortcut) => (
+                <TouchableOpacity
+                  key={shortcut.key}
+                  onPress={shortcut.onPress}
+                  style={{
+                    backgroundColor: `${Colors.primary500}14`,
+                    borderColor: `${Colors.primary500}36`,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 11,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{shortcut.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {canViewStatistics ? (
             <View
-              key={player.documentId}
+              onLayout={(event) => handleRegisterSection('statistics', event.nativeEvent.layout.y)}
+              style={{ marginBottom: 20 }}
+            >
+              <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
+                {isPadelStatisticsMode
+                  ? 'Suivez votre bilan League, votre position dans la division et l historique recent de la squad.'
+                  : 'Retrouvez vos indicateurs League et les statistiques post-match de la squad au meme endroit.'}
+              </Text>
+
+              <View style={{
+                backgroundColor: uiTone.insightCardBg,
+                borderColor: uiTone.insightCardBorder,
+                borderRadius: 16,
+                borderWidth: 1,
+                marginBottom: 14,
+                padding: 14,
+              }}
+              >
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Statistiques</Text>
+                  <View style={{
+                    backgroundColor: `${Colors.primary500}14`,
+                    borderColor: `${Colors.primary500}36`,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>
+                      {statisticsModeLabel}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                  {isPadelStatisticsMode
+                    ? 'La squad voit deja ses resultats, son historique et ses indicateurs League. Les statistiques post-match detaillees padel arriveront dans un lot dedie.'
+                    : 'La squad suit ici sa competition League, ses derniers matchs et les retours post-match publies.'}
+                </Text>
+              </View>
+
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Competition League</Text>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
+                {competitionCards.map((item) => (
+                  <View
+                    key={item.key}
+                    style={{
+                      backgroundColor: uiTone.summaryCardBg,
+                      borderColor: uiTone.summaryCardBorder,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      minWidth: '47%',
+                      padding: 14,
+                      width: '47%',
+                    }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{item.label}</Text>
+                    <Text numberOfLines={2} style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={{
+                backgroundColor: uiTone.insightCardBg,
+                borderColor: uiTone.insightCardBorder,
+                borderRadius: 16,
+                borderWidth: 1,
+                marginBottom: 14,
+                padding: 14,
+              }}
+              >
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Historique des matchs</Text>
+                  <TouchableOpacity onPress={handleOpenFullHistory}>
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Voir tout</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {isLeaguePerformanceFetching && !hasRecentLeagueMatches ? (
+                  <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>Chargement de l historique...</Text>
+                ) : null}
+                {!isLeaguePerformanceFetching && hasRecentLeagueMatches ? (
+                  <View style={[Spaces.gap[10]]}>
+                    {recentLeagueMatches.map((matchItem, index) => {
+                      const resultMeta = getLeagueResultMeta(matchItem?.result, Colors);
+                      return (
+                        <TouchableOpacity
+                          activeOpacity={0.9}
+                          key={matchItem?.documentId || `league-history-${index}`}
+                          onPress={() => handleOpenStatisticsMatch(matchItem?.documentId)}
+                          style={{
+                            backgroundColor: uiTone.panelBg,
+                            borderColor: uiTone.panelBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            padding: 14,
+                          }}
+                        >
+                          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                            <View style={{ flex: 1, paddingRight: 12 }}>
+                              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                                {`vs ${matchItem?.opponent?.name || 'Adversaire'}`}
+                              </Text>
+                              <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                                {formatLeagueMatchDate(matchItem?.date)}
+                              </Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                              <View style={{
+                                backgroundColor: resultMeta.backgroundColor,
+                                borderColor: resultMeta.borderColor,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                              }}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: resultMeta.textColor }]}>{resultMeta.label}</Text>
+                              </View>
+                              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                                {`${Number(matchItem?.scoreFor || 0)} - ${Number(matchItem?.scoreAgainst || 0)}`}
+                              </Text>
+                            </View>
+                          </View>
+                          {matchItem?.eloChange ? (
+                            <Text style={[Fonts.p4Bold, { color: matchItem.eloChange > 0 ? Colors.success500 : Colors.error500 }]}>
+                              {`${matchItem.eloChange > 0 ? '+' : ''}${matchItem.eloChange} ELO`}
+                            </Text>
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
+                {!isLeaguePerformanceFetching && !hasRecentLeagueMatches ? (
+                  <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+                    Aucun match League joue pour le moment.
+                  </Text>
+                ) : null}
+              </View>
+
+              {isPadelStatisticsMode ? (
+                <View style={{
+                  backgroundColor: uiTone.insightCardBg,
+                  borderColor: uiTone.insightCardBorder,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  padding: 14,
+                }}
+                >
+                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Bilan competition</Text>
+                  <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10 }]}>
+                    Cet espace suit deja les resultats League, votre classement et votre historique. Les statistiques post-match detaillees pour le padel ne sont pas encore actives dans cette V1.
+                  </Text>
+                  <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+                    <View style={{
+                      backgroundColor: `${Colors.primary500}10`,
+                      borderColor: `${Colors.primary500}30`,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      minWidth: '30%',
+                      padding: 10,
+                    }}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Matchs</Text>
+                      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{Number(leaguePerformanceSummary.matches || recentLeagueMatches.length || 0)}</Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: `${Colors.primary500}10`,
+                      borderColor: `${Colors.primary500}30`,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      minWidth: '30%',
+                      padding: 10,
+                    }}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Score cumule</Text>
+                      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}</Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: `${Colors.primary500}10`,
+                      borderColor: `${Colors.primary500}30`,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      minWidth: '30%',
+                      padding: 10,
+                    }}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Mode</Text>
+                      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>League</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View style={[Spaces.gap[14]]}>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Performance match</Text>
+
+                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                    {[
+                      { label: 'Matchs', value: leaguePerformanceSummary.matches },
+                      { label: 'Minutes', value: leaguePerformanceSummary.minutesPlayed },
+                      { label: 'Buts', value: leaguePerformanceSummary.goals },
+                      { label: 'Passes D', value: leaguePerformanceSummary.assists },
+                    ].map((stat) => (
+                      <View
+                        key={stat.label}
+                        style={{
+                          backgroundColor: uiTone.summaryCardBg,
+                          borderColor: uiTone.summaryCardBorder,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          minWidth: '47%',
+                          padding: 14,
+                          width: '47%',
+                        }}
+                      >
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>{stat.label}</Text>
+                        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{stat.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={{
+                    backgroundColor: uiTone.insightCardBg,
+                    borderColor: uiTone.insightCardBorder,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    padding: 14,
+                  }}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                      {`Score cumule: ${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}
+                    </Text>
+                    <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+                      {`${leaguePerformanceSummary.cleanSheets} clean sheets - ${leaguePerformanceSummary.scoreAgainstTotal} buts encaisses`}
+                    </Text>
+                  </View>
+
+                  {(leaguePerformanceSummary.averageCollectiveRating !== null || leaguePerformanceSummary.playerCollectiveRatingAverage !== null) ? (
+                    <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                      {leaguePerformanceSummary.averageCollectiveRating !== null ? (
+                        <View
+                          style={{
+                            backgroundColor: uiTone.summaryCardBg,
+                            borderColor: uiTone.summaryCardBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            minWidth: '47%',
+                            padding: 14,
+                            width: '47%',
+                          }}
+                        >
+                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Capitaine</Text>
+                          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.averageCollectiveRating}/10`}</Text>
+                        </View>
+                      ) : null}
+                      {leaguePerformanceSummary.playerCollectiveRatingAverage !== null ? (
+                        <View
+                          style={{
+                            backgroundColor: uiTone.summaryCardBg,
+                            borderColor: uiTone.summaryCardBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            minWidth: '47%',
+                            padding: 14,
+                            width: '47%',
+                          }}
+                        >
+                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Joueurs</Text>
+                          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{`${leaguePerformanceSummary.playerCollectiveRatingAverage}/10`}</Text>
+                          <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                            {`${leaguePerformanceSummary.playerCollectiveRatingCount} note${leaguePerformanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''}`}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {leaguePendingMatches.length ? (
+                    <View style={[Spaces.gap[10]]}>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Reponses joueur en attente de validation equipe</Text>
+                      {leaguePendingMatches.map((pendingMatch, index) => (
+                        <TouchableOpacity
+                          activeOpacity={0.9}
+                          key={pendingMatch?.sourceDocumentId || `league-pending-${index}`}
+                          onPress={() => handleOpenStatisticsMatch(pendingMatch?.sourceDocumentId)}
+                          style={{
+                            backgroundColor: uiTone.panelBg,
+                            borderColor: uiTone.panelBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            padding: 14,
+                          }}
+                        >
+                          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                            <View style={{ flex: 1, paddingRight: 12 }}>
+                              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                                {pendingMatch?.matchLabel || 'Match League'}
+                              </Text>
+                              <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                                {`${Number(pendingMatch?.submittedResponses || 0)}/${Number(pendingMatch?.eligibleCount || 0)} joueurs ont repondu`}
+                              </Text>
+                            </View>
+                            <View style={{
+                              backgroundColor: `${Colors.primary500}14`,
+                              borderColor: `${Colors.primary500}36`,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                            }}
+                            >
+                              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon equipe' : 'En attente'}
+                              </Text>
+                            </View>
+                          </View>
+                          {pendingMatch?.lastSubmittedAt ? (
+                            <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                              {`Derniere reponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
+                            </Text>
+                          ) : null}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {leagueRecentReports.length ? (
+                    <View style={[Spaces.gap[10]]}>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Derniers matchs renseignes</Text>
+                      {leagueRecentReports.map((report, index) => (
+                        <TouchableOpacity
+                          activeOpacity={0.9}
+                          key={report?.documentId || report?.sourceDocumentId || `league-report-${index}`}
+                          onPress={() => handleOpenStatisticsMatch(report?.sourceDocumentId)}
+                          style={{
+                            backgroundColor: uiTone.panelBg,
+                            borderColor: uiTone.panelBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            padding: 14,
+                          }}
+                        >
+                          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                            <View style={{ flex: 1, paddingRight: 12 }}>
+                              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                                {report?.matchLabel || 'Match League'}
+                              </Text>
+                              <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                                {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
+                              </Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                              <View style={{
+                                backgroundColor: `${Colors.primary500}14`,
+                                borderColor: `${Colors.primary500}36`,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                              }}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                                  {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
+                                </Text>
+                              </View>
+                              {report?.hasNewResponsesSincePublication ? (
+                                <View style={{
+                                  backgroundColor: `${Colors.success500}16`,
+                                  borderColor: `${Colors.success500}40`,
+                                  borderRadius: 999,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 4,
+                                }}
+                                >
+                                  <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+                                    {report?.newResponsesCount > 1 ? `${report.newResponsesCount} nouvelles reponses` : 'Nouvelle reponse'}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+                          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], { marginBottom: 8 }]}>
+                            {report?.collectiveRating !== null && report?.collectiveRating !== undefined ? (
+                              <View style={{
+                                backgroundColor: `${Colors.primary500}10`,
+                                borderColor: `${Colors.primary500}30`,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                              }}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`Capitaine ${report.collectiveRating}/10`}</Text>
+                              </View>
+                            ) : null}
+                            {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
+                              <View style={{
+                                backgroundColor: `${Colors.primary500}10`,
+                                borderColor: `${Colors.primary500}30`,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                              }}
+                              >
+                                <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
+                            {`${Number(report?.responseCompletionCount || 0)}/${Number(report?.responseEligibleCount || 0)} joueurs ont repondu`}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {leaguePerformancePlayers.length ? (
+                    <View style={[Spaces.gap[10]]}>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Joueurs</Text>
+                      {leaguePerformancePlayers.map((player, index) => (
+                        <View
+                          key={player?.documentId || player?.manualPlayerName || `league-player-${index}`}
+                          style={{
+                            backgroundColor: uiTone.panelBg,
+                            borderColor: uiTone.panelBorder,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            padding: 14,
+                          }}
+                        >
+                          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1, paddingRight: 12 }]}>
+                              {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || 'Joueur'}
+                            </Text>
+                            <View style={{
+                              backgroundColor: `${Colors.primary500}14`,
+                              borderColor: `${Colors.primary500}36`,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                            }}
+                            >
+                              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>{`${Number(player?.matches || 0)} matchs`}</Text>
+                            </View>
+                          </View>
+                          <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+                            {`${Number(player?.goals || 0)} buts - ${Number(player?.assists || 0)} passes - ${Number(player?.minutesPlayed || 0)} min`}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {!leaguePerformancePlayers.length && !leagueRecentReports.length && !leaguePendingMatches.length && !isLeaguePerformanceFetching ? (
+                    <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+                      Aucune performance de match disponible pour le moment.
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {/* Availability Slots */}
+          <View
+            onLayout={(event) => handleRegisterSection('slots', event.nativeEvent.layout.y)}
+            style={{ marginBottom: 20 }}
+          >
+            <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
+              {isCaptain
+                ? 'Ajoutez et animez vos creneaux pour rendre la squad visible et active.'
+                : 'Consultez les prochains creneaux et confirmez votre presence en un geste.'}
+            </Text>
+            <View style={{
+              backgroundColor: uiTone.insightCardBg,
+              borderColor: uiTone.insightCardBorder,
+              borderRadius: 16,
+              borderWidth: 1,
+              marginBottom: 14,
+              padding: 14,
+            }}
+            >
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>Prochain creneau</Text>
+                <View style={{
+                  backgroundColor: `${Colors.primary500}14`,
+                  borderColor: `${Colors.primary500}36`,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>{nextSlotStatus.badge}</Text>
+                </View>
+              </View>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
+                {nextSlot ? nextSlotLongLabel : 'Aucun creneau programme'}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
+                {nextSlotStatus.helper}
+              </Text>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                <View style={{
+                  backgroundColor: `${Colors.primary500}10`,
+                  borderColor: `${Colors.primary500}30`,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  minWidth: '30%',
+                  padding: 10,
+                }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Confirmes</Text>
+                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                    {nextSlotParticipantsCount}
+                    /5
+                  </Text>
+                </View>
+                <View style={{
+                  backgroundColor: `${Colors.primary500}10`,
+                  borderColor: `${Colors.primary500}30`,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  minWidth: '30%',
+                  padding: 10,
+                }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Manquants</Text>
+                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{nextSlot ? nextSlotRemainingCount : '-'}</Text>
+                </View>
+                <View style={{
+                  backgroundColor: `${Colors.primary500}10`,
+                  borderColor: `${Colors.primary500}30`,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  minWidth: '30%',
+                  padding: 10,
+                }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Action</Text>
+                  <Text numberOfLines={2} style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{nextSlotActionLabel}</Text>
+                </View>
+              </View>
+            </View>
+            <TeamSlotList
+              currentUserId={currentUser?.documentId}
+              isCaptain={isCaptain}
+              isMember={Boolean(isMember)}
+              layout="list"
+              onAddSlot={() => setIsSlotModalVisible(true)}
+              onCheckIn={handleCheckIn}
+              onSlotPress={handleSlotPress}
+              showMemberHelperText
+              slots={team?.slots || []}
+              surfaceTone="league"
+            />
+          </View>
+
+          {/* Roster Preview */}
+          <View
+            onLayout={(event) => handleRegisterSection('effectif', event.nativeEvent.layout.y)}
+            style={{ marginBottom: 24 }}
+          >
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[12]]}>
+              <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
+                {t('squadDetails.roster.title', 'Effectif')}
+                {' ('}
+                {rosterCount}
+                )
+              </Text>
+            </View>
+            <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 14 }]}>
+              {isCaptain
+                ? 'Retrouvez le capitaine, les membres actifs et gerez plus facilement la vie de la squad.'
+                : 'Voyez qui compose deja la squad et identifiez rapidement le capitaine.'}
+            </Text>
+            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
+              {rosterSignals.map((item) => (
+                <View
+                  key={item.key}
+                  style={{
+                    backgroundColor: uiTone.insightCardBg,
+                    borderColor: uiTone.insightCardBorder,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    minWidth: '30%',
+                    padding: 10,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 6 }]}>{item.label}</Text>
+                  <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{item.value}</Text>
+                </View>
+              ))}
+            </View>
+            {isCaptain ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
+                {pendingRequestsCount > 0
+                  ? 'Le groupe est actif: pensez a traiter les demandes et inviter les bons profils.'
+                  : 'Le groupe est stable. Vous pouvez encore inviter des joueurs pour enrichir la squad.'}
+              </Text>
+            ) : null}
+
+            {/* Captain */}
+            {team?.captain && (
+            <View
+              key={team.captain.documentId}
               style={[
                 Alignments.row, Alignments.alignCenter, Spaces.gap[12],
-                ApplicationStyle.backgroundColor.neutral800,
                 Spaces.padding[12],
-                ApplicationStyle.borderRadius12,
-                Spaces.marginBottom[8],
-                { borderColor: uiTone.rosterPlayerBorder, borderWidth: 1 },
+                Spaces.marginBottom[12],
+                {
+                  backgroundColor: uiTone.rosterCaptainBg,
+                  borderColor: uiTone.rosterCaptainBorder,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                },
               ]}
             >
-              <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
+              <ProfileAvatar imageUrl={team.captain.avatar?.url} size={40} />
               <View>
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                  {player.firstname}
+                  {team.captain.firstname}
                   {' '}
-                  {player.lastname}
+                  {team.captain.lastname}
                 </Text>
                 <View style={{
                   alignSelf: 'flex-start',
-                  backgroundColor: uiTone.playerBadgeBg,
-                  borderColor: uiTone.playerBadgeBorder,
+                  backgroundColor: uiTone.captainBadgeBg,
+                  borderColor: uiTone.captainBadgeBorder,
                   borderRadius: 999,
                   borderWidth: 1,
                   marginTop: 4,
@@ -786,16 +2309,197 @@ function SquadDetailsScreen({ navigation, route }) {
                   paddingVertical: 3,
                 }}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
-                    {t('squadDetails.roster.player', 'Joueur')}
+                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                    {t('squadDetails.roster.captain', 'Capitaine')}
                   </Text>
                 </View>
               </View>
             </View>
-          ))}
-        </View>
+            )}
+
+            {/* Roster Players */}
+            {team?.roster?.filter((/** @type {User} */ p) => p.documentId !== team?.captain?.documentId).map((/** @type {User} */ player) => (
+              <View
+                key={player.documentId}
+                style={[
+                  Alignments.row, Alignments.alignCenter, Spaces.gap[12],
+                  Spaces.padding[12],
+                  Spaces.marginBottom[12],
+                  {
+                    backgroundColor: uiTone.rosterPlayerBg,
+                    borderColor: uiTone.rosterPlayerBorder,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <ProfileAvatar imageUrl={player.avatar?.url} size={40} />
+                <View>
+                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                    {player.firstname}
+                    {' '}
+                    {player.lastname}
+                  </Text>
+                  <View style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: uiTone.playerBadgeBg,
+                    borderColor: uiTone.playerBadgeBorder,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    marginTop: 4,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3,
+                  }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary100 }]}>
+                      {t('squadDetails.roster.player', 'Joueur')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
 
       </ScrollView>
+      {shouldShowFixedJoinButton ? (
+        <Button
+          disabled={hasPendingRequest}
+          isLoading={!hasPendingRequest && isUpdating}
+          onPress={handleRequestJoin}
+          style={[
+            Spaces.marginTop[12],
+            Spaces.marginBottom[24],
+            hasPendingRequest ? { opacity: 0.7 } : null,
+          ]}
+          title={fixedJoinButtonTitle}
+          variant="Primary"
+        />
+      ) : null}
+      <BottomModal
+        close={() => setIsInviteModalVisible(false)}
+        headerComponent={(
+          <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
+            {t('squadDetails.invitation.modalTitle', 'Inviter un joueur')}
+          </Text>
+        )}
+        isVisible={isInviteModalVisible}
+        snapPoints={inviteSnapPoints}
+      >
+        <View style={{ paddingBottom: 8 }}>
+          <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
+            {t('squadDetails.invitation.modalDescription', 'Recherchez un joueur de votre perimetre FoundClub puis envoyez-lui une invitation a rejoindre la squad.')}
+          </Text>
+
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: Colors.primary900,
+              borderColor: `${Colors.primary500}33`,
+              borderRadius: 18,
+              borderWidth: 1,
+              flexDirection: 'row',
+              marginBottom: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}
+          >
+            <TextInput
+              onChangeText={setInviteSearchValue}
+              placeholder={t('squadDetails.invitation.searchPlaceholder', 'Rechercher un joueur...')}
+              placeholderTextColor={Colors.neutral300}
+              style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
+              value={inviteSearchValue}
+            />
+          </View>
+
+          {Array.isArray(team?.invitations) && team.invitations.length > 0 ? (
+            <View
+              style={{
+                backgroundColor: `${Colors.gold500}14`,
+                borderColor: `${Colors.gold500}33`,
+                borderRadius: 16,
+                borderWidth: 1,
+                marginBottom: 16,
+                padding: 14,
+              }}
+            >
+              <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                {t('squadDetails.invitation.pendingCount', '{{count}} invitation(s) en cours', { count: team.invitations.length })}
+              </Text>
+            </View>
+          ) : null}
+
+          {isInviteSearchLoading ? (
+            <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
+              {t('common.loading', 'Chargement...')}
+            </Text>
+          ) : null}
+
+          {!isInviteSearchLoading && inviteCandidates.length === 0 ? (
+            <View
+              style={{
+                backgroundColor: Colors.primary900,
+                borderColor: `${Colors.primary500}24`,
+                borderRadius: 18,
+                borderWidth: 1,
+                padding: 18,
+              }}
+            >
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6, textAlign: 'center' }]}>
+                {t('squadDetails.invitation.emptyTitle', 'Aucun joueur a inviter')}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
+                {t('squadDetails.invitation.emptyBody', 'Tous les profils visibles sont deja membres, deja invites ou ont deja une demande en attente.')}
+              </Text>
+            </View>
+          ) : null}
+
+          {inviteCandidates.map((user) => {
+            const userId = getEntityDocumentId(user);
+            const userName = [
+              user?.firstname,
+              user?.lastname,
+            ].filter((part) => typeof part === 'string' && part.trim().length > 0).join(' ').trim()
+              || user?.username
+              || 'Joueur';
+
+            return (
+              <View
+                key={userId}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary900,
+                  borderColor: `${Colors.primary500}24`,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  flexDirection: 'row',
+                  marginBottom: 12,
+                  padding: 14,
+                }}
+              >
+                <ProfileAvatar imageUrl={user?.avatar?.url} size={44} />
+                <View style={{ flex: 1, marginLeft: 12, paddingRight: 12 }}>
+                  <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    {userName}
+                  </Text>
+                  <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
+                    {user?.role?.name || t('common.member', 'Membre')}
+                  </Text>
+                </View>
+                <Button
+                  isLoading={inviteActionUserId === userId}
+                  onPress={() => handleInvitePlayer(user)}
+                  size="sm"
+                  title={t('squadDetails.invitation.inviteAction', 'Inviter')}
+                  variant="Secondary"
+                />
+              </View>
+            );
+          })}
+        </View>
+      </BottomModal>
+
       <BottomModal
         close={() => setIsSlotModalVisible(false)}
         headerComponent={(

@@ -159,6 +159,8 @@ function EventDetails({ navigation, route }) {
   const highlightedSection = route?.params?.focusSection || null;
 
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
+  const [pendingDetectionSlot, setPendingDetectionSlot] = useState(null);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
@@ -595,6 +597,15 @@ function EventDetails({ navigation, route }) {
       };
     })
   ), [activeEventParticipations, detectionRecruitmentAds]);
+  const detectionSlotsSummary = useMemo(() => {
+    const totalOpen = detectionSlots.reduce((sum, slot) => sum + (slot?.isComplete ? 0 : 1), 0);
+    const totalRequested = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
+
+    return {
+      totalOpen,
+      totalRequested,
+    };
+  }, [detectionSlots]);
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
@@ -871,6 +882,9 @@ function EventDetails({ navigation, route }) {
         || 'Impossible de candidater sur ce poste pour le moment.';
       Alert.alert('Detection', message);
     },
+    onSettled: () => {
+      setPendingDetectionSlot(null);
+    },
     onSuccess: (result, slotDocumentId) => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
@@ -911,8 +925,9 @@ function EventDetails({ navigation, route }) {
   const handleApplyToDetectionSlot = useCallback((slot) => {
     const slotDocumentId = slot?.documentId;
     if (!slotDocumentId || applyToDetectionSlotMutation.isPending) return;
-    applyToDetectionSlotMutation.mutate(slotDocumentId);
-  }, [applyToDetectionSlotMutation]);
+    setPendingDetectionSlot(slot);
+    setIsJoinModalVisible(true);
+  }, [applyToDetectionSlotMutation.isPending]);
 
   const handleOpenDetectionSlot = useCallback((slot) => {
     if (!slot?.documentId) return;
@@ -922,16 +937,39 @@ function EventDetails({ navigation, route }) {
     });
   }, [navigation]);
 
-  const handleJoinEvent = () => setIsJoinModalVisible(true);
+  const handleJoinEvent = useCallback(() => {
+    if (detectionSlots.length > 0) {
+      setIsJoinModalVisible(false);
+      setIsDetectionSlotPickerVisible(true);
+      return;
+    }
+
+    setIsJoinModalVisible(true);
+  }, [detectionSlots.length]);
 
   const handleParticipateToEvent = (/** @type {any} */ eventToJoin) => {
     if (!eventToJoin?.documentId || !userData?.documentId) return;
+
+    if (detectionSlots.length > 0) {
+      setIsJoinModalVisible(false);
+      setIsDetectionSlotPickerVisible(true);
+      return;
+    }
+
     mutations.createEventParticipationMutation.mutate({
       event: eventToJoin.documentId,
       user: userData.documentId,
     });
     setIsJoinModalVisible(false);
   };
+
+  const handleApplyToDetectionSlotFromPicker = useCallback((slot) => {
+    const slotDocumentId = String(slot?.documentId || '').trim();
+    if (!slotDocumentId || applyToDetectionSlotMutation.isPending) return;
+    setIsDetectionSlotPickerVisible(false);
+    setPendingDetectionSlot(slot);
+    setIsJoinModalVisible(true);
+  }, [applyToDetectionSlotMutation.isPending]);
 
   const handleDeclineEvent = (/** @type {any} */ eventToDecline) => {
     if (!eventToDecline?.documentId) return;
@@ -2324,7 +2362,7 @@ function EventDetails({ navigation, route }) {
               currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
               currentUserSlotId={currentUserDetectionParticipation?.recruitmentAd?.documentId || ''}
               currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
-              isApplyingSlotId={applyToDetectionSlotMutation.variables || ''}
+              isApplyingSlotId={applyToDetectionSlotMutation.isPending ? (applyToDetectionSlotMutation.variables || '') : ''}
               onApply={handleApplyToDetectionSlot}
               onOpenSlot={handleOpenDetectionSlot}
               slots={detectionSlots}
@@ -2765,11 +2803,108 @@ function EventDetails({ navigation, route }) {
 
       <JoinEventModal
         clubName={event?.team?.club?.name || ''}
+        contextNote={pendingDetectionSlot?.position
+          ? `Poste choisi : ${pendingDetectionSlot.position}.`
+          : undefined}
         createEventParticipationMutation={mutations.createEventParticipationMutation}
         eventId={eventId || ''}
+        isSubmitting={applyToDetectionSlotMutation.isPending && Boolean(pendingDetectionSlot?.documentId)}
         isVisible={isJoinModalVisible}
-        onClose={() => setIsJoinModalVisible(false)}
+        onClose={() => {
+          setIsJoinModalVisible(false);
+          setPendingDetectionSlot(null);
+        }}
+        onConfirm={pendingDetectionSlot?.documentId
+          ? () => applyToDetectionSlotMutation.mutate(pendingDetectionSlot.documentId)
+          : undefined}
       />
+
+      <BottomModal
+        close={() => setIsDetectionSlotPickerVisible(false)}
+        headerComponent={(
+          <View style={[Spaces.gap[12]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { textAlign: 'center' }]}>
+              Choisir un poste
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center' }]}>
+              Selectionne le poste sur lequel tu veux candidater.
+            </Text>
+            <Text style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}>
+              {`${detectionSlots.length} poste(s) - ${detectionSlotsSummary.totalRequested} place(s) - ${detectionSlotsSummary.totalOpen} ouvert(s)`}
+            </Text>
+          </View>
+        )}
+        isVisible={isDetectionSlotPickerVisible}
+        snapPoints={['68%']}
+        style={{
+          borderColor: `${Colors.primary500}24`,
+          borderWidth: 1,
+        }}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
+          {detectionSlots.map((slot) => {
+            const slotId = String(slot?.documentId || '').trim();
+            const isCurrentUserSlot = currentUserDetectionParticipation?.recruitmentAd?.documentId === slotId;
+            const isComplete = Boolean(slot?.isComplete) && !isCurrentUserSlot;
+            const isDisabled = isComplete || applyToDetectionSlotMutation.isPending || isCurrentUserSlot;
+            let buttonTitle = 'Choisir ce poste';
+            if (isCurrentUserSlot) {
+              buttonTitle = 'Candidature envoyee';
+            } else if (isComplete) {
+              buttonTitle = 'Poste complet';
+            }
+            const remainingLabel = isComplete
+              ? 'Complet'
+              : `${slot?.remaining || 0} ${Number(slot?.remaining || 0) > 1 ? 'places restantes' : 'place restante'}`;
+
+            return (
+              <View
+                key={slotId || `${slot?.position}-${slot?.quantity}`}
+                style={[
+                  ApplicationStyle.borderRadius24,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.padding[16],
+                  Spaces.gap[16],
+                  {
+                    backgroundColor: isComplete ? 'rgba(255, 215, 0, 0.06)' : 'rgba(1, 179, 244, 0.10)',
+                    borderColor: isComplete ? `${Colors.gold500}34` : `${Colors.primary500}28`,
+                  },
+                ]}
+              >
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {slot?.position || 'Poste'}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 4 }]}>
+                      {`${slot?.acceptedCount || 0}/${slot?.quantity || 1} valide - ${slot?.pendingCount || 0} en attente`}
+                    </Text>
+                  </View>
+                  <Tag
+                    style={{
+                      backgroundColor: isComplete ? `${Colors.gold500}18` : `${Colors.primary500}18`,
+                      borderColor: isComplete ? `${Colors.gold500}30` : `${Colors.primary500}30`,
+                    }}
+                    text={remainingLabel}
+                    textColor={isComplete ? 'gold500' : 'primary500'}
+                    textStyle={{ fontWeight: '700' }}
+                  />
+                </View>
+
+                <View style={Spaces.marginTop[4]}>
+                  <Button
+                    disabled={isDisabled}
+                    isLoading={applyToDetectionSlotMutation.isPending && applyToDetectionSlotMutation.variables === slotId}
+                    onPress={() => handleApplyToDetectionSlotFromPicker(slot)}
+                    title={buttonTitle}
+                    variant={isDisabled ? 'SecondaryLight' : 'Primary'}
+                  />
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </BottomModal>
 
       <RefuseParticipationModal
         isVisible={isRefuseModalVisible}

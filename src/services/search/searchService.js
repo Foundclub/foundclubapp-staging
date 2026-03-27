@@ -65,6 +65,30 @@ const sanitizeBaseParams = (params = {}) => {
   return requestParams;
 };
 
+const sanitizeOptionalBaseParams = (params = {}) => {
+  const q = toStringOrUndefined(params.q);
+  const page = Number(params.page) || 1;
+  const pageSize = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(params.pageSize) || DEFAULT_PAGE_SIZE));
+  const sort = ['date', 'distance', 'relevance'].includes(params.sort) ? params.sort : 'relevance';
+
+  /** @type {Record<string, any>} */
+  const requestParams = {
+    page,
+    pageSize,
+    sort,
+  };
+
+  if (q && q.length >= MIN_QUERY_LENGTH) {
+    requestParams.q = q;
+  }
+
+  if (params.lat !== undefined) requestParams.lat = params.lat;
+  if (params.lon !== undefined) requestParams.lon = params.lon;
+  if (params.radius !== undefined) requestParams.radius = params.radius;
+  if (params.debug) requestParams.debug = true;
+  return requestParams;
+};
+
 const cleanParams = (params) => Object.entries(params).reduce((acc, [key, value]) => {
   if (value === undefined || value === null || value === '') return acc;
   if (Array.isArray(value) && value.length === 0) return acc;
@@ -220,8 +244,7 @@ export const searchReservations = async (params = {}, options = {}) => {
  * @returns {Promise<import('@/domains/search/types').SearchResponse>}
  */
 export const searchRecruitment = async (params = {}, options = {}) => {
-  const baseParams = sanitizeBaseParams(params);
-  if (!baseParams) return emptyResponse(params.q, params.page, params.pageSize);
+  const baseParams = sanitizeOptionalBaseParams(params);
 
   return requestSearch('/search/recruitment', {
     ...baseParams,
@@ -233,6 +256,37 @@ export const searchRecruitment = async (params = {}, options = {}) => {
     section: extractDocumentId(params.section) || toStringOrUndefined(params.section),
     sport: toStringOrUndefined(params.sport),
     teamIds: normalizeArrayIds(params.teamIds),
+  }, options);
+};
+
+/**
+ * @param {({
+ *  q?: string;
+ *  page?: number;
+ *  pageSize?: number;
+ *  sort?: 'relevance' | 'date' | 'distance';
+ *  lat?: number;
+ *  lon?: number;
+ *  radius?: number;
+ *  activity?: string | string[];
+ *  activityNames?: string | string[];
+ *  category?: string | string[];
+ *  sectionIds?: string | string[];
+ *  position?: string | string[];
+ *  geohash?: string;
+ * })} params
+ * @param options
+ * @returns {Promise<import('@/domains/search/types').SearchResponse>}
+ */
+export const searchProfiles = async (params = {}, options = {}) => {
+  const baseParams = sanitizeOptionalBaseParams(params);
+
+  return requestSearch('/search/profiles', {
+    ...baseParams,
+    activity: normalizeActivity(params.activityNames || params.activity),
+    category: normalizeCategoryOrLevel(params.sectionIds || params.category),
+    geohash: toStringOrUndefined(params.geohash),
+    position: normalizeCategoryOrLevel(params.position),
   }, options);
 };
 

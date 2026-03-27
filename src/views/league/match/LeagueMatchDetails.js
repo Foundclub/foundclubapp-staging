@@ -391,7 +391,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (canManageLeagueStats) {
       return {
         disabled: false,
-        subtitle: 'Note collective, retours coach et stats manquantes a completer pour ton equipe.',
+        subtitle: 'Note collective, retours capitaine et stats manquantes a completer pour ton equipe.',
         title: 'Finaliser le bilan equipe',
       };
     }
@@ -687,6 +687,14 @@ function LeagueMatchDetails({ navigation, route }) {
     myTeamId,
     navigation,
   ]);
+  const handleOpenSquadStatistics = useCallback(() => {
+    if (!myTeamId) return;
+
+    navigation.navigate(RouteNames.SquadDetails, {
+      focusSection: 'statistics',
+      teamId: myTeamId,
+    });
+  }, [myTeamId, navigation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1087,7 +1095,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
           {teamSide && normalizedStatus === 'valid' && canRespondMyLeagueStats ? (
             <>
-              {renderSectionHeader('Mon retour coach', Colors.gold500)}
+              {renderSectionHeader('Mon retour capitaine', Colors.gold500)}
               <LeagueCard style={isCoachFeedbackHighlighted ? { borderColor: Colors.gold500, borderWidth: 2 } : null}>
                 <View style={{ gap: 12 }}>
                   <View
@@ -1103,7 +1111,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       <View style={styles.responseTitleRow}>
                         <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 6 }]}>RETOUR INDIVIDUEL</Text>
                         <View style={styles.coachTag}>
-                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>COACH</Text>
+                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>CAPITAINE</Text>
                         </View>
                       </View>
                       <Text style={[Fonts.h1, styles.responseLargeScore, { color: Colors.neutral00 }]}>
@@ -1132,8 +1140,8 @@ function LeagueMatchDetails({ navigation, route }) {
 
                   <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                     {hasLeagueCoachReview
-                      ? 'Le coach a publie un retour individuel pour ton match.'
-                      : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
+                      ? 'Le capitaine a publie un retour individuel pour ton match.'
+                      : "Le capitaine n'a pas encore laisse d'avis individuel pour ce match."}
                   </Text>
 
                   {leagueMyCoachReview?.comment ? (
@@ -1201,7 +1209,7 @@ function LeagueMatchDetails({ navigation, route }) {
                             padding: 12,
                           }}
                         >
-                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Note coach</Text>
+                          <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Note capitaine</Text>
                           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                             {`${leagueStatsReport.collectiveRating}/10`}
                           </Text>
@@ -1316,6 +1324,14 @@ function LeagueMatchDetails({ navigation, route }) {
                     title={leagueStatsCardButtonTitle}
                     variant="Secondary"
                   />
+                  {myTeamId && normalizedStatus === 'valid' ? (
+                    <Button
+                      onPress={handleOpenSquadStatistics}
+                      size="small"
+                      title="Voir les stats de la squad"
+                      variant="SecondaryLight"
+                    />
+                  ) : null}
                 </View>
               </LeagueCard>
             </>

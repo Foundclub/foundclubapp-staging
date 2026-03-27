@@ -1,6 +1,78 @@
 import client from '../client';
 
 /**
+ * Search users inside a club / multisport scope.
+ * @param {object} params
+ * @param {string} [params.clubId]
+ * @param {boolean} [params.isSuperAdmin]
+ * @param {number} [params.limit]
+ * @param {string} [params.multisportId]
+ * @param {string} [params.query]
+ * @returns {Promise<any[]>}
+ */
+export const searchScopedUsers = async ({
+  clubId,
+  isSuperAdmin = false,
+  limit = 100,
+  multisportId,
+  query = '',
+} = {}) => {
+  const normalizedQuery = String(query || '').trim();
+
+  if (!isSuperAdmin && !clubId && !multisportId) {
+    return [];
+  }
+
+  const nameFilters = normalizedQuery
+    ? [
+      { firstname: { $containsi: normalizedQuery } },
+      { lastname: { $containsi: normalizedQuery } },
+      { username: { $containsi: normalizedQuery } },
+    ]
+    : [];
+
+  /** @type {Record<string, unknown>} */
+  let filters = {};
+
+  if (isSuperAdmin) {
+    filters = nameFilters.length > 0 ? { $or: nameFilters } : {};
+  } else if (multisportId) {
+    const scopeFilter = {
+      $or: [
+        { club: { parentMultisport: { documentId: { $eq: multisportId } } } },
+        { myTeams: { club: { parentMultisport: { documentId: { $eq: multisportId } } } } },
+        { trainedTeams: { club: { parentMultisport: { documentId: { $eq: multisportId } } } } },
+      ],
+    };
+    filters = nameFilters.length > 0
+      ? { $and: [{ $or: nameFilters }, scopeFilter] }
+      : scopeFilter;
+  } else if (clubId) {
+    const scopeFilter = {
+      $or: [
+        { club: { documentId: { $eq: clubId } } },
+        { myTeams: { club: { documentId: { $eq: clubId } } } },
+        { trainedTeams: { club: { documentId: { $eq: clubId } } } },
+      ],
+    };
+    filters = nameFilters.length > 0
+      ? { $and: [{ $or: nameFilters }, scopeFilter] }
+      : scopeFilter;
+  }
+
+  const response = await client.get('/users', {
+    params: {
+      filters,
+      limit,
+      populate: ['avatar', 'club', 'role', 'myTeams', 'trainedTeams'],
+      start: 0,
+    },
+  });
+
+  return Array.isArray(response?.data) ? response.data : [];
+};
+
+/**
  * Search users (for mercato)
  * @param {object} params
  * @param {boolean} [params.isLookingForClub]
@@ -62,9 +134,12 @@ export const searchUsers = async (params = {}) => {
   }
 
   // Sport/Activity filter (preferredSport field)
-  const canonicalActivityNames = Array.isArray(activityNames)
-    ? activityNames
-    : (activityNames ? [activityNames] : []);
+  let canonicalActivityNames = [];
+  if (Array.isArray(activityNames)) {
+    canonicalActivityNames = activityNames;
+  } else if (activityNames) {
+    canonicalActivityNames = [activityNames];
+  }
 
   if (canonicalActivityNames.length > 0) {
     filters.filters.$and = [

@@ -520,11 +520,25 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.LeagueMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab };
+    case NOTIFICATION_TYPES.LEAGUE_SQUAD_INVITATION:
+      return payload.teamId
+        ? {
+          params: { teamId: String(payload.teamId) },
+          route: RouteNames.SquadDetails,
+        }
+        : { params: {}, route: RouteNames.SquadSearch };
     case NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST:
       return payload.teamId
         ? {
           params: { teamId: String(payload.teamId) },
           route: RouteNames.SquadRequests,
+        }
+        : { params: {}, route: RouteNames.SquadSearch };
+    case NOTIFICATION_TYPES.LEAGUE_SQUAD_JOIN_REQUEST_STATUS:
+      return payload.teamId
+        ? {
+          params: { teamId: String(payload.teamId) },
+          route: RouteNames.SquadDetails,
         }
         : { params: {}, route: RouteNames.SquadSearch };
 
