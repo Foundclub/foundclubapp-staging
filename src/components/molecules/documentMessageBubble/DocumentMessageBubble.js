@@ -83,7 +83,13 @@ function DocumentMessageBubble({
   };
 
   return (
-    <View style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '90%', minWidth: 270 }}>
+    <View
+      style={{
+        alignSelf: isMe ? 'flex-end' : 'flex-start',
+        maxWidth: '88%',
+        minWidth: 220,
+      }}
+    >
       <TouchableOpacity
         activeOpacity={pending ? 1 : 0.92}
         disabled={pending}
@@ -116,33 +122,24 @@ function DocumentMessageBubble({
               </Text>
             </View>
 
-            <View style={{ flex: 1, gap: 5 }}>
-              <View style={{
-                alignItems: 'flex-start', flexDirection: 'row', gap: 8, justifyContent: 'space-between',
-              }}
+            <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
+              <Text
+                numberOfLines={2}
+                style={[
+                  Fonts.p2Bold,
+                  {
+                    color: Colors.neutral00,
+                    flexShrink: 1,
+                  },
+                ]}
               >
-                <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>
-                  {displayName}
-                </Text>
-                <View
-                  style={{
-                    alignItems: 'center',
-                    alignSelf: 'flex-start',
-                    backgroundColor: `${accentColor}21`,
-                    borderColor: accentColor,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text style={[Fonts.p4Bold, { color: accentColor }]}>
-                    {badgeLabel}
-                  </Text>
-                </View>
-              </View>
+                {displayName}
+              </Text>
 
-              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p4, { color: Colors.neutral300 }]}
+              >
                 {metaParts.join(' • ') || 'Fichier'}
               </Text>
 
@@ -176,48 +173,93 @@ function DocumentMessageBubble({
 
         <View
           style={{
-            alignItems: 'center',
             borderTopColor: 'rgba(255,255,255,0.08)',
             borderTopWidth: 1,
-            flexDirection: 'row',
+            paddingHorizontal: 10,
+            paddingVertical: 10,
           }}
         >
-          <TouchableOpacity
-            activeOpacity={0.88}
-            disabled={pending}
-            onPress={handlePrimaryPress}
-            style={{
-              alignItems: 'center',
-              flex: 1,
-              opacity: pending ? 0.6 : 1,
-              paddingVertical: 11,
-            }}
-          >
-            <Text style={[Fonts.p3Bold, { color: failed ? Colors.error500 : Colors.primary500 }]}>
-              {failed ? 'Réessayer' : 'Ouvrir'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              disabled={pending}
+              onPress={handlePrimaryPress}
+              style={{
+                alignItems: 'center',
+                backgroundColor: failed ? 'rgba(244, 63, 94, 0.14)' : 'rgba(1,179,244,0.12)',
+                borderColor: failed ? Colors.error500 : Colors.primary500,
+                borderRadius: 10,
+                borderWidth: 1,
+                flex: 1,
+                minWidth: 0,
+                opacity: pending ? 0.6 : 1,
+                paddingHorizontal: 8,
+                paddingVertical: 11,
+              }}
+            >
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                numberOfLines={1}
+                style={[Fonts.p4Bold, { color: failed ? Colors.error500 : Colors.primary500 }]}
+              >
+                {failed ? 'Réessayer' : 'Ouvrir'}
+              </Text>
+            </TouchableOpacity>
 
-          {!failed && !pending ? (
-            <>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', height: 18, width: 1 }} />
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={() => onDownload?.(documentAttachment)}
-                style={{ alignItems: 'center', flex: 1, paddingVertical: 11 }}
-              >
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>Télécharger</Text>
-              </TouchableOpacity>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', height: 18, width: 1 }} />
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={() => onShare?.(documentAttachment)}
-                style={{ alignItems: 'center', flex: 1, paddingVertical: 11 }}
-              >
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>Partager</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
+            {!failed && !pending ? (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => onDownload?.(documentAttachment)}
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    flex: 1,
+                    minWidth: 0,
+                    paddingHorizontal: 8,
+                    paddingVertical: 11,
+                  }}
+                >
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                    numberOfLines={1}
+                    style={[Fonts.p4Bold, { color: Colors.neutral100 }]}
+                  >
+                    Télécharger
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => onShare?.(documentAttachment)}
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    flex: 1,
+                    minWidth: 0,
+                    paddingHorizontal: 8,
+                    paddingVertical: 11,
+                  }}
+                >
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                    numberOfLines={1}
+                    style={[Fonts.p4Bold, { color: Colors.neutral100 }]}
+                  >
+                    Partager
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
         </View>
       </TouchableOpacity>
 

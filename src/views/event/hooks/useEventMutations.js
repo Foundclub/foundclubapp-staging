@@ -324,11 +324,16 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['requestsHub'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
       invalidatePersonalPlanning();
       refetch();
       Alert.alert(
-        t('eventDetails.featuredRequest.success.title', 'Demande envoyée'),
-        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise à la une a été envoyée au dirigeant du club.'),
+        t('eventDetails.featuredRequest.success.title', 'Demande envoyee'),
+        t('eventDetails.featuredRequest.success.message', 'Votre demande de mise a la une a ete envoyee pour validation.'),
       );
     },
   });

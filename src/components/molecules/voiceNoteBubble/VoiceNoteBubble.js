@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -8,8 +8,10 @@ import {
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
 
+import client from '@/services/client';
+
 import { createLogger } from '@/utils/logger/logger';
-import { resolveMediaUrl } from '@/utils/mediaUrl';
+import { resolveMediaUrl, shouldAttachAuthToMediaUrl } from '@/utils/mediaUrl';
 
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 
@@ -51,6 +53,13 @@ const resolveAudioAttachmentUrl = (attachments = []) => {
   if (!rawUrl) return '';
   return resolveMediaUrl(rawUrl);
 };
+
+const getPrimaryAudioAttachment = (attachments = []) => attachments.find((attachment) => {
+  const mime = String(attachment?.mime || '').toLowerCase();
+  if (mime.startsWith('audio/')) return true;
+  const name = String(attachment?.url || attachment?.name || attachment?.uri || '').toLowerCase();
+  return /\.(mp4|m4a|aac|mp3|wav|ogg|oga|webm)$/.test(name);
+}) || null;
 
 const buildFallbackWaveform = (durationMs, size = 28) => (
   Array.from({ length: size }, (_, index) => {
@@ -114,10 +123,65 @@ function VoiceNoteBubble({
     Spaces,
   } = useTheme();
 
-  const audioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
+  const audioAttachment = useMemo(() => getPrimaryAudioAttachment(attachments), [attachments]);
+  const initialAudioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
+  const [audioUrl, setAudioUrl] = useState(initialAudioUrl);
   const messageText = String(message || '').trim();
+
+  useEffect(() => {
+    setAudioUrl(initialAudioUrl);
+  }, [initialAudioUrl]);
+
+  useEffect(() => {
+    const attachmentId = Number(audioAttachment?.id);
+    if (!Number.isInteger(attachmentId) || attachmentId <= 0) return undefined;
+
+    let isCancelled = false;
+
+    const refreshAudioUrl = async () => {
+      try {
+        const response = await client.get(`/upload/files/${attachmentId}`);
+        const file = response?.data || {};
+        const candidates = [
+          file?.url,
+          file?.formats?.large?.url,
+          file?.formats?.medium?.url,
+          file?.formats?.small?.url,
+          file?.formats?.thumbnail?.url,
+          file?.previewUrl,
+          audioAttachment?.url,
+          audioAttachment?.previewUrl,
+          audioAttachment?.uri,
+        ];
+
+        for (let i = 0; i < candidates.length; i += 1) {
+          const resolvedUrl = resolveMediaUrl(candidates[i]);
+          if (resolvedUrl) {
+            if (!isCancelled) {
+              setAudioUrl(resolvedUrl);
+            }
+            return;
+          }
+        }
+      } catch (error) {
+        if (__DEV__) {
+          voiceBubbleLogger.warn(`[voice-diag] bubble-audio-url-refresh-failed${formatDiagnosticMeta({
+            attachmentId,
+            error: error?.message || error,
+          })}`);
+        }
+      }
+    };
+
+    refreshAudioUrl();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [audioAttachment?.id, audioAttachment?.previewUrl, audioAttachment?.uri, audioAttachment?.url]);
+
   const playbackHeaders = useMemo(() => {
-    if (!/^https?:\/\//i.test(String(audioUrl || ''))) return undefined;
+    if (!shouldAttachAuthToMediaUrl(audioUrl)) return undefined;
     const token = getAuthTokens()?.token;
     if (!token) return undefined;
     return { Authorization: `Bearer ${token}` };

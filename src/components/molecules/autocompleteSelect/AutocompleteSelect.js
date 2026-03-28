@@ -43,6 +43,7 @@ import Input from '../input/Input';
  * @property {boolean} [lightMode] - The flag to know if the select is in light mode.
  * @property {string} [modalTitle] - Optional modal title override.
  * @property {(string|number)[]} [modalSnapPoints] - Optional modal snap points override.
+ * @property {string} [displayValue] - Optional custom display value for the closed state.
  */
 
 /**
@@ -232,6 +233,10 @@ const AutocompleteSelect = forwardRef(
     };
 
     const getDisplayValue = () => {
+      if (typeof props.displayValue === 'string' && props.displayValue.trim().length > 0) {
+        return props.displayValue;
+      }
+
       if (!props.value) return '';
 
       if (props.isMulti && Array.isArray(props.value)) {
@@ -241,7 +246,20 @@ const AutocompleteSelect = forwardRef(
         return selectedLabels.join(', ');
       }
 
-      // const option = props.options.find((opt) => opt.value === props.value);
+      const valueTokens = toComparableTokens(props.value);
+      const matchedOption = (props.options || []).find((option) => {
+        const optionTokens = [...toComparableTokens(option?.value), ...toComparableTokens(option?.label)];
+        return optionTokens.some((token) => valueTokens.includes(token));
+      });
+
+      if (matchedOption?.label) {
+        return matchedOption.label;
+      }
+
+      if (typeof props.value === 'object' && props.value !== null && 'label' in props.value) {
+        return props.value.label;
+      }
+
       return props.value || undefined;
     };
 

@@ -219,23 +219,42 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
 };
 
 export const mapFeaturedRequestToHubItem = (event = {}) => {
-  const eventId = String(event?.documentId || event?.id || '');
-  const eventName = normalizeString(event?.name || event?.type?.name) || 'Evenement';
-  const clubName = normalizeString(event?.team?.club?.name) || 'Club';
+  const requestId = String(event?.documentId || event?.id || '');
+  const requestKind = normalizeString(event?.kind).toUpperCase();
+  const eventEntity = event?.event || {};
+  const eventId = String(eventEntity?.documentId || eventEntity?.id || '');
+  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || 'Evenement';
+  const clubName = normalizeString(eventEntity?.team?.club?.name) || 'Club';
+  const scopeLabel = requestKind === 'PUBLIC'
+    ? 'Public'
+    : requestKind === 'CM'
+      ? 'Multisport'
+      : 'Club';
+  const targetName = normalizeString(event?.targetClub?.name || event?.multisportClub?.name || clubName);
+  const requester = event?.requester || {};
+  const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
 
   return {
     actions: { primary: 'accept', secondary: 'reject' },
-    createdAt: toIsoString(event?.createdAt) || toIsoString(event?.date),
-    id: `featured:${eventId}`,
+    createdAt: toIsoString(event?.createdAt) || toIsoString(eventEntity?.date),
+    id: `featured:${requestId}`,
     meta: {
       clubName,
       eventId,
       eventName,
-      raw: event,
+      raw: eventEntity,
+      requestId,
+      requesterAvatarUrl,
+      requesterId: normalizeString(requester?.documentId),
+      requesterName,
+      scope: requestKind,
+      scopeLabel,
+      targetName,
     },
     status: 'pending',
-    subtitle: `${clubName} demande une mise a la une.`,
-    title: `Mise a la une - ${eventName}`,
+    subtitle: `${requesterName} demande une mise à la une ${scopeLabel.toLowerCase()}${targetName ? ` pour ${targetName}` : ''}.`,
+    title: `Mise a la une ${scopeLabel} - ${eventName}`,
     type: 'featured',
   };
 };

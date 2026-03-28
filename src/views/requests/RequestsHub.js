@@ -112,7 +112,7 @@ function RequestsHub({ navigation, route }) {
     const filters = ['all'];
     if (trainedTeamIds.length) filters.push('team');
     if (clubId) filters.push('club', 'event');
-    if (cmId) filters.push('featured');
+    if (clubId || cmId) filters.push('featured');
     return filters;
   }, [clubId, cmId, trainedTeamIds.length]);
 
@@ -194,6 +194,7 @@ function RequestsHub({ navigation, route }) {
 
     const requestId = item?.meta?.requestId;
     const eventId = item?.meta?.eventId;
+    const featuredRequestId = item?.meta?.requestId;
     const participationRequestId = item?.meta?.participationRequestId;
 
     if (action === 'reject' && item?.type === 'event' && actionPosition === 'secondary') {
@@ -271,9 +272,9 @@ function RequestsHub({ navigation, route }) {
       }
 
       if (item?.type === 'featured') {
-        if (!eventId) throw new Error('Missing event identifier');
-        if (action === 'accept') await approveFeatured(eventId);
-        if (action === 'reject') await rejectFeatured({ eventId });
+        if (!featuredRequestId) throw new Error('Missing featured request identifier');
+        if (action === 'accept') await approveFeatured(featuredRequestId);
+        if (action === 'reject') await rejectFeatured({ requestId: featuredRequestId });
       }
 
       await invalidateRequests();

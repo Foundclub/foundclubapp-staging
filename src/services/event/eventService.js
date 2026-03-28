@@ -767,46 +767,52 @@ export const getMyEvents = async (teamIds = []) => getEvents({
 });
 
 /**
- * Request to feature an event for the entire multisport club
- * @param {string} eventId - The ID of the event
- * @returns {Promise<any>} - The updated event
+ * Request one or several featured placements for an event.
+ * @param {{ eventId: string, scopes: string[] } | string} input
+ * @returns {Promise<any>}
  */
-export const requestFeatured = async (eventId) => {
-  const response = await client.post(`/events/${eventId}/request-featured`);
-  return response.data;
-};
-
-/**
- * Approve a featured event request (multisport admin only)
- * @param {string} eventId - The ID of the event
- * @returns {Promise<any>} - The updated event
- */
-export const approveFeatured = async (eventId) => {
-  const response = await client.put(`/events/${eventId}/approve-featured`);
-  return response.data;
-};
-
-/**
- * Reject a featured event request (multisport admin only)
- * @param {object} params
- * @param {string} params.eventId - The ID of the event
- * @param {string} [params.reason] - Optional reason for rejection
- * @returns {Promise<any>} - The updated event
- */
-export const rejectFeatured = async ({ eventId, reason }) => {
-  const response = await client.put(`/events/${eventId}/reject-featured`, {
-    data: { reason },
+export const requestFeatured = async (input) => {
+  const eventId = typeof input === 'string' ? input : input?.eventId;
+  const scopes = Array.isArray(input?.scopes) ? input.scopes : ['CM'];
+  const response = await client.post(`/events/${eventId}/featured-requests`, {
+    data: { scopes },
   });
   return response.data;
 };
 
 /**
- * Get pending featured requests for a multisport club
- * @param {string} multisportClubId - The ID of the multisport club
- * @returns {Promise<any>} - List of events with pending featured requests
+ * Approve a featured request.
+ * @param {string} requestId
+ * @returns {Promise<any>}
  */
-export const getPendingFeaturedRequests = async (multisportClubId) => {
-  const response = await client.get(`/multisport-clubs/${multisportClubId}/pending-featured-requests`);
+export const approveFeatured = async (requestId) => {
+  const response = await client.post(`/featured-requests/${requestId}/approve`);
+  return response.data;
+};
+
+/**
+ * Reject a featured request.
+ * @param {object} params
+ * @param {string} params.requestId
+ * @param {string} [params.reason]
+ * @returns {Promise<any>}
+ */
+export const rejectFeatured = async ({ reason, requestId }) => {
+  const response = await client.post(`/featured-requests/${requestId}/reject`, {
+    data: { reason: reason || '' },
+  });
+  return response.data;
+};
+
+/**
+ * Get featured requests pending for the current validator context.
+ * @param {{ clubId?: string, cmId?: string, scope?: string | string[], status?: string | string[] }} [params]
+ * @returns {Promise<any>}
+ */
+export const getPendingFeaturedRequests = async (params = {}) => {
+  const response = await client.get('/featured-requests/pending', {
+    params,
+  });
   return response.data;
 };
 

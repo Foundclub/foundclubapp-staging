@@ -18,6 +18,32 @@ const getDeviceDialCode = () => DIAL_CODES.find(({ value }) => value === '+33');
 
 const DIALCODE_WIDTH = 72;
 
+const repairCountryLabel = (label) => {
+  const normalizedLabel = String(label || '');
+
+  if (!/[Ãð]/.test(normalizedLabel)) {
+    return normalizedLabel;
+  }
+
+  try {
+    // Repair labels that were stored with UTF-8 bytes interpreted as latin1.
+    return decodeURIComponent(escape(normalizedLabel));
+  } catch (error) {
+    return normalizedLabel;
+  }
+};
+
+const getCompactDialCodeLabel = (dialCodeOption) => {
+  const repairedLabel = repairCountryLabel(dialCodeOption?.label);
+  const firstToken = repairedLabel.split(/\s+/).find(Boolean);
+
+  if (firstToken && !firstToken.startsWith('+')) {
+    return `${firstToken} ${dialCodeOption?.value || ''}`.trim();
+  }
+
+  return String(dialCodeOption?.value || '');
+};
+
 /**
  *
  * @param props
@@ -47,12 +73,22 @@ const PhoneInput = forwardRef(
     const [searchDialCode, setSearchDialCode] = useState('');
 
     // @ts-ignore
-    const dialOptions = useMemo(() => {
+      const dialOptions = useMemo(() => {
       if (searchDialCode) {
-        return DIAL_CODES.filter(({ label }) => label.toLowerCase()
-          .includes(searchDialCode.toLowerCase()));
+        return DIAL_CODES
+          .map((option) => ({
+            ...option,
+            label: repairCountryLabel(option.label),
+          }))
+          .filter(({ label, value: codeValue }) => (
+            label.toLowerCase().includes(searchDialCode.toLowerCase())
+            || String(codeValue || '').includes(searchDialCode.trim())
+          ));
       }
-      return DIAL_CODES;
+      return DIAL_CODES.map((option) => ({
+        ...option,
+        label: repairCountryLabel(option.label),
+      }));
     }, [searchDialCode]);
 
     const formattedValue = useMemo(() => {
@@ -88,6 +124,7 @@ const PhoneInput = forwardRef(
       <View style={[Alignments.row, Alignments.fullWidth, Alignments.alignEnd]}>
 
         <AutocompleteSelect
+          displayValue={getCompactDialCodeLabel(dialCode)}
           isSearchable
           options={dialOptions}
           placeholder={t('modals.phone.title')}

@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 import { Platform } from 'react-native';
 
-import { resolveMediaUrl } from './mediaUrl';
+import { resolveMediaUrl, shouldAttachAuthToMediaUrl } from './mediaUrl';
 
 jest.mock('react-native', () => ({
   Platform: {
@@ -49,5 +49,15 @@ describe('mediaUrl utils', () => {
 
     expect(resolveMediaUrl('https://cdn.example.com/audio/test.m4a'))
       .toBe('https://cdn.example.com/audio/test.m4a');
+  });
+
+  it('attaches auth headers only for first-party media URLs', () => {
+    Platform.OS = 'ios';
+    process.env.API_URL = 'https://api.example.com/api';
+
+    expect(shouldAttachAuthToMediaUrl('https://api.example.com/uploads/test.m4a'))
+      .toBe(true);
+    expect(shouldAttachAuthToMediaUrl('https://cdn.example.com/audio/test.m4a'))
+      .toBe(false);
   });
 });

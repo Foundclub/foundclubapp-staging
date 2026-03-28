@@ -169,7 +169,6 @@ describe('Event Use Cases', () => {
         description: 'Test event',
         endTime: '15:45',
         location: { label: 'Paris', value: '2.3522|48.8566' },
-        requestFeatured: true,
         sessionStatus: 'open',
         startTime: '14:30',
         team: 'team-123',
@@ -184,7 +183,6 @@ describe('Event Use Cases', () => {
         date: expect.stringMatching(/^2025-05-15T.*:30:00/),
         description: 'Test event',
         endTime: '15:45:00.000',
-        featuredRequestStatus: 'pending',
         location: {
           lat: 48.8566,
           lng: 2.3522,

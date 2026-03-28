@@ -61,6 +61,7 @@ function RequestFeedItem({
   const requesterAvatarUrl = item?.meta?.requesterAvatarUrl || '';
   const requesterId = item?.meta?.requesterId || '';
   const requesterName = item?.meta?.requesterName || t('common.user', 'Utilisateur');
+  const featuredScopeLabel = item?.meta?.scopeLabel || '';
   const sourceTeamName = item?.meta?.sourceTeamName || '';
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
   const isEventParticipationRequest = item?.type === 'event'
@@ -161,21 +162,41 @@ function RequestFeedItem({
         <Text numberOfLines={2} style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]}>
           {item?.title}
         </Text>
-        <View
-          style={[
-            ApplicationStyle.borderRadius12,
-            ApplicationStyle.backgroundColor.primary900,
-            ApplicationStyle.borderWidth1,
-            Spaces.paddingHorizontal[8],
-            Spaces.paddingVertical[4],
-            {
-              borderColor: `${Colors.primary500}66`,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-            {getTypeLabel(item?.type, t)}
-          </Text>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          <View
+            style={[
+              ApplicationStyle.borderRadius12,
+              ApplicationStyle.backgroundColor.primary900,
+              ApplicationStyle.borderWidth1,
+              Spaces.paddingHorizontal[8],
+              Spaces.paddingVertical[4],
+              {
+                borderColor: `${Colors.primary500}66`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+              {getTypeLabel(item?.type, t)}
+            </Text>
+          </View>
+          {featuredScopeLabel ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius12,
+                ApplicationStyle.borderWidth1,
+                Spaces.paddingHorizontal[8],
+                Spaces.paddingVertical[4],
+                {
+                  backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                  borderColor: `${Colors.primary500}55`,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                {featuredScopeLabel}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 

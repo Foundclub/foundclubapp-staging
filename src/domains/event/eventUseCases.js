@@ -200,7 +200,6 @@ export const createEventPayload = (event) => {
     locationDetails: event.location?.label ? JSON.stringify({ address: event.location.label }) : null,
     // Format startTime and endTime for Strapi (HH:mm:ss.SSS)
     endTime: formatTimeForStrapi(event.endTime),
-    featuredRequestStatus: event.requestFeatured ? 'pending' : 'none',
     startTime: formatTimeForStrapi(effectiveStartTime),
   };
 

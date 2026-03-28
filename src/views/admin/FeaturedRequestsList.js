@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useMutation } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, TouchableOpacity, View,
@@ -9,20 +9,32 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetEvents } from '@/services/event/eventQueries';
-import { updateEvent } from '@/services/event/eventService';
+import {
+  approveFeatured,
+  getPendingFeaturedRequests,
+  rejectFeatured,
+} from '@/services/event/eventService';
+
+function RequestItemSeparator() {
+  return <View style={{ height: 16 }} />;
+}
+
+const getScopeLabel = (kind) => {
+  if (kind === 'PUBLIC') return 'Public';
+  if (kind === 'SECTION') return 'Club';
+  return 'Multisport';
+};
 
 /**
  *
  */
 function FeaturedRequestsList() {
-  // hooks
   const {
     Alignments,
     ApplicationStyle,
@@ -32,99 +44,122 @@ function FeaturedRequestsList() {
   } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
 
   const [filterStatus, setFilterStatus] = useState('pending');
 
   const {
-    data: requestPages,
+    data: requestsResponse,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
     isLoading,
     refetch,
-  } = useGetEvents({
-    featuredRequestStatus: filterStatus === 'pending' ? 'pending' : ['approved', 'rejected'],
-    pageSize: 10,
-    sort: 'updatedAt:desc', // Newest first
+  } = useQuery({
+    queryFn: () => getPendingFeaturedRequests({
+      status: filterStatus === 'pending' ? 'PENDING' : ['APPROVED', 'REJECTED'],
+    }),
+    queryKey: ['admin-featured-requests', filterStatus],
   });
 
-  const updateEventMutation = useMutation({
-    mutationFn: updateEvent,
-    onSuccess: (data, variables) => {
-      const isApproved = variables.eventData.featuredRequestStatus === 'approved';
+  const updateRequestMutation = useMutation({
+    mutationFn: async ({ action, requestId }) => {
+      if (action === 'approve') return approveFeatured(requestId);
+      return rejectFeatured({ requestId });
+    },
+    onSuccess: (_data, variables) => {
+      const isApproved = variables.action === 'approve';
+      queryClient.invalidateQueries({ queryKey: ['admin-featured-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-featured-requests-count'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       Alert.alert(
-        isApproved ? 'Demande validée' : 'Demande refusée',
-        isApproved ? 'L\'événement est maintenant mis en avant.' : 'La demande a été rejetée.',
+        isApproved ? 'Demande validee' : 'Demande refusee',
+        isApproved ? "L'evenement est maintenant mis en avant." : 'La demande a ete rejetee.',
         [{ onPress: () => refetch(), text: 'OK' }],
       );
     },
   });
 
-  // handlers
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const requests = useMemo(() => requestsResponse?.data || [], [requestsResponse?.data]);
 
-  const handleAcceptRequest = (event) => {
-    console.log('handleAcceptRequest called for:', event?.documentId);
-    if (event?.documentId) {
-      updateEventMutation.mutate({
-        documentId: event.documentId,
-        eventData: {
-          featuredRequestStatus: 'approved',
-          isFeatured: true,
-        },
-      });
-    } else {
-      console.warn('No documentId for event in handleAcceptRequest');
-    }
+  const handleAcceptRequest = (request) => {
+    if (!request?.documentId) return;
+    updateRequestMutation.mutate({
+      action: 'approve',
+      requestId: request.documentId,
+    });
   };
 
-  const handleRejectRequest = (event) => {
-    console.log('handleRejectRequest called for:', event?.documentId);
-    if (event?.documentId) {
-      updateEventMutation.mutate({
-        documentId: event.documentId,
-        eventData: {
-          featuredRequestStatus: 'rejected',
-        },
-      });
-    } else {
-      console.warn('No documentId for event in handleRejectRequest');
-    }
+  const handleRejectRequest = (request) => {
+    if (!request?.documentId) return;
+    updateRequestMutation.mutate({
+      action: 'reject',
+      requestId: request.documentId,
+    });
   };
 
-  const handleEventPress = (event) => {
-    navigation.navigate(RouteNames.EventStack, { params: { eventId: event.documentId }, screen: RouteNames.EventDetails });
+  const handleEventPress = (request) => {
+    const eventId = request?.event?.documentId;
+    if (!eventId) return;
+    navigation.navigate(RouteNames.EventStack, { params: { eventId }, screen: RouteNames.EventDetails });
   };
 
-  /**
-   * @type {FCEvent[]}
-   */
-  const requests = useMemo(() => requestPages?.pages
-    ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
-      const items = page?.data || [];
-      return acc.concat(items);
-    }, [])
-        || [], [requestPages]);
-
-  /**
-   * Render the request item
-   * @param {object} param
-   * @param {FCEvent} param.item
-   * @returns {import('react').ReactElement}
-   */
   const renderItem = ({ item }) => (
-    <EventCardNew
-      item={item}
-      onPress={handleEventPress}
-      onRefuse={filterStatus === 'pending' ? handleRejectRequest : undefined}
-      onValidate={filterStatus === 'pending' ? handleAcceptRequest : undefined}
-      showClubHeader
-    />
+    <TouchableOpacity
+      onPress={() => handleEventPress(item)}
+      style={[
+        ApplicationStyle.backgroundColor.primary900,
+        ApplicationStyle.borderRadius24,
+        ApplicationStyle.borderWidth1,
+        Spaces.padding[16],
+        Spaces.gap[12],
+        { borderColor: `${Colors.primary500}33` },
+      ]}
+    >
+      <View style={Spaces.gap[4]}>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {item?.event?.name || item?.event?.type?.name || 'Evenement'}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary100]}>
+          {item?.event?.team?.club?.name || item?.targetClub?.name || item?.multisportClub?.name || '-'}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          Scope:
+          {' '}
+          {getScopeLabel(item?.kind)}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          Statut:
+          {' '}
+          {item?.status || '-'}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          Demandeur:
+          {' '}
+          {[item?.requester?.firstname, item?.requester?.lastname].filter(Boolean).join(' ') || 'Inconnu'}
+        </Text>
+      </View>
+      {filterStatus === 'pending' ? (
+        <View style={[Alignments.row, Spaces.gap[12]]}>
+          <Button
+            icon="check"
+            isLoading={updateRequestMutation.isPending}
+            isOption
+            onPress={() => handleAcceptRequest(item)}
+            style={{ flex: 1 }}
+            title={t('common.accept', 'Accepter')}
+            variant="Primary"
+          />
+          <Button
+            icon="close"
+            isLoading={updateRequestMutation.isPending}
+            isOption
+            onPress={() => handleRejectRequest(item)}
+            style={{ flex: 1 }}
+            title={t('common.refuse', 'Refuser')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+    </TouchableOpacity>
   );
 
   const renderEmptyList = () => (
@@ -153,7 +188,7 @@ function FeaturedRequestsList() {
     >
       <WithDataWrapper
         error={error?.message}
-        isLoading={isLoading && !isFetchingNextPage}
+        isLoading={isLoading}
         wrapperStyle={[Alignments.fill]}
       >
         <View style={[
@@ -161,7 +196,6 @@ function FeaturedRequestsList() {
           Spaces.paddingHorizontal[16],
           ApplicationStyle.borderRadius2]}
         >
-          {/* Toggle Filter */}
           <View style={[Alignments.row, Spaces.marginBottom[16], { backgroundColor: '#173844', borderRadius: 12, padding: 4 }]}>
             <TouchableOpacity
               onPress={() => setFilterStatus('pending')}
@@ -195,13 +229,11 @@ function FeaturedRequestsList() {
             contentContainerStyle={{ paddingBottom: 24 }}
             data={requests}
             estimatedItemSize={200}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+            ItemSeparatorComponent={RequestItemSeparator}
             keyExtractor={(item) => item?.documentId || 'unknown'}
             ListEmptyComponent={renderEmptyList}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
             onRefresh={refetch}
-            refreshing={isLoading && !isFetchingNextPage}
+            refreshing={isLoading}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
           />

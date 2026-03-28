@@ -1,7 +1,10 @@
 import { AppRegistry } from 'react-native';
 
 import { name as appName } from './app.json';
-import { ENABLE_PUSH_NOTIFICATIONS } from './src/constants/runtimeFlags';
+import {
+  ENABLE_PUSH_NOTIFICATIONS,
+  NOTIFICATIONS_RUNTIME_CONFIG,
+} from './src/constants/runtimeFlags';
 import {
   persistBootError,
   readPersistedBootError,
@@ -67,21 +70,34 @@ if (previousBootError) {
 logBoot('BOOT_APP_START', {
   appName,
   notificationsBootstrapDisabled: isNotificationsBootstrapDisabled,
+  notificationsRuntime: NOTIFICATIONS_RUNTIME_CONFIG,
 });
+
+if (
+  NOTIFICATIONS_RUNTIME_CONFIG.push.shouldEnableByDefault
+  && !NOTIFICATIONS_RUNTIME_CONFIG.push.enabled
+) {
+  logBoot('BOOT_NOTIFICATIONS_EXPECTED_BUT_DISABLED', NOTIFICATIONS_RUNTIME_CONFIG);
+}
 
 // Register notification background handler context immediately
 if (isNotificationsBootstrapDisabled) {
-  logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_DISABLED_BY_FLAG');
+  logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_DISABLED_BY_FLAG', {
+    policy: NOTIFICATIONS_RUNTIME_CONFIG.push.policy,
+  });
 } else {
   try {
     // eslint-disable-next-line global-require
     const { registerBackgroundHandler } = require('./src/services/notificationBackgroundHandler');
     registerBackgroundHandler();
-    logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_ENABLED');
+    logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_ENABLED', {
+      policy: NOTIFICATIONS_RUNTIME_CONFIG.push.policy,
+    });
   } catch (error) {
     console.warn('[index] Failed to register background handler:', error);
     logBoot('BOOT_NOTIFICATIONS_BOOTSTRAP_FAILED', {
       error: error?.message || 'unknown',
+      policy: NOTIFICATIONS_RUNTIME_CONFIG.push.policy,
     });
   }
 }

@@ -16,21 +16,10 @@ export const createWebNavigationAdapter = ({
   setSearchParams,
   goBack,
 }) => {
-  const invokeListener = (listener, payload) => {
-    if (typeof listener === 'function') {
-      listener(payload);
-    }
-  };
-
   const adapter = {
     currentPath,
     currentRouteName,
-    addListener: (_eventName, listener) => {
-      invokeListener(listener, {
-        data: undefined,
-        preventDefault: () => {},
-        target: currentRouteName,
-      });
+    addListener: (_eventName, _listener) => {
       return () => {};
     },
     canGoBack: () => {

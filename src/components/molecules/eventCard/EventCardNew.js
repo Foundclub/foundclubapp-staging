@@ -37,22 +37,15 @@ import {
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getShortAddress } from '@/utils/location';
 
-// Assets
-const BG_OTHER = require('@/assets/background-card-event/card-autre.png');
-const BG_DETECTION = require('@/assets/background-card-event/card-detection.png');
-const BG_TRAINING = require('@/assets/background-card-event/card-entrainement.png');
-const BG_MATCH = require('@/assets/background-card-event/card-match.png');
-const BG_RESERVATION = require('@/assets/background-card-event/card-reservation.png');
-
-const getBackgroundImage = (typeName) => {
+const getBackgroundImage = (typeName, Images) => {
   const normalizedType = (typeName?.toLowerCase() || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
-  if (normalizedType.includes('match')) return BG_MATCH;
-  if (normalizedType.includes('entrainement')) return BG_TRAINING;
-  if (normalizedType.includes('detection')) return BG_DETECTION;
-  if (normalizedType.includes('reservation')) return BG_RESERVATION;
-  return BG_OTHER;
+  if (normalizedType.includes('match')) return Images.eventCardMatch;
+  if (normalizedType.includes('entrainement')) return Images.eventCardTraining;
+  if (normalizedType.includes('detection')) return Images.eventCardDetection;
+  if (normalizedType.includes('reservation')) return Images.eventCardReservation;
+  return Images.eventCardOther;
 };
 
 const getHeaderTitle = (typeName) => {
@@ -215,7 +208,7 @@ function EventCardNew({
   const isMatchEvent = typeName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('match');
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
-  const backgroundImage = getBackgroundImage(typeName);
+  const backgroundImage = getBackgroundImage(typeName, Images);
   const headerTitle = getHeaderTitle(typeName);
 
   // Sponsors

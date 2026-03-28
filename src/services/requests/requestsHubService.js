@@ -98,9 +98,9 @@ const fetchEventValidationRequests = async (clubId) => {
   }));
 };
 
-const fetchFeaturedRequests = async (cmId) => {
-  if (!cmId) return [];
-  const response = await getPendingFeaturedRequests(cmId);
+const fetchFeaturedRequests = async ({ clubId, cmId }) => {
+  if (!clubId && !cmId) return [];
+  const response = await getPendingFeaturedRequests({ clubId, cmId });
   return Array.isArray(response?.data) ? response.data : [];
 };
 
@@ -142,8 +142,8 @@ export const getRequestsHubData = async (rawContext = {}) => {
       key: 'event',
     },
     {
-      enabled: Boolean(context.cmId),
-      fetcher: () => fetchFeaturedRequests(context.cmId),
+      enabled: Boolean(context.clubId || context.cmId),
+      fetcher: () => fetchFeaturedRequests({ clubId: context.clubId, cmId: context.cmId }),
       key: 'featured',
     },
   ];

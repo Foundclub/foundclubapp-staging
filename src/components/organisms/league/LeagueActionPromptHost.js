@@ -324,7 +324,16 @@ function LeagueActionPromptHost() {
         await handleResolvedElsewhere();
         return;
       }
-      Alert.alert('Erreur', "Impossible d'enregistrer cette reponse.");
+      const serverMessage = String(
+        error?.response?.data?.error?.message
+        || error?.response?.data?.message
+        || error?.message
+        || '',
+      ).trim();
+      Alert.alert(
+        'Erreur',
+        serverMessage || "Impossible d'enregistrer cette reponse.",
+      );
     } finally {
       setIsSubmitting(false);
     }

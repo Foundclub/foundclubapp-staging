@@ -21,6 +21,7 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 
 import AppProvidersNative from '@/app/AppProviders.native';
 import buildFoundClubQueryClient from '@/app/queryClient';
+import { NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 
 const isAxiosError = (error) => Boolean(
@@ -69,6 +70,7 @@ console.info('[BOOT] APP_ENV_RESOLVED', {
   appEnv,
   isSentryEnabled,
   isStaging,
+  notificationsRuntime: NOTIFICATIONS_RUNTIME_CONFIG,
   sentryTracesSampleRate,
 });
 

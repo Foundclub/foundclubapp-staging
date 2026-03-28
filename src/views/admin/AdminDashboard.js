@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -16,7 +17,7 @@ import {
   useGetPendingClubClaims,
   useGetPendingClubOnboardingRequests,
 } from '@/services/admin/adminQueries';
-import { useGetEvents } from '@/services/event/eventQueries';
+import { getPendingFeaturedRequests } from '@/services/event/eventService';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -39,9 +40,9 @@ function AdminDashboard() {
   const {
     data: featuredRequestsData,
     refetch: refetchFeatured,
-  } = useGetEvents({
-    featuredRequestStatus: 'pending',
-    pageSize: 1, // We only need the count
+  } = useQuery({
+    queryFn: () => getPendingFeaturedRequests({ status: 'PENDING' }),
+    queryKey: ['admin-featured-requests-count'],
   });
 
   const {
@@ -49,7 +50,7 @@ function AdminDashboard() {
     refetch: refetchStats,
   } = useGetAdminStats();
 
-  const featuredCount = featuredRequestsData?.pages?.[0]?.meta?.pagination?.total || 0;
+  const featuredCount = Array.isArray(featuredRequestsData?.data) ? featuredRequestsData.data.length : 0;
   const eventsTodayCount = stats?.eventsToday || 0;
   const caGenerated = stats?.revenue || 0;
   const reportsCount = stats?.reportsCount || 0;

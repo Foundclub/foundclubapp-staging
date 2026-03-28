@@ -11,7 +11,8 @@
             "env": {
                 "APP_ENV": "staging",
                 "FC_DISABLE_DOCUMENT_PICKER": "0",
-                "FC_DISABLE_NOTIFICATIONS_BOOTSTRAP": "1"
+                "FC_ENABLE_PUSH_NOTIFICATIONS": "1",
+                "FC_ENABLE_SMART_NOTIFICATIONS": "1"
             }
         },
         "staging": {
@@ -22,14 +23,17 @@
             "env": {
                 "APP_ENV": "staging",
                 "FC_DISABLE_DOCUMENT_PICKER": "0",
-                "FC_DISABLE_NOTIFICATIONS_BOOTSTRAP": "1"
+                "FC_ENABLE_PUSH_NOTIFICATIONS": "1",
+                "FC_ENABLE_SMART_NOTIFICATIONS": "1"
             }
         },
         "production": {
             "distribution": "store",
             "env": {
+                "APP_ENV": "production",
                 "FC_DISABLE_DOCUMENT_PICKER": "1",
-                "FC_DISABLE_NOTIFICATIONS_BOOTSTRAP": "0"
+                "FC_ENABLE_PUSH_NOTIFICATIONS": "1",
+                "FC_ENABLE_SMART_NOTIFICATIONS": "1"
             }
         }
     },

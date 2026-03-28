@@ -53,7 +53,11 @@ function FeaturedRequestsScreen({ navigation, route }) {
     refetch,
   } = useQuery({
     enabled: !!cmId,
-    queryFn: () => getPendingFeaturedRequests(cmId),
+    queryFn: () => getPendingFeaturedRequests({
+      cmId,
+      scope: 'CM',
+      status: 'PENDING',
+    }),
     queryKey: ['pending-featured-requests', cmId],
   });
 
@@ -83,28 +87,28 @@ function FeaturedRequestsScreen({ navigation, route }) {
     },
   });
 
-  const handleApprove = useCallback((eventId) => {
+  const handleApprove = useCallback((requestId) => {
     Alert.alert(
       t('featuredRequests.confirm.approve.title', 'Accepter la demande ?'),
       t('featuredRequests.confirm.approve.message', 'Cet événement sera visible dans le planning de tous les adherents du club.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          onPress: () => approveMutation.mutate(eventId),
+          onPress: () => approveMutation.mutate(requestId),
           text: t('common.confirm', 'Accepter'),
         },
       ],
     );
   }, [approveMutation, t]);
 
-  const handleReject = useCallback((eventId) => {
+  const handleReject = useCallback((requestId) => {
     Alert.alert(
       t('featuredRequests.confirm.reject.title', 'Refuser la demande ?'),
       t('featuredRequests.confirm.reject.message', 'Le demandeur sera notifie du refus.'),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
-          onPress: () => rejectMutation.mutate({ eventId }),
+          onPress: () => rejectMutation.mutate({ requestId }),
           style: 'destructive',
           text: t('common.confirm', 'Refuser'),
         },
@@ -112,7 +116,8 @@ function FeaturedRequestsScreen({ navigation, route }) {
     );
   }, [rejectMutation, t]);
 
-  const handleEventPress = useCallback((event) => {
+  const handleEventPress = useCallback((request) => {
+    const event = request?.event;
     if (event?.documentId) {
       navigation.navigate(RouteNames.EventStack, {
         params: { eventId: event.documentId },

@@ -47,7 +47,6 @@ const defaultValues = {
   description: '',
   endTime: '',
   facility: null,
-  featuredRequestStatus: 'none',
   invitedTeams: /** @type {string[]} */ ([]),
   isRecurrent: false,
   location: undefined,
@@ -58,7 +57,6 @@ const defaultValues = {
   recurrenceFrequency: 'week',
   recurrenceInterval: 1,
   recurrenceStartDate: '',
-  requestFeatured: false,
   reservationMode: 'FULL_GROUP',
   sessionStatus: 'open',
   startTime: '',
@@ -92,7 +90,6 @@ const eventSchema = Joi.object({
   documentId: Joi.string().allow(null, '').optional(),
   endTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).allow('').optional(),
   facility: Joi.string().allow(null, '').optional(),
-  featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').optional(),
   invitedTeams: Joi.array().items(Joi.string()).optional(),
   isRecurrent: Joi.boolean().required(),
   location: Joi.object().allow(null, '').optional(),
@@ -119,7 +116,6 @@ const eventSchema = Joi.object({
     otherwise: Joi.string().allow('').optional(),
     then: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).required(),
   }),
-  requestFeatured: Joi.boolean().optional(),
   reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').optional(),
   sessionStatus: Joi.string().valid('open', 'closed').required(),
   startTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).required(),
@@ -164,8 +160,6 @@ function EventEdit({ navigation, route }) {
     value: team.documentId || '',
   })) || [];
 
-  const [isFeaturedRequestLoading, setIsFeaturedRequestLoading] = useState(false);
-  const [featuredRequestError, setFeaturedRequestError] = useState(/** @type {string | null} */ (null));
   const [hasConflict, setHasConflict] = useState(false);
 
   const createEventMutation = useMutation({
@@ -206,7 +200,6 @@ function EventEdit({ navigation, route }) {
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
       facility: event?.facility?.documentId || null,
-      featuredRequestStatus: event?.featuredRequestStatus || 'none',
       invitedTeams: event?.invitedTeams?.map((/** @type {Team} */ t) => t.documentId || '') || [],
       location: {
         label: (() => {
@@ -468,13 +461,10 @@ function EventEdit({ navigation, route }) {
    * @returns {Promise<void>}
    */
   const handleFormSubmit = async (data) => {
-    setFeaturedRequestError(null);
-
     try {
       console.log('Form submitted with data:', data);
       const formattedEvents = createReccurrentEventPayload(data);
       console.log('Formatted events:', formattedEvents);
-      const shouldRequestFeatured = data.requestFeatured;
 
       // If conflict, ensure validationMode is manual (should be set by effect, but double check)
       if (hasConflict) {
@@ -1055,88 +1045,29 @@ function EventEdit({ navigation, route }) {
                 )}
               />
             )}
-
-            {/* Featured Request Section */}
-            <View style={[Spaces.gap[8], Spaces.marginTop[16]]}>
+            <View
+              style={[
+                ApplicationStyle.backgroundColor.primary900,
+                ApplicationStyle.borderRadius16,
+                Spaces.padding[16],
+                Spaces.gap[8],
+                Spaces.marginTop[16],
+              ]}
+            >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('reservation.featuredRequest.title', 'Mise à la une')}
+                Mise a la une
               </Text>
-
-              {eventId ? (
-                // Existing Event
-                <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignCenter]}>
-                  {event?.featuredRequestStatus === 'none' ? (
-                    <Button
-                      isLoading={updateEventMutation.isPending}
-                      onPress={() => {
-                        updateEventMutation.mutate({
-                          documentId: eventId,
-                          eventData: { featuredRequestStatus: 'pending' },
-                        }, {
-                          onSuccess: () => {
-                            // Optimistically update or refetch
-                          },
-                        });
-                      }}
-                      title={t('reservation.actions.requestFeatured', 'Demander la mise à la une')}
-                      variant="Primary"
-                    />
-                  ) : (
-                    <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-                      <Text style={[Fonts.p2, Fonts.neutral00]}>Statut :</Text>
-                      <View style={{
-                        backgroundColor: event?.featuredRequestStatus === 'approved' ? '#10B981'
-                          : event?.featuredRequestStatus === 'rejected' ? '#EF4444' : '#F59E0B',
-                        borderRadius: 4,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                      }}
-                      >
-                        <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>
-                          {event?.featuredRequestStatus === 'approved' ? 'Approuvé'
-                            : event?.featuredRequestStatus === 'rejected' ? 'Rejeté' : 'En attente'}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                // New Event
-                <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignCenter]}>
-                  <Text style={[Fonts.p2, Fonts.neutral00]}>
-                    {t('reservation.actions.requestFeatured', 'Demander la mise à la une')}
-                  </Text>
-                  <Controller
-                    control={control}
-                    name="requestFeatured"
-                    render={({ field: { onChange, value } }) => (
-                      <Switch
-                        onValueChange={onChange}
-                        trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
-                        value={value || false}
-                      />
-                    )}
-                  />
-                </View>
-              )}
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                La demande de mise a la une se fait depuis la fiche de l'evenement une fois enregistre.
+              </Text>
             </View>
           </View>
         </ScrollView>
         <View style={[Spaces.gap[8]]}>
-          {featuredRequestError && (
-            <View style={[Spaces.paddingHorizontal[16]]}>
-              <Text style={[Fonts.p2, { color: Colors.error500 }]}>
-                ⚠️
-                {' '}
-                {featuredRequestError}
-              </Text>
-            </View>
-          )}
           <Button
             isLoading={
               createEventMutation.isPending
               || updateEventMutation.isPending
-              || isFeaturedRequestLoading
             }
             onPress={handleSubmit(handleFormSubmit, (errors) => {
               console.log('Form errors:', errors);

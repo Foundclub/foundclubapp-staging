@@ -6,6 +6,7 @@ import {
   Alert,
   ImageBackground,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -93,6 +94,9 @@ const getParticipationStatusMeta = (status, colors) => {
   };
 };
 
+/**
+ *
+ */
 function RecruitmentAdDetails() {
   const { params } = useRoute();
   const navigation = useNavigation();
@@ -402,6 +406,26 @@ function RecruitmentAdDetails() {
     setIsDeleteModalVisible(true);
   };
 
+  const handleCandidatePress = (candidateUser) => {
+    const candidateUserId = String(
+      candidateUser?.documentId
+      || candidateUser?.id
+      || '',
+    ).trim();
+
+    if (!candidateUserId) return;
+
+    if (candidateUserId === userData?.documentId) {
+      navigation.navigate(RouteNames.ProfileStack);
+      return;
+    }
+
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId: candidateUserId },
+      screen: RouteNames.UserDetails,
+    });
+  };
+
   const handleAcceptParticipation = (requestId) => {
     if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
     acceptParticipationMutation.mutate(requestId);
@@ -455,6 +479,13 @@ function RecruitmentAdDetails() {
               const participationId = String(participation?.documentId || '').trim();
               const status = String(participation?.participationStatus || '').trim().toLowerCase();
               const statusMeta = getParticipationStatusMeta(status, Colors);
+              const candidateUser = participation?.user || participation?.requester;
+              const candidateUserId = String(
+                candidateUser?.documentId
+                || candidateUser?.id
+                || '',
+              ).trim();
+              const canOpenCandidateProfile = Boolean(candidateUserId);
               const requesterName = getCandidateDisplayName(participation);
               const requesterPhone = String(participation?.requester?.phoneNumber || participation?.user?.phoneNumber || '').trim();
               const sourceTeamName = String(participation?.sourceTeam?.name || '').trim();
@@ -477,7 +508,19 @@ function RecruitmentAdDetails() {
                   ]}
                 >
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                    <Pressable
+                      disabled={!canOpenCandidateProfile}
+                      onPress={() => handleCandidatePress(candidateUser)}
+                      style={({ pressed }) => ([
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Spaces.gap[12],
+                        {
+                          flex: 1,
+                          opacity: pressed && canOpenCandidateProfile ? 0.75 : 1,
+                        },
+                      ])}
+                    >
                       <ProfileAvatar
                         imageStyle={{ borderRadius: 40 }}
                         imageUrl={participation?.user?.avatar?.url}
@@ -502,8 +545,13 @@ function RecruitmentAdDetails() {
                             {requesterPhone}
                           </Text>
                         ) : null}
+                        {canOpenCandidateProfile ? (
+                          <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginTop: 6 }]}>
+                            Voir le profil
+                          </Text>
+                        ) : null}
                       </View>
-                    </View>
+                    </Pressable>
 
                     <View
                       style={[
@@ -566,20 +614,58 @@ function RecruitmentAdDetails() {
             <View style={{ marginBottom: 12 }}>
               {candidates.slice(0, 3).map((candidate) => {
                 const candidateKey = candidate?.documentId || candidate?.id || candidate?.phoneNumber;
+                const candidateId = String(candidate?.documentId || candidate?.id || '').trim();
                 const candidateName = [candidate?.firstname, candidate?.lastname]
                   .filter(Boolean)
                   .join(' ')
                   .trim() || candidate?.phoneNumber || 'Candidat';
+                const candidatePhone = String(candidate?.phoneNumber || '').trim();
 
                 return (
-                  <Text
+                  <Pressable
+                    disabled={!candidateId}
                     key={String(candidateKey)}
-                    style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 6 }]}
+                    onPress={() => handleCandidatePress(candidate)}
+                    style={({ pressed }) => ([
+                      styles.candidateCard,
+                      {
+                        backgroundColor: 'rgba(1,179,244,0.08)',
+                        borderColor: 'rgba(1,179,244,0.22)',
+                        marginBottom: 8,
+                        opacity: pressed && candidateId ? 0.75 : 1,
+                      },
+                    ])}
                   >
-                    -
-                    {' '}
-                    {candidateName}
-                  </Text>
+                    <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                        <ProfileAvatar
+                          imageStyle={{ borderRadius: 40 }}
+                          imageUrl={candidate?.avatar?.url}
+                          size={42}
+                          style={{
+                            borderColor: Colors.primary500,
+                            borderRadius: 42,
+                            borderWidth: 1,
+                          }}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text numberOfLines={2} style={[Fonts.p1Bold, { color: Colors.neutral100 }]}>
+                            {candidateName}
+                          </Text>
+                          {candidatePhone ? (
+                            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}>
+                              {candidatePhone}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                      {candidateId ? (
+                        <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                          Voir le profil
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
                 );
               })}
             </View>

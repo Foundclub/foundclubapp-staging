@@ -246,6 +246,20 @@ const logPlaybackDiagnostic = (stage, meta = undefined) => {
 
 const getPlaybackErrorCode = (error) => String(error?.message || error || '').trim().toUpperCase();
 
+const shouldRetryRemoteAudioWithoutHeaders = (error, requestHeaders) => {
+  const hasHeaders = requestHeaders && Object.keys(requestHeaders).length > 0;
+  if (!hasHeaders) return false;
+
+  const errorCode = getPlaybackErrorCode(error);
+  return (
+    errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT'
+    || errorCode === 'AUDIO_DOWNLOAD_EMPTY_FILE'
+    || errorCode === 'AUDIO_HTTP_400'
+    || errorCode === 'AUDIO_HTTP_401'
+    || errorCode === 'AUDIO_HTTP_403'
+  );
+};
+
 const toPlaybackErrorMessage = (error) => {
   const errorCode = getPlaybackErrorCode(error);
 
@@ -408,61 +422,82 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     if (!cacheDir) return rawSource;
 
     const targetExtension = extractAudioFileExtension(rawSource);
-    const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(rawSource)}.${targetExtension}`;
     const safeHeaders = headers && typeof headers === 'object' ? headers : {};
 
-    logPlaybackDiagnostic('playback-download-start', {
-      hasHeaders: Object.keys(safeHeaders).length > 0,
-      sourceUrl: rawSource,
-      targetExtension,
-      targetPath,
-    });
+    const downloadRemoteSource = async (requestHeaders = {}) => {
+      const targetPath = `${cacheDir}/voice-playback-${Date.now()}-${hashString(`${rawSource}-${JSON.stringify(requestHeaders)}`)}.${targetExtension}`;
 
-    const response = await ReactNativeBlobUtil
-      .config({
-        fileCache: true,
-        overwrite: true,
-        path: targetPath,
-      })
-      .fetch('GET', rawSource, safeHeaders);
+      logPlaybackDiagnostic('playback-download-start', {
+        hasHeaders: Object.keys(requestHeaders).length > 0,
+        sourceUrl: rawSource,
+        targetExtension,
+        targetPath,
+      });
 
-    const info = response?.info?.() || {};
-    const status = Number(info?.status || 0);
-    if (status >= 400) {
-      throw new Error(`AUDIO_HTTP_${status}`);
+      const response = await ReactNativeBlobUtil
+        .config({
+          fileCache: true,
+          overwrite: true,
+          path: targetPath,
+        })
+        .fetch('GET', rawSource, requestHeaders);
+
+      const info = response?.info?.() || {};
+      const status = Number(info?.status || 0);
+      if (status >= 400) {
+        throw new Error(`AUDIO_HTTP_${status}`);
+      }
+      const responseHeaders = info?.headers && typeof info.headers === 'object'
+        ? info.headers
+        : {};
+      const responseContentType = String(
+        responseHeaders['content-type']
+        || responseHeaders['Content-Type']
+        || '',
+      ).toLowerCase();
+      if (
+        responseContentType.includes('text/html')
+        || responseContentType.includes('application/json')
+      ) {
+        throw new Error('AUDIO_DOWNLOAD_INVALID_CONTENT');
+      }
+
+      const downloadedPath = stripFileScheme(response?.path?.() || targetPath);
+      if (!downloadedPath) {
+        throw new Error('AUDIO_DOWNLOAD_EMPTY_PATH');
+      }
+
+      const stat = await ReactNativeBlobUtil.fs.stat(downloadedPath);
+      const fileSize = Number(stat?.size || 0);
+      if (!Number.isFinite(fileSize) || fileSize < 512) {
+        throw new Error('AUDIO_DOWNLOAD_EMPTY_FILE');
+      }
+
+      logPlaybackDiagnostic('playback-download-success', {
+        contentType: responseContentType,
+        fileSize,
+        sourceUrl: rawSource,
+        targetPath: downloadedPath,
+        usedHeaders: Object.keys(requestHeaders).length > 0,
+      });
+
+      return downloadedPath;
+    };
+
+    let downloadedPath = '';
+    try {
+      downloadedPath = await downloadRemoteSource(safeHeaders);
+    } catch (error) {
+      if (!shouldRetryRemoteAudioWithoutHeaders(error, safeHeaders)) {
+        throw error;
+      }
+
+      logPlaybackDiagnostic('playback-download-retry-without-headers', {
+        errorCode: getPlaybackErrorCode(error),
+        sourceUrl: rawSource,
+      });
+      downloadedPath = await downloadRemoteSource({});
     }
-    const responseHeaders = info?.headers && typeof info.headers === 'object'
-      ? info.headers
-      : {};
-    const responseContentType = String(
-      responseHeaders['content-type']
-      || responseHeaders['Content-Type']
-      || '',
-    ).toLowerCase();
-    if (
-      responseContentType.includes('text/html')
-      || responseContentType.includes('application/json')
-    ) {
-      throw new Error('AUDIO_DOWNLOAD_INVALID_CONTENT');
-    }
-
-    const downloadedPath = stripFileScheme(response?.path?.() || targetPath);
-    if (!downloadedPath) {
-      throw new Error('AUDIO_DOWNLOAD_EMPTY_PATH');
-    }
-
-    const stat = await ReactNativeBlobUtil.fs.stat(downloadedPath);
-    const fileSize = Number(stat?.size || 0);
-    if (!Number.isFinite(fileSize) || fileSize < 512) {
-      throw new Error('AUDIO_DOWNLOAD_EMPTY_FILE');
-    }
-
-    logPlaybackDiagnostic('playback-download-success', {
-      contentType: responseContentType,
-      fileSize,
-      sourceUrl: rawSource,
-      targetPath: downloadedPath,
-    });
 
     downloadedSourceRef.current = rawSource;
     downloadedPathRef.current = downloadedPath;

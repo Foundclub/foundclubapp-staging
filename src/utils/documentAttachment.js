@@ -19,6 +19,17 @@ const getAttachmentName = (attachment) => String(
   || '',
 ).trim();
 
+const getReadableAttachmentName = (attachment) => {
+  const rawName = getAttachmentName(attachment);
+  if (!rawName) return '';
+
+  try {
+    return decodeURIComponent(rawName.replace(/\+/g, '%20'));
+  } catch (_error) {
+    return rawName;
+  }
+};
+
 const getAttachmentUrlLike = (attachment) => String(
   attachment?.url
   || attachment?.uri
@@ -70,7 +81,11 @@ export const getDocumentKind = (attachment) => {
 
 export const isImageAttachment = (attachment) => {
   const mime = String(attachment?.mime || '').toLowerCase();
-  const source = `${getAttachmentName(attachment)} ${getAttachmentUrlLike(attachment)} ${attachment?.ext || ''}`;
+  const source = [
+    getAttachmentName(attachment),
+    getAttachmentUrlLike(attachment),
+    attachment?.ext || '',
+  ].join(' ');
   return mime.startsWith('image/') || IMAGE_EXTENSION_REGEX.test(source);
 };
 
@@ -101,7 +116,7 @@ export const formatAttachmentSize = (value) => {
 };
 
 export const getDocumentDisplayName = (attachment) => {
-  const rawName = getAttachmentName(attachment);
+  const rawName = getReadableAttachmentName(attachment);
   if (!rawName) return 'Fichier';
 
   if (rawName.length <= 38) return rawName;
@@ -127,7 +142,7 @@ export const getDocumentPreviewText = (attachments = []) => {
 
   const attachment = documentAttachments[0];
   const badgeLabel = getDocumentBadgeLabel(attachment);
-  const fileName = getAttachmentName(attachment) || 'fichier';
+  const fileName = getReadableAttachmentName(attachment) || 'fichier';
   return `${badgeLabel} • ${fileName}`;
 };
 
@@ -135,7 +150,8 @@ export const isGeneratedDocumentFallbackText = (messageText, attachments = []) =
   const normalizedText = normalizeString(messageText);
   if (!normalizedText) return false;
 
-  const hasKnownPrefix = DOCUMENT_FALLBACK_PREFIXES.some((prefix) => normalizedText.startsWith(prefix));
+  const hasKnownPrefix = DOCUMENT_FALLBACK_PREFIXES
+    .some((prefix) => normalizedText.startsWith(prefix));
   if (!hasKnownPrefix) return false;
 
   const primaryAttachment = getPrimaryDocumentAttachment(attachments);

@@ -26,6 +26,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -45,7 +46,11 @@ import {
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
-import { exportEventParticipants } from '@/services/event/eventService';
+import {
+  approveFeatured,
+  exportEventParticipants,
+  rejectFeatured,
+} from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   useGetEventMatchStats,
@@ -164,6 +169,11 @@ function EventDetails({ navigation, route }) {
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [isFeaturedModalVisible, setIsFeaturedModalVisible] = useState(false);
+  const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState({
+    CM: false,
+    PUBLIC: false,
+    SECTION: false,
+  });
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [isMatchActionsOpen, setIsMatchActionsOpen] = useState(true);
@@ -231,6 +241,49 @@ function EventDetails({ navigation, route }) {
   }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
   const canEdit = Boolean(canManageEvent(event));
   const canApprovePendingRequests = Boolean(canEditEvent(event?.team?.documentId || ''));
+  const eventClubId = event?.team?.club?.documentId || '';
+  const eventMultisportId = event?.team?.club?.parentMultisport?.documentId || '';
+  const userClubId = userData?.club?.documentId || '';
+  const userMultisportIds = useMemo(
+    () => (userData?.multisportClubs || []).map((club) => club?.documentId).filter(Boolean),
+    [userData?.multisportClubs],
+  );
+  const isClubManagerForEvent = Boolean(
+    userData?.role?.name === USER_ROLES.president
+    && userClubId
+    && eventClubId
+    && userClubId === eventClubId,
+  );
+  const isMultisportAdminForEvent = Boolean(
+    eventMultisportId
+    && userMultisportIds.includes(eventMultisportId),
+  );
+  const canManageFeatured = Boolean(
+    canEdit
+    || isClubManagerForEvent
+    || isMultisportAdminForEvent
+    || userData?.role?.name === USER_ROLES.superAdmin,
+  );
+  const featuredRequestsSummary = useMemo(() => ({
+    CM: {
+      requestId: null,
+      scopeLabel: 'Multisport',
+      status: 'none',
+      ...(event?.featuredRequestsSummary?.CM || {}),
+    },
+    PUBLIC: {
+      requestId: null,
+      scopeLabel: 'Public',
+      status: 'none',
+      ...(event?.featuredRequestsSummary?.PUBLIC || {}),
+    },
+    SECTION: {
+      requestId: null,
+      scopeLabel: 'Club',
+      status: 'none',
+      ...(event?.featuredRequestsSummary?.SECTION || {}),
+    },
+  }), [event?.featuredRequestsSummary]);
 
   const isTeamMember = useMemo(() => {
     const userDocId = userData?.documentId;
@@ -343,6 +396,34 @@ function EventDetails({ navigation, route }) {
   ]);
 
   const mutations = useEventMutations(eventId, refetch, refetchParticipations);
+  const approveFeaturedRequestMutation = useMutation({
+    mutationFn: approveFeatured,
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de valider cette demande.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['requestsHub'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      refetch();
+    },
+  });
+  const rejectFeaturedRequestMutation = useMutation({
+    mutationFn: rejectFeatured,
+    onError: (mutationError) => {
+      Alert.alert('Erreur', mutationError?.message || 'Impossible de refuser cette demande.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['requestsHub'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      refetch();
+    },
+  });
 
   const attendanceByUserId = useMemo(() => {
     const items = /** @type {any[]} */ (attendancePayload?.data?.items || []);
@@ -898,13 +979,105 @@ function EventDetails({ navigation, route }) {
     },
   });
 
-  const canRequestFeatured = useMemo(() => {
-    const hasParentMultisport = Boolean(event?.team?.club?.parentMultisport);
-    const isNotAlreadyFeatured = !event?.isFeatured;
-    const isNotPending = event?.featuredRequestStatus !== 'pending';
-    const isNotApproved = event?.featuredRequestStatus !== 'approved';
-    return hasParentMultisport && isNotAlreadyFeatured && isNotPending && isNotApproved && canEdit;
-  }, [canEdit, event?.featuredRequestStatus, event?.isFeatured, event?.team?.club?.parentMultisport]);
+  const featuredScopeOptions = useMemo(() => ([
+    {
+      kind: 'PUBLIC',
+      label: 'À la une publique',
+      status: featuredRequestsSummary.PUBLIC.status,
+      summary: featuredRequestsSummary.PUBLIC,
+      visible: canManageFeatured,
+    },
+    {
+      kind: 'SECTION',
+      label: 'À la une dans mon club',
+      status: featuredRequestsSummary.SECTION.status,
+      summary: featuredRequestsSummary.SECTION,
+      visible: canManageFeatured && Boolean(eventClubId),
+    },
+    {
+      kind: 'CM',
+      label: 'À la une dans le club multisport',
+      status: featuredRequestsSummary.CM.status,
+      summary: featuredRequestsSummary.CM,
+      visible: canManageFeatured && Boolean(eventMultisportId),
+    },
+  ].filter((option) => option.visible)), [
+    canManageFeatured,
+    eventClubId,
+    eventMultisportId,
+    featuredRequestsSummary.CM,
+    featuredRequestsSummary.PUBLIC,
+    featuredRequestsSummary.SECTION,
+  ]);
+
+  const canRequestFeatured = useMemo(
+    () => featuredScopeOptions.some((option) => option.status === 'none' || option.status === 'rejected'),
+    [featuredScopeOptions],
+  );
+
+  const hasPendingFeaturedScope = useMemo(
+    () => featuredScopeOptions.some((option) => option.status === 'pending'),
+    [featuredScopeOptions],
+  );
+
+  const hasApprovedFeaturedScope = useMemo(
+    () => featuredScopeOptions.some((option) => option.status === 'approved'),
+    [featuredScopeOptions],
+  );
+
+  const selectedFeaturedScopeKinds = useMemo(
+    () => Object.entries(selectedFeaturedScopes)
+      .filter(([, enabled]) => Boolean(enabled))
+      .map(([kind]) => kind),
+    [selectedFeaturedScopes],
+  );
+
+  const pendingFeaturedApproval = useMemo(() => {
+    if (userData?.role?.name === USER_ROLES.superAdmin && featuredRequestsSummary.PUBLIC.status === 'pending') {
+      return {
+        requestId: featuredRequestsSummary.PUBLIC.requestId,
+        scopeLabel: featuredRequestsSummary.PUBLIC.scopeLabel,
+      };
+    }
+
+    if (isClubManagerForEvent && featuredRequestsSummary.SECTION.status === 'pending') {
+      return {
+        requestId: featuredRequestsSummary.SECTION.requestId,
+        scopeLabel: featuredRequestsSummary.SECTION.scopeLabel,
+      };
+    }
+
+    if (isMultisportAdminForEvent && featuredRequestsSummary.CM.status === 'pending') {
+      return {
+        requestId: featuredRequestsSummary.CM.requestId,
+        scopeLabel: featuredRequestsSummary.CM.scopeLabel,
+      };
+    }
+
+    return null;
+  }, [
+    featuredRequestsSummary.CM.requestId,
+    featuredRequestsSummary.CM.scopeLabel,
+    featuredRequestsSummary.CM.status,
+    featuredRequestsSummary.PUBLIC.requestId,
+    featuredRequestsSummary.PUBLIC.scopeLabel,
+    featuredRequestsSummary.PUBLIC.status,
+    featuredRequestsSummary.SECTION.requestId,
+    featuredRequestsSummary.SECTION.scopeLabel,
+    featuredRequestsSummary.SECTION.status,
+    isClubManagerForEvent,
+    isMultisportAdminForEvent,
+    userData?.role?.name,
+  ]);
+
+  useEffect(() => {
+    if (isFeaturedModalVisible) return;
+    setSelectedFeaturedScopes({
+      CM: false,
+      PUBLIC: false,
+      SECTION: false,
+    });
+  }, [isFeaturedModalVisible]);
 
   const computeLateMinutes = useCallback((/** @type {string | null | undefined} */ arrivedAtIso) => {
     const eventStart = eventStartAt;
@@ -921,6 +1094,38 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.EventEdit,
     });
   }, [eventId, navigation]);
+
+  const toggleFeaturedScope = useCallback((kind) => {
+    setSelectedFeaturedScopes((previous) => ({
+      ...previous,
+      [kind]: !previous[kind],
+    }));
+  }, []);
+
+  const handleSubmitFeaturedScopes = useCallback(() => {
+    if (!selectedFeaturedScopeKinds.length || !eventId) return;
+    setIsFeaturedModalVisible(false);
+    mutations.requestFeaturedMutation.mutate({
+      eventId,
+      scopes: selectedFeaturedScopeKinds,
+    });
+  }, [eventId, mutations.requestFeaturedMutation, selectedFeaturedScopeKinds]);
+
+  const handleRejectFeaturedApproval = useCallback(() => {
+    if (!pendingFeaturedApproval?.requestId) return;
+    Alert.alert(
+      'Refuser la demande ?',
+      'Le demandeur sera notifié du refus.',
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => rejectFeaturedRequestMutation.mutate({ requestId: pendingFeaturedApproval.requestId }),
+          style: 'destructive',
+          text: 'Refuser',
+        },
+      ],
+    );
+  }, [pendingFeaturedApproval?.requestId, rejectFeaturedRequestMutation]);
 
   const handleApplyToDetectionSlot = useCallback((slot) => {
     const slotDocumentId = slot?.documentId;
@@ -1150,7 +1355,7 @@ function EventDetails({ navigation, route }) {
     }, 120);
   }, [eventId, navigation, sendMessage, t]);
 
-  const handleCancelEvent = () => {
+  const handleCancelEvent = useCallback(() => {
     if (!eventId) return;
     if (event?.recurrenceGroupId) {
       Alert.alert(
@@ -1196,7 +1401,26 @@ function EventDetails({ navigation, route }) {
         },
       ],
     );
-  };
+  }, [event?.recurrenceGroupId, eventId, mutations.cancelEventMutation, t]);
+
+  const handleOpenEventActionsMenu = useCallback(() => {
+    Alert.alert(
+      t('eventDetails.actions.menuTitle', 'Actions événement'),
+      t('eventDetails.actions.menuDescription', 'Choisissez une action.'),
+      [
+        { style: 'cancel', text: t('common.cancel', 'Annuler') },
+        {
+          onPress: handleEditEvent,
+          text: t('eventDetails.actions.edit', "Modifier l'événement"),
+        },
+        {
+          onPress: handleCancelEvent,
+          style: 'destructive',
+          text: t('eventDetails.actions.cancelEvent', "Annuler l'événement"),
+        },
+      ],
+    );
+  }, [handleCancelEvent, handleEditEvent, t]);
 
   const isMatchEvent = useMemo(() => {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
@@ -2031,40 +2255,45 @@ function EventDetails({ navigation, route }) {
           {hasAlreadyJoined && <Button disabled title="Je participe !" variant="Primary" />}
           {!hasAlreadyJoined && <Button onPress={handleJoinEvent} title="Reserver" variant="Primary" />}
           {canEdit && (
-            <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[12]]}>
-              <Button icon="edit" isOption onPress={handleEditEvent} style={{ flex: 1 }} title="Modifier" variant="Secondary" />
-              <Button icon="close" isOption onPress={handleCancelEvent} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
+            <View style={Spaces.marginTop[12]}>
+              <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
             </View>
           )}
         </View>
       );
     }
 
-    const featuredActionNode = canEdit && canRequestFeatured ? (
+    const featuredActionNode = canManageFeatured && canRequestFeatured ? (
       <View style={{ marginTop: 12 }}>
         <Button icon="bell" onPress={() => setIsFeaturedModalVisible(true)} title={'Mettre \u00e0 la une'} variant="Secondary" />
       </View>
     ) : null;
-    const pendingFeaturedActionNode = event?.featuredRequestStatus === 'pending' ? (
+    const pendingFeaturedActionNode = hasPendingFeaturedScope ? (
       <View style={{ marginTop: 12, opacity: 0.7 }}>
         <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
+      </View>
+    ) : hasApprovedFeaturedScope && canManageFeatured ? (
+      <View style={{ marginTop: 12, opacity: 0.8 }}>
+        <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
       </View>
     ) : null;
 
     const actionButtonsNode = (
       <View>
-        <EventAnswerButtons
-          event={event}
-          hasAcceptedRequest={hasAcceptedRequest}
-          hasPendingRequest={hasPendingRequest}
-          onCancel={canEdit ? handleCancelEvent : undefined}
-          onDecline={() => handleDeclineEvent(event)}
-          onDeleteParticipation={handleDeleteParticipation}
-          onEdit={canEdit ? handleEditEvent : undefined}
-          onJoin={handleJoinEvent}
-          onLogin={() => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount })}
-          onParticipate={() => handleParticipateToEvent(event)}
-        />
+        {canEdit ? (
+          <Button onPress={handleOpenEventActionsMenu} title="Actions événement" variant="Secondary" />
+        ) : (
+          <EventAnswerButtons
+            event={event}
+            hasAcceptedRequest={hasAcceptedRequest}
+            hasPendingRequest={hasPendingRequest}
+            onDecline={() => handleDeclineEvent(event)}
+            onDeleteParticipation={handleDeleteParticipation}
+            onJoin={handleJoinEvent}
+            onLogin={() => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.AuthStackAccount })}
+            onParticipate={() => handleParticipateToEvent(event)}
+          />
+        )}
         {canEdit && isMatchEvent && (
           <View style={{ marginTop: 12 }}>
             <Button
@@ -2117,9 +2346,9 @@ function EventDetails({ navigation, route }) {
               style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions du match</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Modifie cet evenement, gere son annulation ou ouvre la composition d equipe.
+                  Modifie cet événement, gère son annulation ou ouvre la composition d&apos;équipe.
                 </Text>
               </View>
               <View
@@ -2777,21 +3006,23 @@ function EventDetails({ navigation, route }) {
       </ScrollView>
 
       <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
-        {userData?.role?.name === USER_ROLES.superAdmin && event?.featuredRequestStatus === 'pending'
+        {pendingFeaturedApproval?.requestId
           ? (
             <View style={[Alignments.row, Spaces.gap[16]]}>
               <Button
                 icon="check"
                 isOption
-                onPress={() => /** @type {any} */ (mutations.updateEventMutation).mutate({ documentId: eventId || '', eventData: { featuredRequestStatus: 'approved', isFeatured: true } })}
+                isLoading={approveFeaturedRequestMutation.isPending}
+                onPress={() => approveFeaturedRequestMutation.mutate(pendingFeaturedApproval.requestId)}
                 style={{ flex: 1 }}
-                title="Valider"
+                title={`Valider ${pendingFeaturedApproval.scopeLabel.toLowerCase()}`}
                 variant="Primary"
               />
               <Button
                 icon="close"
                 isOption
-                onPress={() => /** @type {any} */ (mutations.updateEventMutation).mutate({ documentId: eventId || '', eventData: { featuredRequestStatus: 'rejected' } })}
+                isLoading={rejectFeaturedRequestMutation.isPending}
+                onPress={handleRejectFeaturedApproval}
                 style={{ flex: 1 }}
                 title="Refuser"
                 variant="Secondary"
@@ -2986,16 +3217,79 @@ function EventDetails({ navigation, route }) {
           onPress={() => setIsFeaturedModalVisible(false)}
           style={{ backgroundColor: 'rgba(0,0,0,0.5)', flex: 1, justifyContent: 'flex-end' }}
         >
-          <View style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
-            <Button
-              onPress={() => {
-                setIsFeaturedModalVisible(false);
-                mutations.requestFeaturedMutation.mutate(eventId || '');
-              }}
-              title="Tout le club"
-              variant="Primary"
-            />
-          </View>
+          <TouchableOpacity activeOpacity={1} style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
+            <View style={[Spaces.gap[16]]}>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                Mettre à la une
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                Choisissez où vous souhaitez mettre cet événement en avant.
+              </Text>
+
+              {featuredScopeOptions.map((option) => {
+                const isDisabled = option.status === 'pending' || option.status === 'approved';
+                const isSelected = Boolean(selectedFeaturedScopes[option.kind]);
+                const statusLabel = option.status === 'pending'
+                  ? 'Demande en attente'
+                  : option.status === 'approved'
+                    ? 'Déjà à la une'
+                    : option.status === 'rejected'
+                      ? 'Refusée, vous pouvez redemander'
+                      : 'Disponible';
+
+                return (
+                  <View
+                    key={option.kind}
+                    style={[
+                      ApplicationStyle.borderRadius16,
+                      ApplicationStyle.borderWidth1,
+                      Spaces.padding[16],
+                      Spaces.gap[8],
+                      {
+                        borderColor: `${Colors.primary500}55`,
+                        opacity: isDisabled ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                      <Checkbox
+                        disabled={isDisabled}
+                        onValueChange={() => toggleFeaturedScope(option.kind)}
+                        value={isSelected}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          {option.label}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {statusLabel}
+                        </Text>
+                        {option.summary?.targetName ? (
+                          <Text style={[Fonts.p4, Fonts.primary100]}>
+                            {option.summary.targetName}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+
+              <View style={[Spaces.gap[12]]}>
+                <Button
+                  disabled={!selectedFeaturedScopeKinds.length || mutations.requestFeaturedMutation.isPending}
+                  onPress={handleSubmitFeaturedScopes}
+                  title="Envoyer la demande"
+                  variant="Primary"
+                />
+                <Button
+                  onPress={() => setIsFeaturedModalVisible(false)}
+                  title="Annuler"
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
 

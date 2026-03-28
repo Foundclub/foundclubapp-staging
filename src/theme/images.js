@@ -8,6 +8,11 @@ export const images = {
   bg3: require('../assets/pictures/bg-3.png'),
   bg4: require('../assets/pictures/bg-4.png'),
   bg5: require('../assets/pictures/bg-5.png'),
+  eventCardOther: require('../assets/background-card-event/card-autre.png'),
+  eventCardDetection: require('../assets/background-card-event/card-detection.png'),
+  eventCardTraining: require('../assets/background-card-event/card-entrainement.png'),
+  eventCardMatch: require('../assets/background-card-event/card-match.png'),
+  eventCardReservation: require('../assets/background-card-event/card-reservation.png'),
   logo: require('../assets/pictures/logo.png'),
   roundAvatar: require('../assets/pictures/avatar-round.png'),
   // icon

@@ -64,6 +64,27 @@ export const rewriteLoopbackUrl = (rawUrl, targetOrigin) => {
   return rawUrl;
 };
 
+export const shouldAttachAuthToMediaUrl = (rawUrl, options = {}) => {
+  const value = String(rawUrl || '').trim();
+  if (!/^https?:\/\//i.test(value)) return false;
+
+  const apiOrigins = [
+    options.apiOrigin,
+    options.publicApiOrigin,
+    process.env.API_URL,
+    process.env.API_PUBLIC_URL,
+  ]
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean);
+
+  if (apiOrigins.length === 0) return false;
+
+  const mediaOrigin = normalizeOrigin(value);
+  if (!mediaOrigin) return false;
+
+  return apiOrigins.some((origin) => origin === mediaOrigin);
+};
+
 const buildDefaultMediaOrigins = () => [
   process.env.API_URL,
   process.env.API_PUBLIC_URL,
