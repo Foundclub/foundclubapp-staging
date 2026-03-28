@@ -70,6 +70,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
+import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -415,6 +416,9 @@ function Conversation({ navigation, route }) {
     if (rawErrorMessage.includes('voice_file_empty')) {
       return 'Le fichier audio local est vide.';
     }
+    if (rawErrorMessage.includes('voice note requires an audio attachment')) {
+      return 'La note vocale a bien ete enregistree, mais le serveur n a pas reconnu le fichier audio. Reessayez.';
+    }
     if (rawErrorMessage.includes('voice_module_unavailable')) {
       return 'Le module vocal n est pas disponible sur cette build.';
     }
@@ -432,6 +436,32 @@ function Conversation({ navigation, route }) {
     }
     return "Impossible d'envoyer cette pièce jointe.";
   }, [isTransientNetworkUploadError]);
+
+  const getAttachmentExtensionFromAsset = useCallback((asset) => {
+    const rawFileName = String(asset?.fileName || '').trim();
+    const rawUri = String(asset?.uri || '').trim();
+    const rawType = String(asset?.type || '').trim().toLowerCase();
+
+    const extractExtension = (value) => {
+      const sanitized = String(value || '').split('?')[0].split('#')[0];
+      const lastDotIndex = sanitized.lastIndexOf('.');
+      if (lastDotIndex < 0) return '';
+      return sanitized.slice(lastDotIndex + 1).trim().toLowerCase();
+    };
+
+    const fileNameExtension = extractExtension(rawFileName);
+    if (fileNameExtension) return fileNameExtension;
+
+    const uriExtension = extractExtension(rawUri.replace(/^file:\/\//i, ''));
+    if (uriExtension) return uriExtension;
+
+    if (rawType.startsWith('audio/mp4')) return 'mp4';
+    if (rawType.startsWith('audio/')) return rawType.split('/')[1] || 'm4a';
+    if (rawType.startsWith('video/')) return rawType.split('/')[1] || 'mp4';
+    if (rawType.startsWith('image/')) return rawType.split('/')[1] || 'jpg';
+    if (rawType.includes('/')) return rawType.split('/')[1] || 'bin';
+    return 'bin';
+  }, []);
 
   const getAttachmentSizeLimit = useCallback((assetType) => {
     const normalizedType = String(assetType || '').toLowerCase();
@@ -562,10 +592,17 @@ function Conversation({ navigation, route }) {
       }));
   }, [chatData?.participants, userData?.documentId]);
 
-  const canRecordVoiceNote = useMemo(
-    () => isVoiceNotesEnabled && isVoiceNoteRecordingSupported(),
-    [],
-  );
+  const canRecordVoiceNote = useMemo(() => {
+    if (!isVoiceNotesEnabled) return false;
+    try {
+      return isVoiceNoteRecordingSupported();
+    } catch (error) {
+      conversationLogger.warn('Voice note capability check failed', {
+        message: error?.message,
+      });
+      return false;
+    }
+  }, []);
 
   const {
     Alignments,
@@ -754,6 +791,9 @@ function Conversation({ navigation, route }) {
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
+  const [counterProposalContext, setCounterProposalContext] = useState(
+    /** @type {{ messageId: string; shouldDecline: boolean } | null} */ (null),
+  );
   const [isLocationShareModalVisible, setIsLocationShareModalVisible] = useState(false);
   const [isContactShareModalVisible, setIsContactShareModalVisible] = useState(false);
   const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
@@ -766,6 +806,7 @@ function Conversation({ navigation, route }) {
   const sharedEventPreviewByIdRef = useRef(new Map());
   const messageContainerRef = useRef(null);
   const swipeableMessageRefs = useRef(new Map());
+  const consumedNegotiationFocusKeyRef = useRef('');
   const pendingAttachmentActionRef = useRef(
     /** @type {null | (() => Promise<void> | void)} */ (null),
   );
@@ -1083,21 +1124,15 @@ function Conversation({ navigation, route }) {
       socketConnected: Boolean(isSocketConnected),
     });
 
-    const isVideo = typeof asset.type === 'string' && asset.type.startsWith('video/');
     const isAudio = typeof asset.type === 'string' && asset.type.startsWith('audio/');
-    let defaultExtension = 'jpg';
-    if (isVideo) {
-      defaultExtension = 'mp4';
-    } else if (isAudio) {
-      defaultExtension = 'm4a';
-    }
+    const defaultExtension = getAttachmentExtensionFromAsset(asset) || 'jpg';
     const maxAttempts = 3;
     const wait = (ms) => new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
     const attemptUpload = async (attempt) => {
       try {
-        if (Platform.OS === 'android' && attempt === 1 && !isAudio) {
+        if (Platform.OS === 'android' && attempt === 1) {
           try {
             const androidFetchItems = await uploadAttachmentAssetWithFetch(asset);
             if (androidFetchItems.length > 0) {
@@ -1155,11 +1190,11 @@ function Conversation({ navigation, route }) {
           shouldRetry,
         });
 
-        if (Platform.OS === 'android' && isAudio && attempt === 1) {
+        if (Platform.OS === 'android' && isAudio && isTransientNetworkError) {
           try {
             const fallbackItems = await uploadAttachmentAssetWithFetch({
               ...asset,
-              fileName: asset.fileName || `upload_${Date.now()}.m4a`,
+              fileName: asset.fileName || `upload_${Date.now()}.${defaultExtension}`,
               type: asset.type || 'audio/mp4',
             });
             if (fallbackItems.length > 0) {
@@ -1197,7 +1232,7 @@ function Conversation({ navigation, route }) {
     };
 
     return attemptUpload(1);
-  }, [chatId, describeAsset, describeUploadItems, isSocketConnected, isTransientNetworkUploadError, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
+  }, [chatId, describeAsset, describeUploadItems, getAttachmentExtensionFromAsset, isSocketConnected, isTransientNetworkUploadError, logAttachmentDebug, uploadAttachmentAssetWithFetch]);
 
   const uploadAndSendAttachment = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ asset,
@@ -1412,16 +1447,11 @@ function Conversation({ navigation, route }) {
     const safeType = rawType || 'application/octet-stream';
     const baseName = String(selectedAsset?.fileName || '').trim();
 
-    let extension = 'bin';
-    if (safeType.startsWith('image/')) {
-      extension = safeType.split('/')[1] || 'jpg';
-    } else if (safeType.startsWith('video/')) {
-      extension = safeType.split('/')[1] || 'mp4';
-    } else if (safeType.startsWith('audio/')) {
-      extension = safeType.split('/')[1] || 'm4a';
-    } else if (safeType.includes('/')) {
-      extension = safeType.split('/')[1] || extension;
-    }
+    const extension = getAttachmentExtensionFromAsset({
+      fileName: baseName,
+      type: safeType,
+      uri: selectedAsset?.uri,
+    });
 
     return {
       fileName: baseName || `media_${Date.now()}.${extension}`,
@@ -1429,7 +1459,7 @@ function Conversation({ navigation, route }) {
       type: safeType,
       uri: selectedAsset?.uri,
     };
-  }, []);
+  }, [getAttachmentExtensionFromAsset]);
 
   const queueOrSendPickedAsset = async (
     /** @type {{ fileName?: string; type?: string; uri?: string | null }} */ selectedAsset,
@@ -2368,7 +2398,10 @@ function Conversation({ navigation, route }) {
       setPendingVoiceDraft({
         diagnostics: draft?.diagnostics,
         durationMs: normalizedDurationMs,
-        fileName: draft?.fileName || `voice-note-${Date.now()}.m4a`,
+        fileName: draft?.fileName || `voice-note-${Date.now()}.${getAttachmentExtensionFromAsset({
+          type: draft?.mime || 'audio/mp4',
+          uri: draft?.uri,
+        })}`,
         mime: draft?.mime || 'audio/mp4',
         size: Math.max(0, Number(draft?.size) || 0),
         uri: draft.uri,
@@ -2417,6 +2450,7 @@ function Conversation({ navigation, route }) {
     }
   }, [
     chatId,
+    getAttachmentExtensionFromAsset,
     isVoiceRecording,
     logVoiceDiagnostic,
     resetVoiceRecordingState,
@@ -2609,60 +2643,48 @@ function Conversation({ navigation, route }) {
   /* Proposal Logic */
   const handleSendProposal = async (/** @type {any} */ proposalData) => {
     try {
-      const proposalStartDate = new Date(proposalData.date);
-      const proposalEndDate = proposalData.endDate
-        ? new Date(proposalData.endDate)
-        : new Date(proposalStartDate.getTime() + (60 * 60 * 1000));
       const matchId = getEntityDocumentId(chatData?.league_match);
-      const addressLabel = typeof proposalData?.address === 'string'
-        ? proposalData.address
-        : proposalData?.addressObject?.label
-              || proposalData?.addressObject?.address
-              || null;
-      const nextLocation = {
-        ...(chatData?.league_match?.location && typeof chatData.league_match.location === 'object'
-          ? chatData.league_match.location
-          : {}),
-        ...(proposalData?.addressObject && typeof proposalData.addressObject === 'object'
-          ? proposalData.addressObject
-          : {}),
-        ...(addressLabel ? { address: addressLabel, label: addressLabel } : {}),
-        proposed_end_time: proposalEndDate.toISOString(),
-      };
+      const payload = buildLeagueProposalPayload(
+        matchId,
+        proposalData,
+        chatData?.league_match?.location,
+      );
 
-      if (matchId) {
-        await updateMatch(matchId, {
-          location: nextLocation,
-          proposed_time: proposalStartDate.toISOString(),
-          proposed_venue: proposalData.venue,
-        });
+      if (counterProposalContext?.shouldDecline && counterProposalContext?.messageId) {
+        await respondToProposal(counterProposalContext.messageId, 'declined');
       }
 
-      // Construct the message content
-      const messageText = 'Nouvelle proposition de match';
-      const proposalComposition = {
-        address: addressLabel,
-        addressObject: nextLocation,
-        date: proposalStartDate.toISOString(),
-        endDate: proposalEndDate.toISOString(),
-        matchId,
-        status: 'pending',
-        type: 'proposal',
-        venue: proposalData.venue,
-      };
+      if (matchId) {
+        await updateMatch(matchId, payload.matchUpdate);
+      }
 
-      // Send message
-      await sendMessage(chatId, messageText, {
-        composition: proposalComposition,
+      sendMessage(chatId, payload.message.message, {
+        composition: payload.message.composition,
         sender: userData,
       });
 
-      Alert.alert('Envoyé', 'Votre proposition a été envoyée !');
+      setIsProposalModalVisible(false);
+      setCounterProposalContext(null);
+      Alert.alert('Envoye', 'Votre proposition a ete envoyee !');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
       Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
     }
   };
+
+  const handleOpenCounterProposal = useCallback((message, options = {}) => {
+    const proposalMessageId = String(
+      message?.documentId
+      || message?._id
+      || message?.id
+      || '',
+    ).trim();
+    setCounterProposalContext({
+      messageId: proposalMessageId,
+      shouldDecline: options?.shouldDecline !== false && !options?.isMine,
+    });
+    setIsProposalModalVisible(true);
+  }, []);
 
   const handleRespondProposal = async (/** @type {any} */ message, /** @type {string} */ status) => {
     const matchId = message?.composition?.matchId || getEntityDocumentId(chatData?.league_match);
@@ -2929,6 +2951,7 @@ function Conversation({ navigation, route }) {
         pending: msg.pending,
         readBy: msg.readBy,
         replyTo: msg.replyTo,
+        senderDocumentId: msg.sender?.documentId || '',
         text: msg.message,
         user: {
           _id: msg.sender?.documentId || '',
@@ -2945,6 +2968,116 @@ function Conversation({ navigation, route }) {
     || messages?.[0]?._id
     || '',
   ).trim();
+  const latestProposalMessage = useMemo(() => (
+    Array.isArray(messages)
+      ? messages.find((message) => message?.composition?.type === 'proposal' && message?.composition?.status === 'pending')
+        || messages.find((message) => message?.composition?.type === 'proposal')
+        || null
+      : null
+  ), [messages]);
+  const latestProposalMessageId = String(
+    latestProposalMessage?.documentId
+    || latestProposalMessage?._id
+    || '',
+  ).trim();
+  const leagueConversationMatch = chatData?.league_match || null;
+  const leagueConversationMatchId = getEntityDocumentId(leagueConversationMatch);
+  const latestProposalSenderId = String(latestProposalMessage?.senderDocumentId || latestProposalMessage?.user?._id || '').trim();
+  const myTeamMemberIds = useMemo(() => {
+    const ids = new Set();
+    const members = Array.isArray(chatData?.myTeamMembers) ? chatData.myTeamMembers : [];
+    members.forEach((member) => {
+      const memberId = getEntityDocumentId(member);
+      if (memberId) ids.add(memberId);
+    });
+    if (userData?.documentId) ids.add(String(userData.documentId));
+    return ids;
+  }, [chatData?.myTeamMembers, userData?.documentId]);
+  const isLatestProposalFromMySquad = Boolean(
+    latestProposalSenderId && myTeamMemberIds.has(latestProposalSenderId),
+  );
+  const leagueNegotiationSummary = useMemo(() => {
+    const proposal = latestProposalMessage?.composition || null;
+    const proposalDate = proposal?.date || leagueConversationMatch?.proposed_time || leagueConversationMatch?.date || null;
+    const proposalEndDate = proposal?.endDate || leagueConversationMatch?.location?.proposed_end_time || null;
+    const proposalVenue = proposal?.venue || leagueConversationMatch?.proposed_venue || leagueConversationMatch?.venue || 'Lieu a definir';
+    const proposalStatus = String(proposal?.status || '').trim().toLowerCase();
+
+    let statusLabel = 'Negociation active';
+    let title = 'Organisation du match en cours';
+    if (proposalStatus === 'accepted') {
+      statusLabel = 'Proposition acceptee';
+      title = 'Le match est en bonne voie';
+    } else if (proposalStatus === 'declined') {
+      statusLabel = 'Proposition refusee';
+      title = 'Une nouvelle proposition est attendue';
+    } else if (proposalStatus === 'pending') {
+      statusLabel = isLatestProposalFromMySquad ? 'Proposition envoyee' : 'Proposition recue';
+      title = isLatestProposalFromMySquad
+        ? 'Votre proposition attend une reponse'
+        : 'Une proposition attend votre reponse';
+    }
+
+    let helper = 'La conversation avec l adversaire reste l espace principal pour conclure ce match.';
+    if (proposalStatus === 'pending') {
+      helper = isLatestProposalFromMySquad
+        ? 'Suivez la reponse adverse depuis le chat ou la fiche match.'
+        : 'Consultez la proposition puis acceptez, refusez ou contre-proposez.';
+    } else if (proposalStatus === 'accepted') {
+      helper = 'Retrouvez les details confirms sur la fiche match.';
+    } else if (proposalStatus === 'declined') {
+      helper = 'Poursuivez la negociation pour trouver un nouveau creneau.';
+    }
+
+    let formattedDate = 'Date a definir';
+    if (proposalDate) {
+      try {
+        formattedDate = new Date(proposalDate).toLocaleString('fr-FR', {
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          month: 'long',
+        });
+      } catch (_error) {
+        formattedDate = 'Date a definir';
+      }
+    }
+
+    let scheduleLabel = formattedDate;
+    if (proposalDate) {
+      try {
+        const start = new Date(proposalDate);
+        const end = proposalEndDate ? new Date(proposalEndDate) : null;
+        const dayLabel = start.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: 'short',
+          weekday: 'short',
+        });
+        const startTime = start.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const endTime = end && !Number.isNaN(end.getTime())
+          ? end.toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+          : null;
+        scheduleLabel = endTime ? `${dayLabel} • ${startTime} - ${endTime}` : `${dayLabel} • ${startTime}`;
+      } catch (_error) {
+        scheduleLabel = formattedDate;
+      }
+    }
+
+    return {
+      formattedDate,
+      helper,
+      scheduleLabel,
+      statusLabel,
+      title,
+      venue: proposalVenue,
+    };
+  }, [isLatestProposalFromMySquad, latestProposalMessage?.composition, leagueConversationMatch]);
 
   useEffect(() => {
     if (!isSocketReadTypingEnabled) return;
@@ -3242,7 +3375,10 @@ function Conversation({ navigation, route }) {
     }
 
     const normalizedVoiceAsset = {
-      fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.m4a`,
+      fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.${getAttachmentExtensionFromAsset({
+        type: pendingVoiceDraft.mime || 'audio/mp4',
+        uri: pendingVoiceDraft.uri,
+      })}`,
       size: Number(pendingVoiceDraft.size || 0) || 0,
       type: pendingVoiceDraft.mime || 'audio/mp4',
       uri: pendingVoiceDraft.uri,
@@ -3655,6 +3791,40 @@ function Conversation({ navigation, route }) {
     return false;
   }, [messageIndexByDocumentId]);
 
+  const handleOpenLeagueMatchDetails = useCallback(() => {
+    if (!leagueConversationMatchId) return;
+    navigation.navigate(RouteNames.LeagueMatchDetails, {
+      focusSection: 'negotiation',
+      matchId: leagueConversationMatchId,
+    });
+  }, [leagueConversationMatchId, navigation]);
+
+  useEffect(() => {
+    const focusToken = String(route?.params?.leagueNegotiationFocusToken || '').trim();
+    const explicitMessageId = String(route?.params?.focusProposalMessageId || '').trim();
+    const shouldFocusLatestProposal = Boolean(route?.params?.focusLatestProposal);
+    const targetMessageId = explicitMessageId || (shouldFocusLatestProposal ? latestProposalMessageId : '');
+    if (!targetMessageId) return undefined;
+
+    const focusKey = `${focusToken || 'default'}:${targetMessageId}`;
+    if (consumedNegotiationFocusKeyRef.current === focusKey) return undefined;
+
+    const timeout = setTimeout(() => {
+      const didScroll = scrollToMessageByDocumentId(targetMessageId);
+      if (didScroll) {
+        consumedNegotiationFocusKeyRef.current = focusKey;
+      }
+    }, 180);
+
+    return () => clearTimeout(timeout);
+  }, [
+    latestProposalMessageId,
+    route?.params?.focusLatestProposal,
+    route?.params?.focusProposalMessageId,
+    route?.params?.leagueNegotiationFocusToken,
+    scrollToMessageByDocumentId,
+  ]);
+
   const handleReplyPreviewPress = useCallback((replyTo) => {
     const targetDocumentId = getReplyTargetDocumentId(replyTo);
     if (!targetDocumentId) return;
@@ -3976,8 +4146,13 @@ function Conversation({ navigation, route }) {
           currentMessage, (
             <View style={{ marginBottom, marginTop }}>
               <ProposalMessageBubble
+                isHighlighted={latestProposalMessageId === String(currentMessage.documentId || currentMessage._id || '')}
                 isMe={!isLeft}
                 onAccept={() => handleRespondProposal(currentMessage, 'accepted')}
+                onCounter={() => handleOpenCounterProposal(currentMessage, {
+                  isMine: !isLeft,
+                  shouldDecline: isLeft,
+                })}
                 onDecline={() => handleRespondProposal(currentMessage, 'declined')}
                 proposal={currentMessage.composition}
               />
@@ -4329,7 +4504,10 @@ function Conversation({ navigation, route }) {
     <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
       {isLeagueConversation ? (
         <TouchableOpacity
-          onPress={() => setIsProposalModalVisible(true)}
+          onPress={() => {
+            setCounterProposalContext(null);
+            setIsProposalModalVisible(true);
+          }}
           style={{
             alignItems: 'center',
             backgroundColor: Colors.gold500,
@@ -4884,6 +5062,95 @@ function Conversation({ navigation, route }) {
     }, 120);
   }, []);
 
+  const renderLeagueNegotiationBanner = () => {
+    if (!isLeagueConversation || !leagueConversationMatch) return null;
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          Spaces.marginHorizontal[16],
+          Spaces.marginBottom[12],
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[14],
+          {
+            backgroundColor: 'rgba(10, 28, 43, 0.92)',
+            borderColor: 'rgba(1,179,244,0.28)',
+            borderWidth: 1,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}>
+          <View
+            style={{
+              backgroundColor: 'rgba(1,179,244,0.14)',
+              borderColor: 'rgba(1,179,244,0.36)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+            }}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {leagueNegotiationSummary.statusLabel}
+            </Text>
+          </View>
+          {latestProposalMessageId ? (
+            <TouchableOpacity onPress={() => scrollToMessageByDocumentId(latestProposalMessageId)}>
+              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Voir la proposition</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 12 }]}>
+          {leagueNegotiationSummary.title}
+        </Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 6 }]}>
+          {leagueNegotiationSummary.helper}
+        </Text>
+
+        <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginTop: 14 }]}>
+          <View
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {leagueNegotiationSummary.scheduleLabel}
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {leagueNegotiationSummary.venue}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[Spaces.marginTop[14]]}>
+          <Button
+            onPress={handleOpenLeagueMatchDetails}
+            title="Voir la fiche match"
+            variant="SecondaryLight"
+          />
+        </View>
+      </View>
+    );
+  };
+
   return (
     <ImageBackground
       resizeMode="cover"
@@ -4953,6 +5220,7 @@ function Conversation({ navigation, route }) {
       </View>
 
       <View style={[Alignments.fill]}>
+        {renderLeagueNegotiationBanner()}
         <GiftedChat
           bottomOffset={giftedChatBottomOffset}
           dateFormat="DD MMMM"
@@ -5657,9 +5925,15 @@ function Conversation({ navigation, route }) {
           initialEndTime={proposalDefaults.end}
           initialStartTime={proposalDefaults.start}
           isVisible={isProposalModalVisible}
-          onClose={() => setIsProposalModalVisible(false)}
+          onClose={() => {
+            setCounterProposalContext(null);
+            setIsProposalModalVisible(false);
+          }}
           onSend={handleSendProposal}
-          onSkip={() => setIsProposalModalVisible(false)}
+          onSkip={() => {
+            setCounterProposalContext(null);
+            setIsProposalModalVisible(false);
+          }}
         />
       </View>
     </ImageBackground>

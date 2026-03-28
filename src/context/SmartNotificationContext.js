@@ -127,10 +127,10 @@ export function SmartNotificationProvider({ children }) {
     recapSheetVisible,
   ]);
 
-  return (
-    <SmartNotificationContext.Provider value={value}>
-      {children}
-    </SmartNotificationContext.Provider>
+  return React.createElement(
+    SmartNotificationContext.Provider,
+    { value },
+    children,
   );
 }
 

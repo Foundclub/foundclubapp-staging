@@ -24,6 +24,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStatsQueries';
 
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+
 const BLOCKED_ROUTES = new Set([
   RouteNames.EventDetails,
   RouteNames.LeagueMatchDetails,
@@ -149,7 +151,6 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
 function MatchStatsPromptHost() {
   const [{ auth }] = useAppContext();
   const queryClient = useQueryClient();
-  const [isVisible, setIsVisible] = useState(false);
   const [dismissedPromptKey, setDismissedPromptKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
@@ -175,6 +176,19 @@ function MatchStatsPromptHost() {
   const isCompactMobile = width < 390 || height < 760;
   const statusMeta = useMemo(() => getPromptStatusMeta(nextPrompt, Colors), [Colors, nextPrompt]);
   const modalSnapPoint = isCompactMobile ? '88%' : '82%';
+  const shouldShowPrompt = Boolean(
+    auth?.token
+    && nextPrompt
+    && isNavigationReady
+    && !isBlockedRoute
+    && (!dismissedPromptKey || dismissedPromptKey !== nextPrompt.key),
+  );
+  const canShowPrompt = useBlockingOverlayPrompt(
+    'match-stats-prompt',
+    shouldShowPrompt,
+    65,
+  );
+  const isVisible = shouldShowPrompt && canShowPrompt;
   const sectionGap = isCompactMobile ? 16 : 24;
   const titleGap = isCompactMobile ? 12 : 16;
   const cardPadding = isCompactMobile ? 16 : 24;
@@ -249,7 +263,6 @@ function MatchStatsPromptHost() {
     if (nextPrompt?.key) {
       setDismissedPromptKey(nextPrompt.key);
     }
-    setIsVisible(false);
   }, [nextPrompt?.key]);
 
   const handleOpenEditor = useCallback(() => {
@@ -268,7 +281,6 @@ function MatchStatsPromptHost() {
   useEffect(() => {
     if (!auth?.token) {
       setDismissedPromptKey(null);
-      setIsVisible(false);
       return undefined;
     }
 
@@ -307,25 +319,6 @@ function MatchStatsPromptHost() {
 
     return () => subscription.remove();
   }, [auth?.token, queryClient, refetch]);
-
-  useEffect(() => {
-    if (!auth?.token || !nextPrompt || !isNavigationReady) {
-      setIsVisible(false);
-      return;
-    }
-
-    if (isBlockedRoute) {
-      setIsVisible(false);
-      return;
-    }
-
-    if (dismissedPromptKey && dismissedPromptKey === nextPrompt.key) {
-      setIsVisible(false);
-      return;
-    }
-
-    setIsVisible(true);
-  }, [auth?.token, dismissedPromptKey, isBlockedRoute, isNavigationReady, nextPrompt]);
 
   if (!auth?.token || !nextPrompt) {
     return null;

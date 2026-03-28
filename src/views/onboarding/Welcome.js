@@ -10,7 +10,7 @@ import { storage, useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 /**
  * Welcome screen component shown after completing onboarding.
@@ -41,8 +41,9 @@ function Welcome({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
+      contentWidth="readable"
       contentContainerStyle={[
         Spaces.padding[24],
         Alignments.justifySpaceBetween,
@@ -98,7 +99,7 @@ function Welcome({ navigation }) {
         title={t('welcome.actions.go')}
         variant="Primary"
       />
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

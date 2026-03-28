@@ -9,7 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -62,7 +62,7 @@ function UserSection({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
@@ -98,7 +98,7 @@ function UserSection({ navigation }) {
         title={t('profile.actions.save')}
         variant="Primary"
       />
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

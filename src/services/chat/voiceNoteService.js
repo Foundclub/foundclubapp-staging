@@ -1,6 +1,7 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { createLogger } from '@/utils/logger/logger';
 
 const voiceNoteLogger = createLogger('voice-note-service');
@@ -23,14 +24,48 @@ let recordingSession = {
   meteringSamples: [],
 };
 
-const hasRecorderApi = (candidate) => (
-  !!candidate
-  && typeof candidate.startRecorder === 'function'
-  && typeof candidate.stopRecorder === 'function'
-);
+const safeRead = (resolver, context, fallback = null) => {
+  try {
+    return resolver();
+  } catch (error) {
+    if (context) {
+      voiceNoteLogger.warn(context, { message: error?.message });
+    }
+    return fallback;
+  }
+};
+
+const safeCall = (fn, thisArg, args, context, fallback = null) => {
+  if (typeof fn !== 'function') return fallback;
+  try {
+    return fn.apply(thisArg, Array.isArray(args) ? args : []);
+  } catch (error) {
+    if (context) {
+      voiceNoteLogger.warn(context, { message: error?.message });
+    }
+    return fallback;
+  }
+};
+
+const hasRecorderApi = (candidate) => {
+  if (!candidate) return false;
+  const startRecorder = safeRead(
+    () => candidate.startRecorder,
+    'Recorder start API unavailable',
+  );
+  const stopRecorder = safeRead(
+    () => candidate.stopRecorder,
+    'Recorder stop API unavailable',
+  );
+  return typeof startRecorder === 'function' && typeof stopRecorder === 'function';
+};
 
 const getAudioModule = () => {
   if (cachedAudioModule !== undefined) return cachedAudioModule;
+  if (!canLoadNitroSoundModule()) {
+    cachedAudioModule = null;
+    return cachedAudioModule;
+  }
   try {
     // eslint-disable-next-line global-require
     cachedAudioModule = require('react-native-nitro-sound');
@@ -46,35 +81,71 @@ const createRecorder = () => {
   if (!audioModule) return null;
 
   const createdFromFactory = (() => {
-    if (typeof audioModule?.createSound === 'function') {
-      try {
-        return audioModule.createSound();
-      } catch (_error) {
-        return null;
-      }
+    const createSound = safeRead(
+      () => audioModule.createSound,
+      'Nitro createSound unavailable',
+    );
+    if (typeof createSound === 'function') {
+      return safeCall(
+        createSound,
+        audioModule,
+        [],
+        'Nitro createSound factory failed',
+      );
     }
-    if (typeof audioModule?.default?.createSound === 'function') {
-      try {
-        return audioModule.default.createSound();
-      } catch (_error) {
-        return null;
-      }
+
+    const defaultExport = safeRead(
+      () => audioModule.default,
+      'Nitro default export unavailable',
+    );
+    const createSoundFromDefault = safeRead(
+      () => defaultExport?.createSound,
+      'Nitro default createSound unavailable',
+    );
+    if (typeof createSoundFromDefault === 'function') {
+      return safeCall(
+        createSoundFromDefault,
+        defaultExport,
+        [],
+        'Nitro default createSound factory failed',
+      );
     }
     return null;
   })();
 
   if (hasRecorderApi(createdFromFactory)) return createdFromFactory;
   if (hasRecorderApi(audioModule)) return audioModule;
-  if (hasRecorderApi(audioModule?.default)) return audioModule.default;
-  if (hasRecorderApi(audioModule?.Sound)) return audioModule.Sound;
+  const defaultExport = safeRead(
+    () => audioModule.default,
+    'Nitro default recorder export unavailable',
+  );
+  if (hasRecorderApi(defaultExport)) return defaultExport;
+
+  const soundExport = safeRead(
+    () => audioModule.Sound,
+    'Nitro Sound recorder export unavailable',
+  );
+  if (hasRecorderApi(soundExport)) return soundExport;
   return null;
 };
 
 const getRecorder = () => {
   if (recorderInstance) return recorderInstance;
-  recorderInstance = createRecorder();
+  recorderInstance = safeRead(
+    () => createRecorder(),
+    'Failed to create Nitro recorder',
+  );
   if (recorderInstance) {
-    recorderInstance.setSubscriptionDuration?.(0.1);
+    const setSubscriptionDuration = safeRead(
+      () => recorderInstance.setSubscriptionDuration,
+      'Recorder subscription setter unavailable',
+    );
+    safeCall(
+      setSubscriptionDuration,
+      recorderInstance,
+      [0.1],
+      'Recorder subscription setup failed',
+    );
   }
   return recorderInstance;
 };
@@ -109,6 +180,17 @@ const extractFileName = (path) => {
   return chunks[chunks.length - 1] || '';
 };
 
+const getDefaultVoiceNoteExtension = (path) => {
+  const fileName = extractFileName(path);
+  const sanitized = String(fileName || '').split('?')[0].split('#')[0];
+  const lastDotIndex = sanitized.lastIndexOf('.');
+  if (lastDotIndex >= 0) {
+    const extension = sanitized.slice(lastDotIndex + 1).trim().toLowerCase();
+    if (extension) return extension;
+  }
+  return Platform.OS === 'android' ? 'mp4' : 'm4a';
+};
+
 const ensureRecordPermission = async () => {
   if (Platform.OS !== 'android') return true;
   const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
@@ -127,18 +209,34 @@ const buildAudioSet = () => {
   const audioModule = getAudioModule();
   return {
     AudioChannels: 1,
-    AudioEncoderAndroid: audioModule?.AudioEncoderAndroidType?.AAC ?? 3,
+    AudioEncoderAndroid: safeRead(
+      () => audioModule?.AudioEncoderAndroidType?.AAC,
+      'Recorder Android encoder constant unavailable',
+      3,
+    ) ?? 3,
     AudioEncodingBitRate: 128000,
     AudioQuality: 'high',
     AudioSamplingRate: 44100,
-    AudioSourceAndroid: audioModule?.AudioSourceAndroidType?.MIC ?? 1,
-    AVEncoderAudioQualityKeyIOS: audioModule?.AVEncoderAudioQualityIOSType?.high ?? 96,
+    AudioSourceAndroid: safeRead(
+      () => audioModule?.AudioSourceAndroidType?.MIC,
+      'Recorder Android source constant unavailable',
+      1,
+    ) ?? 1,
+    AVEncoderAudioQualityKeyIOS: safeRead(
+      () => audioModule?.AVEncoderAudioQualityIOSType?.high,
+      'Recorder iOS quality constant unavailable',
+      96,
+    ) ?? 96,
     AVEncodingOptionIOS: 'aac',
     AVFormatIDKeyIOS: 'aac',
     AVModeIOS: 'measurement',
     AVNumberOfChannelsKeyIOS: 1,
     AVSampleRateKeyIOS: 44100,
-    OutputFormatAndroid: audioModule?.OutputFormatAndroidType?.MPEG_4 ?? 2,
+    OutputFormatAndroid: safeRead(
+      () => audioModule?.OutputFormatAndroidType?.MPEG_4,
+      'Recorder Android output format constant unavailable',
+      2,
+    ) ?? 2,
   };
 };
 
@@ -234,7 +332,11 @@ const buildFallbackWaveform = (durationMs) => {
   });
 };
 
-export const isVoiceNoteRecordingSupported = () => Boolean(getRecorder());
+export const isVoiceNoteRecordingSupported = () => safeRead(
+  () => Boolean(getRecorder()),
+  'Voice note capability check failed',
+  false,
+);
 
 /**
  * @param {{
@@ -363,7 +465,7 @@ export const stopRecording = async () => {
   const response = {
     diagnostics: buildMeteringDiagnostics(recordingSession.meteringSamples, waveformSource),
     durationMs,
-    fileName: extractFileName(finalPath) || `voice-note-${Date.now()}.m4a`,
+    fileName: extractFileName(finalPath) || `voice-note-${Date.now()}.${getDefaultVoiceNoteExtension(finalPath)}`,
     mime: 'audio/mp4',
     size,
     uri: asFileUri(finalPath),

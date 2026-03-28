@@ -11,7 +11,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -82,7 +82,7 @@ function UserAvatar({ navigation }) {
   const hasSelectedAvatar = Boolean(avatar?.path || avatar?.uri);
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
@@ -127,7 +127,7 @@ function UserAvatar({ navigation }) {
           variant="Secondary"
         />
       </View>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

@@ -20,9 +20,10 @@ import Button from '@/components/atoms/button/Button';
 import { navigate } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+
 /**
  * Normalise une valeur en chaine exploitable.
- *
  * @param {unknown} value
  * @returns {string}
  */
@@ -30,7 +31,6 @@ const getNormalizedString = (value) => String(value || '').trim();
 
 /**
  * Filtre les equipes qui doivent encore configurer une source externe.
- *
  * @param {any} userData
  * @returns {Array<any>}
  */
@@ -61,7 +61,6 @@ const getTeamsNeedingExternalSource = (userData) => {
 /**
  * Affiche un rappel global unique par session pour les equipes eligibles
  * sans lien de classement configure.
- *
  * @param {{ userData?: any, enabled?: boolean, openDelayMs?: number }} props
  * @returns {import('react').ReactElement | null}
  */
@@ -80,7 +79,7 @@ function ExternalCompetitionPromptGate({
   const { t } = useTranslation();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
   const [dismissedSessionKey, setDismissedSessionKey] = useState('');
-  const [visible, setVisible] = useState(false);
+  const [isPromptReady, setIsPromptReady] = useState(false);
 
   const sessionKey = getNormalizedString(userData?.documentId);
   const isLandscape = viewportWidth > viewportHeight;
@@ -99,7 +98,7 @@ function ExternalCompetitionPromptGate({
 
   useEffect(() => {
     setDismissedSessionKey('');
-    setVisible(false);
+    setIsPromptReady(false);
   }, [sessionKey]);
 
   useEffect(() => {
@@ -109,7 +108,7 @@ function ExternalCompetitionPromptGate({
       || !teamsNeedingExternalSource.length
       || dismissedSessionKey === sessionKey
     ) {
-      setVisible(false);
+      setIsPromptReady(false);
       return undefined;
     }
 
@@ -118,7 +117,7 @@ function ExternalCompetitionPromptGate({
     const interactionHandle = InteractionManager.runAfterInteractions(() => {
       timeoutId = setTimeout(() => {
         if (!isCancelled) {
-          setVisible(true);
+          setIsPromptReady(true);
         }
       }, openDelayMs);
     });
@@ -136,18 +135,25 @@ function ExternalCompetitionPromptGate({
     teamsNeedingExternalSource.length,
   ]);
 
+  const canShowPrompt = useBlockingOverlayPrompt(
+    'external-competition-prompt',
+    isPromptReady,
+    40,
+  );
+  const visible = isPromptReady && canShowPrompt;
+
   const handleDismiss = () => {
     if (sessionKey) {
       setDismissedSessionKey(sessionKey);
     }
-    setVisible(false);
+    setIsPromptReady(false);
   };
 
   const handleOpenTeamSetup = (team) => {
     if (sessionKey) {
       setDismissedSessionKey(sessionKey);
     }
-    setVisible(false);
+    setIsPromptReady(false);
     navigate(RouteNames.TeamStack, {
       params: {
         openExternalSourceSetup: true,

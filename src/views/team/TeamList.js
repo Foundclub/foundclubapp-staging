@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
@@ -18,6 +18,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+
 /**
  * Team list screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -30,6 +32,12 @@ function TeamList({ navigation, route }) {
   const assignmentTrainerName = route?.params?.assignmentTrainerName;
   const assignmentTrainerId = route?.params?.assignmentTrainerId;
   const openAssignTrainerGuide = route?.params?.openAssignTrainerGuide;
+  const isTrainerGuideAlertOpenRef = useRef(false);
+  const canShowTrainerGuide = useBlockingOverlayPrompt(
+    'team-assign-trainer-guide',
+    Boolean(openAssignTrainerGuide),
+    35,
+  );
 
   // Effects
   useFocusEffect(() => {
@@ -37,18 +45,35 @@ function TeamList({ navigation, route }) {
   });
 
   useEffect(() => {
-    if (!openAssignTrainerGuide) return;
+    if (
+      !openAssignTrainerGuide
+      || !canShowTrainerGuide
+      || isTrainerGuideAlertOpenRef.current
+    ) {
+      return;
+    }
+
+    isTrainerGuideAlertOpenRef.current = true;
+    let dismissed = false;
+    const finalize = () => {
+      if (dismissed) return;
+      dismissed = true;
+      isTrainerGuideAlertOpenRef.current = false;
+      navigation.setParams({
+        openAssignTrainerGuide: false,
+      });
+    };
 
     Alert.alert(
       'Assigner un entraîneur',
       `${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1) Ouvrez une équipe.\n2) Appuyez sur "Modifier".\n3) Dans la section "Entraîneurs", ajoutez puis validez.`,
-      [{ text: t('common.actions.ok', 'OK') }],
+      [{ onPress: finalize, text: t('common.actions.ok', 'OK') }],
+      {
+        cancelable: true,
+        onDismiss: finalize,
+      },
     );
-
-    navigation.setParams({
-      openAssignTrainerGuide: false,
-    });
-  }, [assignmentTrainerName, navigation, openAssignTrainerGuide, t]);
+  }, [assignmentTrainerName, canShowTrainerGuide, navigation, openAssignTrainerGuide, t]);
 
   // hooks
   const {

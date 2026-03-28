@@ -30,7 +30,7 @@ import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHin
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -598,8 +598,9 @@ function UserAffiliationGuideContent({ navigation }) {
   })();
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
+      contentWidth="wide"
       contentContainerStyle={[
         Spaces.paddingVertical[16],
         Alignments.fill,
@@ -931,7 +932,7 @@ function UserAffiliationGuideContent({ navigation }) {
       </BottomModal>
 
       <OnboardingOverlay />
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

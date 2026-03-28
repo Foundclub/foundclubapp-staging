@@ -18,6 +18,7 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
 const AUTO_HIDE_SNACKBAR_MS = 3200;
@@ -35,6 +36,16 @@ function SmartNotificationHost() {
   } = useSmartNotifications();
 
   const isLineupReminder = activeSnackbar?.type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER;
+  const canShowLineupReminderModal = useBlockingOverlayPrompt(
+    'smart-lineup-reminder',
+    Boolean(activeSnackbar && isLineupReminder),
+    45,
+  );
+  const canShowRecapModal = useBlockingOverlayPrompt(
+    'smart-match-recap',
+    Boolean(activeRecap),
+    50,
+  );
 
   useEffect(() => {
     if (!activeSnackbar || isLineupReminder) return undefined;
@@ -82,7 +93,7 @@ function SmartNotificationHost() {
         </View>
       ) : null}
 
-      {activeSnackbar && isLineupReminder ? (
+      {activeSnackbar && isLineupReminder && canShowLineupReminderModal ? (
         <Modal
           animationType="fade"
           onRequestClose={dismissSnackbar}
@@ -133,7 +144,7 @@ function SmartNotificationHost() {
           dismissRecap();
         }}
         payload={activeRecap}
-        visible={Boolean(activeRecap)}
+        visible={Boolean(activeRecap && canShowRecapModal)}
       />
     </>
   );

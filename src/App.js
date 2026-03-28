@@ -1,18 +1,9 @@
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import * as Sentry from '@sentry/react-native';
-import {
-  MutationCache, QueryCache, QueryClient, QueryClientProvider,
-} from '@tanstack/react-query';
-import { isAxiosError } from 'axios/dist/browser/axios.cjs';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import { AppProvider } from '@/store/appContext';
-import { ThemeProvider } from '@/theme/themeContext';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
+import LeagueActionPromptHost from '@/components/organisms/league/LeagueActionPromptHost';
 import MatchStatsPromptHost from '@/components/organisms/matchStats/MatchStatsPromptHost';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
 import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
@@ -28,8 +19,15 @@ import {
 } from '@/utils/bootDiagnostics';
 import { displayErrorAlert } from '@/utils/errors/displayError';
 
-import { AppModeProvider } from '@/context/AppModeContext';
-import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
+import AppProvidersNative from '@/app/AppProviders.native';
+import buildFoundClubQueryClient from '@/app/queryClient';
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+
+const isAxiosError = (error) => Boolean(
+  error
+  && typeof error === 'object'
+  && /** @type {{ isAxiosError?: unknown }} */ (error).isAxiosError === true,
+);
 
 /**
  * @param {unknown} rawValue
@@ -47,38 +45,6 @@ const parseSampleRate = (rawValue, fallbackValue) => {
   }
 
   return parsed;
-};
-
-/**
- * @param {number} failureCount
- * @param {unknown} error
- * @returns {boolean}
- */
-const shouldRetryQuery = (failureCount, error) => {
-  if (failureCount >= 2) {
-    return false;
-  }
-
-  const typedError = /** @type {any} */ (error);
-  if (!isAxiosError(typedError)) {
-    return true;
-  }
-
-  const method = String(typedError?.config?.method || 'get').trim().toUpperCase();
-  if (method && method !== 'GET') {
-    return false;
-  }
-
-  const status = typedError?.response?.status;
-  if (!status) {
-    return true;
-  }
-
-  if (status === 408 || status === 425 || status === 429) {
-    return true;
-  }
-
-  return status >= 500;
 };
 
 const appEnv = String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase();
@@ -142,103 +108,110 @@ if (__DEV__) {
   require('../ReactotronConfig');
 }
 
-// create react query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: shouldRetryQuery,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
-    },
+const queryClient = buildFoundClubQueryClient({
+  captureQueryError: (/** @type {unknown} */ error) => {
+    const typedError = /** @type {any} */ (error);
+    const shouldSkip = isAxiosError(typedError) && isInSentryExceptionsAllowList(typedError);
+    if (isSentryEnabled && !shouldSkip) {
+      Sentry.captureException(error);
+    }
   },
-  mutationCache: new MutationCache({
-    onError:
-      (error, variables, context, mutation) => {
-        if (!mutation?.options?.meta?.preventToastError) {
-          // Handle error and show Alert
-          displayErrorAlert(
-            error,
-            mutation?.options?.meta?.errorMessageFallback?.toString(),
-          );
-        }
-        // if (isAxiosError(error) && !isInSentryExceptionsAllowList(error)) {
-        //   Sentry.captureException(error);
-        // } else {
-        //   Sentry.captureException(error);
-        // }
-      },
-  }),
-
-  queryCache: new QueryCache({
-    onError: (error) => {
-      // Capture exceptions to Sentry unless in allow list
-      const typedError = /** @type {any} */ (error);
-      const shouldSkip = isAxiosError(typedError) && isInSentryExceptionsAllowList(typedError);
-      if (isSentryEnabled && !shouldSkip) {
-        Sentry.captureException(error);
-      }
-    },
-  }),
-
+  onMutationError: (
+    /** @type {unknown} */ error,
+    /** @type {string | undefined} */ fallbackMessage,
+  ) => {
+    displayErrorAlert(error, fallbackMessage);
+  },
 });
+
+/**
+ * App root component.
+ * @returns {null}
+ */
+function BootErrorAlertHost() {
+  const [pendingBootError, setPendingBootError] = useState(null);
+  const shownBootErrorKeyRef = useRef('');
+
+  useEffect(() => {
+    const previousBootError = readPersistedBootError();
+    if (!previousBootError) return;
+
+    console.warn('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
+    setPendingBootError(previousBootError);
+  }, []);
+
+  const bootErrorPromptKey = [
+    pendingBootError?.context,
+    pendingBootError?.name,
+    pendingBootError?.message,
+  ].filter(Boolean).join(':');
+  const canShowBootError = useBlockingOverlayPrompt(
+    'boot-error-alert',
+    Boolean(pendingBootError),
+    100,
+  );
+
+  useEffect(() => {
+    if (!pendingBootError || !canShowBootError) return;
+    if (shownBootErrorKeyRef.current === bootErrorPromptKey) return;
+    shownBootErrorKeyRef.current = bootErrorPromptKey;
+
+    const summary = [
+      pendingBootError.context,
+      pendingBootError.name,
+      pendingBootError.message,
+    ].filter(Boolean).join('\n');
+
+    let dismissed = false;
+    const finalize = () => {
+      if (dismissed) return;
+      dismissed = true;
+      shownBootErrorKeyRef.current = '';
+      clearPersistedBootError();
+      setPendingBootError(null);
+    };
+
+    Alert.alert(
+      'Crash precedent detecte',
+      summary.slice(0, 500),
+      [{ onPress: finalize, text: 'OK' }],
+      {
+        cancelable: true,
+        onDismiss: finalize,
+      },
+    );
+  }, [bootErrorPromptKey, canShowBootError, pendingBootError]);
+
+  return null;
+}
 
 /**
  * App root component.
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
-  useEffect(() => {
-    const previousBootError = readPersistedBootError();
-    if (!previousBootError) return;
-
-    console.warn('[BOOT] BOOT_PREVIOUS_JS_ERROR_VISIBLE', previousBootError);
-
-    const summary = [
-      previousBootError.context,
-      previousBootError.name,
-      previousBootError.message,
-    ].filter(Boolean).join('\n');
-
-    Alert.alert(
-      'Crash precedent détecté',
-      summary.slice(0, 500),
-    );
-    clearPersistedBootError();
-  }, []);
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProvider>
-          <ThemeProvider>
-            <AppModeProvider>
-              <SmartNotificationProvider>
-                <QueryClientProvider client={queryClient}>
-                  <BottomSheetModalProvider>
-                    <SessionManager />
-                    {isSentryEnabled ? (
-                      <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
-                        <AppNavigator navigationIntegration={navigationIntegration} />
-                        <MatchStatsPromptHost />
-                        <NotificationBootstrap />
-                        <SmartNotificationHost />
-                      </Sentry.ErrorBoundary>
-                    ) : (
-                      <>
-                        <AppNavigator navigationIntegration={navigationIntegration} />
-                        <MatchStatsPromptHost />
-                        <NotificationBootstrap />
-                        <SmartNotificationHost />
-                      </>
-                    )}
-                  </BottomSheetModalProvider>
-                </QueryClientProvider>
-              </SmartNotificationProvider>
-            </AppModeProvider>
-          </ThemeProvider>
-        </AppProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <AppProvidersNative queryClient={queryClient}>
+      <BootErrorAlertHost />
+      <SessionManager />
+      {isSentryEnabled ? (
+        <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+          <AppNavigator navigationIntegration={navigationIntegration} />
+          <MatchStatsPromptHost />
+          <LeagueActionPromptHost />
+          <NotificationBootstrap />
+          <SmartNotificationHost />
+        </Sentry.ErrorBoundary>
+      ) : (
+        <>
+          <AppNavigator navigationIntegration={navigationIntegration} />
+          <MatchStatsPromptHost />
+          <LeagueActionPromptHost />
+          <NotificationBootstrap />
+          <SmartNotificationHost />
+        </>
+      )}
+    </AppProvidersNative>
   );
 }
 

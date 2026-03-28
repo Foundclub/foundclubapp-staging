@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   createContext, useCallback, useContext, useMemo, useState,
 } from 'react';
@@ -75,10 +76,10 @@ export function ThemeProvider({ children }) {
     [theme, changeTheme],
   );
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {theme && children}
-    </ThemeContext.Provider>
+  return React.createElement(
+    ThemeContext.Provider,
+    { value: contextValue },
+    theme ? children : null,
   );
 }
 

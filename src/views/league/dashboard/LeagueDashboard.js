@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -17,10 +18,11 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { getMatchHistory } from '@/services/league/leagueMatchService';
+import { getMatch, getMatchHistory } from '@/services/league/leagueMatchService';
 import MatchmakingService from '@/services/league/MatchmakingService';
 import {
   getInvitedLeagueTeams,
@@ -65,6 +67,65 @@ const computeTeamForm = (team) => {
   return rawSeries.slice(0, 3).map(normalizeFormResult).join('');
 };
 
+const formatLeagueDashboardDate = (value) => {
+  if (!value) return 'Date a definir';
+  try {
+    return new Date(value).toLocaleString('fr-FR', {
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      month: 'short',
+    });
+  } catch (_error) {
+    return 'Date a definir';
+  }
+};
+
+const LEAGUE_ACTION_META = {
+  confirmed_upcoming: {
+    accent: 'success',
+    actionLabel: 'Voir le match',
+    helper: 'Le match est confirme. Retrouvez les informations de preparation dans votre espace Match.',
+    title: 'Match confirme',
+  },
+  idle: {
+    accent: 'neutral',
+    actionLabel: 'Trouver un match',
+    helper: 'Lancez une recherche pour trouver un adversaire compatible avec les creneaux de votre squad.',
+    title: 'Aucun match actif',
+  },
+  opponent_found: {
+    accent: 'primary',
+    actionLabel: 'Voir le match',
+    helper: 'Un adversaire a ete trouve. Il reste a vous accorder sur la proposition de match.',
+    title: 'Adversaire trouve',
+  },
+  proposal_received: {
+    accent: 'warning',
+    actionLabel: 'Repondre',
+    helper: 'Une proposition attend votre reponse. Repondez depuis le popup, la conversation ou la fiche match.',
+    title: 'Nouvelle proposition recue',
+  },
+  proposal_sent_waiting: {
+    accent: 'gold',
+    actionLabel: 'Repondre',
+    helper: "Votre proposition a ete envoyee. Continuez l'echange dans la conversation avec l'adversaire.",
+    title: 'Proposition envoyee',
+  },
+  searching: {
+    accent: 'gold',
+    actionLabel: 'Ouvrir le centre de match',
+    helper: 'La recherche est en cours. Les meilleures correspondances continuent a etre analysees.',
+    title: 'Recherche en cours',
+  },
+  waiting_venue: {
+    accent: 'warning',
+    actionLabel: 'Reserver le terrain',
+    helper: "Le match est confirme, mais le terrain n'est pas encore reserve. Finalisez l'organisation des que possible.",
+    title: 'Terrain a reserver',
+  },
+};
+
 /**
  *
  */
@@ -81,7 +142,8 @@ function LeagueDashboard() {
   const [invitedSquads, setInvitedSquads] = useState(/** @type {Team[]} */ ([]));
   const [pendingSquads, setPendingSquads] = useState(/** @type {Team[]} */ ([]));
   const [loading, setLoading] = useState(true);
-  const [isSearchRunning, setIsSearchRunning] = useState(false);
+  const [leagueActionState, setLeagueActionState] = useState(/** @type {any | null} */ (null));
+  const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
   const leagueSurface = {
     backgroundColor: 'rgba(10, 28, 43, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.22)',
@@ -104,7 +166,7 @@ function LeagueDashboard() {
       // 1. Get User Team
       const team = squads && squads.length > 0 ? squads[0] : null;
       setUserTeam(team);
-      setIsSearchRunning(false);
+      setLeagueActionState(null);
       setMatchHistory([]);
       setRankingData([]);
 
@@ -114,7 +176,7 @@ function LeagueDashboard() {
           const teamId = getEntityDocumentId(team);
           if (teamId) {
             const searchState = await MatchmakingService.getActiveRequest(teamId);
-            setIsSearchRunning(searchState?.state === 'searching' || searchState?.state === 'matched');
+            setLeagueActionState(searchState || null);
           }
 
           const history = await getMatchHistory(getEntityDocumentId(team), 5);
@@ -128,14 +190,14 @@ function LeagueDashboard() {
           console.log('Data fetch error:', historyErr);
           setMatchHistory([]);
           setRankingData([]);
-          setIsSearchRunning(false);
+          setLeagueActionState(null);
         }
       }
     } catch (error) {
       console.error('Dashboard Load Error:', error);
       setInvitedSquads([]);
       setPendingSquads([]);
-      setIsSearchRunning(false);
+      setLeagueActionState(null);
     } finally {
       setLoading(false);
     }
@@ -168,6 +230,122 @@ function LeagueDashboard() {
       teamId: squadId,
     });
   }, [navigation, userTeam]);
+
+  const openLeagueConversation = useCallback(async (options = {}) => {
+    let chatId = options?.chatId || leagueActionState?.chatId || '';
+    const matchId = options?.matchId || leagueActionState?.matchId || leagueActionState?.match?.documentId || '';
+    const shouldHideOpponentName = shouldMaskOpponentIdentity(leagueActionState?.match || null);
+    const opponentName = shouldHideOpponentName
+      ? 'Adversaire'
+      : options?.opponentName || leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
+
+    if (!chatId && matchId) {
+      try {
+        const latestMatch = await getMatch(matchId);
+        chatId = latestMatch?.chat?.documentId || latestMatch?.chat?.id || '';
+      } catch (_error) {
+        chatId = '';
+      }
+    }
+
+    if (!chatId) {
+      setConversationFallbackState({
+        matchId,
+        opponentName,
+        proposalMessageId: options?.proposalMessageId || leagueActionState?.proposalMessageId || '',
+      });
+      return;
+    }
+
+    navigation.navigate(RouteNames.Conversation, {
+      chatId,
+      focusLatestProposal: true,
+      focusProposalMessageId: options?.proposalMessageId || leagueActionState?.proposalMessageId || undefined,
+      leagueNegotiationFocusToken: String(Date.now()),
+      subTitle: 'Negociation du match en cours',
+      title: `${userTeam?.name || 'Votre squad'} vs ${opponentName}`,
+    });
+  }, [leagueActionState, navigation, userTeam?.name]);
+
+  const reopenLeaguePrompt = useCallback(() => {
+    navigation.setParams({
+      forceLeagueActionPrompt: true,
+      forceLeagueActionPromptToken: String(Date.now()),
+      matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId || undefined,
+    });
+  }, [leagueActionState?.match?.documentId, leagueActionState?.matchId, navigation]);
+
+  const openLeagueMatchDetails = useCallback((matchId, focusSection = undefined) => {
+    if (!matchId) {
+      navigation.navigate(RouteNames.LeagueMatchTab);
+      return;
+    }
+    navigation.navigate(RouteNames.LeagueMatchDetails, {
+      ...(focusSection ? { focusSection } : {}),
+      matchId,
+    });
+  }, [navigation]);
+
+  const handlePrimaryLeagueAction = useCallback(() => {
+    const state = String(leagueActionState?.state || 'idle');
+
+    if (state === 'searching') {
+      navigation.navigate(RouteNames.LeagueMatchTab);
+      return;
+    }
+
+    if (state === 'waiting_venue') {
+      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId, 'venueBooking');
+      return;
+    }
+
+    if (state === 'proposal_received') {
+      reopenLeaguePrompt();
+      return;
+    }
+
+    if (['confirmed_upcoming', 'opponent_found', 'proposal_sent_waiting'].includes(state)) {
+      if (state === 'proposal_sent_waiting') {
+        openLeagueConversation({
+          chatId: leagueActionState?.chatId,
+          matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+          proposalMessageId: leagueActionState?.proposalMessageId,
+        });
+      } else {
+        openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+      }
+      return;
+    }
+
+    navigation.navigate(RouteNames.LeagueMatchTab);
+  }, [leagueActionState, navigation, openLeagueConversation, openLeagueMatchDetails, reopenLeaguePrompt]);
+
+  const handleSecondaryLeagueAction = useCallback(() => {
+    const state = String(leagueActionState?.state || '');
+
+    if (state === 'proposal_received') {
+      openLeagueConversation({
+        chatId: leagueActionState?.chatId,
+        matchId: leagueActionState?.matchId || leagueActionState?.match?.documentId,
+        proposalMessageId: leagueActionState?.proposalMessageId,
+      });
+      return;
+    }
+
+    if (state === 'proposal_sent_waiting') {
+      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+      return;
+    }
+
+    if (state === 'waiting_venue') {
+      openLeagueMatchDetails(leagueActionState?.matchId || leagueActionState?.match?.documentId);
+    }
+  }, [leagueActionState, openLeagueConversation, openLeagueMatchDetails]);
+
+  const leagueActionMeta = useMemo(() => {
+    const state = String(leagueActionState?.state || 'idle');
+    return LEAGUE_ACTION_META[state] || LEAGUE_ACTION_META.idle;
+  }, [leagueActionState?.state]);
 
   // --- Components ---
 
@@ -396,6 +574,148 @@ function LeagueDashboard() {
     );
   };
 
+  const renderLeagueActionCard = () => {
+    const state = String(leagueActionState?.state || 'idle');
+    const accentPalette = (() => {
+      switch (leagueActionMeta.accent) {
+        case 'gold':
+          return {
+            bg: `${Colors.gold500}14`,
+            border: `${Colors.gold500}42`,
+            text: Colors.gold500,
+          };
+        case 'neutral':
+          return {
+            bg: `${Colors.neutral300}14`,
+            border: `${Colors.neutral300}30`,
+            text: Colors.neutral200,
+          };
+        case 'success':
+          return {
+            bg: `${Colors.success500}18`,
+            border: `${Colors.success500}45`,
+            text: Colors.success500,
+          };
+        case 'warning':
+          return {
+            bg: `${Colors.warning500}18`,
+            border: `${Colors.warning500}45`,
+            text: Colors.warning500,
+          };
+        default:
+          return {
+            bg: `${Colors.primary500}16`,
+            border: `${Colors.primary500}40`,
+            text: Colors.primary500,
+          };
+      }
+    })();
+
+    const shouldHideOpponentName = shouldMaskOpponentIdentity(leagueActionState?.match || null);
+    const opponentName = shouldHideOpponentName
+      ? 'Adversaire'
+      : leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
+    const actionRequired = state === 'proposal_received' || state === 'waiting_venue';
+    const hasSecondaryAction = ['proposal_received', 'proposal_sent_waiting', 'waiting_venue'].includes(state);
+    let secondaryActionLabel = 'Voir le chat';
+    if (state === 'proposal_sent_waiting' || state === 'waiting_venue') {
+      secondaryActionLabel = 'Voir le match';
+    }
+
+    return (
+      <LeagueCard style={{ ...leagueSurface, marginBottom: 24 }}>
+        <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View
+            style={{
+              backgroundColor: accentPalette.bg,
+              borderColor: accentPalette.border,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: accentPalette.text }]}>{leagueActionMeta.title}</Text>
+          </View>
+          {actionRequired ? (
+            <View
+              style={{
+                backgroundColor: `${Colors.error500}16`,
+                borderColor: `${Colors.error500}40`,
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+              }}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>ACTION REQUISE</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginTop: 14 }]}>
+          {state === 'searching' || state === 'idle'
+            ? (userTeam?.name || 'Votre squad')
+            : `${userTeam?.name || 'Votre squad'} VS ${opponentName}`}
+        </Text>
+
+        <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 10 }]}>
+          {leagueActionMeta.helper}
+        </Text>
+
+        {(leagueActionState?.date || leagueActionState?.venue) ? (
+          <View
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderRadius: 18,
+              borderWidth: 1,
+              gap: 8,
+              marginTop: 16,
+              padding: 14,
+            }}
+          >
+            {leagueActionState?.date ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                Date
+                {' : '}
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                  {formatLeagueDashboardDate(leagueActionState.date)}
+                </Text>
+              </Text>
+            ) : null}
+            {leagueActionState?.venue ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                Lieu
+                {' : '}
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{leagueActionState.venue}</Text>
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View style={{ gap: 12, marginTop: 18 }}>
+          <Button
+            onPress={handlePrimaryLeagueAction}
+            style={{ backgroundColor: Colors.gold500 }}
+            textStyle={{ color: Colors.primary900 }}
+            title={leagueActionMeta.actionLabel}
+            variant="Primary"
+          />
+          {hasSecondaryAction ? (
+            <Button
+              onPress={handleSecondaryLeagueAction}
+              style={{ borderColor: Colors.gold500 }}
+              textStyle={{ color: Colors.gold500 }}
+              title={secondaryActionLabel}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
+      </LeagueCard>
+    );
+  };
+
   const renderStats = () => (
     <LeagueCard style={leagueSurface}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -570,24 +890,7 @@ function LeagueDashboard() {
 
             {renderCaptainRequestsSignal()}
 
-            {/* CTA Matchmaking */}
-            <View style={{ marginVertical: 24 }}>
-              <Button
-                onPress={() => navigation.navigate(RouteNames.LeagueMatchTab)}
-                style={{
-                  backgroundColor: Colors.gold500,
-                  borderColor: 'rgba(255, 219, 102, 0.35)',
-                  borderRadius: 30,
-                  borderWidth: 1,
-                  height: 56,
-                }}
-                textStyle={{
-                  ...Fonts.h4Bold, color: Colors.neutral900, letterSpacing: 1, lineHeight: undefined,
-                }}
-                title={isSearchRunning ? 'RECHERCHE EN COURS' : 'TROUVER UN MATCH'}
-                variant="Primary"
-              />
-            </View>
+            {renderLeagueActionCard()}
 
             {/* Stats */}
             <View style={{ marginBottom: 24 }}>
@@ -617,6 +920,58 @@ function LeagueDashboard() {
         )}
 
       </ScrollView>
+      <BottomModal
+        close={() => setConversationFallbackState(null)}
+        isVisible={Boolean(conversationFallbackState)}
+      >
+        <View style={{ gap: 16, paddingBottom: 12 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+              Conversation en preparation
+            </Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
+              La conversation avec l&apos;adversaire n&apos;est pas encore prete. Reessayez dans quelques secondes ou ouvrez la fiche match pour suivre l&apos;organisation.
+            </Text>
+          </View>
+          <LeagueCard style={{ ...leagueSurface, marginBottom: 0 }}>
+            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Etat League</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
+              {conversationFallbackState?.opponentName || 'Adversaire'}
+            </Text>
+          </LeagueCard>
+          <Button
+            onPress={async () => {
+              const fallbackState = conversationFallbackState;
+              setConversationFallbackState(null);
+              await openLeagueConversation({
+                matchId: fallbackState?.matchId,
+                opponentName: fallbackState?.opponentName,
+                proposalMessageId: fallbackState?.proposalMessageId,
+              });
+            }}
+            title="Repondre"
+            variant="Primary"
+          />
+          {conversationFallbackState?.matchId ? (
+            <Button
+              onPress={() => {
+                const nextMatchId = conversationFallbackState?.matchId;
+                setConversationFallbackState(null);
+                if (nextMatchId) {
+                  openLeagueMatchDetails(nextMatchId, 'negotiation');
+                }
+              }}
+              title="Voir le match"
+              variant="Secondary"
+            />
+          ) : null}
+          <Button
+            onPress={() => setConversationFallbackState(null)}
+            title="Fermer"
+            variant="SecondaryLight"
+          />
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }

@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -25,6 +26,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import {
@@ -34,15 +36,24 @@ import {
   normalizeMatchStatus,
   shouldMaskOpponentIdentity,
 } from '@/views/league/match/utils/matchStatus';
+import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
+import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  createChatMessage,
+  respondProposalMessage,
+} from '@/services/chat/chatService';
+import { usePendingLeagueAction } from '@/services/league/leagueActionQueries';
+import {
   cancelMatch,
+  confirmMatch,
   confirmParticipation,
   declineParticipation,
   fetchMatch,
   markVenueBooked,
+  updateMatch,
 } from '@/services/league/leagueMatchService';
 import {
   useGetLeagueMatchStats,
@@ -74,6 +85,12 @@ const getParticipantDisplayName = (/** @type {User | null | undefined} */ partic
   return 'Joueur';
 };
 
+const isAlreadyResolvedError = (error) => {
+  const status = Number(error?.response?.status || error?.status || 0);
+  const code = String(error?.response?.data?.error?.code || error?.code || '');
+  return status === 409 || code === 'ALREADY_RESOLVED';
+};
+
 /**
  * @param {unknown} sportValue
  * @returns {number}
@@ -91,6 +108,7 @@ const getRequiredPlayersForSport = (sportValue) => {
 function LeagueMatchDetails({ navigation, route }) {
   const { matchId } = route.params;
   const highlightedSection = route?.params?.focusSection || null;
+  const queryClient = useQueryClient();
   const { Colors, Fonts, Images } = useTheme();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const leagueCardTextColor = Colors.primary500;
@@ -102,6 +120,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
+  const [isNegotiationModalVisible, setIsNegotiationModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const userId = getEntityDocumentId(userData);
@@ -163,6 +182,12 @@ function LeagueMatchDetails({ navigation, route }) {
     return null;
   }, [match?.team_a, match?.team_b, teamSide]);
   const myTeamId = getEntityDocumentId(myTeam);
+  const {
+    data: pendingLeagueActionPayload,
+    refetch: refetchPendingLeagueAction,
+  } = usePendingLeagueAction(myTeamId || undefined, {
+    enabled: Boolean(myTeamId),
+  });
 
   const {
     data: leagueMatchStatsPayload,
@@ -197,6 +222,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const leagueMyCoachReview = leagueMatchStatsPayload?.myCoachReview || null;
   const leagueMyMatchResponse = leagueMyMatchResponsePayload?.response || null;
   const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
+  const isVenueBookingHighlighted = highlightedSection === 'venueBooking';
   const hasLeagueCoachReview = leagueMyCoachReview?.rating != null || Boolean(leagueMyCoachReview?.comment);
   const isLeagueStatsFinal = leagueStatsReport?.status === 'final';
   const isLeagueStatsReviewRequired = Boolean(leagueStatsReport?.needsReview);
@@ -212,6 +238,126 @@ function LeagueMatchDetails({ navigation, route }) {
     () => isCaptain && normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScore,
     [canSubmitScore, isCaptain, isVenueBooked, normalizedStatus],
   );
+  const pendingLeagueAction = pendingLeagueActionPayload?.nextAction || null;
+  const isPendingActionForCurrentMatch = useMemo(() => {
+    const currentMatchId = getEntityDocumentId(match);
+    return areSameEntityId(pendingLeagueAction?.matchId, matchId)
+      || areSameEntityId(pendingLeagueAction?.matchId, currentMatchId);
+  }, [match, matchId, pendingLeagueAction?.matchId]);
+  const lastProposalSide = String(match?.automation_meta?.last_proposal_by_side || '').trim().toLowerCase();
+  const fallbackNegotiationState = useMemo(() => {
+    if (matchPhase !== 'waiting_proposal') return null;
+    if (teamSide && lastProposalSide) {
+      return lastProposalSide === teamSide ? 'proposal_sent_waiting' : 'proposal_received';
+    }
+    return match?.chat ? 'opponent_found' : null;
+  }, [lastProposalSide, match?.chat, matchPhase, teamSide]);
+  const negotiationState = useMemo(() => {
+    const nextState = String(pendingLeagueAction?.state || '').trim();
+    if (
+      isPendingActionForCurrentMatch
+      && ['opponent_found', 'proposal_received', 'proposal_sent_waiting'].includes(nextState)
+    ) {
+      return nextState;
+    }
+    return fallbackNegotiationState;
+  }, [fallbackNegotiationState, isPendingActionForCurrentMatch, pendingLeagueAction?.state]);
+  const isNegotiationHighlighted = highlightedSection === 'negotiation';
+  const negotiationProposalDate = pendingLeagueAction?.date || match?.proposed_time || match?.date || null;
+  const negotiationProposalVenue = pendingLeagueAction?.venue || match?.proposed_venue || match?.venue || 'Lieu a definir';
+  const negotiationProposalMessageId = String(pendingLeagueAction?.proposalMessageId || '').trim();
+  const hasNegotiationConversation = Boolean(getEntityDocumentId(match?.chat));
+  const canReplyFromNegotiationCard = negotiationState === 'proposal_received' && Boolean(negotiationProposalMessageId);
+  const canCounterProposeFromNegotiationCard = Boolean(
+    hasNegotiationConversation && ['proposal_received', 'proposal_sent_waiting'].includes(String(negotiationState || '')),
+  );
+  const proposalDefaults = useMemo(
+    () => buildProposalDefaultsFromMatch(match || null),
+    [match],
+  );
+  const negotiationMeta = useMemo(() => {
+    let title = 'Negociation du match';
+    let helper = 'Retrouve la conversation avec l adversaire pour conclure rapidement.';
+    let origin = 'Discussion League active';
+
+    if (negotiationState === 'proposal_received') {
+      title = 'Proposition recue';
+      helper = 'Une proposition adverse attend votre reponse. Vous pouvez accepter, refuser ou contre-proposer.';
+      origin = 'Envoyee par l adversaire';
+    } else if (negotiationState === 'proposal_sent_waiting') {
+      title = 'Proposition envoyee';
+      helper = 'Votre squad attend maintenant la reponse adverse. La conversation reste le centre de la negociation.';
+      origin = 'Envoyee par votre squad';
+    } else if (negotiationState === 'opponent_found') {
+      title = 'Adversaire trouve';
+      helper = 'Le match est cree. Lancez la conversation pour envoyer la premiere proposition.';
+      origin = 'Aucune proposition definitive pour le moment';
+    }
+
+    let formattedDate = 'Date a definir';
+    if (negotiationProposalDate) {
+      try {
+        formattedDate = format(new Date(negotiationProposalDate), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
+      } catch (_error) {
+        formattedDate = 'Date a definir';
+      }
+    }
+
+    return {
+      formattedDate,
+      helper,
+      origin,
+      title,
+    };
+  }, [negotiationProposalDate, negotiationState]);
+  const renderNegotiationActions = useCallback(() => {
+    if (canReplyFromNegotiationCard) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleAcceptNegotiationProposal}
+            title="Accepter"
+            variant="Primary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={handleDeclineNegotiationProposal}
+            title="Refuser"
+            variant="Secondary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            title="Contre-proposer"
+            variant="SecondaryLight"
+          />
+        </View>
+      );
+    }
+
+    if (canCounterProposeFromNegotiationCard) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            title="Contre-proposer"
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    return null;
+  }, [
+    actionLoading,
+    canCounterProposeFromNegotiationCard,
+    canReplyFromNegotiationCard,
+    handleAcceptNegotiationProposal,
+    handleDeclineNegotiationProposal,
+    handleOpenCounterProposal,
+  ]);
 
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
   const addressLabel = useMemo(() => resolveAddressLabel(match), [match]);
@@ -294,14 +440,15 @@ function LeagueMatchDetails({ navigation, route }) {
     };
   }, [match]);
 
-  const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || (normalizedStatus === 'scheduled' && !isVenueBooked);
-  const canShowCaptainCancel = normalizedStatus === 'scheduled';
+  const canManageVenue = Boolean(teamSide && normalizedStatus === 'scheduled' && !isVenueBooked);
+  const canShowCaptainPrimary = (canSubmitScore || isScoreLockedByTime) || canManageVenue;
+  const canShowCaptainCancel = isCaptain && normalizedStatus === 'scheduled';
   const hasBottomPresenceBar = Boolean(teamSide && normalizedStatus === 'scheduled');
   const scrollBottomPadding = useMemo(() => {
     if (!hasBottomPresenceBar) return 52;
-    if (isCaptain && (canShowCaptainPrimary || canShowCaptainCancel)) return 320;
+    if (canShowCaptainPrimary || canShowCaptainCancel) return 320;
     return 250;
-  }, [canShowCaptainCancel, canShowCaptainPrimary, hasBottomPresenceBar, isCaptain]);
+  }, [canShowCaptainCancel, canShowCaptainPrimary, hasBottomPresenceBar]);
   const isScoreToSubmitBadge = statusConfig.label === 'Score a saisir';
   const heroStatusMeta = useMemo(() => {
     if (isScoreToSubmitBadge || canSubmitScore) {
@@ -317,7 +464,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.warning500,
         icon: Images.stadium,
-        label: 'Terrain a confirmer',
+        label: 'Organisation equipe',
         text: 'Le terrain doit encore etre confirme avant le coup d envoi.',
       };
     }
@@ -628,15 +775,161 @@ function LeagueMatchDetails({ navigation, route }) {
     );
   };
 
-  const handleOpenChat = () => {
+  const handleOpenChat = useCallback(() => {
     if (!match) return;
     const chatId = getEntityDocumentId(match?.chat);
-    if (!chatId) return;
-    navigation.navigate('Conversation', {
+    if (!chatId) {
+      Alert.alert(
+        'Conversation en preparation',
+        'La conversation avec l adversaire n est pas encore disponible. Reessayez dans quelques secondes.',
+      );
+      return;
+    }
+    navigation.navigate(RouteNames.Conversation, {
       chatId,
-      title: `${match.team_a?.name} vs ${match.team_b?.name}`,
+      focusLatestProposal: true,
+      focusProposalMessageId: negotiationProposalMessageId || undefined,
+      focusSection: undefined,
+      leagueNegotiationFocusToken: String(Date.now()),
+      subTitle: 'Negociation du match en cours',
+      title: isAnonymous
+        ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
+        : `${match.team_a?.name} vs ${match.team_b?.name}`,
     });
-  };
+  }, [isAnonymous, match, myTeam?.name, navigation, negotiationProposalMessageId]);
+
+  const invalidateNegotiationQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
+    queryClient.invalidateQueries({ queryKey: ['chat', getEntityDocumentId(match?.chat)] });
+    queryClient.invalidateQueries({ queryKey: ['chat-messages', getEntityDocumentId(match?.chat)] });
+    queryClient.invalidateQueries({ queryKey: ['league-matches'] });
+  }, [match?.chat, queryClient]);
+
+  const handleAcceptNegotiationProposal = useCallback(async () => {
+    if (!matchId || actionLoading) return;
+    setActionLoading(true);
+    try {
+      await confirmMatch(matchId);
+      if (negotiationProposalMessageId) {
+        await respondProposalMessage(negotiationProposalMessageId, 'accepted');
+      }
+      invalidateNegotiationQueries();
+      await refetchPendingLeagueAction();
+      await loadMatch();
+      navigation.navigate(RouteNames.LeagueMatchDetails, {
+        focusSection: 'venueBooking',
+        matchId,
+      });
+    } catch (error) {
+      if (isAlreadyResolvedError(error)) {
+        invalidateNegotiationQueries();
+        await refetchPendingLeagueAction();
+        await loadMatch();
+        return;
+      }
+      Alert.alert('Erreur', 'Impossible d accepter la proposition pour le moment.');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [
+    actionLoading,
+    invalidateNegotiationQueries,
+    loadMatch,
+    matchId,
+    navigation,
+    negotiationProposalMessageId,
+    refetchPendingLeagueAction,
+  ]);
+
+  const handleDeclineNegotiationProposal = useCallback(async () => {
+    if (!negotiationProposalMessageId || actionLoading) return;
+    setActionLoading(true);
+    try {
+      await respondProposalMessage(negotiationProposalMessageId, 'declined');
+      invalidateNegotiationQueries();
+      await refetchPendingLeagueAction();
+      await loadMatch();
+      setIsNegotiationModalVisible(true);
+    } catch (error) {
+      if (isAlreadyResolvedError(error)) {
+        invalidateNegotiationQueries();
+        await refetchPendingLeagueAction();
+        await loadMatch();
+        return;
+      }
+      Alert.alert('Erreur', 'Impossible de refuser la proposition pour le moment.');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [
+    actionLoading,
+    invalidateNegotiationQueries,
+    loadMatch,
+    negotiationProposalMessageId,
+    refetchPendingLeagueAction,
+  ]);
+
+  const handleOpenCounterProposal = useCallback(() => {
+    setIsNegotiationModalVisible(true);
+  }, []);
+
+  const handleSendCounterProposal = useCallback(async (proposalData) => {
+    const chatId = getEntityDocumentId(match?.chat);
+    if (!matchId || !chatId || actionLoading) return;
+
+    setActionLoading(true);
+    try {
+      const payload = buildLeagueProposalPayload(matchId, proposalData, match?.location);
+      if (canReplyFromNegotiationCard && negotiationProposalMessageId) {
+        await respondProposalMessage(negotiationProposalMessageId, 'declined');
+      }
+      await updateMatch(matchId, payload.matchUpdate);
+      await createChatMessage({
+        chatId,
+        composition: payload.message.composition,
+        message: payload.message.message,
+      });
+      invalidateNegotiationQueries();
+      await refetchPendingLeagueAction();
+      await loadMatch();
+      setIsNegotiationModalVisible(false);
+      navigation.navigate(RouteNames.Conversation, {
+        chatId,
+        focusLatestProposal: true,
+        leagueNegotiationFocusToken: String(Date.now()),
+        subTitle: 'Negociation du match en cours',
+        title: isAnonymous
+          ? `${myTeam?.name || 'Votre squad'} vs Adversaire`
+          : `${match?.team_a?.name} vs ${match?.team_b?.name}`,
+      });
+    } catch (error) {
+      if (isAlreadyResolvedError(error)) {
+        invalidateNegotiationQueries();
+        await refetchPendingLeagueAction();
+        await loadMatch();
+        setIsNegotiationModalVisible(false);
+        return;
+      }
+      Alert.alert('Erreur', "Impossible d'envoyer la contre-proposition.");
+    } finally {
+      setActionLoading(false);
+    }
+  }, [
+    actionLoading,
+    canReplyFromNegotiationCard,
+    invalidateNegotiationQueries,
+    isAnonymous,
+    loadMatch,
+    match?.chat,
+    match?.location,
+    match?.team_a?.name,
+    match?.team_b?.name,
+    matchId,
+    myTeam?.name,
+    navigation,
+    negotiationProposalMessageId,
+    refetchPendingLeagueAction,
+  ]);
 
   const handleGoToScoreEntry = () => {
     if (isScoreLockedByTime) {
@@ -914,6 +1207,123 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
           </View>
 
+          {negotiationState ? (
+            <>
+              {renderSectionHeader('Negociation')}
+              <LeagueCard
+                style={isNegotiationHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null}
+              >
+                <View
+                  style={[
+                    styles.captainHeroCard,
+                    {
+                      backgroundColor: isNegotiationHighlighted ? 'rgba(245, 158, 11, 0.14)' : leagueAccentSurface,
+                      borderColor: isNegotiationHighlighted ? 'rgba(245, 158, 11, 0.34)' : 'rgba(1, 179, 244, 0.22)',
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+                    {negotiationMeta.title}
+                  </Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    {negotiationMeta.helper}
+                  </Text>
+                </View>
+
+                <View style={styles.infoStack}>
+                  <View
+                    style={[
+                      styles.infoPill,
+                      {
+                        backgroundColor: leagueGoldSurface,
+                        borderColor: 'rgba(255, 215, 0, 0.18)',
+                      },
+                    ]}
+                  >
+                    <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.14)' }]}>
+                      <Image source={Images.calendar} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                    </View>
+                    <View style={styles.infoTextWrap}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Derniere proposition</Text>
+                      <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{negotiationMeta.formattedDate}</Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.infoPill,
+                      {
+                        backgroundColor: leagueAccentSurface,
+                        borderColor: 'rgba(1, 179, 244, 0.18)',
+                      },
+                    ]}
+                  >
+                    <View style={[styles.infoIconWrap, { backgroundColor: 'rgba(1, 179, 244, 0.14)' }]}>
+                      <Image source={Images.pin} style={{ height: 18, tintColor: Colors.gold500, width: 18 }} />
+                    </View>
+                    <View style={styles.infoTextWrap}>
+                      <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Origine et lieu</Text>
+                      <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>{negotiationProposalVenue}</Text>
+                      <Text style={[Fonts.p2, { color: leagueCardTextColor, marginTop: 4 }]}>
+                        {negotiationMeta.origin}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {hasNegotiationConversation ? (
+                  <View style={{ gap: 10, marginTop: 16 }}>
+                    <Button
+                      disabled={actionLoading}
+                      onPress={handleOpenChat}
+                      style={{ backgroundColor: Colors.gold500 }}
+                      textStyle={{ color: Colors.primary900 }}
+                      title="Repondre"
+                      variant="Primary"
+                    />
+                    <Button
+                      disabled={actionLoading}
+                      onPress={handleOpenChat}
+                      title={negotiationProposalMessageId ? 'Voir la proposition dans le chat' : 'Voir le fil de negociation'}
+                      variant="Secondary"
+                    />
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.heroStatusSupportCard,
+                      {
+                        backgroundColor: 'rgba(255,255,255,0.04)',
+                        borderColor: 'rgba(255,255,255,0.12)',
+                        marginTop: 16,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, { color: Colors.warning500, marginBottom: 4 }]}>
+                      Conversation en preparation
+                    </Text>
+                    <Text style={[Fonts.p4, { color: leagueCardTextColor, textAlign: 'center' }]}>
+                      La conversation avec l adversaire arrive bientot. Reessayez dans quelques secondes ou poursuivez depuis cette fiche match.
+                    </Text>
+                    <View style={{ gap: 10, marginTop: 14, width: '100%' }}>
+                      <Button
+                        disabled={actionLoading}
+                        onPress={() => {
+                          refetchPendingLeagueAction();
+                          loadMatch();
+                        }}
+                        title="Reessayer"
+                        variant="SecondaryLight"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {renderNegotiationActions()}
+              </LeagueCard>
+            </>
+          ) : null}
+
           <LeagueCard isGold>
             <View style={styles.infoStack}>
               <View
@@ -941,7 +1351,8 @@ function LeagueMatchDetails({ navigation, route }) {
                   styles.infoPill,
                   {
                     backgroundColor: leagueAccentSurface,
-                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                    borderColor: isVenueBookingHighlighted ? Colors.warning500 : 'rgba(1, 179, 244, 0.18)',
+                    borderWidth: isVenueBookingHighlighted ? 2 : 1,
                   },
                 ]}
               >
@@ -1396,24 +1807,26 @@ function LeagueMatchDetails({ navigation, route }) {
             </View>
           </LeagueCard>
 
-          {isCaptain && (canShowCaptainPrimary || canShowCaptainCancel) ? (
+          {(canShowCaptainPrimary || canShowCaptainCancel) ? (
             <>
-              {renderSectionHeader('Zone Capitaine')}
-              <LeagueCard>
+              {renderSectionHeader(isCaptain ? 'Zone Capitaine' : 'Organisation du match')}
+              <LeagueCard style={isVenueBookingHighlighted ? { borderColor: Colors.warning500, borderWidth: 2 } : null}>
                 <View
                   style={[
                     styles.captainHeroCard,
                     {
-                      backgroundColor: leagueAccentSurface,
-                      borderColor: 'rgba(1, 179, 244, 0.22)',
+                      backgroundColor: isVenueBookingHighlighted ? 'rgba(245, 158, 11, 0.14)' : leagueAccentSurface,
+                      borderColor: isVenueBookingHighlighted ? 'rgba(245, 158, 11, 0.34)' : 'rgba(1, 179, 244, 0.22)',
                     },
                   ]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
-                    PRIORITE MATCH
+                    {isCaptain ? 'PRIORITE MATCH' : 'ACTION EQUIPE'}
                   </Text>
                   <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                    Valide les actions terrain et score pour debloquer le suivi League.
+                    {isCaptain
+                      ? 'Valide les actions terrain et score pour debloquer le suivi League.'
+                      : 'Le terrain doit etre confirme pour finaliser l organisation du match.'}
                   </Text>
                 </View>
                 {canSubmitScore || isScoreLockedByTime ? (
@@ -1438,7 +1851,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     Le score sera disponible apres l&apos;heure de debut du match (+1 min).
                   </Text>
                 ) : null}
-                {normalizedStatus === 'scheduled' && !isVenueBooked ? (
+                {canManageVenue ? (
                   <Button
                     disabled={actionLoading}
                     icon="stadium"
@@ -1636,6 +2049,15 @@ function LeagueMatchDetails({ navigation, route }) {
             />
           </View>
         </BottomModal>
+        <VenueProposalModal
+          initialDate={proposalDefaults.date}
+          initialEndTime={proposalDefaults.end}
+          initialStartTime={proposalDefaults.start}
+          isVisible={isNegotiationModalVisible}
+          onClose={() => setIsNegotiationModalVisible(false)}
+          onSend={handleSendCounterProposal}
+          onSkip={() => setIsNegotiationModalVisible(false)}
+        />
       </SafeAreaView>
     </ScreenContainer>
   );

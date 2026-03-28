@@ -10,7 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OTPForm from '@/components/organisms/otpForm/OTPForm';
 import PhoneForm from '@/components/organisms/signinPhoneForm/SigninPhoneForm';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -51,7 +51,7 @@ function Login({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingTop[32],
@@ -129,7 +129,7 @@ function Login({ navigation }) {
           </View>
         )}
       </KeyboardAvoidingView>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

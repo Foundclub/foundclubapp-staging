@@ -372,6 +372,10 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
 
   const leagueTabTypes = new Set([
     NOTIFICATION_TYPES.LEAGUE_AUTOMATION,
+    NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CANCELLED,
+    NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CHECK,
+    NOTIFICATION_TYPES.LEAGUE_POST_SLOT_CONFIRMATION,
+    NOTIFICATION_TYPES.LEAGUE_POST_SLOT_RESCHEDULED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
@@ -379,7 +383,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
     NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
     NOTIFICATION_TYPES.LEAGUE_SEARCH_RELAUNCH_PROMPT,
-    NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED,
     NOTIFICATION_TYPES.REMATCH_REQUEST,
     NOTIFICATION_TYPES.RSVP_ALERT,
   ]);
@@ -482,8 +485,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       }
       return eventDetailsDestination(payload.eventId);
     case NOTIFICATION_TYPES.LEAGUE_MATCH_DISPUTED:
-    case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
-    case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
       return chatDestination(payload.chatId || payload.conversationId)
         || { params: {}, route: RouteNames.LeagueMatchTab };
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FINALIZED: {
@@ -504,7 +505,22 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     }
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
     case NOTIFICATION_TYPES.MATCH_FOUND:
-      return { params: {}, route: RouteNames.LeagueMatchTab };
+      return payload.matchId
+        ? {
+          params: {
+            matchId: String(payload.matchId),
+          },
+          route: RouteNames.LeagueMatchDetails,
+        }
+        : {
+          params: {
+            params: {
+              forceLeagueActionPrompt: true,
+            },
+            screen: RouteNames.LeagueDashboard,
+          },
+          route: RouteNames.LeagueHomeTab,
+        };
     case NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED:
       return payload.matchId
         ? {
@@ -512,6 +528,28 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.PastMatchDetails,
         }
         : { params: {}, route: RouteNames.LeagueMatchTab };
+    case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED:
+      return payload.matchId
+        ? {
+          params: {
+            focusSection: 'venueBooking',
+            matchId: String(payload.matchId),
+          },
+          route: RouteNames.LeagueMatchDetails,
+        }
+        : { params: {}, route: RouteNames.LeagueMatchTab };
+    case NOTIFICATION_TYPES.LEAGUE_PROPOSAL_RECEIVED:
+      return {
+        params: {
+          params: {
+            forceLeagueActionPrompt: true,
+            forceLeagueActionPromptToken: String(payload.notificationId || payload.dedupeKey || payload.matchId || 'proposal'),
+            matchId: payload.matchId ? String(payload.matchId) : undefined,
+          },
+          screen: RouteNames.LeagueDashboard,
+        },
+        route: RouteNames.LeagueHomeTab,
+      };
     case NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT:
     case NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT:
       return payload.matchId
@@ -541,6 +579,16 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
           route: RouteNames.SquadDetails,
         }
         : { params: {}, route: RouteNames.SquadSearch };
+    case NOTIFICATION_TYPES.LEAGUE_VENUE_BOOKED:
+      return payload.matchId
+        ? {
+          params: {
+            focusSection: 'venueBooking',
+            matchId: String(payload.matchId),
+          },
+          route: RouteNames.LeagueMatchDetails,
+        }
+        : { params: {}, route: RouteNames.LeagueMatchTab };
 
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:

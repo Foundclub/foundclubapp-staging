@@ -9,7 +9,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -63,7 +63,7 @@ function UserSportHistory({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
@@ -113,7 +113,7 @@ function UserSportHistory({ navigation }) {
           variant="Secondary"
         />
       </View>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

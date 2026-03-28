@@ -8,6 +8,7 @@ import {
 import { Linking } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { createLogger } from '@/utils/logger/logger';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -19,11 +20,38 @@ let cachedAudioModule;
 /** @type {{ ownerId: string; stop: null | (() => Promise<void>) }} */
 let activePlayback = { ownerId: '', stop: null };
 
+const safeRead = (resolver, context, fallback = null) => {
+  try {
+    return resolver();
+  } catch (error) {
+    if (context) {
+      playbackLogger.warn(context, { message: error?.message });
+    }
+    return fallback;
+  }
+};
+
+const safeCall = (fn, thisArg, args, context, fallback = null) => {
+  if (typeof fn !== 'function') return fallback;
+  try {
+    return fn.apply(thisArg, Array.isArray(args) ? args : []);
+  } catch (error) {
+    if (context) {
+      playbackLogger.warn(context, { message: error?.message });
+    }
+    return fallback;
+  }
+};
+
 const getAudioModule = () => {
   if (cachedAudioModule !== undefined) return cachedAudioModule;
 
   try {
     if (typeof require !== 'function') {
+      cachedAudioModule = null;
+      return cachedAudioModule;
+    }
+    if (!canLoadNitroSoundModule()) {
       cachedAudioModule = null;
       return cachedAudioModule;
     }
@@ -36,27 +64,61 @@ const getAudioModule = () => {
   return cachedAudioModule;
 };
 
-const hasPlayerMethods = (candidate) => (
-  !!candidate
-  && typeof candidate.startPlayer === 'function'
-  && typeof candidate.stopPlayer === 'function'
-);
+const hasPlayerMethods = (candidate) => {
+  if (!candidate) return false;
+  const startPlayer = safeRead(
+    () => candidate.startPlayer,
+    'Audio player start API unavailable',
+  );
+  const stopPlayer = safeRead(
+    () => candidate.stopPlayer,
+    'Audio player stop API unavailable',
+  );
+  return typeof startPlayer === 'function' && typeof stopPlayer === 'function';
+};
 
 const resolvePlayerFactory = () => {
   const moduleValue = getAudioModule();
   if (!moduleValue) return /** @type {null | (() => any)} */ (null);
 
-  if (typeof moduleValue?.createSound === 'function') {
-    return () => moduleValue.createSound();
+  const createSound = safeRead(
+    () => moduleValue.createSound,
+    'Nitro player createSound unavailable',
+  );
+  if (typeof createSound === 'function') {
+    return () => safeCall(
+      createSound,
+      moduleValue,
+      [],
+      'Nitro player createSound factory failed',
+    );
   }
 
-  if (typeof moduleValue?.default?.createSound === 'function') {
-    return () => moduleValue.default.createSound();
+  const defaultExport = safeRead(
+    () => moduleValue.default,
+    'Nitro player default export unavailable',
+  );
+  const createSoundFromDefault = safeRead(
+    () => defaultExport?.createSound,
+    'Nitro player default createSound unavailable',
+  );
+  if (typeof createSoundFromDefault === 'function') {
+    return () => safeCall(
+      createSoundFromDefault,
+      defaultExport,
+      [],
+      'Nitro player default createSound factory failed',
+    );
   }
 
   if (hasPlayerMethods(moduleValue)) return () => moduleValue;
-  if (hasPlayerMethods(moduleValue?.default)) return () => moduleValue.default;
-  if (hasPlayerMethods(moduleValue?.Sound)) return () => moduleValue.Sound;
+  if (hasPlayerMethods(defaultExport)) return () => defaultExport;
+
+  const soundExport = safeRead(
+    () => moduleValue.Sound,
+    'Nitro player Sound export unavailable',
+  );
+  if (hasPlayerMethods(soundExport)) return () => soundExport;
 
   return /** @type {null | (() => any)} */ (null);
 };
@@ -277,9 +339,22 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     if (playerRef.current) return playerRef.current;
     if (!playerFactory) return null;
 
-    const player = playerFactory();
+    const player = safeRead(
+      () => playerFactory(),
+      'Failed to create Nitro player',
+    );
     if (!hasPlayerMethods(player)) return null;
-    player.setSubscriptionDuration?.(0.1);
+
+    const setSubscriptionDuration = safeRead(
+      () => player.setSubscriptionDuration,
+      'Player subscription setter unavailable',
+    );
+    safeCall(
+      setSubscriptionDuration,
+      player,
+      [0.1],
+      'Player subscription setup failed',
+    );
     playerRef.current = player;
     return playerRef.current;
   }, [playerFactory]);

@@ -1,9 +1,15 @@
-import { signInWithPhoneNumber as firebaseSignInWithPhoneNumber, getAuth } from '@react-native-firebase/auth';
 import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
-import { getDeviceId, getVersion } from 'react-native-device-info';
 
+import {
+  confirmOtp,
+  getCurrentUser,
+  logout as platformLogout,
+  onAuthStateChanged as subscribeToPlatformAuthState,
+  sendOtp,
+} from '@/platform/auth';
+import { getAppVersion, getDeviceId } from '@/platform/device';
 import client from '@/services/client';
 
 import { isFirebaseBypassEnabled } from './bypassPolicy';
@@ -143,8 +149,7 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
   }
 
   try {
-    const auth = getAuth();
-    const result = await firebaseSignInWithPhoneNumber(auth, phoneNumber);
+    const result = await sendOtp(phoneNumber);
     return Promise.resolve(result);
   } catch (e) {
     return Promise.reject(e);
@@ -202,13 +207,13 @@ export const login = async ({ code, confirm }) => {
 
   // NORMAL MODE: Use Firebase Auth
   // Check if user is already authenticated (auto-verification case)
-  const { currentUser } = getAuth();
+  const currentUser = getCurrentUser();
 
   let firebaseResult;
   if (currentUser) {
     firebaseResult = { user: currentUser };
   } else {
-    firebaseResult = await confirm.confirm(code);
+    firebaseResult = await confirmOtp({ code, confirmation: confirm });
   }
   const idToken = await firebaseResult?.user.getIdToken() || '';
 
@@ -238,12 +243,11 @@ export const logout = async () => {
   }
 
   try {
-    const auth = getAuth();
-    if (!auth?.currentUser) {
+    if (!getCurrentUser()) {
       return Promise.resolve();
     }
 
-    await auth.signOut();
+    await platformLogout();
     return Promise.resolve();
   } catch (e) {
     if (e?.code === 'auth/no-current-user') {
@@ -259,8 +263,11 @@ export const logout = async () => {
  * @returns {Function} unsubscribe
  */
 export const subscribeToAuthState = (onAuthStateChanged) => {
-  const auth = getAuth();
-  return auth.onAuthStateChanged(onAuthStateChanged);
+  if (typeof onAuthStateChanged !== 'function') {
+    return () => {};
+  }
+
+  return subscribeToPlatformAuthState(onAuthStateChanged);
 };
 
 /**
@@ -560,7 +567,7 @@ export const addDeviceToken = async (token) => {
     });
     const result = await client.post('/user-fcm-token/me/device', {
       data: {
-        appVersion: getVersion(),
+        appVersion: getAppVersion(),
         device: getDeviceId(),
         platform: Platform.OS,
         supportsPushActions: true,

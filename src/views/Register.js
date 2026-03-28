@@ -9,7 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import OTPForm from '@/components/organisms/otpForm/OTPForm';
 import PhoneForm from '@/components/organisms/signinPhoneForm/SigninPhoneForm';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 /**
  * Registration screen component for new user sign-up.
@@ -39,7 +39,7 @@ function Register() {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingTop[32],
@@ -76,7 +76,7 @@ function Register() {
             )}
         </View>
       </KeyboardAvoidingView>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

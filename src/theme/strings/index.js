@@ -1,11 +1,13 @@
 import { setDefaultOptions } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import i18n from 'i18next';
-import DefaultJoi from 'joi';
+import * as JoiModule from 'joi';
 import { initReactI18next } from 'react-i18next';
 
 import * as translations from '@/theme/strings/translations';
 import validations from '@/theme/strings/translations/validations';
+
+const DefaultJoi = JoiModule?.default || JoiModule;
 
 i18n.use(initReactI18next).init({
   compatibilityJSON: 'v4',

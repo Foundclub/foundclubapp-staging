@@ -1,6 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ImageBackground,
@@ -17,6 +18,7 @@ import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Checkable from '@/components/atoms/checkable/Checkable';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -34,6 +36,7 @@ import {
   applyToRecruitmentAd,
   deleteRecruitmentAd,
   getRecruitmentAd,
+  resolveRecruitmentAdApplicationState,
 } from '@/services/recruitment/recruitmentService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -48,11 +51,6 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
-
-const normalizeComparableId = (value) => {
-  if (value === null || value === undefined) return '';
-  return String(value).trim();
-};
 
 const getCandidateDisplayName = (participation) => {
   const requesterName = String(participation?.requester?.displayName || '').trim();
@@ -99,12 +97,16 @@ function RecruitmentAdDetails() {
   const { params } = useRoute();
   const navigation = useNavigation();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
   const queryClient = useQueryClient();
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isDetectionApplyModalVisible, setIsDetectionApplyModalVisible] = useState(false);
+  const [hasAcceptedDetectionRiskDeclaration, setHasAcceptedDetectionRiskDeclaration] = useState(false);
+  const [hasAcceptedDetectionConditions, setHasAcceptedDetectionConditions] = useState(false);
 
   const adId = params?.ad?.documentId || params?.adId || params?.ad?.id;
 
@@ -122,16 +124,16 @@ function RecruitmentAdDetails() {
     () => (Array.isArray(ad?.candidates) ? ad.candidates : []),
     [ad?.candidates],
   );
-  const currentUserId = normalizeComparableId(userData?.documentId || userData?.id);
-
-  const hasApplied = useMemo(() => {
-    if (!currentUserId || candidates.length === 0) return false;
-    return candidates.some((candidate) => {
-      const candidateDocumentId = normalizeComparableId(candidate?.documentId);
-      const candidateId = normalizeComparableId(candidate?.id);
-      return candidateDocumentId === currentUserId || candidateId === currentUserId;
-    });
-  }, [candidates, currentUserId]);
+  const applicationState = useMemo(
+    () => resolveRecruitmentAdApplicationState(ad, userData),
+    [ad, userData],
+  );
+  const { hasApplied } = applicationState;
+  const isAppliedOnAnotherDetectionSlot = Boolean(
+    isDetectionLinked
+    && applicationState.linkedRecruitmentAdDocumentId
+    && applicationState.linkedRecruitmentAdDocumentId !== recruitmentAdDocumentId,
+  );
 
   const isOwner = useMemo(() => {
     if (!userData || !ad) return false;
@@ -197,7 +199,7 @@ function RecruitmentAdDetails() {
   });
 
   const applyMutation = useMutation({
-    mutationFn: () => applyToRecruitmentAd(ad.documentId || ad.id),
+    mutationFn: (payload) => applyToRecruitmentAd(ad.documentId || ad.id, payload),
     onError: (error) => {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
@@ -206,6 +208,9 @@ function RecruitmentAdDetails() {
       Alert.alert('Candidature', message);
     },
     onSuccess: (result) => {
+      setIsDetectionApplyModalVisible(false);
+      setHasAcceptedDetectionRiskDeclaration(false);
+      setHasAcceptedDetectionConditions(false);
       queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
@@ -272,6 +277,57 @@ function RecruitmentAdDetails() {
     });
   }, [navigation, Colors]);
 
+  const team = ad?.team;
+  const club = team?.club;
+  const clubName = club?.name || team?.name || 'Club inconnu';
+  const clubLogo = getImageUrl(club?.logo?.url);
+  const positionLabel = ad?.position || 'Poste non specifie';
+  const levelName = ad?.level?.name || ad?.minLevel || 'Niveau ?';
+  const categoryName = ad?.category?.name || ad?.category || 'Categorie ?';
+  const address = getShortAddress(ad?.city || club?.city || '');
+  const sectionName = ad?.section?.name || ad?.section;
+  const date = ad?.createdAt ? formatDateWithDayPrefix(new Date(ad.createdAt)) : '';
+  const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
+  const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
+  const detectionDateTimeLabel = useMemo(() => {
+    if (!ad?.event?.date) return '';
+
+    const detectionDateValue = new Date(ad.event.date);
+    if (Number.isNaN(detectionDateValue.getTime())) return '';
+
+    const dateLabel = formatDateWithDayPrefix(detectionDateValue);
+    const hourLabel = detectionDateValue.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return hourLabel ? `${dateLabel} a ${hourLabel}` : dateLabel;
+  }, [ad?.event?.date]);
+  const detectionApplySummary = useMemo(() => {
+    const summaryParts = [];
+
+    if (positionLabel) {
+      summaryParts.push(`Poste vise : ${positionLabel}`);
+    }
+
+    if (detectionDateTimeLabel) {
+      summaryParts.push(`Date de la detection : ${detectionDateTimeLabel}`);
+    }
+
+    if (clubName) {
+      summaryParts.push(`Club concerne : ${clubName}`);
+    }
+
+    return summaryParts.join('\n');
+  }, [clubName, detectionDateTimeLabel, positionLabel]);
+  const checkableWrapperStyle = useMemo(() => ([
+    ApplicationStyle.borderWidth0,
+    ApplicationStyle.backgroundColor.transparent,
+    Spaces.padding[0],
+    Alignments.rowReverse,
+    { flex: 0, width: '100%' },
+  ]), [Alignments.rowReverse, ApplicationStyle.backgroundColor.transparent, ApplicationStyle.borderWidth0, Spaces.padding]);
+
   if (!ad) {
     return (
       <ScreenContainer>
@@ -284,26 +340,50 @@ function RecruitmentAdDetails() {
     );
   }
 
-  const { team } = ad;
-  const club = team?.club;
-  const clubName = club?.name || team?.name || 'Club inconnu';
-  const clubLogo = getImageUrl(club?.logo?.url);
-  const positionLabel = ad.position || 'Poste non specifie';
-  const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
-  const categoryName = ad.category?.name || ad.category || 'Categorie ?';
-  const address = getShortAddress(ad.city || club?.city || '');
-  const sectionName = ad.section?.name || ad.section;
-  const date = ad.createdAt ? formatDateWithDayPrefix(new Date(ad.createdAt)) : '';
-  const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
-  const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
-
   const handleApply = () => {
     if (hasApplied) {
-      Alert.alert('Candidature', 'Tu as deja postule a cette annonce.');
+      if (applicationState.status === 'accepted') {
+        Alert.alert(
+          'Candidature',
+          isDetectionLinked
+            ? 'Tu participes deja a cette detection.'
+            : 'Ta candidature est deja validee pour cette annonce.',
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Candidature',
+        isDetectionLinked
+          ? 'Tu as deja une candidature en attente sur cette detection.'
+          : 'Tu as deja postule a cette annonce.',
+      );
       return;
     }
 
-    applyMutation.mutate();
+    if (isDetectionLinked) {
+      setHasAcceptedDetectionRiskDeclaration(false);
+      setHasAcceptedDetectionConditions(false);
+      setIsDetectionApplyModalVisible(true);
+      return;
+    }
+
+    applyMutation.mutate({});
+  };
+
+  const handleCloseDetectionApplyModal = () => {
+    if (applyMutation.isPending) return;
+    setIsDetectionApplyModalVisible(false);
+    setHasAcceptedDetectionRiskDeclaration(false);
+    setHasAcceptedDetectionConditions(false);
+  };
+
+  const handleConfirmDetectionApply = () => {
+    if (!hasAcceptedDetectionRiskDeclaration || !hasAcceptedDetectionConditions) return;
+
+    applyMutation.mutate({
+      acceptRiskDeclaration: true,
+    });
   };
 
   const handleEdit = () => {
@@ -345,8 +425,10 @@ function RecruitmentAdDetails() {
   };
 
   let applyButtonTitle = 'Postuler';
-  if (hasApplied) {
-    applyButtonTitle = 'Deja postule';
+  if (applicationState.status === 'accepted') {
+    applyButtonTitle = 'Je participe';
+  } else if (applicationState.status === 'pending') {
+    applyButtonTitle = 'Demande en attente';
   } else if (!ad.isActive) {
     applyButtonTitle = 'Annonce inactive';
   }
@@ -640,6 +722,28 @@ function RecruitmentAdDetails() {
             {ad.description || 'Aucune description fournie pour cette annonce.'}
           </Text>
 
+          {isAppliedOnAnotherDetectionSlot ? (
+            <View
+              style={{
+                backgroundColor: applicationState.status === 'accepted' ? `${Colors.success500}12` : `${Colors.warning500}12`,
+                borderColor: applicationState.status === 'accepted' ? `${Colors.success500}35` : `${Colors.warning500}35`,
+                borderRadius: 18,
+                borderWidth: 1,
+                marginTop: 20,
+                padding: 14,
+              }}
+            >
+              <Text style={[Fonts.p2Bold, { color: applicationState.status === 'accepted' ? Colors.success500 : Colors.warning500 }]}>
+                {applicationState.status === 'accepted' ? 'Participation deja validee sur cette detection' : 'Candidature deja envoyee sur cette detection'}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginTop: 6 }]}>
+                {applicationState.status === 'accepted'
+                  ? 'Tu participes deja a un autre poste de cette detection. Les autres annonces gardent donc le meme statut.'
+                  : 'Tu as deja une demande en attente sur un autre poste de cette detection. Les autres annonces gardent donc le meme statut.'}
+              </Text>
+            </View>
+          ) : null}
+
           {isDetectionLinked && ad?.event?.documentId ? (
             <View style={{ marginTop: 24 }}>
               <Button
@@ -710,6 +814,79 @@ function RecruitmentAdDetails() {
               variant="Secondary"
             />
           </View>
+        </View>
+      </BottomModal>
+      <BottomModal
+        close={handleCloseDetectionApplyModal}
+        footerComponent={(
+          <View style={{ gap: 12 }}>
+            <Button
+              disabled={!hasAcceptedDetectionRiskDeclaration || !hasAcceptedDetectionConditions}
+              isLoading={applyMutation.isPending}
+              onPress={handleConfirmDetectionApply}
+              title="Confirmer ma candidature"
+              variant="Primary"
+            />
+            <Button
+              disabled={applyMutation.isPending}
+              onPress={handleCloseDetectionApplyModal}
+              title="Annuler"
+              variant="Secondary"
+            />
+          </View>
+        )}
+        headerComponent={(
+          <Text style={[Fonts.p1Black, { color: Colors.neutral100, textAlign: 'center' }]}>
+            {t('eventList.joinModal.title')}
+          </Text>
+        )}
+        hideCloseButton
+        isVisible={isDetectionApplyModalVisible}
+        snapPoints={['78%']}
+      >
+        <View style={{ gap: 20 }}>
+          <View
+            style={{
+              backgroundColor: 'rgba(1,179,244,0.10)',
+              borderColor: 'rgba(1,179,244,0.28)',
+              borderRadius: 18,
+              borderWidth: 1,
+              padding: 16,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 8 }]}>
+              Tu candidates a une detection
+            </Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
+              {detectionApplySummary || 'Verification de la detection en cours.'}
+            </Text>
+          </View>
+
+          <Text style={[Fonts.p1, { color: Colors.neutral100, lineHeight: 24 }]}>
+            {t('eventList.joinModal.description', { clubName })}
+          </Text>
+
+          <Checkable
+            fontStyle={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}
+            isChecked={hasAcceptedDetectionRiskDeclaration}
+            setIsChecked={() => setHasAcceptedDetectionRiskDeclaration((previous) => !previous)}
+            text={t('eventList.joinModal.checkboxes.responsibility')}
+            type="square"
+            wrapperStyle={checkableWrapperStyle}
+          />
+
+          <Checkable
+            fontStyle={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}
+            isChecked={hasAcceptedDetectionConditions}
+            setIsChecked={() => setHasAcceptedDetectionConditions((previous) => !previous)}
+            text={t('eventList.joinModal.checkboxes.conditions')}
+            type="square"
+            wrapperStyle={checkableWrapperStyle}
+          />
+
+          <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
+            {t('eventList.joinModal.validation')}
+          </Text>
         </View>
       </BottomModal>
     </ScreenContainer>

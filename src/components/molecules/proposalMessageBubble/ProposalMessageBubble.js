@@ -43,6 +43,31 @@ const STATUS_CONFIG = {
   },
 };
 
+const getProposalMeta = ({ isMe, status, statusConfig }) => {
+  if (status === 'accepted') {
+    return {
+      badgeLabel: 'Acceptee',
+      title: isMe ? 'Votre proposition' : 'Proposition adverse',
+    };
+  }
+  if (status === 'declined') {
+    return {
+      badgeLabel: 'Refusee',
+      title: isMe ? 'Votre proposition' : 'Proposition adverse',
+    };
+  }
+  if (isMe) {
+    return {
+      badgeLabel: 'En attente de reponse',
+      title: 'Votre proposition',
+    };
+  }
+  return {
+    badgeLabel: 'En attente de votre reponse',
+    title: 'Proposition adverse',
+  };
+};
+
 const styles = StyleSheet.create({
   addressDot: {
     backgroundColor: '#ff4d4f',
@@ -64,26 +89,27 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: 38,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  container: {
     borderRadius: 14,
     borderWidth: 1,
-    marginVertical: 6,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  container: {
+    borderRadius: 18,
+    borderWidth: 1,
+    marginVertical: 8,
     maxWidth: '90%',
     minWidth: 260,
     overflow: 'hidden',
     width: '100%',
   },
   content: {
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   fieldLabel: {
     minWidth: 48,
@@ -101,16 +127,16 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'stretch',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     width: '100%',
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     width: '100%',
   },
   headerTitle: {
@@ -135,13 +161,20 @@ const styles = StyleSheet.create({
  * Bubble to display a Match Proposal in chat.
  * @param {object} props
  * @param {object} props.proposal
+ * @param {boolean} [props.isHighlighted]
  * @param {boolean} [props.isMe]
  * @param {Function} [props.onAccept]
+ * @param {Function} [props.onCounter]
  * @param {Function} [props.onDecline]
  * @returns {import('react').ReactElement | null}
  */
 function ProposalMessageBubble({
-  isMe = false, onAccept, onDecline, proposal,
+  isHighlighted = false,
+  isMe = false,
+  onAccept,
+  onCounter,
+  onDecline,
+  proposal,
 }) {
   const { Colors, Fonts } = useTheme();
   const [loading, setLoading] = useState(false);
@@ -158,6 +191,7 @@ function ProposalMessageBubble({
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
+  const proposalMeta = getProposalMeta({ isMe, status, statusConfig });
   const addressLabel = resolveAddressLabel(address);
 
   const formattedDate = date
@@ -207,7 +241,11 @@ function ProposalMessageBubble({
         {
           alignSelf: isMe ? 'flex-end' : 'flex-start',
           backgroundColor: 'rgba(20, 39, 52, 0.92)',
-          borderColor: 'rgba(212, 175, 55, 0.9)',
+          borderColor: isHighlighted ? Colors.primary500 : 'rgba(212, 175, 55, 0.9)',
+          shadowColor: isHighlighted ? Colors.primary500 : '#000',
+          shadowOffset: { height: 10, width: 0 },
+          shadowOpacity: isHighlighted ? 0.18 : 0,
+          shadowRadius: 16,
         },
       ]}
     >
@@ -216,20 +254,22 @@ function ProposalMessageBubble({
           adjustsFontSizeToFit
           minimumFontScale={0.86}
           numberOfLines={1}
-          style={[Fonts.p2Bold, styles.headerTitle, { color: Colors.gold500 }]}
+          style={[Fonts.p2Bold, styles.headerTitle, { color: Colors.neutral00 }]}
         >
-          Proposition de match
+          {proposalMeta.title}
         </Text>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: statusConfig.bg,
-              borderColor: statusConfig.border,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, { color: statusColor }]}>{statusConfig.label}</Text>
+        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: statusConfig.bg,
+                borderColor: statusConfig.border,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: statusColor }]}>{proposalMeta.badgeLabel}</Text>
+          </View>
         </View>
       </View>
       <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
@@ -272,59 +312,92 @@ function ProposalMessageBubble({
             >
               {addressLabel}
             </Text>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginLeft: 10 }]}>Ouvrir</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginLeft: 10 }]}>Voir le lieu</Text>
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {status === 'pending' && !isMe && (
+      {status === 'pending' && !isMe ? (
         <>
           <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
           <View style={styles.footer}>
             {loading ? (
               <ActivityIndicator color={Colors.primary500} />
             ) : (
-              <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
+              <View style={{ alignSelf: 'stretch', gap: 10 }}>
+                <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => handleAction(onAccept)}
+                    style={[
+                      styles.button,
+                      {
+                        backgroundColor: 'rgba(76, 175, 80, 0.15)',
+                        borderColor: Colors.success500,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>Accepter</Text>
+                  </TouchableOpacity>
+                  {onCounter ? (
+                    <TouchableOpacity
+                      onPress={() => handleAction(onCounter)}
+                      style={[
+                        styles.button,
+                        {
+                          backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                          borderColor: Colors.primary500,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Contre-proposer</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
                 <TouchableOpacity
                   onPress={() => handleAction(onDecline)}
                   style={[
                     styles.button,
                     {
-                      backgroundColor: 'rgba(244, 67, 54, 0.15)',
+                      backgroundColor: 'rgba(244, 67, 54, 0.08)',
                       borderColor: Colors.error500,
+                      flex: undefined,
                     },
                   ]}
                 >
                   <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Refuser</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleAction(onAccept)}
-                  style={[
-                    styles.button,
-                    {
-                      backgroundColor: 'rgba(76, 175, 80, 0.15)',
-                      borderColor: Colors.success500,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>Accepter</Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
         </>
-      )}
+      ) : null}
 
-      {status === 'pending' && isMe && (
+      {status === 'pending' && isMe ? (
         <>
           <View style={[styles.separator, { backgroundColor: Colors.neutral700 }]} />
           <View style={styles.footer}>
-            <Text style={[Fonts.p4, { color: Colors.neutral300, fontStyle: 'italic' }]}>
-              En attente de la réponse adverse
-            </Text>
+            <View style={{ gap: 10 }}>
+              <Text style={[Fonts.p4, { color: Colors.neutral300, fontStyle: 'italic' }]}>
+                En attente de la reponse adverse
+              </Text>
+              {onCounter ? (
+                <TouchableOpacity
+                  onPress={() => handleAction(onCounter)}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                      borderColor: Colors.primary500,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Contre-proposer</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
         </>
-      )}
+      ) : null}
     </View>
   );
 }

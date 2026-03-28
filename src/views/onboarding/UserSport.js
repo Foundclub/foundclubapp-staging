@@ -12,7 +12,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -122,8 +122,9 @@ function UserSport({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
+      contentWidth="readable"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
         { marginBottom: insets.bottom },
@@ -242,7 +243,7 @@ function UserSport({ navigation }) {
           variant="Secondary"
         />
       </View>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

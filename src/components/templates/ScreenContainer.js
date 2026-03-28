@@ -21,8 +21,13 @@ function ScreenContainer({
   bgImage = 'bg2', // Default to bg2 per user request
   children,
   contentContainerStyle = [],
+  contentWidth,
+  desktopAlignment,
+  desktopMinHeight,
   gradient = null, // Default to no gradient
   responsiveHorizontalPadding = false,
+  responsivePadding,
+  surface,
   style = [],
   withHeaderPadding = true,
   ...props
@@ -34,7 +39,13 @@ function ScreenContainer({
   const insets = useSafeAreaInsets();
   const headerHeightNative = useHeaderHeight();
   const { width } = useWindowDimensions();
-  const horizontalPadding = responsiveHorizontalPadding && width <= 375 ? 16 : 24;
+  const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
+  const horizontalPadding = isResponsivePaddingEnabled && width <= 375 ? 16 : 24;
+
+  void contentWidth;
+  void desktopAlignment;
+  void desktopMinHeight;
+  void surface;
 
   // constants
   const containerSpaces = useMemo(() => {

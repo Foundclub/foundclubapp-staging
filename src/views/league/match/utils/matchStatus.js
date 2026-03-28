@@ -172,6 +172,15 @@ export const getMatchDerivedPhase = (match, event = null, now = new Date()) => {
   }
 
   if (status === 'provisionary' || status === 'negotiating') return 'waiting_proposal';
+  const postSlotResolution = String(match?.automation_meta?.post_slot_resolution?.resolution || '').trim().toLowerCase();
+  if (
+    status === 'scheduled'
+    && !venueBooked
+    && isScoreWindowOpen(match, event, now)
+    && !['auto_cancelled', 'cancelled', 'disputed', 'rescheduled', 'score_flow'].includes(postSlotResolution)
+  ) {
+    return 'post_slot_resolution';
+  }
   // Never unlock score from device time fallback.
   // If backend phase is missing, keep scheduled matches in pre-score phases only.
   if (status === 'scheduled' && !venueBooked) return 'waiting_venue';
@@ -223,6 +232,7 @@ export const shouldShowNextMatchCard = (match, event = null) => {
     'confirmed_upcoming',
     'disputed',
     'pending_validation',
+    'post_slot_resolution',
     'waiting_score',
     'waiting_venue',
   ].includes(phase);
@@ -254,6 +264,7 @@ export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now 
     forfeit: { bg: withAlpha(palette.error), color: palette.error, label: 'Forfait' },
     no_show: { bg: withAlpha(palette.error), color: palette.error, label: 'No-show' },
     pending_validation: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Validation score' },
+    post_slot_resolution: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Confirmation match' },
     valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Validé' },
     waiting_proposal: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente accord' },
     waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score a saisir' },

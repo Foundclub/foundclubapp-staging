@@ -17,6 +17,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { resolveRecruitmentAdApplicationState } from '@/services/recruitment/recruitmentService';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
@@ -25,6 +27,7 @@ import { getShortAddress } from '@/utils/location';
  * RecruitmentAdCard component - Fully aligned with EventCardNew.js design
  * @param {object} props
  * @param {object} props.ad - The recruitment ad data
+ * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
  * @param {Function} [props.onPress] - Callback when card is pressed
  * @param {boolean} [props.isOwner] - If true, shows owner actions
  */
@@ -45,12 +48,18 @@ const normalizeTypeLabel = (value = '') => String(value || '')
 
 /**
  *
- * @param root0
- * @param root0.ad
- * @param root0.isOwner
- * @param root0.onPress
+ * @param {object} root0
+ * @param {object} root0.ad
+ * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [root0.detectionApplicationStatusByEvent]
+ * @param {boolean} [root0.isOwner]
+ * @param {Function} [root0.onPress]
  */
-function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
+function RecruitmentAdCard({
+  ad,
+  detectionApplicationStatusByEvent = {},
+  isOwner = false,
+  onPress,
+}) {
   const navigation = useNavigation();
   const {
     Colors, Fonts, Images,
@@ -95,6 +104,24 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))
     : '';
+  const applicationState = resolveRecruitmentAdApplicationState(ad, userData, detectionApplicationStatusByEvent);
+  let playerCtaBackgroundColor = Colors.primary500;
+  let playerCtaBorderColor = 'transparent';
+  let playerCtaTextColor = Colors.neutral900;
+  let playerCtaLabel = 'Postuler';
+  if (!ad.isActive) {
+    playerCtaLabel = 'Annonce inactive';
+  } else if (applicationState.status === 'accepted') {
+    playerCtaLabel = 'Je participe';
+    playerCtaBackgroundColor = `${Colors.success500}18`;
+    playerCtaBorderColor = `${Colors.success500}35`;
+    playerCtaTextColor = Colors.success500;
+  } else if (applicationState.status === 'pending') {
+    playerCtaLabel = 'Demande en attente';
+    playerCtaBackgroundColor = `${Colors.warning500}18`;
+    playerCtaBorderColor = `${Colors.warning500}35`;
+    playerCtaTextColor = Colors.warning500;
+  }
 
   // Sponsors
   // Owner specifics
@@ -302,11 +329,20 @@ function RecruitmentAdCard({ ad, isOwner = false, onPress }) {
               <View
                 style={[
                   styles.reservationButton,
-                  { backgroundColor: Colors.primary500 },
+                  {
+                    backgroundColor: playerCtaBackgroundColor,
+                    borderColor: playerCtaBorderColor,
+                    borderWidth: applicationState.status ? 1 : 0,
+                  },
                 ]}
               >
-                <Text style={[styles.reservationButtonText, { color: Colors.neutral900 }]}>
-                  Postuler
+                <Text
+                  style={[
+                    styles.reservationButtonText,
+                    { color: playerCtaTextColor },
+                  ]}
+                >
+                  {playerCtaLabel}
                 </Text>
               </View>
             )}

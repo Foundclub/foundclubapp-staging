@@ -217,13 +217,14 @@ export const useMatchmakingStateMachine = ({
         const statusData = await MatchmakingService.getActiveRequest(squadId);
         failureCountRef.current = 0;
         setServerNow(statusData?.serverNow || null);
+        const effectiveLegacyState = statusData?.legacyState || statusData?.state;
 
-        if (statusData?.state === 'matched') {
+        if (effectiveLegacyState === 'matched') {
           onMatched?.(statusData, { silent: viewState === 'match_found' });
           return;
         }
 
-        if (statusData?.state === 'searching') {
+        if (effectiveLegacyState === 'searching') {
           onSearchingStatus?.(statusData);
         }
 
@@ -232,7 +233,7 @@ export const useMatchmakingStateMachine = ({
           setSearchInsightsUpdatedAt(Date.now());
         }
 
-        if ((viewState === 'locker_room' || viewState === 'match_found') && statusData?.state === 'searching') {
+        if ((viewState === 'locker_room' || viewState === 'match_found') && effectiveLegacyState === 'searching') {
           onAutoSearchingDetected?.(statusData);
         }
       } catch (error) {

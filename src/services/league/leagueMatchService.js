@@ -51,6 +51,17 @@ export const markVenueBooked = async (matchId) => {
 };
 
 /**
+ * Captains answer the post-slot resolution prompt.
+ * @param {string} matchId
+ * @param {{outcome: 'played' | 'not_played', nextAction?: 'reschedule' | 'cancel'}} payload
+ */
+export const submitPostSlotResponse = async (matchId, payload) => {
+  const normalizedMatchId = requireDocumentId(matchId, 'match');
+  const response = await client.post(`/league-matches/${normalizedMatchId}/post-slot-response`, payload);
+  return response.data;
+};
+
+/**
  * Confirm a match proposal (schedule it)
  * @param {string} matchId - The match documentId
  */

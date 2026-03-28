@@ -9,7 +9,12 @@ import {
   requestPermission,
 } from '@react-native-firebase/messaging';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Alert,
   AppState,
@@ -45,6 +50,7 @@ import {
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 import { ENABLE_PUSH_NOTIFICATIONS, ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { NOTIFICATIONS_QUERY_KEY, UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 
 const notificationsLogger = createLogger('notifications');
@@ -73,6 +79,10 @@ const formatDateForGoogleCalendar = (dateInput) => {
   const pad = (value) => String(value).padStart(2, '0');
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
+
+const getCalendarPromptKey = (notificationData) => String(
+  notificationData?.matchId || notificationData?.dedupeKey || '',
+).trim();
 
 const isFirebaseMessagingApiAvailable = () => (
   typeof getApp === 'function'
@@ -217,12 +227,22 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   }, [saveTokenMutation]);
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
+  const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const queuedCalendarPromptKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
+  const shownCalendarPromptKeyRef = useRef('');
   const queuedNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const tokenSyncInFlightRef = useRef(false);
   const lastTokenSyncAtRef = useRef(0);
   const hasSynced = useRef(false);
+  const pendingCalendarPrompt = pendingCalendarPrompts[0] || null;
+  const pendingCalendarPromptKey = getCalendarPromptKey(pendingCalendarPrompt);
+  const canShowCalendarPrompt = useBlockingOverlayPrompt(
+    'notification-calendar-alert',
+    Boolean(pendingCalendarPrompt),
+    60,
+  );
 
   const invalidateNotificationQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
@@ -331,22 +351,65 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   const maybePromptAddToCalendar = useCallback((notificationData) => {
     if (!notificationData || notificationData.type !== NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) return;
-    const key = notificationData.matchId || notificationData.dedupeKey;
-    if (!key || promptedCalendarMatchesRef.current.has(key)) return;
-    promptedCalendarMatchesRef.current.add(key);
+    const key = getCalendarPromptKey(notificationData);
+    if (
+      !key
+      || promptedCalendarMatchesRef.current.has(key)
+      || queuedCalendarPromptKeysRef.current.has(key)
+    ) {
+      return;
+    }
+
+    queuedCalendarPromptKeysRef.current.add(key);
+    setPendingCalendarPrompts((previousPrompts) => [...previousPrompts, notificationData]);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingCalendarPrompt || !canShowCalendarPrompt) return;
+    if (shownCalendarPromptKeyRef.current === pendingCalendarPromptKey) return;
+    shownCalendarPromptKeyRef.current = pendingCalendarPromptKey;
+    promptedCalendarMatchesRef.current.add(pendingCalendarPromptKey);
+
+    let dismissed = false;
+    const finalize = () => {
+      if (dismissed) return;
+      dismissed = true;
+      shownCalendarPromptKeyRef.current = '';
+      queuedCalendarPromptKeysRef.current.delete(pendingCalendarPromptKey);
+      setPendingCalendarPrompts((previousPrompts) => previousPrompts.filter(
+        (prompt) => getCalendarPromptKey(prompt) !== pendingCalendarPromptKey,
+      ));
+    };
 
     Alert.alert(
       'Match confirme',
       'Ajouter ce match a votre agenda ?',
       [
-        { style: 'cancel', text: 'Plus tard' },
         {
-          onPress: () => openCalendarFromNotification(notificationData),
+          onPress: finalize,
+          style: 'cancel',
+          text: 'Plus tard',
+        },
+        {
+          onPress: () => {
+            openCalendarFromNotification(pendingCalendarPrompt);
+            finalize();
+          },
           text: 'Ajouter',
         },
       ],
+      {
+        cancelable: true,
+        onDismiss: finalize,
+      },
     );
-  }, [openCalendarFromNotification]);
+  }, [
+    canShowCalendarPrompt,
+    openCalendarFromNotification,
+    pendingCalendarPrompt,
+    pendingCalendarPrompts,
+    pendingCalendarPromptKey,
+  ]);
 
   const handleNavigateOnOpen = useCallback((remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);

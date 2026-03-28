@@ -57,6 +57,14 @@ const normalizeUserReference = (userRef) => {
   };
 };
 
+const normalizeParticipationStatus = (value) => String(value || '').trim().toLowerCase();
+
+const normalizeTypeLabel = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim();
+
 const normalizeDocumentIds = (values) => {
   const sourceValues = Array.isArray(values) ? values : [values];
 
@@ -95,6 +103,140 @@ const buildCandidateFilter = (userRef) => {
   return undefined;
 };
 
+const userMatchesReference = (candidate, userRef) => {
+  const normalizedUserRef = normalizeUserReference(userRef);
+  const candidateDocumentId = typeof candidate?.documentId === 'string' ? candidate.documentId.trim() : '';
+  const candidateId = Number(candidate?.id);
+
+  if (normalizedUserRef.documentId && candidateDocumentId) {
+    return candidateDocumentId === normalizedUserRef.documentId;
+  }
+
+  if (Number.isFinite(normalizedUserRef.id) && Number.isFinite(candidateId)) {
+    return candidateId === normalizedUserRef.id;
+  }
+
+  return false;
+};
+
+const getRecruitmentEventDocumentId = (ad) => {
+  const value = ad?.event?.documentId || ad?.event?.id;
+  return typeof value === 'string' ? value.trim() : String(value || '').trim();
+};
+
+const isDetectionRecruitmentAd = (ad) => normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
+
+const getActiveDetectionParticipation = (ad, userRef) => {
+  if (!isDetectionRecruitmentAd(ad)) return null;
+
+  const eventParticipations = Array.isArray(ad?.event?.participationRequests)
+    ? ad.event.participationRequests
+    : [];
+
+  return eventParticipations.find((participation) => (
+    participation?.isActive !== false
+    && ['accepted', 'pending'].includes(normalizeParticipationStatus(participation?.participationStatus))
+    && userMatchesReference(participation?.user, userRef)
+  )) || null;
+};
+
+const hasDirectCandidateApplication = (ad, userRef) => (
+  Array.isArray(ad?.candidates)
+    ? ad.candidates.some((candidate) => userMatchesReference(candidate, userRef))
+    : false
+);
+
+/**
+ * Build a detection application status map keyed by event documentId.
+ * @param {Array<any>} ads
+ * @param {string | number | { id?: string | number, documentId?: string }} userRef
+ * @returns {Record<string, { status: 'accepted' | 'pending', recruitmentAdDocumentId?: string }>}
+ */
+export const buildDetectionApplicationStatusMap = (ads, userRef) => {
+  if (!Array.isArray(ads) || ads.length === 0) return {};
+
+  return ads.reduce((accumulator, ad) => {
+    const eventDocumentId = getRecruitmentEventDocumentId(ad);
+    if (!eventDocumentId || !isDetectionRecruitmentAd(ad) || accumulator[eventDocumentId]) {
+      return accumulator;
+    }
+
+    const activeParticipation = getActiveDetectionParticipation(ad, userRef);
+    if (activeParticipation) {
+      accumulator[eventDocumentId] = {
+        recruitmentAdDocumentId: String(
+          activeParticipation?.recruitmentAd?.documentId
+          || activeParticipation?.recruitmentAd?.id
+          || ad?.documentId
+          || ad?.id
+          || '',
+        ).trim(),
+        status: /** @type {'accepted' | 'pending'} */ (normalizeParticipationStatus(activeParticipation?.participationStatus)),
+      };
+      return accumulator;
+    }
+
+    if (hasDirectCandidateApplication(ad, userRef)) {
+      accumulator[eventDocumentId] = {
+        recruitmentAdDocumentId: String(ad?.documentId || ad?.id || '').trim(),
+        status: 'pending',
+      };
+    }
+
+    return accumulator;
+  }, {});
+};
+
+/**
+ * Resolve the application state for a recruitment ad, including detection-wide shared status.
+ * @param {any} ad
+ * @param {string | number | { id?: string | number, documentId?: string }} userRef
+ * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [sharedDetectionStatusByEvent]
+ * @returns {{ hasApplied: boolean, linkedRecruitmentAdDocumentId: string, status: 'accepted' | 'pending' | null }}
+ */
+export const resolveRecruitmentAdApplicationState = (ad, userRef, sharedDetectionStatusByEvent = {}) => {
+  const eventDocumentId = getRecruitmentEventDocumentId(ad);
+  const sharedStatus = eventDocumentId ? sharedDetectionStatusByEvent[eventDocumentId] : null;
+  const normalizedSharedStatus = normalizeParticipationStatus(sharedStatus?.status);
+
+  if (['accepted', 'pending'].includes(normalizedSharedStatus)) {
+    return {
+      hasApplied: true,
+      linkedRecruitmentAdDocumentId: String(sharedStatus?.recruitmentAdDocumentId || '').trim(),
+      status: /** @type {'accepted' | 'pending'} */ (normalizedSharedStatus),
+    };
+  }
+
+  const activeParticipation = getActiveDetectionParticipation(ad, userRef);
+  if (activeParticipation) {
+    return {
+      hasApplied: true,
+      linkedRecruitmentAdDocumentId: String(
+        activeParticipation?.recruitmentAd?.documentId
+        || activeParticipation?.recruitmentAd?.id
+        || ad?.documentId
+        || ad?.id
+        || '',
+      ).trim(),
+      status: /** @type {'accepted' | 'pending'} */ (normalizeParticipationStatus(activeParticipation?.participationStatus)),
+    };
+  }
+
+  if (hasDirectCandidateApplication(ad, userRef)) {
+    return {
+      hasApplied: true,
+      linkedRecruitmentAdDocumentId: String(ad?.documentId || ad?.id || '').trim(),
+      status: 'pending',
+    };
+  }
+
+  return {
+    hasApplied: false,
+    linkedRecruitmentAdDocumentId: '',
+    status: null,
+  };
+};
+
 /**
  * Get recruitment ads matching player profile
  * @param {object} filters - Filters for matching
@@ -126,6 +268,9 @@ export const getRecruitmentAds = async (filters = {}) => {
         'team.club.sponsor.logo',
         'author',
         'event',
+        'event.participationRequests',
+        'event.participationRequests.user',
+        'event.participationRequests.recruitmentAd',
         'event.type',
         'candidates',
         'category',
@@ -176,6 +321,9 @@ export const getRecruitmentAd = async (adId) => {
         'team.club.sponsor.logo',
         'author',
         'event',
+        'event.participationRequests',
+        'event.participationRequests.user',
+        'event.participationRequests.recruitmentAd',
         'event.type',
         'candidates',
         'category',
@@ -231,6 +379,9 @@ export const getMyRecruitmentAds = async (filters = {}) => {
           'team.club.sponsor.logo',
           'author',
           'event',
+          'event.participationRequests',
+          'event.participationRequests.user',
+          'event.participationRequests.recruitmentAd',
           'event.type',
           'candidates',
           'category',
@@ -278,11 +429,12 @@ export const createRecruitmentAd = async (adData) => {
 /**
  * Apply to a recruitment ad
  * @param {string} adId - Ad documentId
+ * @param {{ acceptRiskDeclaration?: boolean }} [payload]
  * @returns {Promise<object>} Application result
  */
-export const applyToRecruitmentAd = async (adId) => {
+export const applyToRecruitmentAd = async (adId, payload = {}) => {
   try {
-    const response = await client.post(`/recruitment-ads/${adId}/apply`);
+    const response = await client.post(`/recruitment-ads/${adId}/apply`, payload);
     return response.data;
   } catch (error) {
     console.error('[recruitmentService] Error applying to ad:', error);
@@ -356,6 +508,9 @@ export const getMyApplications = async (userRef) => {
         'team.club.logo',
         'author',
         'event',
+        'event.participationRequests',
+        'event.participationRequests.user',
+        'event.participationRequests.recruitmentAd',
         'event.type',
         'category',
         'section',

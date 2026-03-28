@@ -106,6 +106,7 @@ function NextMatchCard({
   const hasMatchEnded = isMatchPastEnd(match, event, now);
   const canSubmitScoreByPhase = ['disputed', 'pending_validation', 'waiting_score'].includes(derivedPhase);
   const isScoreLockedByTime = normalizedStatus === 'scheduled' && isVenueBooked && !canSubmitScoreByPhase;
+  const canManageVenue = Boolean(myTeam) && derivedPhase === 'waiting_venue' && !isTerminalStatus;
 
   // Participations
   // SOT: use event.participations if available (Event Mode)
@@ -444,8 +445,8 @@ function NextMatchCard({
           </Text>
         </View>
 
-        {/* Captain Booking Section */}
-        {isCaptain && derivedPhase === 'waiting_venue' && !isTerminalStatus && (
+        {/* Venue Booking Section */}
+        {canManageVenue && (
         <TouchableOpacity
           onPress={handleMarkVenueBooked}
           style={styles.bookingButton}
@@ -784,4 +785,3 @@ const styles = StyleSheet.create({
 });
 
 export default NextMatchCard;
-

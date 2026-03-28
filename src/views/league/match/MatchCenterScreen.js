@@ -22,7 +22,7 @@ import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueP
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
-import { shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
+import { shouldMaskOpponentIdentity, shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch, toHourMinute } from '@/views/league/match/utils/proposalDefaults';
 
 import { RouteNames } from '@/navigation/routeNames'; // Import RouteNames
@@ -186,6 +186,8 @@ function MatchCenterScreen() {
   const mySquadLogoUri = React.useMemo(() => getSquadLogoUri(mySquad), [getSquadLogoUri, mySquad]);
   const userId = React.useMemo(() => getEntityDocumentId(userData), [userData]);
   const mySquadId = React.useMemo(() => getEntityDocumentId(mySquad), [mySquad]);
+  const isOpponentAnonymous = React.useMemo(() => shouldMaskOpponentIdentity(currentMatch), [currentMatch]);
+  const opponentChatTitle = isOpponentAnonymous ? 'Vs Adversaire' : `Vs ${opponentDetails?.name || 'Adversaire'}`;
 
   // DAY_MAP for display
   /** @type {Record<string, string>} */
@@ -310,14 +312,15 @@ function MatchCenterScreen() {
       // B. Check Active Matchmaking Request for THIS squad
       const activeReq = await MatchmakingService.getActiveRequest(getEntityDocumentId(squad));
       setMatchmakingServerNow(activeReq?.serverNow || null);
+      const effectiveLegacyState = activeReq?.legacyState || activeReq?.state;
 
       // activeReq is { state: 'idle' | 'searching' | 'matched', request?, match? }
-      if (activeReq && (activeReq.state === 'searching' || activeReq.state === 'matched')) {
+      if (activeReq && (effectiveLegacyState === 'searching' || effectiveLegacyState === 'matched')) {
         setMatchRequest(activeReq.request || null);
-        if (activeReq.state === 'matched') {
+        if (effectiveLegacyState === 'matched') {
           setViewState('match_found');
           setCurrentMatch(activeReq.match || null);
-          setOpponentDetails(activeReq.opponentDetails || null);
+          setOpponentDetails(activeReq.opponentDetails || activeReq.opponent || null);
           lastMatchRef.current = activeReq.match || null; // Track match
         } else {
           setViewState('radar');
@@ -755,11 +758,10 @@ function MatchCenterScreen() {
 
         // 4. Navigate to Chat
         setIsProposalModalVisible(false);
-        const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
         navigation.navigate('Conversation', {
           chatId,
           subTitle: 'Match de Ligue',
-          title: opponentName,
+          title: opponentChatTitle,
         });
       }
     } catch (error) {
@@ -1418,11 +1420,10 @@ function MatchCenterScreen() {
                 if (!currentMatch.proposed_venue) {
                   setIsProposalModalVisible(true);
                 } else {
-                  const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
                   navigation.navigate('Conversation', {
                     chatId,
                     subTitle: 'Match de Ligue',
-                    title: opponentName,
+                    title: opponentChatTitle,
                   });
                 }
               } else {
@@ -1812,11 +1813,10 @@ function MatchCenterScreen() {
                 if (!currentMatch.proposed_venue) {
                   setIsProposalModalVisible(true);
                 } else {
-                  const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
                   navigation.navigate('Conversation', {
                     chatId,
                     subTitle: 'Match de Ligue',
-                    title: opponentName,
+                    title: opponentChatTitle,
                   });
                 }
               } else {
@@ -2870,11 +2870,10 @@ function MatchCenterScreen() {
           setIsProposalModalVisible(false);
           if (currentMatch && currentMatch.chat) {
             const chatId = getEntityDocumentId(currentMatch.chat);
-            const opponentName = opponentDetails ? `Vs ${opponentDetails.name || 'Adversaire'}` : 'Chat';
             navigation.navigate('Conversation', {
               chatId,
               subTitle: 'Match de Ligue',
-              title: opponentName,
+              title: opponentChatTitle,
             });
           }
         }}

@@ -13,7 +13,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -118,7 +118,7 @@ function UserBirthdate({ navigation }) {
   };
 
   return (
-    <ScreenContainer
+    <FormScreenContainer
       bgImage="bg2"
       contentContainerStyle={[
         Spaces.paddingVertical[24],
@@ -243,7 +243,7 @@ function UserBirthdate({ navigation }) {
           variant="Primary"
         />
       </KeyboardAvoidingView>
-    </ScreenContainer>
+    </FormScreenContainer>
   );
 }
 

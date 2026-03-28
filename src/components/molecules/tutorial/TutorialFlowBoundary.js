@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 
@@ -41,7 +46,20 @@ function TutorialFlowBoundaryInner({
   } = useOnboarding();
   const wasActiveRef = useRef(false);
   const hasStartedRef = useRef(false);
+  const hasMarkedSeenRef = useRef(false);
   const handledForceStartKeyRef = useRef('');
+  const tutorialSeenSource = shouldForceStart
+    ? tutorialSource || 'manual'
+    : 'auto';
+
+  const handleOverlayVisible = useCallback(() => {
+    if (!hasStartedRef.current || hasMarkedSeenRef.current) {
+      return;
+    }
+
+    hasMarkedSeenRef.current = true;
+    markSeen(tutorialSeenSource);
+  }, [markSeen, tutorialSeenSource]);
 
   useEffect(() => {
     if (!totalSteps || isActive || hasStartedRef.current) return undefined;
@@ -49,10 +67,6 @@ function TutorialFlowBoundaryInner({
     if (shouldForceStart && forceStartKey && handledForceStartKeyRef.current === forceStartKey) {
       return undefined;
     }
-
-    const source = shouldForceStart
-      ? tutorialSource || 'manual'
-      : 'auto';
 
     const timer = setTimeout(() => {
       if (hasStartedRef.current) {
@@ -65,7 +79,6 @@ function TutorialFlowBoundaryInner({
       }
 
       hasStartedRef.current = true;
-      markSeen(source);
       if (shouldForceStart) {
         if (forceStartKey) {
           handledForceStartKeyRef.current = forceStartKey;
@@ -85,7 +98,6 @@ function TutorialFlowBoundaryInner({
     startDelayMs,
     startOnboarding,
     totalSteps,
-    tutorialSource,
   ]);
 
   useEffect(() => {
@@ -96,6 +108,7 @@ function TutorialFlowBoundaryInner({
         markCompleted(tutorialSource || 'auto');
       }
       hasStartedRef.current = false;
+      hasMarkedSeenRef.current = false;
     }
     wasActiveRef.current = isActive;
   }, [
@@ -109,7 +122,7 @@ function TutorialFlowBoundaryInner({
   return (
     <>
       {children}
-      {enableOverlay ? <OnboardingOverlay /> : null}
+      {enableOverlay ? <OnboardingOverlay onVisible={handleOverlayVisible} /> : null}
     </>
   );
 }

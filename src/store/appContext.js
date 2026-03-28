@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useReducer } from 'react';
 import { Platform } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
 
+import { getStorageBackend } from '@/platform/storage';
 import appReducer from '@/store/appReducer';
 import {
   registerAuthRuntimeDispatch,
@@ -14,51 +14,18 @@ const AppDispatchContext = React
 
 const isLocalAppEnvironment = () => String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase() === 'local';
 
-let storageInstance = null;
-let storageBackend = 'mmkv';
-const inMemoryStorageMap = new Map();
-const fallbackStorage = {
-  addOnValueChangedListener: () => ({ remove: () => {} }),
-  clearAll: () => inMemoryStorageMap.clear(),
-  contains: (key) => inMemoryStorageMap.has(key),
-  delete: (key) => inMemoryStorageMap.delete(key),
-  getAllKeys: () => Array.from(inMemoryStorageMap.keys()),
-  getBoolean: (key) => {
-    const value = inMemoryStorageMap.get(key);
-    return typeof value === 'boolean' ? value : false;
-  },
-  getNumber: (key) => {
-    const value = inMemoryStorageMap.get(key);
-    return typeof value === 'number' ? value : 0;
-  },
-  getString: (key) => {
-    const value = inMemoryStorageMap.get(key);
-    if (typeof value === 'string') return value;
-    if (value === undefined || value === null) return undefined;
-    return String(value);
-  },
-  set: (key, value) => {
-    inMemoryStorageMap.set(key, value);
-  },
-};
+let storageBackend = Platform.OS === 'web' ? 'localStorage' : 'mmkv';
 
 export const getStorage = () => {
-  if (Platform.OS === 'web') {
-    storageBackend = 'memory-fallback-web';
-    return fallbackStorage;
+  try {
+    const backend = getStorageBackend();
+    storageBackend = Platform.OS === 'web' ? 'localStorage' : 'mmkv';
+    return backend;
+  } catch (error) {
+    storageBackend = Platform.OS === 'web' ? 'memory-fallback-web' : 'memory-fallback-native';
+    console.warn('[AppContext] Platform storage backend unavailable.', error);
+    return getStorageBackend();
   }
-
-  if (!storageInstance) {
-    try {
-      storageInstance = new MMKV();
-      storageBackend = 'mmkv';
-    } catch (error) {
-      console.warn('[AppContext] MMKV unavailable, using in-memory fallback storage.', error);
-      storageInstance = fallbackStorage;
-      storageBackend = 'memory-fallback-mmkv-error';
-    }
-  }
-  return storageInstance;
 };
 
 export const storage = {
@@ -352,12 +319,14 @@ function AppProvider({ children }) {
   const contextValue = React.useMemo(() => state, [state]);
   const dispatchValue = React.useMemo(() => dispatch, []);
 
-  return (
-    <AppStateContext.Provider value={contextValue}>
-      <AppDispatchContext.Provider value={dispatchValue}>
-        {children}
-      </AppDispatchContext.Provider>
-    </AppStateContext.Provider>
+  return React.createElement(
+    AppStateContext.Provider,
+    { value: contextValue },
+    React.createElement(
+      AppDispatchContext.Provider,
+      { value: dispatchValue },
+      children,
+    ),
   );
 }
 

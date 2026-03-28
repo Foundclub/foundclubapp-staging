@@ -38,8 +38,8 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-      // If you opted-in for the New Architecture, we load the native entry point for this app.
-      load()
+      // Keep the New Architecture enabled but opt out of bridgeless until Nitro is stable there.
+      load(bridgelessEnabled = false)
     }
   }
 }

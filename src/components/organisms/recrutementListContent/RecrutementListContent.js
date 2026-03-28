@@ -1,5 +1,7 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, FlatList, Text, TouchableOpacity, View,
@@ -23,7 +25,12 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 // Services
 import { useAppContext } from '@/store/appContext';
 
-import { getMyApplications, getMyRecruitmentAds, getRecruitmentAds } from '@/services/recruitment/recruitmentService';
+import {
+  buildDetectionApplicationStatusMap,
+  getMyApplications,
+  getMyRecruitmentAds,
+  getRecruitmentAds,
+} from '@/services/recruitment/recruitmentService';
 import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/services/search/searchService';
 
 /**
@@ -272,11 +279,10 @@ function RecrutementListContent({ initialTab, timestamp }) {
   // Handle external tab switching (e.g. from creation wizard)
   useEffect(() => {
     const nextTab = sanitizeRecruitmentTabForRole(initialTab, userData);
-    if (nextTab !== activeTab) {
-      console.log('[RecrutementListContent] initialTab changed to:', initialTab);
-      setActiveTab(nextTab);
-    }
-  }, [activeTab, initialTab, userData]);
+    setActiveTab((previousTab) => (
+      previousTab === nextTab ? previousTab : nextTab
+    ));
+  }, [initialTab, userData]);
 
   // State for pagination (ads)
   const [adsPage, setAdsPage] = useState(1);
@@ -399,6 +405,29 @@ function RecrutementListContent({ initialTab, timestamp }) {
       if (!isRefresh) setLoading(false);
     }
   }, [userData, isCoachOrAdmin]);
+
+  const fetchMyApplicationsSilently = useCallback(async () => {
+    if (isCoachOrAdmin) return;
+    try {
+      const data = await getMyApplications(userData);
+      setMyApplications(data || []);
+    } catch (error) {
+      console.error('[RecrutementListContent] Error silently fetching applications:', error);
+    }
+  }, [isCoachOrAdmin, userData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isCoachOrAdmin) return undefined;
+      fetchMyApplicationsSilently();
+      return undefined;
+    }, [fetchMyApplicationsSilently, isCoachOrAdmin]),
+  );
+
+  const detectionApplicationStatusByEvent = useMemo(
+    () => buildDetectionApplicationStatusMap(myApplications, userData),
+    [myApplications, userData],
+  );
 
   // Effect to fetch data based on tab
   useEffect(() => {
@@ -612,6 +641,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
               ) : null}
               <RecruitmentAdCard
                 ad={item}
+                detectionApplicationStatusByEvent={detectionApplicationStatusByEvent}
                 isOwner
                 onPress={(ad) => handleAdCardPress(ad, true)}
               />
@@ -652,21 +682,17 @@ function RecrutementListContent({ initialTab, timestamp }) {
     showMatchingOnly: showProfileMatchesOnly,
   }), [matchingAds, otherAds, showProfileMatchesOnly]);
 
-  const playerIntroText = React.useMemo(() => {
-    if (matchingAds.length > 0) {
-      if (matchingAds.length === 1) {
-        return '1 annonce correspond à ton profil et apparaît en premier.';
-      }
-
-      return `${String(formatAdsCountLabel(matchingAds.length))} correspondent à ton profil et apparaissent en premier.`;
+  const playerFilterHelperText = React.useMemo(() => {
+    if (!hasProfileSignals) {
+      return 'Complète ton profil pour activer un tri personnalisé.';
     }
 
-    if (hasProfileSignals) {
-      return "Aucune annonce ne correspond exactement à ton profil pour l'instant, mais toutes les autres restent visibles.";
+    if (showProfileMatchesOnly) {
+      return 'Le flux affiche uniquement les annonces compatibles avec ton profil.';
     }
 
-    return 'Complète ton profil pour mettre en avant les annonces qui te correspondent.';
-  }, [hasProfileSignals, matchingAds.length]);
+    return 'Les annonces compatibles restent déjà en tête. Active le filtre pour ne voir qu’elles.';
+  }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
     if (showProfileMatchesOnly) {
@@ -718,7 +744,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
     const isMatching = variant === 'matching';
     return (
       <View
-        style={[Spaces.marginTop[4], {
+        style={[Spaces.marginTop[2], {
           alignItems: 'center',
           backgroundColor: recruitmentSurface,
           borderColor: isMatching ? recruitmentBorder : recruitmentBorderSoft,
@@ -727,140 +753,92 @@ function RecrutementListContent({ initialTab, timestamp }) {
           flexDirection: 'row',
           justifyContent: 'space-between',
           paddingHorizontal: 14,
-          paddingVertical: 12,
+          paddingVertical: 10,
         }]}
       >
         <View style={{ flex: 1, paddingRight: 12 }}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
             {title}
           </Text>
-          <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 3 }]}>
-            {isMatching
-              ? 'Affichées en priorité selon ton profil.'
-              : 'Toutes les autres opportunités restent visibles.'}
-          </Text>
         </View>
-        <View style={{
-          backgroundColor: isMatching ? recruitmentSurfaceSoft : recruitmentSurfaceStrong,
-          borderColor: isMatching ? recruitmentBorder : 'transparent',
-          borderRadius: 999,
-          borderWidth: isMatching ? 1 : 0,
-          paddingHorizontal: 10,
-          paddingVertical: 6,
-        }}
-        >
-          <Text style={[
-            Fonts.p4Bold,
-            {
-              color: isMatching ? Colors.primary500 : Colors.neutral200,
-              textTransform: 'uppercase',
-            },
-          ]}
+        <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+          {isMatching ? (
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginRight: 8 }]}>
+              Prioritaires
+            </Text>
+          ) : null}
+          <View style={{
+            backgroundColor: isMatching ? recruitmentSurfaceSoft : recruitmentSurfaceStrong,
+            borderColor: isMatching ? recruitmentBorder : 'transparent',
+            borderRadius: 999,
+            borderWidth: isMatching ? 1 : 0,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+          }}
           >
-            {formatAdsCountLabel(count)}
-          </Text>
+            <Text style={[
+              Fonts.p4Bold,
+              {
+                color: isMatching ? Colors.primary500 : Colors.neutral200,
+                textTransform: 'uppercase',
+              },
+            ]}
+            >
+              {formatAdsCountLabel(count)}
+            </Text>
+          </View>
         </View>
       </View>
     );
   };
 
   const renderPlayerListHeader = () => (
-    <View style={[Spaces.gap[12], Spaces.marginBottom[4]]}>
+    <View style={[Spaces.gap[10], Spaces.marginBottom[4]]}>
       <View style={{
-        backgroundColor: recruitmentSurface,
-        borderColor: recruitmentBorder,
-        borderRadius: 18,
+        backgroundColor: recruitmentSurfaceStrong,
+        borderColor: recruitmentBorderSoft,
+        borderRadius: 16,
         borderWidth: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
       }}
       >
         <View style={{
-          alignItems: 'flex-start',
+          alignItems: 'center',
           flexDirection: 'row',
           justifyContent: 'space-between',
         }}
         >
           <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={[Fonts.h4, Fonts.neutral100]}>
-              Toutes les annonces
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+              Afficher seulement les annonces compatibles
             </Text>
-            <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 6 }]}>
-              {playerIntroText}
-            </Text>
-          </View>
-          <View style={{
-            backgroundColor: recruitmentSurfaceSoft,
-            borderColor: recruitmentBorder,
-            borderRadius: 999,
-            borderWidth: 1,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-          }}
-          >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500, textTransform: 'uppercase' }]}>
-              {matchingAds.length > 0 ? `${String(matchingAds.length)} pour toi` : 'Feed complet'}
+            <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 4 }]}>
+              {playerFilterHelperText}
             </Text>
           </View>
-        </View>
-        <View style={{
-          backgroundColor: recruitmentSurfaceStrong,
-          borderColor: recruitmentBorderSoft,
-          borderRadius: 16,
-          borderWidth: 1,
-          marginTop: 14,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-        }}
-        >
-          <View style={{
-            alignItems: 'center',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          }}
+          <TouchableOpacity
+            accessibilityRole="switch"
+            accessibilityState={{ checked: showProfileMatchesOnly }}
+            onPress={() => setShowProfileMatchesOnly(!showProfileMatchesOnly)}
+            style={{
+              backgroundColor: showProfileMatchesOnly ? Colors.primary500 : recruitmentToggleOff,
+              borderRadius: 12,
+              height: 24,
+              justifyContent: 'center',
+              paddingHorizontal: 2,
+              width: 44,
+            }}
           >
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                Affichage personnalisé
-              </Text>
-              <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-                {hasProfileSignals
-                  ? "Les annonces compatibles restent déjà en tête. Active le filtre pour n'afficher que celles-ci."
-                  : 'Ajoute tes infos sportives pour faire remonter automatiquement les meilleures annonces.'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              accessibilityRole="switch"
-              accessibilityState={{ checked: showProfileMatchesOnly }}
-              onPress={() => setShowProfileMatchesOnly(!showProfileMatchesOnly)}
-              style={{
-                backgroundColor: showProfileMatchesOnly ? Colors.primary500 : recruitmentToggleOff,
-                borderRadius: 12,
-                height: 24,
-                justifyContent: 'center',
-                paddingHorizontal: 2,
-                width: 44,
-              }}
-            >
-              <View style={{
-                alignSelf: showProfileMatchesOnly ? 'flex-end' : 'flex-start',
-                backgroundColor: Colors.neutral00,
-                borderRadius: 10,
-                height: 20,
-                width: 20,
-              }}
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={[Fonts.p3, {
-            color: showProfileMatchesOnly ? Colors.primary500 : recruitmentMutedText,
-            marginTop: 10,
-          }]}
-          >
-            {showProfileMatchesOnly
-              ? 'Seules les annonces correspondant à ton profil sont affichées.'
-              : 'Toutes les annonces restent visibles, avec les plus pertinentes en premier.'}
-          </Text>
+            <View style={{
+              alignSelf: showProfileMatchesOnly ? 'flex-end' : 'flex-start',
+              backgroundColor: Colors.neutral00,
+              borderRadius: 10,
+              height: 20,
+              width: 20,
+            }}
+            />
+          </TouchableOpacity>
         </View>
       </View>
       {!hasProfileSignals ? (
@@ -877,26 +855,28 @@ function RecrutementListContent({ initialTab, timestamp }) {
             paddingVertical: 12,
           }}
         >
-          <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-            Compléter mon profil
-          </Text>
-          <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Ajoute ton sport, ta section, ta catégorie et ton niveau pour personnaliser ce flux.
-          </Text>
+          <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                Compléter mon profil
+              </Text>
+              <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 4 }]}>
+                Sport, section, catégorie, niveau.
+              </Text>
+            </View>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              Ouvrir
+            </Text>
+          </View>
         </TouchableOpacity>
       ) : null}
-      <View>
-        <Text style={[Fonts.p3, { color: recruitmentMutedText, marginBottom: 8 }]}>
-          Recherche et filtres
-        </Text>
-        <SearchComponent
-          filterNumber={adFiltersCount}
-          handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
-          placeholder="Rechercher une annonce..."
-          searchDefaultValue={adSearchValue}
-        />
-      </View>
+      <SearchComponent
+        filterNumber={adFiltersCount}
+        handleSearchField={setAdSearchValue}
+        openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
+        placeholder="Rechercher une annonce..."
+        searchDefaultValue={adSearchValue}
+      />
       {adSearchValue?.trim()?.length >= 2 ? (
         <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
           Trié par pertinence
@@ -911,7 +891,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
       <Loader />
     ) : (
       <FlatList
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
+        contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[140], { flexGrow: 1 }]}
         data={playerFeedItems}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.key}
@@ -955,7 +935,11 @@ function RecrutementListContent({ initialTab, timestamp }) {
                   </Text>
                 </View>
               ) : null}
-              <RecruitmentAdCard ad={ad} onPress={handleAdCardPress} />
+              <RecruitmentAdCard
+                ad={ad}
+                detectionApplicationStatusByEvent={detectionApplicationStatusByEvent}
+                onPress={handleAdCardPress}
+              />
             </View>
           );
         }}
@@ -984,8 +968,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
         onPress={() => setActiveTab('annonces')}
         style={[
           Alignments.alignCenter,
-          Spaces.paddingVertical[12],
-          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[10],
+          Spaces.paddingHorizontal[20],
           {
             backgroundColor: activeTab === 'annonces' ? recruitmentSurfaceStrong : 'transparent',
             borderRadius: 10,
@@ -1018,8 +1002,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
         onPress={() => setActiveTab('candidatures')}
         style={[
           Alignments.alignCenter,
-          Spaces.paddingVertical[12],
-          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[10],
+          Spaces.paddingHorizontal[20],
           {
             backgroundColor: activeTab === 'candidatures' ? recruitmentSurfaceStrong : 'transparent',
             borderRadius: 10,
@@ -1082,7 +1066,11 @@ function RecrutementListContent({ initialTab, timestamp }) {
         onRefresh={onRefresh}
         refreshing={refreshing}
         renderItem={({ item }) => (
-          <RecruitmentAdCard ad={item} onPress={handleAdCardPress} />
+          <RecruitmentAdCard
+            ad={item}
+            detectionApplicationStatusByEvent={detectionApplicationStatusByEvent}
+            onPress={handleAdCardPress}
+          />
         )}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
@@ -1091,7 +1079,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
   );
 
   return (
-    <View style={[Alignments.fill, Spaces.paddingHorizontal[16]]}>
+    <View style={[Alignments.fill, { width: '100%' }]}>
       {isCoachOrAdmin ? (
         <View style={{ flex: 1 }}>
           {renderCoachTabs()}

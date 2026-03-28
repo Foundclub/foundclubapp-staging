@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useTheme from '@/theme/themeContext';
 
 import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { useOnboarding } from '@/context/OnboardingContext';
 
 const TOOLTIP_HORIZONTAL_MARGIN = 24;
@@ -76,9 +78,9 @@ const buildFocusLayout = (layout, spotlight = {}, viewport = {}) => {
 };
 
 /**
- *
+ * @param {{ onVisible?: () => void }} [props]
  */
-function OnboardingOverlay() {
+function OnboardingOverlay({ onVisible } = {}) {
   const { t } = useTranslation();
   const {
     Alignments,
@@ -119,7 +121,19 @@ function OnboardingOverlay() {
     };
   }, [currentStep?.id, isActive, viewportHeight, viewportWidth]);
 
-  if (!isActive || !currentStep) return null;
+  const shouldShowOverlay = Boolean(isActive && currentStep);
+  const canShowOverlay = useBlockingOverlayPrompt(
+    'onboarding-overlay',
+    shouldShowOverlay,
+    20,
+  );
+
+  useEffect(() => {
+    if (!shouldShowOverlay || !canShowOverlay) return;
+    onVisible?.();
+  }, [canShowOverlay, onVisible, shouldShowOverlay]);
+
+  if (!shouldShowOverlay || !canShowOverlay) return null;
 
   const stepLogKey = `${currentStep?.id || 'none'}:${currentStepIndex}`;
   if (lastStepLogRef.current !== stepLogKey) {
@@ -225,7 +239,7 @@ function OnboardingOverlay() {
       onRequestClose={skipOnboarding}
       presentationStyle="overFullScreen"
       transparent
-      visible={isActive}
+      visible={shouldShowOverlay && canShowOverlay}
     >
       <View pointerEvents="box-none" style={styles.container}>
         <View
