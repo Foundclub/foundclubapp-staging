@@ -129,7 +129,12 @@ function SquadFiltersScreen({ navigation }) {
   } = useTheme();
   const [{ squadFilters }, appDispatch] = useAppContext();
   const insets = useSafeAreaInsets();
-  const { data: categoriesData, isLoading: isCategoriesLoading } = useGetCategories();
+  const {
+    data: categoriesData,
+    error: categoriesError,
+    isLoading: isCategoriesLoading,
+    refetch: refetchCategories,
+  } = useGetCategories();
   const [categorySearchValue, setCategorySearchValue] = useState('');
 
   const categoryOptions = useMemo(() => {
@@ -357,6 +362,7 @@ function SquadFiltersScreen({ navigation }) {
           )}
         />
 
+        {/* eslint-disable no-nested-ternary */}
         <Controller
           control={control}
           name="category"
@@ -367,6 +373,29 @@ function SquadFiltersScreen({ navigation }) {
                 <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
                   <ActivityIndicator color={Colors.primary500} size="small" />
                   <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>Chargement des catégories...</Text>
+                </View>
+              ) : categoriesError ? (
+                <View
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    borderColor: 'rgba(239, 68, 68, 0.40)',
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                    Impossible de charger les categories League.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => refetchCategories()}
+                    style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
+                      Reessayer
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <AutocompleteSelect
@@ -389,6 +418,7 @@ function SquadFiltersScreen({ navigation }) {
             </View>
           )}
         />
+        {/* eslint-enable no-nested-ternary */}
 
         <Controller
           control={control}

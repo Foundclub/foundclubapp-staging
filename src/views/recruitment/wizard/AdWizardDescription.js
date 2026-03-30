@@ -11,6 +11,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdWizard } from './AdWizardContext';
+import {
+  getAdWizardDescriptionStepIndex,
+  getAdWizardStepCount,
+} from './adWizardStepUtils';
 
 /**
  *
@@ -42,6 +46,8 @@ function AdWizardDescription({ navigation }) {
       onNext={handleNext}
       onSkip={handleSkip}
       showSkip
+      stepCount={getAdWizardStepCount(state)}
+      stepIndex={getAdWizardDescriptionStepIndex(state)}
       subtitle="Ajoutez des détails pour attirer les bons joueurs"
       title="Description"
     >

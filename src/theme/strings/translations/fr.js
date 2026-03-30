@@ -233,6 +233,7 @@ export default {
       delete: 'Supprimer',
       editInfo: 'Modifier',
       join: "C'est mon club !",
+      leave: 'Quitter le club',
       manageJoinRequests: 'Voir les demandes d\'affiliation',
       requestJoin: 'Demander à rejoindre ce club',
       requestPending: 'Demande en attente',
@@ -244,21 +245,21 @@ export default {
           confirm: 'Supprimer',
         },
         description: 'Êtes-vous sûr·e de vouloir continuer ?',
-        title: 'Vous êtes sur le point de supprimer le partenaire {{sponsorName}} .',
+        title: 'Vous êtes sur le point de supprimer le partenaire {{sponsorName}}.',
       },
       deleteTrainer: {
         actions: {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
-        description: 'Le compte ne sera pas supprimé mais l\'entraîneur·e ne sera plus lié au club. Êtes-vous sûr·e de vouloir continuer ?',
+        description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club. Êtes-vous sûr·e de vouloir continuer ?',
         title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e.',
       },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
-          + '\nVous avez été désigné comme entraîneur·e dans le club {{clubName}}.'
+          + '\nVous avez été désigné·e comme entraîneur·e dans le club {{clubName}}.'
           + "\nTéléchargez l'application Found Club pour finaliser la création de votre compte"
-          + ' et commencer à gérer vos équipes et vos évènements.',
+          + ' et commencer à gérer vos équipes et vos événements.',
         title: 'Bienvenue sur Found Club !',
       },
       joinClub: {
@@ -268,12 +269,21 @@ export default {
         description: 'Votre dirigeant·e va recevoir votre demande et la traiter dès que possible.',
         title: "Votre demande d'adhésion a bien été envoyée",
       },
+      leave: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Quitter le club',
+        },
+        description: 'Vous ne serez plus lié·e à ce club ni à ses équipes en tant qu’encadrant·e. Êtes-vous sûr·e de vouloir continuer ?',
+        error: 'Impossible de quitter ce club pour le moment.',
+        title: 'Quitter le club ?',
+      },
       myClub: {
         actions: {
           cancel: 'Annuler',
           confirm: 'Contacter Found Club',
         },
-        description: 'Contactez nos équipes pour accéder aux fonctionnalités pour les dirigeant·e·s et entraîneurs de club !',
+        description: 'Contactez nos équipes pour accéder aux fonctionnalités réservées aux dirigeant·e·s et aux entraîneur·e·s du club.',
         title: 'Vous êtes dirigeant·e de ce club ?',
       },
     },
@@ -329,9 +339,9 @@ export default {
     },
     fields: {
       accepted: 'Demande acceptée',
-      claimAccepted: '{{firstname}} a bien été ajouté comme dirigeant du club.',
+      claimAccepted: '{{firstname}} a bien été ajouté·e comme dirigeant·e du club.',
       claimAcceptedTitle: 'Dirigeant ajouté',
-      pending: "{{firstname}} s'est signalé comme entraîneur·e de cette équipe",
+      pending: "{{firstname}} s'est signalé·e comme entraîneur·e de cette équipe",
       pendingClaim: '{{firstname}} souhaite revendiquer la gestion de ce club.',
       rejected: 'Demande refusée',
     },
@@ -1804,9 +1814,9 @@ export default {
       featured: 'À la une',
       team: 'Équipe',
     },
-    forbidden: 'Cet onglet est reserve aux coachs et dirigeants.',
+    forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
     migratedBannerAction: "Ouvrir l'onglet Demandes",
-    migratedBannerTitle: 'Ce flux est migre vers Demandes.',
+    migratedBannerTitle: 'Ce flux a été migré vers Demandes.',
     partialError: 'Source indisponible',
     rejectEventMessage: 'L\'événement sera annulé.',
     rejectEventTitle: 'Refuser la demande ?',
@@ -2107,7 +2117,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer du club',
         },
-        description: 'Le compte ne sera pas supprimé mais l\'entraîneur·e ne sera plus lié au club ni à aucune de ces équipes.'
+        description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club ni à aucune de ces équipes.'
           + ' Si vous souhaitez le retirer seulement de cette équipe merci de passer par le bouton de modification de l\'équipe.',
         title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e de votre club.',
       },

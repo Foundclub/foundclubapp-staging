@@ -1,8 +1,9 @@
 import {
-  createContext, useContext, useMemo, useReducer,
+  createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
 const EventWizardContext = createContext();
+const EVENT_WIZARD_STORAGE_KEY = 'fc:web:event-wizard';
 
 const createDefaultTimeRange = () => {
   const now = new Date();
@@ -52,6 +53,34 @@ const createInitialState = () => {
     facility: null,
     location: null,
   };
+};
+
+const canUseWizardStorage = () => (
+  typeof globalThis !== 'undefined'
+  && typeof globalThis.sessionStorage !== 'undefined'
+);
+
+const loadPersistedState = () => {
+  const initialState = createInitialState();
+
+  if (!canUseWizardStorage()) {
+    return initialState;
+  }
+
+  try {
+    const raw = globalThis.sessionStorage.getItem(EVENT_WIZARD_STORAGE_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return initialState;
+
+    return {
+      ...initialState,
+      ...parsed,
+    };
+  } catch (_error) {
+    return initialState;
+  }
 };
 
 /**
@@ -105,7 +134,20 @@ function eventWizardReducer(state, action) {
  * @param root0.children
  */
 export function EventWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(eventWizardReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(eventWizardReducer, undefined, loadPersistedState);
+
+  useEffect(() => {
+    if (!canUseWizardStorage()) return;
+
+    try {
+      globalThis.sessionStorage.setItem(
+        EVENT_WIZARD_STORAGE_KEY,
+        JSON.stringify(state),
+      );
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory wizard state.
+    }
+  }, [state]);
 
   const value = useMemo(() => ({ dispatch, state }), [state]);
 

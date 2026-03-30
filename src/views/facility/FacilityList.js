@@ -71,6 +71,7 @@ function FacilityList() {
     || (!route.params?.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
   const {
     data: facilityContext,
+    error,
     isLoading: loading,
     isRefetching: refreshing,
     refetch: refetchFacilities,
@@ -111,7 +112,13 @@ function FacilityList() {
               await deleteFacility(id);
               refetchFacilities();
             } catch (error) {
-              // no-op: alert flow already handled
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                error?.message || t(
+                  'facilityList.alerts.delete.error',
+                  "Impossible de supprimer l'installation pour le moment.",
+                ),
+              );
             }
           },
           style: 'destructive',
@@ -178,6 +185,7 @@ function FacilityList() {
     sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
   }), [facilityContext?.allFacilities, t]);
   const hasMultipleSections = sections.length > 1;
+  const isMissingContext = !contextClubId && !contextCmId;
 
   const renderMetaChip = useCallback((label, tone = 'primary') => {
     const chipStyleByTone = {
@@ -455,6 +463,7 @@ function FacilityList() {
           </Text>
         </View>
         <Button
+          disabled={isMissingContext}
           icon="plus"
           onPress={handleCreate}
           size="small"
@@ -463,8 +472,36 @@ function FacilityList() {
         />
       </View>
 
-      {loading && !refreshing ? (
+      {isMissingContext ? (
+        <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+            Club introuvable
+          </Text>
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            Impossible de determiner pour quel club afficher les installations.
+          </Text>
+          <Button
+            onPress={() => navigation.navigate(RouteNames.TeamList)}
+            title="Retour aux equipes"
+            variant="Secondary"
+          />
+        </View>
+      ) : loading && !refreshing ? (
         <Loader />
+      ) : error ? (
+        <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+            Impossible de charger les installations
+          </Text>
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            {error?.message || 'Reessayez dans quelques instants.'}
+          </Text>
+          <Button
+            onPress={() => refetchFacilities()}
+            title="Reessayer"
+            variant="Secondary"
+          />
+        </View>
       ) : (
         <SectionList
           contentContainerStyle={[

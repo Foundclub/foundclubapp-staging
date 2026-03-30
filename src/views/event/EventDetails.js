@@ -11,7 +11,6 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  Share,
   Text,
   TextInput,
   TouchableOpacity,
@@ -59,6 +58,7 @@ import {
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
+import { share } from '@/platform/share';
 
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventHeader from './components/EventHeader';
@@ -1315,7 +1315,9 @@ function EventDetails({ navigation, route }) {
     try {
       const path = await exportEventParticipants(eventId, event?.name || 'participants');
       if (Platform.OS === 'ios') {
-        setTimeout(() => Share.share({ title: 'Participants', url: path }), 500);
+        setTimeout(() => {
+          share({ title: 'Participants', url: path }).catch(() => undefined);
+        }, 500);
       } else {
         ReactNativeBlobUtil.android
           .actionViewIntent(path, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

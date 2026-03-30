@@ -4,17 +4,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, View,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
 
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Loader from '@/components/atoms/loader/Loader';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -53,7 +56,12 @@ function ClubEdit({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
 
-  const { data: clubData, refetch } = useGetClub(clubId);
+  const {
+    data: clubData,
+    error,
+    isLoading,
+    refetch,
+  } = useGetClub(clubId);
 
   // local state
   const [logo, setLogo] = useState(
@@ -87,6 +95,12 @@ function ClubEdit({ navigation, route }) {
 
   const updateClubMutation = useMutation({
     mutationFn: updateClubInfo,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || 'Impossible de mettre a jour ce club pour le moment.',
+      );
+    },
     onSuccess: () => {
       refetch();
       navigation.goBack();
@@ -110,15 +124,78 @@ function ClubEdit({ navigation, route }) {
 
   useEffect(() => {
     if (clubData) {
+      let parsedAddress = '';
+      try {
+        parsedAddress = clubData.addressDetails ? JSON.parse(clubData.addressDetails)?.address || '' : '';
+      } catch (_error) {
+        parsedAddress = clubData.addressDetails || '';
+      }
+
       reset({
         activites: (clubData.activites || []).map((activity) => activity.documentId).filter(Boolean),
-        addressDetails: clubData.addressDetails ? JSON.parse(clubData.addressDetails)?.address : '',
+        addressDetails: parsedAddress,
         email: clubData.email || '',
         name: clubData.name || '',
         phoneNumber: clubData.phoneNumber || '',
       });
     }
   }, [clubData, reset]);
+
+  const isMissingClubId = !clubId;
+  const isInitialClubLoading = isLoading && !clubData;
+  const isClubLoadingError = Boolean(error) && !clubData;
+  const isClubNotFound = Boolean(clubId) && !isLoading && !error && !clubData;
+
+  if (isMissingClubId || isClubNotFound) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
+        <View style={[Spaces.gap[12]]}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>
+            {isMissingClubId ? 'Club introuvable' : 'Ce club est introuvable'}
+          </Text>
+          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+            {isMissingClubId
+              ? 'Aucun identifiant de club n a ete fourni.'
+              : 'Le lien est peut-etre obsolete ou le club a ete supprime.'}
+          </Text>
+          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          {!isMissingClubId ? (
+            <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isInitialClubLoading) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
+        <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+          <Loader />
+          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+            Chargement du club...
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isClubLoadingError) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
+        <View style={[Spaces.gap[12]]}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>
+            Impossible de charger le club
+          </Text>
+          <Text style={{ color: '#c9d3dd', fontSize: 15 }}>
+            {error?.message || 'Reessayez dans quelques instants.'}
+          </Text>
+          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   /**
    * Handle form submit
@@ -288,11 +365,19 @@ function ClubEdit({ navigation, route }) {
 
         <View style={[Spaces.marginBottom[16]]}>
           <Button
+            disabled={!clubData}
             isLoading={updateClubMutation.isPending}
             onPress={handleSubmit(handleFormSubmit)}
             title={t('common.actions.save') || 'Enregistrer'}
             variant="Primary"
           />
+          <View style={[Spaces.marginTop[8]]}>
+            <Button
+              onPress={() => navigation.goBack()}
+              title={t('common.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </ScreenContainer>

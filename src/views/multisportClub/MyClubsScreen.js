@@ -1,13 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
-
-import useTheme from '@/theme/themeContext';
-
-import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMe } from '@/services/auth/authQueries';
 
 import CMDashboard from './CMDashboard';
+import MultisportStateView from './components/MultisportStateView';
 
 /**
  * Deprecated fallback screen.
@@ -16,20 +12,42 @@ import CMDashboard from './CMDashboard';
  */
 function MyClubsScreen({ navigation, route }) {
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
-  const { Alignments, Fonts, Spaces } = useTheme();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: isLoadingUserData,
+    refetch: refetchUserData,
+  } = useGetMe();
 
   const fallbackCmId = route?.params?.cmId || userData?.multisportClubs?.[0]?.documentId;
 
+  if (isLoadingUserData && !fallbackCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.loading', 'Nous preparons votre espace multisport.')}
+        isLoading
+        title={t('multisport.fallback.loadingTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (userDataError && !fallbackCmId) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.fallback.error', "Impossible de charger vos informations multisport pour le moment.")}
+        onAction={() => refetchUserData()}
+        title={t('multisport.fallback.errorTitle', 'Club indisponible')}
+      />
+    );
+  }
+
   if (!fallbackCmId) {
     return (
-      <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.fill, Alignments.center, Spaces.paddingHorizontal[24]]}>
-          <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter]}>
-            {t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
-          </Text>
-        </View>
-      </ScreenContainer>
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
     );
   }
 

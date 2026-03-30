@@ -264,6 +264,38 @@ function CMDashboard({ navigation, route }) {
     },
   ]), [cmId, globalStats.members, globalStats.sections, globalStats.teams, navigation, t]);
 
+  const isMissingCmId = !cmId;
+  const isCmNotFound = Boolean(cmId) && !isLoading && !error && !cm;
+
+  if (isMissingCmId || isCmNotFound) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.justifyCenter,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {isMissingCmId ? 'Club multisport introuvable' : 'Cet espace multisport est introuvable'}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {isMissingCmId
+              ? 'Aucun identifiant multisport n a ete fourni.'
+              : 'Le lien est peut-etre obsolete ou cet espace a ete supprime.'}
+          </Text>
+          <Button onPress={() => navigation.navigate(RouteNames.MyClubs)} title="Retour aux clubs" variant="Secondary" />
+          {!isMissingCmId ? (
+            <Button onPress={refetch} title="Reessayer" variant="Primary" />
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <TutorialFlowBoundary
       onForceStartHandled={() => {

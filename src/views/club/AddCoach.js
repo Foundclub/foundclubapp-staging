@@ -18,8 +18,10 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { createTrainer, linkTrainerToClub } from '@/services/auth/authService';
+import { useGetClub } from '@/services/club/clubQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
@@ -37,6 +39,15 @@ const addCoachSchema = Joi.object({
   phoneNumber: Joi.string().required(),
 }).unknown(true);
 
+const sanitizeRouteParam = (value) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue || normalizedValue.startsWith(':')) {
+    return '';
+  }
+
+  return normalizedValue;
+};
+
 /**
  * Add coach screen component. Allows club managers to add a new coach.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -53,7 +64,18 @@ function AddCoach({ navigation, route }) {
 
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
-  const { formatBirthdateToDisplay } = useAuth();
+  const { formatBirthdateToDisplay, userData } = useAuth();
+  const routeClubId = sanitizeRouteParam(route?.params?.clubId);
+  const routeClubName = String(route?.params?.clubName || '').trim();
+  const {
+    data: clubData,
+    error: clubError,
+    isLoading: isLoadingClub,
+    refetch: refetchClub,
+  } = useGetClub(routeClubId, {
+    enabled: !!routeClubId,
+  });
+  const resolvedClubName = routeClubName || clubData?.name || userData?.club?.name || 'Club';
 
   const {
     control,
@@ -69,13 +91,18 @@ function AddCoach({ navigation, route }) {
 
   const linkTrainerToClubMutation = useMutation({
     mutationFn: linkTrainerToClub,
+    onError: () => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        "Impossible d'ajouter cet entraineur au club pour le moment.",
+      );
+    },
     onSuccess: () => {
       navigation.goBack();
     },
   });
 
   const { inviteTrainer } = useAuth();
-  const { clubName } = route?.params || {};
 
   const createTrainerMutation = useMutation({
     mutationFn: createTrainer,
@@ -140,6 +167,47 @@ function AddCoach({ navigation, route }) {
       avatar,
     });
   };
+
+  if (!routeClubId) {
+    return (
+      <ClubStateView
+        description="Impossible d'ouvrir ce formulaire sans club valide. Revenez a la fiche club puis relancez l'ajout."
+        title="Club introuvable"
+      />
+    );
+  }
+
+  if (isLoadingClub && !clubData) {
+    return (
+      <ClubStateView
+        description="Nous recuperons les informations du club pour preparer l'ajout du coach."
+        isLoading
+        title="Chargement du club"
+      />
+    );
+  }
+
+  if (clubError && !clubData) {
+    return (
+      <ClubStateView
+        actionLabel="Reessayer"
+        description="Impossible de charger ce club pour le moment."
+        onAction={() => refetchClub()}
+        title="Ajout indisponible"
+      />
+    );
+  }
+
+  if (!isLoadingClub && !clubError && !clubData) {
+    return (
+      <ClubStateView
+        actionLabel="Actualiser"
+        description="Ce club est introuvable ou n'est plus accessible."
+        onAction={() => refetchClub()}
+        title="Club introuvable"
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -275,7 +343,8 @@ function AddCoach({ navigation, route }) {
         onInvite={() => {
           if (createdTrainer) {
             inviteTrainer({
-              clubName: clubName || 'Club',
+              clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
+              clubName: resolvedClubName,
               firstname: createdTrainer.firstname || 'Coach',
               phoneNumber: createdTrainer.phoneNumber,
             });

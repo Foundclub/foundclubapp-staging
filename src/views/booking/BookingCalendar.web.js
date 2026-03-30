@@ -73,7 +73,11 @@ function BookingCalendar({ navigation, route }) {
   const [submitError, setSubmitError] = useState('');
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const { data: facilitiesResponse, isLoading: facilitiesLoading } = useGetBookableFacilities();
+  const {
+    data: facilitiesResponse,
+    error: facilitiesError,
+    isLoading: facilitiesLoading,
+  } = useGetBookableFacilities();
   const facilities = useMemo(() => normalizeFacilities(facilitiesResponse), [facilitiesResponse]);
 
   useEffect(() => {
@@ -94,6 +98,7 @@ function BookingCalendar({ navigation, route }) {
 
   const {
     data: availability,
+    error: availabilityError,
     isLoading: availabilityLoading,
     refetch,
   } = useGetFacilityAvailability(selectedFacilityId, dateString, {
@@ -285,7 +290,11 @@ function BookingCalendar({ navigation, route }) {
                 </div>
               ) : (
                 <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px dashed ${borderColor}`, borderRadius: 22, color: mutedTextColor, padding: 20 }}>
-                  Choisis une installation pour voir ses créneaux disponibles.
+                  {facilitiesError
+                    ? (facilitiesError?.message || 'Impossible de charger les installations.')
+                    : facilities.length === 0
+                      ? 'Aucune installation reservable n est disponible pour le moment.'
+                      : 'Choisis une installation pour voir ses creneaux disponibles.'}
                 </div>
               )}
 
@@ -336,7 +345,11 @@ function BookingCalendar({ navigation, route }) {
                   ) : null}
                 </div>
 
-                {availability?.slots?.length > 0 ? (
+                {availabilityError ? (
+                  <div style={{ background: 'rgba(220, 64, 64, 0.12)', border: '1px solid rgba(220, 64, 64, 0.28)', borderRadius: 22, color: '#ffd6d6', padding: 20 }}>
+                    {availabilityError?.message || 'Impossible de charger les disponibilites.'}
+                  </div>
+                ) : availability?.slots?.length > 0 ? (
                   <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isTablet ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}>
                     {availability.slots.map((slot) => {
                       const isAvailable = Number(slot?.remaining || 0) > 0;
@@ -521,14 +534,14 @@ function BookingCalendar({ navigation, route }) {
               ) : null}
 
               <button
-                disabled={!selectedSlot || !selectedDuration || createBookingMutation.isPending}
+                disabled={!selectedSlot || !selectedDuration || createBookingMutation.isPending || Boolean(availabilityError)}
                 onClick={handleSubmit}
                 style={{
-                  background: !selectedSlot || !selectedDuration || createBookingMutation.isPending ? 'rgba(255,255,255,0.14)' : accentColor,
+                  background: !selectedSlot || !selectedDuration || createBookingMutation.isPending || availabilityError ? 'rgba(255,255,255,0.14)' : accentColor,
                   border: 0,
                   borderRadius: 999,
                   color: '#04131d',
-                  cursor: !selectedSlot || !selectedDuration || createBookingMutation.isPending ? 'not-allowed' : 'pointer',
+                  cursor: !selectedSlot || !selectedDuration || createBookingMutation.isPending || availabilityError ? 'not-allowed' : 'pointer',
                   fontFamily: 'Montserrat-Bold, sans-serif',
                   fontSize: 15,
                   padding: '14px 18px',

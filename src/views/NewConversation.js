@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList, Image, SectionList, Text, TextInput, TouchableOpacity, View,
+  Alert, FlatList, Image, Platform, SectionList, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -195,7 +195,12 @@ function NewConversation({ navigation, route }) {
     [accessibleTeams, t],
   );
 
-  const { data: users, isLoading } = useQuery({
+  const {
+    data: users,
+    error: usersError,
+    isLoading,
+    refetch,
+  } = useQuery({
     enabled: true,
     queryFn: async () => {
       const res = await searchUsers({
@@ -307,6 +312,12 @@ function NewConversation({ navigation, route }) {
       }
     } catch (error) {
       newConversationLogger.error('Failed to create chat', error?.message || error);
+      const safeMessage = error?.message || t('messaging.createConversationError', 'Impossible de demarrer cette conversation.');
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(safeMessage);
+      } else {
+        Alert.alert(t('messaging.title', 'Messagerie'), safeMessage);
+      }
     } finally {
       setIsCreating(false);
     }
@@ -461,6 +472,17 @@ function NewConversation({ navigation, route }) {
       <View style={Alignments.fill}>
         {isLoading ? (
           <Loader />
+        ) : usersError ? (
+          <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[16], Spaces.paddingHorizontal[24]]}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+              {usersError?.message || t('messaging.loadUsersError', 'Impossible de charger les membres pour cette conversation.')}
+            </Text>
+            <Button
+              onPress={() => refetch()}
+              title={t('common.retry', 'Reessayer')}
+              variant="Primary"
+            />
+          </View>
         ) : (
           <SectionList
             contentContainerStyle={Spaces.paddingBottom[80]}

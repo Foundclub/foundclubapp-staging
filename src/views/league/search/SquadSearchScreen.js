@@ -165,17 +165,29 @@ function SquadSearchScreen() {
 
   const currentUserId = String(userData?.documentId || '').trim();
 
-  const { data: joinedSquads } = useGetMyLeagueTeam(currentUserId, {
+  const {
+    data: joinedSquads,
+    error: joinedSquadsError,
+    refetch: refetchJoinedSquads,
+  } = useGetMyLeagueTeam(currentUserId, {
     enabled: Boolean(currentUserId),
     staleTime: 30_000,
   });
 
-  const { data: pendingSquads } = useGetPendingLeagueTeams(currentUserId, {
+  const {
+    data: pendingSquads,
+    error: pendingSquadsError,
+    refetch: refetchPendingSquads,
+  } = useGetPendingLeagueTeams(currentUserId, {
     enabled: Boolean(currentUserId),
     staleTime: 30_000,
   });
 
-  const { data: invitedSquads } = useGetInvitedLeagueTeams(currentUserId, {
+  const {
+    data: invitedSquads,
+    error: invitedSquadsError,
+    refetch: refetchInvitedSquads,
+  } = useGetInvitedLeagueTeams(currentUserId, {
     enabled: Boolean(currentUserId),
     staleTime: 30_000,
   });
@@ -277,6 +289,17 @@ function SquadSearchScreen() {
       setIsLoading(false);
     }
   }, [query, squadFilters]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      handleSearch(),
+      refetchJoinedSquads(),
+      refetchPendingSquads(),
+      refetchInvitedSquads(),
+    ]);
+  }, [handleSearch, refetchInvitedSquads, refetchJoinedSquads, refetchPendingSquads]);
+
+  const statusQueryError = joinedSquadsError || pendingSquadsError || invitedSquadsError;
 
   useFocusEffect(
     useCallback(() => {
@@ -553,6 +576,34 @@ function SquadSearchScreen() {
           </View>
         ) : null}
 
+        {statusQueryError ? (
+          <View style={{
+            backgroundColor: 'rgba(250, 204, 21, 0.14)',
+            borderColor: 'rgba(250, 204, 21, 0.40)',
+            borderRadius: 10,
+            borderWidth: 1,
+            marginTop: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+          }}
+          >
+            <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+              Impossible de charger vos statuts personnels League. La recherche reste disponible.
+            </Text>
+            <TouchableOpacity
+              onPress={handleRefresh}
+              style={{
+                alignSelf: 'flex-start',
+                marginTop: 10,
+              }}
+            >
+              <Text style={[Fonts.p3Bold, { color: Colors.gold500, textDecorationLine: 'underline' }]}>
+                Reessayer
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {errorMessage ? (
           <View style={{
             backgroundColor: 'rgba(239, 68, 68, 0.16)',
@@ -622,6 +673,8 @@ function SquadSearchScreen() {
                 </TouchableOpacity>
               </View>
             )}
+            onRefresh={handleRefresh}
+            refreshing={isLoading}
             renderItem={renderItem}
           />
         )}

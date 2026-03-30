@@ -25,6 +25,7 @@ export const createTeamMembershipRequest = async (teamMembershipRequestData) => 
  * Get team membership requests
  * @param {string|string[]} teamIds - Single teamId or array of teamIds
  * @param {{
+ *   clubId?: string;
  *   page?: number;
  *   pageSize?: number;
  * }} [params]
@@ -33,14 +34,33 @@ export const createTeamMembershipRequest = async (teamMembershipRequestData) => 
  */
 export const getTeamMembershipRequests = async (teamIds, params = {}) => {
   const {
+    clubId,
     page,
     pageSize,
   } = params;
 
+  let normalizedTeamIds = [];
+  if (Array.isArray(teamIds)) {
+    normalizedTeamIds = teamIds.filter(Boolean);
+  } else if (teamIds) {
+    normalizedTeamIds = [teamIds];
+  }
+  let teamDocumentIdFilter;
+  if (normalizedTeamIds.length > 1) {
+    teamDocumentIdFilter = { $in: normalizedTeamIds };
+  } else if (normalizedTeamIds.length === 1) {
+    [teamDocumentIdFilter] = normalizedTeamIds;
+  }
+
   const filters = {
     filters: {
       team: {
-        documentId: Array.isArray(teamIds) ? { $in: teamIds } : teamIds,
+        ...(teamDocumentIdFilter ? { documentId: teamDocumentIdFilter } : {}),
+        ...(clubId ? {
+          club: {
+            documentId: clubId,
+          },
+        } : {}),
       },
     },
     pagination: {

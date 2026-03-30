@@ -1,10 +1,11 @@
 import React, {
-  createContext, useContext, useMemo, useReducer,
+  createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
 const AdWizardContext = createContext();
+const AD_WIZARD_STORAGE_KEY = 'fc:web:ad-wizard';
 
-const initialState = {
+const createInitialState = () => ({
   // Source
   event: null, // Event object (null = classic ad)
   team: null, // Team object
@@ -12,8 +13,8 @@ const initialState = {
   // Team-related info (pre-filled from team, but editable)
   address: null, // Address object { label, city, geohash, context, ... }
   category: null, // Category object { documentId, name } (U20, Senior, etc.)
-  minLevel: null, // Level object { documentId, name } (Départemental, Régional, etc.)
-  section: null, // Section object { documentId, name } (Masculine, Féminine)
+  minLevel: null, // Level object { documentId, name } (Departemental, Regional, etc.)
+  section: null, // Section object { documentId, name } (Masculine, Feminine)
   sport: null, // Activity object { documentId, name } (Football, Basketball, etc.)
 
   // Positions with quantities: [{ name: 'Gardien', quantity: 1 }, ...]
@@ -22,6 +23,36 @@ const initialState = {
   // Options
   description: '',
   validationMode: 'auto', // Only used when event != null
+});
+
+const canUseWizardStorage = () => (
+  typeof globalThis !== 'undefined'
+  && typeof globalThis.sessionStorage !== 'undefined'
+);
+
+const loadPersistedState = () => {
+  const initialState = createInitialState();
+
+  if (!canUseWizardStorage()) {
+    return initialState;
+  }
+
+  try {
+    const raw = globalThis.sessionStorage.getItem(AD_WIZARD_STORAGE_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return initialState;
+    }
+
+    return {
+      ...initialState,
+      ...parsed,
+    };
+  } catch (_error) {
+    return initialState;
+  }
 };
 
 /**
@@ -32,7 +63,7 @@ const initialState = {
 function adWizardReducer(state, action) {
   switch (action.type) {
     case 'RESET':
-      return initialState;
+      return createInitialState();
     case 'SET_ADDRESS':
       return { ...state, address: action.payload };
     case 'SET_CATEGORY':
@@ -56,7 +87,7 @@ function adWizardReducer(state, action) {
       return { ...state, section: action.payload };
     case 'SET_SPORT':
       return { ...state, positions: [], sport: action.payload }; // Reset positions when sport changes
-    case 'SET_TEAM':
+    case 'SET_TEAM': {
       // When team is set, also pre-fill section, category, level, sport from team data
       const team = action.payload;
       return {
@@ -69,6 +100,7 @@ function adWizardReducer(state, action) {
         sport: team?.activities?.[0] || team?.sport || null,
         team,
       };
+    }
     case 'SET_VALIDATION_MODE':
       return { ...state, validationMode: action.payload };
     case 'TOGGLE_POSITION': {
@@ -92,7 +124,20 @@ function adWizardReducer(state, action) {
  * @param root0.children
  */
 export function AdWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(adWizardReducer, initialState);
+  const [state, dispatch] = useReducer(adWizardReducer, undefined, loadPersistedState);
+
+  useEffect(() => {
+    if (!canUseWizardStorage()) return;
+
+    try {
+      globalThis.sessionStorage.setItem(
+        AD_WIZARD_STORAGE_KEY,
+        JSON.stringify(state),
+      );
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory wizard state.
+    }
+  }, [state]);
 
   const value = useMemo(() => ({ dispatch, state }), [state]);
 

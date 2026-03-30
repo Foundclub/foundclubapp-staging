@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Text, TextInput, TouchableOpacity, View,
+  Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -67,9 +67,10 @@ function Messaging({ navigation, route }) {
   });
 
   const {
-    archiveChat, getConversationName, getUnreadStatus,
-    joinChat, pinChat, unpinChat,
+    archiveChatAsync, getConversationName, getUnreadStatus,
+    joinChat, pinChatAsync, unpinChatAsync,
   } = useMessaging();
+  const isWeb = Platform.OS === 'web';
 
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
@@ -225,6 +226,19 @@ function Messaging({ navigation, route }) {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingChatAction, setPendingChatAction] = useState({ chatId: '', type: '' });
+
+  const showMessagingAlert = (message) => {
+    const safeMessage = String(message || '').trim();
+    if (!safeMessage) return;
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(safeMessage);
+      return;
+    }
+
+    Alert.alert(t('messaging.title', 'Messagerie'), safeMessage);
+  };
 
   const filteredChats = useMemo(() => {
     if (!searchQuery) return allChats;
@@ -277,8 +291,15 @@ function Messaging({ navigation, route }) {
     return (
       <TouchableOpacity
         onPress={() => {
-          if (isPinned) unpinChat(chat.documentId);
-          else pinChat(chat.documentId);
+          if (isPinned) {
+            unpinChatAsync(chat.documentId).catch((actionError) => {
+              showMessagingAlert(actionError?.message || t('messaging.unpinError', 'Impossible de desepingler cette conversation.'));
+            });
+          } else {
+            pinChatAsync(chat.documentId).catch((actionError) => {
+              showMessagingAlert(actionError?.message || t('messaging.pinError', 'Impossible d epingler cette conversation.'));
+            });
+          }
         }}
         style={{
           alignItems: 'center',
@@ -298,7 +319,9 @@ function Messaging({ navigation, route }) {
 
   const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
     <TouchableOpacity
-      onPress={() => archiveChat(chat.documentId)}
+      onPress={() => archiveChatAsync(chat.documentId).catch((actionError) => {
+        showMessagingAlert(actionError?.message || t('messaging.archiveError', 'Impossible d archiver cette conversation.'));
+      })}
       style={{
         alignItems: 'center',
         backgroundColor: Colors.error500, // Or warning color
@@ -312,6 +335,136 @@ function Messaging({ navigation, route }) {
         {t('messaging.archive', 'Archiver')}
       </Text>
     </TouchableOpacity>
+  );
+
+  const handleTogglePin = async (/** @type {Chat} */ chat) => {
+    const chatId = String(chat?.documentId || '').trim();
+    if (!chatId) return;
+
+    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+    setPendingChatAction({ chatId, type: 'pin' });
+
+    try {
+      if (isPinned) {
+        await unpinChatAsync(chatId);
+      } else {
+        await pinChatAsync(chatId);
+      }
+    } catch (actionError) {
+      showMessagingAlert(actionError?.message || (isPinned
+        ? t('messaging.unpinError', 'Impossible de desepingler cette conversation.')
+        : t('messaging.pinError', 'Impossible d epingler cette conversation.')));
+    } finally {
+      setPendingChatAction({ chatId: '', type: '' });
+    }
+  };
+
+  const handleArchive = async (/** @type {Chat} */ chat) => {
+    const chatId = String(chat?.documentId || '').trim();
+    if (!chatId) return;
+
+    setPendingChatAction({ chatId, type: 'archive' });
+
+    try {
+      await archiveChatAsync(chatId);
+    } catch (actionError) {
+      showMessagingAlert(actionError?.message || t('messaging.archiveError', 'Impossible d archiver cette conversation.'));
+    } finally {
+      setPendingChatAction({ chatId: '', type: '' });
+    }
+  };
+
+  const renderWebChatActions = (/** @type {Chat} */ chat) => {
+    if (!isWeb) return null;
+
+    const chatId = String(chat?.documentId || '').trim();
+    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+    const isPendingAction = pendingChatAction.chatId === chatId;
+    const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
+    const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
+
+    return (
+      <View
+        style={[
+          Alignments.row,
+          Alignments.justifyEnd,
+          Alignments.alignCenter,
+          Spaces.gap[8],
+          Spaces.marginTop[12],
+        ]}
+      >
+        <TouchableOpacity
+          disabled={isPendingAction}
+          onPress={() => handleTogglePin(chat)}
+          style={[
+            ApplicationStyle.borderRadius16,
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: Colors.primary700,
+              opacity: isPendingAction ? 0.6 : 1,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+            {isPinPending
+              ? t('common.loading', 'Chargement...')
+              : (isPinned ? t('messaging.unpin', 'Desepingler') : t('messaging.pin', 'Epingler'))}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          disabled={isPendingAction}
+          onPress={() => handleArchive(chat)}
+          style={[
+            ApplicationStyle.borderRadius16,
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: Colors.error500,
+              opacity: isPendingAction ? 0.6 : 1,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+            {isArchivePending ? t('common.loading', 'Chargement...') : t('messaging.archive', 'Archiver')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderErrorState = () => (
+    <View style={[
+      ApplicationStyle.backgroundColor.primary900,
+      ApplicationStyle.borderRadius32,
+      Alignments.alignCenter,
+      Spaces.gap[16],
+      Spaces.paddingHorizontal[16],
+      Spaces.paddingVertical[24],
+      Spaces.marginVertical[24],
+    ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+        {error?.message || t('messaging.loadError', 'Impossible de charger les conversations.')}
+      </Text>
+      <TouchableOpacity
+        disabled={isLoading}
+        onPress={() => refetch()}
+        style={[
+          ApplicationStyle.borderRadius24,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[10],
+          {
+            backgroundColor: Colors.primary500,
+            opacity: isLoading ? 0.6 : 1,
+          },
+        ]}
+      >
+        <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
+          {t('common.retry', 'Reessayer')}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   /**
@@ -332,7 +485,7 @@ function Messaging({ navigation, route }) {
     if (hasUnread) {
       chatBackgroundStyle = ApplicationStyle.backgroundColor.primary700;
     } else if (chat.type === 'league_match') {
-      chatBackgroundStyle = 'rgba(212, 175, 55, 0.1)';
+      chatBackgroundStyle = { backgroundColor: 'rgba(212, 175, 55, 0.1)' };
     }
 
     return (
@@ -423,6 +576,7 @@ function Messaging({ navigation, route }) {
               )}
             </View>
           </View>
+          {renderWebChatActions(chat)}
         </TouchableOpacity>
       </Swipeable>
     );
@@ -499,11 +653,31 @@ function Messaging({ navigation, route }) {
         >
           <View style={[Alignments.fill]}>
             {renderSearch()}
-            <WithDataWrapper
-              error={error?.message}
-              isLoading={isLoading}
-              wrapperStyle={[Alignments.fill]}
-            >
+            {isLoading ? (
+              <WithDataWrapper
+                isLoading
+                wrapperStyle={[Alignments.fill]}
+              >
+                <View style={[
+                  Alignments.fill,
+                  ApplicationStyle.borderRadius2]}
+                >
+                  <FlashList
+                    data={filteredChats}
+                    keyExtractor={(item) => item.documentId}
+                    ListEmptyComponent={renderEmptyList}
+                    onEndReached={() => hasNextPage && fetchNextPage()}
+                    onEndReachedThreshold={0.5}
+                    onRefresh={refetch}
+                    refreshing={isLoading}
+                    renderItem={renderChat}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
+              </WithDataWrapper>
+            ) : error ? (
+              renderErrorState()
+            ) : (
               <View style={[
                 Alignments.fill,
                 ApplicationStyle.borderRadius2]}
@@ -515,12 +689,12 @@ function Messaging({ navigation, route }) {
                   onEndReached={() => hasNextPage && fetchNextPage()}
                   onEndReachedThreshold={0.5}
                   onRefresh={refetch}
-                  refreshing={isLoading}
+                  refreshing={false}
                   renderItem={renderChat}
                   showsVerticalScrollIndicator={false}
                 />
               </View>
-            </WithDataWrapper>
+            )}
           </View>
         </OnboardingWrapper>
 

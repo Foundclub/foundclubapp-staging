@@ -39,15 +39,27 @@ function EventEdit({ navigation, route }) {
     Colors,
   } = useTheme();
   const { userData } = useAuth();
-  const { data: event } = useGetEvent(eventId || '', { enabled: Boolean(eventId) });
-  const { data: eventTypes } = useGetEventTypes();
+  const {
+    data: event,
+    error: eventError,
+    isLoading: eventLoading,
+  } = useGetEvent(eventId || '', { enabled: Boolean(eventId) });
+  const {
+    data: eventTypes,
+    error: eventTypesError,
+    isLoading: eventTypesLoading,
+  } = useGetEventTypes();
 
   const trainedTeams = Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [];
   const selectedTeam = trainedTeams.find((team) => getEntityDocumentId(team) === String(route?.params?.teamId || '').trim())
     || trainedTeams.find((team) => getEntityDocumentId(team) === getEntityDocumentId(event?.team))
     || null;
   const facilityClubId = getEntityDocumentId(selectedTeam?.club) || getEntityDocumentId(userData?.club);
-  const { data: facilitiesResponse } = useGetFacilities(facilityClubId, {
+  const {
+    data: facilitiesResponse,
+    error: facilitiesError,
+    isLoading: facilitiesLoading,
+  } = useGetFacilities(facilityClubId, {
     enabled: Boolean(facilityClubId),
   });
 
@@ -113,6 +125,12 @@ function EventEdit({ navigation, route }) {
     : Array.isArray(eventTypes?.data)
       ? eventTypes.data
       : [];
+  const isBootstrapping = Boolean(eventId) && eventLoading;
+  const missingEvent = Boolean(eventId) && !eventLoading && !eventError && !event;
+  const setupLoading = Boolean(!isBootstrapping && (eventTypesLoading || (facilityClubId && facilitiesLoading)));
+  const setupError = eventError || eventTypesError || facilitiesError;
+  const hasTypes = typeOptions.length > 0;
+  const hasTeams = trainedTeams.length > 0;
 
   const availableInvitedTeams = useMemo(
     () => trainedTeams.filter((team) => getEntityDocumentId(team) !== formState.team),
@@ -153,6 +171,16 @@ function EventEdit({ navigation, route }) {
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
   const accentColor = Colors?.primary500 || '#01b3f4';
   const isSubmitting = createEventMutation.isPending || updateEventMutation.isPending;
+  const canSubmit = Boolean(
+    !isBootstrapping
+    && !setupError
+    && hasTypes
+    && hasTeams
+    && formState.type
+    && formState.team
+    && formState.date
+    && formState.startTime,
+  );
 
   const updateField = (field, value) => {
     setFormState((current) => ({
@@ -247,6 +275,45 @@ function EventEdit({ navigation, route }) {
             </button>
           </div>
 
+          {isBootstrapping ? (
+            <div style={{ color: mutedTextColor }}>Chargement de l evenement...</div>
+          ) : null}
+
+          {!isBootstrapping && setupLoading ? (
+            <div style={{ color: mutedTextColor }}>Preparation du formulaire...</div>
+          ) : null}
+
+          {!isBootstrapping && !setupLoading && setupError ? (
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ color: '#ff6b81', fontFamily: 'Montserrat-Bold, sans-serif' }}>Configuration indisponible</div>
+              <div style={{ color: mutedTextColor }}>
+                {setupError?.message || 'Impossible de charger les donnees du formulaire.'}
+              </div>
+            </div>
+          ) : null}
+
+          {!isBootstrapping && !setupLoading && !setupError && missingEvent ? (
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>Evenement introuvable</div>
+              <div style={{ color: mutedTextColor }}>
+                Cet evenement n existe plus ou ne peut pas etre modifie depuis ce lien.
+              </div>
+            </div>
+          ) : null}
+
+          {!isBootstrapping && !setupLoading && !setupError && !missingEvent && !hasTeams ? (
+            <div style={{ color: mutedTextColor }}>
+              Aucune equipe disponible pour creer ou modifier cet evenement.
+            </div>
+          ) : null}
+
+          {!isBootstrapping && !setupLoading && !setupError && !missingEvent && hasTeams && !hasTypes ? (
+            <div style={{ color: mutedTextColor }}>
+              Aucun type d evenement n est disponible pour le moment.
+            </div>
+          ) : null}
+
+          {!isBootstrapping && !setupLoading && !setupError && !missingEvent && hasTeams && hasTypes ? (
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
             <div style={{ display: 'grid', gap: 16, gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr' }}>
               <label style={{ display: 'grid', gap: 8 }}>
@@ -402,24 +469,25 @@ function EventEdit({ navigation, route }) {
                   Annuler
                 </button>
                 <button
-                  disabled={isSubmitting}
+                  disabled={!canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading}
                   style={{
-                    background: accentColor,
+                    background: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 'rgba(255,255,255,0.14)' : accentColor,
                     border: 0,
                     borderRadius: 999,
                     color: '#001218',
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    cursor: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 'not-allowed' : 'pointer',
                     fontFamily: 'Montserrat-Bold, sans-serif',
-                    opacity: isSubmitting ? 0.7 : 1,
+                    opacity: !canSubmit || isSubmitting || eventTypesLoading || facilitiesLoading ? 0.7 : 1,
                     padding: '12px 18px',
                   }}
                   type="submit"
                 >
-                  {isSubmitting ? 'Enregistrement...' : eventId ? 'Mettre a jour' : 'Creer'}
+                  {isSubmitting ? 'Enregistrement...' : eventTypesLoading || facilitiesLoading ? 'Preparation...' : eventId ? 'Mettre a jour' : 'Creer'}
                 </button>
               </div>
             </div>
           </form>
+          ) : null}
         </section>
       </div>
     </ScreenContainer>

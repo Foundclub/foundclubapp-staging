@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import React, {
+import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,13 +12,29 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { useGetLeagueTeam } from '@/services/leagueTeam/leagueTeamQueries';
 import { respondToJoinRequest } from '@/services/leagueTeam/leagueTeamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
+
+const isPhoneLike = (value) => {
+  const normalized = String(value || '').replace(/\s+/g, '');
+  if (!normalized) return false;
+  return /^\+?\d{8,15}$/.test(normalized);
+};
+
+const getRequesterName = (/** @type {any} */ user) => {
+  const firstname = String(user?.firstname || '').trim();
+  const lastname = String(user?.lastname || '').trim();
+  const fullname = [firstname, lastname].filter(Boolean).join(' ').trim();
+  if (fullname.length > 0) return fullname;
+  const username = String(user?.username || '').trim();
+  if (username.length > 0 && !isPhoneLike(username)) return username;
+  return 'Joueur';
+};
 
 /**
  * @param {{ navigation: any, route: { params?: { teamId?: string } } }} props
@@ -43,7 +59,7 @@ function SquadRequestsScreen({ navigation, route }) {
     enabled: !!teamId,
   });
 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [pendingAction, setPendingAction] = useState(/** @type {{ decision: boolean, userId: string } | null } */ (null));
   const [feedback, setFeedback] = useState(/** @type {{ type: 'success' | 'error', message: string } | null} */ (null));
 
   useEffect(() => {
@@ -60,27 +76,11 @@ function SquadRequestsScreen({ navigation, route }) {
 
   const requests = useMemo(() => (Array.isArray(team?.join_requests) ? team.join_requests : []), [team?.join_requests]);
 
-  const isPhoneLike = (value) => {
-    const normalized = String(value || '').replace(/\s+/g, '');
-    if (!normalized) return false;
-    return /^\+?\d{8,15}$/.test(normalized);
-  };
-
-  const getRequesterName = (/** @type {any} */ user) => {
-    const firstname = String(user?.firstname || '').trim();
-    const lastname = String(user?.lastname || '').trim();
-    const fullname = [firstname, lastname].filter(Boolean).join(' ').trim();
-    if (fullname.length > 0) return fullname;
-    const username = String(user?.username || '').trim();
-    if (username.length > 0 && !isPhoneLike(username)) return username;
-    return 'Joueur';
-  };
-
   const handleRespond = useCallback(async (/** @type {string} */ userId, /** @type {boolean} */ accept) => {
     if (!teamId || !userId) return;
 
     try {
-      setIsProcessing(true);
+      setPendingAction({ decision: accept, userId });
       await respondToJoinRequest(teamId, userId, accept);
       await refetch();
       setFeedback({
@@ -94,7 +94,7 @@ function SquadRequestsScreen({ navigation, route }) {
         type: 'error',
       });
     } finally {
-      setIsProcessing(false);
+      setPendingAction(null);
     }
   }, [refetch, teamId]);
 
@@ -156,14 +156,16 @@ function SquadRequestsScreen({ navigation, route }) {
 
         <View style={[Alignments.row, Spaces.gap[16]]}>
           <Button
-            disabled={isProcessing || !userId}
+            disabled={Boolean(pendingAction) || !userId}
+            isLoading={pendingAction?.userId === userId && pendingAction?.decision === true}
             onPress={() => handleRespond(String(userId || ''), true)}
             style={{ flex: 1 }}
             title={t('teamMembershipRequestList.actions.accept', 'Accepter')}
             variant="Primary"
           />
           <Button
-            disabled={isProcessing || !userId}
+            disabled={Boolean(pendingAction) || !userId}
+            isLoading={pendingAction?.userId === userId && pendingAction?.decision === false}
             onPress={() => handleRespond(String(userId || ''), false)}
             style={{ flex: 1 }}
             title={t('teamMembershipRequestList.actions.reject', 'Refuser')}
@@ -182,17 +184,17 @@ function SquadRequestsScreen({ navigation, route }) {
     ApplicationStyle.borderWidth1,
     Colors.neutral00,
     Colors.neutral200,
-    Colors.neutral300,
     Colors.neutral700,
+    Colors.gold500,
     Fonts.h4Black,
-    Fonts.p3,
+    Fonts.p2,
+    Fonts.p3Bold,
     Spaces.gap,
     Spaces.marginHorizontal,
     Spaces.marginBottom,
-    Spaces.marginTop,
     Spaces.padding,
     handleRespond,
-    isProcessing,
+    pendingAction,
     t,
     team?.name,
   ]);
@@ -229,6 +231,49 @@ function SquadRequestsScreen({ navigation, route }) {
     isLoading,
     t,
   ]);
+
+  if (!teamId) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour"
+        description="L'identifiant de la squad est manquant. Ouvrez les demandes depuis la fiche squad ou le dashboard League."
+        onAction={() => navigation.goBack()}
+        title="Squad introuvable"
+      />
+    );
+  }
+
+  if (isLoading && !team) {
+    return (
+      <LeagueStateView
+        description="Chargement des demandes d'adhesion de la squad League."
+        isLoading
+        title="Chargement des demandes"
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <LeagueStateView
+        actionLabel="Reessayer"
+        description="Impossible de charger les demandes d'adhesion pour cette squad. Verifiez la connexion puis relancez."
+        onAction={() => refetch()}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (!team) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour"
+        description="Cette squad League est introuvable ou n'est plus disponible."
+        onAction={() => navigation.goBack()}
+        title="Squad indisponible"
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -290,23 +335,17 @@ function SquadRequestsScreen({ navigation, route }) {
         ) : null}
       </View>
 
-      <WithDataWrapper
-        error={error?.message}
-        isLoading={Boolean(isLoading && !requests.length) || isProcessing}
-        wrapperStyle={[Alignments.fill]}
-      >
-        <FlashList
-          contentContainerStyle={{ paddingBottom: 32, paddingTop: 4 }}
-          data={requests}
-          estimatedItemSize={200}
-          keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}
-          ListEmptyComponent={emptyState}
-          onRefresh={refetch}
-          refreshing={Boolean(isLoading && requests.length > 0)}
-          renderItem={renderRequestCard}
-          showsVerticalScrollIndicator={false}
-        />
-      </WithDataWrapper>
+      <FlashList
+        contentContainerStyle={{ paddingBottom: 32, paddingTop: 4 }}
+        data={requests}
+        estimatedItemSize={200}
+        keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}
+        ListEmptyComponent={emptyState}
+        onRefresh={refetch}
+        refreshing={Boolean(isLoading && requests.length > 0)}
+        renderItem={renderRequestCard}
+        showsVerticalScrollIndicator={false}
+      />
     </ScreenContainer>
   );
 }

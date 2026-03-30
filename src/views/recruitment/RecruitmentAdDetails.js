@@ -114,7 +114,12 @@ function RecruitmentAdDetails() {
 
   const adId = params?.ad?.documentId || params?.adId || params?.ad?.id;
 
-  const { data: fetchedAd, isLoading } = useQuery({
+  const {
+    data: fetchedAd,
+    error: adError,
+    isLoading,
+    refetch: refetchAd,
+  } = useQuery({
     enabled: !!adId,
     initialData: params?.ad,
     queryFn: () => getRecruitmentAd(adId),
@@ -334,11 +339,21 @@ function RecruitmentAdDetails() {
 
   if (!ad) {
     return (
-      <ScreenContainer>
-        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
-          <Text style={[Fonts.h3, { color: Colors.neutral100 }]}>
-            {isLoading ? 'Chargement...' : 'Annonce introuvable'}
+      <ScreenContainer bgImage="bg2">
+        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.padding[16], { gap: 12 }]}>
+          <Text style={[Fonts.h3, { color: adError ? Colors.error500 : Colors.neutral100 }]}>
+            {isLoading ? 'Chargement...' : adError ? 'Chargement impossible' : 'Annonce introuvable'}
           </Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
+            {adError?.message || 'Cette annonce n est plus disponible ou n a pas pu etre chargee.'}
+          </Text>
+          {adError ? (
+            <Button
+              onPress={() => refetchAd()}
+              title="Recharger"
+              variant="Primary"
+            />
+          ) : null}
         </View>
       </ScreenContainer>
     );
@@ -473,7 +488,22 @@ function RecruitmentAdDetails() {
           </View>
         ) : null}
 
-        {!slotParticipationsQuery.isLoading && slotParticipations.length > 0 ? (
+        {slotParticipationsQuery.error ? (
+          <View style={styles.emptyCandidatesBox}>
+            <Text style={[Fonts.p1Bold, { color: Colors.error500, marginBottom: 8 }]}>Chargement impossible</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 12, textAlign: 'center' }]}>
+              {slotParticipationsQuery.error?.message || 'Impossible de charger les candidatures pour le moment.'}
+            </Text>
+            <Button
+              onPress={() => slotParticipationsQuery.refetch()}
+              size="sm"
+              title="Recharger"
+              variant="Primary"
+            />
+          </View>
+        ) : null}
+
+        {!slotParticipationsQuery.isLoading && !slotParticipationsQuery.error && slotParticipations.length > 0 ? (
           <View style={{ gap: 12 }}>
             {slotParticipations.map((participation) => {
               const participationId = String(participation?.documentId || '').trim();
@@ -594,7 +624,7 @@ function RecruitmentAdDetails() {
           </View>
         ) : null}
 
-        {!slotParticipationsQuery.isLoading && slotParticipations.length === 0 ? (
+        {!slotParticipationsQuery.isLoading && !slotParticipationsQuery.error && slotParticipations.length === 0 ? (
           <View style={styles.emptyCandidatesBox}>
             <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
           </View>

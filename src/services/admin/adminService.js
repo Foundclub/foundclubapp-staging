@@ -48,9 +48,9 @@ const buildPendingClubRequestFilters = (requestKinds) => ({
 });
 
 const toBadgeLabel = (kind) => {
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION) return 'CLUB A ONBOARDER';
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION) return 'CRÉATION DE CLUB';
   if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND) return 'CLUB INTROUVABLE';
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'Ã‰quipe INTROUVABLE';
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'ÉQUIPE INTROUVABLE';
   return 'REVENDICATION';
 };
 
@@ -64,8 +64,8 @@ const sortByCreatedAtDesc = (a, b) => toTimestamp(b?.createdAt) - toTimestamp(a?
 const normalizeHelpState = (state) => {
   const normalized = String(state || '').trim().toLowerCase();
   if (normalized === 'en attente' || normalized === 'pending') return 'pending';
-  if (normalized === 'traitÃ©e' || normalized === 'traitee' || normalized === 'processed') return 'processed';
-  if (normalized === 'refusÃ©e' || normalized === 'refusee' || normalized === 'refused') return 'refused';
+  if (normalized === 'traitée' || normalized === 'traitee' || normalized === 'processed') return 'processed';
+  if (normalized === 'refusée' || normalized === 'refusee' || normalized === 'refused') return 'refused';
   return normalized || 'pending';
 };
 
@@ -461,7 +461,7 @@ export const getLeagueDisputes = async (params = {}) => {
  */
 export const resolveLeagueDispute = async (matchId, payload) => {
   const response = await client.post(`/league-matches/${matchId}/resolve-dispute`, {
-    reason: payload.reason || 'DÃ©cision SuperAdmin',
+    reason: payload.reason || 'Décision SuperAdmin',
     score_a: Number.parseInt(String(payload.scoreA), 10),
     score_b: Number.parseInt(String(payload.scoreB), 10),
   });

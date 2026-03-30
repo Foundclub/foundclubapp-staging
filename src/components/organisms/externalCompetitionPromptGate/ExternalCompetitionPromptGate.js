@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   InteractionManager,
   Modal,
+  Platform,
   ScrollView,
   Text,
   useWindowDimensions,
@@ -245,6 +246,158 @@ function ExternalCompetitionPromptGate({
     );
   };
 
+  const promptContent = (
+    <View
+      style={[
+        Alignments.fill,
+        Alignments.justifyCenter,
+        {
+          paddingHorizontal: overlayHorizontalPadding,
+          paddingVertical: overlayVerticalPadding,
+        },
+        {
+          backgroundColor: 'rgba(0,0,0,0.72)',
+        },
+      ]}
+    >
+      <View
+        style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          {
+            borderColor: `${Colors.primary500}33`,
+            borderWidth: 1,
+            maxHeight: dialogMaxHeight,
+            maxWidth: dialogMaxWidth,
+            overflow: 'hidden',
+            width: '100%',
+          },
+        ]}
+      >
+        {isLandscape ? (
+          <ScrollView
+            contentContainerStyle={{
+              padding: 20,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={[
+                Alignments.row,
+                {
+                  alignItems: 'flex-start',
+                  gap: 18,
+                },
+              ]}
+            >
+              <View
+                style={{
+                  flex: 0.95,
+                  minWidth: 0,
+                  paddingRight: 4,
+                }}
+              >
+                {renderPromptHeader()}
+              </View>
+
+              <View
+                style={{
+                  flex: 1.05,
+                  gap: 12,
+                  minWidth: 0,
+                }}
+              >
+                {teamsNeedingExternalSource.map(renderTeamCard)}
+
+                <View
+                  style={{
+                    paddingTop: 2,
+                  }}
+                >
+                  <Button
+                    onPress={handleDismiss}
+                    style={{ width: '100%' }}
+                    textStyle={{ letterSpacing: 0.2 }}
+                    title={t('common.later', 'Plus tard')}
+                    variant="Secondary"
+                  />
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        ) : (
+          <>
+            <View
+              style={[
+                Spaces.paddingHorizontal[24],
+                {
+                  paddingBottom: 18,
+                  paddingTop: 24,
+                },
+              ]}
+            >
+              {renderPromptHeader()}
+            </View>
+
+            <ScrollView
+              contentContainerStyle={[
+                Spaces.gap[14],
+                Spaces.paddingHorizontal[24],
+                {
+                  paddingBottom: 20,
+                },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {teamsNeedingExternalSource.map(renderTeamCard)}
+            </ScrollView>
+
+            <View
+              style={[
+                Spaces.paddingHorizontal[24],
+                {
+                  borderTopColor: `${Colors.primary500}1F`,
+                  borderTopWidth: 1,
+                  paddingBottom: 24,
+                  paddingTop: 16,
+                },
+              ]}
+            >
+              <Button
+                onPress={handleDismiss}
+                style={{ width: '100%' }}
+                textStyle={{ letterSpacing: 0.2 }}
+                title={t('common.later', 'Plus tard')}
+                variant="Secondary"
+              />
+            </View>
+          </>
+        )}
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    if (!visible) {
+      return null;
+    }
+
+    return (
+      <View
+        style={{
+          bottom: 0,
+          left: 0,
+          position: 'fixed',
+          right: 0,
+          top: 0,
+          zIndex: 1060,
+        }}
+      >
+        {promptContent}
+      </View>
+    );
+  }
+
   return (
     <Modal
       animationType="fade"
@@ -252,134 +405,7 @@ function ExternalCompetitionPromptGate({
       transparent
       visible={visible}
     >
-      <View
-        style={[
-          Alignments.fill,
-          Alignments.justifyCenter,
-          {
-            paddingHorizontal: overlayHorizontalPadding,
-            paddingVertical: overlayVerticalPadding,
-          },
-          {
-            backgroundColor: 'rgba(0,0,0,0.72)',
-          },
-        ]}
-      >
-        <View
-          style={[
-            ApplicationStyle.backgroundColor.primary700,
-            ApplicationStyle.borderRadius24,
-            {
-              borderColor: `${Colors.primary500}33`,
-              borderWidth: 1,
-              maxHeight: dialogMaxHeight,
-              maxWidth: dialogMaxWidth,
-              overflow: 'hidden',
-              width: '100%',
-            },
-          ]}
-        >
-          {isLandscape ? (
-            <ScrollView
-              contentContainerStyle={{
-                padding: 20,
-              }}
-              showsVerticalScrollIndicator={false}
-            >
-              <View
-                style={[
-                  Alignments.row,
-                  {
-                    alignItems: 'flex-start',
-                    gap: 18,
-                  },
-                ]}
-              >
-                <View
-                  style={{
-                    flex: 0.95,
-                    minWidth: 0,
-                    paddingRight: 4,
-                  }}
-                >
-                  {renderPromptHeader()}
-                </View>
-
-                <View
-                  style={{
-                    flex: 1.05,
-                    gap: 12,
-                    minWidth: 0,
-                  }}
-                >
-                  {teamsNeedingExternalSource.map(renderTeamCard)}
-
-                  <View
-                    style={{
-                      paddingTop: 2,
-                    }}
-                  >
-                    <Button
-                      onPress={handleDismiss}
-                      style={{ width: '100%' }}
-                      textStyle={{ letterSpacing: 0.2 }}
-                      title={t('common.later', 'Plus tard')}
-                      variant="Secondary"
-                    />
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-          ) : (
-            <>
-              <View
-                style={[
-                  Spaces.paddingHorizontal[24],
-                  {
-                    paddingBottom: 18,
-                    paddingTop: 24,
-                  },
-                ]}
-              >
-                {renderPromptHeader()}
-              </View>
-
-              <ScrollView
-                contentContainerStyle={[
-                  Spaces.gap[14],
-                  Spaces.paddingHorizontal[24],
-                  {
-                    paddingBottom: 20,
-                  },
-                ]}
-                showsVerticalScrollIndicator={false}
-              >
-                {teamsNeedingExternalSource.map(renderTeamCard)}
-              </ScrollView>
-
-              <View
-                style={[
-                  Spaces.paddingHorizontal[24],
-                  {
-                    borderTopColor: `${Colors.primary500}1F`,
-                    borderTopWidth: 1,
-                    paddingBottom: 24,
-                    paddingTop: 16,
-                  },
-                ]}
-              >
-                <Button
-                  onPress={handleDismiss}
-                  style={{ width: '100%' }}
-                  textStyle={{ letterSpacing: 0.2 }}
-                  title={t('common.later', 'Plus tard')}
-                  variant="Secondary"
-                />
-              </View>
-            </>
-          )}
-        </View>
-      </View>
+      {promptContent}
     </Modal>
   );
 }

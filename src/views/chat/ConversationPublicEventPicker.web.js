@@ -45,7 +45,11 @@ function ConversationPublicEventPicker({ navigation, route }) {
   const normalizedQuery = String(query || '').trim();
   const searchEnabled = normalizedQuery.length >= 2;
 
-  const { data: publicEventsPages, isLoading: isPublicLoading } = useGetEvents({
+  const {
+    data: publicEventsPages,
+    error: publicEventsError,
+    isLoading: isPublicLoading,
+  } = useGetEvents({
     excludeType: 'Reservation',
     pageSize: 24,
     sessionStatus: 'open',
@@ -54,7 +58,11 @@ function ConversationPublicEventPicker({ navigation, route }) {
     enabled: !searchEnabled,
   });
 
-  const { data: searchEventsPages, isLoading: isSearchLoading } = useSearchEvents({
+  const {
+    data: searchEventsPages,
+    error: searchEventsError,
+    isLoading: isSearchLoading,
+  } = useSearchEvents({
     excludeType: 'Reservation',
     pageSize: 24,
     q: normalizedQuery,
@@ -81,6 +89,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
   );
 
   const isLoading = searchEnabled ? isSearchLoading : isPublicLoading;
+  const activeError = searchEnabled ? searchEventsError : publicEventsError;
   const textColor = Colors?.neutral00 || '#ffffff';
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
   const accentColor = Colors?.primary500 || '#01b3f4';
@@ -172,7 +181,18 @@ function ConversationPublicEventPicker({ navigation, route }) {
             </div>
           ) : null}
 
-          {!isLoading && events.length === 0 ? (
+          {!isLoading && activeError ? (
+            <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
+              <strong style={{ color: '#ff8f9a', fontFamily: 'Montserrat-Bold, sans-serif' }}>
+                Chargement impossible
+              </strong>
+              <p style={{ color: mutedTextColor, margin: 0 }}>
+                {activeError?.message || 'Impossible de charger les evenements publics.'}
+              </p>
+            </div>
+          ) : null}
+
+          {!isLoading && !activeError && events.length === 0 ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
               <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
                 Aucun evenement disponible
@@ -183,7 +203,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
             </div>
           ) : null}
 
-          {!isLoading && events.length > 0 ? (
+          {!isLoading && !activeError && events.length > 0 ? (
             <div style={{ display: 'grid', gap: 14, gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr' }}>
               {events.map((event) => {
                 const eventId = getEntityDocumentId(event);

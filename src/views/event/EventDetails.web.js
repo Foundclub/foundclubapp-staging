@@ -98,6 +98,7 @@ function EventDetails({ navigation, route }) {
     enabled: Boolean(eventId && userData?.documentId),
   });
   const [isSharing, setIsSharing] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   const myParticipations = useMemo(
     () => flattenPages(myParticipationPages?.pages),
@@ -112,6 +113,7 @@ function EventDetails({ navigation, route }) {
   }), [event?.missings, event?.participationRequests, event?.participations, myParticipations, userData]);
 
   const canEdit = Boolean(canManageEvent(event));
+  const hasEvent = Boolean(event);
   const isReservation = normalizeTypeName(event?.type?.name).includes('reservation');
   const facilityId = getEntityDocumentId(event?.facility);
   const eventLink = buildDeepLink(RouteNames.EventDetails, { eventId });
@@ -155,19 +157,21 @@ function EventDetails({ navigation, route }) {
   const accentColor = Colors?.primary500 || '#01b3f4';
 
   const handleJoin = useCallback(async () => {
+    setActionError('');
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
-      window.alert(joinError?.message || 'Impossible de rejoindre cet evenement.');
+      setActionError(joinError?.message || 'Impossible de rejoindre cet evenement.');
     }
   }, [createParticipationMutation]);
 
   const handleCancelParticipation = useCallback(async () => {
     if (!activeParticipationRequestId) return;
+    setActionError('');
     try {
       await cancelParticipationMutation.mutateAsync(activeParticipationRequestId);
     } catch (cancelError) {
-      window.alert(cancelError?.message || 'Impossible d annuler cette participation.');
+      setActionError(cancelError?.message || 'Impossible d annuler cette participation.');
     }
   }, [activeParticipationRequestId, cancelParticipationMutation]);
 
@@ -217,7 +221,7 @@ function EventDetails({ navigation, route }) {
               alignItems: 'stretch',
               display: 'grid',
               gap: 0,
-              gridTemplateColumns: isDesktop ? 'minmax(0, 1.2fr) 320px' : 'minmax(0, 1fr)',
+              gridTemplateColumns: isDesktop && hasEvent ? 'minmax(0, 1.2fr) 320px' : 'minmax(0, 1fr)',
             }}
           >
             <div style={{ display: 'grid', gap: 18, padding: isTablet ? 32 : 22 }}>
@@ -236,80 +240,87 @@ function EventDetails({ navigation, route }) {
                 >
                   Retour
                 </button>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  <button
-                    onClick={handleShare}
-                    style={{
-                      background: 'transparent',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: 999,
-                      color: textColor,
-                      cursor: 'pointer',
-                      padding: '10px 14px',
-                    }}
-                    type="button"
-                  >
-                    {isSharing ? 'Partage...' : 'Partager'}
-                  </button>
-                  {canEdit ? (
+                {hasEvent ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
-                      onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
+                      onClick={handleShare}
                       style={{
-                        background: accentColor,
-                        border: 0,
+                        background: 'transparent',
+                        border: `1px solid ${borderColor}`,
                         borderRadius: 999,
-                        color: '#001218',
+                        color: textColor,
                         cursor: 'pointer',
-                        fontFamily: 'Montserrat-Bold, sans-serif',
-                        padding: '10px 16px',
+                        padding: '10px 14px',
                       }}
                       type="button"
                     >
-                      Modifier
+                      {isSharing ? 'Partage...' : 'Partager'}
                     </button>
+                    {canEdit ? (
+                      <button
+                        onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
+                        style={{
+                          background: accentColor,
+                          border: 0,
+                          borderRadius: 999,
+                          color: '#001218',
+                          cursor: 'pointer',
+                          fontFamily: 'Montserrat-Bold, sans-serif',
+                          padding: '10px 16px',
+                        }}
+                        type="button"
+                      >
+                        Modifier
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              {hasEvent ? (
+                <>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      {event?.type?.name || 'Evenement'}
+                    </span>
+                    <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 38 : 30, lineHeight: 1.1, margin: 0 }}>
+                      {event?.name || event?.type?.name || 'Evenement'}
+                    </h1>
+                    <div style={{ color: mutedTextColor, display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                      <span>{formatDateTimeLabel(event?.date)}</span>
+                      {event?.startTime ? <span>{formatTimeLabel(event?.startTime)} - {formatTimeLabel(event?.endTime)}</span> : null}
+                      {event?.team?.name ? <span>{event.team.name}</span> : null}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                    {event?.facility?.name ? (
+                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                        {event.facility.name}
+                      </span>
+                    ) : null}
+                    {event?.validationMode ? (
+                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                        Validation {event.validationMode === 'manual' ? 'manuelle' : 'auto'}
+                      </span>
+                    ) : null}
+                    {event?.sessionStatus ? (
+                      <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
+                        Session {event.sessionStatus === 'closed' ? 'fermee' : 'ouverte'}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {String(event?.description || '').trim() ? (
+                    <p style={{ color: textColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840 }}>
+                      {String(event?.description || '').trim()}
+                    </p>
                   ) : null}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: 10 }}>
-                <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {event?.type?.name || 'Evenement'}
-                </span>
-                <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 38 : 30, lineHeight: 1.1, margin: 0 }}>
-                  {event?.name || event?.type?.name || 'Evenement'}
-                </h1>
-                <div style={{ color: mutedTextColor, display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-                  <span>{formatDateTimeLabel(event?.date)}</span>
-                  {event?.startTime ? <span>{formatTimeLabel(event?.startTime)} - {formatTimeLabel(event?.endTime)}</span> : null}
-                  {event?.team?.name ? <span>{event.team.name}</span> : null}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {event?.facility?.name ? (
-                  <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
-                    {event.facility.name}
-                  </span>
-                ) : null}
-                {event?.validationMode ? (
-                  <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
-                    Validation {event.validationMode === 'manual' ? 'manuelle' : 'auto'}
-                  </span>
-                ) : null}
-                {event?.sessionStatus ? (
-                  <span style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '9px 14px' }}>
-                    Session {event.sessionStatus === 'closed' ? 'fermee' : 'ouverte'}
-                  </span>
-                ) : null}
-              </div>
-
-              {String(event?.description || '').trim() ? (
-                <p style={{ color: textColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840 }}>
-                  {String(event?.description || '').trim()}
-                </p>
+                </>
               ) : null}
             </div>
 
+            {hasEvent ? (
             <div
               style={{
                 background: heroImage ? `linear-gradient(rgba(3, 13, 20, 0.22), rgba(3, 13, 20, 0.48)), url(${heroImage}) center/cover` : 'linear-gradient(160deg, rgba(1,179,244,0.16), rgba(23,56,68,0.4))',
@@ -378,12 +389,18 @@ function EventDetails({ navigation, route }) {
                   </button>
                 ) : null}
               </div>
+              {actionError ? (
+                <div style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
+                  {actionError}
+                </div>
+              ) : null}
               {event?.team?.club?.name ? (
                 <div style={{ color: mutedTextColor, fontSize: 13 }}>
                   Club organisateur: {event.team.club.name}
                 </div>
               ) : null}
             </div>
+            ) : null}
           </div>
         </section>
 
@@ -404,6 +421,17 @@ function EventDetails({ navigation, route }) {
         {isLoading ? (
           <section style={{ background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, padding: 22 }}>
             Chargement de l evenement...
+          </section>
+        ) : null}
+
+        {!isLoading && !error && !hasEvent ? (
+          <section style={{ background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 10, padding: 22 }}>
+            <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22 }}>
+              Evenement introuvable
+            </div>
+            <div>
+              Cet evenement n est plus disponible ou n a pas pu etre charge.
+            </div>
           </section>
         ) : null}
 

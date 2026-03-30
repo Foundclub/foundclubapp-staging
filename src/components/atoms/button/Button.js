@@ -1,5 +1,5 @@
 import {
-  Image, Text, TouchableOpacity, View,
+  Image, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 // Hooks
 import useTheme from '@/theme/themeContext';
@@ -24,6 +24,7 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {string} [props.accessibilityLabel]
  * @param {string} [props.accessibilityHint]
  * @param {import('react-native').AccessibilityRole} [props.accessibilityRole]
+ * @param {boolean} [props.submitOnEnter]
  * @returns {import('react').ReactElement}
  */
 function Button({
@@ -39,6 +40,7 @@ function Button({
   onPress,
   size = 'md',
   style,
+  submitOnEnter = false,
   textStyle,
   title,
   variant = 'Primary',
@@ -70,20 +72,39 @@ function Button({
     }
     : null;
   const sizeTextStyle = isSmall ? Fonts.p2Bold : null;
+  const isDisabled = isLoading || disabled;
+
+  /**
+   * @param {any} event
+   */
+  const handleKeyDown = (event) => {
+    if (Platform.OS !== 'web' || !submitOnEnter || isDisabled || !onPress) {
+      return;
+    }
+
+    if (event?.key !== 'Enter' && event?.key !== ' ') {
+      return;
+    }
+
+    event?.preventDefault?.();
+    onPress(event);
+  };
 
   return (
     <TouchableOpacity
       accessibilityHint={accessibilityHint}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}
-      disabled={isLoading || disabled}
+      disabled={isDisabled}
+      focusable={!isDisabled}
+      onKeyDown={handleKeyDown}
       onPress={onPress}
       style={[
         ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
         sizeStyle,
         !title && ApplicationStyle[`buttonIcon${isOption ? 'Option' : ''}`],
         !title && sizeIconStyle,
-        disabled && ApplicationStyle.buttonDisabled,
+        isDisabled && ApplicationStyle.buttonDisabled,
         style,
       ]}
     >

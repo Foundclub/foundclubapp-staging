@@ -1,7 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Joi from 'joi';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,10 +19,14 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Loader from '@/components/atoms/loader/Loader';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetFacility } from '@/services/facility/facilityQueries';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
 import {
   FACILITY_PLANNING_PALETTE,
@@ -117,6 +121,15 @@ const getCapacityLabel = (value, t) => {
   return `${teams} ${unit}`;
 };
 
+const sanitizeRouteParam = (value) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue || normalizedValue.startsWith(':')) {
+    return null;
+  }
+
+  return normalizedValue;
+};
+
 /**
  * Facility create/update screen.
  * @returns {import('react').ReactElement}
@@ -129,23 +142,44 @@ function FacilityForm() {
   const navigation = useNavigation();
   const route = useRoute();
   const { userData } = useAuth();
-  const facility = route.params?.facility;
-  const isEdit = !!facility;
+  const routedFacility = route.params?.facility || null;
+  const routedFacilityId = sanitizeRouteParam(route.params?.facilityId);
+  const {
+    data: fetchedFacility,
+    error: facilityError,
+    isLoading: facilityLoading,
+    refetch: refetchFacility,
+  } = useGetFacility(routedFacilityId, {
+    enabled: Boolean(routedFacilityId && !routedFacility),
+  });
+  const facility = routedFacility || fetchedFacility || null;
+  const isEdit = Boolean(routedFacilityId || facility?.documentId || facility?.id);
+  const contextClubId = route.params?.clubId
+    || facility?.club?.documentId
+    || facility?.club?.id
+    || userData?.club?.documentId
+    || userData?.club?.id
+    || null;
+  const contextCmId = route.params?.cmId
+    || facility?.multisportClub?.documentId
+    || facility?.multisportClub?.id
+    || null;
 
   const {
     clearErrors,
     control,
     formState: { errors },
     handleSubmit,
+    reset,
     setError,
     watch,
   } = useForm({
     defaultValues: {
-      address: facility?.address || null,
-      maxSlots: Number(facility?.maxSlots || 1),
-      name: facility?.name || '',
-      planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
-      type: facility?.type || 'Terrain',
+      address: null,
+      maxSlots: 1,
+      name: '',
+      planningColor: FACILITY_PLANNING_PALETTE[0],
+      type: 'Terrain',
     },
     resolver: joiResolver(schema),
   });
@@ -157,6 +191,31 @@ function FacilityForm() {
   const watchedAddress = watch('address');
   const watchedMaxSlots = watch('maxSlots');
   const watchedPlanningColor = watch('planningColor');
+  const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId;
+  const isFacilityNotFound = isEdit && !facilityLoading && !facilityError && !facility;
+
+  useEffect(() => {
+    if (facility) {
+      reset({
+        address: facility?.address || null,
+        maxSlots: Number(facility?.maxSlots || 1),
+        name: facility?.name || '',
+        planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
+        type: facility?.type || 'Terrain',
+      });
+      return;
+    }
+
+    if (!isEdit) {
+      reset({
+        address: null,
+        maxSlots: 1,
+        name: '',
+        planningColor: FACILITY_PLANNING_PALETTE[0],
+        type: 'Terrain',
+      });
+    }
+  }, [facility, isEdit, reset]);
 
   const subtitle = useMemo(() => (
     isEdit
@@ -165,10 +224,9 @@ function FacilityForm() {
   ), [isEdit, t]);
 
   const handleSave = async (data) => {
-    const clubId = route.params?.clubId || (userData?.club?.documentId || userData?.club?.id);
-    const cmId = route.params?.cmId;
+    const facilityDocumentId = facility?.documentId || facility?.id || routedFacilityId;
 
-    if (!clubId && !cmId) {
+    if (!isEdit && !contextClubId && !contextCmId) {
       Alert.alert(
         t('common.error', 'Erreur'),
         t('facilityForm.errors.contextMissing', 'Impossible de récupérer les informations du club.'),
@@ -197,11 +255,14 @@ function FacilityForm() {
     setLoading(true);
     try {
       if (isEdit) {
-        await updateFacility(facility.documentId, formattedData);
-      } else if (clubId) {
-        await createFacility({ ...formattedData, club: clubId });
-      } else if (cmId) {
-        await createFacility({ ...formattedData, multisportClub: cmId });
+        if (!facilityDocumentId) {
+          throw new Error('Missing facility id');
+        }
+        await updateFacility(facilityDocumentId, formattedData);
+      } else if (contextClubId) {
+        await createFacility({ ...formattedData, club: contextClubId });
+      } else if (contextCmId) {
+        await createFacility({ ...formattedData, multisportClub: contextCmId });
       } else {
         throw new Error('No clubId or cmId provided');
       }
@@ -209,7 +270,7 @@ function FacilityForm() {
     } catch (error) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('facilityForm.errors.saveFailed', 'Une erreur est survenue lors de l\'enregistrement.'),
+        error?.message || t('facilityForm.errors.saveFailed', 'Une erreur est survenue lors de l\'enregistrement.'),
       );
     } finally {
       setLoading(false);
@@ -250,6 +311,66 @@ function FacilityForm() {
       </View>
     );
   };
+
+  if (isEdit && facilityLoading && !facility) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}
+      >
+        <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+          <Loader />
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            Chargement de l installation...
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isEdit && facilityError && !facility) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+            Impossible de charger l installation
+          </Text>
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            {facilityError?.message || 'Reessayez dans quelques instants.'}
+          </Text>
+          <Button onPress={() => refetchFacility()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isFacilityNotFound || isMissingCreateContext) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+            {isFacilityNotFound ? 'Installation introuvable' : 'Contexte club introuvable'}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            {isFacilityNotFound
+              ? 'Le lien est peut-etre obsolete ou cette installation a ete supprimee.'
+              : 'Impossible de determiner pour quel club creer cette installation.'}
+          </Text>
+          <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
+          {isFacilityNotFound ? (
+            <Button onPress={() => refetchFacility()} title="Reessayer" variant="Primary" />
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

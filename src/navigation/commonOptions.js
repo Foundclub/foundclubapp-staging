@@ -59,43 +59,57 @@ export const getTabScreenCommonOptions = ({
   label,
   labelScheme = 'light',
   renderTabBarIcon = undefined,
-}) => ({
-  tabBarAccessibilityLabel: label,
-  tabBarActiveTintColor: activeColor,
-  tabBarIcon: icon && renderTabBarIcon
-  /**
-   * Render tab bar icon.
-   * @param {object} props - Component props.
-   * @param {string} props.color - Icon color.
-   * @returns {React.ReactElement} TabBarIcon component.
-   */
-    ? ({ color }) => renderTabBarIcon({
-      badge,
-      badgeColor: activeColor,
-      color,
-      label,
-      source: icon,
-    }) : undefined,
-  tabBarIconStyle: {
-    display: icon ? 'flex' : 'none',
-  },
-  tabBarInactiveTintColor: getLabelColor(labelScheme, false),
-  tabBarLabel: label,
-  tabBarLabelStyle: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 10,
-    lineHeight: 16,
-  },
-  tabBarStyle: {
-    backgroundColor: getThemeColors().primary700,
-    borderTopColor: getThemeColors().primary900,
-    borderTopWidth: 1,
-    elevation: 0,
-    height: Platform.OS === 'ios' ? 80 : 80 + bottomInset,
-    marginBottom: 0,
-    shadowColor: 'transparent',
-    shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-  },
-});
+}) => {
+  const isWeb = Platform.OS === 'web';
+  const tabBarPaddingTop = isWeb ? 10 : 6;
+  const tabBarPaddingBottom = isWeb ? Math.max(bottomInset, 14) : Math.max(bottomInset, 8);
+  const tabBarHeight = 80 + tabBarPaddingTop + tabBarPaddingBottom;
+
+  return ({
+    tabBarAccessibilityLabel: label,
+    tabBarActiveTintColor: activeColor,
+    tabBarIcon: icon && renderTabBarIcon
+      /**
+       * Render tab bar icon.
+       * @param {object} props - Component props.
+       * @param {string} props.color - Icon color.
+       * @returns {React.ReactElement} TabBarIcon component.
+       */
+      ? ({ color }) => renderTabBarIcon({
+        badge,
+        badgeColor: activeColor,
+        color,
+        label,
+        source: icon,
+      }) : undefined,
+    tabBarIconStyle: {
+      display: icon ? 'flex' : 'none',
+    },
+    tabBarInactiveTintColor: getLabelColor(labelScheme, false),
+    tabBarItemStyle: {
+      justifyContent: 'center',
+      paddingBottom: isWeb ? 2 : 0,
+      paddingTop: isWeb ? 2 : 0,
+    },
+    tabBarLabel: label,
+    tabBarLabelStyle: {
+      fontFamily: 'Montserrat-Bold',
+      fontSize: 10,
+      lineHeight: 16,
+    },
+    tabBarStyle: {
+      backgroundColor: getThemeColors().primary700,
+      borderTopColor: getThemeColors().primary900,
+      borderTopWidth: 1,
+      elevation: 0,
+      height: Platform.OS === 'ios' && !isWeb ? 80 : tabBarHeight,
+      marginBottom: 0,
+      paddingBottom: tabBarPaddingBottom,
+      paddingTop: tabBarPaddingTop,
+      shadowColor: 'transparent',
+      shadowOffset: { height: 0, width: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    },
+  });
+};

@@ -103,3 +103,11 @@ src/inspect_*
 
 # Local analysis artifacts
 .tmp/
+.tmp-bundle/
+.tmp-bundle-assets/
+NUL
+
+# Local bundle/debug workdirs
+.codex-tmp/encoding-copy-pass/
+.codex-tmp/encoding-fix/
+.codex-tmp/team-actions/

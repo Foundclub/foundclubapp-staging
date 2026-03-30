@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
+import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -27,7 +28,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { removeTrainerFromClub } from '@/services/auth/authService';
+import { leaveClub, removeTrainerFromClub } from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimClub, updateClub } from '@/services/club/clubService';
@@ -200,6 +201,7 @@ function ClubDetails({ navigation, route }) {
   const {
     data: club,
     error,
+    isFetching,
     isLoading,
     refetch,
   } = useGetClub(clubId ?? '');
@@ -222,6 +224,22 @@ function ClubDetails({ navigation, route }) {
   const deleteTrainerMutation = useMutation({
     mutationFn: removeTrainerFromClub,
     onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const leaveClubMutation = useMutation({
+    mutationFn: leaveClub,
+    onError: (mutationError) => {
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('clubDetails.alerts.leave.error', 'Impossible de quitter ce club pour le moment.');
+
+      Alert.alert(t('common.error', 'Erreur'), errorMessage);
+    },
+    onSuccess: () => {
+      refetchUserData();
       refetch();
     },
   });
@@ -602,6 +620,31 @@ function ClubDetails({ navigation, route }) {
     }
   };
 
+  const handleLeaveClub = useCallback(() => {
+    leaveClubMutation.mutate();
+  }, [leaveClubMutation]);
+
+  const handleAskToLeaveClub = useCallback(() => {
+    Alert.alert(
+      t('clubDetails.alerts.leave.title', 'Quitter le club ?'),
+      t(
+        'clubDetails.alerts.leave.description',
+        'Vous ne serez plus lie a ce club ni a ses equipes en tant qu encadrant. Etes-vous sur de vouloir continuer ?',
+      ),
+      [
+        {
+          style: 'cancel',
+          text: t('clubDetails.alerts.leave.actions.cancel', 'Annuler'),
+        },
+        {
+          onPress: handleLeaveClub,
+          style: 'destructive',
+          text: t('clubDetails.alerts.leave.actions.confirm', 'Quitter le club'),
+        },
+      ],
+    );
+  }, [handleLeaveClub, t]);
+
   const handleAskToJoinClub = () => {
     if (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending) {
       return;
@@ -786,6 +829,14 @@ function ClubDetails({ navigation, route }) {
   const isCoachOfViewedClub = useMemo(() => (
     (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
   ), [clubId, userData?.trainedTeams]);
+
+  const canLeaveClub = useMemo(() => {
+    const currentClubId = userData?.club?.documentId || userData?.club?.id;
+    const currentRole = userData?.role?.name;
+
+    return Boolean(currentClubId && clubId && currentClubId === clubId)
+      && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
+  }, [USER_ROLES.coach, USER_ROLES.president, clubId, userData?.club, userData?.role?.name]);
 
   const isMultisportAdmin = useMemo(() => (
     (userData?.multisportClubs || []).some((multisportClub) => multisportClub?.documentId === resolvedFacilityCmId)
@@ -1124,6 +1175,87 @@ function ClubDetails({ navigation, route }) {
     </View>
   );
 
+  const isMissingClubId = !clubId;
+  const isInitialClubLoading = isLoading && !club;
+  const isRefreshing = isFetching && !isLoading;
+  const isClubLoadingError = Boolean(error) && !club;
+  const isClubNotFound = Boolean(clubId) && !isLoading && !error && !club;
+
+  if (isInitialClubLoading) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.justifyCenter,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+          <Loader />
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            Chargement du club...
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isClubLoadingError) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.justifyCenter,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            Impossible de charger le club
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {error?.message || 'Reessayez dans quelques instants.'}
+          </Text>
+          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isMissingClubId || isClubNotFound) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Alignments.column,
+          Alignments.justifyCenter,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {isMissingClubId ? 'Club introuvable' : 'Ce club est introuvable'}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {isMissingClubId
+              ? 'Aucun identifiant de club n a ete fourni.'
+              : 'Le lien est peut-etre obsolete ou le club a ete supprime.'}
+          </Text>
+          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          {!isMissingClubId ? (
+            <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -1141,14 +1273,12 @@ function ClubDetails({ navigation, route }) {
         refreshControl={(
           <RefreshControl
             onRefresh={refetch}
-            refreshing={isLoading}
+            refreshing={isRefreshing}
           />
         )}
         showsVerticalScrollIndicator={false}
       >
         <WithDataWrapper
-          error={error?.message}
-          isLoading={isLoading}
           wrapperStyle={[Spaces.gap[32]]}
         >
           <View style={[
@@ -1714,6 +1844,7 @@ function ClubDetails({ navigation, route }) {
                                 isOption
                                 onPress={() => {
                                   inviteTrainer({
+                                    clubId: club?.documentId,
                                     clubName: club?.name,
                                     firstname: user.firstname,
                                     phoneNumber: user.phoneNumber,
@@ -1842,6 +1973,22 @@ function ClubDetails({ navigation, route }) {
             style={Spaces.marginBottom[24]}
             title={t('clubDetails.actions.contactTrainers')}
             variant="Primary"
+          />
+        ) : null
+      }
+      {
+        canLeaveClub ? (
+          <Button
+            disabled={leaveClubMutation.isPending}
+            onPress={handleAskToLeaveClub}
+            style={[
+              Spaces.marginTop[12],
+              Spaces.marginBottom[24],
+              { backgroundColor: `${Colors.error500}12`, borderColor: Colors.error500 },
+            ]}
+            textStyle={{ color: Colors.error500 }}
+            title={t('clubDetails.actions.leave', 'Quitter le club')}
+            variant="Secondary"
           />
         ) : null
       }

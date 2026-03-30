@@ -1,30 +1,33 @@
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 import { renderMap } from '@/platform/maps';
 
 /**
- * Lightweight web fallback for the mobile map explorer.
+ * Web map explorer aligned with the shared mobile props.
  * @param {object} props
- * @param {() => void} [props.onToggleMap]
+ * @param {any[]} [props.items]
+ * @param {(item: any) => void} [props.onMarkerPress]
+ * @param {'event' | 'club'} [props.type]
  * @returns {import('react').ReactElement}
  */
-function SearchMap({ onToggleMap }) {
+function SearchMap({ items = [], onMarkerPress, type = 'event' }) {
   const { Spaces } = useTheme();
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onToggleMap}
-      style={[Spaces.marginTop[12]]}
-    >
-      <View>
+    <View style={[Spaces.marginTop[12], { minHeight: 320 }]}>
+      <View style={{ flex: 1 }}>
         {renderMap({
           height: 320,
-          message: 'La carte FoundClub sera adaptee pour le web dans une prochaine vague.',
+          items,
+          message: type === 'club'
+            ? 'Aucun club geolocalisable pour le moment.'
+            : 'Aucun evenement geolocalisable pour le moment.',
+          onMarkerPress,
+          type,
         })}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 

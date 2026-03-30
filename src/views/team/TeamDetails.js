@@ -98,10 +98,11 @@ function TeamDetails({ navigation, route }) {
     getPostOnboardingHomeRoute,
     inviteTeamPlayers,
     refetchUserData,
+    USER_ROLES: AUTH_USER_ROLES,
     userData: currentUser,
   } = useAuth();
   const { getClubInitials } = useClub();
-  const { startTeamChat } = useMessaging();
+  const { startTeamChat, startWhisperChat } = useMessaging();
   const isMyTeam = useMemo(
     () => {
       const allMyTeams = (currentUser?.myTeams || [])?.concat(currentUser?.trainedTeams || []);
@@ -119,7 +120,7 @@ function TeamDetails({ navigation, route }) {
   }, [currentUser?.myTeams, currentUser?.trainedTeams, teamId]);
 
   const {
-    data: team, error, isLoading, refetch,
+    data: team, error, isFetching, isLoading, refetch,
   } = useGetTeam(teamId);
   const { data: clubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId);
   const { data: teamStatsData, isLoading: isTeamStatsLoading, refetch: refetchTeamStats } = useGetTeamStats(
@@ -543,7 +544,12 @@ function TeamDetails({ navigation, route }) {
     onSuccess: () => {
       Alert.alert(
         t('teamDetails.alerts.joinRequest.title'),
-        t('teamDetails.alerts.joinRequest.description'),
+        currentUser?.role?.name === AUTH_USER_ROLES.coach && isMyClub && !isMyTeam
+          ? t(
+            'teamDetails.alerts.joinRequest.coachDescription',
+            "Les entraineurs de l'equipe et le dirigeant du club vont recevoir votre demande.",
+          )
+          : t('teamDetails.alerts.joinRequest.description'),
         [{
           onPress: () => {
             refetchUserData();
@@ -1255,12 +1261,38 @@ function TeamDetails({ navigation, route }) {
     );
   }, [currentUser, teamId]);
 
+  const trainerContactIds = useMemo(
+    () => (team?.trainers || [])
+      .map((trainer) => trainer?.documentId)
+      .filter((trainerId) => Boolean(trainerId) && trainerId !== currentUser?.documentId),
+    [currentUser?.documentId, team?.trainers],
+  );
+
+  const canCoachRequestJoinViewedTeam = useMemo(() => (
+    currentUser?.role?.name === AUTH_USER_ROLES.coach
+    && isMyClub
+    && !isMyTeam
+    && Boolean(teamId)
+  ), [AUTH_USER_ROLES.coach, currentUser?.role?.name, isMyClub, isMyTeam, teamId]);
+
+  const canContactViewedTeamTrainers = useMemo(() => (
+    currentUser?.role?.name === AUTH_USER_ROLES.coach
+    && isMyClub
+    && !isMyTeam
+    && trainerContactIds.length > 0
+  ), [AUTH_USER_ROLES.coach, currentUser?.role?.name, isMyClub, isMyTeam, trainerContactIds.length]);
+
   const handleJoinTeam = useCallback(() => {
     const userId = currentUser?.documentId;
     if (teamId && userId) {
       Alert.alert(
-        t('teamDetails.alerts.joinRequest.title'),
-        t('teamDetails.alerts.joinRequest.description'),
+        t('teamDetails.actions.joinRequest', "Demander a rejoindre l'equipe"),
+        canCoachRequestJoinViewedTeam
+          ? t(
+            'teamDetails.alerts.joinRequest.coachDescription',
+            "Les entraineurs de l'equipe et le dirigeant du club vont recevoir votre demande.",
+          )
+          : t('teamDetails.alerts.joinRequest.description'),
         [
           {
             style: 'cancel',
@@ -1278,7 +1310,29 @@ function TeamDetails({ navigation, route }) {
         ],
       );
     }
-  }, [teamId, createTeamMembershipRequestMutation, currentUser?.documentId, t]);
+  }, [canCoachRequestJoinViewedTeam, teamId, createTeamMembershipRequestMutation, currentUser?.documentId, t]);
+
+  const handleContactTeamTrainers = useCallback(async () => {
+    if (!trainerContactIds.length) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('teamDetails.actions.noTrainerContact', "Aucun entraineur n'est disponible pour cette equipe."),
+      );
+      return;
+    }
+
+    try {
+      const chat = await startWhisperChat(trainerContactIds);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (contactError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        contactError?.message || t('teamDetails.actions.contactTrainersError', "Impossible d'ouvrir la conversation pour le moment."),
+      );
+    }
+  }, [navigation, startWhisperChat, t, trainerContactIds]);
 
   const handleLeaveTeam = useCallback(() => {
     if (teamId && currentUser?.documentId) {
@@ -1372,9 +1426,11 @@ function TeamDetails({ navigation, route }) {
   const showTeamChatAction = canManageTeam && allMembers?.length > 1 && isMyTeam;
   const showDefaultCompositionAction = canManageTeam;
   const showLeaveAction = isMyTeam;
-  const showJoinAction = canJoinTeam(teamId);
+  const showContactTrainersAction = canContactViewedTeamTrainers;
+  const showJoinAction = canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
   const hasTeamActionsPanel = showEditAction
     || showTeamChatAction
+    || showContactTrainersAction
     || showDefaultCompositionAction
     || showLeaveAction
     || showJoinAction;
@@ -1924,6 +1980,90 @@ function TeamDetails({ navigation, route }) {
     );
   };
 
+  const isMissingTeamId = !teamId;
+  const isInitialTeamLoading = isLoading && !team;
+  const isRefreshing = isFetching && !isLoading;
+  const isTeamLoadingError = Boolean(error) && !team;
+  const isTeamNotFound = Boolean(teamId) && !isLoading && !error && !team;
+
+  if (isInitialTeamLoading) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingBottom[32],
+          Spaces.gap[16],
+          Alignments.justifyCenter,
+          Alignments.column,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+          <Loader />
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            Chargement de l equipe...
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isTeamLoadingError) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingBottom[32],
+          Spaces.gap[16],
+          Alignments.justifyCenter,
+          Alignments.column,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            Impossible de charger l equipe
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {error?.message || 'Reessayez dans quelques instants.'}
+          </Text>
+          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (isMissingTeamId || isTeamNotFound) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.paddingBottom[32],
+          Spaces.gap[16],
+          Alignments.justifyCenter,
+          Alignments.column,
+          Alignments.fill,
+        ]}
+      >
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {isMissingTeamId ? 'Equipe introuvable' : 'Cette equipe est introuvable'}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {isMissingTeamId
+              ? 'Aucun identifiant d equipe n a ete fourni.'
+              : 'Le lien est peut-etre obsolete ou l equipe a ete supprimee.'}
+          </Text>
+          <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+          {!isMissingTeamId ? (
+            <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -1995,15 +2135,13 @@ function TeamDetails({ navigation, route }) {
         refreshControl={(
           <RefreshControl
             onRefresh={refetch}
-            refreshing={isLoading}
+            refreshing={isRefreshing}
           />
         )}
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
         <WithDataWrapper
-          error={error?.message}
-          isLoading={isLoading}
           wrapperStyle={[Alignments.fill]}
         >
           {/* TAB CONTENT: INFOS */}
@@ -2279,6 +2417,7 @@ function TeamDetails({ navigation, route }) {
                       isOption
                       onPress={() => inviteTeamPlayers({
                         clubName: team?.club?.name,
+                        teamId: team?.documentId || teamId,
                         teamName: team?.name,
                       })}
                       variant="Primary"
@@ -3442,6 +3581,20 @@ function TeamDetails({ navigation, route }) {
                   />
                 ) : null}
 
+                {showContactTrainersAction ? (
+                  <Button
+                    icon="envelope"
+                    iconPosition="before"
+                    onPress={handleContactTeamTrainers}
+                    title={
+                      trainerContactIds.length > 1
+                        ? t('teamDetails.actions.contactTrainers', 'Contacter les entraineurs')
+                        : t('teamDetails.actions.contactTrainer', "Contacter l'entraineur")
+                    }
+                    variant="Secondary"
+                  />
+                ) : null}
+
                 {showLeaveAction ? (
                   <Button
                     onPress={handleAskToLeave}
@@ -3459,7 +3612,9 @@ function TeamDetails({ navigation, route }) {
                     title={
                       pendingRequest
                         ? t('teamDetails.actions.requestPending', 'Demande en attente')
-                        : t('teamDetails.actions.join')
+                        : canCoachRequestJoinViewedTeam
+                          ? t('teamDetails.actions.joinRequest', "Demander a rejoindre l'equipe")
+                          : t('teamDetails.actions.join')
                     }
                     variant={pendingRequest ? 'Secondary' : 'Primary'}
                   />

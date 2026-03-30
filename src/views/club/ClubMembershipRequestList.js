@@ -120,6 +120,13 @@ function ClubMembershipRequestList({ navigation, route }) {
       return acc.concat(items);
     }, [])
     || [], [requestPages]);
+  const isMissingClubId = !clubId;
+  const isMutating = acceptRequestMutation.isPending || rejectRequestMutation.isPending;
+  const initialErrorMessage = extractApiErrorMessage(error)
+    || t(
+      'clubMembershipRequestList.errors.load',
+      'Impossible de charger les demandes du club pour le moment.',
+    );
 
   const acceptRequestMutation = useMutation({
     mutationFn: acceptClubMembershipRequest,
@@ -342,16 +349,20 @@ function ClubMembershipRequestList({ navigation, route }) {
           />
           <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
             <Button
+              disabled={isMutating}
               icon="check"
               isOption
+              isLoading={acceptRequestMutation.isPending}
               onPress={() => handleAcceptRequest(item.documentId)}
               style={[Alignments.fill, { minHeight: 42 }]}
               title={t('clubMembershipRequestList.actions.accept')}
               variant="Primary"
             />
             <Button
+              disabled={isMutating}
               icon="close"
               isOption
+              isLoading={rejectRequestMutation.isPending}
               onPress={() => handleRejectRequest(item.documentId)}
               style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
               textStyle={[Fonts.error500]}
@@ -379,6 +390,78 @@ function ClubMembershipRequestList({ navigation, route }) {
       </Text>
     </View>
   );
+
+  if (isMissingClubId) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Alignments.fill,
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[16],
+          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[24],
+        ]}
+      >
+        <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+          {t('clubMembershipRequestList.errors.missingClubTitle', 'Club introuvable')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+          {t(
+            'clubMembershipRequestList.errors.missingClubBody',
+            "Impossible d'ouvrir ces demandes sans identifiant de club.",
+          )}
+        </Text>
+        <Button
+          onPress={() => navigateToRequestsHub(navigation, {
+            initialFilter: 'club',
+            source: 'profile',
+          })}
+          title={t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+          variant="Primary"
+        />
+      </ScreenContainer>
+    );
+  }
+
+  if (error && requests.length === 0 && !isLoading) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Alignments.fill,
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[16],
+          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[24],
+        ]}
+      >
+        <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+          {t('clubMembershipRequestList.errors.loadTitle', 'Chargement impossible')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+          {initialErrorMessage}
+        </Text>
+        <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
+          <Button
+            onPress={() => refetch()}
+            title={t('common.actions.retry', 'Reessayer')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'club',
+              source: 'profile',
+            })}
+            title={t('common.actions.back', 'Retour')}
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <TutorialFlowBoundary
@@ -469,4 +552,3 @@ function ClubMembershipRequestList({ navigation, route }) {
 }
 
 export default ClubMembershipRequestList;
-

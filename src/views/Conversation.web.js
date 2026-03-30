@@ -21,7 +21,7 @@ import { BREAKPOINTS } from '@/responsive'
 import ScreenContainer from '@/components/templates/ScreenContainer'
 import { RouteNames } from '@/navigation/routeNames'
 import { openUrl } from '@/platform/links'
-import { pickDocument, pickImage } from '@/platform/media'
+import { pickDocument, pickImage, recordVoiceNote } from '@/platform/media'
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat'
 import { createChatMessage } from '@/services/chat/chatService'
 import client from '@/services/client'
@@ -144,6 +144,17 @@ const buildEventShareComposition = (event) => {
   }
 }
 
+const getErrorMessage = (error, fallback) => String(error?.message || fallback || 'Une erreur est survenue.')
+  .trim()
+
+const formatDurationLabel = (durationMs) => {
+  const totalSeconds = Math.max(0, Math.round(Number(durationMs || 0) / 1000))
+  if (!totalSeconds) return ''
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return minutes > 0 ? `${minutes}:${String(seconds).padStart(2, '0')}` : `${seconds}s`
+}
+
 function Conversation({ navigation, route }) {
   const chatId = String(route?.params?.chatId || '').trim()
   const queryClient = useQueryClient()
@@ -181,20 +192,29 @@ function Conversation({ navigation, route }) {
   const [proposalEndTime, setProposalEndTime] = useState('')
   const [proposalVenue, setProposalVenue] = useState('')
   const [proposalAddress, setProposalAddress] = useState('')
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
+  const [isStoppingVoice, setIsStoppingVoice] = useState(false)
+  const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const messagePaneRef = useRef(null)
   const typingTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   const handledSharedEventFromPickerRef = useRef('')
+  const voiceRecorderRef = useRef(null)
 
   const {
     data: chatData,
+    error: chatError,
     isLoading: isChatLoading,
+    refetch: refetchChat,
   } = useGetChatById(chatId)
   const {
     data: messagesPages,
+    error: messagesError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isLoading: isMessagesLoading,
+    refetch: refetchMessages,
   } = useGetChatMessages({ chatId, pageSize: 30 })
   const { data: sharedEventsPages } = useGetEvents({
     excludeType: 'Reservation',
@@ -236,6 +256,11 @@ function Conversation({ navigation, route }) {
   const latestMessageId = messages.length > 0 ? getMessageId(messages[messages.length - 1]) : ''
   const leagueMatchId = getEntityDocumentId(chatData?.league_match)
   const isLeagueConversation = chatData?.type === 'league_match'
+  const canUseConversationActions = Boolean(chatId && chatData)
+  const isVoiceRecordingSupported = typeof window !== 'undefined'
+    && typeof navigator !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia)
+    && typeof window.MediaRecorder !== 'undefined'
 
   const invalidateConversationQueries = useCallback(async () => {
     await Promise.all([
@@ -252,6 +277,14 @@ function Conversation({ navigation, route }) {
     joinChat(chatId)
     return () => leaveChat(chatId)
   }, [chatId, joinChat, leaveChat])
+
+  useEffect(() => () => {
+    const recorder = voiceRecorderRef.current
+    voiceRecorderRef.current = null
+    if (recorder?.cancel) {
+      recorder.cancel().catch(() => undefined)
+    }
+  }, [])
 
   useEffect(() => {
     if (!chatId || !latestMessageId) return
@@ -428,6 +461,72 @@ function Conversation({ navigation, route }) {
     }
   }, [sendPickedFile])
 
+  const handleSendVoiceNote = useCallback(async (voiceNote) => {
+    if (!voiceNote?.file || !chatId) return
+
+    setIsUploading(true)
+    try {
+      const uploadedFiles = await uploadAttachment(voiceNote.file)
+      if (!uploadedFiles.length) {
+        window.alert('Aucune note vocale n a pu etre televersee.')
+        return
+      }
+
+      await sendChatPayload({
+        attachments: uploadedFiles,
+        composition: {
+          durationMs: Number(voiceNote?.durationMs || 0) || 0,
+          mime: voiceNote?.mime || voiceNote?.file?.type || uploadedFiles?.[0]?.mime || 'audio/webm',
+          size: Number(voiceNote?.size || voiceNote?.file?.size || 0) || 0,
+          type: 'voice_note',
+          version: 1,
+          waveform: [],
+        },
+        message: composerText.trim(),
+        replyTo: replyTarget,
+      })
+    } catch (error) {
+      window.alert(error?.message || 'Impossible d envoyer cette note vocale.')
+    } finally {
+      setIsUploading(false)
+    }
+  }, [chatId, composerText, replyTarget, sendChatPayload, uploadAttachment])
+
+  const handleVoiceNote = useCallback(async () => {
+    if (!isRecordingVoice) {
+      try {
+        const recorder = await recordVoiceNote()
+        voiceRecorderRef.current = recorder
+        setIsRecordingVoice(true)
+      } catch (error) {
+        window.alert(error?.message || 'L enregistrement vocal n est pas disponible sur ce navigateur.')
+      }
+      return
+    }
+
+    const activeRecorder = voiceRecorderRef.current
+    if (!activeRecorder?.stop) {
+      voiceRecorderRef.current = null
+      setIsRecordingVoice(false)
+      return
+    }
+
+    setIsStoppingVoice(true)
+    try {
+      const result = await activeRecorder.stop()
+      voiceRecorderRef.current = null
+      setIsRecordingVoice(false)
+      await handleSendVoiceNote(result)
+    } catch (error) {
+      if (error?.message !== 'VOICE_NOTE_RECORDING_CANCELLED') {
+        window.alert(error?.message || 'Impossible de finaliser cette note vocale.')
+      }
+    } finally {
+      setIsStoppingVoice(false)
+      setIsRecordingVoice(false)
+    }
+  }, [handleSendVoiceNote, isRecordingVoice])
+
   const handleSendText = useCallback(async () => {
     const trimmed = composerText.trim()
     if (!trimmed || !chatId) return
@@ -523,6 +622,7 @@ function Conversation({ navigation, route }) {
       return
     }
 
+    setIsSubmittingPoll(true)
     try {
       await sendChatPayload({
         composition: createPollComposition({
@@ -539,6 +639,8 @@ function Conversation({ navigation, route }) {
       setIsAnonymousPoll(false)
     } catch (error) {
       window.alert(error?.message || 'Impossible de creer ce sondage.')
+    } finally {
+      setIsSubmittingPoll(false)
     }
   }, [
     allowMultipleVotes,
@@ -593,6 +695,7 @@ function Conversation({ navigation, route }) {
       return
     }
 
+    setIsSubmittingProposal(true)
     try {
       const startIso = new Date(`${proposalDate}T${proposalStartTime}:00`).toISOString()
       const endIso = proposalEndTime
@@ -618,6 +721,8 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       window.alert(error?.message || 'Impossible d envoyer cette proposition.')
+    } finally {
+      setIsSubmittingProposal(false)
     }
   }, [
     chatData?.league_match?.location,
@@ -656,6 +761,82 @@ function Conversation({ navigation, route }) {
   const panelBackground = 'rgba(4, 18, 28, 0.78)'
   const borderColor = 'rgba(255, 255, 255, 0.08)'
   const primaryColor = Colors?.primary500 || '#01b3f4'
+  const canSendText = Boolean(composerText.trim())
+    && canUseConversationActions
+    && !isSending
+    && !isUploading
+    && !isRecordingVoice
+    && !isStoppingVoice
+  const validPollOptionCount = pollOptions.map((option) => option.trim()).filter(Boolean).length
+  const canSubmitPoll = Boolean(pollQuestion.trim())
+    && validPollOptionCount >= 2
+    && canUseConversationActions
+    && !isSubmittingPoll
+    && !isUploading
+    && !isRecordingVoice
+  const canSubmitProposal = Boolean(proposalDate && proposalStartTime)
+    && canUseConversationActions
+    && !isSubmittingProposal
+    && !isUploading
+    && !isRecordingVoice
+
+  const renderStateCard = useCallback(({
+    actionLabel,
+    description,
+    onAction,
+    title,
+  }) => (
+    <section style={{
+      background: panelBackground,
+      border: `1px solid ${borderColor}`,
+      borderRadius: 28,
+      color: baseTextColor,
+      display: 'grid',
+      gap: 14,
+      justifyItems: 'start',
+      margin: '0 auto',
+      maxWidth: 760,
+      padding: 28,
+      width: '100%',
+    }}
+    >
+      <div style={{ display: 'grid', gap: 8 }}>
+        <span style={{ color: mutedTextColor, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Messagerie
+        </span>
+        <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0 }}>
+          {title}
+        </h1>
+      </div>
+      <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
+        {description}
+      </div>
+      {onAction ? (
+        <button
+          onClick={onAction}
+          style={{
+            background: primaryColor,
+            border: 0,
+            borderRadius: 999,
+            color: '#001218',
+            cursor: 'pointer',
+            fontFamily: 'Montserrat-Bold, sans-serif',
+            padding: '12px 18px',
+          }}
+          type="button"
+        >
+          {actionLabel || 'Reessayer'}
+        </button>
+      ) : null}
+    </section>
+  ), [baseTextColor, borderColor, mutedTextColor, panelBackground, primaryColor])
+
+  const retryConversationLoad = useCallback(async () => {
+    await Promise.all([
+      refetchChat(),
+      refetchMessages(),
+    ])
+  }, [refetchChat, refetchMessages])
 
   const renderAttachments = useCallback((attachments = []) => (
     <div style={{ display: 'grid', gap: 10 }}>
@@ -915,9 +1096,28 @@ function Conversation({ navigation, route }) {
     }
 
     if (composition.type === 'voice_note') {
+      const voiceAttachment = Array.isArray(message?.attachments)
+        ? message.attachments.find((attachment) => Boolean(getAttachmentUrl(attachment)))
+        : null
+      const voiceUrl = getAttachmentUrl(voiceAttachment)
+      const durationLabel = formatDurationLabel(composition?.durationMs)
       return (
-        <div style={{ color: mutedTextColor, fontSize: 13 }}>
-          Note vocale recue sur mobile. La lecture/enregistrement web reste en cours de migration.
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
+            Note vocale
+          </div>
+          {durationLabel ? (
+            <div style={{ color: mutedTextColor, fontSize: 12 }}>
+              Duree {durationLabel}
+            </div>
+          ) : null}
+          {voiceUrl ? (
+            <audio controls preload="metadata" src={voiceUrl} style={{ maxWidth: '100%', width: '100%' }} />
+          ) : (
+            <div style={{ color: mutedTextColor, fontSize: 13 }}>
+              Le fichier audio n est pas disponible pour la lecture web.
+            </div>
+          )}
         </div>
       )
     }
@@ -943,6 +1143,7 @@ function Conversation({ navigation, route }) {
     const senderName = getDisplayName(message?.sender)
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
+    const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
     const bubbleBackground = isMine ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.04)'
 
@@ -995,7 +1196,7 @@ function Conversation({ navigation, route }) {
               {String(message?.message || '').trim()}
             </div>
           ) : null}
-          {attachments.length > 0 ? renderAttachments(attachments) : null}
+          {shouldRenderAttachments ? renderAttachments(attachments) : null}
           {message?.composition ? renderComposition(message) : null}
           <div style={{
             alignItems: 'center',
@@ -1044,6 +1245,76 @@ function Conversation({ navigation, route }) {
     renderComposition,
     userData?.documentId,
   ])
+
+  if (!chatId) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentWidth="full"
+        responsivePadding
+        style={{ paddingBottom: 32 }}
+      >
+        {renderStateCard({
+          actionLabel: 'Voir mes messages',
+          description: 'Aucune conversation n a ete selectionnee. Revenez a la liste des messages puis ouvrez une discussion.',
+          onAction: () => navigation.navigate(RouteNames.Chat),
+          title: 'Conversation introuvable',
+        })}
+      </ScreenContainer>
+    )
+  }
+
+  if (isChatLoading && !chatData) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentWidth="full"
+        responsivePadding
+        style={{ paddingBottom: 32 }}
+      >
+        {renderStateCard({
+          description: 'Chargement de la conversation en cours...',
+          title: 'Chargement',
+        })}
+      </ScreenContainer>
+    )
+  }
+
+  if (chatError && !chatData) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentWidth="full"
+        responsivePadding
+        style={{ paddingBottom: 32 }}
+      >
+        {renderStateCard({
+          actionLabel: 'Reessayer',
+          description: getErrorMessage(chatError, 'Impossible de charger cette conversation.'),
+          onAction: retryConversationLoad,
+          title: 'Conversation indisponible',
+        })}
+      </ScreenContainer>
+    )
+  }
+
+  if (!chatData) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentWidth="full"
+        responsivePadding
+        style={{ paddingBottom: 32 }}
+      >
+        {renderStateCard({
+          actionLabel: 'Retour a mes messages',
+          description: 'Cette conversation est introuvable ou vous n y avez plus acces.',
+          onAction: () => navigation.navigate(RouteNames.Chat),
+          title: 'Conversation introuvable',
+        })}
+      </ScreenContainer>
+    )
+  }
 
   return (
     <ScreenContainer
@@ -1133,11 +1404,41 @@ function Conversation({ navigation, route }) {
               <div style={{ color: mutedTextColor }}>Chargement des messages...</div>
             ) : null}
 
-            {!isMessagesLoading && messages.length === 0 ? (
+            {!isMessagesLoading && messagesError ? (
+              <div style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${borderColor}`,
+                borderRadius: 18,
+                color: mutedTextColor,
+                display: 'grid',
+                gap: 12,
+                padding: 18,
+              }}
+              >
+                <div>{getErrorMessage(messagesError, 'Impossible de charger les messages de cette conversation.')}</div>
+                <button
+                  onClick={() => refetchMessages()}
+                  style={{
+                    background: 'transparent',
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 999,
+                    color: baseTextColor,
+                    cursor: 'pointer',
+                    justifySelf: 'start',
+                    padding: '10px 14px',
+                  }}
+                  type="button"
+                >
+                  Reessayer
+                </button>
+              </div>
+            ) : null}
+
+            {!isMessagesLoading && !messagesError && messages.length === 0 ? (
               <div style={{ color: mutedTextColor }}>Aucun message pour le moment.</div>
             ) : null}
 
-            {messages.map((message) => renderMessageCard(message))}
+            {!messagesError ? messages.map((message) => renderMessageCard(message)) : null}
           </div>
 
           <div style={{ borderTop: `1px solid ${borderColor}`, display: 'grid', gap: 14, padding: 20 }}>
@@ -1200,26 +1501,51 @@ function Conversation({ navigation, route }) {
 
             <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <button
+                  disabled={isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal}
+                  onClick={handleVoiceNote}
+                  style={{
+                    background: isRecordingVoice ? primaryColor : 'transparent',
+                    border: `1px solid ${isRecordingVoice ? primaryColor : borderColor}`,
+                    borderRadius: 999,
+                    color: isRecordingVoice ? '#001218' : baseTextColor,
+                    cursor: (isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal) ? 'not-allowed' : 'pointer',
+                    opacity: (isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal) ? 0.6 : 1,
+                    padding: '10px 14px',
+                  }}
+                  type="button"
+                >
+                  {isStoppingVoice
+                    ? 'Preparation...'
+                    : (isRecordingVoice ? 'Arreter la note vocale' : 'Note vocale')}
+                </button>
                 <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Image</button>
                 <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Document</button>
               </div>
               <button
-                disabled={isSending || isUploading || !composerText.trim()}
+                disabled={!canSendText}
                 onClick={handleSendText}
                 style={{
                   background: primaryColor,
                   border: 0,
                   borderRadius: 999,
                   color: '#001218',
-                  cursor: isSending || isUploading || !composerText.trim() ? 'not-allowed' : 'pointer',
+                  cursor: !canSendText ? 'not-allowed' : 'pointer',
                   fontFamily: 'Montserrat-Bold, sans-serif',
-                  opacity: isSending || isUploading || !composerText.trim() ? 0.6 : 1,
+                  opacity: !canSendText ? 0.6 : 1,
                   padding: '12px 18px',
                 }}
                 type="button"
               >
                 {isSending ? 'Envoi...' : 'Envoyer'}
               </button>
+            </div>
+            <div style={{ color: mutedTextColor, fontSize: 12 }}>
+              {isRecordingVoice
+                ? 'Enregistrement en cours. Cliquez a nouveau pour envoyer la note vocale.'
+                : (isVoiceRecordingSupported
+                  ? 'Les notes vocales utilisent le microphone du navigateur.'
+                  : 'Les notes vocales ne sont pas prises en charge par ce navigateur.')}
             </div>
           </div>
         </section>
@@ -1332,7 +1658,23 @@ function Conversation({ navigation, route }) {
               <input checked={isAnonymousPoll} onChange={(event) => setIsAnonymousPoll(event.target.checked)} type="checkbox" />
               Sondage anonyme
             </label>
-            <button onClick={handleSubmitPoll} style={{ background: primaryColor, border: 0, borderRadius: 999, color: '#001218', cursor: 'pointer', fontFamily: 'Montserrat-Bold, sans-serif', padding: '12px 16px' }} type="button">Envoyer le sondage</button>
+            <button
+              disabled={!canSubmitPoll}
+              onClick={handleSubmitPoll}
+              style={{
+                background: primaryColor,
+                border: 0,
+                borderRadius: 999,
+                color: '#001218',
+                cursor: !canSubmitPoll ? 'not-allowed' : 'pointer',
+                fontFamily: 'Montserrat-Bold, sans-serif',
+                opacity: !canSubmitPoll ? 0.6 : 1,
+                padding: '12px 16px',
+              }}
+              type="button"
+            >
+              {isSubmittingPoll ? 'Envoi...' : 'Envoyer le sondage'}
+            </button>
           </section>
 
           {isLeagueConversation ? (
@@ -1345,14 +1687,30 @@ function Conversation({ navigation, route }) {
               </div>
               <input onChange={(event) => setProposalVenue(event.target.value)} placeholder="Lieu" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalVenue} />
               <input onChange={(event) => setProposalAddress(event.target.value)} placeholder="Adresse" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalAddress} />
-              <button onClick={handleSendProposal} style={{ background: primaryColor, border: 0, borderRadius: 999, color: '#001218', cursor: 'pointer', fontFamily: 'Montserrat-Bold, sans-serif', padding: '12px 16px' }} type="button">Envoyer la proposition</button>
+              <button
+                disabled={!canSubmitProposal}
+                onClick={handleSendProposal}
+                style={{
+                  background: primaryColor,
+                  border: 0,
+                  borderRadius: 999,
+                  color: '#001218',
+                  cursor: !canSubmitProposal ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  opacity: !canSubmitProposal ? 0.6 : 1,
+                  padding: '12px 16px',
+                }}
+                type="button"
+              >
+                {isSubmittingProposal ? 'Envoi...' : 'Envoyer la proposition'}
+              </button>
             </section>
           ) : null}
 
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 8, padding: 22 }}>
-            <h2 style={{ color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Limites web temporaires</h2>
+            <h2 style={{ color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Parite web</h2>
             <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-              Notes vocales et camera native restent encore en fallback sur le web. Le reste de la conversation utilise deja les hooks, services et sockets partages de l app mobile.
+              Texte, reponse, pieces jointes, partages, sondages et propositions utilisent deja les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.
             </div>
           </section>
         </aside>

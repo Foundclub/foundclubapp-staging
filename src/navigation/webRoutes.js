@@ -31,8 +31,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ClubMembershipRequests]: '/clubs/:clubId/requests',
   [RouteNames.RequestsDashboard]: '/clubs/:clubId/requests-dashboard',
   [RouteNames.AddCoach]: '/clubs/:clubId/coaches/add',
-  [RouteNames.AddSponsor]: '/clubs/:clubId/sponsors/add',
-  [RouteNames.AssignCoachTeams]: '/clubs/:clubId/coaches/:coachId/assign',
+  [RouteNames.AddSponsor]: '/clubs/:clubId?/sponsors/add',
+  [RouteNames.AssignCoachTeams]: '/clubs/:clubId/coaches/:trainerId/assign',
   [RouteNames.CreateClub]: '/clubs/create',
   [RouteNames.MultisportClubDetails]: '/multisport/:cmId',
   [RouteNames.MultisportClubEdit]: '/multisport/:cmId/edit',
@@ -105,7 +105,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdWizardRecap]: '/recruitment/wizard/recap',
   [RouteNames.PollDetails]: '/polls/:pollId',
   [RouteNames.FacilityList]: '/facilities',
-  [RouteNames.FacilityForm]: '/facilities/:facilityId',
+  [RouteNames.FacilityForm]: '/facilities/:facilityId?',
   [RouteNames.AdminDashboard]: '/admin',
   [RouteNames.AdminRevenue]: '/admin/revenue',
   [RouteNames.AdminEvents]: '/admin/events',
@@ -153,14 +153,25 @@ const WEB_ROUTE_PATTERNS = {
 
 const normalizePathValue = (value) => String(value || '').trim();
 
-const replacePathParams = (pattern, params = {}) => pattern.replace(/:([A-Za-z0-9_]+)/g, (_, key) => {
-  const rawValue = params[key];
-  if (rawValue === undefined || rawValue === null || rawValue === '') {
-    return `:${key}`;
-  }
+const replacePathParams = (pattern, params = {}) => {
+  const withOptionalParamsResolved = pattern.replace(/\/:([A-Za-z0-9_]+)\?/g, (_, key) => {
+    const rawValue = params[key];
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+      return '';
+    }
 
-  return encodeURIComponent(String(rawValue));
-});
+    return `/${encodeURIComponent(String(rawValue))}`;
+  });
+
+  return withOptionalParamsResolved.replace(/:([A-Za-z0-9_]+)/g, (_, key) => {
+    const rawValue = params[key];
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+      return `:${key}`;
+    }
+
+    return encodeURIComponent(String(rawValue));
+  });
+};
 
 const buildQueryString = (params = {}, reservedKeys = []) => {
   const searchParams = new URLSearchParams();

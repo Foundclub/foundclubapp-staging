@@ -1,5 +1,5 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Joi from 'joi';
 import React, { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -18,7 +18,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
-import { updateRecruitmentAd } from '@/services/recruitment/recruitmentService';
+import { getRecruitmentAd, updateRecruitmentAd } from '@/services/recruitment/recruitmentService';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -34,6 +34,15 @@ const schema = Joi.object({
   section: Joi.alternatives().try(Joi.string(), Joi.object()).optional(),
 });
 
+const buildDefaultValues = (ad) => ({
+  category: ad?.category || null,
+  description: ad?.description || '',
+  level: ad?.level || null,
+  position: ad?.position || '',
+  quantity: ad?.quantity || 1,
+  section: ad?.section || null,
+});
+
 /**
  *
  * @param root0
@@ -45,20 +54,30 @@ function RecruitmentAdEdit({ navigation, route }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const resolvedAdId = ad?.documentId || ad?.id || adId;
+  const {
+    data: fetchedAd,
+    error: adError,
+    isLoading: isAdLoading,
+    refetch: refetchAd,
+  } = useQuery({
+    enabled: Boolean(!ad && resolvedAdId),
+    queryFn: () => getRecruitmentAd(resolvedAdId),
+    queryKey: ['recruitmentAd', resolvedAdId],
+  });
+  const resolvedAd = fetchedAd || ad || null;
 
   const {
-    control, formState: { errors }, handleSubmit, setValue, watch,
+    control, formState: { errors }, handleSubmit, reset, setValue, watch,
   } = useForm({
-    defaultValues: {
-      category: ad?.category || null,
-      description: ad?.description || '',
-      level: ad?.level || null,
-      position: ad?.position || '',
-      quantity: ad?.quantity || 1,
-      section: ad?.section || null,
-    },
+    defaultValues: buildDefaultValues(ad),
     resolver: joiResolver(schema),
   });
+
+  useEffect(() => {
+    if (!resolvedAd) return;
+    reset(buildDefaultValues(resolvedAd));
+  }, [resolvedAd, reset]);
 
   // Fetch options
   const { data: allLevels } = useGetLevels();
@@ -75,7 +94,7 @@ function RecruitmentAdEdit({ navigation, route }) {
   const watchedQuantity = watch('quantity');
 
   const updateMutation = useMutation({
-    mutationFn: (data) => updateRecruitmentAd(adId, data),
+    mutationFn: (data) => updateRecruitmentAd(resolvedAdId, data),
     onError: (error) => {
       console.error('Error updating ad:', error);
       Alert.alert('Erreur', 'Impossible de mettre à jour l\'annonce.');
@@ -83,7 +102,7 @@ function RecruitmentAdEdit({ navigation, route }) {
     onSuccess: (updatedAd) => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
       queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] });
-      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] }); // Invalidate specific ad if cached
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', resolvedAdId] });
 
       Alert.alert(
         'Succès',
@@ -113,7 +132,61 @@ function RecruitmentAdEdit({ navigation, route }) {
     updateMutation.mutate(payload);
   };
 
-  if (!ad) return null;
+  if (isAdLoading) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        onGoBack={() => navigation.goBack()}
+        title="Modifier l'annonce"
+      >
+        <View style={[Spaces.padding[16], { gap: 12 }]}>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Chargement de l'annonce...</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            Preparation du formulaire d'edition.
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (adError) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        onGoBack={() => navigation.goBack()}
+        title="Modifier l'annonce"
+      >
+        <View style={[Spaces.padding[16], { gap: 16 }]}>
+          <Text style={[Fonts.p1Bold, { color: Colors.error500 }]}>Chargement impossible</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            {adError?.message || 'Impossible de charger cette annonce.'}
+          </Text>
+          <Button
+            onPress={() => refetchAd()}
+            title="Recharger"
+            variant="Primary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!resolvedAd) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        onGoBack={() => navigation.goBack()}
+        title="Modifier l'annonce"
+      >
+        <View style={[Spaces.padding[16], { gap: 12 }]}>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Annonce introuvable</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            Cette annonce n'est plus disponible ou ne peut pas etre modifiee depuis ce lien.
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer
@@ -126,7 +199,7 @@ function RecruitmentAdEdit({ navigation, route }) {
         {/* Team Info (Read Only) */}
         <View style={[Spaces.marginBottom[24], { opacity: 0.7 }]}>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 4 }]}>Équipe</Text>
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{ad.team?.name || 'Équipe inconnue'}</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{resolvedAd.team?.name || 'Équipe inconnue'}</Text>
         </View>
 
         {/* Position */}

@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Text, TouchableOpacity, View,
+  Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -19,11 +19,22 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useGetTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestQueries';
 import {
   acceptTeamMembershipRequest,
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+
+const extractApiErrorMessage = (error) => {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (typeof error?.message === 'string') return error.message;
+  if (typeof error?.error === 'string') return error.error;
+  if (typeof error?.details?.error === 'string') return error.details.error;
+  return '';
+};
 
 /**
  * Team membership request list screen component
@@ -31,7 +42,14 @@ import {
  * @returns {import('react').ReactElement} Team membership request list screen component
  */
 function TeamMembershipRequestList({ navigation, route }) {
-  const { teamIds } = route?.params ?? {};
+  const routeParams = route?.params ?? {};
+  const teamIds = Array.isArray(routeParams.teamIds)
+    ? routeParams.teamIds
+    : routeParams.teamIds
+      ? [routeParams.teamIds]
+      : routeParams.teamId
+        ? [routeParams.teamId]
+        : [];
   const { userData } = useAuth();
 
   // hooks
@@ -40,7 +58,6 @@ function TeamMembershipRequestList({ navigation, route }) {
     ApplicationStyle,
     Colors,
     Fonts,
-    Images,
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
@@ -59,6 +76,16 @@ function TeamMembershipRequestList({ navigation, route }) {
 
   const acceptRequestMutation = useMutation({
     mutationFn: acceptTeamMembershipRequest,
+    onError: (mutationError) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        extractApiErrorMessage(mutationError)
+          || t(
+            'teamMembershipRequestList.errors.accept',
+            'Impossible de valider la demande pour le moment.',
+          ),
+      );
+    },
     onSuccess: () => {
       refetch();
     },
@@ -66,6 +93,16 @@ function TeamMembershipRequestList({ navigation, route }) {
 
   const rejectRequestMutation = useMutation({
     mutationFn: rejectTeamMembershipRequest,
+    onError: (mutationError) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        extractApiErrorMessage(mutationError)
+          || t(
+            'teamMembershipRequestList.errors.reject',
+            'Impossible de refuser la demande pour le moment.',
+          ),
+      );
+    },
     onSuccess: () => {
       refetch();
     },
@@ -115,6 +152,13 @@ function TeamMembershipRequestList({ navigation, route }) {
       return acc.concat(items);
     }, [])
     || [], [requestPages]);
+  const isMissingTeamContext = teamIds.length === 0;
+  const isMutating = acceptRequestMutation.isPending || rejectRequestMutation.isPending;
+  const initialErrorMessage = extractApiErrorMessage(error)
+    || t(
+      'teamMembershipRequestList.errors.load',
+      "Impossible de charger les demandes d'equipe pour le moment.",
+    );
 
   /**
    * Render the request item
@@ -191,15 +235,19 @@ function TeamMembershipRequestList({ navigation, route }) {
         Spaces.gap[12], Spaces.marginTop[12]]}
       >
         <Button
+          disabled={isMutating}
           icon="check"
           isOption
+          isLoading={acceptRequestMutation.isPending}
           onPress={() => handleAcceptRequest(item.documentId)}
           title={t('teamMembershipRequestList.actions.accept')}
           variant="Primary"
         />
         <Button
+          disabled={isMutating}
           icon="close"
           isOption
+          isLoading={rejectRequestMutation.isPending}
           onPress={() => handleRejectRequest(item.documentId)}
           title={t('teamMembershipRequestList.actions.reject')}
           variant="Secondary"
@@ -223,6 +271,85 @@ function TeamMembershipRequestList({ navigation, route }) {
       </Text>
     </View>
   );
+
+  if (isMissingTeamContext) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Alignments.fill,
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[16],
+          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[24],
+        ]}
+      >
+        <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+          {t('teamMembershipRequestList.errors.missingTeamTitle', 'Equipe introuvable')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+          {t(
+            'teamMembershipRequestList.errors.missingTeamBody',
+            "Impossible d'ouvrir ces demandes sans identifiant d'equipe.",
+          )}
+        </Text>
+        <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
+          <Button
+            onPress={() => navigation.navigate(RouteNames.TeamList)}
+            title={t('teamMembershipRequestList.actions.backToTeams', 'Retour aux equipes')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'team',
+              source: 'profile',
+            })}
+            title={t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (error && requests.length === 0 && !isLoading) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Alignments.fill,
+          Alignments.justifyCenter,
+          Alignments.alignCenter,
+          Spaces.gap[16],
+          Spaces.paddingHorizontal[24],
+          Spaces.paddingVertical[24],
+        ]}
+      >
+        <Text style={[Fonts.h3Black, Fonts.neutral00, Fonts.textCenter]}>
+          {t('teamMembershipRequestList.errors.loadTitle', 'Chargement impossible')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+          {initialErrorMessage}
+        </Text>
+        <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
+          <Button
+            onPress={() => refetch()}
+            title={t('common.actions.retry', 'Reessayer')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigateToRequestsHub(navigation, {
+              initialFilter: 'team',
+              source: 'profile',
+            })}
+            title={t('common.actions.back', 'Retour')}
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <TutorialFlowBoundary

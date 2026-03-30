@@ -22,7 +22,6 @@ import {
   PermissionsAndroid,
   Platform,
   ScrollView,
-  Share,
   StatusBar,
   Text,
   TextInput,
@@ -97,6 +96,7 @@ import {
 } from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
+import { share } from '@/platform/share';
 
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 import { EVENTS } from '@/hooks/useSocket';
@@ -3231,7 +3231,7 @@ function Conversation({ navigation, route }) {
     }
 
     try {
-      await Share.share({
+      await share({
         message: `${attachmentLabel}\n${resolvedUrl}`,
         title: attachmentLabel,
         url: resolvedUrl,

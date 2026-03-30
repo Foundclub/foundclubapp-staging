@@ -30,6 +30,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
@@ -157,6 +158,66 @@ function HomeSection({
         })}
       </View>
     </View>
+  );
+}
+
+function HomeHubStateView({
+  actionLabel,
+  description,
+  isLoading = false,
+  onAction,
+  title,
+}) {
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
+
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentWidth="readable"
+      contentContainerStyle={[
+        Alignments.fill,
+        Alignments.justifyCenter,
+      ]}
+      responsivePadding
+      withHeaderPadding={false}
+    >
+      <View
+        style={[
+          ApplicationStyle.borderRadius24,
+          ApplicationStyle.borderWidth1,
+          Spaces.padding[24],
+          Spaces.gap[16],
+          {
+            alignSelf: 'center',
+            backgroundColor: 'rgba(9, 24, 35, 0.88)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            maxWidth: 560,
+            width: '100%',
+          },
+        ]}
+      >
+        <Text style={[Fonts.h2, Fonts.neutral00]}>{title}</Text>
+        <Text style={[Fonts.p1, Fonts.neutral100]}>{description}</Text>
+        {isLoading ? (
+          <View style={[Alignments.alignCenter, Spaces.paddingVertical[8]]}>
+            <Loader />
+          </View>
+        ) : null}
+        {onAction && actionLabel ? (
+          <Button
+            onPress={onAction}
+            title={actionLabel}
+            variant="Primary"
+          />
+        ) : null}
+      </View>
+    </ScreenContainer>
   );
 }
 
@@ -1356,7 +1417,9 @@ function HomeHubContent({ auth, navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      contentWidth="wide"
       contentContainerStyle={[Spaces.paddingBottom[24], Alignments.column, Alignments.fill]}
+      responsivePadding
     >
       <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
         <LeagueHeaderSwitch />
@@ -1543,6 +1606,42 @@ function HomeHub({ navigation, route }) {
       tutorialStartToken: undefined,
     });
   }, [navigation]);
+
+  if (auth?.userDataLoading) {
+    return (
+      <HomeHubStateView
+        description="Nous préparons votre espace FoundClub."
+        isLoading
+        title="Chargement de l'accueil"
+      />
+    );
+  }
+
+  if (auth?.userDataError) {
+    return (
+      <HomeHubStateView
+        actionLabel="Réessayer"
+        description="Impossible de charger votre espace pour le moment. Vérifiez votre connexion puis relancez le chargement."
+        onAction={() => {
+          auth.refetchUserData?.();
+        }}
+        title="Accueil indisponible"
+      />
+    );
+  }
+
+  if (!auth?.userData) {
+    return (
+      <HomeHubStateView
+        actionLabel="Actualiser"
+        description="Votre compte n'a pas encore été chargé. Relancez le chargement pour afficher votre accueil personnalisé."
+        onAction={() => {
+          auth.refetchUserData?.();
+        }}
+        title="Compte introuvable"
+      />
+    );
+  }
 
   return (
     <TutorialFlowBoundary

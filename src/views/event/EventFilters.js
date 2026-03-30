@@ -36,6 +36,12 @@ import { useGetTeams } from '@/services/team/teamQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+const WEB_FILTER_SURFACE_PROPS = {
+  contentWidth: 720,
+  responsivePadding: true,
+  surface: 'card',
+};
+
 /** @typedef {{ label: string; value: string }} Option */
 /**
  * @typedef {{
@@ -499,6 +505,7 @@ function EventFilters({ navigation }) {
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
+      {...WEB_FILTER_SURFACE_PROPS}
     >
       <BottomModal
         close={() => setInfoModalVisible(false)}

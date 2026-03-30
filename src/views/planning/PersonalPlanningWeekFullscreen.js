@@ -4,7 +4,12 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { addDays, format, parseISO } from 'date-fns';
+import {
+  addDays,
+  format,
+  isSameWeek,
+  parseISO,
+} from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   useCallback, useMemo, useState,
@@ -20,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -165,12 +171,19 @@ function PlanningWeekFullscreen() {
     sectionId,
     sourceType,
   }), [clubId, cmId, facilityId, planningRange, sectionId, sourceType]);
-  const { data, isFetching, isLoading } = useQuery({
+  const {
+    data,
+    error,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useQuery({
     staleTime: PERSONAL_PLANNING_STALE_MS,
     ...planningQuery,
   });
 
   const events = normalizePlanningItems(data?.data || []);
+  const hasEvents = events.length > 0;
   const weekLabel = useMemo(() => {
     const fromDate = parseISO(planningRange.from);
     const toDate = parseISO(planningRange.to);
@@ -200,6 +213,10 @@ function PlanningWeekFullscreen() {
 
     return `${planningContextLabel} - ${contextDetailLabel}`;
   }, [contextDetailLabel, planningContextLabel]);
+  const isCurrentWeek = useMemo(
+    () => isSameWeek(currentDate, getPlanningDefaultDate(), { weekStartsOn: 1 }),
+    [currentDate],
+  );
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -222,10 +239,16 @@ function PlanningWeekFullscreen() {
     setCurrentDate((previousDate) => addDays(previousDate, 7));
   }, []);
 
+  const handleBackToCurrentWeek = useCallback(() => {
+    setCurrentDate(getPlanningDefaultDate());
+  }, []);
+
   return (
     <ScreenContainer
       bgImage="bg2"
+      contentWidth="wide"
       contentContainerStyle={[{ paddingBottom: Math.max(insets.bottom, 8) }]}
+      responsivePadding
       style={[{ paddingHorizontal: 8 }]}
       withHeaderPadding={false}
     >
@@ -332,11 +355,84 @@ function PlanningWeekFullscreen() {
               style={{ height: 12, tintColor: Colors.neutral00, width: 12 }}
             />
           </TouchableOpacity>
+          {!isCurrentWeek ? (
+            <TouchableOpacity
+              accessibilityLabel="Revenir a la semaine actuelle"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={handleBackToCurrentWeek}
+              style={{
+                alignItems: 'center',
+                backgroundColor: 'rgba(1,179,244,0.14)',
+                borderColor: `${Colors.primary500}66`,
+                borderRadius: 12,
+                borderWidth: 1,
+                height: 30,
+                justifyContent: 'center',
+                marginLeft: 6,
+                minWidth: 86,
+                paddingHorizontal: 10,
+              }}
+            >
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Aujourd'hui</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={{ flex: 1 }}>
           {isLoading || isFetching ? (
             <Loader />
+          ) : error ? (
+            <View
+              style={{
+                alignSelf: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(10, 23, 34, 0.84)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 24,
+                borderWidth: 1,
+                justifyContent: 'center',
+                maxWidth: 520,
+                padding: 24,
+                width: '100%',
+              }}
+            >
+              <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
+                Impossible de charger le planning
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+                Le planning de cette semaine n'a pas pu être récupéré. Réessayez ou changez de semaine.
+              </Text>
+              <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+            </View>
+          ) : !hasEvents ? (
+            <View
+              style={{
+                alignSelf: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(10, 23, 34, 0.84)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 24,
+                borderWidth: 1,
+                justifyContent: 'center',
+                maxWidth: 520,
+                padding: 24,
+                width: '100%',
+              }}
+            >
+              <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
+                Aucun créneau cette semaine
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+                Changez de semaine pour explorer le planning ou revenez à la semaine actuelle.
+              </Text>
+              <View style={[Alignments.row, Spaces.gap[12]]}>
+                {!isCurrentWeek ? (
+                  <Button onPress={handleBackToCurrentWeek} title="Aujourd'hui" variant="Secondary" />
+                ) : null}
+                <Button onPress={handleNextWeek} title="Semaine suivante" variant="Primary" />
+              </View>
+            </View>
           ) : (
             <PlanningWeekTimelineView
               compactFullscreen

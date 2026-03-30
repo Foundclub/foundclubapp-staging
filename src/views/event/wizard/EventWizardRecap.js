@@ -257,6 +257,11 @@ function EventWizardRecap({ navigation }) {
         created,
         failed,
       });
+    } catch (submitError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        submitError?.message || t('eventWizard.errors.genericCreate'),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -330,6 +335,7 @@ function EventWizardRecap({ navigation }) {
   return (
     <>
       <WizardStepLayout
+        isNextDisabled={!isRecapReady}
         isNextLoading={isSubmitting}
         nextLabel={t('eventWizard.recap.actions.createShort', 'Créer')}
         onBack={() => navigation.goBack()}

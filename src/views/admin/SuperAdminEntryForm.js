@@ -584,13 +584,20 @@ function SuperAdminEntryForm({ navigation, route }) {
       const extension = mime.includes('/') ? (mime.split('/')[1] || 'bin') : 'bin';
       const fallbackName = `upload_${Date.now()}.${extension}`;
       const fileName = String(asset.fileName || asset.name || fallbackName).trim() || fallbackName;
+      const browserFile = typeof File !== 'undefined' && asset?.file instanceof File
+        ? asset.file
+        : null;
 
       const formData = new FormData();
-      formData.append('files', /** @type {any} */ ({
-        name: fileName,
-        type: mime,
-        uri,
-      }));
+      if (browserFile) {
+        formData.append('files', browserFile, fileName);
+      } else {
+        formData.append('files', /** @type {any} */ ({
+          name: fileName,
+          type: mime,
+          uri,
+        }));
+      }
 
       const response = await client.post('/upload', formData, {
         headers: {

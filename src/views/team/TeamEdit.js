@@ -6,8 +6,11 @@ import {
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView, Platform, View,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -18,6 +21,7 @@ import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Loader from '@/components/atoms/loader/Loader';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -78,20 +82,36 @@ function TeamEdit({ navigation, route }) {
 
   // hooks
   // Determine effective club ID (from params or team data)
-  const { data: teamData } = useGetTeam(teamId, {
+  const {
+    data: teamData,
+    error: teamError,
+    isLoading: isTeamLoading,
+    refetch: refetchTeam,
+  } = useGetTeam(teamId, {
     enabled: !!teamId,
   });
 
   const effectiveClubId = clubId || teamData?.club?.documentId;
-  const { data: clubData, refetch: refetchClubData } = useGetClub(effectiveClubId);
+  const {
+    data: clubData,
+    error: clubError,
+    isLoading: isClubLoading,
+    refetch: refetchClubData,
+  } = useGetClub(effectiveClubId, {
+    enabled: Boolean(effectiveClubId),
+  });
 
   // Track if we have already initialized the form to avoid overwrites
   const isInitialized = useRef(false);
 
-  const { data: activities } = useGetActivities();
-  const { data: categories } = useGetCategories();
-  const { data: levels } = useGetLevels();
-  const { data: sections } = useGetSections();
+  const activitiesQuery = useGetActivities();
+  const categoriesQuery = useGetCategories();
+  const levelsQuery = useGetLevels();
+  const sectionsQuery = useGetSections();
+  const { data: activities } = activitiesQuery;
+  const { data: categories } = categoriesQuery;
+  const { data: levels } = levelsQuery;
+  const { data: sections } = sectionsQuery;
 
   const {
     Alignments, Colors, Spaces,
@@ -371,6 +391,25 @@ function TeamEdit({ navigation, route }) {
     );
   }, [deleteTeamMutation, t, teamData?.name, teamId]);
 
+  const isBootstrapLoading = isTeamLoading
+    || isClubLoading
+    || activitiesQuery.isLoading
+    || categoriesQuery.isLoading
+    || levelsQuery.isLoading
+    || sectionsQuery.isLoading;
+
+  const bootstrapError = teamError
+    || clubError
+    || activitiesQuery.error
+    || categoriesQuery.error
+    || levelsQuery.error
+    || sectionsQuery.error;
+
+  const isMissingTeamId = !teamId;
+  const isTeamNotFound = Boolean(teamId) && !isTeamLoading && !teamError && !teamData;
+  const isClubNotFound = Boolean(effectiveClubId) && !isClubLoading && !clubError && !clubData;
+  const isFormBlocked = isBootstrapLoading || Boolean(bootstrapError) || isMissingTeamId || isTeamNotFound || isClubNotFound;
+
   useEffect(() => {
     navigation.setOptions({
       headerTitle: teamId
@@ -378,6 +417,65 @@ function TeamEdit({ navigation, route }) {
         : t('teamEdit.title'),
     });
   }, [navigation, teamId, t]);
+
+  const handleRetryBootstrap = () => {
+    if (teamId) {
+      void refetchTeam();
+    }
+    if (effectiveClubId) {
+      void refetchClubData();
+    }
+    void activitiesQuery.refetch();
+    void categoriesQuery.refetch();
+    void levelsQuery.refetch();
+    void sectionsQuery.refetch();
+  };
+
+  if (isFormBlocked) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingVertical[32]]}
+      >
+        <View style={[Alignments.fill, Alignments.justifyCenter, Spaces.gap[16]]}>
+          {isBootstrapLoading ? (
+            <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
+              <Loader color={Colors.primary500} size="large" />
+              <Text>Chargement de l'equipe et des referentiels...</Text>
+            </View>
+          ) : null}
+
+          {isMissingTeamId ? (
+            <View style={Spaces.gap[12]}>
+              <Text>Identifiant d'equipe manquant. Ouvre l'edition depuis la fiche equipe pour continuer.</Text>
+              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+            </View>
+          ) : null}
+
+          {isTeamNotFound ? (
+            <View style={Spaces.gap[12]}>
+              <Text>Equipe introuvable. Verifie le lien ou retourne a la liste des equipes.</Text>
+              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
+            </View>
+          ) : null}
+
+          {isClubNotFound ? (
+            <View style={Spaces.gap[12]}>
+              <Text>Club introuvable pour cette equipe. Reessaye ou reviens a la fiche equipe.</Text>
+              <Button onPress={handleRetryBootstrap} title="Reessayer" variant="Secondary" />
+            </View>
+          ) : null}
+
+          {bootstrapError && !isBootstrapLoading ? (
+            <View style={Spaces.gap[12]}>
+              <Text>{bootstrapError?.message || 'Impossible de charger les informations de l equipe.'}</Text>
+              <Button onPress={handleRetryBootstrap} title="Reessayer" variant="Secondary" />
+            </View>
+          ) : null}
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer
@@ -585,6 +683,7 @@ function TeamEdit({ navigation, route }) {
 
         <View style={[Spaces.gap[12]]}>
           <Button
+            disabled={isFormBlocked}
             isLoading={teamMutation.isPending}
             onPress={handleSubmit(handleFormSubmit)}
             title={t('teamEdit.actions.save')}

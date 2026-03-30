@@ -20,6 +20,7 @@ import SearchCountdown from '@/components/organisms/league/SearchCountdown';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { useMatchmakingStateMachine } from '@/views/league/match/hooks/useMatchmakingStateMachine';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { shouldMaskOpponentIdentity, shouldShowNextMatchCard } from '@/views/league/match/utils/matchStatus';
@@ -172,6 +173,7 @@ function MatchCenterScreen() {
 
   // UI State
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
 
@@ -370,6 +372,7 @@ function MatchCenterScreen() {
   const loadMatchCenter = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    setLoadError('');
     try {
       // A. Fetch User's LEAGUE Squads
       const squads = await getMyLeagueTeam(userId);
@@ -393,6 +396,7 @@ function MatchCenterScreen() {
     } catch (error) {
       console.error('Load Match Center Error:', error);
       Alert.alert('Erreur', 'Impossible de charger le Match Center');
+      setLoadError('Impossible de charger le Match Center League.');
       setLoading(false);
     }
   }, [userId, mySquadId, fetchMatchData]);
@@ -2830,6 +2834,17 @@ function MatchCenterScreen() {
   );
 
   const proposalDefaults = React.useMemo(() => buildProposalDefaultsFromMatch(currentMatch), [currentMatch]);
+
+  if (loadError && !mySquad && viewState !== 'no_squad') {
+    return (
+      <LeagueStateView
+        actionLabel="Reessayer"
+        description={loadError}
+        onAction={() => loadMatchCenter()}
+        title="Match Center indisponible"
+      />
+    );
+  }
 
   if (viewState === 'loading' && !mySquad) { return <View style={[styles.screen, { justifyContent: 'center' }]}><ActivityIndicator color={Colors.gold500 || '#D4AF37'} /></View>; }
   if (viewState === 'no_squad') return <View style={styles.screen}>{renderNoSquad()}</View>;

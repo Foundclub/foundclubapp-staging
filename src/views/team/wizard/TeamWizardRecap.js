@@ -2,11 +2,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Text, TouchableOpacity, View,
+  ActivityIndicator,
+  Alert,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
@@ -40,11 +45,16 @@ function TeamWizardRecap({ navigation }) {
     Spaces,
   } = useTheme();
 
-  const { data: activities } = useGetActivities();
-  const { data: categories } = useGetCategories();
-  const { data: levels } = useGetLevels();
-  const { data: sections } = useGetSections();
-  const { data: clubData } = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
+  const activitiesQuery = useGetActivities();
+  const categoriesQuery = useGetCategories();
+  const levelsQuery = useGetLevels();
+  const sectionsQuery = useGetSections();
+  const clubQuery = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
+  const { data: activities } = activitiesQuery;
+  const { data: categories } = categoriesQuery;
+  const { data: levels } = levelsQuery;
+  const { data: sections } = sectionsQuery;
+  const { data: clubData } = clubQuery;
 
   const selectedOverview = useMemo(() => ({
     activity: state.activities || '',
@@ -118,6 +128,20 @@ function TeamWizardRecap({ navigation }) {
     ],
   );
 
+  const isReferenceLoading = activitiesQuery.isLoading
+    || categoriesQuery.isLoading
+    || levelsQuery.isLoading
+    || sectionsQuery.isLoading
+    || (Boolean(state.clubId) && clubQuery.isLoading);
+
+  const hasReferenceError = Boolean(
+    activitiesQuery.error
+    || categoriesQuery.error
+    || levelsQuery.error
+    || sectionsQuery.error
+    || clubQuery.error,
+  );
+
   const handleSubmit = () => {
     if (!selectedOverview.clubId) {
       Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.clubRequired', 'Club introuvable. Recommence la création depuis la liste équipe.'));
@@ -162,7 +186,7 @@ function TeamWizardRecap({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!isRecapReady}
+      isNextDisabled={!isRecapReady || isReferenceLoading || hasReferenceError}
       isNextLoading={createTeamMutation.isPending}
       nextLabel={t('teamWizard.actions.create', "Créer l'équipe")}
       onBack={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
@@ -175,6 +199,41 @@ function TeamWizardRecap({ navigation }) {
       title={t('teamWizard.steps.recap.title', 'Récapitulatif')}
     >
       <View style={[Spaces.gap[16]]}>
+        {isReferenceLoading ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+              <ActivityIndicator size="small" />
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Chargement du recapitulatif de l'equipe...
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {hasReferenceError ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              Impossible de charger toutes les informations du recapitulatif.
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Reessaye avant de creer l'equipe pour verifier le club, les referentiels et les entraineurs.
+            </Text>
+            <Button
+              onPress={() => {
+                void activitiesQuery.refetch();
+                void categoriesQuery.refetch();
+                void levelsQuery.refetch();
+                void sectionsQuery.refetch();
+                if (state.clubId) {
+                  void clubQuery.refetch();
+                }
+              }}
+              title="Reessayer"
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
+
         <View
           style={[
             ApplicationStyle.card,

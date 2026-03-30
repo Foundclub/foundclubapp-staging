@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -44,7 +45,12 @@ function EventWizardTeam({ navigation }) {
       .filter(Boolean),
   );
 
-  const { data: teamsData } = useGetTeams(
+  const {
+    data: teamsData,
+    error,
+    isLoading,
+    refetch,
+  } = useGetTeams(
     {
       clubId: userData?.club?.documentId,
       pageSize: 100,
@@ -114,6 +120,56 @@ function EventWizardTeam({ navigation }) {
       title={t('eventWizard.steps.team.title')}
     >
       <View style={[Spaces.gap[16]]}>
+        {isLoading ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              {
+                backgroundColor: Colors.primary700,
+                borderColor: `${Colors.primary500}55`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+              {t('common.loading', 'Chargement...')}
+            </Text>
+          </View>
+        ) : null}
+
+        {!isLoading && error ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[12],
+              {
+                backgroundColor: Colors.primary700,
+                borderColor: `${Colors.primary500}55`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
+              {error?.message || t('eventWizard.errors.noTeams')}
+            </Text>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={[
+                ApplicationStyle.card,
+                Spaces.paddingHorizontal[16],
+                Spaces.paddingVertical[10],
+                {
+                  alignSelf: 'center',
+                  backgroundColor: 'rgba(1, 179, 244, 0.16)',
+                  borderColor: Colors.primary500,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Recharger</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {hasTeams ? (
           <Input
             density="compact"
@@ -124,7 +180,7 @@ function EventWizardTeam({ navigation }) {
           />
         ) : null}
 
-        {!hasTeams ? (
+        {!isLoading && !error && !hasTeams ? (
           <View
             style={[
               ApplicationStyle.card,
@@ -141,7 +197,7 @@ function EventWizardTeam({ navigation }) {
           </View>
         ) : null}
 
-        {hasTeams && !hasFilteredTeams ? (
+        {!isLoading && !error && hasTeams && !hasFilteredTeams ? (
           <View
             style={[
               ApplicationStyle.card,
@@ -158,7 +214,7 @@ function EventWizardTeam({ navigation }) {
           </View>
         ) : null}
 
-        {hasFilteredTeams ? filteredTeams.map(renderTeamCard) : null}
+        {!isLoading && !error && hasFilteredTeams ? filteredTeams.map(renderTeamCard) : null}
       </View>
     </WizardStepLayout>
   );

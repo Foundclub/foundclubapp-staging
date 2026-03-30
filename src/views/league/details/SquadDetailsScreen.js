@@ -5,7 +5,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View,
+  Alert, Animated, Image, ImageBackground, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
@@ -23,6 +23,7 @@ import ProfilePicturePreviewOverlay from '@/components/molecules/profilePictureP
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -43,6 +44,12 @@ import { searchScopedUsers } from '@/services/user/userService';
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getImageUrl } from '@/utils/imageUrl';
 import { normalizeLocationInput } from '@/utils/location';
+import {
+  buildInstallLandingUrl,
+  buildShareMessageWithUrl,
+} from '@/utils/shareLinks';
+
+import SharePlatform from '@/platform/share';
 
 const slotDayLabels = {
   friday: 'Vendredi',
@@ -175,7 +182,7 @@ const getLeagueResultMeta = (result, Colors) => {
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
 function SquadDetailsScreen({ navigation, route }) {
-  const { teamId } = route?.params ?? {};
+  const safeTeamId = String(route?.params?.teamId || '').trim();
   const focusSection = route?.params?.focusSection || null;
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -191,7 +198,12 @@ function SquadDetailsScreen({ navigation, route }) {
   const { getClubInitials } = useClub();
 
   // Use League Team Hook
-  const { data: team, isLoading, refetch } = useGetLeagueTeam(teamId);
+  const {
+    data: team,
+    error: teamError,
+    isLoading,
+    refetch,
+  } = useGetLeagueTeam(safeTeamId);
 
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
@@ -258,7 +270,7 @@ function SquadDetailsScreen({ navigation, route }) {
       multisportId: inviteScopeMultisportId,
       query: inviteSearchValue,
     }),
-    queryKey: ['leagueSquadInviteSearch', teamId, inviteScopeClubId, inviteScopeMultisportId, isSuperAdminUser, inviteSearchValue],
+    queryKey: ['leagueSquadInviteSearch', safeTeamId, inviteScopeClubId, inviteScopeMultisportId, isSuperAdminUser, inviteSearchValue],
     staleTime: 15_000,
   });
 
@@ -266,8 +278,8 @@ function SquadDetailsScreen({ navigation, route }) {
     data: leaguePerformanceStats,
     isFetching: isLeaguePerformanceFetching,
     refetch: refetchLeaguePerformanceStats,
-  } = useGetLeagueTeamPerformanceStats(teamId, {
-    enabled: Boolean(teamId && canViewStatistics),
+  } = useGetLeagueTeamPerformanceStats(safeTeamId, {
+    enabled: Boolean(safeTeamId && canViewStatistics),
   });
 
   const {
@@ -564,26 +576,33 @@ function SquadDetailsScreen({ navigation, route }) {
   ]), [squadRank, team?.division, team?.draws, team?.elo, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
 
   const handleShare = useCallback(() => {
-    const squadId = team?.documentId || teamId;
-    const deepLink = squadId ? `foundclub://squad/${squadId}` : null;
-    const message = deepLink
-      ? `Rejoins ma squad ${team?.name || ''} sur FoundClub League !\n${deepLink}`
-      : `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`;
+    const squadId = team?.documentId || safeTeamId;
+    const shareUrl = buildInstallLandingUrl({
+      id: squadId,
+      source: 'share',
+      type: 'squad',
+    });
+    const message = buildShareMessageWithUrl({
+      intro: `Rejoins ma squad ${team?.name || ''} sur FoundClub League !`,
+      linkLabel: 'Ouvrir dans FoundClub',
+      url: shareUrl,
+    });
 
-    Share.share({
+    SharePlatform.share({
       message,
       title: `Rejoins ${team?.name || 'ma squad'} !`,
-    });
-  }, [team?.documentId, team?.name, teamId]);
+      url: shareUrl,
+    }).catch(() => undefined);
+  }, [safeTeamId, team?.documentId, team?.name]);
 
   const handleRequestJoin = useCallback(async () => {
     try {
-      if (!teamId || !currentUserId) {
+      if (!safeTeamId || !currentUserId) {
         Alert.alert(t('common.error'), t('squad.join.error', 'Impossible d\'envoyer la demande.'));
         return;
       }
       setIsUpdating(true);
-      await requestToJoinSquad(String(teamId || ''), currentUserId || '');
+      await requestToJoinSquad(safeTeamId, currentUserId || '');
       await refetch();
       Alert.alert(t('squad.join.successTitle', 'Demande envoyée'), t('squad.join.successMessage', 'Le capitaine a recu votre demande.'));
     } catch (error) {
@@ -592,16 +611,16 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  }, [currentUserId, refetch, t, teamId]);
+  }, [currentUserId, refetch, safeTeamId, t]);
 
   const handleCancelJoinRequest = useCallback(async () => {
     try {
-      if (!teamId || !currentUserId) {
+      if (!safeTeamId || !currentUserId) {
         Alert.alert(t('common.error'), t('squad.join.cancelError', 'Impossible d\'annuler la demande.'));
         return;
       }
       setIsUpdating(true);
-      await cancelJoinRequest(String(teamId || ''), currentUserId || '');
+      await cancelJoinRequest(safeTeamId, currentUserId || '');
       await refetch();
       Alert.alert(
         t('squad.join.cancelSuccessTitle', 'Demande annulée'),
@@ -613,17 +632,17 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  }, [currentUserId, refetch, t, teamId]);
+  }, [currentUserId, refetch, safeTeamId, t]);
 
   const handleRespondToInvitation = useCallback(async (accept) => {
     try {
-      if (!teamId || !currentUserId) {
+      if (!safeTeamId || !currentUserId) {
         Alert.alert(t('common.error'), t('squad.invitation.error', 'Impossible de repondre a l invitation.'));
         return;
       }
 
       setIsUpdating(true);
-      await respondToSquadInvite(String(teamId || ''), currentUserId || '', accept);
+      await respondToSquadInvite(safeTeamId, currentUserId || '', accept);
       await refetch();
       Alert.alert(
         accept
@@ -639,15 +658,15 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setIsUpdating(false);
     }
-  }, [currentUserId, refetch, t, teamId]);
+  }, [currentUserId, refetch, safeTeamId, t]);
 
   const handleInvitePlayer = useCallback(async (user) => {
     const invitedUserId = getEntityDocumentId(user);
-    if (!teamId || !invitedUserId) return;
+    if (!safeTeamId || !invitedUserId) return;
 
     try {
       setInviteActionUserId(invitedUserId);
-      await inviteUserToSquad(String(teamId || ''), invitedUserId);
+      await inviteUserToSquad(safeTeamId, invitedUserId);
       await refetch();
       Alert.alert(
         t('squad.invitation.sentTitle', 'Invitation envoyee'),
@@ -662,7 +681,7 @@ function SquadDetailsScreen({ navigation, route }) {
     } finally {
       setInviteActionUserId('');
     }
-  }, [refetch, t, teamId]);
+  }, [refetch, safeTeamId, t]);
 
   /**
    * @param {'logo' | 'cover'} type
@@ -718,7 +737,7 @@ function SquadDetailsScreen({ navigation, route }) {
 
         setIsUpdating(true);
         const payload = {
-          documentId: String(teamId || ''),
+          documentId: safeTeamId,
           [type]: file, // Service maps 'logo' to 'crest'
         };
 
@@ -759,7 +778,7 @@ function SquadDetailsScreen({ navigation, route }) {
 
         const payload = {
           end_hour: `${slotData.endTime}:00`,
-          league_team: String(teamId || ''),
+          league_team: safeTeamId,
           recurrence_day: slotData.day,
           start_hour: `${slotData.startTime}:00`,
           status: 'open',
@@ -775,7 +794,7 @@ function SquadDetailsScreen({ navigation, route }) {
           slotsToSave.map((slotData) => {
             const payload = {
               end_hour: `${slotData.endTime}:00`,
-              league_team: String(teamId || ''),
+              league_team: safeTeamId,
               recurrence_day: slotData.day,
               start_hour: `${slotData.startTime}:00`,
               status: 'open',
@@ -956,7 +975,7 @@ function SquadDetailsScreen({ navigation, route }) {
           onPress: async () => {
             try {
               setIsUpdating(true);
-              await deleteLeagueTeam(teamId);
+              await deleteLeagueTeam(safeTeamId);
               navigation.navigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueDashboard });
             } catch (error) {
               console.error(error);
@@ -973,11 +992,11 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [navigation, t, team?.name, teamId]);
+  }, [navigation, safeTeamId, t, team?.name]);
 
   const openRequests = useCallback(() => {
-    navigation.navigate(RouteNames.SquadRequests, { teamId });
-  }, [navigation, teamId]);
+    navigation.navigate(RouteNames.SquadRequests, { teamId: safeTeamId });
+  }, [navigation, safeTeamId]);
 
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
@@ -990,7 +1009,7 @@ function SquadDetailsScreen({ navigation, route }) {
           text: t('squadDetails.actions.invitePlayer', 'Inviter un joueur'),
         },
         {
-          onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId }),
+          onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId: safeTeamId }),
           text: t('squadDetails.actions.editTeam', 'Modifier l\'équipe'),
         },
         {
@@ -1004,7 +1023,7 @@ function SquadDetailsScreen({ navigation, route }) {
         },
       ],
     );
-  }, [handleDeleteTeam, navigation, openRequests, t, teamId]);
+  }, [handleDeleteTeam, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
     if (isCaptain) return 'Demandes';
@@ -1187,6 +1206,49 @@ function SquadDetailsScreen({ navigation, route }) {
       },
     ],
   }), [bodyEntry]);
+
+  if (!safeTeamId) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour"
+        description="L'identifiant de la squad est manquant. Ouvrez la fiche depuis la recherche League ou le dashboard."
+        onAction={() => navigation.goBack()}
+        title="Squad introuvable"
+      />
+    );
+  }
+
+  if (isLoading && !team) {
+    return (
+      <LeagueStateView
+        description="Chargement de la fiche squad et des signaux League."
+        isLoading
+        title="Chargement de la squad"
+      />
+    );
+  }
+
+  if (teamError) {
+    return (
+      <LeagueStateView
+        actionLabel="Reessayer"
+        description="Impossible de charger cette squad League pour le moment. Relancez le chargement ou revenez a la recherche."
+        onAction={() => refetch()}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (!team) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour"
+        description="Cette squad League est introuvable ou n'est plus disponible."
+        onAction={() => navigation.goBack()}
+        title="Squad indisponible"
+      />
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2">

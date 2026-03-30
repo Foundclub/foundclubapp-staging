@@ -2,7 +2,7 @@ import { joiResolver } from '@hookform/resolvers/joi';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppContext } from '@/store/appContext';
@@ -23,6 +23,12 @@ import { getFieldError } from '@/utils/form/formUtils';
 
 /** @typedef {{ label: string; value: string }} Option */
 
+const WEB_FILTER_SURFACE_PROPS = {
+  contentWidth: 720,
+  responsivePadding: true,
+  surface: 'card',
+};
+
 const filtersSchema = Joi.object({
   activities: Joi.string().allow(''),
   category: Joi.string().allow(''),
@@ -42,6 +48,7 @@ function TeamFilters({ navigation }) {
 
   const {
     Alignments,
+    Fonts,
     Spaces,
   } = useTheme();
 
@@ -50,10 +57,30 @@ function TeamFilters({ navigation }) {
   const [categorySearch, setCategorySearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
 
-  const { data: activities } = useGetActivities();
-  const { data: sections } = useGetSections();
-  const { data: categories } = useGetCategories();
-  const { data: levels } = useGetLevels();
+  const {
+    data: activities,
+    error: activitiesError,
+    isLoading: isLoadingActivities,
+    refetch: refetchActivities,
+  } = useGetActivities();
+  const {
+    data: sections,
+    error: sectionsError,
+    isLoading: isLoadingSections,
+    refetch: refetchSections,
+  } = useGetSections();
+  const {
+    data: categories,
+    error: categoriesError,
+    isLoading: isLoadingCategories,
+    refetch: refetchCategories,
+  } = useGetCategories();
+  const {
+    data: levels,
+    error: levelsError,
+    isLoading: isLoadingLevels,
+    refetch: refetchLevels,
+  } = useGetLevels();
 
   const defaultValues = useMemo(() => ({
     activities: teamFilters?.activities || '',
@@ -79,49 +106,78 @@ function TeamFilters({ navigation }) {
     resolver: joiResolver(filtersSchema),
   });
 
-  const activityOptions = useMemo(() => {
-    const options = activities?.map((activity) => ({
+  const allActivityOptions = useMemo(() => (
+    activities?.map((activity) => ({
       label: activity.name,
       value: activity.documentId || '',
-    })) || [];
+    })) || []
+  ), [activities]);
 
-    if (!activitySearch.trim()) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(activitySearch.toLowerCase()));
-  }, [activities, activitySearch]);
+  const activityOptions = useMemo(() => {
+    if (!activitySearch.trim()) return allActivityOptions;
+    return allActivityOptions.filter((option) => option.label.toLowerCase().includes(activitySearch.toLowerCase()));
+  }, [activitySearch, allActivityOptions]);
 
-  const sectionOptions = useMemo(() => {
-    const options = sections?.map((section) => ({
+  const allSectionOptions = useMemo(() => (
+    sections?.map((section) => ({
       label: section.name,
       value: section.documentId || '',
-    })) || [];
+    })) || []
+  ), [sections]);
 
-    if (!sectionSearch.trim()) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(sectionSearch.toLowerCase()));
-  }, [sections, sectionSearch]);
+  const sectionOptions = useMemo(() => {
+    if (!sectionSearch.trim()) return allSectionOptions;
+    return allSectionOptions.filter((option) => option.label.toLowerCase().includes(sectionSearch.toLowerCase()));
+  }, [allSectionOptions, sectionSearch]);
 
-  const categoryOptions = useMemo(() => {
-    const options = categories?.map((category) => ({
+  const allCategoryOptions = useMemo(() => (
+    categories?.map((category) => ({
       label: category.name,
       value: category.documentId || '',
-    })) || [];
+    })) || []
+  ), [categories]);
 
-    if (!categorySearch.trim()) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(categorySearch.toLowerCase()));
-  }, [categories, categorySearch]);
+  const categoryOptions = useMemo(() => {
+    if (!categorySearch.trim()) return allCategoryOptions;
+    return allCategoryOptions.filter((option) => option.label.toLowerCase().includes(categorySearch.toLowerCase()));
+  }, [allCategoryOptions, categorySearch]);
 
-  const levelOptions = useMemo(() => {
-    const options = levels?.map((level) => ({
+  const allLevelOptions = useMemo(() => (
+    levels?.map((level) => ({
       label: level.name,
       value: level.documentId || '',
-    })) || [];
+    })) || []
+  ), [levels]);
 
-    if (!levelSearch.trim()) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(levelSearch.toLowerCase()));
-  }, [levels, levelSearch]);
+  const levelOptions = useMemo(() => {
+    if (!levelSearch.trim()) return allLevelOptions;
+    return allLevelOptions.filter((option) => option.label.toLowerCase().includes(levelSearch.toLowerCase()));
+  }, [allLevelOptions, levelSearch]);
 
   const getOptionLabel = (/** @type {Option[]} */ options, /** @type {string} */ value) => (
     options.find((option) => option.value === value)?.label || ''
   );
+
+  const hasReferenceError = Boolean(
+    activitiesError
+    || sectionsError
+    || categoriesError
+    || levelsError
+  );
+
+  const isReferenceLoading = Boolean(
+    isLoadingActivities
+    || isLoadingSections
+    || isLoadingCategories
+    || isLoadingLevels
+  );
+
+  const handleRetryReferences = () => {
+    refetchActivities();
+    refetchSections();
+    refetchCategories();
+    refetchLevels();
+  };
 
   /**
    * @param {{
@@ -163,11 +219,40 @@ function TeamFilters({ navigation }) {
         Spaces.paddingVertical[24],
         { paddingBottom: insets.bottom + 16 },
       ]}
+      {...WEB_FILTER_SURFACE_PROPS}
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[24]]}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {hasReferenceError ? (
+          <View
+            style={[
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                backgroundColor: 'rgba(255, 159, 67, 0.12)',
+                borderColor: 'rgba(255, 159, 67, 0.4)',
+                borderRadius: 16,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('teamFilters.status.referenceErrorTitle', 'Certaines listes n ont pas pu etre chargees.')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {t('teamFilters.status.referenceErrorBody', 'Vous pouvez quand meme filtrer par nom, ou recharger les listes de reference.')}
+            </Text>
+            <Button
+              onPress={handleRetryReferences}
+              title={t('common.retry', 'Reessayer')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
+
         <Controller
           control={control}
           name="name"
@@ -197,7 +282,9 @@ function TeamFilters({ navigation }) {
             },
           }) => (
             <AutocompleteSelect
+              disabled={Boolean(activitiesError)}
               error={getFieldError({ errors: formErrors, fieldName: name })}
+              isLoading={isLoadingActivities}
               isSearchable
               label={t('teamFilters.fields.activities.label')}
               onBlur={onBlur}
@@ -207,7 +294,7 @@ function TeamFilters({ navigation }) {
               searchValue={activitySearch}
               setSearchValue={setActivitySearch}
               setValue={(/** @type {Option} */ option) => onChange(option?.value || '')}
-              value={getOptionLabel(activityOptions, value)}
+              value={getOptionLabel(allActivityOptions, value)}
             />
           )}
         />
@@ -221,7 +308,9 @@ function TeamFilters({ navigation }) {
             },
           }) => (
             <AutocompleteSelect
+              disabled={Boolean(sectionsError)}
               error={getFieldError({ errors: formErrors, fieldName: name })}
+              isLoading={isLoadingSections}
               isSearchable
               label={t('teamFilters.fields.section.label')}
               onBlur={onBlur}
@@ -231,7 +320,7 @@ function TeamFilters({ navigation }) {
               searchValue={sectionSearch}
               setSearchValue={setSectionSearch}
               setValue={(/** @type {Option} */ option) => onChange(option?.value || '')}
-              value={getOptionLabel(sectionOptions, value)}
+              value={getOptionLabel(allSectionOptions, value)}
             />
           )}
         />
@@ -245,7 +334,9 @@ function TeamFilters({ navigation }) {
             },
           }) => (
             <AutocompleteSelect
+              disabled={Boolean(categoriesError)}
               error={getFieldError({ errors: formErrors, fieldName: name })}
+              isLoading={isLoadingCategories}
               isSearchable
               label={t('teamFilters.fields.category.label')}
               onBlur={onBlur}
@@ -255,7 +346,7 @@ function TeamFilters({ navigation }) {
               searchValue={categorySearch}
               setSearchValue={setCategorySearch}
               setValue={(/** @type {Option} */ option) => onChange(option?.value || '')}
-              value={getOptionLabel(categoryOptions, value)}
+              value={getOptionLabel(allCategoryOptions, value)}
             />
           )}
         />
@@ -269,7 +360,9 @@ function TeamFilters({ navigation }) {
             },
           }) => (
             <AutocompleteSelect
+              disabled={Boolean(levelsError)}
               error={getFieldError({ errors: formErrors, fieldName: name })}
+              isLoading={isLoadingLevels}
               isSearchable
               label={t('teamFilters.fields.level.label')}
               onBlur={onBlur}
@@ -279,7 +372,7 @@ function TeamFilters({ navigation }) {
               searchValue={levelSearch}
               setSearchValue={setLevelSearch}
               setValue={(/** @type {Option} */ option) => onChange(option?.value || '')}
-              value={getOptionLabel(levelOptions, value)}
+              value={getOptionLabel(allLevelOptions, value)}
             />
           )}
         />
@@ -292,6 +385,7 @@ function TeamFilters({ navigation }) {
           variant="Secondary"
         />
         <Button
+          disabled={isReferenceLoading}
           onPress={handleSubmit(handleApplyFilters)}
           title={t('teamFilters.actions.apply')}
           variant="Primary"

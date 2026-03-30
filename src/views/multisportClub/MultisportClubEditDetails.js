@@ -16,9 +16,12 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { useGetMe } from '@/services/auth/authQueries';
 import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+
+import MultisportStateView from './components/MultisportStateView';
 
 /** @typedef {import('@/domains/auth/types').Avatar} Avatar */
 /** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
@@ -51,6 +54,13 @@ const clubSchema = Joi.object({
  */
 function MultisportClubEditDetails({ navigation, route }) {
   const { cmId } = route?.params ?? {};
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: isLoadingUserData,
+    refetch: refetchUserData,
+  } = useGetMe();
+  const resolvedCmId = cmId || userData?.multisportClubs?.[0]?.documentId;
 
   // hooks
   const {
@@ -58,10 +68,15 @@ function MultisportClubEditDetails({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
 
-  const { data: cmData, refetch } = useQuery({
-    enabled: !!cmId,
-    queryFn: () => getMultisportClubById(cmId),
-    queryKey: ['multisport-club', cmId],
+  const {
+    data: cmData,
+    error: cmError,
+    isLoading: isLoadingCmData,
+    refetch,
+  } = useQuery({
+    enabled: !!resolvedCmId,
+    queryFn: () => getMultisportClubById(resolvedCmId),
+    queryKey: ['multisport-club', resolvedCmId],
   });
 
   // local state
@@ -94,7 +109,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   }, [cmData, address]);
 
   const updateCMMutation = useMutation({
-    mutationFn: (/** @type {CMUpdatePayload} */ data) => updateMultisportClub(cmId, data),
+    mutationFn: (/** @type {CMUpdatePayload} */ data) => updateMultisportClub(resolvedCmId, data),
     onSuccess: () => {
       refetch();
       navigation.goBack();
@@ -129,7 +144,7 @@ function MultisportClubEditDetails({ navigation, route }) {
    * @param {typeof defaultValues} data
    */
   const handleFormSubmit = (data) => {
-    if (cmData) {
+    if (cmData && resolvedCmId) {
       updateCMMutation.mutate({
         ...data,
         addressLabel: address?.label,
@@ -138,6 +153,68 @@ function MultisportClubEditDetails({ navigation, route }) {
       });
     }
   };
+
+  if (isLoadingUserData && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.edit.loadingUser', 'Nous preparons les informations de votre club multisport.')}
+        isLoading
+        title={t('multisport.edit.loadingUserTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (userDataError && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.edit.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        onAction={() => refetchUserData()}
+        title={t('multisport.edit.userErrorTitle', 'Edition indisponible')}
+      />
+    );
+  }
+
+  if (!resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
+    );
+  }
+
+  if (isLoadingCmData && !cmData) {
+    return (
+      <MultisportStateView
+        description={t('multisport.edit.loading', 'Nous chargeons les informations a modifier.')}
+        isLoading
+        title={t('multisport.edit.loadingTitle', 'Chargement de la fiche')}
+      />
+    );
+  }
+
+  if (cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.edit.error', "Impossible de charger cette fiche multisport pour le moment.")}
+        onAction={() => refetch()}
+        title={t('multisport.edit.errorTitle', 'Edition indisponible')}
+      />
+    );
+  }
+
+  if (!isLoadingCmData && !cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Actualiser')}
+        description={t('multisport.edit.notFound', "Cette structure multisport est introuvable ou n est plus accessible.")}
+        onAction={() => refetch()}
+        title={t('multisport.edit.notFoundTitle', 'Club introuvable')}
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -250,6 +327,7 @@ function MultisportClubEditDetails({ navigation, route }) {
 
         <View style={[Spaces.marginBottom[16]]}>
           <Button
+            disabled={isLoadingCmData || !cmData}
             isLoading={updateCMMutation.isPending}
             onPress={handleSubmit(handleFormSubmit)}
             title={t('common.actions.save') || 'Enregistrer'}

@@ -67,13 +67,38 @@ const fetchAllPages = async (fetchPage) => {
   return collected;
 };
 
-const fetchTeamRequests = async (teamIds) => {
-  if (!teamIds.length) return [];
+const mergeRequestsById = (entries = []) => {
+  const byId = new Map();
+  entries.forEach((entry) => {
+    const id = String(entry?.documentId || entry?.id || '').trim();
+    if (!id || byId.has(id)) return;
+    byId.set(id, entry);
+  });
+  return Array.from(byId.values());
+};
 
-  return fetchAllPages((page) => getTeamMembershipRequests(teamIds, {
-    page,
-    pageSize: 50,
-  }));
+const fetchTeamRequests = async ({ clubId, teamIds }) => {
+  const jobs = [];
+
+  if (teamIds.length) {
+    jobs.push(fetchAllPages((page) => getTeamMembershipRequests(teamIds, {
+      page,
+      pageSize: 50,
+    })));
+  }
+
+  if (clubId) {
+    jobs.push(fetchAllPages((page) => getTeamMembershipRequests([], {
+      clubId,
+      page,
+      pageSize: 50,
+    })));
+  }
+
+  if (!jobs.length) return [];
+
+  const settled = await Promise.all(jobs);
+  return mergeRequestsById(settled.flat());
 };
 
 const fetchClubRequests = async (clubId) => {
@@ -127,8 +152,8 @@ export const getRequestsHubData = async (rawContext = {}) => {
 
   const sources = [
     {
-      enabled: context.teamIds.length > 0,
-      fetcher: () => fetchTeamRequests(context.teamIds),
+      enabled: context.teamIds.length > 0 || Boolean(context.clubId),
+      fetcher: () => fetchTeamRequests({ clubId: context.clubId, teamIds: context.teamIds }),
       key: 'team',
     },
     {

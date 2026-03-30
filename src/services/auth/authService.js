@@ -496,6 +496,16 @@ export const removeTrainerFromClub = async (id) => {
   const result = await client.put(`/firebase-auth/remove-trainer-from-club/${id}`);
   return result.data;
 };
+
+/**
+ * Leave my current club
+ * @returns {Promise<object>} The API response
+ */
+export const leaveClub = async () => {
+  const result = await client.post('/firebase-auth/me/leave-club');
+  return result.data;
+};
+
 /**
  * Link a trainer to my club
  * @param {string} id

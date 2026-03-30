@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -19,7 +19,10 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { getActivities } from '@/services/activity/activityService';
-import { createCMSection, getMultisportClubById } from '@/services/multisportClub/multisportClubService';
+import { createCMSection } from '@/services/multisportClub/multisportClubService';
+
+import MultisportStateView from './components/MultisportStateView';
+import useResolvedMultisportClub from './useResolvedMultisportClub';
 
 /** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
 /**
@@ -52,6 +55,16 @@ function CreateSectionScreen({ navigation, route }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const {
+    cmData,
+    cmError,
+    isLoadingCmData,
+    isLoadingUserData,
+    refetchCm,
+    refetchUserData,
+    resolvedCmId,
+    userDataError,
+  } = useResolvedMultisportClub(cmId);
 
   const [name, setName] = useState('');
   const [selectedActivity, setSelectedActivity] = useState(
@@ -63,7 +76,12 @@ function CreateSectionScreen({ navigation, route }) {
   );
   const [managerPhone, setManagerPhone] = useState('');
 
-  const { data: activities = [] } = useQuery({
+  const {
+    data: activities = [],
+    error: activitiesError,
+    isLoading: isLoadingActivities,
+    refetch: refetchActivities,
+  } = useQuery({
     queryFn: getActivities,
     queryKey: ['activities'],
     select: (data) => {
@@ -92,33 +110,27 @@ function CreateSectionScreen({ navigation, route }) {
       .includes(normalizedSearch));
   }, [activities, activitySearchValue]);
 
-  const { data: cmDetails } = useQuery({
-    enabled: !!cmId,
-    queryFn: () => getMultisportClubById(cmId),
-    queryKey: ['multisportClub', cmId],
-  });
-
   useEffect(() => {
-    if (!cmDetails || address) return;
-    if (cmDetails.address) {
+    if (!cmData || address) return;
+    if (cmData.address) {
       setAddress({
-        label: cmDetails.addressDetails || cmDetails.address.label,
-        value: `${cmDetails.address.lng}|${cmDetails.address.lat}`,
+        label: cmData.addressDetails || cmData.address.label,
+        value: `${cmData.address.lng}|${cmData.address.lat}`,
       });
       return;
     }
-    if (cmDetails.addressDetails) {
+    if (cmData.addressDetails) {
       setAddress({
-        label: cmDetails.addressDetails,
+        label: cmData.addressDetails,
         value: null,
       });
     }
-  }, [address, cmDetails]);
+  }, [address, cmData]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => createCMSection(cmId || '', /** @type {SectionPayload} */ (data)),
+    mutationFn: (data) => createCMSection(resolvedCmId || '', /** @type {SectionPayload} */ (data)),
     onError: (error) => {
-      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la création de la section.');
+      const fallbackMessage = t('multisport.formErrors.generic', 'Une erreur est survenue lors de la creation de la section.');
       const message = error && typeof error === 'object' && 'message' in error
         ? error.message
         : fallbackMessage;
@@ -129,10 +141,10 @@ function CreateSectionScreen({ navigation, route }) {
     },
     onSuccess: (result) => {
       Alert.alert(
-        t('multisport.sectionCreatedTitle', 'Section créée'),
+        t('multisport.sectionCreatedTitle', 'Section creee'),
         t(
           'multisport.sectionCreatedMessage',
-          'La section "{{name}}" a été créée avec succès.',
+          'La section "{{name}}" a ete creee avec succes.',
           { name: result?.data?.name || name },
         ),
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
@@ -140,13 +152,17 @@ function CreateSectionScreen({ navigation, route }) {
     },
   });
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     if (!name.trim()) {
       Alert.alert(t('APIerrors.title', 'Erreur'), t('multisport.formErrors.sectionNameRequired', 'Le nom de la section est obligatoire.'));
       return;
     }
     if (!address?.label) {
       Alert.alert(t('APIerrors.title', 'Erreur'), t('multisport.formErrors.addressRequired', "L'adresse est obligatoire."));
+      return;
+    }
+    if (!resolvedCmId) {
+      Alert.alert(t('APIerrors.title', 'Erreur'), t('multisport.formErrors.clubRequired', 'Impossible de retrouver le club multisport.'));
       return;
     }
 
@@ -157,9 +173,75 @@ function CreateSectionScreen({ navigation, route }) {
       managerPhone: managerPhone.trim() || undefined,
       name: name.trim(),
     });
-  };
+  }, [address, createMutation, managerPhone, name, resolvedCmId, selectedActivity, t]);
 
-  const isValid = name.trim().length > 0 && Boolean(address?.label);
+  const isValid = name.trim().length > 0
+    && Boolean(address?.label)
+    && !isLoadingActivities
+    && !activitiesError
+    && Boolean(resolvedCmId);
+
+  if (isLoadingUserData && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.createSection.loadingUser', 'Nous preparons votre structure multisport avant la creation de la section.')}
+        isLoading
+        title={t('multisport.createSection.loadingUserTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (userDataError && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.createSection.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        onAction={() => refetchUserData()}
+        title={t('multisport.createSection.userErrorTitle', 'Creation indisponible')}
+      />
+    );
+  }
+
+  if (!resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
+    );
+  }
+
+  if (isLoadingCmData && !cmData) {
+    return (
+      <MultisportStateView
+        description={t('multisport.createSection.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        isLoading
+        title={t('multisport.createSection.loadingTitle', 'Chargement de la fiche')}
+      />
+    );
+  }
+
+  if (cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.createSection.error', "Impossible de charger cette structure multisport pour le moment.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.createSection.errorTitle', 'Creation indisponible')}
+      />
+    );
+  }
+
+  if (!isLoadingCmData && !cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Actualiser')}
+        description={t('multisport.createSection.notFound', "Cette structure multisport est introuvable ou n'est plus accessible.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.createSection.notFoundTitle', 'Club introuvable')}
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -184,9 +266,34 @@ function CreateSectionScreen({ navigation, route }) {
               {t('multisport.createSection.title', 'Nouvelle section')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral200]}>
-              {t('multisport.createSection.subtitle', 'Créez une section sportive pour votre club multisport.')}
+              {t('multisport.createSection.subtitle', 'Creez une section sportive pour votre club multisport.')}
             </Text>
           </View>
+
+          {activitiesError ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.backgroundColor.primary700,
+                ApplicationStyle.borderWidth1,
+                Spaces.padding[16],
+                Spaces.gap[8],
+                { borderColor: 'rgba(255, 191, 71, 0.45)' },
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('multisport.createSection.activitiesErrorTitle', 'Le referentiel des sports est indisponible')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral100]}>
+                {t('multisport.createSection.activitiesErrorDescription', "Impossible de charger la liste des sports pour le moment.")}
+              </Text>
+              <Button
+                onPress={() => refetchActivities()}
+                title={t('common.retry', 'Reessayer')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
 
           <View
             style={[
@@ -215,6 +322,8 @@ function CreateSectionScreen({ navigation, route }) {
                 {t('multisport.createSection.fields.sport.label', 'Sport')}
               </Text>
               <AutocompleteSelect
+                disabled={Boolean(activitiesError)}
+                isLoading={isLoadingActivities}
                 isSearchable
                 options={filteredActivities}
                 placeholder={t('multisport.createSection.fields.sport.placeholder', 'Choisir un sport')}
@@ -225,7 +334,7 @@ function CreateSectionScreen({ navigation, route }) {
               />
               {activitySearchValue.trim().length > 0 && filteredActivities.length === 0 ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond à votre recherche.')}
+                  {t('multisport.createSection.fields.sport.noResults', 'Aucun sport ne correspond a votre recherche.')}
                 </Text>
               ) : null}
             </View>
@@ -252,7 +361,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce numéro sera utilisé pour rattacher le dirigeant à la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ce numero sera utilise pour rattacher le dirigeant a la section.')}
               </Text>
             </View>
           </View>
@@ -267,7 +376,7 @@ function CreateSectionScreen({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('multisport.createSection.info', 'Une fois créée, la section pourra accueillir équipes, événements et membres.')}
+              {t('multisport.createSection.info', 'Une fois creee, la section pourra accueillir equipes, evenements et membres.')}
             </Text>
           </View>
         </ScrollView>
@@ -277,8 +386,8 @@ function CreateSectionScreen({ navigation, route }) {
             disabled={!isValid || createMutation.isPending}
             onPress={handleCreate}
             title={createMutation.isPending
-              ? t('multisport.createSection.actions.creating', 'Création...')
-              : t('multisport.createSection.actions.create', 'Créer la section')}
+              ? t('multisport.createSection.actions.creating', 'Creation...')
+              : t('multisport.createSection.actions.create', 'Creer la section')}
             variant="Primary"
           />
         </View>
@@ -288,4 +397,3 @@ function CreateSectionScreen({ navigation, route }) {
 }
 
 export default CreateSectionScreen;
-

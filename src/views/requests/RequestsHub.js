@@ -110,7 +110,7 @@ function RequestsHub({ navigation, route }) {
   const availableFilters = useMemo(() => {
     /** @type {('all' | 'team' | 'club' | 'event' | 'featured')[]} */
     const filters = ['all'];
-    if (trainedTeamIds.length) filters.push('team');
+    if (trainedTeamIds.length || clubId) filters.push('team');
     if (clubId) filters.push('club', 'event');
     if (clubId || cmId) filters.push('featured');
     return filters;

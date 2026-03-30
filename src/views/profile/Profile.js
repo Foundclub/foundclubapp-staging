@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -208,6 +209,15 @@ function Profile({ navigation, route }) {
     }
     setIsAccountModalVisible(false);
     addAccount();
+  };
+
+  const handleToggleAccountSwitcher = () => {
+    if (Platform.OS === 'web') {
+      setIsAccountModalVisible((currentValue) => !currentValue);
+      return;
+    }
+
+    setIsAccountModalVisible(true);
   };
 
   const renderUserClub = () => {
@@ -452,7 +462,7 @@ function Profile({ navigation, route }) {
 
       <TabButton
         isActive={false}
-        onPress={() => setIsAccountModalVisible(true)}
+        onPress={handleToggleAccountSwitcher}
         title={t('profile.actions.switchAccount', 'Changer de compte')}
       />
     </View>
@@ -516,6 +526,31 @@ function Profile({ navigation, route }) {
         title={t('profile.actions.addAccount', 'Ajouter un compte')}
         variant="Secondary"
       />
+    </View>
+  );
+
+  const accountSwitcherPanel = (
+    <View
+      style={[
+        Spaces.gap[12],
+        Spaces.padding[16],
+        ApplicationStyle.borderRadius12,
+        ApplicationStyle.borderWidth1,
+        ApplicationStyle.borderColor.primary100,
+        ApplicationStyle.backgroundColor.primary700,
+      ]}
+    >
+      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t('profile.actions.switchAccount', 'Changer de compte')}
+        </Text>
+        <TouchableOpacity onPress={() => setIsAccountModalVisible(false)}>
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t('common.close', 'Fermer')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {accountSwitcherContent}
     </View>
   );
 
@@ -633,6 +668,21 @@ function Profile({ navigation, route }) {
               {profileActionsContent}
             </OnboardingWrapper>
           ) : profileActionsContent}
+          {Platform.OS === 'web' && isAccountModalVisible ? (
+            isAccountSwitcherTutorial ? (
+              <OnboardingWrapper
+                description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+                id="profile-account-switcher-modal"
+                order={1}
+                spotlight={{
+                  borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+                }}
+                title="Changer de compte"
+              >
+                {accountSwitcherPanel}
+              </OnboardingWrapper>
+            ) : accountSwitcherPanel
+          ) : null}
 
           {isLogoutTutorial ? (
             <OnboardingWrapper
@@ -665,27 +715,29 @@ function Profile({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <BottomModal
-          close={() => setIsAccountModalVisible(false)}
-          contentContainerStyle={{ paddingBottom: 8 }}
-          hideCloseButton
-          isVisible={isAccountModalVisible}
-          useSafeAreaBottomInset={false}
-        >
-          {isAccountSwitcherTutorial ? (
-            <OnboardingWrapper
-              description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
-              id="profile-account-switcher-modal"
-              order={1}
-              spotlight={{
-                borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
-              }}
-              title="Changer de compte"
-            >
-              {accountSwitcherContent}
-            </OnboardingWrapper>
-          ) : accountSwitcherContent}
-        </BottomModal>
+        {Platform.OS === 'web' ? null : (
+          <BottomModal
+            close={() => setIsAccountModalVisible(false)}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            hideCloseButton
+            isVisible={isAccountModalVisible}
+            useSafeAreaBottomInset={false}
+          >
+            {isAccountSwitcherTutorial ? (
+              <OnboardingWrapper
+                description="Choisissez un compte actif ou ajoutez un nouveau compte connecte."
+                id="profile-account-switcher-modal"
+                order={1}
+                spotlight={{
+                  borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
+                }}
+                title="Changer de compte"
+              >
+                {accountSwitcherContent}
+              </OnboardingWrapper>
+            ) : accountSwitcherContent}
+          </BottomModal>
+        )}
       </ScreenContainer>
     </TutorialFlowBoundary>
   );

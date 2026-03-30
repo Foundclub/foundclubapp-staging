@@ -69,6 +69,14 @@ function CreateClubRequest({ navigation }) {
 
   const createClubMutation = useMutation({
     mutationFn: createClubRequest,
+    onError: (mutationError) => {
+      const errorMessage = mutationError?.response?.data?.error?.message
+        || mutationError?.response?.data?.error
+        || mutationError?.message
+        || t('APIerrors.unknown');
+
+      Alert.alert(t('common.error', 'Erreur'), String(errorMessage));
+    },
     onSuccess: () => {
       Alert.alert(
         t('createClubRequest.alerts.title'),
@@ -247,6 +255,7 @@ function CreateClubRequest({ navigation }) {
         </ScrollView>
 
         <Button
+          disabled={createClubMutation.isPending}
           isLoading={createClubMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
           title={t('createClubRequest.actions.create')}

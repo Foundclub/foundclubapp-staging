@@ -19,6 +19,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -77,14 +78,22 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
     [currentDate, viewMode],
   );
 
-  const { data: sectionsData } = useQuery({
+  const {
+    data: sectionsData,
+    error: sectionsError,
+    refetch: refetchSections,
+  } = useQuery({
     enabled: !!cmId,
     queryFn: () => getCMClubs(cmId),
     queryKey: ['cm-clubs-list', cmId],
   });
   const sections = sectionsData?.data || [];
 
-  const { data: facilitiesData } = useQuery({
+  const {
+    data: facilitiesData,
+    error: facilitiesError,
+    refetch: refetchFacilities,
+  } = useQuery({
     enabled: !!cmId,
     queryFn: () => getCMFacilities(cmId),
     queryKey: ['cm-facilities-list', cmId],
@@ -149,6 +158,7 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
     { label: t('planning.mode.threeDaysShort', '3 jours'), value: '3days' },
     { label: t('planning.mode.monthShort', 'Mois'), value: 'month' },
   ]), [t]);
+  const filtersError = sectionsError || facilitiesError;
 
   const handleEventPress = (event) => {
     if (!event?.documentId) return;
@@ -233,6 +243,37 @@ function CMPlanningContent({ cmId, navigation, showTopHeader = false }) {
             )}
           </Text>
         </View>
+
+        {filtersError ? (
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[8],
+              { borderColor: `${Colors.gold500}55` },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('planning.cm.filtersErrorTitle', 'Certains filtres du planning sont indisponibles')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {t(
+                'planning.cm.filtersErrorDescription',
+                "Le planning reste accessible, mais nous n'avons pas pu charger toutes les sections ou installations.",
+              )}
+            </Text>
+            <Button
+              onPress={() => {
+                refetchSections();
+                refetchFacilities();
+              }}
+              title={t('common.retry', 'Reessayer')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>

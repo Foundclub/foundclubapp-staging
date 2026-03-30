@@ -11,6 +11,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdWizard } from './AdWizardContext';
+import { getAdWizardStepCount } from './adWizardStepUtils';
 import { getPositionValuesForSport } from '@/constants/positions';
 
 /**
@@ -74,6 +75,8 @@ function AdWizardPositions({ navigation }) {
       nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
+      stepCount={getAdWizardStepCount(state)}
+      stepIndex={3}
       subtitle="Sélectionnez les postes et le nombre de joueurs"
       title="Postes recherchés"
     >

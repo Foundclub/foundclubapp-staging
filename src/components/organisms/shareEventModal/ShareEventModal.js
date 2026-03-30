@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Share, Text, TouchableOpacity, View,
+  Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -18,6 +18,13 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
+import {
+  buildInstallLandingUrl,
+  buildShareMessageWithUrl,
+} from '@/utils/shareLinks';
+
+import SharePlatform from '@/platform/share';
+
 /**
  * Modal to select a chat to share an event
  * @param {object} props
@@ -31,7 +38,7 @@ function ShareEventModal({
   event, isVisible, onClose, onSelectChat,
 }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const { allMyTeams, userData } = useAuth();
@@ -102,11 +109,23 @@ function ShareEventModal({
   const handleNativeShare = async () => {
     if (!event) return;
     try {
-      const message = `${t('event.shareMessage', 'Découvrez cet événement :')} ${event.title}\n${event.description || ''}`;
-      await Share.share({
+      const shareUrl = buildInstallLandingUrl({
+        id: event?.documentId,
+        source: 'share',
+        type: 'event',
+      });
+      const message = buildShareMessageWithUrl({
+        intro: [
+          `${t('event.shareMessage', 'Découvrez cet événement :')} ${event.title}`,
+          event.description || '',
+        ].filter(Boolean).join('\n'),
+        linkLabel: t('event.shareLinkLabel', 'Ouvrir dans FoundClub'),
+        url: shareUrl,
+      });
+      await SharePlatform.share({
         message,
         title: event.title,
-        // url: `foundclub://event/${event.documentId}` // Optional deep link
+        url: shareUrl,
       });
     } catch (err) {
       console.error(err);

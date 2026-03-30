@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Text, View } from 'react-native';
+import {
+  FlatList, RefreshControl, Text, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import StatRow from '@/components/molecules/statRow/StatRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetTeamStats } from '@/services/stats/statsQueries';
 
@@ -29,7 +34,7 @@ const getColumnsForSport = (sport) =>
  * TeamStatsScreen - Displays attendance and performance stats for team players
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
-function TeamStatsScreen({ route }) {
+function TeamStatsScreen({ navigation, route }) {
   const { teamId, teamName: routeTeamName } = route.params || {};
   const { t } = useTranslation();
   const {
@@ -37,11 +42,20 @@ function TeamStatsScreen({ route }) {
   } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { data: statsData, error, isLoading } = useGetTeamStats(teamId);
+  const {
+    data: statsData,
+    error,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useGetTeamStats(teamId, { enabled: Boolean(teamId) });
 
   const columns = useMemo(() => getColumnsForSport(statsData?.sport), [statsData?.sport]);
 
   const teamName = statsData?.teamName || routeTeamName || 'Équipe';
+
+  const isMissingTeamId = !teamId;
+  const isRefreshing = isFetching && !isLoading;
 
   const renderHeader = () => (
     <View style={[Spaces.marginBottom[24], Spaces.paddingHorizontal[4]]}>
@@ -143,6 +157,26 @@ function TeamStatsScreen({ route }) {
     </View>
   );
 
+  if (isMissingTeamId) {
+    return (
+      <ScreenContainer bgImage="bg2">
+        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            Equipe introuvable
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            Aucun identifiant d equipe n a ete fourni.
+          </Text>
+          <Button
+            onPress={() => navigation.navigate(RouteNames.TeamList)}
+            title="Retour aux equipes"
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (isLoading) {
     return (
       <ScreenContainer bgImage="bg2">
@@ -156,10 +190,14 @@ function TeamStatsScreen({ route }) {
   if (error) {
     return (
       <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
-          <Text style={[Fonts.p1, { color: Colors.error500 }]}>
-            {t('common.errors.generic', 'Une erreur est survenue')}
+        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            Impossible de charger les statistiques
           </Text>
+          <Text style={[Fonts.p1, { color: Colors.error500 }]}>
+            {error?.message || t('common.errors.generic', 'Une erreur est survenue')}
+          </Text>
+          <Button onPress={() => refetch()} title="Reessayer" variant="Secondary" />
         </View>
       </ScreenContainer>
     );
@@ -176,7 +214,7 @@ function TeamStatsScreen({ route }) {
       <FlatList
         contentContainerStyle={[Spaces.gap[0]]}
         data={statsData?.data || []}
-        keyExtractor={(item) => item.user?.documentId || Math.random().toString()}
+        keyExtractor={(item, index) => item.user?.documentId || `team-stat-row-${index}`}
         ListEmptyComponent={(
           <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
             <Text style={[Fonts.p1, { color: Colors.neutral400 }]}>
@@ -185,6 +223,14 @@ function TeamStatsScreen({ route }) {
           </View>
         )}
         ListHeaderComponent={renderHeader}
+        refreshControl={(
+          <RefreshControl
+            colors={[Colors.primary500]}
+            onRefresh={() => refetch()}
+            refreshing={isRefreshing}
+            tintColor={Colors.primary500}
+          />
+        )}
         renderItem={({ index, item }) => (
           <View style={[Spaces.marginBottom[8]]}>
             <StatRow columns={columns} isEven={index % 2 === 0} player={item} />

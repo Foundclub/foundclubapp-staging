@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Share, Text, TouchableOpacity, View,
+  Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -17,6 +17,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
+import { share } from '@/platform/share';
 
 /**
  * @typedef {object} CompositionData
@@ -127,7 +128,7 @@ function ShareCompositionModal({
 
       const message = `📋 Composition d'équipe\n\n⚽ Titulaires (${playerCount}):\n- ${starters}\n\nRetrouvez le détail sur FoundClub !`;
 
-      await Share.share({
+      await share({
         message,
         title: `Composition ${event?.subject || 'Match'}`,
       });

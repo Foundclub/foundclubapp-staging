@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -9,6 +9,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
@@ -51,30 +52,31 @@ function EventWizardInvites({ navigation }) {
     setSelectedTeams(state.invitedTeams || []);
   }, [state.invitedTeams]);
 
-  useEffect(() => {
-    const fetchClubTeams = async () => {
-      if (!clubId) {
-        setAvailableTeams([]);
-        return;
-      }
-
-      setIsLoading(true);
+  const loadClubTeams = useCallback(async () => {
+    if (!clubId) {
+      setAvailableTeams([]);
       setHasFetchError(false);
-      try {
-        const response = await getTeams({ clubId, pageSize: 100 });
-        const allTeams = Array.isArray(response?.data) ? response.data : [];
-        const inviteable = allTeams.filter((team) => team.documentId !== selectedOrganizerTeamId);
-        setAvailableTeams(inviteable);
-      } catch (error) {
-        setHasFetchError(true);
-        setAvailableTeams([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      return;
+    }
 
-    fetchClubTeams();
+    setIsLoading(true);
+    setHasFetchError(false);
+    try {
+      const response = await getTeams({ clubId, pageSize: 100 });
+      const allTeams = Array.isArray(response?.data) ? response.data : [];
+      const inviteable = allTeams.filter((team) => team.documentId !== selectedOrganizerTeamId);
+      setAvailableTeams(inviteable);
+    } catch (_error) {
+      setHasFetchError(true);
+      setAvailableTeams([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [clubId, selectedOrganizerTeamId]);
+
+  useEffect(() => {
+    loadClubTeams();
+  }, [loadClubTeams]);
 
   const teamsByOwnership = useMemo(() => {
     const myTeamIds = new Set((userData?.trainedTeams || []).map((team) => team.documentId));
@@ -125,6 +127,7 @@ function EventWizardInvites({ navigation }) {
 
   return (
     <WizardStepLayout
+      isNextDisabled={isLoading || hasFetchError}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       onSkip={handleSkip}
@@ -140,9 +143,14 @@ function EventWizardInvites({ navigation }) {
 
       {!isLoading && hasFetchError ? (
         <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
-          <Text style={[Fonts.p1, Fonts.neutral100]}>
+          <Text style={[Fonts.p1, Fonts.neutral100, Spaces.marginBottom[12]]}>
             {t('eventWizard.errors.invitesFetch')}
           </Text>
+          <Button
+            onPress={loadClubTeams}
+            title={t('common.retry', 'Recharger')}
+            variant="Primary"
+          />
         </View>
       ) : null}
 

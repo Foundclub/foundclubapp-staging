@@ -1,4 +1,4 @@
-import { Image, Text, TouchableOpacity } from 'react-native';
+import { Image, Platform, Text, TouchableOpacity } from 'react-native';
 
 import useTheme from '../../../theme/themeContext';
 
@@ -19,8 +19,27 @@ function TabButton({
     Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
 
+  /**
+   * @param {any} event
+   */
+  const handleKeyDown = (event) => {
+    if (Platform.OS !== 'web' || !onPress) {
+      return;
+    }
+
+    if (event?.key !== 'Enter' && event?.key !== ' ') {
+      return;
+    }
+
+    event?.preventDefault?.();
+    onPress(event);
+  };
+
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      focusable
+      onKeyDown={handleKeyDown}
       onPress={onPress}
       style={[
         Alignments.row,

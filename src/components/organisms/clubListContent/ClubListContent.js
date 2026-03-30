@@ -9,6 +9,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -35,7 +36,7 @@ function ClubListContent() {
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
-  const [isMapView] = useState(false);
+  const [isMapView, setIsMapView] = useState(false);
   const [{ clubFilters }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
   const activeSearchText = useMemo(
@@ -94,6 +95,7 @@ function ClubListContent() {
   const activeError = isSmartSearchEnabled ? smartError : error;
   const activeIsLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeIsFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
+  const shouldShowMapToggle = isMapView || displayedClubs.length > 0;
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -164,6 +166,18 @@ function ClubListContent() {
     }
   }, [navigation]);
 
+  const handleClubMapMarkerPress = useCallback((item) => {
+    const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
+    const documentId = item?.documentId;
+
+    if (isMultisport) {
+      handleMultisportSelection(documentId);
+      return;
+    }
+
+    handleClubSelection(documentId);
+  }, [handleClubSelection, handleMultisportSelection]);
+
   /**
    * Render the club item
    * @param {object} param
@@ -233,7 +247,7 @@ function ClubListContent() {
       {isMapView ? (
         <SearchMap
           items={displayedClubs}
-          onMarkerPress={handleClubSelection}
+          onMarkerPress={handleClubMapMarkerPress}
           type="club"
         />
       ) : (
@@ -266,6 +280,13 @@ function ClubListContent() {
           />
         </WithDataWrapper>
       )}
+      {shouldShowMapToggle ? (
+        <MapFloatButton
+          isMapView={isMapView}
+          onPress={() => setIsMapView((previousValue) => !previousValue)}
+          type="club"
+        />
+      ) : null}
     </View>
   );
 }

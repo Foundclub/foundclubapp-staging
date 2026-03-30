@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -93,13 +94,16 @@ function SmartNotificationHost() {
         </View>
       ) : null}
 
-      {activeSnackbar && isLineupReminder && canShowLineupReminderModal ? (
-        <Modal
-          animationType="fade"
-          onRequestClose={dismissSnackbar}
-          statusBarTranslucent
-          transparent
-          visible
+      {activeSnackbar && isLineupReminder && canShowLineupReminderModal && Platform.OS === 'web' ? (
+        <View
+          style={{
+            bottom: 0,
+            left: 0,
+            position: 'fixed',
+            right: 0,
+            top: 0,
+            zIndex: 1070,
+          }}
         >
           <View style={styles.lineupOverlay}>
             <Pressable onPress={dismissSnackbar} style={styles.lineupOverlayTapArea} />
@@ -130,7 +134,49 @@ function SmartNotificationHost() {
               </View>
             </View>
           </View>
-        </Modal>
+        </View>
+      ) : null}
+
+      {activeSnackbar && isLineupReminder && canShowLineupReminderModal ? (
+        Platform.OS === 'web' ? null : (
+          <Modal
+            animationType="fade"
+            onRequestClose={dismissSnackbar}
+            statusBarTranslucent
+            transparent
+            visible
+          >
+            <View style={styles.lineupOverlay}>
+              <Pressable onPress={dismissSnackbar} style={styles.lineupOverlayTapArea} />
+              <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
+                <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+                  {activeSnackbar.title || 'Publier la compo'}
+                </Text>
+                <Text style={[Fonts.p2, styles.lineupDescription, { color: Colors.neutral100 }]}>
+                  {activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+                </Text>
+
+                <View style={styles.lineupActions}>
+                  <Pressable
+                    onPress={dismissSnackbar}
+                    style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Plus tard</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      handleOpenFromPayload(activeSnackbar);
+                      dismissSnackbar();
+                    }}
+                    style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>Publier la compo</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )
       ) : null}
 
       <MatchFinalPosterModal

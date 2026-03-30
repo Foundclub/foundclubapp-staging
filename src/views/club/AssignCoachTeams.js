@@ -17,6 +17,7 @@ import Checkable from '@/components/atoms/checkable/Checkable';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -35,12 +36,24 @@ const isTrainerAlreadyAssigned = (team, trainerId) => {
   return (team?.trainers || []).some((trainer) => trainer?.documentId === trainerId);
 };
 
+const sanitizeRouteParam = (value) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue || normalizedValue.startsWith(':')) {
+    return '';
+  }
+
+  return normalizedValue;
+};
+
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
 function AssignCoachTeams({ navigation, route }) {
-  const { clubId, trainerId, trainerName } = route?.params ?? {};
+  const clubId = sanitizeRouteParam(route?.params?.clubId);
+  const trainerId = sanitizeRouteParam(route?.params?.trainerId)
+    || sanitizeRouteParam(route?.params?.coachId);
+  const trainerName = String(route?.params?.trainerName || '').trim();
   const { t } = useTranslation();
   const {
     Alignments,
@@ -298,6 +311,24 @@ function AssignCoachTeams({ navigation, route }) {
     return `${selectedTeamIds.length} équipes sélectionnées`;
   }, [selectedTeamIds.length]);
 
+  if (!clubId) {
+    return (
+      <ClubStateView
+        description="Impossible d'ouvrir cette assignation sans club valide. Revenez a la demande d'adhesion puis relancez l'action."
+        title="Club introuvable"
+      />
+    );
+  }
+
+  if (!trainerId) {
+    return (
+      <ClubStateView
+        description="Impossible de retrouver le coach a assigner. Revenez a la demande puis relancez l'assignation."
+        title="Coach introuvable"
+      />
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -355,6 +386,7 @@ function AssignCoachTeams({ navigation, route }) {
               {selectedCountLabel}
             </Text>
             <Button
+              disabled={!selectedTeamIds.length || assignMutation.isPending || isLoading}
               isLoading={assignMutation.isPending}
               onPress={handleAssignSelected}
               title="Assigner aux équipes sélectionnées"

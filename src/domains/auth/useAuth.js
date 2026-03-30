@@ -5,12 +5,13 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Linking, Platform, Share,
+  Alert, Linking, Platform,
 } from 'react-native';
 
 import { storage, useAppContext } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
+import SharePlatform from '@/platform/share';
 
 import {
   deleteDeviceToken,
@@ -18,6 +19,10 @@ import {
 } from '@/services/auth/authService';
 
 import { createLogger } from '@/utils/logger/logger';
+import {
+  buildInstallLandingUrl,
+  buildShareMessageWithUrl,
+} from '@/utils/shareLinks';
 import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import {
   formatBirthdateToDisplay,
@@ -187,55 +192,38 @@ const useAuth = () => {
   /**
    * Invite a trainer
    * @param {object} param
+   * @param {string | undefined} param.clubId
    * @param {string | undefined} param.firstname
    * @param {string | undefined} param.clubName
    * @param {string | undefined} param.phoneNumber
    */
-  const inviteTrainer = ({ clubName, firstname, phoneNumber }) => {
-    // Construct the message
+  const inviteTrainer = ({
+    clubId, clubName, firstname, phoneNumber,
+  }) => {
     const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
       clubName,
       coachName: firstname,
     });
-
-    // Smart install link logic
-    const baseUrl = process.env.API_URL ? process.env.API_URL.replace('/api', '') : 'https://foundclub.com';
-    // Append context for the landing page to generate the correct deep link
-    // Assuming we have the clubId available here. If not, we might need to fetch it or pass it.
-    // For inviteTrainer, we usually have clubName, but maybe not ID?
-    // Let's assume for now we might need to pass clubId to inviteTrainer.
-    // If clubId is missing, the link will just be a generic install link.
-    // Wait, the hook inviteTrainer signature currently is: ({ clubName, firstname, phoneNumber })
-    // We need to add clubId to the function signature or get it from context if possible.
-    // The previous code in AddCoach.js call: inviteTrainer({ clubName: ..., firstname: ..., phoneNumber: ... })
-    // It seems we should update the signature. But first let's see where we get the clubId.
-    // In AddCoach.js: const { clubName } = route?.params || {};
-    // It seems route params usually have IDs too?
-    // Checking AddCoach.js again... it receives route parameters.
-
-    // For now, I will update the invitation generation to use a placeholder or best effort
-    // BUT I must update the function signature too.
-
-    const installUrl = `${baseUrl}/install.html?type=club&id=${encodeURIComponent(clubName || '')}`; // Ideally ID, but name is what we have passed often.
-    // actually, deep linking usually requires ID.
-    // I should check if I can pass clubId.
-
-    // Let's look at how inviteTrainer is called in AddCoach.js
-    // It's called with { clubName, firstname, phoneNumber }.
-    // I will update the signature to accept clubId and pass it from the caller.
-
-    const urls = `\n\n${t('teamDetails.alerts.invitePlayers.downloadApp', 'Télécharge l\'application ici')} : \n${installUrl}`;
-
-    const encodedMessage = `${shareMessage}${urls}`;
+    const installUrl = buildInstallLandingUrl({
+      id: clubId,
+      source: 'sms',
+      type: 'club',
+    });
+    const encodedMessage = buildShareMessageWithUrl({
+      intro: shareMessage,
+      linkLabel: t('teamDetails.alerts.invitePlayers.downloadApp', 'Telecharge l\'application ici'),
+      url: installUrl,
+    });
     const smsUrl = `sms:${phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(encodedMessage)}`;
 
     Linking.openURL(smsUrl).catch(() => {
-      Share.share({
+      SharePlatform.share({
         message: encodedMessage,
         title: t(
           'clubDetails.alerts.inviteTrainer.title',
         ),
-      });
+        url: installUrl,
+      }).catch(() => undefined);
     });
   };
 
@@ -243,31 +231,32 @@ const useAuth = () => {
    * Invite team players
    * @param {object} param
    * @param {string} [param.clubName]
+   * @param {string} [param.teamId]
    * @param {string} [param.teamName]
    * @returns {void}
    */
-  const inviteTeamPlayers = ({ clubName, teamName }) => {
-    // Smart install link logic
-    const baseUrl = process.env.API_URL ? process.env.API_URL.replace('/api', '') : 'https://foundclub.com';
-    // We need teamId here! The function signature is ({ clubName, teamName }).
-    // I must update it to ({ clubName, teamName, teamId }).
-    const installUrl = `${baseUrl}/install.html?type=team&id=${encodeURIComponent(teamName || '')}`;
-    // Again, name is unstable for deep linking. I will likely need to update the caller to pass ID.
-
-    // Construct the message
+  const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
+    const installUrl = buildInstallLandingUrl({
+      id: teamId,
+      source: 'sms',
+      type: 'team',
+    });
     const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
       clubName,
       teamName,
     });
 
-    const urls = `\n\n${t('teamDetails.alerts.invitePlayers.downloadApp', 'Télécharge l\'application ici')} : \n${installUrl}`;
-
-    Share.share({
-      message: `${shareMessage}${urls}`,
+    SharePlatform.share({
+      message: buildShareMessageWithUrl({
+        intro: shareMessage,
+        linkLabel: t('teamDetails.alerts.invitePlayers.downloadApp', 'Telecharge l\'application ici'),
+        url: installUrl,
+      }),
       title: t(
         'teamDetails.alerts.invitePlayers.title',
       ),
-    });
+      url: installUrl,
+    }).catch(() => undefined);
   };
 
   const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {

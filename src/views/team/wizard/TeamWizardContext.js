@@ -1,8 +1,9 @@
 import {
-  createContext, useContext, useMemo, useReducer,
+  createContext, useContext, useEffect, useMemo, useReducer,
 } from 'react';
 
 const TeamWizardContext = createContext(/** @type {any} */ (null));
+const TEAM_WIZARD_STORAGE_KEY = 'fc:web:team-wizard';
 
 const createInitialState = () => ({
   activities: '',
@@ -15,6 +16,36 @@ const createInitialState = () => ({
   section: '',
   trainers: /** @type {string[]} */ ([]),
 });
+
+const canUseWizardStorage = () => (
+  typeof globalThis !== 'undefined'
+  && typeof globalThis.sessionStorage !== 'undefined'
+);
+
+const loadPersistedState = () => {
+  const initialState = createInitialState();
+
+  if (!canUseWizardStorage()) {
+    return initialState;
+  }
+
+  try {
+    const raw = globalThis.sessionStorage.getItem(TEAM_WIZARD_STORAGE_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return initialState;
+    }
+
+    return {
+      ...initialState,
+      ...parsed,
+    };
+  } catch (_error) {
+    return initialState;
+  }
+};
 
 /**
  * @param {ReturnType<typeof createInitialState>} state
@@ -65,7 +96,21 @@ function teamWizardReducer(state, action) {
  * @returns {import('react').ReactElement}
  */
 export function TeamWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(teamWizardReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(teamWizardReducer, undefined, loadPersistedState);
+
+  useEffect(() => {
+    if (!canUseWizardStorage()) return;
+
+    try {
+      globalThis.sessionStorage.setItem(
+        TEAM_WIZARD_STORAGE_KEY,
+        JSON.stringify(state),
+      );
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory wizard state.
+    }
+  }, [state]);
+
   const value = useMemo(() => ({ dispatch, state }), [state]);
 
   return (

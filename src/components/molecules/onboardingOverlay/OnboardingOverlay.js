@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -152,6 +153,7 @@ function OnboardingOverlay({ onVisible } = {}) {
     height: safeViewportHeight,
     width: safeViewportWidth,
   });
+  const hasRenderableFocus = focusLayout.width > 0 && focusLayout.height > 0;
   const effectiveTooltipHeight = TOOLTIP_ESTIMATED_HEIGHT;
   const overlayOpacity = clamp(
     toSafeNumber(spotlight?.overlayOpacity, DEFAULT_OVERLAY_OPACITY),
@@ -232,6 +234,159 @@ function OnboardingOverlay({ onVisible } = {}) {
     nextStep();
   };
 
+  if (Platform.OS === 'web' && !hasRenderableFocus) {
+    return null;
+  }
+
+  const overlayContent = (
+    <View pointerEvents="box-none" style={styles.container}>
+      <View
+        pointerEvents="none"
+        style={[styles.overlayPart, overlayStyle, {
+          height: topHeight, left: 0, right: 0, top: 0,
+        }]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.overlayPart, overlayStyle, {
+          bottom: 0, left: 0, right: 0, top: topHeight + focusLayout.height,
+        }]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.overlayPart, overlayStyle, {
+          height: focusLayout.height, left: 0, top: topHeight, width: leftWidth,
+        }]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.overlayPart, overlayStyle, {
+          height: focusLayout.height, right: 0, top: topHeight, width: rightWidth,
+        }]}
+      />
+
+      <View
+        pointerEvents="none"
+        style={[
+          styles.spotlightFrame,
+          {
+            borderColor: Colors.primary500,
+            borderRadius: focusLayout.borderRadius,
+            height: focusLayout.height,
+            left: focusLayout.x,
+            top: focusLayout.y,
+            width: focusLayout.width,
+          },
+        ]}
+      />
+
+      <View
+        pointerEvents="auto"
+        style={[
+          styles.tooltip,
+          {
+            backgroundColor: Colors.neutral00,
+            left: tooltipLeft,
+            shadowColor: Colors.neutral900,
+            top: tooltipTop,
+            width: tooltipWidth,
+          },
+          Spaces.padding[16],
+        ]}
+      >
+        <View
+          style={[
+            styles.tooltipArrow,
+            placeTooltipAboveTarget ? styles.tooltipArrowBottom : styles.tooltipArrowTop,
+            {
+              borderBottomColor: !placeTooltipAboveTarget ? Colors.neutral00 : 'transparent',
+              borderTopColor: placeTooltipAboveTarget ? Colors.neutral00 : 'transparent',
+              left: arrowLeft,
+            },
+          ]}
+        />
+        <Text style={[Fonts.h3Bold, Fonts.neutral900, Spaces.marginBottom[8]]}>
+          {title}
+        </Text>
+        <Text style={[Fonts.p1, Fonts.neutral500, Spaces.marginBottom[16]]}>
+          {description}
+        </Text>
+
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+            <Pressable
+              accessibilityHint={t('onboardingAffiliation.a11y.tooltipSkipHint')}
+              accessibilityLabel={t('common.skip')}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={handleSkipPress}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral500]}>
+                {t('common.skip')}
+              </Text>
+            </Pressable>
+
+            {canGoBack ? (
+              <Pressable
+                accessibilityHint={t('onboardingAffiliation.a11y.tooltipPreviousHint')}
+                accessibilityLabel={t('common.previous')}
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={handlePreviousPress}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral500]}>
+                  {t('common.previous')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <Text style={[Fonts.p3, Fonts.neutral400]}>
+              {currentStepIndex + 1}
+              /
+              {totalSteps}
+            </Text>
+            <Pressable
+              accessibilityHint={t('onboardingAffiliation.a11y.tooltipNextHint')}
+              accessibilityLabel={nextButtonLabel}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={handleNextPress}
+              style={[styles.nextButton, { backgroundColor: Colors.primary500 }]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[6]]}>
+                {isScrollStep && !isLastStep ? (
+                  <Image source={Images.chevronDown} style={{ height: 12, tintColor: Colors.neutral00, width: 12 }} />
+                ) : null}
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {nextButtonLabel}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        style={{
+          bottom: 0,
+          left: 0,
+          position: 'fixed',
+          right: 0,
+          top: 0,
+          zIndex: 1080,
+        }}
+      >
+        {overlayContent}
+      </View>
+    );
+  }
+
   return (
     <Modal
       animationType="fade"
@@ -241,135 +396,7 @@ function OnboardingOverlay({ onVisible } = {}) {
       transparent
       visible={shouldShowOverlay && canShowOverlay}
     >
-      <View pointerEvents="box-none" style={styles.container}>
-        <View
-          pointerEvents="none"
-          style={[styles.overlayPart, overlayStyle, {
-            height: topHeight, left: 0, right: 0, top: 0,
-          }]}
-        />
-        <View
-          pointerEvents="none"
-          style={[styles.overlayPart, overlayStyle, {
-            bottom: 0, left: 0, right: 0, top: topHeight + focusLayout.height,
-          }]}
-        />
-        <View
-          pointerEvents="none"
-          style={[styles.overlayPart, overlayStyle, {
-            height: focusLayout.height, left: 0, top: topHeight, width: leftWidth,
-          }]}
-        />
-        <View
-          pointerEvents="none"
-          style={[styles.overlayPart, overlayStyle, {
-            height: focusLayout.height, right: 0, top: topHeight, width: rightWidth,
-          }]}
-        />
-
-        <View
-          pointerEvents="none"
-          style={[
-            styles.spotlightFrame,
-            {
-              borderColor: Colors.primary500,
-              borderRadius: focusLayout.borderRadius,
-              height: focusLayout.height,
-              left: focusLayout.x,
-              top: focusLayout.y,
-              width: focusLayout.width,
-            },
-          ]}
-        />
-
-        <View
-          pointerEvents="auto"
-          style={[
-            styles.tooltip,
-            {
-              backgroundColor: Colors.neutral00,
-              left: tooltipLeft,
-              shadowColor: Colors.neutral900,
-              top: tooltipTop,
-              width: tooltipWidth,
-            },
-            Spaces.padding[16],
-          ]}
-        >
-          <View
-            style={[
-              styles.tooltipArrow,
-              placeTooltipAboveTarget ? styles.tooltipArrowBottom : styles.tooltipArrowTop,
-              {
-                borderBottomColor: !placeTooltipAboveTarget ? Colors.neutral00 : 'transparent',
-                borderTopColor: placeTooltipAboveTarget ? Colors.neutral00 : 'transparent',
-                left: arrowLeft,
-              },
-            ]}
-          />
-          <Text style={[Fonts.h3Bold, Fonts.neutral900, Spaces.marginBottom[8]]}>
-            {title}
-          </Text>
-          <Text style={[Fonts.p1, Fonts.neutral500, Spaces.marginBottom[16]]}>
-            {description}
-          </Text>
-
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-              <Pressable
-                accessibilityHint={t('onboardingAffiliation.a11y.tooltipSkipHint')}
-                accessibilityLabel={t('common.skip')}
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={handleSkipPress}
-              >
-                <Text style={[Fonts.p2Bold, Fonts.neutral500]}>
-                  {t('common.skip')}
-                </Text>
-              </Pressable>
-
-              {canGoBack ? (
-                <Pressable
-                  accessibilityHint={t('onboardingAffiliation.a11y.tooltipPreviousHint')}
-                  accessibilityLabel={t('common.previous')}
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  onPress={handlePreviousPress}
-                >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral500]}>
-                    {t('common.previous')}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral400]}>
-                {currentStepIndex + 1}
-                /
-                {totalSteps}
-              </Text>
-              <Pressable
-                accessibilityHint={t('onboardingAffiliation.a11y.tooltipNextHint')}
-                accessibilityLabel={nextButtonLabel}
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={handleNextPress}
-                style={[styles.nextButton, { backgroundColor: Colors.primary500 }]}
-              >
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[6]]}>
-                  {isScrollStep && !isLastStep ? (
-                    <Image source={Images.chevronDown} style={{ height: 12, tintColor: Colors.neutral00, width: 12 }} />
-                  ) : null}
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {nextButtonLabel}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </View>
+      {overlayContent}
     </Modal>
   );
 }

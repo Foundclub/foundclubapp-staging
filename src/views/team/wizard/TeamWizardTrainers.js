@@ -1,10 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  View,
+} from 'react-native';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 
+import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
@@ -28,9 +33,13 @@ function TeamWizardTrainers({ navigation }) {
   const handleExitWizard = useTeamWizardExit(navigation);
   const [isCreateTrainerModalVisible, setIsCreateTrainerModalVisible] = useState(false);
 
-  const { data: clubData, refetch: refetchClubData } = useGetClub(state.clubId, {
+  const clubQuery = useGetClub(state.clubId, {
     enabled: Boolean(state.clubId),
   });
+  const { data: clubData, refetch: refetchClubData } = clubQuery;
+  const isLoading = Boolean(state.clubId) && clubQuery.isLoading;
+  const hasError = Boolean(clubQuery.error);
+  const isClubMissing = !state.clubId;
 
   const trainerOptions = useMemo(() => {
     const members = clubData?.members
@@ -75,7 +84,7 @@ function TeamWizardTrainers({ navigation }) {
   return (
     <>
       <WizardStepLayout
-        isNextDisabled={!hasSelectedTrainer}
+        isNextDisabled={!hasSelectedTrainer || isLoading || hasError || isClubMissing}
         nextLabel={t('common.next', 'Suivant')}
         onBack={() => navigation.navigate(RouteNames.TeamWizardLevel)}
         onClose={handleExitWizard}
@@ -83,12 +92,34 @@ function TeamWizardTrainers({ navigation }) {
         onSkip={() => {}}
         stepCount={8}
         stepIndex={7}
-        subtitle={t('teamWizard.steps.trainers.subtitle', 'Sélectionné au moins un entraîneur pour encadrer cette équipe.')}
-        title={t('teamWizard.steps.trainers.title', 'Entraîneurs')}
+        subtitle={t('teamWizard.steps.trainers.subtitle', 'Selectionne au moins un entraineur pour encadrer cette equipe.')}
+        title={t('teamWizard.steps.trainers.title', 'Entraineurs')}
       >
         <View>
+          {isLoading ? (
+            <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <ActivityIndicator size="small" />
+              <Text>Chargement des entraineurs du club...</Text>
+            </View>
+          ) : null}
+
+          {isClubMissing ? (
+            <View style={{ marginBottom: 16 }}>
+              <Text>Club introuvable pour initialiser la creation de l'equipe. Reviens a la liste des equipes puis relance le wizard.</Text>
+            </View>
+          ) : null}
+
+          {hasError ? (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ marginBottom: 12 }}>
+                Impossible de charger les membres du club. Reessayez pour continuer.
+              </Text>
+              <Button onPress={() => refetchClubData()} title="Reessayer" variant="Secondary" />
+            </View>
+          ) : null}
+
           <AutocompleteSelect
-            actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraîneur')}
+            actionLabel={t('teamEdit.fields.trainers.actions.add', 'Ajouter un entraineur')}
             isMulti
             label={t('teamEdit.fields.trainers.label')}
             onActionPress={() => setIsCreateTrainerModalVisible(true)}
@@ -102,6 +133,12 @@ function TeamWizardTrainers({ navigation }) {
             }}
             value={selectedValue}
           />
+
+          {!isLoading && !hasError && !isClubMissing && trainerOptions.length === 0 ? (
+            <View style={{ marginTop: 12 }}>
+              <Text>Aucun entraineur n'est encore disponible pour ce club. Ajoute-en un pour continuer.</Text>
+            </View>
+          ) : null}
         </View>
       </WizardStepLayout>
 

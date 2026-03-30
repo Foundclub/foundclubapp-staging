@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -56,14 +57,66 @@ function WizardStepLayout({
   const hasProgress = Number.isFinite(stepIndex) && Number.isFinite(stepCount) && stepCount > 0;
   const normalizedProgress = hasProgress ? Math.max(0, Math.min(1, stepIndex / stepCount)) : 0;
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !onNext || isNextDisabled || isNextLoading) {
+      return undefined;
+    }
+
+    /**
+     * @param {KeyboardEvent} event
+     */
+    const handleWindowKeyDown = (event) => {
+      if (
+        event.defaultPrevented
+        || event.key !== 'Enter'
+        || event.shiftKey
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      const isElement = typeof HTMLElement !== 'undefined' && target instanceof HTMLElement;
+      const tagName = isElement ? target.tagName.toLowerCase() : '';
+      const isEditable = isElement && target.isContentEditable;
+      const inputType = typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement
+        ? target.type
+        : '';
+
+      if (
+        isEditable
+        || tagName === 'textarea'
+        || tagName === 'button'
+        || tagName === 'a'
+        || tagName === 'select'
+        || (tagName === 'input' && ['button', 'submit', 'checkbox', 'radio', 'file'].includes(inputType))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      onNext();
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown);
+    };
+  }, [isNextDisabled, isNextLoading, onNext]);
+
   return (
     <ScreenContainer
       bgImage="bg2"
+      contentWidth="readable"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
         { paddingBottom: insets.bottom + 16 },
       ]}
+      responsivePadding
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -173,6 +226,7 @@ function WizardStepLayout({
                 isLoading={isNextLoading}
                 onPress={onNext}
                 style={{ flex: 1 }}
+                submitOnEnter
                 title={nextLabel || t('common.next', 'Suivant')}
                 variant="Primary"
               />

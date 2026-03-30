@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Text, TouchableOpacity, View,
+  Alert, FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
@@ -12,9 +12,13 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import Loader from '@/components/atoms/loader/Loader';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMe } from '@/services/auth/authQueries';
 import { cancelEvent, getEvents, updateEvent } from '@/services/event/eventService';
@@ -34,6 +38,7 @@ function RequestsDashboard({ navigation, route }) {
   const { data: userData } = useGetMe();
 
   const clubId = route?.params?.clubId || userData?.trainedTeams?.[0]?.club?.documentId;
+  const isMissingContext = !clubId;
 
   useEffect(() => {
     if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
@@ -43,7 +48,13 @@ function RequestsDashboard({ navigation, route }) {
     });
   }, [navigation]);
 
-  const { data: pendingEvents, isLoading } = useQuery({
+  const {
+    data: pendingEvents = [],
+    error,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useQuery({
     enabled: !!clubId,
     queryFn: async () => {
       if (!clubId) return [];
@@ -57,19 +68,38 @@ function RequestsDashboard({ navigation, route }) {
     },
     queryKey: ['pendingEvents', clubId],
   });
+  const isRefreshing = isFetching && !isLoading;
 
   const updateMutation = useMutation({
     mutationFn: updateEvent,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t(
+          'requests.approvedError',
+          "Impossible de valider cette demande pour le moment.",
+        ),
+      );
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingEvents', clubId] });
       Alert.alert(t('common.success'), t('requests.approvedSuccess'));
     },
   });
 
   const cancelMutation = useMutation({
     mutationFn: cancelEvent,
+    onError: (error) => {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        error?.message || t(
+          'requests.rejectedError',
+          "Impossible de refuser cette demande pour le moment.",
+        ),
+      );
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pendingEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingEvents', clubId] });
       Alert.alert(t('common.success'), t('requests.rejectedSuccess'));
     },
   });
@@ -209,19 +239,71 @@ function RequestsDashboard({ navigation, route }) {
               {t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
             </Text>
           </TouchableOpacity>
-          <FlatList
-            contentContainerStyle={[Spaces.padding[16]]}
-            data={pendingEvents}
-            keyExtractor={(item) => item.documentId}
-            ListEmptyComponent={
-              !isLoading && (
-                <View style={[Alignments.center, Spaces.marginTop[40]]}>
-                  <Text style={[Fonts.p1, Fonts.neutral00]}>{t('requests.empty', 'Aucune demande en attente')}</Text>
-                </View>
-              )
-            }
-            renderItem={renderItem}
-          />
+          {isMissingContext ? (
+            <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12], Spaces.padding[16]]}>
+              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                Club introuvable
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Impossible de determiner pour quel club afficher les demandes.
+              </Text>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.TeamList)}
+                title="Retour aux equipes"
+                variant="Secondary"
+              />
+            </View>
+          ) : isLoading ? (
+            <View style={[Alignments.fill, Alignments.mainCenter]}>
+              <Loader />
+            </View>
+          ) : error ? (
+            <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12], Spaces.padding[16]]}>
+              <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                Impossible de charger les demandes
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {error?.message || 'Reessayez dans quelques instants.'}
+              </Text>
+              <Button
+                onPress={() => refetch()}
+                title="Reessayer"
+                variant="Secondary"
+              />
+            </View>
+          ) : (
+            <FlatList
+              contentContainerStyle={[
+                Spaces.padding[16],
+                pendingEvents.length === 0 && Alignments.fill,
+              ]}
+              data={pendingEvents}
+              keyExtractor={(item) => item.documentId}
+              ListEmptyComponent={(
+                <EmptyState
+                  description={t(
+                    'requests.emptyDescription',
+                    "Les prochaines validations de demandes d'evenements apparaitront ici.",
+                  )}
+                  onAction={() => navigateToRequestsHub(navigation, {
+                    initialFilter: 'event',
+                    source: 'home',
+                  })}
+                  actionLabel={t('requestsHub.migratedBannerAction', "Ouvrir l'onglet Demandes")}
+                  title={t('requests.empty', 'Aucune demande en attente')}
+                />
+              )}
+              refreshControl={(
+                <RefreshControl
+                  colors={[Colors.primary500]}
+                  onRefresh={() => refetch()}
+                  refreshing={isRefreshing}
+                  tintColor={Colors.primary500}
+                />
+              )}
+              renderItem={renderItem}
+            />
+          )}
         </OnboardingWrapper>
       </ScreenContainer>
     </TutorialFlowBoundary>

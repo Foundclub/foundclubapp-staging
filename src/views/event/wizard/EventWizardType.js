@@ -40,7 +40,12 @@ function EventWizardType({ navigation, route }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { dispatch, state } = useEventWizard();
-  const { data: eventTypes, isLoading } = useGetEventTypes();
+  const {
+    data: eventTypes,
+    error,
+    isLoading,
+    refetch,
+  } = useGetEventTypes();
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -78,7 +83,30 @@ function EventWizardType({ navigation, route }) {
           <ActivityIndicator color={Colors.primary500} size="large" />
         ) : null}
 
-        {!isLoading && !hasTypes ? (
+        {!isLoading && error ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[12], cardSurfaceStyle]}>
+            <Text style={[Fonts.p1, Fonts.neutral100]}>
+              {error?.message || t('eventWizard.errors.genericLoad', 'Impossible de charger cette etape.')}
+            </Text>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={[
+                ApplicationStyle.card,
+                Spaces.paddingHorizontal[16],
+                Spaces.paddingVertical[10],
+                {
+                  alignSelf: 'flex-start',
+                  backgroundColor: 'rgba(1, 179, 244, 0.16)',
+                  borderColor: Colors.primary500,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Recharger</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {!isLoading && !error && !hasTypes ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p1, Fonts.neutral100]}>
               {t('eventWizard.errors.noTypes')}
@@ -86,7 +114,7 @@ function EventWizardType({ navigation, route }) {
           </View>
         ) : null}
 
-        {!isLoading && hasTypes ? (
+        {!isLoading && !error && hasTypes ? (
           <OnboardingWrapper
             description="Choisissez le type d événement avant de continuer le wizard."
             id="event-wizard-type-list"

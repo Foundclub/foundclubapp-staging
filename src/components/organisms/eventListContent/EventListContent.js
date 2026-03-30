@@ -261,6 +261,7 @@ function EventListContent({
   const isLoading = propIsLoading !== undefined
     ? propIsLoading
     : (isSmartSearchEnabled ? isSearchLoading : isInternalLoading);
+  const shouldShowMapToggle = showFilters && (isMapView || events.length > 0);
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -566,9 +567,13 @@ function EventListContent({
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
       />
-
-      {/* Floating Map Button */}
-
+      {shouldShowMapToggle ? (
+        <MapFloatButton
+          isMapView={isMapView}
+          onPress={() => setIsMapView((previousValue) => !previousValue)}
+          type="event"
+        />
+      ) : null}
     </View>
   );
 }

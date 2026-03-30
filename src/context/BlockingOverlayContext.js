@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useEffect,
   useCallback,
   useContext,
   useMemo,
@@ -29,6 +30,7 @@ const sortRequests = (requests) => [...requests].sort((left, right) => {
 export function BlockingOverlayProvider({ children }) {
   const requestOrderRef = useRef(0);
   const [requests, setRequests] = useState([]);
+  const activePromptId = requests[0]?.id || null;
 
   const enqueuePrompt = useCallback((id, priority = 0) => {
     if (!id) return;
@@ -73,11 +75,16 @@ export function BlockingOverlayProvider({ children }) {
     });
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__FC_ACTIVE_BLOCKING_OVERLAY__ = activePromptId;
+  }, [activePromptId]);
+
   const value = useMemo(() => ({
-    activePromptId: requests[0]?.id || null,
+    activePromptId,
     dequeuePrompt,
     enqueuePrompt,
-  }), [dequeuePrompt, enqueuePrompt, requests]);
+  }), [activePromptId, dequeuePrompt, enqueuePrompt]);
 
   return React.createElement(
     BlockingOverlayContext.Provider,

@@ -21,6 +21,12 @@ import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+const WEB_FILTER_SURFACE_PROPS = {
+  contentWidth: 720,
+  responsivePadding: true,
+  surface: 'card',
+};
+
 /** @typedef {{ label: string; value: string }} Option */
 
 const filtersSchema = Joi.object({
@@ -158,6 +164,7 @@ function RecruitmentAdFilters({ navigation }) {
         Spaces.paddingVertical[24],
         { paddingBottom: insets.bottom + 16 },
       ]}
+      {...WEB_FILTER_SURFACE_PROPS}
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[24]]}

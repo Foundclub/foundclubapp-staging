@@ -26,6 +26,7 @@ import MultisportAdminsSection from './components/MultisportAdminsSection';
 import MultisportHeroCard from './components/MultisportHeroCard';
 import MultisportSectionsList from './components/MultisportSectionsList';
 import MultisportSponsorsSection from './components/MultisportSponsorsSection';
+import MultisportStateView from './components/MultisportStateView';
 import MultisportStatsRow from './components/MultisportStatsRow';
 
 /**
@@ -58,6 +59,7 @@ function MultisportClubDetails({ navigation, route }) {
   } = useTheme();
   const { userData } = useAuth();
   const { getClubInitials } = useClub();
+  const resolvedCmId = cmId || userData?.multisportClubs?.[0]?.documentId;
 
   const {
     data: cmData,
@@ -65,12 +67,12 @@ function MultisportClubDetails({ navigation, route }) {
     isLoading,
     refetch,
   } = useQuery({
-    enabled: !!cmId,
+    enabled: !!resolvedCmId,
     queryFn: () => {
-      if (!cmId) return Promise.resolve(null);
-      return getMultisportClubById(cmId);
+      if (!resolvedCmId) return Promise.resolve(null);
+      return getMultisportClubById(resolvedCmId);
     },
-    queryKey: ['multisport-club', cmId],
+    queryKey: ['multisport-club', resolvedCmId],
   });
 
   const cm = /** @type {MultisportClub | null | undefined} */ (cmData);
@@ -99,9 +101,9 @@ function MultisportClubDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleOpenManageClub = useCallback(() => {
-    if (!cmId) return;
-    navigation.navigate(RouteNames.MultisportClubEdit, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.MultisportClubEdit, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
   const handleOpenRequests = useCallback(() => {
     navigateToRequestsHub(navigation, {
@@ -121,8 +123,9 @@ function MultisportClubDetails({ navigation, route }) {
   }, [navigation]);
 
   const handleAddSponsor = useCallback(() => {
-    navigation.navigate(RouteNames.AddSponsor, { cmId });
-  }, [cmId, navigation]);
+    if (!resolvedCmId) return;
+    navigation.navigate(RouteNames.AddSponsor, { cmId: resolvedCmId });
+  }, [navigation, resolvedCmId]);
 
   const statsItems = useMemo(() => {
     const teamsCount = sections.reduce((total, section) => total + (section.teams?.length || 0), 0);
@@ -186,6 +189,47 @@ function MultisportClubDetails({ navigation, route }) {
     t,
   ]);
 
+  if (!resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
+    );
+  }
+
+  if (isLoading && !cm) {
+    return (
+      <MultisportStateView
+        description={t('multisport.details.loading', 'Nous preparons les informations de votre structure multisport.')}
+        isLoading
+        title={t('multisport.details.loadingTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (error && !cm) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.details.error', "Impossible de charger cette structure multisport pour le moment.")}
+        onAction={() => refetch()}
+        title={t('multisport.details.errorTitle', 'Club indisponible')}
+      />
+    );
+  }
+
+  if (!isLoading && !error && !cm) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Actualiser')}
+        description={t('multisport.details.notFound', "Cette structure multisport est introuvable ou n est plus accessible.")}
+        onAction={() => refetch()}
+        title={t('multisport.details.notFoundTitle', 'Club introuvable')}
+      />
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -240,7 +284,7 @@ function MultisportClubDetails({ navigation, route }) {
 
           {canEdit ? (
             <Button
-              onPress={() => navigation.navigate(RouteNames.CreateSection, { cmId })}
+              onPress={() => navigation.navigate(RouteNames.CreateSection, { cmId: resolvedCmId })}
               title={t('multisport.actions.createSection.title', 'Créer une section')}
               variant="Secondary"
             />

@@ -22,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getTeamById } from '@/services/team/teamService';
 
 import { useAdWizard } from './AdWizardContext';
+import { getAdWizardStepCount } from './adWizardStepUtils';
 
 const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
 
@@ -187,6 +188,8 @@ function AdWizardTeam({ navigation, route }) {
     return (
       <WizardStepLayout
         onBack={() => navigation.goBack()}
+        stepCount={getAdWizardStepCount(state)}
+        stepIndex={1}
         subtitle="Vous n'avez pas d'équipe associée"
         title="Créer une annonce"
       >
@@ -211,6 +214,8 @@ function AdWizardTeam({ navigation, route }) {
   return (
     <WizardStepLayout
       onBack={() => navigation.goBack()}
+      stepCount={getAdWizardStepCount(state)}
+      stepIndex={1}
       subtitle="Sélectionnez l'équipe qui recrute"
       title="Pour quelle équipe ?"
     >

@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
@@ -24,7 +24,9 @@ function ProfileButton() {
       dispatch({ type: 'CANCEL_ADD_ACCOUNT' });
       return;
     }
-    const targetRoute = userData ? RouteNames.ProfileStack : RouteNames.AuthStackAccount;
+    const targetRoute = userData
+      ? (Platform.OS === 'web' ? RouteNames.Profile : RouteNames.ProfileStack)
+      : (Platform.OS === 'web' ? RouteNames.Login : RouteNames.AuthStackAccount);
     // @ts-expect-error - Navigation typing will be fixed when types are properly set up
     navigation.navigate(targetRoute);
   };

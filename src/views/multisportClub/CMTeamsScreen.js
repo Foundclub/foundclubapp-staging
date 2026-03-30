@@ -1,7 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState } from 'react';
 import {
-  FlatList, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
@@ -18,6 +29,9 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getCMTeams } from '@/services/multisportClub/multisportClubService';
 
+import MultisportStateView from './components/MultisportStateView';
+import useResolvedMultisportClub from './useResolvedMultisportClub';
+
 /**
  * Screen to display list of teams in a CM
  * @param {object} props
@@ -25,11 +39,27 @@ import { getCMTeams } from '@/services/multisportClub/multisportClubService';
  * @param {object} props.route
  */
 function CMTeamsScreen({ navigation, route }) {
-  const { cmId } = route.params || {};
+  const { cmId } = route?.params || {};
+  const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
   } = useTheme();
   const { getClubInitials } = useClub();
+  const {
+    cmData,
+    cmError,
+    isFetchingCmData,
+    isLoadingCmData,
+    isLoadingUserData,
+    refetchCm,
+    refetchUserData,
+    resolvedCmId,
+    userDataError,
+  } = useResolvedMultisportClub(cmId);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSection, setSelectedSection] = useState(null);
@@ -37,26 +67,36 @@ function CMTeamsScreen({ navigation, route }) {
   const {
     data: teamsData,
     error,
+    isFetching,
     isLoading,
-    refetch,
+    refetch: refetchTeams,
   } = useQuery({
-    enabled: !!cmId,
-    queryFn: () => getCMTeams(cmId),
-    queryKey: ['cm-teams', cmId],
+    enabled: !!resolvedCmId,
+    queryFn: () => getCMTeams(resolvedCmId),
+    queryKey: ['cm-teams', resolvedCmId],
   });
 
   const allTeams = useMemo(() => teamsData?.data || [], [teamsData?.data]);
   const sections = teamsData?.meta?.filters?.sections || [];
 
   const displayedTeams = useMemo(() => allTeams.filter((team) => {
-    const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const teamName = String(team?.name || '').toLowerCase();
+    const matchesSearch = teamName.includes(searchQuery.toLowerCase());
     const matchesSection = selectedSection ? team.sectionName === selectedSection : true;
     return matchesSearch && matchesSection;
   }), [allTeams, searchQuery, selectedSection]);
 
-  React.useEffect(() => {
-    navigation.setOptions({ headerTitle: `Équipes (${displayedTeams.length})` });
-  }, [navigation, displayedTeams.length]);
+  useEffect(() => {
+    navigation.setOptions({ headerTitle: `Equipes (${displayedTeams.length})` });
+  }, [displayedTeams.length, navigation]);
+
+  const handleRefresh = useCallback(() => {
+    refetchTeams();
+    refetchCm();
+    if (!resolvedCmId) {
+      refetchUserData();
+    }
+  }, [refetchCm, refetchTeams, refetchUserData, resolvedCmId]);
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -88,22 +128,86 @@ function CMTeamsScreen({ navigation, route }) {
         )}
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.name}</Text>
-          <Text style={[Fonts.p2, Fonts.primary100]}>{item.sectionName}</Text>
+          <Text style={[Fonts.p2, Fonts.primary100]}>
+            {item.sectionName || t('multisport.teams.noSection', 'Section non renseignee')}
+          </Text>
         </View>
-        {item.sport && <Tag text={item.sport} />}
+        {item.sport ? <Tag text={item.sport} /> : null}
       </View>
 
       <View style={[Alignments.row, Spaces.marginTop[12], Spaces.gap[12]]}>
-        {item.category && <Text style={[Fonts.p3, Fonts.neutral100]}>{item.category}</Text>}
-        {item.level && (
-        <Text style={[Fonts.p3, Fonts.neutral100]}>
-          -
-          {item.level}
-        </Text>
-        )}
+        {item.category ? <Text style={[Fonts.p3, Fonts.neutral100]}>{item.category}</Text> : null}
+        {item.level ? (
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            -
+            {item.level}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
+
+  if (isLoadingUserData && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.teams.loadingUser', 'Nous preparons les equipes de votre structure multisport.')}
+        isLoading
+        title={t('multisport.teams.loadingUserTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (userDataError && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.teams.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        onAction={() => refetchUserData()}
+        title={t('multisport.teams.userErrorTitle', 'Club indisponible')}
+      />
+    );
+  }
+
+  if (!resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
+    );
+  }
+
+  if (isLoadingCmData && !cmData) {
+    return (
+      <MultisportStateView
+        description={t('multisport.teams.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        isLoading
+        title={t('multisport.teams.loadingTitle', 'Chargement des equipes')}
+      />
+    );
+  }
+
+  if (cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.teams.error', "Impossible de charger cette structure multisport pour le moment.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.teams.errorTitle', 'Equipes indisponibles')}
+      />
+    );
+  }
+
+  if (!isLoadingCmData && !cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Actualiser')}
+        description={t('multisport.teams.notFound', "Cette structure multisport est introuvable ou n'est plus accessible.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.teams.notFoundTitle', 'Club introuvable')}
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -117,14 +221,13 @@ function CMTeamsScreen({ navigation, route }) {
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SearchBar
           onChangeText={setSearchQuery}
-          placeholder="Rechercher une équipe..."
+          placeholder="Rechercher une equipe..."
           value={searchQuery}
           withCalendar={false}
           withFilter={false}
         />
       </View>
 
-      {/* Sections Filter */}
       {sections.length > 0 && (
         <View style={[Spaces.marginBottom[16]]}>
           <ScrollView
@@ -181,15 +284,22 @@ function CMTeamsScreen({ navigation, route }) {
         <FlatList
           contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[40]]}
           data={displayedTeams}
-          keyExtractor={(item) => item.documentId || item.id}
+          keyExtractor={(item, index) => item.documentId || item.id || String(index)}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucune équipe trouvée.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>
+                {selectedSection || searchQuery.trim().length > 0
+                  ? t('multisport.teams.emptyFiltered', 'Aucune equipe ne correspond a ces filtres.')
+                  : t('multisport.teams.empty', 'Aucune equipe trouvee pour le moment.')}
+              </Text>
             </View>
           )}
-          refreshControl={
-            <RefreshControl onRefresh={refetch} refreshing={isLoading} />
-          }
+          refreshControl={(
+            <RefreshControl
+              onRefresh={handleRefresh}
+              refreshing={isLoading || isFetching || isFetchingCmData}
+            />
+          )}
           renderItem={renderItem}
         />
       </WithDataWrapper>

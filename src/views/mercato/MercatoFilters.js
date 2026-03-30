@@ -33,6 +33,12 @@ import { getFieldError } from '@/utils/form/formUtils';
 
 import { SPORTS_POSITIONS } from '@/constants/sportsPositions';
 
+const WEB_FILTER_SURFACE_PROPS = {
+  contentWidth: 720,
+  responsivePadding: true,
+  surface: 'card',
+};
+
 /** @typedef {import('@/components/molecules/autocompleteSelect/types').Option} Option */
 /** @typedef {{ createAlertMode?: boolean; editAlertMode?: boolean; alertLabel?: string; alertDocumentId?: string; savedFilters?: MercatoFiltersFormData }} MercatoRouteParams */
 /** @typedef {{ title: string; content: string }} InfoModalContent */
@@ -411,6 +417,7 @@ function MercatoFilters({ navigation }) {
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
+      {...WEB_FILTER_SURFACE_PROPS}
     >
       <BottomModal
         close={() => setInfoModalVisible(false)}

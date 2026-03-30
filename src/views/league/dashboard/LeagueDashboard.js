@@ -18,6 +18,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import CompetitiveHero from '@/components/organisms/league/CompetitiveHero';
 import MatchHistory from '@/components/organisms/league/MatchHistory';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -142,6 +143,7 @@ function LeagueDashboard() {
   const [invitedSquads, setInvitedSquads] = useState(/** @type {Team[]} */ ([]));
   const [pendingSquads, setPendingSquads] = useState(/** @type {Team[]} */ ([]));
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [leagueActionState, setLeagueActionState] = useState(/** @type {any | null} */ (null));
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
   const leagueSurface = {
@@ -152,6 +154,7 @@ function LeagueDashboard() {
   const loadDashboard = useCallback(async () => {
     if (!userData) return;
     setLoading(true);
+    setLoadError('');
     try {
       const userId = getEntityDocumentId(userData);
       const [squads, invitationResults, pendingResults] = await Promise.all([
@@ -197,7 +200,11 @@ function LeagueDashboard() {
       console.error('Dashboard Load Error:', error);
       setInvitedSquads([]);
       setPendingSquads([]);
+      setUserTeam(null);
+      setMatchHistory([]);
+      setRankingData([]);
       setLeagueActionState(null);
+      setLoadError('Impossible de charger le dashboard League pour le moment.');
     } finally {
       setLoading(false);
     }
@@ -862,6 +869,27 @@ function LeagueDashboard() {
       </View>
     );
   };
+
+  if (loading && !userTeam && !loadError) {
+    return (
+      <LeagueStateView
+        description="Chargement du dashboard League et de votre squad."
+        isLoading
+        title="Chargement League"
+      />
+    );
+  }
+
+  if (loadError && !userTeam) {
+    return (
+      <LeagueStateView
+        actionLabel="Reessayer"
+        description={loadError}
+        onAction={() => loadDashboard()}
+        title="Dashboard indisponible"
+      />
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2">

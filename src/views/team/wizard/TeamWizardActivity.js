@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  View,
+} from 'react-native';
 
+import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
@@ -23,8 +28,13 @@ function TeamWizardActivity({ navigation }) {
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
   const [searchValue, setSearchValue] = useState('');
-  const { data: activities } = useGetActivities();
-  const { data: clubData } = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
+  const activitiesQuery = useGetActivities();
+  const clubQuery = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
+  const { data: activities } = activitiesQuery;
+  const { data: clubData } = clubQuery;
+  const isLoading = activitiesQuery.isLoading || (Boolean(state.clubId) && clubQuery.isLoading);
+  const hasError = Boolean(activitiesQuery.error || clubQuery.error);
+  const isClubMissing = !state.clubId;
 
   const allowedActivityIds = useMemo(() => {
     const ids = (clubData?.activites || [])
@@ -71,7 +81,7 @@ function TeamWizardActivity({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!state.activities}
+      isNextDisabled={!state.activities || isLoading || hasError || isClubMissing}
       nextLabel={t('common.next', 'Suivant')}
       onBack={() => navigation.navigate(RouteNames.TeamWizardSection)}
       onClose={handleExitWizard}
@@ -83,6 +93,37 @@ function TeamWizardActivity({ navigation }) {
       title={t('teamWizard.steps.activity.title', 'Sport')}
     >
       <View>
+        {isLoading ? (
+          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <ActivityIndicator size="small" />
+            <Text>Chargement des sports disponibles...</Text>
+          </View>
+        ) : null}
+
+        {isClubMissing ? (
+          <View style={{ marginBottom: 16 }}>
+            <Text>Club introuvable pour initialiser la creation de l'equipe. Reviens a la liste des equipes puis relance le wizard.</Text>
+          </View>
+        ) : null}
+
+        {hasError ? (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ marginBottom: 12 }}>
+              Impossible de charger les sports autorises pour ce club. Reessayez pour continuer.
+            </Text>
+            <Button
+              onPress={() => {
+                void activitiesQuery.refetch();
+                if (state.clubId) {
+                  void clubQuery.refetch();
+                }
+              }}
+              title="Reessayer"
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
+
         <AutocompleteSelect
           isSearchable
           label={t('teamEdit.fields.activities.label')}
@@ -93,6 +134,12 @@ function TeamWizardActivity({ navigation }) {
           setValue={(/** @type {Option} */ option) => dispatch({ payload: option?.value || '', type: 'SET_ACTIVITY' })}
           value={selectedLabel}
         />
+
+        {!isLoading && !hasError && !isClubMissing && clubActivityOptions.length === 0 ? (
+          <View style={{ marginTop: 12 }}>
+            <Text>Aucun sport n'est disponible pour ce club.</Text>
+          </View>
+        ) : null}
       </View>
     </WizardStepLayout>
   );

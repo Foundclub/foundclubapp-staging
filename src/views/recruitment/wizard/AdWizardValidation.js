@@ -11,6 +11,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdWizard } from './AdWizardContext';
+import { getAdWizardStepCount } from './adWizardStepUtils';
 
 const VALIDATION_MODES = [
   {
@@ -52,6 +53,8 @@ function AdWizardValidation({ navigation }) {
       nextLabel="Suivant"
       onBack={() => navigation.goBack()}
       onNext={handleNext}
+      stepCount={getAdWizardStepCount(state)}
+      stepIndex={4}
       subtitle="Comment valider les inscriptions à l'événement ?"
       title="Mode de validation"
     >

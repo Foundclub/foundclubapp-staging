@@ -1,5 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { getMyLeagueTeam, getRanking } from '@/services/leagueTeam/leagueTeamService';
 
@@ -31,6 +32,7 @@ function RankingScreen() {
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
 
   const [division, setDivision] = useState(5);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState(/** @type {Team[]} */ ([]));
 
@@ -54,22 +56,30 @@ function RankingScreen() {
     init();
   }, [userData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const data = await getRanking(division);
       setRanking(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
       setRanking([]);
+      setLoadError('Impossible de charger le classement League pour cette division.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [division]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
 
   useEffect(() => {
     loadData();
-  }, [division]);
+  }, [loadData]);
 
   const changeDivision = (/** @type {number} */ delta) => {
     const nextDivision = division + delta;
@@ -122,6 +132,27 @@ function RankingScreen() {
     </TouchableOpacity>
   );
 
+  if (loading && ranking.length === 0) {
+    return (
+      <LeagueStateView
+        description="Chargement du classement League."
+        isLoading
+        title="Chargement du classement"
+      />
+    );
+  }
+
+  if (loadError && ranking.length === 0) {
+    return (
+      <LeagueStateView
+        actionLabel="Reessayer"
+        description={loadError}
+        onAction={() => loadData()}
+        title="Classement indisponible"
+      />
+    );
+  }
+
   return (
     <ScreenContainer bgImage="bg2">
       <View style={styles.screen}>
@@ -162,19 +193,19 @@ function RankingScreen() {
               <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
                   Aucune équipe sur cette division.
-                                </Text>
+                </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
                   Change de division ou relance plus tard.
-                                </Text>
+                </Text>
               </View>
-                        )}
+            )}
             refreshControl={(
               <RefreshControl
                 onRefresh={loadData}
                 refreshing={loading}
                 tintColor={Colors.primary500}
               />
-                        )}
+            )}
             renderItem={renderItem}
           />
         </LeagueCard>

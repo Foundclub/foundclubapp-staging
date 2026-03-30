@@ -35,6 +35,11 @@ const filtersSchema = Joi.object({
   radius: Joi.number().allow(''),
 });
 const AFFILIATION_TUTORIAL_FLOW_PREFIX = 'onboarding-affiliation-v2';
+const WEB_FILTER_SURFACE_PROPS = {
+  contentWidth: 720,
+  responsivePadding: true,
+  surface: 'card',
+};
 
 /**
  * ClubFilters component for filtering clubs by location and activity
@@ -79,6 +84,9 @@ function ClubFiltersContent({ navigation, route }) {
 
   const {
     data: allActivities,
+    error: activitiesError,
+    isLoading: isLoadingActivities,
+    refetch: refetchActivities,
   } = useGetActivities();
 
   useEffect(() => {
@@ -107,12 +115,17 @@ function ClubFiltersContent({ navigation, route }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    reset,
     watch,
   } = useForm({
     defaultValues: initialValues,
     mode: 'onBlur',
     resolver: joiResolver(filtersSchema),
   });
+
+  useEffect(() => {
+    reset(initialValues);
+  }, [initialValues, reset]);
 
   /**
    * Handles the application of filters
@@ -175,6 +188,7 @@ function ClubFiltersContent({ navigation, route }) {
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
+      {...WEB_FILTER_SURFACE_PROPS}
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[40]]}
@@ -208,7 +222,7 @@ function ClubFiltersContent({ navigation, route }) {
             }) => (
               <AutocompleteAddressInput
                 address={value}
-                error={getFieldError({ errors: formErrors, fieldName: 'address' })}
+                error={getFieldError({ errors: formErrors, fieldName: 'city' })}
                 label={t('clubFilters.fields.city.label')}
                 placeholder={t('clubFilters.fields.city.placeholder')}
                 setAddress={onChange}
@@ -290,24 +304,43 @@ function ClubFiltersContent({ navigation, route }) {
             render={({
               field: { onChange, ref, value },
             }) => (
-              <AutocompleteSelect
-                isSearchable
-                label={t('clubFilters.fields.activity.label')}
-                options={activities}
-                placeholder={t('clubFilters.fields.activity.placeholder')}
-                ref={ref}
-                searchValue={activitySearchValue}
-                setSearchValue={setActivitySearchValue}
-                setValue={
-                  /**
-                   * Handles selection of an activity option
-                   * @param {{value: string}} option The selected option
-                   * @returns {void}
-                   */
-                  (option) => onChange(option?.value || '')
-                }
-                value={getActivityLabel(value)}
-              />
+              <View style={[Spaces.gap[12]]}>
+                <AutocompleteSelect
+                  disabled={Boolean(activitiesError)}
+                  isLoading={isLoadingActivities}
+                  isSearchable
+                  label={t('clubFilters.fields.activity.label')}
+                  options={activities}
+                  placeholder={t('clubFilters.fields.activity.placeholder')}
+                  ref={ref}
+                  searchValue={activitySearchValue}
+                  setSearchValue={setActivitySearchValue}
+                  setValue={
+                    /**
+                     * Handles selection of an activity option
+                     * @param {{value: string}} option The selected option
+                     * @returns {void}
+                     */
+                    (option) => onChange(option?.value || '')
+                  }
+                  value={getActivityLabel(value)}
+                />
+                {activitiesError ? (
+                  <View style={[Spaces.gap[8]]}>
+                    <Text style={[Fonts.p3, Fonts.error500]}>
+                      {t(
+                        'clubFilters.fields.activity.error',
+                        'Impossible de charger la liste des sports pour le moment.',
+                      )}
+                    </Text>
+                    <Button
+                      onPress={() => refetchActivities()}
+                      title={t('common.actions.retry', 'Reessayer')}
+                      variant="Secondary"
+                    />
+                  </View>
+                ) : null}
+              </View>
             )}
           />
         </OnboardingWrapper>

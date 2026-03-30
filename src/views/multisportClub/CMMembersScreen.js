@@ -1,7 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState } from 'react';
 import {
-  FlatList, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -15,6 +27,50 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getCMMembers } from '@/services/multisportClub/multisportClubService';
 
+import MultisportStateView from './components/MultisportStateView';
+import useResolvedMultisportClub from './useResolvedMultisportClub';
+
+const EMPTY_MEMBER_GROUP = { coaches: [], players: [], presidents: [] };
+
+/**
+ * @param {any[]} members
+ * @returns {any[]}
+ */
+const deduplicateMembers = (members) => {
+  const byId = new Map();
+
+  members.forEach((member) => {
+    const key = String(
+      member?.documentId
+      || member?.id
+      || `${member?.firstname || ''}-${member?.lastname || ''}`,
+    ).trim();
+
+    if (!key) return;
+
+    const memberSections = Array.isArray(member?.sections)
+      ? member.sections.filter(Boolean)
+      : [];
+    const existing = byId.get(key);
+
+    if (!existing) {
+      byId.set(key, {
+        ...member,
+        sections: [...new Set(memberSections)],
+      });
+      return;
+    }
+
+    byId.set(key, {
+      ...existing,
+      ...member,
+      sections: [...new Set([...(existing.sections || []), ...memberSections])],
+    });
+  });
+
+  return Array.from(byId.values());
+};
+
 /**
  * Screen to display list of members in a CM
  * @param {object} props
@@ -22,45 +78,66 @@ import { getCMMembers } from '@/services/multisportClub/multisportClubService';
  * @param {object} props.route
  */
 function CMMembersScreen({ navigation, route }) {
-  const { cmId } = route.params || {};
+  const { cmId } = route?.params || {};
+  const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Images,
+    Spaces,
   } = useTheme();
+  const {
+    cmData,
+    cmError,
+    isFetchingCmData,
+    isLoadingCmData,
+    isLoadingUserData,
+    refetchCm,
+    refetchUserData,
+    resolvedCmId,
+    userDataError,
+  } = useResolvedMultisportClub(cmId);
 
   const [selectedTab, setSelectedTab] = useState('all');
+  const [selectedSection, setSelectedSection] = useState(null);
 
   const {
     data: membersData,
     error,
+    isFetching,
     isLoading,
-    refetch,
+    refetch: refetchMembers,
   } = useQuery({
-    enabled: !!cmId,
-    queryFn: () => getCMMembers(cmId),
-    queryKey: ['cm-members', cmId],
+    enabled: !!resolvedCmId,
+    queryFn: () => getCMMembers(resolvedCmId),
+    queryKey: ['cm-members', resolvedCmId],
   });
 
-  const { coaches, players, presidents } = membersData?.data || { coaches: [], players: [], presidents: [] };
+  const { coaches, players, presidents } = membersData?.data || EMPTY_MEMBER_GROUP;
   const total = membersData?.data?.total || 0;
 
-  React.useEffect(() => {
+  useEffect(() => {
     navigation.setOptions({ headerTitle: `Membres (${total})` });
   }, [navigation, total]);
 
   const tabs = [
-
     { label: 'Tous', value: 'all' },
     { label: 'Dirigeants', value: 'presidents' },
-    { label: 'Entraîneurs', value: 'coaches' },
+    { label: 'Entraineurs', value: 'coaches' },
     { label: 'Joueurs', value: 'players' },
   ];
 
-  const [selectedSection, setSelectedSection] = useState(null);
-
   const allSections = membersData?.data?.sections || [];
+  const allMembers = useMemo(
+    () => deduplicateMembers([...presidents, ...coaches, ...players]),
+    [coaches, players, presidents],
+  );
 
   const displayedMembers = useMemo(() => {
     let list = [];
+
     switch (selectedTab) {
       case 'coaches':
         list = coaches;
@@ -73,28 +150,31 @@ function CMMembersScreen({ navigation, route }) {
         break;
       case 'all':
       default:
-        // Filter out duplicates if a user is in multiple roles logic ?
-        // Backend returns separated lists. For "All", we just verify uniqueness by ID if needed.
-        // But here we just concat. If a user is both coach and player, they appear twice?
-        // Let's deduce uniqueness by ID if we want single entry per person.
-        // For now, simple concat as per previous logic.
-        list = [...presidents, ...coaches, ...players];
+        list = allMembers;
         break;
     }
 
     if (selectedSection) {
-      list = list.filter((m) => m.sections?.includes(selectedSection));
+      list = list.filter((member) => member.sections?.includes(selectedSection));
     }
 
     return list;
-  }, [selectedTab, selectedSection, presidents, coaches, players]);
+  }, [allMembers, coaches, players, presidents, selectedSection, selectedTab]);
 
-  const handleUserPress = (user) => {
+  const handleUserPress = useCallback((user) => {
     navigation.navigate(RouteNames.ProfileStack, {
       params: { userId: user.documentId || user.id },
       screen: RouteNames.UserDetails,
     });
-  };
+  }, [navigation]);
+
+  const handleRefresh = useCallback(() => {
+    refetchMembers();
+    refetchCm();
+    if (!resolvedCmId) {
+      refetchUserData();
+    }
+  }, [refetchCm, refetchMembers, refetchUserData, resolvedCmId]);
 
   /**
    * Render member item
@@ -127,8 +207,9 @@ function CMMembersScreen({ navigation, route }) {
           {item.lastname}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary500]}>
-          {/* Section display if available */}
-          {item.sections?.join(', ')}
+          {item.sections?.length
+            ? item.sections.join(', ')
+            : t('multisport.members.noSection', 'Section non renseignee')}
         </Text>
       </View>
       <Image
@@ -140,6 +221,68 @@ function CMMembersScreen({ navigation, route }) {
       />
     </TouchableOpacity>
   );
+
+  if (isLoadingUserData && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.members.loadingUser', 'Nous preparons les membres de votre structure multisport.')}
+        isLoading
+        title={t('multisport.members.loadingUserTitle', 'Chargement du club')}
+      />
+    );
+  }
+
+  if (userDataError && !resolvedCmId) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.members.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
+        onAction={() => refetchUserData()}
+        title={t('multisport.members.userErrorTitle', 'Club indisponible')}
+      />
+    );
+  }
+
+  if (!resolvedCmId) {
+    return (
+      <MultisportStateView
+        description={t('multisport.fallback.noClub', 'Aucun club multisport associe a ce compte.')}
+        title={t('multisport.fallback.noClubTitle', 'Aucun club multisport')}
+      />
+    );
+  }
+
+  if (isLoadingCmData && !cmData) {
+    return (
+      <MultisportStateView
+        description={t('multisport.members.loading', 'Nous chargeons les informations de votre structure multisport.')}
+        isLoading
+        title={t('multisport.members.loadingTitle', 'Chargement des membres')}
+      />
+    );
+  }
+
+  if (cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Reessayer')}
+        description={t('multisport.members.error', "Impossible de charger cette structure multisport pour le moment.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.members.errorTitle', 'Membres indisponibles')}
+      />
+    );
+  }
+
+  if (!isLoadingCmData && !cmError && !cmData) {
+    return (
+      <MultisportStateView
+        actionLabel={t('common.retry', 'Actualiser')}
+        description={t('multisport.members.notFound', "Cette structure multisport est introuvable ou n'est plus accessible.")}
+        onAction={() => refetchCm()}
+        title={t('multisport.members.notFoundTitle', 'Club introuvable')}
+      />
+    );
+  }
 
   return (
     <ScreenContainer
@@ -158,7 +301,6 @@ function CMMembersScreen({ navigation, route }) {
         />
       </View>
 
-      {/* Section Filter */}
       {allSections.length > 0 && (
         <View style={[Spaces.marginBottom[16]]}>
           <ScrollView
@@ -218,12 +360,19 @@ function CMMembersScreen({ navigation, route }) {
           keyExtractor={(item, index) => item.documentId || item.id || index.toString()}
           ListEmptyComponent={(
             <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-              <Text style={[Fonts.p1, Fonts.neutral100]}>Aucun membre trouvé.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral100]}>
+                {selectedSection || selectedTab !== 'all'
+                  ? t('multisport.members.emptyFiltered', 'Aucun membre ne correspond a ces filtres.')
+                  : t('multisport.members.empty', 'Aucun membre trouve pour le moment.')}
+              </Text>
             </View>
           )}
-          refreshControl={
-            <RefreshControl onRefresh={refetch} refreshing={isLoading} />
-          }
+          refreshControl={(
+            <RefreshControl
+              onRefresh={handleRefresh}
+              refreshing={isLoading || isFetching || isFetchingCmData}
+            />
+          )}
           renderItem={renderItem}
         />
       </WithDataWrapper>
@@ -232,4 +381,3 @@ function CMMembersScreen({ navigation, route }) {
 }
 
 export default CMMembersScreen;
-
