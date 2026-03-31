@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
 } from 'react';
@@ -62,6 +63,38 @@ const createInitialState = () => {
     startYear: currentYear,
     useCustomClub: false,
   };
+};
+
+const HISTORY_WIZARD_STORAGE_KEY = 'fc:web:history-wizard';
+
+const canUseWizardStorage = () => (
+  typeof globalThis !== 'undefined'
+  && typeof globalThis.sessionStorage !== 'undefined'
+);
+
+const loadPersistedState = () => {
+  const initialState = createInitialState();
+
+  if (!canUseWizardStorage()) {
+    return initialState;
+  }
+
+  try {
+    const raw = globalThis.sessionStorage.getItem(HISTORY_WIZARD_STORAGE_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return initialState;
+    }
+
+    return {
+      ...initialState,
+      ...parsed,
+    };
+  } catch (_error) {
+    return initialState;
+  }
 };
 
 const normalizeCategories = (payload) => {
@@ -153,7 +186,11 @@ function historyWizardReducer(state, action) {
     case 'SET_RETURN_ROUTE':
       return { ...state, returnRoute: action.payload };
     case 'SET_START_YEAR':
-      return { ...state, startYear: action.payload };
+      return {
+        ...state,
+        endYear: state.isCurrentlyActive ? state.endYear : Math.max(Number(state.endYear || 0), Number(action.payload || 0)),
+        startYear: action.payload,
+      };
     case 'TOGGLE_CATEGORY': {
       if (!action.payload?.documentId) return state;
       const exists = state.categories.some(
@@ -178,7 +215,21 @@ const HistoryWizardContext = createContext(/** @type {HistoryWizardContextValue 
  * @param {{ children: React.ReactNode }} props
  */
 export function HistoryWizardProvider({ children }) {
-  const [state, dispatch] = useReducer(historyWizardReducer, undefined, createInitialState);
+  const [state, dispatch] = useReducer(historyWizardReducer, undefined, loadPersistedState);
+
+  useEffect(() => {
+    if (!canUseWizardStorage()) return;
+
+    try {
+      globalThis.sessionStorage.setItem(
+        HISTORY_WIZARD_STORAGE_KEY,
+        JSON.stringify(state),
+      );
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory wizard state.
+    }
+  }, [state]);
+
   const value = useMemo(() => ({ dispatch, state }), [dispatch, state]);
 
   return (

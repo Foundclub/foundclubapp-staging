@@ -171,6 +171,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
   const responseQuery = sourceType === 'event' ? eventQuery : leagueQuery;
   const responsePayload = responseQuery.data || null;
+  const isMissingSourceId = sourceType === 'event' ? !eventId : !matchId;
   const sport = normalizeSport(responsePayload?.sport || route?.params?.sport || 'football');
   const [participation, setParticipation] = useState(null);
   const [doesKnowStats, setDoesKnowStats] = useState(true);
@@ -496,6 +497,61 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     </View>
   );
 
+  if (isMissingSourceId) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
+        <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Match introuvable</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            Cette route n&apos;a pas recu les informations necessaires pour charger ton retour post-match.
+          </Text>
+          <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (responseQuery.isLoading && !responsePayload) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
+        <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Chargement du retour post-match</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            Nous recuperons ton questionnaire et le score officiel du match.
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (responseQuery.error && !responsePayload) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
+        <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[12], { backgroundColor: cardSurfaceColor }]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Chargement impossible</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {String(responseQuery.error?.message || 'Une erreur est survenue.')}
+          </Text>
+          <Button onPress={() => responseQuery.refetch()} title="Reessayer" variant="Primary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!responsePayload) {
+    return (
+      <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
+        <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[12], { backgroundColor: cardSurfaceColor }]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Questionnaire indisponible</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            Aucun retour joueur n&apos;est disponible pour ce match.
+          </Text>
+          <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingBottom[24], Spaces.paddingTop[0], Alignments.fill]}>
       <View
@@ -788,12 +844,14 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                 </Text>
               </View>
               <Button
+                disabled={!participation || saveMutation.isPending}
                 isLoading={saveMutation.isPending}
                 onPress={handleSaveDraft}
                 title="Sauvegarder mon brouillon"
                 variant="Secondary"
               />
               <Button
+                disabled={!participation || saveMutation.isPending}
                 isLoading={saveMutation.isPending}
                 onPress={handleSubmit}
                 title="Envoyer mon retour"

@@ -364,6 +364,8 @@ function MatchCenterScreen() {
       }
     } catch (error) {
       console.error('Fetch Match Data Error:', error);
+      setLoadError('Impossible de synchroniser le Match Center League.');
+      setViewState('connection_error');
     } finally {
       setLoading(false);
     }
@@ -2846,7 +2848,15 @@ function MatchCenterScreen() {
     );
   }
 
-  if (viewState === 'loading' && !mySquad) { return <View style={[styles.screen, { justifyContent: 'center' }]}><ActivityIndicator color={Colors.gold500 || '#D4AF37'} /></View>; }
+  if (viewState === 'loading' && !mySquad) {
+    return (
+      <LeagueStateView
+        description="Synchronisation de votre squad et des opportunites de match en cours."
+        isLoading
+        title="Chargement du Match Center"
+      />
+    );
+  }
   if (viewState === 'no_squad') return <View style={styles.screen}>{renderNoSquad()}</View>;
 
   return (

@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 /**
  * Welcome screen component shown after completing onboarding.
@@ -26,7 +27,33 @@ function Welcome({ navigation }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [{ auth }] = useAppContext();
-  const { getPostOnboardingHomeRoute } = useAuth();
+  const {
+    getPostOnboardingHomeRoute,
+    refetchUserData,
+    userDataError,
+    userDataLoading,
+  } = useAuth();
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de finaliser l'onboarding."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const handleNext = () => {
     if (auth?.user?.documentId) {

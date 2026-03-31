@@ -19,7 +19,12 @@ import { useGetLevels } from '@/services/level/levelQueries';
 function HistoryWizardLevel({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { dispatch, state } = useHistoryWizard();
-  const { data: levels, isLoading } = useGetLevels();
+  const {
+    data: levels,
+    error,
+    isLoading,
+    refetch,
+  } = useGetLevels();
 
   const handleSelectLevel = (level) => {
     dispatch({ payload: level, type: 'SET_LEVEL' });
@@ -37,6 +42,34 @@ function HistoryWizardLevel({ navigation }) {
     >
       {isLoading ? (
         <ActivityIndicator color={Colors.primary500} size="large" />
+      ) : error ? (
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.p1, { color: Colors.neutral100 }]}>
+            Impossible de charger les niveaux pour le moment.
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetch()}
+            style={{
+              alignItems: 'center',
+              alignSelf: 'flex-start',
+              borderColor: Colors.primary500,
+              borderRadius: 20,
+              borderWidth: 1,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+              Reessayer
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : !Array.isArray(levels) || levels.length === 0 ? (
+        <View style={[Spaces.gap[12]]}>
+          <Text style={[Fonts.p1, { color: Colors.neutral100 }]}>
+            Aucun niveau disponible pour le moment.
+          </Text>
+        </View>
       ) : (
         <View style={[Spaces.gap[12]]}>
           {levels?.map((level) => {

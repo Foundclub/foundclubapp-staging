@@ -23,9 +23,12 @@ function SquadSectionStep({
 
   const [sections, setSections] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
 
   React.useEffect(() => {
     const fetchSections = async () => {
+      setLoading(true);
+      setLoadError('');
       try {
         const result = await getSections();
         // Map to format { label: name, value: documentId }
@@ -35,6 +38,8 @@ function SquadSectionStep({
         }));
         setSections(options);
       } catch (error) {
+        setLoadError("Impossible de charger les sections League pour le moment.");
+        setSections([]);
         console.error('Error fetching sections:', error);
       } finally {
         setLoading(false);
@@ -61,6 +66,11 @@ function SquadSectionStep({
           setValue={(item) => updateData('section', item)}
           value={data.section?.label}
         />
+        {loadError ? (
+          <Text style={[Fonts.p3, { color: Colors.error500, marginTop: 12, textAlign: 'center' }]}>
+            {loadError}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ gap: 10, marginBottom: 20 }}>

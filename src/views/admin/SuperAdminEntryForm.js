@@ -13,6 +13,8 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -388,7 +390,9 @@ function SuperAdminEntryForm({ navigation, route }) {
     Spaces,
   } = useTheme();
 
-  const isEditMode = mode === 'edit';
+  const normalizedDocumentId = String(documentId || '').trim();
+  const isCreateMode = mode === 'create' || !normalizedDocumentId || normalizedDocumentId === 'new';
+  const isEditMode = !isCreateMode;
 
   const [formValues, setFormValues] = useState({});
   const [reason, setReason] = useState('');
@@ -401,7 +405,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   const [showRawFallback, setShowRawFallback] = useState(false);
 
   const metadataQuery = useGetSuperadminContentMetadata(uid);
-  const entryQuery = useGetSuperadminEntry(uid, isEditMode ? documentId : undefined);
+  const entryQuery = useGetSuperadminEntry(uid, isEditMode ? normalizedDocumentId : undefined);
   const createMutation = useCreateSuperadminEntry();
   const updateMutation = useUpdateSuperadminEntry();
   const pageHorizontalPadding = superAdminLayout.pageHorizontal;
@@ -465,6 +469,52 @@ function SuperAdminEntryForm({ navigation, route }) {
     isHydrated,
     metadataQuery.isLoading,
   ]);
+
+  if (!uid) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="Le content-type superadmin est absent de l'URL."
+        onAction={() => navigation.goBack()}
+        title="Content-type introuvable"
+      />
+    );
+  }
+
+  if (metadataQuery.isLoading || (isEditMode && entryQuery.isLoading)) {
+    return (
+      <AdminStateView
+        description="Nous preparons le formulaire superadmin."
+        isLoading
+        title="Chargement du formulaire"
+      />
+    );
+  }
+
+  if (metadataQuery.error || (isEditMode && entryQuery.error)) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={metadataQuery.error?.message || entryQuery.error?.message || 'Impossible de charger ce formulaire.'}
+        onAction={() => {
+          metadataQuery.refetch();
+          if (isEditMode) entryQuery.refetch();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (isEditMode && !entryQuery?.data?.data) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="L'entree demandee n'existe pas ou n'est plus accessible."
+        onAction={() => navigation.goBack()}
+        title="Entree introuvable"
+      />
+    );
+  }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 

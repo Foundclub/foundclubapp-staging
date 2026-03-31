@@ -10,6 +10,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -25,8 +26,34 @@ function UserSportHistory({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const insets = useSafeAreaInsets();
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant d'afficher ton historique."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   // We don't save the history here anymore, it's done via the wizard
   // So we just handle navigation
@@ -41,14 +68,9 @@ function UserSportHistory({ navigation }) {
   };
 
   const handleAddExperience = () => {
-    // Navigate to the wizard, asking to return here afterwards
-    // We also ask to reset the wizard context to start fresh
-    navigation.navigate('ProfileStack', {
-      params: {
-        resetContext: true,
-        returnRoute: RouteNames.UserSportHistory,
-      },
-      screen: RouteNames.HistoryWizardCategory,
+    navigation.navigate(RouteNames.HistoryWizardCategory, {
+      resetContext: true,
+      returnRoute: RouteNames.UserSportHistory,
     });
   };
 
@@ -90,9 +112,10 @@ function UserSportHistory({ navigation }) {
             isOwnProfile
             onAddPress={handleAddExperience}
             onEditPress={(entry) => {
-              // Optional: Allow editing during onboarding
-              // For now let's just allow adding, or we can enable editing too
-              // To enable editing we'd need to pass the entry to the wizard
+              navigation.navigate(RouteNames.HistoryWizardCategory, {
+                editingEntry: entry,
+                returnRoute: RouteNames.UserSportHistory,
+              });
             }}
             userId={userData?.documentId}
           />

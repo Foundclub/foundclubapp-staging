@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, PermissionsAndroid, Platform, TouchableOpacity, View,
 } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import useTheme from '@/theme/themeContext';
 
@@ -38,10 +37,35 @@ function SelectAvatar({
   size = 95,
 }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const browserInputRef = useRef(null);
   const {
     Alignments, ApplicationStyle, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  /**
+   * @param {File | undefined} file
+   */
+  const handleBrowserFileSelection = (file) => {
+    if (!file) return;
+
+    const objectUrl = URL.createObjectURL(file);
+    onAvatarSelected({
+      file,
+      fileName: file.name,
+      filename: file.name,
+      height: undefined,
+      mime: file.type || 'application/octet-stream',
+      name: file.name,
+      path: objectUrl,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      uri: objectUrl,
+      url: '',
+      width: undefined,
+    });
+    setIsModalVisible(false);
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -91,6 +115,13 @@ function SelectAvatar({
 
   const takePicture = async () => {
     try {
+      if (Platform.OS === 'web') {
+        browserInputRef.current?.setAttribute('capture', 'environment');
+        browserInputRef.current?.click();
+        return;
+      }
+
+      const { launchCamera } = await import('react-native-image-picker');
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
@@ -127,6 +158,13 @@ function SelectAvatar({
 
   const selectFromGallery = async () => {
     try {
+      if (Platform.OS === 'web') {
+        browserInputRef.current?.removeAttribute('capture');
+        browserInputRef.current?.click();
+        return;
+      }
+
+      const { launchImageLibrary } = await import('react-native-image-picker');
       const result = await launchImageLibrary({
         includeBase64: false,
         includeExtra: true,
@@ -144,6 +182,19 @@ function SelectAvatar({
 
   return (
     <>
+      {Platform.OS === 'web' ? (
+        <input
+          accept="image/*"
+          onChange={(event) => {
+            const nextFile = event.currentTarget.files?.[0];
+            handleBrowserFileSelection(nextFile);
+            event.currentTarget.value = '';
+          }}
+          ref={browserInputRef}
+          style={{ display: 'none' }}
+          type="file"
+        />
+      ) : null}
       <View style={[
         ApplicationStyle.backgroundColor.neutral00,
         ApplicationStyle.borderRadius24,

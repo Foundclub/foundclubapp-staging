@@ -12,6 +12,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
@@ -63,6 +65,7 @@ function SuperAdminContentExplorer({ navigation }) {
 
   const {
     data,
+    error,
     isLoading,
     refetch,
   } = useGetSuperadminContentTypes();
@@ -76,6 +79,27 @@ function SuperAdminContentExplorer({ navigation }) {
     () => (Array.isArray(data?.data) ? data.data : []),
     [data?.data],
   );
+
+  if (isLoading && !contentTypes.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons les content-types du Content Manager."
+        isLoading
+        title="Chargement du contenu superadmin"
+      />
+    );
+  }
+
+  if (error && !contentTypes.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger les content-types superadmin.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const filtered = useMemo(() => {
     const sorted = [...contentTypes].sort(sortByDisplayName);
@@ -251,4 +275,3 @@ function SuperAdminContentExplorer({ navigation }) {
 }
 
 export default SuperAdminContentExplorer;
-

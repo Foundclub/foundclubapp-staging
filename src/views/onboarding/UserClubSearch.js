@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Text, TouchableOpacity, View,
@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -31,7 +32,12 @@ function UserClubSearch({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -53,6 +59,33 @@ function UserClubSearch({ navigation }) {
       }
     },
   });
+
+  useEffect(() => {
+    if (typeof userData?.isLookingForClub === 'boolean') {
+      setIsLooking(userData.isLookingForClub);
+    }
+  }, [userData?.isLookingForClub]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de regler la visibilite."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const handleNext = () => {
     if (isLooking !== null && userData) {

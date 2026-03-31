@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -33,7 +34,12 @@ function UserPosition({ navigation, route }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -47,14 +53,25 @@ function UserPosition({ navigation, route }) {
     return sportPositions.length > 0 ? sportPositions : getPositionsForSport('football');
   }, [userSport]);
 
+  useEffect(() => {
+    const currentPositions = String(userData?.position || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (currentPositions.length) {
+      setSelectedPositions(currentPositions);
+    }
+  }, [userData?.position]);
+
   // Check if we should skip this step
   useEffect(() => {
     const sport = userSport?.toLowerCase();
-    if (sport && !SPORTS_WITH_POSITIONS.includes(sport)) {
+    if (!userDataLoading && sport && !SPORTS_WITH_POSITIONS.includes(sport)) {
       // Sport doesn't have positions, skip this step
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserPosition) || getPostOnboardingHomeRoute());
     }
-  }, [userSport, navigation, getNextOnboardingRoute, getPostOnboardingHomeRoute]);
+  }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation, userDataLoading, userSport]);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -100,6 +117,27 @@ function UserPosition({ navigation, route }) {
     };
     return sportNames[sport] || sport;
   }, [userSport]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir tes postes."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   return (
     <FormScreenContainer

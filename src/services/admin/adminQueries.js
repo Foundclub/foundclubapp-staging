@@ -6,6 +6,7 @@ import {
   approveClubClaim,
   getAdminClub,
   getAdminClubs,
+  getAdminReports,
   getAdminStats,
   getAdminUser,
   getAdminUsers,
@@ -107,6 +108,15 @@ export const useRefuseAffiliationHelpRequest = () => {
 export const useGetAdminStats = () => useQuery({
   queryFn: getAdminStats,
   queryKey: ['adminStats'],
+});
+
+/**
+ * Hook to get aggregated admin reports.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>}
+ */
+export const useGetAdminReports = () => useQuery({
+  queryFn: getAdminReports,
+  queryKey: ['admin', 'reports'],
 });
 
 /**

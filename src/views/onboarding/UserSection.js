@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -24,9 +25,19 @@ import { useGetSections } from '@/services/section/sectionQueries';
  */
 function UserSection({ navigation }) {
   // hooks
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
-  const { data: sections } = useGetSections();
+  const {
+    data: sections,
+    error: sectionsError,
+    isLoading: sectionsLoading,
+    refetch: refetchSections,
+  } = useGetSections();
   const insets = useSafeAreaInsets();
 
   // local state
@@ -35,6 +46,54 @@ function UserSection({ navigation }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (userData?.section?.documentId) {
+      setSection(userData.section.documentId);
+    }
+  }, [userData?.section?.documentId]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir ta section."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (sectionsLoading && !sections?.length) {
+    return (
+      <OnboardingStateView
+        description="Nous chargeons les sections disponibles."
+        isLoading
+        title="Chargement des sections"
+      />
+    );
+  }
+
+  if (sectionsError && !sections?.length) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={sectionsError?.message || 'Impossible de charger les sections.'}
+        onAction={refetchSections}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -94,6 +153,7 @@ function UserSection({ navigation }) {
       </View>
       <Button
         disabled={!section}
+        isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         title={t('profile.actions.save')}
         variant="Primary"

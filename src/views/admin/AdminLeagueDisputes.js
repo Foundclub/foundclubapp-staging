@@ -5,6 +5,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -32,11 +34,37 @@ function AdminLeagueDisputes() {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const { data, isLoading, refetch } = useGetLeagueDisputes();
+  const {
+    data,
+    error,
+    isLoading,
+    refetch,
+  } = useGetLeagueDisputes();
   const resolveMutation = useResolveLeagueDispute();
   const [formByMatch, setFormByMatch] = useState({});
 
   const disputes = useMemo(() => data?.data || [], [data]);
+
+  if (isLoading && !disputes.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons les litiges League."
+        isLoading
+        title="Chargement des litiges"
+      />
+    );
+  }
+
+  if (error && !disputes.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger les litiges League.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const getForm = (match) => {
     const key = normalizeId(match?.documentId || match?.id);

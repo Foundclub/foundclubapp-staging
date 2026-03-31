@@ -6,6 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -31,11 +33,33 @@ function AdminClubList() {
 
   const {
     data,
+    error,
     isLoading,
     refetch,
   } = useGetAdminClubs({ q: debouncedSearch });
 
   const clubs = data?.data || data || [];
+
+  if (isLoading && !clubs.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons la liste des clubs."
+        isLoading
+        title="Chargement des clubs"
+      />
+    );
+  }
+
+  if (error && !clubs.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger les clubs.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const renderItem = useCallback(({ item }) => (
     <TouchableOpacity

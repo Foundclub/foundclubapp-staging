@@ -6,6 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -32,11 +34,33 @@ function AdminUserList() {
 
   const {
     data,
+    error,
     isLoading,
     refetch,
   } = useGetAdminUsers({ q: debouncedSearch });
 
   const users = data?.data || data || [];
+
+  if (isLoading && !users.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons la liste des utilisateurs."
+        isLoading
+        title="Chargement des utilisateurs"
+      />
+    );
+  }
+
+  if (error && !users.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger les utilisateurs.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const getRoleBadgeColor = (roleType) => {
     switch (roleType) {
@@ -55,7 +79,9 @@ function AdminUserList() {
 
     return (
       <TouchableOpacity
-        onPress={() => navigation.navigate(RouteNames.AdminUserDetail, { userId: item.id })}
+        onPress={() => navigation.navigate(RouteNames.AdminUserDetail, {
+          userId: item.documentId || item.id,
+        })}
         style={[
           ApplicationStyle.backgroundColor.neutral800,
           ApplicationStyle.borderRadius16,

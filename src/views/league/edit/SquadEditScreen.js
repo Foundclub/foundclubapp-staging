@@ -15,6 +15,9 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -46,9 +49,24 @@ function SquadEditScreen({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
 
-  const { data: team, isLoading } = useGetLeagueTeam(safeTeamId);
-  const { data: allActivities } = useGetActivities();
-  const { data: allCategories } = useGetCategories();
+  const {
+    data: team,
+    error: teamError,
+    isLoading: isTeamLoading,
+    refetch: refetchTeam,
+  } = useGetLeagueTeam(safeTeamId);
+  const {
+    data: allActivities,
+    error: activitiesError,
+    isLoading: activitiesLoading,
+    refetch: refetchActivities,
+  } = useGetActivities();
+  const {
+    data: allCategories,
+    error: categoriesError,
+    isLoading: categoriesLoading,
+    refetch: refetchCategories,
+  } = useGetCategories();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sportSearchValue, setSportSearchValue] = useState('');
@@ -71,6 +89,9 @@ function SquadEditScreen({ navigation, route }) {
   });
 
   const radiusValue = watch('radius');
+  const setupError = teamError || activitiesError || categoriesError;
+  const isBootstrapping = isTeamLoading || activitiesLoading || categoriesLoading;
+  const missingTeam = Boolean(safeTeamId) && !isTeamLoading && !teamError && !team;
 
   // Format Activities for AutocompleteSelect
   const activities = useMemo(() => {
@@ -155,6 +176,53 @@ function SquadEditScreen({ navigation, route }) {
       setIsSubmitting(false);
     }
   };
+
+  if (!safeTeamId) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour aux squads"
+        description="Aucune squad n'est associee a ce lien d'edition."
+        onAction={() => navigation.navigate(RouteNames.LeagueSquadTab)}
+        title="Squad introuvable"
+      />
+    );
+  }
+
+  if (isBootstrapping) {
+    return (
+      <LeagueStateView
+        description="Preparation du formulaire d'edition de la squad."
+        isLoading
+        title="Chargement de la squad"
+      />
+    );
+  }
+
+  if (setupError) {
+    return (
+      <LeagueStateView
+        actionLabel="Recharger"
+        description={setupError?.message || "Impossible de charger cette squad pour le moment."}
+        onAction={() => {
+          refetchTeam();
+          refetchActivities();
+          refetchCategories();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (missingTeam) {
+    return (
+      <LeagueStateView
+        actionLabel="Retour aux squads"
+        description="Cette squad n'existe plus ou n'est pas accessible depuis ce lien."
+        onAction={() => navigation.navigate(RouteNames.LeagueSquadTab)}
+        title="Squad introuvable"
+      />
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2">
@@ -281,7 +349,7 @@ function SquadEditScreen({ navigation, route }) {
           <View style={{ marginTop: 24 }}>
             <Button
               disabled={isSubmitting}
-              isLoading={isSubmitting || isLoading}
+              isLoading={isSubmitting || isBootstrapping}
               onPress={handleSubmit(onSubmit)}
               title="Enregistrer"
               variant="Primary"

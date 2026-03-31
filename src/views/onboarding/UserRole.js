@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, RefreshControl, Text, View,
@@ -15,6 +15,7 @@ import Button from '@/components/atoms/button/Button';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -27,7 +28,12 @@ import { updateMe } from '@/services/auth/authService';
  * @returns {import('react').ReactElement} User type screen component
  */
 function UserRole({ navigation }) {
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const { getNextOnboardingRoute, USER_ROLES } = useAuth();
   const insets = useSafeAreaInsets();
   // local state
@@ -45,6 +51,12 @@ function UserRole({ navigation }) {
     isLoading: rolesLoading,
     refetch: refetchRoles,
   } = useGetRoles();
+
+  useEffect(() => {
+    if (userData?.role?.documentId) {
+      setRole(userData.role.documentId);
+    }
+  }, [userData?.role?.documentId]);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -72,6 +84,48 @@ function UserRole({ navigation }) {
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
   const coachRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.coach);
   const presidentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.president);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir ton role."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (rolesLoading && !roles?.length) {
+    return (
+      <OnboardingStateView
+        description="Nous chargeons les roles disponibles."
+        isLoading
+        title="Chargement des roles"
+      />
+    );
+  }
+
+  if (rolesError && !roles?.length) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={rolesError?.message || 'Impossible de charger les roles.'}
+        onAction={refetchRoles}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   return (
     <FormScreenContainer
@@ -124,6 +178,7 @@ function UserRole({ navigation }) {
       </ScrollView>
       <Button
         disabled={!role}
+        isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         title={t('profile.actions.save')}
         variant="Primary"

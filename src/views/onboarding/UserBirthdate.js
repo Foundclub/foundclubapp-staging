@@ -1,6 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, Text, View,
@@ -14,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -79,7 +81,12 @@ const birthdateSchema = Joi.object({
 function UserBirthdate({ navigation }) {
   const { Alignments, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -98,6 +105,7 @@ function UserBirthdate({ navigation }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    reset,
     setFocus,
   } = useForm({
     defaultValues,
@@ -105,6 +113,46 @@ function UserBirthdate({ navigation }) {
     resolver: joiResolver(birthdateSchema),
     shouldFocusError: false,
   });
+
+  useEffect(() => {
+    if (!userData?.birthdate) {
+      reset(defaultValues);
+      return;
+    }
+
+    const parsedDate = new Date(userData.birthdate);
+    if (Number.isNaN(parsedDate.getTime())) {
+      reset(defaultValues);
+      return;
+    }
+
+    reset({
+      day: String(parsedDate.getUTCDate()).padStart(2, '0'),
+      month: String(parsedDate.getUTCMonth() + 1).padStart(2, '0'),
+      year: String(parsedDate.getUTCFullYear()),
+    });
+  }, [reset, userData?.birthdate]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de renseigner ta date de naissance."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   /**
    * Handle form submit
@@ -238,6 +286,7 @@ function UserBirthdate({ navigation }) {
 
         <Button
           disabled={!!Object.keys(formErrors).length}
+          isLoading={updateUserMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
           title={t('profile.actions.save')}
           variant="Primary"

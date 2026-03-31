@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View,
@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -49,8 +50,18 @@ function UserSport({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
-  const { data: activities, isLoading: activitiesLoading } = useGetActivities();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
+  const {
+    data: activities,
+    error: activitiesError,
+    isLoading: activitiesLoading,
+    refetch: refetchActivities,
+  } = useGetActivities();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -89,6 +100,54 @@ function UserSport({ navigation }) {
       }
     },
   });
+
+  useEffect(() => {
+    if (userData?.preferredSport) {
+      setSelectedSport(String(userData.preferredSport));
+    }
+  }, [userData?.preferredSport]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir ton sport."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (activitiesLoading && !activities?.length) {
+    return (
+      <OnboardingStateView
+        description="Nous chargeons la liste des sports."
+        isLoading
+        title="Chargement des sports"
+      />
+    );
+  }
+
+  if (activitiesError && !activities?.length) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={activitiesError?.message || 'Impossible de charger les sports.'}
+        onAction={refetchActivities}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   // Filter activities based on search query
   const filteredActivities = useMemo(() => {

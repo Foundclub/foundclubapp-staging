@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -23,6 +24,9 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { getMatch, requestRematch } from '@/services/league/leagueMatchService';
 
@@ -69,24 +73,31 @@ function PastMatchDetails() {
   const myTeamId = routeParams?.myTeamId ? String(routeParams.myTeamId) : '';
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
+  const [refreshing, setRefreshing] = useState(false);
   const [requestingRematch, setRequestingRematch] = useState(false);
 
   const loadMatch = useCallback(async () => {
     if (!matchId) {
+      setLoadError("Aucun match n'est associe a ce lien.");
       setMatch(null);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
     try {
+      setLoadError('');
       const data = await getMatch(matchId);
       setMatch(/** @type {LeagueMatch | null} */ (data || null));
     } catch (error) {
       console.error('Error loading match:', error);
-      Alert.alert('Erreur', 'Impossible de charger le match');
+      setMatch(null);
+      setLoadError(error?.message || 'Impossible de charger le match termine.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [matchId]);
 
@@ -262,15 +273,28 @@ function PastMatchDetails() {
     );
   }
 
+  if (loadError && !match) {
+    return (
+      <LeagueStateView
+        actionLabel="Recharger"
+        description={loadError}
+        onAction={() => {
+          setLoading(true);
+          loadMatch();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
   if (!match) {
     return (
-      <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.centered}>
-            <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>Match introuvable</Text>
-          </View>
-        </SafeAreaView>
-      </ScreenContainer>
+      <LeagueStateView
+        actionLabel="Retour au dashboard"
+        description="Ce match termine n'est plus accessible depuis ce lien."
+        onAction={() => navigation.navigate(RouteNames.LeagueDashboard)}
+        title="Match introuvable"
+      />
     );
   }
 
@@ -297,7 +321,20 @@ function PastMatchDetails() {
           <View style={styles.headerSide} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={() => {
+                setRefreshing(true);
+                loadMatch();
+              }}
+              refreshing={refreshing}
+              tintColor={Colors.primary500}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+        >
           <View
             style={[
               styles.resultBadge,

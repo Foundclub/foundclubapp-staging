@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -17,10 +18,13 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 
 /**
  * Category step of the history wizard.
- * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
+ * @param {{
+ *  navigation: import('@react-navigation/native').NavigationProp<any>;
+ *  route?: { params?: { editingEntry?: any; resetContext?: boolean; returnRoute?: string } };
+ * }} props
  * @returns {import('react').ReactElement}
  */
-function HistoryWizardCategory({ navigation }) {
+function HistoryWizardCategory({ navigation, route }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { dispatch, state } = useHistoryWizard();
@@ -32,6 +36,20 @@ function HistoryWizardCategory({ navigation }) {
   } = useGetCategories();
   const isEditing = Boolean(state.editingEntry);
   const categoryOptions = Array.isArray(categories) ? categories : [];
+
+  useEffect(() => {
+    if (route?.params?.resetContext) {
+      dispatch({ type: 'RESET' });
+    }
+
+    if (route?.params?.editingEntry) {
+      dispatch({ payload: route.params.editingEntry, type: 'SET_EDITING_ENTRY' });
+    }
+
+    if (route?.params?.returnRoute) {
+      dispatch({ payload: route.params.returnRoute, type: 'SET_RETURN_ROUTE' });
+    }
+  }, [dispatch, route?.params]);
 
   const handleSelectCategory = (category) => {
     if (isEditing) {

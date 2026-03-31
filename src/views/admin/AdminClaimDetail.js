@@ -8,8 +8,9 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import Button from '@/components/atoms/button/Button';
-import Loader from '@/components/atoms/loader/Loader';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -35,7 +36,12 @@ function AdminClaimDetail() {
   const navigation = useNavigation();
   const { requestId, requestType } = route.params || {};
 
-  const { data: requestResponse, isLoading } = useGetClubClaimRequest(requestId, requestType);
+  const {
+    data: requestResponse,
+    error,
+    isLoading,
+    refetch,
+  } = useGetClubClaimRequest(requestId, requestType);
   const approveMutation = useApproveClubClaim();
   const refuseClaimMutation = useRefuseClubClaim();
   const processHelpMutation = useProcessAffiliationHelpRequest();
@@ -171,17 +177,46 @@ function AdminClaimDetail() {
     );
   };
 
+  if (!requestId) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="L'identifiant de la demande est absent de l'URL."
+        onAction={() => navigation.goBack()}
+        title="Demande introuvable"
+      />
+    );
+  }
+
   if (isLoading) {
-    return <Loader />;
+    return (
+      <AdminStateView
+        description="Nous chargeons le detail de la demande."
+        isLoading
+        title="Chargement de la demande"
+      />
+    );
+  }
+
+  if (error && !request) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger cette demande.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
   }
 
   if (!request) {
     return (
-      <ScreenContainer>
-        <View style={Alignments.center}>
-          <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Demande introuvable</Text>
-        </View>
-      </ScreenContainer>
+      <AdminStateView
+        actionLabel="Retour"
+        description="La demande demandee n'existe pas ou n'est plus accessible."
+        onAction={() => navigation.goBack()}
+        title="Demande introuvable"
+      />
     );
   }
 

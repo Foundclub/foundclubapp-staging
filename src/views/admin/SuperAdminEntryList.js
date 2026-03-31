@@ -12,6 +12,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SuperAdminEmptyState from '@/components/molecules/superAdmin/SuperAdminEmptyState';
 import SuperAdminEntryActionsSheet from '@/components/molecules/superAdmin/SuperAdminEntryActionsSheet';
@@ -114,7 +116,12 @@ function SuperAdminEntryList({ navigation, route }) {
     sort: listRequestConfig.sort,
   }), [listRequestConfig.fields, listRequestConfig.sort, page, pageSize, query]);
 
-  const { data, isLoading, refetch } = useGetSuperadminEntries(uid, params);
+  const {
+    data,
+    error: entriesError,
+    isLoading,
+    refetch,
+  } = useGetSuperadminEntries(uid, params);
   const deleteMutation = useDeleteSuperadminEntry();
   const bulkMutation = useBulkSuperadminEntries();
 
@@ -305,6 +312,41 @@ function SuperAdminEntryList({ navigation, route }) {
     return Colors.primary500;
   })();
 
+  if (!uid) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="Le content-type superadmin est absent de l'URL."
+        onAction={() => navigation.goBack()}
+        title="Content-type introuvable"
+      />
+    );
+  }
+
+  if ((metadataQuery.isLoading || isLoading) && !entries.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons les entrees du content manager."
+        isLoading
+        title="Chargement du contenu superadmin"
+      />
+    );
+  }
+
+  if ((metadataQuery.error || entriesError) && !entries.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={metadataQuery.error?.message || entriesError?.message || 'Impossible de charger cette liste superadmin.'}
+        onAction={() => {
+          metadataQuery.refetch();
+          refetch();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
   return (
     <ScreenContainer bgImage="bg2">
       <View style={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.marginTop[20], Spaces.marginBottom[2]]}>
@@ -322,6 +364,7 @@ function SuperAdminEntryList({ navigation, route }) {
           setPage(1);
         }}
         onCreateEntry={() => navigation.navigate(RouteNames.SuperAdminEntryForm, {
+          documentId: 'new',
           mode: 'create',
           uid,
           uidDisplayName: displayName,

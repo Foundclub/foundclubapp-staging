@@ -23,9 +23,12 @@ function SquadCategoryStep({
 
   const [categories, setCategories] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
 
   React.useEffect(() => {
     const fetchCategories = async () => {
+      setLoading(true);
+      setLoadError('');
       try {
         const result = await getCategories();
         // Map to format { label: name, value: documentId }
@@ -35,6 +38,8 @@ function SquadCategoryStep({
         }));
         setCategories(options);
       } catch (error) {
+        setLoadError("Impossible de charger les categories League pour le moment.");
+        setCategories([]);
         console.error('Error fetching catégories:', error);
       } finally {
         setLoading(false);
@@ -61,6 +66,11 @@ function SquadCategoryStep({
           setValue={(item) => updateData('category', item)}
           value={data.category?.label}
         />
+        {loadError ? (
+          <Text style={[Fonts.p3, { color: Colors.error500, marginTop: 12, textAlign: 'center' }]}>
+            {loadError}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ gap: 10, marginBottom: 20 }}>

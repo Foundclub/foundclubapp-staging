@@ -1,6 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, Text, View,
@@ -14,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -42,7 +44,12 @@ function UserName({ navigation }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -59,6 +66,7 @@ function UserName({ navigation }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    reset,
     setFocus,
   } = useForm({
     defaultValues: {
@@ -70,6 +78,34 @@ function UserName({ navigation }) {
     resolver: joiResolver(nameSchema),
     shouldFocusError: false,
   });
+
+  useEffect(() => {
+    reset({
+      firstname: userData?.firstname || '',
+      lastname: userData?.lastname || '',
+    });
+  }, [reset, userData?.firstname, userData?.lastname]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de modifier ton nom."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   /**
    * Handle form submit
@@ -158,6 +194,7 @@ function UserName({ navigation }) {
 
         <Button
           disabled={!!Object.keys(formErrors).length}
+          isLoading={updateUserMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
           title={t('profile.actions.save')}
           variant="Primary"

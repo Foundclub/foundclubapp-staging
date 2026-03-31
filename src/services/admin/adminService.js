@@ -20,6 +20,111 @@ export const getAdminStats = async () => {
   return result.data;
 };
 
+/**
+ * Get aggregated admin reports inbox.
+ * @returns {Promise<{ data: Array<any> }>}
+ */
+export const getAdminReports = async () => {
+  const [eventReportsResponse, messageReportsResponse] = await Promise.all([
+    client.get('/event-reports', {
+      params: {
+        pagination: { page: 1, pageSize: 100 },
+        populate: ['event', 'event.team', 'event.team.club', 'event.club', 'user', 'author', 'createdBy'],
+        sort: ['createdAt:desc'],
+      },
+    }),
+    client.get('/chat-message-reports', {
+      params: {
+        pagination: { page: 1, pageSize: 100 },
+        populate: ['message', 'message.chat', 'message.author', 'chat', 'user', 'author', 'createdBy'],
+        sort: ['createdAt:desc'],
+      },
+    }),
+  ]);
+
+  const eventReports = toCollectionItems(eventReportsResponse.data).map(mapEventReportItem);
+  const messageReports = toCollectionItems(messageReportsResponse.data).map(mapMessageReportItem);
+
+  return {
+    data: [...eventReports, ...messageReports].sort(sortByCreatedAtDesc),
+  };
+};
+
+const toCollectionItems = (payload) => {
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
+
+const toEntity = (value) => {
+  if (!value) return null;
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toEntity(item)).filter(Boolean);
+  }
+
+  if (typeof value !== 'object') {
+    return value;
+  }
+
+  if (value?.data !== undefined) {
+    return toEntity(value.data);
+  }
+
+  if (value?.attributes && typeof value.attributes === 'object') {
+    return {
+      id: value.id,
+      ...value.attributes,
+    };
+  }
+
+  return value;
+};
+
+const pickDocumentId = (...values) => {
+  for (const value of values) {
+    const candidate = typeof value === 'object' ? value?.documentId || value?.id : value;
+    if (candidate !== undefined && candidate !== null && String(candidate).trim()) {
+      return String(candidate).trim();
+    }
+  }
+  return null;
+};
+
+const pickFirstText = (...values) => {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    const normalized = String(value).trim();
+    if (normalized) return normalized;
+  }
+  return '';
+};
+
+const buildPersonLabel = (...people) => {
+  for (const person of people) {
+    const entity = toEntity(person);
+    if (!entity || typeof entity !== 'object') continue;
+
+    const fullname = [entity.firstname, entity.lastname].filter(Boolean).join(' ').trim();
+    if (fullname) return fullname;
+
+    const fallback = pickFirstText(entity.username, entity.email, entity.phoneNumber, entity.name);
+    if (fallback) return fallback;
+  }
+
+  return 'Utilisateur inconnu';
+};
+
+const normalizeReportStatus = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return 'pending';
+  if (['pending', 'en attente', 'open', 'new'].includes(normalized)) return 'pending';
+  if (['resolved', 'processed', 'closed', 'done', 'accepted'].includes(normalized)) return 'resolved';
+  if (['rejected', 'refused', 'dismissed'].includes(normalized)) return 'rejected';
+  return normalized;
+};
+
 export const ADMIN_CLAIM_ITEM_TYPES = Object.freeze({
   CLAIM: 'claim',
   CLUB_CREATION: 'club_creation',
@@ -57,6 +162,64 @@ const toBadgeLabel = (kind) => {
 const toTimestamp = (value) => {
   const parsed = Date.parse(String(value || ''));
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const mapEventReportItem = (item = {}) => {
+  const report = toEntity(item) || {};
+  const event = toEntity(report.event) || {};
+  const team = toEntity(event.team) || {};
+  const club = toEntity(team.club) || toEntity(event.club) || {};
+  const eventDocumentId = pickDocumentId(event);
+
+  return {
+    authorLabel: buildPersonLabel(report.user, report.author, report.createdBy, report.reporter),
+    createdAt: report.createdAt || report.updatedAt || null,
+    documentId: pickDocumentId(report),
+    message: pickFirstText(report.reason, report.comment, report.description, 'Signalement d\'evenement'),
+    raw: report,
+    source: 'event',
+    status: normalizeReportStatus(report.status || report.state),
+    targetDocumentId: eventDocumentId,
+    targetKind: eventDocumentId ? 'event' : null,
+    targetLabel: pickFirstText(
+      event.name,
+      event.title,
+      [team.name, club.name].filter(Boolean).join(' - '),
+      'Evenement',
+    ),
+  };
+};
+
+const mapMessageReportItem = (item = {}) => {
+  const report = toEntity(item) || {};
+  const messageEntity = toEntity(report.message) || toEntity(report.chatMessage) || {};
+  const chat = toEntity(messageEntity.chat) || toEntity(report.chat) || {};
+  const author = toEntity(messageEntity.author) || toEntity(messageEntity.user) || {};
+  const chatDocumentId = pickDocumentId(chat);
+  const messagePreview = pickFirstText(
+    messageEntity.content,
+    messageEntity.text,
+    messageEntity.body,
+    report.reason,
+  );
+
+  return {
+    authorLabel: buildPersonLabel(report.user, report.author, report.createdBy, report.reporter, author),
+    createdAt: report.createdAt || report.updatedAt || null,
+    documentId: pickDocumentId(report),
+    message: pickFirstText(report.reason, report.comment, messagePreview, 'Signalement de message'),
+    raw: report,
+    source: 'message',
+    status: normalizeReportStatus(report.status || report.state),
+    targetDocumentId: chatDocumentId,
+    targetKind: chatDocumentId ? 'conversation' : null,
+    targetLabel: pickFirstText(
+      chat.name,
+      chat.title,
+      author?.firstname ? `Conversation avec ${buildPersonLabel(author)}` : '',
+      'Conversation',
+    ),
+  };
 };
 
 const sortByCreatedAtDesc = (a, b) => toTimestamp(b?.createdAt) - toTimestamp(a?.createdAt);

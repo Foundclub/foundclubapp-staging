@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -31,8 +32,18 @@ function UserLevel({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
-  const { data: levels, isLoading: levelsLoading } = useGetLevels();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
+  const {
+    data: levels,
+    error: levelsError,
+    isLoading: levelsLoading,
+    refetch: refetchLevels,
+  } = useGetLevels();
   const insets = useSafeAreaInsets();
 
   const queryClient = useQueryClient();
@@ -46,6 +57,55 @@ function UserLevel({ navigation }) {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || getPostOnboardingHomeRoute());
     },
   });
+
+  useEffect(() => {
+    const currentLevel = userData?.bestLevel?.name || userData?.bestLevel || null;
+    if (currentLevel) {
+      setSelectedLevel(String(currentLevel));
+    }
+  }, [userData?.bestLevel]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir ton niveau."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (levelsLoading && !levels?.length) {
+    return (
+      <OnboardingStateView
+        description="Nous chargeons les niveaux disponibles."
+        isLoading
+        title="Chargement des niveaux"
+      />
+    );
+  }
+
+  if (levelsError && !levels?.length) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={levelsError?.message || 'Impossible de charger les niveaux.'}
+        onAction={refetchLevels}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const handleNext = () => {
     if (selectedLevel && userData) {

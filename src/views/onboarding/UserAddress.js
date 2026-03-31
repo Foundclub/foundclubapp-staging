@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, Text, View,
@@ -14,6 +14,7 @@ import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -28,7 +29,12 @@ import { updateMe } from '@/services/auth/authService';
 function UserAddress({ navigation }) {
   const { Alignments, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const { getNextOnboardingRoute } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
   const insets = useSafeAreaInsets();
@@ -48,6 +54,33 @@ function UserAddress({ navigation }) {
         || RouteNames.UserAvatar);
     },
   });
+
+  useEffect(() => {
+    if (userData?.address) {
+      setAddress(userData.address);
+    }
+  }, [userData?.address]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de renseigner ton adresse."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const handleNext = () => {
     if (userData && address) {

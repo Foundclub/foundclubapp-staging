@@ -5,6 +5,8 @@ import { Image, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import SelectPicker from '@/components/atoms/selectPicker/SelectPicker';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -55,6 +57,27 @@ function AdminRevenue() {
   // Ideally, the backend stats endpoint gives the true total.
   // But per requirements: "Calculé dynamiquement côté client sur la liste chargée"
   const totalRevenue = useMemo(() => clubs.reduce((acc, club) => acc + (club.subscriptionValue || 0), 0), [clubs]);
+
+  if (isLoading && !clubs.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons les revenus et les clubs partenaires."
+        isLoading
+        title="Chargement des revenus"
+      />
+    );
+  }
+
+  if (!isLoading && !error && !clubs.length) {
+    return (
+      <AdminStateView
+        actionLabel="Rafraichir"
+        description="Aucun club partenaire n'est disponible pour cette vue."
+        onAction={refetch}
+        title="Aucun revenu disponible"
+      />
+    );
+  }
 
   const years = [
     { label: '2024', value: '2024' },

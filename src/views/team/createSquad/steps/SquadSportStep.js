@@ -23,33 +23,36 @@ function SquadSportStep({
 
   const [sports, setSports] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState('');
+
+  const fetchSports = React.useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const activities = await getActivities({
+        filters: {
+          isLeague: {
+            $eq: true,
+          },
+        },
+      });
+      const options = activities.map((a) => ({
+        label: a.name,
+        value: a.documentId,
+      }));
+      setSports(options);
+    } catch (error) {
+      console.error('Error fetching sports:', error);
+      setLoadError("Impossible de charger les sports League pour le moment.");
+      setSports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    const fetchSports = async () => {
-      try {
-        const activities = await getActivities({
-          filters: {
-            isLeague: {
-              $eq: true,
-            },
-          },
-        });
-        // Map to format { label: name, value: documentId or id }
-        // The service returns the data array directly validated
-        const options = activities.map((a) => ({
-          label: a.name,
-          value: a.documentId,
-        }));
-        setSports(options);
-      } catch (error) {
-        console.error('Error fetching sports:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSports();
-  }, []);
+  }, [fetchSports]);
 
   const isValid = useMemo(() => !!data.sport, [data.sport]);
 
@@ -68,6 +71,18 @@ function SquadSportStep({
           setValue={(item) => updateData('sport', item)}
           value={data.sport?.label}
         />
+        {loadError ? (
+          <View style={{ marginTop: 16 }}>
+            <Text style={[Fonts.p3, { color: Colors.error500, marginBottom: 10, textAlign: 'center' }]}>
+              {loadError}
+            </Text>
+            <Button
+              onPress={fetchSports}
+              title="Recharger"
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
       </View>
 
       <View style={{ gap: 10, marginBottom: 20 }}>

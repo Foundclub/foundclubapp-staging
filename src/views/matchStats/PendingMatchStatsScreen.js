@@ -132,7 +132,9 @@ function PendingMatchStatsScreen({ navigation }) {
 
   const {
     data: pendingPayload,
+    error,
     isFetching,
+    isLoading,
     refetch,
   } = useGetPendingMatchStatsPrompts();
 
@@ -148,6 +150,61 @@ function PendingMatchStatsScreen({ navigation }) {
     () => promptItems.filter((item) => item?.actionType !== 'player_self_report'),
     [promptItems],
   );
+
+  if (isLoading && !promptItems.length) {
+    return (
+      <ScreenContainer bgImage="bg2">
+        <View
+          style={[
+            ApplicationStyle.backgroundColor.primary900,
+            ApplicationStyle.borderRadius24,
+            ApplicationStyle.borderColor.primary500,
+            ApplicationStyle.borderWidth1,
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.padding[24],
+            Spaces.gap[8],
+            { flex: 1, minHeight: 220 },
+          ]}
+        >
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Chargement des matchs en attente</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+            Nous recuperons tes retours post-match disponibles.
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (error && !promptItems.length) {
+    return (
+      <ScreenContainer bgImage="bg2">
+        <View
+          style={[
+            ApplicationStyle.backgroundColor.primary900,
+            ApplicationStyle.borderRadius24,
+            ApplicationStyle.borderColor.primary500,
+            ApplicationStyle.borderWidth1,
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.padding[24],
+            Spaces.gap[12],
+            { flex: 1, minHeight: 220 },
+          ]}
+        >
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Chargement impossible</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+            {error?.message || 'Impossible de charger les actions post-match pour le moment.'}
+          </Text>
+          <Button
+            onPress={() => refetch()}
+            title="Reessayer"
+            variant="Primary"
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   const handleOpenPrompt = useCallback((prompt) => {
     if (!prompt) return;

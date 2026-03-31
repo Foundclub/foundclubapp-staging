@@ -8,6 +8,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -33,6 +35,7 @@ function AdminClaimList() {
 
   const {
     data,
+    error,
     isLoading,
     refetch,
   } = useGetClubClaimsRequestList();
@@ -43,6 +46,27 @@ function AdminClaimList() {
   const refuseHelpMutation = useRefuseAffiliationHelpRequest();
 
   const requests = useMemo(() => data?.data || [], [data?.data]);
+
+  if (isLoading && !requests.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons les revendications et demandes en attente."
+        isLoading
+        title="Chargement des demandes"
+      />
+    );
+  }
+
+  if (error && !requests.length) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || 'Impossible de charger les demandes admin.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const handlePrimaryAction = (item) => {
     if (item?.__isAffiliationHelp) {

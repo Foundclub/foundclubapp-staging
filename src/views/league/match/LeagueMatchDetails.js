@@ -28,6 +28,7 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import {
   getMatchDerivedPhase,
@@ -117,6 +118,7 @@ function LeagueMatchDetails({ navigation, route }) {
 
   const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [match, setMatch] = useState(/** @type {LeagueMatch | null} */ (null));
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [hasDismissedMatchStatsPrompt, setHasDismissedMatchStatsPrompt] = useState(false);
@@ -126,12 +128,22 @@ function LeagueMatchDetails({ navigation, route }) {
   const userId = getEntityDocumentId(userData);
 
   const loadMatch = useCallback(async () => {
+    if (!matchId) {
+      setLoadError("Aucun match n'est associe a ce lien.");
+      setMatch(null);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
+      setLoadError('');
       const data = await fetchMatch(matchId);
       setMatch(data);
     } catch (error) {
       console.error('Error loading match:', error);
-      Alert.alert('Erreur', 'Impossible de charger le match');
+      setMatch(null);
+      setLoadError(error?.message || 'Impossible de charger le match pour le moment.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1030,26 +1042,28 @@ function LeagueMatchDetails({ navigation, route }) {
     );
   }
 
+  if (loadError && !match) {
+    return (
+      <LeagueStateView
+        actionLabel="Recharger"
+        description={loadError}
+        onAction={() => {
+          setLoading(true);
+          loadMatch();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
   if (!match) {
     return (
-      <ScreenContainer bgImage="bg2" style={[screenContainerStyle]}>
-        <View style={styles.header}>
-          <View style={styles.headerSide}>
-            <HeaderBackButton
-              borderColor="primary500"
-              color="primary500"
-              onPress={() => navigation.goBack()}
-              style={styles.headerBackButton}
-              withDefaultMargin={false}
-            />
-          </View>
-          <Text style={[Fonts.h4, styles.headerTitle, { color: leagueCardTextColor }]}>Details du match</Text>
-          <View style={[styles.headerSide, styles.headerSideRight]} />
-        </View>
-        <View style={styles.centered}>
-          <Text style={[Fonts.p1, { color: leagueCardTextColor }]}>Match introuvable</Text>
-        </View>
-      </ScreenContainer>
+      <LeagueStateView
+        actionLabel="Retour aux matchs"
+        description="Ce match n'existe plus ou n'est pas accessible depuis ce lien."
+        onAction={() => navigation.navigate(RouteNames.LeagueMatchTab)}
+        title="Match introuvable"
+      />
     );
   }
 

@@ -136,6 +136,8 @@ const navigateToPath = (path) => {
   window.dispatchEvent(new PopStateEvent('popstate'));
 };
 
+const hasUnresolvedRouteParams = (path) => /(^|\/):[A-Za-z0-9_]+/.test(String(path || ''));
+
 const readPayloadFromQueryString = () => {
   if (typeof window === 'undefined') return null;
 
@@ -284,12 +286,30 @@ export const openFromPayload = async (payload) => {
 
   if (!destination?.route) {
     logWarn('Aucune destination resolue pour cette notification.', normalizedPayload?.type || normalizedPayload);
-    return null;
+    navigateToPath('/');
+    return '/';
   }
 
-  const path = buildWebPath(destination.route, destination.params || {});
-  navigateToPath(path);
-  return path;
+  try {
+    const path = buildWebPath(destination.route, destination.params || {});
+
+    if (!path || hasUnresolvedRouteParams(path)) {
+      logWarn('Destination de notification incomplete, fallback sur l accueil.', {
+        destination,
+        normalizedPayload,
+        path,
+      });
+      navigateToPath('/');
+      return '/';
+    }
+
+    navigateToPath(path);
+    return path;
+  } catch (error) {
+    logWarn('Erreur lors de la resolution de destination de notification, fallback sur l accueil.', error?.message || error);
+    navigateToPath('/');
+    return '/';
+  }
 };
 
 export const requestPermission = async () => {

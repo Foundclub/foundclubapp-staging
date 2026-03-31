@@ -31,6 +31,7 @@ import OnboardingOverlay from '@/components/molecules/onboardingOverlay/Onboardi
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -71,7 +72,10 @@ function UserAffiliationGuideContent({ navigation }) {
   const {
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    refetchUserData,
     userData,
+    userDataError,
+    userDataLoading,
   } = useAuth();
   const [{ clubFilters }] = useAppContext();
   const { getClubFiltersNumber } = useClub();
@@ -97,6 +101,27 @@ function UserAffiliationGuideContent({ navigation }) {
   const [requestedName, setRequestedName] = useState('');
   const [comment, setComment] = useState('');
   const [footerHeight, setFooterHeight] = useState(0);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de lancer l'affiliation."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const stickyFooterInset = (footerHeight || 156) + 12;
 

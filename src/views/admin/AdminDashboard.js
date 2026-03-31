@@ -7,6 +7,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,6 +41,8 @@ function AdminDashboard() {
   // 1. Featured Requests Count
   const {
     data: featuredRequestsData,
+    error: featuredRequestsError,
+    isLoading: isFeaturedRequestsLoading,
     refetch: refetchFeatured,
   } = useQuery({
     queryFn: () => getPendingFeaturedRequests({ status: 'PENDING' }),
@@ -47,6 +51,8 @@ function AdminDashboard() {
 
   const {
     data: stats,
+    error: statsError,
+    isLoading: isStatsLoading,
     refetch: refetchStats,
   } = useGetAdminStats();
 
@@ -57,12 +63,16 @@ function AdminDashboard() {
 
   const {
     data: claimsData,
+    error: claimsError,
+    isLoading: isClaimsLoading,
     refetch: refetchClaims,
   } = useGetPendingClubClaims();
 
   const claimsCount = claimsData?.meta?.pagination?.total || 0;
   const {
     data: clubOnboardingData,
+    error: clubOnboardingError,
+    isLoading: isClubOnboardingLoading,
     refetch: refetchClubOnboarding,
   } = useGetPendingClubOnboardingRequests({
     pagination: {
@@ -77,6 +87,8 @@ function AdminDashboard() {
 
   const {
     data: leagueDisputesData,
+    error: leagueDisputesError,
+    isLoading: isLeagueDisputesLoading,
     refetch: refetchLeagueDisputes,
   } = useGetLeagueDisputes(disputeCountParams);
 
@@ -91,6 +103,48 @@ function AdminDashboard() {
       refetchLeagueDisputes();
     }, [refetchClaims, refetchClubOnboarding, refetchFeatured, refetchLeagueDisputes, refetchStats]),
   );
+
+  const dashboardError = (
+    featuredRequestsError
+    || statsError
+    || claimsError
+    || clubOnboardingError
+    || leagueDisputesError
+  );
+  const isBootstrapping = (
+    isFeaturedRequestsLoading
+    || isStatsLoading
+    || isClaimsLoading
+    || isClubOnboardingLoading
+    || isLeagueDisputesLoading
+  );
+
+  if (isBootstrapping) {
+    return (
+      <AdminStateView
+        description="Nous synchronisons les indicateurs d'administration."
+        isLoading
+        title="Chargement du dashboard admin"
+      />
+    );
+  }
+
+  if (dashboardError) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={dashboardError?.message || 'Impossible de charger les indicateurs admin.'}
+        onAction={() => {
+          refetchFeatured();
+          refetchStats();
+          refetchClaims();
+          refetchClubOnboarding();
+          refetchLeagueDisputes();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   /**
    *

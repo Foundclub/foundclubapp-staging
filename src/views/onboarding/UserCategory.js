@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import OnboardingOptionalHint from '@/components/molecules/onboardingOptionalHint/OnboardingOptionalHint';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -54,7 +55,12 @@ function UserCategory({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { data: userData } = useGetMe();
+  const {
+    data: userData,
+    error: userDataError,
+    isLoading: userDataLoading,
+    refetch: refetchUserData,
+  } = useGetMe();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
@@ -68,6 +74,38 @@ function UserCategory({ navigation }) {
       navigation.navigate(getNextOnboardingRoute(RouteNames.UserCategory) || getPostOnboardingHomeRoute());
     },
   });
+
+  useEffect(() => {
+    const categories = String(userData?.category || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (categories.length) {
+      setSelectedCategories(categories);
+    }
+  }, [userData?.category]);
+
+  if (userDataLoading) {
+    return (
+      <OnboardingStateView
+        description="Nous recuperons ton profil avant de choisir ta categorie."
+        isLoading
+        title="Chargement du profil"
+      />
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <OnboardingStateView
+        actionLabel="Reessayer"
+        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        onAction={refetchUserData}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   const toggleCategory = (categoryValue) => {
     setSelectedCategories((prev) => {

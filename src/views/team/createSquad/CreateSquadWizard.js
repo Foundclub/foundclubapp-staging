@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 import SquadAvailabilitiesStep from '@/views/team/createSquad/steps/SquadAvailabilitiesStep';
 import SquadCategoryStep from '@/views/team/createSquad/steps/SquadCategoryStep';
 import SquadImageStep from '@/views/team/createSquad/steps/SquadImageStep';
@@ -21,6 +22,13 @@ import { createLeagueTeam } from '@/services/leagueTeam/leagueTeamService';
 import { createTeamSlot } from '@/services/teamSlot/teamSlotService';
 
 import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
+
+const CREATE_SQUAD_STORAGE_KEY = 'fc:web:create-squad-wizard';
+
+const canUseWizardStorage = () => (
+  typeof globalThis !== 'undefined'
+  && typeof globalThis.sessionStorage !== 'undefined'
+);
 
 /**
  * @typedef {object} AddressProperties
@@ -65,27 +73,86 @@ import { buildHomeBasePayload, normalizeLocationInput } from '@/utils/location';
  * Squad creation wizard component
  * @param {{ navigation: import('@react-navigation/native').NavigationProp<any> }} props
  */
+const createInitialSquadData = () => /** @type {SquadData} */ ({
+  address: null,
+  category: null,
+  city: '',
+  cover: null,
+  level: null,
+  logo: null,
+  name: '',
+  radius: 50,
+  section: null,
+  slots: [],
+  sport: null,
+});
+
+const loadPersistedWizardState = () => {
+  const initialState = {
+    squadData: createInitialSquadData(),
+    step: 1,
+  };
+
+  if (!canUseWizardStorage()) {
+    return initialState;
+  }
+
+  try {
+    const raw = globalThis.sessionStorage.getItem(CREATE_SQUAD_STORAGE_KEY);
+    if (!raw) return initialState;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return initialState;
+
+    return {
+      squadData: {
+        ...initialState.squadData,
+        ...(parsed.squadData && typeof parsed.squadData === 'object' ? parsed.squadData : {}),
+      },
+      step: Number.isInteger(parsed.step) && parsed.step > 0 ? parsed.step : 1,
+    };
+  } catch (_error) {
+    return initialState;
+  }
+};
+
+const clearPersistedWizardState = () => {
+  if (!canUseWizardStorage()) return;
+
+  try {
+    globalThis.sessionStorage.removeItem(CREATE_SQUAD_STORAGE_KEY);
+  } catch (_error) {
+    // Ignore storage failures and keep the in-memory flow working.
+  }
+};
+
 function CreateSquadWizard({ navigation }) {
   const { Colors, Fonts, Spaces } = useTheme();
   // @ts-ignore - useAuth returns extended user object
   const { userData: user } = useAuth();
+  const persistedState = loadPersistedWizardState();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(persistedState.step);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   /** @type {[SquadData, React.Dispatch<React.SetStateAction<SquadData>>]} */
-  const [squadData, setSquadData] = useState(/** @type {SquadData} */ ({
-    address: null,
-    category: null,
-    city: '',
-    cover: null,
-    level: null,
-    logo: null,
-    name: '',
-    radius: 50, // Default radius if needed
-    section: null,
-    slots: [],
-    sport: null,
-  }));
+  const [squadData, setSquadData] = useState(persistedState.squadData);
+
+  useEffect(() => {
+    if (!canUseWizardStorage()) return;
+
+    try {
+      globalThis.sessionStorage.setItem(
+        CREATE_SQUAD_STORAGE_KEY,
+        JSON.stringify({
+          squadData,
+          step,
+        }),
+      );
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory flow working.
+    }
+  }, [squadData, step]);
 
   const nextStep = () => setStep((prev) => prev + 1);
   const prevStep = () => {
@@ -106,7 +173,11 @@ function CreateSquadWizard({ navigation }) {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setSubmitError('');
     try {
+      if (!user?.documentId) {
+        throw new Error("Session introuvable. Rechargez la page avant de creer une squad.");
+      }
       console.log('DEBUG: User object:', user);
       console.log('DEBUG: User DocumentId:', user?.documentId);
 
@@ -210,6 +281,7 @@ function CreateSquadWizard({ navigation }) {
       }
 
       // 4. Navigate to League Squad Tab
+      clearPersistedWizardState();
       navigation.navigate(RouteNames.LeagueHomeTab, {
         screen: RouteNames.LeagueSquadTab,
       });
@@ -223,14 +295,26 @@ function CreateSquadWizard({ navigation }) {
       console.error('Full Error:', JSON.stringify(errorData, null, 2));
 
       if (errorMessage?.includes('unique') || errorMessage?.includes('already taken')) {
+        setSubmitError("Ce nom d'equipe est deja pris. Veuillez en choisir un autre.");
         alert("Ce nom d'équipe est déjà pris. Veuillez en choisir un autre.");
       } else {
+        setSubmitError(`Erreur: ${errorMessage}`);
         alert(`Erreur: ${errorMessage}\n${errorDetails}`);
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <LeagueStateView
+        description="Rechargez la page pour recuperer votre session avant de creer une squad."
+        isLoading
+        title="Preparation du wizard"
+      />
+    );
+  }
 
   const renderStep = () => {
     switch (step) {
@@ -312,6 +396,7 @@ function CreateSquadWizard({ navigation }) {
             isLoading={isLoading}
             onPrev={prevStep}
             onSubmit={handleSubmit}
+            submitError={submitError}
           />
         );
       default:

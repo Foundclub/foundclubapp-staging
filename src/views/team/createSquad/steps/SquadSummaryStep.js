@@ -5,10 +5,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 /**
- * @param {{ data: any; onPrev: () => void; onSubmit: () => void; isLoading?: boolean }} props
+ * @param {{ data: any; onPrev: () => void; onSubmit: () => void; isLoading?: boolean; submitError?: string }} props
  */
 function SquadSummaryStep({
-  data, isLoading = false, onPrev, onSubmit,
+  data, isLoading = false, onPrev, onSubmit, submitError = '',
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
 
@@ -94,6 +94,12 @@ function SquadSummaryStep({
           )}
         </View>
 
+        {submitError ? (
+          <View style={{ backgroundColor: 'rgba(255, 40, 79, 0.12)', borderRadius: 12, padding: 16 }}>
+            <Text style={[Fonts.p2Bold, { color: Colors.error500, marginBottom: 4 }]}>Creation impossible</Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>{submitError}</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>

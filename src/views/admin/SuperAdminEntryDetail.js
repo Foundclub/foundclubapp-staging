@@ -14,6 +14,8 @@ import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -89,6 +91,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
 
   const {
     data,
+    error,
     isLoading,
     refetch,
   } = useGetSuperadminEntry(uid, documentId);
@@ -146,6 +149,52 @@ function SuperAdminEntryDetail({ navigation, route }) {
       borderWidth: 1,
     },
   ];
+
+  if (!uid || !documentId) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="Les informations de l'entree superadmin sont incompletes dans l'URL."
+        onAction={() => navigation.goBack()}
+        title="Entree introuvable"
+      />
+    );
+  }
+
+  if ((isLoading || metadataQuery.isLoading) && !entry) {
+    return (
+      <AdminStateView
+        description="Nous chargeons le detail de l'entree."
+        isLoading
+        title="Chargement du detail"
+      />
+    );
+  }
+
+  if ((error || metadataQuery.error) && !entry) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={error?.message || metadataQuery.error?.message || 'Impossible de charger cette entree.'}
+        onAction={() => {
+          metadataQuery.refetch();
+          refetch();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (!entry) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="Cette entree superadmin n'existe pas ou n'est plus accessible."
+        onAction={() => navigation.goBack()}
+        title="Entree introuvable"
+      />
+    );
+  }
 
   const closeDeleteModal = () => {
     if (deleteMutation.isPending) return;

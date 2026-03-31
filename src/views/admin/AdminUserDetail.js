@@ -8,8 +8,9 @@ import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
+import AdminStateView from '@/views/admin/components/AdminStateView';
+
 import Button from '@/components/atoms/button/Button';
-import Loader from '@/components/atoms/loader/Loader';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -31,8 +32,13 @@ function AdminUserDetail() {
   const { userData: currentUser } = useAuth();
   const { startWhisperChat } = useMessaging();
 
-  const { data: userData, isLoading } = useGetAdminUser(userId);
-  const { data: rolesData } = useGetRoles();
+  const {
+    data: userData,
+    error: userError,
+    isLoading,
+    refetch,
+  } = useGetAdminUser(userId);
+  const { data: rolesData, error: rolesError } = useGetRoles();
   const updateMutation = useUpdateAdminUser();
 
   const user = userData; // users-permissions returns user directly, not wrapped in data
@@ -111,15 +117,46 @@ function AdminUserDetail() {
     }
   };
 
-  if (isLoading) return <Loader />;
+  if (!userId) {
+    return (
+      <AdminStateView
+        actionLabel="Retour"
+        description="L'identifiant utilisateur est absent de l'URL."
+        onAction={() => navigation.goBack()}
+        title="Utilisateur introuvable"
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AdminStateView
+        description="Nous chargeons la fiche utilisateur."
+        isLoading
+        title="Chargement du profil admin"
+      />
+    );
+  }
+
+  if ((userError || rolesError) && !user) {
+    return (
+      <AdminStateView
+        actionLabel="Reessayer"
+        description={userError?.message || rolesError?.message || 'Impossible de charger cet utilisateur.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
 
   if (!user) {
     return (
-      <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.alignCenter, Alignments.justifyCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Utilisateur introuvable</Text>
-        </View>
-      </ScreenContainer>
+      <AdminStateView
+        actionLabel="Retour"
+        description="Le compte demande n'existe pas ou n'est plus accessible."
+        onAction={() => navigation.goBack()}
+        title="Utilisateur introuvable"
+      />
     );
   }
 

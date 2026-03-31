@@ -912,12 +912,18 @@ function UserDetails({ navigation, route }) {
             isOwnProfile={isSelfProfile}
             onAddPress={
               isSelfProfile
-                ? () => navigation.navigate(RouteNames.HistoryWizardCategory)
+                ? () => navigation.navigate(RouteNames.HistoryWizardCategory, {
+                  resetContext: true,
+                  returnRoute: RouteNames.Profile,
+                })
                 : undefined
             }
             onEditPress={
               isSelfProfile
-                ? () => navigation.navigate(RouteNames.HistoryWizardCategory)
+                ? (entry) => navigation.navigate(RouteNames.HistoryWizardCategory, {
+                  editingEntry: entry,
+                  returnRoute: RouteNames.Profile,
+                })
                 : undefined
             }
             preferredSport={preferredSportValue || undefined}
