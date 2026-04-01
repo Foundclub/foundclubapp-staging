@@ -1,5 +1,4 @@
 import axios from 'axios/dist/browser/axios.cjs';
-import { Platform } from 'react-native';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
@@ -8,14 +7,10 @@ import {
   getAuthRuntimeSnapshot,
 } from '@/store/authRuntime';
 
-// Fix for Android Emulator Localhost
-// Only use 10.0.2.2 fallback if NO environment variable is provided
-const baseURL = (__DEV__ && Platform.OS === 'android')
-  ? (process.env.API_URL || 'http://10.0.2.2:1337/api')
-  : process.env.API_URL;
+import { getApiBaseUrl } from '@/config/runtimeUrls';
 
 const instance = axios.create({
-  baseURL,
+  baseURL: getApiBaseUrl() || undefined,
   // Some custom actions (league score/validation) can exceed 5s on local dev.
   timeout: 15000,
 });

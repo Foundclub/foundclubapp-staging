@@ -1,8 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Dimensions, ScrollView, StyleSheet, Text, View,
+  Dimensions, ScrollView, Text, View,
 } from 'react-native';
 
 import { horizontalScale } from '@/theme/scaling';
@@ -23,18 +23,16 @@ import { RouteNames } from '@/navigation/routeNames';
 function FeaturedEvents({ events = [], useFacilityAccentColorForPublic = false }) {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const { Colors, Fonts, Spaces } = useTheme();
+  const { Fonts, Spaces } = useTheme();
 
   const handleCardPress = useCallback((item) => {
-    if (item?.documentId) {
-      if (item.type?.name === 'Match') {
-        navigation.navigate(RouteNames.MatchDetails, { matchId: item.documentId });
-      } else if (item.type?.name === 'Entraînement') {
-        navigation.navigate(RouteNames.TrainingDetails, { trainingId: item.documentId });
-      } else {
-        navigation.navigate(RouteNames.EventStack, { params: { eventId: item.documentId }, screen: RouteNames.EventDetails });
-      }
-    }
+    if (!item?.documentId) return;
+
+    // Reuse the main event-list navigation path to avoid route mismatches.
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: item.documentId },
+      screen: RouteNames.EventDetails,
+    });
   }, [navigation]);
 
   if (!events || events.length === 0) {
@@ -70,7 +68,5 @@ function FeaturedEvents({ events = [], useFacilityAccentColorForPublic = false }
     </View>
   );
 }
-
-const styles = StyleSheet.create({});
 
 export default FeaturedEvents;

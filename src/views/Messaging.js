@@ -707,7 +707,7 @@ function Messaging({ navigation, route }) {
           }}
           >
             <TouchableOpacity
-              onPress={() => navigation.navigate('NewConversation')}
+              onPress={() => navigation.navigate(RouteNames.NewConversation)}
               style={{
                 alignItems: 'center',
                 backgroundColor: Colors.primary500,

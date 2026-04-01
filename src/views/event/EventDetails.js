@@ -58,7 +58,6 @@ import {
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
-import { share } from '@/platform/share';
 
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventHeader from './components/EventHeader';
@@ -66,6 +65,8 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { useEventMutations } from './hooks/useEventMutations';
+
+const SharePlatform = require('@/platform/share').default;
 
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /**
@@ -430,10 +431,21 @@ function EventDetails({ navigation, route }) {
     /**
      * @type {Record<string, {
      * arrivedAt?: string | null,
+     * attendanceStatus?: string | null,
+     * countsInTeamStats?: {
+     *   absence?: boolean,
+     *   attendance?: boolean,
+     *   late?: boolean,
+     *   rsvpYes?: boolean,
+     * } | null,
      * declaredAt?: string | null,
      * declaredLateMinutes?: number | null,
      * declarationSource?: string | null,
+     * finalOperationalStatus?: string | null,
+     * finalizedAt?: string | null,
+     * finalState?: string | null,
      * lateMinutes?: number | null,
+     * rsvpStatus?: string | null,
      * source?: string | null,
      * manualOverride?: boolean,
      * note?: string | null,
@@ -446,12 +458,18 @@ function EventDetails({ navigation, route }) {
       if (!userDocId) return;
       map[userDocId] = {
         arrivedAt: item?.attendance?.arrivedAt || null,
+        attendanceStatus: item?.attendanceStatus || item?.attendance?.finalState || null,
+        countsInTeamStats: item?.countsInTeamStats || null,
         declarationSource: item?.attendance?.declarationSource || null,
         declaredAt: item?.attendance?.declaredAt || null,
         declaredLateMinutes: item?.attendance?.declaredLateMinutes || 0,
+        finalizedAt: item?.attendance?.finalizedAt || null,
+        finalOperationalStatus: item?.finalOperationalStatus || null,
+        finalState: item?.attendance?.finalState || null,
         lateMinutes: item?.attendance?.lateMinutes || 0,
         manualOverride: Boolean(item?.attendance?.manualOverride),
         note: item?.attendance?.note || null,
+        rsvpStatus: item?.rsvpStatus || null,
         source: item?.attendance?.source || null,
         updatedAt: item?.attendance?.updatedAt || null,
         updatedBy: item?.attendance?.updatedBy || null,
@@ -475,18 +493,34 @@ function EventDetails({ navigation, route }) {
 
     const eventStartMs = eventStartAt.getTime();
     if (Number.isNaN(eventStartMs)) return null;
+    const normalizedAttendanceStatus = String(
+      myAttendance?.attendanceStatus || myAttendance?.finalState || '',
+    ).trim().toLowerCase();
+
+    if (normalizedAttendanceStatus === 'no_show') {
+      return {
+        accentColor: Colors.error500 || 'rgb(248, 113, 113)',
+        badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
+        badgeLabel: 'Absence enregistree',
+        badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
+        description: "L'evenement est termine et aucune arrivee n'a ete confirmee. Un coach doit corriger le pointage si besoin.",
+        hasArrived: false,
+        primaryAction: null,
+        secondaryAction: null,
+      };
+    }
 
     if (myAttendance?.arrivedAt) {
       const arrivedAtMs = new Date(myAttendance.arrivedAt).getTime();
       const hasValidArrival = !Number.isNaN(arrivedAtMs);
 
       if (hasValidArrival && arrivedAtMs < eventStartMs) {
-        const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
+        const earlyMinutes = Math.max(1, Math.floor((eventStartMs - arrivedAtMs) / 60000));
         return {
-          accentColor: Colors.success500 || '#22c55e',
-          badgeBackgroundColor: `${Colors.success500 || '#22c55e'}22`,
-          badgeLabel: 'Arrive en avance',
-          badgeTextColor: Colors.success500 || '#22c55e',
+          accentColor: Colors.success500 || 'rgb(34, 197, 94)',
+          badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
+          badgeLabel: 'Arrive',
+          badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
           description: `${earlyMinutes} min avant le debut de l'evenement.`,
           hasArrived: true,
           primaryAction: null,
@@ -496,16 +530,16 @@ function EventDetails({ navigation, route }) {
 
       const lateMinutesFromRecord = Math.max(0, Number(myAttendance.lateMinutes || 0));
       const lateMinutesFromDiff = hasValidArrival && arrivedAtMs > eventStartMs
-        ? Math.max(1, Math.ceil((arrivedAtMs - eventStartMs) / 60000))
+        ? Math.max(0, Math.floor((arrivedAtMs - eventStartMs) / 60000))
         : 0;
       const lateMinutes = Math.max(lateMinutesFromRecord, lateMinutesFromDiff);
 
       if (lateMinutes > 0) {
         return {
-          accentColor: Colors.warning500 || '#f59e0b',
-          badgeBackgroundColor: `${Colors.warning500 || '#f59e0b'}22`,
+          accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
+          badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
           badgeLabel: `Arrive +${lateMinutes} min`,
-          badgeTextColor: Colors.warning500 || '#f59e0b',
+          badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
           description: 'Votre arrivee reelle a bien ete enregistree.',
           hasArrived: true,
           primaryAction: null,
@@ -514,10 +548,10 @@ function EventDetails({ navigation, route }) {
       }
 
       return {
-        accentColor: Colors.success500 || '#22c55e',
-        badgeBackgroundColor: `${Colors.success500 || '#22c55e'}22`,
+        accentColor: Colors.success500 || 'rgb(34, 197, 94)',
+        badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
         badgeLabel: 'Arrive',
-        badgeTextColor: Colors.success500 || '#22c55e',
+        badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
         description: 'Vous etes signale present a l\'heure.',
         hasArrived: true,
         primaryAction: null,
@@ -528,11 +562,11 @@ function EventDetails({ navigation, route }) {
     const declaredLateMinutes = Math.max(0, Number(myAttendance?.declaredLateMinutes || 0));
     if (declaredLateMinutes > 0) {
       return {
-        accentColor: Colors.warning500 || '#f59e0b',
-        badgeBackgroundColor: `${Colors.warning500 || '#f59e0b'}22`,
-        badgeLabel: `Retard annonce +${declaredLateMinutes} min`,
-        badgeTextColor: Colors.warning500 || '#f59e0b',
-        description: 'Votre retard est signale. Confirmez votre arrivee une fois sur place.',
+        accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
+        badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
+        badgeLabel: 'Retard annonce',
+        badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
+        description: `Retard signale : +${declaredLateMinutes} min. Confirmez votre arrivee une fois sur place.`,
         hasArrived: false,
         primaryAction: {
           title: 'Mettre a jour',
@@ -566,12 +600,12 @@ function EventDetails({ navigation, route }) {
       };
     }
 
-    const liveLateMinutes = Math.max(1, Math.ceil(Math.abs(diffMs) / 60000));
+    const liveLateMinutes = Math.max(0, Math.floor(Math.abs(diffMs) / 60000));
     return {
-      accentColor: Colors.error500 || '#f87171',
-      badgeBackgroundColor: `${Colors.error500 || '#f87171'}22`,
-      badgeLabel: `En attente +${liveLateMinutes} min`,
-      badgeTextColor: Colors.error500 || '#f87171',
+      accentColor: Colors.error500 || 'rgb(248, 113, 113)',
+      badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
+      badgeLabel: liveLateMinutes > 0 ? `En attente +${liveLateMinutes} min` : 'En attente',
+      badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
       description: 'Le debut est passe. Signalez votre retard ou confirmez votre arrivee.',
       hasArrived: false,
       primaryAction: {
@@ -591,7 +625,9 @@ function EventDetails({ navigation, route }) {
     Colors.warning500,
     eventStartAt,
     myAttendance?.arrivedAt,
+    myAttendance?.attendanceStatus,
     myAttendance?.declaredLateMinutes,
+    myAttendance?.finalState,
     myAttendance?.lateMinutes,
     serverNowMs,
   ]);
@@ -1316,7 +1352,7 @@ function EventDetails({ navigation, route }) {
       const path = await exportEventParticipants(eventId, event?.name || 'participants');
       if (Platform.OS === 'ios') {
         setTimeout(() => {
-          share({ title: 'Participants', url: path }).catch(() => undefined);
+          SharePlatform.share({ title: 'Participants', url: path }).catch(() => undefined);
         }, 500);
       } else {
         ReactNativeBlobUtil.android
@@ -1550,7 +1586,10 @@ function EventDetails({ navigation, route }) {
   const myMatchResponse = myMatchResponsePayload?.response || null;
   const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
   const hasMyCoachReview = myCoachReview?.rating != null || Boolean(myCoachReview?.comment);
-  const canRespondMyMatchStats = Boolean(myMatchResponsePayload?.permissions?.canRespond || isTeamMember);
+  const hasExplicitMyMatchResponsePermission = typeof myMatchResponsePayload?.permissions?.canRespond === 'boolean';
+  const canRespondMyMatchStats = hasExplicitMyMatchResponsePermission
+    ? Boolean(myMatchResponsePayload?.permissions?.canRespond)
+    : (!isMyMatchResponseFetching && Boolean(isTeamMember));
   const isMatchStatsFinal = matchStatsReport?.status === 'final';
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
   const isMatchStatsCompleted = isMatchStatsFinal && !isMatchStatsReviewRequired;
@@ -2221,11 +2260,11 @@ function EventDetails({ navigation, route }) {
           let message = t('eventDetails.late.selfOnTime', 'Arrivee enregistree a l\'heure.');
 
           if (hasValidTimestamps && eventStartMs && arrivedAtMs < eventStartMs) {
-            const earlyMinutes = Math.max(1, Math.ceil((eventStartMs - arrivedAtMs) / 60000));
+            const earlyMinutes = Math.max(1, Math.floor((eventStartMs - arrivedAtMs) / 60000));
             message = t('eventDetails.late.selfEarly', `Bravo ! Vous etes en avance de ${earlyMinutes} min.`);
           } else {
             const lateMinutesFromDiff = hasValidTimestamps && eventStartMs && arrivedAtMs > eventStartMs
-              ? Math.max(1, Math.ceil((arrivedAtMs - eventStartMs) / 60000))
+              ? Math.max(0, Math.floor((arrivedAtMs - eventStartMs) / 60000))
               : 0;
             const lateMinutes = Math.max(lateMinutesFromResponse, lateMinutesFromDiff);
             if (lateMinutes > 0) {
@@ -2345,7 +2384,7 @@ function EventDetails({ navigation, route }) {
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => setIsMatchActionsOpen((prev) => !prev)}
-              style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter]}
+              style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}
             >
               <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions événement</Text>
@@ -2621,6 +2660,35 @@ function EventDetails({ navigation, route }) {
             teamParticipationSections={teamParticipationSections}
           />
 
+          {isMatchEvent
+          && compositionTeamId
+          && isTeamMember
+          && isMatchFinished
+          && myMatchResponsePayload?.attendanceRestriction === 'no_show' ? (
+            <View style={[Spaces.gap[12]]}>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary900,
+                  ApplicationStyle.borderRadius24,
+                  Spaces.padding[16],
+                  Spaces.gap[10],
+                  {
+                    borderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}55`,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
+                  Pointage a corriger
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  Votre arrivee n&apos;a pas ete confirmee avant la fin du match. Un coach doit corriger votre attendance avant de debloquer votre retour post-match.
+                </Text>
+              </View>
+            </View>
+            ) : null}
+
           {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
@@ -2634,7 +2702,7 @@ function EventDetails({ navigation, route }) {
                   Spaces.gap[12],
                 ]}
               >
-                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
@@ -2721,7 +2789,7 @@ function EventDetails({ navigation, route }) {
                     : null,
                 ]}
               >
-                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel du coach</Text>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
@@ -2782,7 +2850,7 @@ function EventDetails({ navigation, route }) {
                   Spaces.gap[12],
                 ]}
               >
-                <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
                     <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{matchStatsScoreLabel}</Text>
@@ -2921,7 +2989,7 @@ function EventDetails({ navigation, route }) {
                       },
                     ]}
                   >
-                    <Text style={[Fonts.p4, Fonts.warning400]}>
+                    <Text style={[Fonts.p4, Fonts.warning500]}>
                       Le score officiel a change apres la premiere publication. Une mise a jour est requise.
                     </Text>
                   </View>
@@ -3178,7 +3246,7 @@ function EventDetails({ navigation, route }) {
           <View
             style={[
               ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius20,
+              { borderRadius: 20 },
               Spaces.padding[16],
               Spaces.gap[6],
             ]}

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Platform } from 'react-native';
 
+import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+
 import { navigate } from '@/navigation/navigationService';
 
 import {
@@ -9,6 +11,7 @@ import {
   NOTIFICATIONS_BOOTSTRAP_POLICY,
   NOTIFICATIONS_RUNTIME_CONFIG,
 } from '@/constants/runtimeFlags';
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 import useNotifications from '@/hooks/useNotifications';
 
@@ -41,11 +44,72 @@ function NotificationBootstrapEnabled() {
     });
   }, []);
 
-  useNotifications({
+  const {
+    calendarPrompt,
+    pushPermissionPrompt,
+  } = useNotifications({
     navigate,
     onSmartNotification: ENABLE_SMART_NOTIFICATIONS ? consumeNotification : undefined,
   });
-  return null;
+
+  const canShowCalendarPrompt = useBlockingOverlayPrompt(
+    calendarPrompt.descriptor.id,
+    calendarPrompt.canShow,
+    calendarPrompt.descriptor.priority,
+  );
+  const canShowPushPrompt = useBlockingOverlayPrompt(
+    pushPermissionPrompt.descriptor.id,
+    pushPermissionPrompt.canShow,
+    pushPermissionPrompt.descriptor.priority,
+  );
+  const isCalendarPromptVisible = Boolean(calendarPrompt.canShow && canShowCalendarPrompt);
+  const isPushPromptVisible = Boolean(pushPermissionPrompt.canShow && canShowPushPrompt);
+
+  React.useEffect(() => {
+    if (!isCalendarPromptVisible) return;
+    calendarPrompt.onVisible?.();
+  }, [calendarPrompt, isCalendarPromptVisible]);
+
+  React.useEffect(() => {
+    if (!isPushPromptVisible) return;
+    pushPermissionPrompt.onVisible?.();
+  }, [isPushPromptVisible, pushPermissionPrompt]);
+
+  return (
+    <>
+      <GlobalPromptModal
+        body={pushPermissionPrompt.body}
+        onRequestClose={pushPermissionPrompt.onDismiss}
+        primaryAction={{
+          label: 'Activer',
+          onPress: pushPermissionPrompt.onAccept,
+        }}
+        secondaryAction={{
+          label: 'Plus tard',
+          onPress: pushPermissionPrompt.onDismiss,
+        }}
+        supportingText="Vous pourrez toujours modifier ce choix plus tard dans les réglages."
+        title={pushPermissionPrompt.title}
+        visible={isPushPromptVisible}
+      />
+
+      <GlobalPromptModal
+        body={calendarPrompt.body}
+        onRequestClose={calendarPrompt.onDismiss}
+        primaryAction={{
+          label: 'Ajouter au calendrier',
+          onPress: calendarPrompt.onAccept,
+        }}
+        secondaryAction={{
+          label: 'Plus tard',
+          onPress: calendarPrompt.onDismiss,
+        }}
+        title={calendarPrompt.title}
+        tone="league"
+        visible={isCalendarPromptVisible}
+      />
+    </>
+  );
 }
 
 /**

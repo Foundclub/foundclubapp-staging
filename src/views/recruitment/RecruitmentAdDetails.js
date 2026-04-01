@@ -406,7 +406,7 @@ function RecruitmentAdDetails() {
   };
 
   const handleEdit = () => {
-    navigation.navigate('RecruitmentAdEdit', { ad, adId: ad.documentId });
+    navigation.navigate(RouteNames.RecruitmentAdEdit, { ad, adId: ad.documentId });
   };
 
   const handleOpenDetection = () => {

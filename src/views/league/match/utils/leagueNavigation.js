@@ -2,7 +2,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getEntityDocumentId } from '@/utils/entityId';
 
-const END_MATCH_ROUTE = 'EndMatchScreen';
+const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
 const MATCH_DETAILS_ROUTE = RouteNames.LeagueMatchDetails;
 
 /**

@@ -100,7 +100,10 @@ function ReservationListContent({ showFilters = false }) {
   // Handlers - SAME as EventListContent
   const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
-      navigation.navigate('EventStack', { params: { eventId: item.documentId }, screen: 'EventDetails' });
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: item.documentId },
+        screen: RouteNames.EventDetails,
+      });
     }
   }, [navigation]);
 

@@ -13,6 +13,7 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { RouteNames } from '@/navigation/routeNames';
 
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useGetReservations } from '@/services/reservation/reservationQueries';
@@ -103,7 +104,10 @@ function MissingPlayersView({ navigation }) {
   // Handlers
   const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
     if (item?.documentId) {
-      navigation.navigate('EventStack', { params: { eventId: item.documentId }, screen: 'EventDetails' });
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: item.documentId },
+        screen: RouteNames.EventDetails,
+      });
     }
   }, [navigation]);
 

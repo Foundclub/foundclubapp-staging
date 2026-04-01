@@ -24,11 +24,11 @@ const Stack = createStackNavigator();
 export default function LeagueNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen component={LeagueDashboard} name="LeagueHome" />
-      <Stack.Screen component={MatchCenterScreen} name="MatchCenter" />
+      <Stack.Screen component={LeagueDashboard} name={RouteNames.LeagueHome} />
+      <Stack.Screen component={MatchCenterScreen} name={RouteNames.MatchCenter} />
       <Stack.Screen
         component={EndMatchScreen}
-        name="EndMatchScreen"
+        name={RouteNames.EndMatchScreen}
         options={{ headerShown: false }}
       />
 
@@ -39,12 +39,12 @@ export default function LeagueNavigator() {
       />
       <Stack.Screen
         component={MatchHistoryScreen}
-        name="MatchHistoryScreen"
+        name={RouteNames.MatchHistoryScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         component={LeagueMatchDetails}
-        name="LeagueMatchDetails"
+        name={RouteNames.LeagueMatchDetails}
         options={{ headerShown: false }}
       />
       <Stack.Screen

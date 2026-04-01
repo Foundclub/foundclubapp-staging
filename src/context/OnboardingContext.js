@@ -9,13 +9,17 @@ import {
 } from 'react';
 import { MMKV } from 'react-native-mmkv';
 
-import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 
 const defaultOnboardingContextValue = {
   canGoBack: false,
   currentStep: undefined,
+  currentStepLayout: null,
   currentStepIndex: 0,
+  getStepById: () => undefined,
   isActive: false,
+  isStepReady: false,
+  isTransitioning: false,
   nextStep: () => {},
   previousStep: () => {},
   refreshCurrentStep: () => {},
@@ -113,7 +117,14 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
   const [steps, setSteps] = useState({});
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
+  const [currentStepLayout, setCurrentStepLayout] = useState(null);
+  const [isStepReady, setIsStepReady] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const registrationCounterRef = useRef(0);
+  const nextStepTimerRef = useRef(0);
+  const isAdvancingRef = useRef(false);
+  const activeMeasureRequestRef = useRef(0);
+  const prefetchedStepLayoutRef = useRef(null);
   const registerStatsRef = useRef({
     count: 0,
     lastWarnAt: 0,
@@ -132,9 +143,28 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     setSteps({});
     setCurrentStepIndex(0);
     setIsActive(false);
+    setCurrentStepLayout(null);
+    setIsStepReady(false);
+    setIsTransitioning(false);
     registrationCounterRef.current = 0;
+    activeMeasureRequestRef.current = 0;
+    prefetchedStepLayoutRef.current = null;
+    isAdvancingRef.current = false;
+    if (nextStepTimerRef.current) {
+      clearTimeout(nextStepTimerRef.current);
+      nextStepTimerRef.current = 0;
+    }
     setCompletedStepIds(parseCompletedSteps(storage.getString(getCompletedStepsKey(flowId))));
   }, [flowId]);
+
+  useEffect(() => () => {
+    if (nextStepTimerRef.current) {
+      clearTimeout(nextStepTimerRef.current);
+      nextStepTimerRef.current = 0;
+    }
+    prefetchedStepLayoutRef.current = null;
+    isAdvancingRef.current = false;
+  }, []);
 
   useEffect(() => {
     if (!__DEV__) return;
@@ -167,6 +197,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     spotlight = undefined,
     onNext = undefined,
     measure = undefined,
+    getTargetNode = undefined,
     navigationMeta = undefined,
   ) => {
     const now = Date.now();
@@ -199,11 +230,13 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         measure,
         nextAction: navigationMeta?.nextAction,
         nextLabel: navigationMeta?.nextLabel,
+        nextTargetStepId: navigationMeta?.nextTargetStepId,
         onNext,
         order,
         registrationIndex: previousStep?.registrationIndex ?? (registrationCounterRef.current += 1),
         spotlight,
         title,
+        getTargetNode,
       };
       if (
         previousStep
@@ -213,6 +246,9 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         && previousStep.description === nextStep.description
         && previousStep.nextAction === nextStep.nextAction
         && previousStep.nextLabel === nextStep.nextLabel
+        && previousStep.nextTargetStepId === nextStep.nextTargetStepId
+        && previousStep.measure === nextStep.measure
+        && previousStep.getTargetNode === nextStep.getTargetNode
         && isSameLayout(previousStep.layout, nextStep.layout)
         && isSameSpotlight(previousStep.spotlight, nextStep.spotlight)
       ) {
@@ -234,6 +270,38 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       });
     }
   }, []);
+
+  const getStepById = useCallback((id) => steps[id], [steps]);
+
+  const resolveStepLayout = useCallback(async (step, reason = 'resolve') => {
+    if (!step) return null;
+
+    let nextLayout = step.layout || null;
+
+    if (typeof step.measure === 'function') {
+      try {
+        nextLayout = await Promise.resolve(step.measure());
+      } catch (error) {
+        tutorialDebugLog('resolveStepLayout.error', {
+          error: error instanceof Error ? error.message : String(error),
+          flowId,
+          reason,
+          stepId: step.id,
+        });
+      }
+    }
+
+    if (!nextLayout?.width || !nextLayout?.height) {
+      return null;
+    }
+
+    return {
+      height: Math.round(nextLayout.height),
+      width: Math.round(nextLayout.width),
+      x: Math.round(nextLayout.x),
+      y: Math.round(nextLayout.y),
+    };
+  }, [flowId]);
 
   const unregisterStep = useCallback((id) => {
     setSteps((prev) => {
@@ -262,6 +330,9 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     }
 
     setCurrentStepIndex(firstPendingIndex);
+    setCurrentStepLayout(null);
+    setIsStepReady(false);
+    setIsTransitioning(true);
     setIsActive(true);
     tutorialDebugLog('startOnboarding', {
       firstPendingIndex,
@@ -273,48 +344,151 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
   }, [completedStepIds, isActive, orderedSteps, persistCompletedSteps]);
 
   const stopOnboarding = useCallback(() => {
+    if (nextStepTimerRef.current) {
+      clearTimeout(nextStepTimerRef.current);
+      nextStepTimerRef.current = 0;
+    }
+    isAdvancingRef.current = false;
+    activeMeasureRequestRef.current += 1;
+    prefetchedStepLayoutRef.current = null;
+    setCurrentStepLayout(null);
+    setIsStepReady(false);
+    setIsTransitioning(false);
+    setTutorialDebugState({
+      currentStepId: null,
+      currentStepIndex: 0,
+      currentStepLayout: null,
+      isStepReady: false,
+      isTransitioning: false,
+      lastAdvanceFromStepId: null,
+      lastAdvancePhase: null,
+      lastAdvanceToStepId: null,
+      lastFailureReason: null,
+      lastResolvedStepId: null,
+      lastResolvedTargetId: null,
+    });
     setIsActive(false);
   }, []);
 
   const nextStep = useCallback(() => {
+    if (isAdvancingRef.current) {
+      return;
+    }
+
     if (!orderedSteps.length) {
       stopOnboarding();
       return;
     }
 
     const currentStep = orderedSteps[currentStepIndex];
-    const mergedCompletedStepIds = mergeStepIds(completedStepIds, [currentStep?.id]);
-    const completedSet = new Set(mergedCompletedStepIds);
+    const finalizeStepProgression = (prefetchedLayout = null) => {
+      const mergedCompletedStepIds = mergeStepIds(completedStepIds, [currentStep?.id]);
+      const completedSet = new Set(mergedCompletedStepIds);
 
-    setCompletedStepIds(mergedCompletedStepIds);
-    persistCompletedSteps(mergedCompletedStepIds);
+      setCompletedStepIds(mergedCompletedStepIds);
+      persistCompletedSteps(mergedCompletedStepIds);
 
-    const nextPendingIndex = orderedSteps.findIndex(
-      (step, index) => index > currentStepIndex && !completedSet.has(step.id),
-    );
-    const isLastPending = nextPendingIndex === -1;
+      const nextPendingIndex = orderedSteps.findIndex(
+        (step, index) => index > currentStepIndex && !completedSet.has(step.id),
+      );
+      const isLastPending = nextPendingIndex === -1;
 
-    if (isLastPending) {
-      stopOnboarding();
-    } else {
-      setCurrentStepIndex(nextPendingIndex);
-    }
+      if (isLastPending) {
+        setTutorialDebugState({
+          lastAdvanceFromStepId: currentStep?.id || null,
+          lastAdvancePhase: 'finish-flow',
+          lastAdvanceToStepId: null,
+        });
+        stopOnboarding();
+      } else {
+        const nextStep = orderedSteps[nextPendingIndex];
+        setTutorialDebugState({
+          lastAdvanceFromStepId: currentStep?.id || null,
+          lastAdvancePhase: 'finalize',
+          lastAdvanceToStepId: nextStep?.id || null,
+        });
+        prefetchedStepLayoutRef.current = (
+          prefetchedLayout
+          && nextStep?.id
+          && currentStep?.nextTargetStepId === nextStep.id
+        )
+          ? {
+            layout: prefetchedLayout,
+            stepId: nextStep.id,
+          }
+          : null;
+        setCurrentStepLayout(null);
+        setIsStepReady(false);
+        setIsTransitioning(true);
+        setCurrentStepIndex(nextPendingIndex);
+      }
 
-    tutorialDebugLog('nextStep', {
-      currentStepId: currentStep?.id,
-      currentStepIndex,
-      flowId,
-      isLastPending,
-      nextPendingIndex,
+      tutorialDebugLog('nextStep', {
+        currentStepId: currentStep?.id,
+        currentStepIndex,
+        flowId,
+        isLastPending,
+        nextPendingIndex,
+      });
+
+      isAdvancingRef.current = false;
+      nextStepTimerRef.current = 0;
+    };
+
+    let onNextResult;
+    setTutorialDebugState({
+      lastAdvanceFromStepId: currentStep?.id || null,
+      lastAdvancePhase: 'start',
+      lastAdvanceToStepId: currentStep?.nextTargetStepId || null,
     });
-
     if (typeof currentStep?.onNext === 'function') {
       try {
-        currentStep.onNext();
+        onNextResult = currentStep.onNext();
       } catch (_error) {
         // Keep onboarding progression robust even if a side effect fails.
       }
     }
+
+    if (onNextResult && typeof onNextResult.then === 'function') {
+      isAdvancingRef.current = true;
+      setCurrentStepLayout(null);
+      setIsStepReady(false);
+      setIsTransitioning(true);
+      setTutorialDebugState({
+        lastAdvanceFromStepId: currentStep?.id || null,
+        lastAdvancePhase: 'await-onNext',
+        lastAdvanceToStepId: currentStep?.nextTargetStepId || null,
+      });
+      Promise.resolve(onNextResult)
+        .then((result) => {
+          finalizeStepProgression(result || null);
+        })
+        .catch(() => {
+          setTutorialDebugState({
+            lastAdvanceFromStepId: currentStep?.id || null,
+            lastAdvancePhase: 'onNext-error',
+            lastAdvanceToStepId: currentStep?.nextTargetStepId || null,
+          });
+          finalizeStepProgression();
+        });
+      return;
+    }
+
+    if (currentStep?.nextAction === 'scrollDown') {
+      isAdvancingRef.current = true;
+      setCurrentStepLayout(null);
+      setIsStepReady(false);
+      setIsTransitioning(true);
+      setTutorialDebugState({
+        lastAdvanceFromStepId: currentStep?.id || null,
+        lastAdvancePhase: 'scroll-fallback-timer',
+        lastAdvanceToStepId: currentStep?.nextTargetStepId || null,
+      });
+      nextStepTimerRef.current = setTimeout(finalizeStepProgression, 120);
+      return;
+    }
+
+    finalizeStepProgression();
   }, [
     completedStepIds,
     currentStepIndex,
@@ -324,6 +498,9 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
   ]);
 
   const previousStep = useCallback(() => {
+    setCurrentStepLayout(null);
+    setIsStepReady(false);
+    setIsTransitioning(true);
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
     tutorialDebugLog('previousStep', { flowId });
   }, []);
@@ -335,10 +512,29 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       currentStepIndex,
       flowId,
     });
-    if (typeof activeStep?.measure === 'function') {
-      activeStep.measure();
-    }
-  }, [currentStepIndex, orderedSteps]);
+    activeMeasureRequestRef.current += 1;
+    const requestId = activeMeasureRequestRef.current;
+    return resolveStepLayout(activeStep, 'refresh').then((nextLayout) => {
+      if (requestId !== activeMeasureRequestRef.current) {
+        return null;
+      }
+
+      setCurrentStepLayout(nextLayout);
+      setIsStepReady(Boolean(nextLayout));
+      setIsTransitioning(false);
+      setTutorialDebugState({
+        currentStepId: activeStep?.id || null,
+        currentStepIndex,
+        currentStepLayout: nextLayout,
+        isStepReady: Boolean(nextLayout),
+        isTransitioning: false,
+        lastFailureReason: nextLayout ? null : 'refresh-measure-failed',
+        lastResolvedStepId: activeStep?.id || null,
+        lastResolvedTargetId: activeStep?.nextTargetStepId || null,
+      });
+      return nextLayout;
+    });
+  }, [currentStepIndex, flowId, orderedSteps, resolveStepLayout]);
 
   const skipOnboarding = useCallback(() => {
     const allStepIds = orderedSteps.map((step) => step.id);
@@ -349,11 +545,100 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     stopOnboarding();
   }, [completedStepIds, orderedSteps, persistCompletedSteps, stopOnboarding]);
 
+  const activeStep = orderedSteps[currentStepIndex];
+  const activeStepLayoutKey = [
+    activeStep?.id || '',
+    activeStep?.layout?.x ?? '',
+    activeStep?.layout?.y ?? '',
+    activeStep?.layout?.width ?? '',
+    activeStep?.layout?.height ?? '',
+  ].join('|');
+
+  useEffect(() => {
+    if (!isActive || !activeStep) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const requestId = activeMeasureRequestRef.current + 1;
+    activeMeasureRequestRef.current = requestId;
+    const prefetchedLayout = prefetchedStepLayoutRef.current?.stepId === activeStep.id
+      ? prefetchedStepLayoutRef.current.layout
+      : null;
+
+    setIsTransitioning(true);
+    setIsStepReady(false);
+    setTutorialDebugState({
+      currentStepId: activeStep.id,
+      currentStepIndex,
+      currentStepLayout: null,
+      isStepReady: false,
+      isTransitioning: true,
+      lastFailureReason: null,
+      lastResolvedStepId: null,
+      lastResolvedTargetId: activeStep.nextTargetStepId || null,
+    });
+
+    if (prefetchedLayout) {
+      prefetchedStepLayoutRef.current = null;
+      setCurrentStepLayout(prefetchedLayout);
+      setIsStepReady(true);
+      setIsTransitioning(false);
+      setTutorialDebugState({
+        currentStepId: activeStep.id,
+        currentStepIndex,
+        currentStepLayout: prefetchedLayout,
+        isStepReady: true,
+        isTransitioning: false,
+        lastFailureReason: null,
+        lastResolvedStepId: activeStep.id,
+        lastResolvedTargetId: activeStep.nextTargetStepId || null,
+      });
+    }
+
+    resolveStepLayout(activeStep, 'activate')
+      .then((nextLayout) => {
+        if (cancelled || requestId !== activeMeasureRequestRef.current) {
+          return;
+        }
+
+        const resolvedLayout = nextLayout || prefetchedLayout || null;
+        setCurrentStepLayout(resolvedLayout);
+        setIsStepReady(Boolean(resolvedLayout));
+        setIsTransitioning(false);
+        setTutorialDebugState({
+          currentStepId: activeStep.id,
+          currentStepIndex,
+          currentStepLayout: resolvedLayout,
+          isStepReady: Boolean(resolvedLayout),
+          isTransitioning: false,
+          lastFailureReason: resolvedLayout ? null : 'activate-measure-failed',
+          lastResolvedStepId: activeStep.id,
+          lastResolvedTargetId: activeStep.nextTargetStepId || null,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeStep?.id,
+    activeStep?.measure,
+    activeStepLayoutKey,
+    currentStepIndex,
+    isActive,
+    resolveStepLayout,
+  ]);
+
   const contextValue = useMemo(() => ({
     canGoBack: currentStepIndex > 0,
     currentStep: orderedSteps[currentStepIndex],
+    currentStepLayout,
     currentStepIndex,
+    getStepById,
     isActive,
+    isStepReady,
+    isTransitioning,
     nextStep,
     previousStep,
     refreshCurrentStep,
@@ -363,8 +648,12 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     totalSteps: orderedSteps.length,
     unregisterStep,
   }), [
+    currentStepLayout,
     currentStepIndex,
+    getStepById,
     isActive,
+    isStepReady,
+    isTransitioning,
     nextStep,
     orderedSteps,
     previousStep,

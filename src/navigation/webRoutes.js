@@ -88,7 +88,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.NotificationDetails]: '/notifications/:notificationId',
   [RouteNames.Conversation]: '/messages/:chatId',
   [RouteNames.Chat]: '/messages',
-  NewConversation: '/messages/new',
+  [RouteNames.NewConversation]: '/messages/new',
   [RouteNames.ConversationPublicEventPicker]: '/messages/:chatId/public-events',
   [RouteNames.BookingCalendar]: '/booking',
   [RouteNames.MissingPlayersView]: '/booking/missing-players',

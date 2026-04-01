@@ -2,6 +2,8 @@ import { io } from 'socket.io-client';
 
 import { createLogger } from '@/utils/logger/logger';
 
+import { getSocketBaseUrl } from '@/config/runtimeUrls';
+
 const socketLogger = createLogger('socket');
 
 /** @type {import('socket.io-client').Socket | null} */
@@ -11,7 +13,7 @@ let sharedToken = null;
 /** @type {Set<(isConnected: boolean) => void>} */
 const connectionSubscribers = new Set();
 
-const getSocketUrl = () => process.env.SOCKET_URL || process.env.API_URL?.replace('/api', '') || 'http://10.0.2.2:1337';
+const getSocketUrl = () => getSocketBaseUrl();
 
 const notifyConnectionSubscribers = (isConnected) => {
   connectionSubscribers.forEach((subscriber) => {

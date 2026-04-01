@@ -16,7 +16,6 @@ import {
   useState,
 } from 'react';
 import {
-  Alert,
   AppState,
   Linking,
   PermissionsAndroid,
@@ -49,8 +48,15 @@ import {
 } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
 import { ENABLE_PUSH_NOTIFICATIONS, ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
-import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import {
+  usePopupEligibility,
+  usePopupManager,
+} from '@/context/PopupManagerContext';
 import { NOTIFICATIONS_QUERY_KEY, UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
 
 const notificationsLogger = createLogger('notifications');
@@ -138,6 +144,24 @@ const requestUserPermission = async () => {
   }
 };
 
+const getPushPermissionGranted = async () => {
+  if (Platform.OS === 'android') {
+    return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  }
+
+  if (Platform.OS === 'ios' && typeof notifee?.getNotificationSettings === 'function') {
+    try {
+      const settings = await notifee.getNotificationSettings();
+      return Number(settings?.authorizationStatus || 0) > 0;
+    } catch (error) {
+      notificationsLogger.warn('[FCM] Failed to read iOS notification settings.', error);
+      return false;
+    }
+  }
+
+  return false;
+};
+
 /**
  * @param {{title: string, body: string, data: any}} param0
  * @returns {Promise<void>}
@@ -200,6 +224,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const [{ pendingNotification }, dispatch] = useAppContext();
   const { userData } = useAuth();
   const queryClient = useQueryClient();
+  const { isStartupWindowActive } = usePopupManager();
 
   const { mutate: saveTokenMutation } = useMutation({
     meta: { preventToastError: true },
@@ -228,6 +253,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
+  const [pendingPushPermissionReason, setPendingPushPermissionReason] = useState('');
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
   const queuedCalendarPromptKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const shownCalendarPromptKeyRef = useRef('');
@@ -238,10 +264,25 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const hasSynced = useRef(false);
   const pendingCalendarPrompt = pendingCalendarPrompts[0] || null;
   const pendingCalendarPromptKey = getCalendarPromptKey(pendingCalendarPrompt);
-  const canShowCalendarPrompt = useBlockingOverlayPrompt(
-    'notification-calendar-alert',
+  const calendarPrompt = usePopupEligibility(
+    POPUP_IDS.NOTIFICATION_CALENDAR_ALERT,
     Boolean(pendingCalendarPrompt),
-    60,
+    {
+      cooldownKey: pendingCalendarPromptKey || 'default',
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const pushPermissionPrompt = usePopupEligibility(
+    POPUP_IDS.PUSH_PERMISSION_PREPROMPT,
+    Boolean(
+      pendingPushPermissionReason
+      && userData
+      && (!isStartupWindowActive || pendingPushPermissionReason !== 'login'),
+    ),
+    {
+      cooldownKey: userData?.documentId || 'anonymous',
+      dismissScope: POPUP_DISMISS_SCOPES.DAY,
+    },
   );
 
   const invalidateNotificationQueries = useCallback(() => {
@@ -255,10 +296,38 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     });
   }, []);
 
-  const syncTokenIfNeeded = useCallback(async (reason = 'manual') => {
+  useEffect(() => {
+    if (!userData) {
+      setPendingPushPermissionReason('');
+    }
+  }, [userData]);
+
+  const finalizeCalendarPrompt = useCallback(() => {
+    if (!pendingCalendarPromptKey) return;
+    shownCalendarPromptKeyRef.current = '';
+    queuedCalendarPromptKeysRef.current.delete(pendingCalendarPromptKey);
+    setPendingCalendarPrompts((previousPrompts) => previousPrompts.filter(
+      (prompt) => getCalendarPromptKey(prompt) !== pendingCalendarPromptKey,
+    ));
+  }, [pendingCalendarPromptKey]);
+
+  const requestPushPermissionPrePrompt = useCallback((reason) => {
+    if (!userData) return false;
+    if (pushPermissionPrompt.isDismissed) {
+      pushPermissionPrompt.trackEvent('deferred', { reason, source: 'cooldown' });
+      return false;
+    }
+
+    setPendingPushPermissionReason((previousReason) => previousReason || reason);
+    return true;
+  }, [pushPermissionPrompt, userData]);
+
+  const syncTokenIfNeeded = useCallback(async (reason = 'manual', options = {}) => {
     if (!ENABLE_PUSH_NOTIFICATIONS || !userData) {
       return;
     }
+
+    const bypassPreprompt = Boolean(options?.bypassPreprompt);
 
     const now = Date.now();
     if (tokenSyncInFlightRef.current || (now - lastTokenSyncAtRef.current < 30000 && reason !== 'token_refresh')) {
@@ -275,10 +344,23 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         notificationsLogger.warn('[FCM] Token retrieval skipped: messaging unavailable.');
         return;
       }
+      const permissionGranted = await getPushPermissionGranted();
+
+      if (!permissionGranted && !bypassPreprompt && requestPushPermissionPrePrompt(reason)) {
+        notificationsLogger.info('[FCM] Deferring token sync until push pre-prompt is answered.', { reason });
+        return;
+      }
 
       if (Platform.OS === 'ios') {
         notificationsLogger.debug('[FCM] iOS detected - requesting permissions...');
-        await requestUserPermission();
+        if (!permissionGranted) {
+          await requestUserPermission();
+        }
+        const didGrantPermission = await getPushPermissionGranted();
+        if (!didGrantPermission) {
+          notificationsLogger.info('[FCM] Permission denied after iOS prompt. Token sync aborted.', { reason });
+          return;
+        }
         const registered = await messagingInstance.isDeviceRegisteredForRemoteMessages;
         notificationsLogger.debug('[FCM] Device registered for remote messages:', registered);
         if (!registered) {
@@ -286,12 +368,19 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           notificationsLogger.debug('[FCM] Device registered successfully');
         }
       } else {
-        const permissionGranted = await PermissionsAndroid.check(
+        const androidPermissionGranted = await PermissionsAndroid.check(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
         );
-        notificationsLogger.debug('[FCM] Android permission granted:', permissionGranted);
-        if (!permissionGranted) {
+        notificationsLogger.debug('[FCM] Android permission granted:', androidPermissionGranted);
+        if (!androidPermissionGranted) {
           await requestUserPermission();
+        }
+        const didGrantPermission = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        if (!didGrantPermission) {
+          notificationsLogger.info('[FCM] Permission denied after Android prompt. Token sync aborted.', { reason });
+          return;
         }
       }
 
@@ -313,7 +402,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     } finally {
       tokenSyncInFlightRef.current = false;
     }
-  }, [saveToken, userData]);
+  }, [requestPushPermissionPrePrompt, saveToken, userData]);
 
   /**
    * @typedef {{
@@ -363,53 +452,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     queuedCalendarPromptKeysRef.current.add(key);
     setPendingCalendarPrompts((previousPrompts) => [...previousPrompts, notificationData]);
   }, []);
-
-  useEffect(() => {
-    if (!pendingCalendarPrompt || !canShowCalendarPrompt) return;
-    if (shownCalendarPromptKeyRef.current === pendingCalendarPromptKey) return;
-    shownCalendarPromptKeyRef.current = pendingCalendarPromptKey;
-    promptedCalendarMatchesRef.current.add(pendingCalendarPromptKey);
-
-    let dismissed = false;
-    const finalize = () => {
-      if (dismissed) return;
-      dismissed = true;
-      shownCalendarPromptKeyRef.current = '';
-      queuedCalendarPromptKeysRef.current.delete(pendingCalendarPromptKey);
-      setPendingCalendarPrompts((previousPrompts) => previousPrompts.filter(
-        (prompt) => getCalendarPromptKey(prompt) !== pendingCalendarPromptKey,
-      ));
-    };
-
-    Alert.alert(
-      'Match confirme',
-      'Ajouter ce match a votre agenda ?',
-      [
-        {
-          onPress: finalize,
-          style: 'cancel',
-          text: 'Plus tard',
-        },
-        {
-          onPress: () => {
-            openCalendarFromNotification(pendingCalendarPrompt);
-            finalize();
-          },
-          text: 'Ajouter',
-        },
-      ],
-      {
-        cancelable: true,
-        onDismiss: finalize,
-      },
-    );
-  }, [
-    canShowCalendarPrompt,
-    openCalendarFromNotification,
-    pendingCalendarPrompt,
-    pendingCalendarPrompts,
-    pendingCalendarPromptKey,
-  ]);
 
   const handleNavigateOnOpen = useCallback((remoteMessageData) => {
     const notificationData = normalizeNotificationPayload(remoteMessageData);
@@ -692,7 +734,53 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   }, [pendingNotification, handleNavigateOnOpen, dispatch]);
 
   return {
+    calendarPrompt: {
+      body: pendingCalendarPrompt
+        ? 'Ajouter ce match League à votre agenda pour ne pas le manquer ?'
+        : '',
+      canShow: calendarPrompt.canShow,
+      descriptor: calendarPrompt.descriptor,
+      onAccept: async () => {
+        calendarPrompt.trackEvent('accepted', { pendingCalendarPromptKey });
+        calendarPrompt.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+        await openCalendarFromNotification(pendingCalendarPrompt);
+        finalizeCalendarPrompt();
+      },
+      onDismiss: () => {
+        calendarPrompt.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+        finalizeCalendarPrompt();
+      },
+      onVisible: () => {
+        if (!pendingCalendarPromptKey) return;
+        if (shownCalendarPromptKeyRef.current === pendingCalendarPromptKey) return;
+        shownCalendarPromptKeyRef.current = pendingCalendarPromptKey;
+        promptedCalendarMatchesRef.current.add(pendingCalendarPromptKey);
+        calendarPrompt.markShown({ pendingCalendarPromptKey });
+      },
+      title: 'Match confirmé',
+      visiblePayload: pendingCalendarPrompt,
+    },
     handleNavigateOnOpen,
+    pushPermissionPrompt: {
+      body: 'Activez les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.',
+      canShow: pushPermissionPrompt.canShow,
+      descriptor: pushPermissionPrompt.descriptor,
+      onAccept: async () => {
+        const nextReason = pendingPushPermissionReason || 'manual';
+        pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+        pushPermissionPrompt.trackEvent('accepted', { reason: nextReason });
+        setPendingPushPermissionReason('');
+        await syncTokenIfNeeded(nextReason, { bypassPreprompt: true });
+      },
+      onDismiss: () => {
+        pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.DAY);
+        setPendingPushPermissionReason('');
+      },
+      onVisible: () => {
+        pushPermissionPrompt.markShown({ reason: pendingPushPermissionReason || 'manual' });
+      },
+      title: 'Activez les notifications FoundClub',
+    },
     saveToken,
   };
 };

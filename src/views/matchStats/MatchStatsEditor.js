@@ -386,6 +386,10 @@ function MatchStatsEditor({ navigation, route }) {
     isWaitingOfficial,
   }, Colors), [Colors, isFinalized, isReviewRequired, isWaitingOfficial]);
   const playerStatRows = useMemo(() => chunkFields(getFieldConfig(sport), 2), [sport]);
+  const excludedNoShowPlayers = useMemo(
+    () => (Array.isArray(statsPayload?.excludedNoShowPlayers) ? statsPayload.excludedNoShowPlayers : []),
+    [statsPayload?.excludedNoShowPlayers],
+  );
 
   const [scoreFor, setScoreFor] = useState('');
   const [scoreAgainst, setScoreAgainst] = useState('');
@@ -1005,7 +1009,7 @@ function MatchStatsEditor({ navigation, route }) {
             ) : null}
 
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Score final</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>{getScoreSourceLabel(statsPayload?.score)}</Text>
@@ -1108,7 +1112,7 @@ function MatchStatsEditor({ navigation, route }) {
                   Fonts.p2,
                   Fonts.neutral00,
                   ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius20,
+                  { borderRadius: 20 },
                   Spaces.padding[16],
                   {
                     borderColor: counterBorderColor,
@@ -1122,7 +1126,7 @@ function MatchStatsEditor({ navigation, route }) {
               <View
                 style={[
                   ApplicationStyle.backgroundColor.primary900,
-                  ApplicationStyle.borderRadius20,
+                  { borderRadius: 20 },
                   Spaces.padding[12],
                   {
                     borderColor: counterBorderColor,
@@ -1157,7 +1161,7 @@ function MatchStatsEditor({ navigation, route }) {
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{review.label}</Text>
                       <Text style={[Fonts.p4, Fonts.neutral100]}>
@@ -1201,7 +1205,7 @@ function MatchStatsEditor({ navigation, route }) {
                       Fonts.p3,
                       Fonts.neutral00,
                       ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius20,
+                      { borderRadius: 20 },
                       Spaces.padding[14],
                       {
                         borderColor: counterBorderColor,
@@ -1214,7 +1218,7 @@ function MatchStatsEditor({ navigation, route }) {
                   />
                 </View>
               )) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius20, Spaces.padding[20], Spaces.gap[8]]}>
+                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, Spaces.padding[20], Spaces.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
                     Les retours individuels apparaitront ici des que la liste joueur sera disponible.
@@ -1223,8 +1227,49 @@ function MatchStatsEditor({ navigation, route }) {
               )}
             </View>
 
+            {excludedNoShowPlayers.length ? (
+              <View
+                style={[
+                  ApplicationStyle.backgroundColor.primary700,
+                  ApplicationStyle.borderRadius24,
+                  Spaces.padding[sectionPadding],
+                  Spaces.gap[12],
+                  {
+                    borderColor: `${Colors.warning500}40`,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Joueurs non pointes</Text>
+                <Text style={[Fonts.p3, Fonts.neutral100]}>
+                  Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n&apos;a pas ete corrigee.
+                </Text>
+                <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                  {excludedNoShowPlayers.map((player) => (
+                    <View
+                      key={player?.documentId || player?.label || player?.manualPlayerName}
+                      style={[
+                        Spaces.paddingHorizontal[10],
+                        Spaces.paddingVertical[6],
+                        {
+                          backgroundColor: `${Colors.warning500}18`,
+                          borderColor: `${Colors.warning500}3A`,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                        {player?.label || player?.manualPlayerName || 'Joueur'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                 <View style={[Spaces.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Stats joueurs</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
@@ -1270,7 +1315,7 @@ function MatchStatsEditor({ navigation, route }) {
                       },
                     ]}
                   >
-                    <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                       <View style={{ flex: 1 }}>
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
@@ -1350,7 +1395,7 @@ function MatchStatsEditor({ navigation, route }) {
                   </View>
                 );
               }) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius20, Spaces.padding[20], Spaces.gap[8]]}>
+                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, Spaces.padding[20], Spaces.gap[8]]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
                     Publie d abord la convocation ou verifie le roster de l equipe pour alimenter cette liste.

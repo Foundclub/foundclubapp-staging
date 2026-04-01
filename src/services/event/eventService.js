@@ -2,6 +2,7 @@ import Joi from 'joi';
 import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import { getApiBaseUrl } from '@/config/runtimeUrls';
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 
 import { createLogger } from '@/utils/logger/logger';
@@ -891,7 +892,10 @@ export const resetCoachAttendance = async (eventId, userId) => {
  */
 export const exportEventParticipants = async (eventId, eventName) => {
   const token = getAuthTokens()?.token;
-  const baseURL = process.env.API_URL; // e.g. http://localhost:1337/api
+  const baseURL = getApiBaseUrl();
+  if (!baseURL) {
+    throw new Error('API base URL is missing');
+  }
   const url = `${baseURL}/events/${eventId}/export-participants`;
 
   const { dirs } = ReactNativeBlobUtil.fs;

@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
+
 const LOOPBACK_HOSTS = new Set(['10.0.2.2', '127.0.0.1', 'localhost']);
 
 export const toPublicApiOrigin = (rawApiUrl) => {
@@ -71,8 +73,8 @@ export const shouldAttachAuthToMediaUrl = (rawUrl, options = {}) => {
   const apiOrigins = [
     options.apiOrigin,
     options.publicApiOrigin,
-    process.env.API_URL,
-    process.env.API_PUBLIC_URL,
+    getApiBaseUrl(),
+    getPublicApiOrigin(),
   ]
     .map((origin) => normalizeOrigin(origin))
     .filter(Boolean);
@@ -86,9 +88,8 @@ export const shouldAttachAuthToMediaUrl = (rawUrl, options = {}) => {
 };
 
 const buildDefaultMediaOrigins = () => [
-  process.env.API_URL,
-  process.env.API_PUBLIC_URL,
-  __DEV__ && Platform.OS === 'android' ? 'http://10.0.2.2:1337' : '',
+  getApiBaseUrl(),
+  getPublicApiOrigin(),
 ]
   .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);

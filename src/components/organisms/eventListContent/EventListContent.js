@@ -338,7 +338,10 @@ function EventListContent({
       return;
     }
     eventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
-    /** @type {any} */ (navigation).navigate('EventStack', { params: { eventId: event.documentId }, screen: 'EventDetails' });
+    /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
+      params: { eventId: event.documentId },
+      screen: RouteNames.EventDetails,
+    });
   }, [navigation]);
 
   const handleOpenFilters = useCallback(() => {

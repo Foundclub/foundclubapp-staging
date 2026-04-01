@@ -10,7 +10,9 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
 import MatchFinalPosterModal from '@/components/organisms/league/MatchFinalPosterModal';
+import GlobalBanner from '@/components/organisms/popup/GlobalBanner';
 
 import { navigate } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
@@ -18,8 +20,13 @@ import { RouteNames } from '@/navigation/routeNames';
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
 import { ENABLE_SMART_NOTIFICATIONS } from '@/constants/runtimeFlags';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useSmartNotifications } from '@/context/SmartNotificationContext';
 
 const AUTO_HIDE_SNACKBAR_MS = 3200;
@@ -37,22 +44,55 @@ function SmartNotificationHost() {
   } = useSmartNotifications();
 
   const isLineupReminder = activeSnackbar?.type === NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER;
-  const canShowLineupReminderModal = useBlockingOverlayPrompt(
-    'smart-lineup-reminder',
+  const lineupReminderPopup = usePopupEligibility(
+    POPUP_IDS.SMART_LINEUP_REMINDER,
     Boolean(activeSnackbar && isLineupReminder),
-    45,
+    {
+      cooldownKey: String(activeSnackbar?.matchId || activeSnackbar?.eventId || activeSnackbar?.dedupeKey || activeSnackbar?.notificationId || 'default'),
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const recapPopup = usePopupEligibility(
+    POPUP_IDS.SMART_MATCH_RECAP,
+    Boolean(activeRecap),
+    {
+      cooldownKey: String(activeRecap?.matchId || activeRecap?.dedupeKey || activeRecap?.notificationId || 'default'),
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const canShowLineupReminderModal = useBlockingOverlayPrompt(
+    lineupReminderPopup.descriptor.id,
+    lineupReminderPopup.canShow,
+    lineupReminderPopup.descriptor.priority,
   );
   const canShowRecapModal = useBlockingOverlayPrompt(
-    'smart-match-recap',
-    Boolean(activeRecap),
-    50,
+    recapPopup.descriptor.id,
+    recapPopup.canShow,
+    recapPopup.descriptor.priority,
   );
+  const isLineupReminderVisible = Boolean(activeSnackbar && isLineupReminder && lineupReminderPopup.canShow && canShowLineupReminderModal);
+  const isRecapVisible = Boolean(activeRecap && recapPopup.canShow && canShowRecapModal);
+  const shouldRenderNativeLineupReminder = isLineupReminderVisible && Platform.OS !== 'web';
 
   useEffect(() => {
     if (!activeSnackbar || isLineupReminder) return undefined;
     const timer = setTimeout(() => dismissSnackbar(), AUTO_HIDE_SNACKBAR_MS);
     return () => clearTimeout(timer);
   }, [activeSnackbar, dismissSnackbar, isLineupReminder]);
+
+  useEffect(() => {
+    if (!isLineupReminderVisible) return;
+    lineupReminderPopup.markShown({
+      matchId: activeSnackbar?.matchId || activeSnackbar?.eventId || null,
+    });
+  }, [activeSnackbar?.eventId, activeSnackbar?.matchId, isLineupReminderVisible, lineupReminderPopup]);
+
+  useEffect(() => {
+    if (!isRecapVisible) return;
+    recapPopup.markShown({
+      matchId: activeRecap?.matchId || null,
+    });
+  }, [activeRecap?.matchId, isRecapVisible, recapPopup]);
 
   // Lineup reminder popup must stay available even when smart league snackbars are feature-flagged off.
   if (!ENABLE_SMART_NOTIFICATIONS && !isLineupReminder) return null;
@@ -71,30 +111,19 @@ function SmartNotificationHost() {
     <>
       {activeSnackbar && !isLineupReminder ? (
         <View style={styles.snackbarWrap}>
-          <Pressable
+          <GlobalBanner
+            body={activeSnackbar.body || 'Nouvelle mise a jour.'}
             onPress={() => {
               handleOpenFromPayload(activeSnackbar);
               dismissSnackbar();
             }}
-            style={[
-              styles.snackbar,
-              {
-                backgroundColor: 'rgba(10, 28, 43, 0.96)',
-                borderColor: Colors.primary500,
-              },
-            ]}
-          >
-            <Text numberOfLines={1} style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              {activeSnackbar.title || 'Notification league'}
-            </Text>
-            <Text numberOfLines={2} style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              {activeSnackbar.body || 'Nouvelle mise a jour.'}
-            </Text>
-          </Pressable>
+            title={activeSnackbar.title || 'Notification league'}
+            tone="league"
+          />
         </View>
       ) : null}
 
-      {activeSnackbar && isLineupReminder && canShowLineupReminderModal && Platform.OS === 'web' ? (
+      {isLineupReminderVisible && Platform.OS === 'web' ? (
         <View
           style={{
             bottom: 0,
@@ -106,24 +135,35 @@ function SmartNotificationHost() {
           }}
         >
           <View style={styles.lineupOverlay}>
-            <Pressable onPress={dismissSnackbar} style={styles.lineupOverlayTapArea} />
+            <Pressable
+              onPress={() => {
+                lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+                dismissSnackbar();
+              }}
+              style={styles.lineupOverlayTapArea}
+            />
             <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
-              <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-                {activeSnackbar.title || 'Publier la compo'}
-              </Text>
-              <Text style={[Fonts.p2, styles.lineupDescription, { color: Colors.neutral100 }]}>
-                {activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
-              </Text>
+              <LeagueModalHeader
+                description={activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+                title={activeSnackbar.title || 'Publier la compo'}
+              />
 
               <View style={styles.lineupActions}>
                 <Pressable
-                  onPress={dismissSnackbar}
+                  onPress={() => {
+                    lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+                    dismissSnackbar();
+                  }}
                   style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
                 >
                   <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Plus tard</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
+                    lineupReminderPopup.trackEvent('accepted', {
+                      matchId: activeSnackbar?.matchId || activeSnackbar?.eventId || null,
+                    });
+                    lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
                     handleOpenFromPayload(activeSnackbar);
                     dismissSnackbar();
                   }}
@@ -137,60 +177,84 @@ function SmartNotificationHost() {
         </View>
       ) : null}
 
-      {activeSnackbar && isLineupReminder && canShowLineupReminderModal ? (
-        Platform.OS === 'web' ? null : (
-          <Modal
-            animationType="fade"
-            onRequestClose={dismissSnackbar}
-            statusBarTranslucent
-            transparent
-            visible
-          >
-            <View style={styles.lineupOverlay}>
-              <Pressable onPress={dismissSnackbar} style={styles.lineupOverlayTapArea} />
-              <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
-                <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-                  {activeSnackbar.title || 'Publier la compo'}
-                </Text>
-                <Text style={[Fonts.p2, styles.lineupDescription, { color: Colors.neutral100 }]}>
-                  {activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
-                </Text>
+      {shouldRenderNativeLineupReminder ? (
+        <Modal
+          animationType="fade"
+          onRequestClose={() => {
+            lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+            dismissSnackbar();
+          }}
+          statusBarTranslucent
+          transparent
+          visible
+        >
+          <View style={styles.lineupOverlay}>
+            <Pressable
+              onPress={() => {
+                lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+                dismissSnackbar();
+              }}
+              style={styles.lineupOverlayTapArea}
+            />
+            <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
+              <LeagueModalHeader
+                description={activeSnackbar.body || 'Votre match est dans 2 jours. Souhaitez-vous publier la composition maintenant ?'}
+                title={activeSnackbar.title || 'Publier la compo'}
+              />
 
-                <View style={styles.lineupActions}>
-                  <Pressable
-                    onPress={dismissSnackbar}
-                    style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
-                  >
-                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Plus tard</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      handleOpenFromPayload(activeSnackbar);
-                      dismissSnackbar();
-                    }}
-                    style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
-                  >
-                    <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>Publier la compo</Text>
-                  </Pressable>
-                </View>
+              <View style={styles.lineupActions}>
+                <Pressable
+                  onPress={() => {
+                    lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+                    dismissSnackbar();
+                  }}
+                  style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Plus tard</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    lineupReminderPopup.trackEvent('accepted', {
+                      matchId: activeSnackbar?.matchId || activeSnackbar?.eventId || null,
+                    });
+                    lineupReminderPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+                    handleOpenFromPayload(activeSnackbar);
+                    dismissSnackbar();
+                  }}
+                  style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
+                >
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>Publier la compo</Text>
+                </Pressable>
               </View>
             </View>
-          </Modal>
-        )
+          </View>
+        </Modal>
       ) : null}
 
       <MatchFinalPosterModal
-        onClose={dismissRecap}
+        onClose={() => {
+          recapPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+          dismissRecap();
+        }}
         onOpenDetails={() => {
+          recapPopup.trackEvent('accepted', {
+            matchId: activeRecap?.matchId || null,
+          });
+          recapPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
           handleOpenFromPayload(activeRecap);
           dismissRecap();
         }}
         onRelaunchSearch={() => {
+          recapPopup.trackEvent('accepted', {
+            action: 'relaunch_search',
+            matchId: activeRecap?.matchId || null,
+          });
+          recapPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
           navigate(RouteNames.LeagueMatchTab);
           dismissRecap();
         }}
         payload={activeRecap}
-        visible={Boolean(activeRecap && canShowRecapModal)}
+        visible={isRecapVisible}
       />
     </>
   );
@@ -246,13 +310,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 12,
-  },
-  snackbar: {
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   snackbarWrap: {
     left: 12,

@@ -24,6 +24,7 @@ import useTheme from '@/theme/themeContext';
  * @param {HomeCardLayout} [props.layout]
  * @param {HomeCardEmphasis} [props.emphasis]
  * @param {1 | 2} [props.subtitleLines]
+ * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
  */
 function HomeActionCard({
@@ -35,6 +36,7 @@ function HomeActionCard({
   onPress,
   subtitle,
   subtitleLines = 2,
+  tutorialTargetRef,
   title,
 }) {
   const {
@@ -73,6 +75,8 @@ function HomeActionCard({
       ])}
     >
       <View
+        collapsable={false}
+        ref={tutorialTargetRef}
         style={[
           ApplicationStyle.card,
           {

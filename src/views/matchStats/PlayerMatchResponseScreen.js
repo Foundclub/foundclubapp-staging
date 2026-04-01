@@ -431,7 +431,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       <Text style={[Fonts.p4Bold, Fonts.neutral100, Spaces.marginBottom[8]]}>{label}</Text>
       <View
         style={[
-          ApplicationStyle.borderRadius20,
+          { borderRadius: 20 },
           Alignments.row,
           Alignments.alignCenter,
           {
@@ -694,7 +694,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                       key={option.value}
                       onPress={() => setParticipation(option.value)}
                       style={[
-                        ApplicationStyle.borderRadius20,
+                        { borderRadius: 20 },
                         Spaces.padding[16],
                         Spaces.gap[4],
                         {
@@ -761,8 +761,8 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                       </Pressable>
                     ) : null}
                     {consistencyIssues.length ? (
-                      <View style={[ApplicationStyle.borderRadius20, Spaces.padding[16], Spaces.gap[8], { backgroundColor: activeSurfaceColor, borderColor: `${Colors.warning500}66`, borderWidth: 1 }]}>
-                        <Text style={[Fonts.p3Bold, Fonts.warning400]}>Verification de coherence</Text>
+                      <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: activeSurfaceColor, borderColor: `${Colors.warning500}66`, borderWidth: 1 }]}>
+                        <Text style={[Fonts.p3Bold, Fonts.warning500]}>Verification de coherence</Text>
                         {consistencyIssues.map((issue) => (
                           <Text key={issue} style={[Fonts.p3, Fonts.neutral100]}>
                             {`- ${issue}`}
@@ -775,7 +775,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                     ) : null}
                   </>
                 ) : (
-                  <View style={[ApplicationStyle.borderRadius20, Spaces.padding[16], Spaces.gap[8], { backgroundColor: insetSurfaceColor, borderColor: subtleBorderColor, borderWidth: 1 }]}>
+                  <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: insetSurfaceColor, borderColor: subtleBorderColor, borderWidth: 1 }]}>
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucun probleme.</Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
                       On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand meme laisser ta note et ton ressenti.
@@ -821,7 +821,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                   style={[
                     Fonts.p2,
                     Fonts.neutral00,
-                    ApplicationStyle.borderRadius20,
+                    { borderRadius: 20 },
                     Spaces.padding[16],
                     {
                       backgroundColor: fieldSurfaceColor,

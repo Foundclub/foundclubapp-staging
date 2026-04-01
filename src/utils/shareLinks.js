@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from '@/config/runtimeUrls';
+
 const DEFAULT_PUBLIC_ORIGIN = 'https://foundclub.com';
 
 const buildQueryString = (params) => Object.entries(params)
@@ -5,7 +7,7 @@ const buildQueryString = (params) => Object.entries(params)
   .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
   .join('&');
 
-export const toPublicOrigin = (apiUrl = process.env.API_URL) => {
+export const toPublicOrigin = (apiUrl = getApiBaseUrl()) => {
   const rawValue = String(apiUrl || '').trim();
   if (!rawValue) return DEFAULT_PUBLIC_ORIGIN;
   return rawValue.replace(/\/api\/?$/i, '');

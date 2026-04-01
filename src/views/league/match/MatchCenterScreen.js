@@ -764,7 +764,7 @@ function MatchCenterScreen() {
 
         // 4. Navigate to Chat
         setIsProposalModalVisible(false);
-        navigation.navigate('Conversation', {
+        navigation.navigate(RouteNames.Conversation, {
           chatId,
           subTitle: 'Match de Ligue',
           title: opponentChatTitle,
@@ -1426,7 +1426,7 @@ function MatchCenterScreen() {
                 if (!currentMatch.proposed_venue) {
                   setIsProposalModalVisible(true);
                 } else {
-                  navigation.navigate('Conversation', {
+                  navigation.navigate(RouteNames.Conversation, {
                     chatId,
                     subTitle: 'Match de Ligue',
                     title: opponentChatTitle,
@@ -1819,7 +1819,7 @@ function MatchCenterScreen() {
                 if (!currentMatch.proposed_venue) {
                   setIsProposalModalVisible(true);
                 } else {
-                  navigation.navigate('Conversation', {
+                  navigation.navigate(RouteNames.Conversation, {
                     chatId,
                     subTitle: 'Match de Ligue',
                     title: opponentChatTitle,
@@ -2107,7 +2107,7 @@ function MatchCenterScreen() {
                   joueurs pour être au complet.
                 </Text>
                 <Button
-                  onPress={() => navigation.navigate('LeagueSquadTab')}
+                  onPress={() => navigation.navigate(RouteNames.LeagueSquadTab)}
                   style={{
                     backgroundColor: Colors.neutral800, borderColor: Colors.primary500, borderWidth: 1, marginBottom: 12,
                   }}
@@ -2895,7 +2895,7 @@ function MatchCenterScreen() {
           setIsProposalModalVisible(false);
           if (currentMatch && currentMatch.chat) {
             const chatId = getEntityDocumentId(currentMatch.chat);
-            navigation.navigate('Conversation', {
+            navigation.navigate(RouteNames.Conversation, {
               chatId,
               subTitle: 'Match de Ligue',
               title: opponentChatTitle,

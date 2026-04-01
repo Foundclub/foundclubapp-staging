@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { getUploadEndpoint } from '@/config/runtimeUrls';
 import client from '@/services/client';
 
 import { clampLeagueDivision } from '@/utils/league/division';
@@ -217,8 +218,12 @@ const uploadFile = async (file) => {
     // Get token for upload
     const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const token = getAuthTokens()?.token;
+    const uploadEndpoint = getUploadEndpoint();
+    if (!uploadEndpoint) {
+      throw new Error('Upload endpoint is missing');
+    }
 
-    const response = await fetch(`${process.env.API_URL}/upload`, {
+    const response = await fetch(uploadEndpoint, {
       body: formData,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

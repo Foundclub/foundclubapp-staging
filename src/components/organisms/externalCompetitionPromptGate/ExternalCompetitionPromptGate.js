@@ -21,7 +21,12 @@ import Button from '@/components/atoms/button/Button';
 import { navigate } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 /**
  * Normalise une valeur en chaine exploitable.
@@ -79,7 +84,6 @@ function ExternalCompetitionPromptGate({
   } = useTheme();
   const { t } = useTranslation();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
-  const [dismissedSessionKey, setDismissedSessionKey] = useState('');
   const [isPromptReady, setIsPromptReady] = useState(false);
 
   const sessionKey = getNormalizedString(userData?.documentId);
@@ -96,9 +100,16 @@ function ExternalCompetitionPromptGate({
     () => getTeamsNeedingExternalSource(userData),
     [userData],
   );
+  const externalCompetitionPopup = usePopupEligibility(
+    POPUP_IDS.EXTERNAL_COMPETITION_PROMPT,
+    Boolean(enabled && isPromptReady && teamsNeedingExternalSource.length),
+    {
+      cooldownKey: [sessionKey, ...teamsNeedingExternalSource.map((team) => team?.documentId || team?.id)].filter(Boolean).join(':') || 'default',
+      dismissScope: POPUP_DISMISS_SCOPES.DAY,
+    },
+  );
 
   useEffect(() => {
-    setDismissedSessionKey('');
     setIsPromptReady(false);
   }, [sessionKey]);
 
@@ -107,7 +118,6 @@ function ExternalCompetitionPromptGate({
       !enabled
       || !sessionKey
       || !teamsNeedingExternalSource.length
-      || dismissedSessionKey === sessionKey
     ) {
       setIsPromptReady(false);
       return undefined;
@@ -129,7 +139,6 @@ function ExternalCompetitionPromptGate({
       interactionHandle?.cancel?.();
     };
   }, [
-    dismissedSessionKey,
     enabled,
     openDelayMs,
     sessionKey,
@@ -137,23 +146,27 @@ function ExternalCompetitionPromptGate({
   ]);
 
   const canShowPrompt = useBlockingOverlayPrompt(
-    'external-competition-prompt',
-    isPromptReady,
-    40,
+    externalCompetitionPopup.descriptor.id,
+    externalCompetitionPopup.canShow,
+    externalCompetitionPopup.descriptor.priority,
   );
-  const visible = isPromptReady && canShowPrompt;
+  const visible = Boolean(isPromptReady && externalCompetitionPopup.canShow && canShowPrompt);
+
+  useEffect(() => {
+    if (!visible) return;
+    externalCompetitionPopup.markShown({ sessionKey });
+  }, [externalCompetitionPopup, sessionKey, visible]);
 
   const handleDismiss = () => {
-    if (sessionKey) {
-      setDismissedSessionKey(sessionKey);
-    }
+    externalCompetitionPopup.dismiss(POPUP_DISMISS_SCOPES.DAY);
     setIsPromptReady(false);
   };
 
   const handleOpenTeamSetup = (team) => {
-    if (sessionKey) {
-      setDismissedSessionKey(sessionKey);
-    }
+    externalCompetitionPopup.trackEvent('accepted', {
+      teamId: team?.documentId || team?.id,
+    });
+    externalCompetitionPopup.dismiss(POPUP_DISMISS_SCOPES.DAY);
     setIsPromptReady(false);
     navigate(RouteNames.TeamStack, {
       params: {

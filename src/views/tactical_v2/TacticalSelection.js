@@ -22,6 +22,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent, useGetEventTeamComposition } from '@/services/event/eventQueries';
 import { useGetTeamDefaultComposition } from '@/services/team/teamQueries';
@@ -439,7 +440,7 @@ function TacticalSelection() {
     const selectedPlayers = allPlayers.filter((p) => selectedIds.has(p.id || '') || selectedIds.has(p.documentId || ''));
 
     // @ts-ignore
-    navigation.navigate('TacticalBoardV2', {
+    navigation.navigate(RouteNames.TacticalBoardV2, {
       editorMode,
       editorSource,
       editorSourceLabel: sourceLabel,

@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
+import { getApiBaseUrl } from '@/config/runtimeUrls';
 import {
   confirmOtp,
   getCurrentUser,
@@ -359,10 +360,7 @@ export const updateMe = async (userData) => {
       }
     });
 
-    const resolvedApiBaseUrl = client?.defaults?.baseURL
-      || ((__DEV__ && Platform.OS === 'android')
-        ? 'http://10.0.2.2:1337/api'
-        : process.env.API_URL);
+    const resolvedApiBaseUrl = client?.defaults?.baseURL || getApiBaseUrl();
     if (!resolvedApiBaseUrl) {
       throw new Error('API base URL is missing');
     }

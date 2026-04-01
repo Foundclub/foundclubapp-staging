@@ -12,7 +12,6 @@ import * as ReactI18next from 'react-i18next';
 import 'dayjs/locale/fr';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ImageBackground,
   Keyboard,
@@ -67,12 +66,14 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ChatAttachmentSheet from '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
+import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
 import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 import {
   cancelRecording,
@@ -96,10 +97,11 @@ import {
 } from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
-import { share } from '@/platform/share';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 import { EVENTS } from '@/hooks/useSocket';
+import shareApi from '@/platform/share';
 
 const conversationLogger = createLogger('conversation');
 
@@ -280,9 +282,38 @@ function Conversation({ navigation, route }) {
   ).trim();
   const { t } = useTranslationCompat();
   const { userData } = useAuth();
+  const { showBanner } = useAppFeedback();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
   const uploadInFlightRef = useRef(false);
+  const closeConversationPrompt = useCallback(() => {
+    setConversationPrompt(null);
+  }, []);
+  const openConversationPrompt = useCallback((promptConfig) => {
+    setConversationPrompt(promptConfig);
+  }, []);
+  const showErrorBanner = useCallback((body, title = 'Erreur') => {
+    showBanner({
+      body: String(body || '').trim() || 'Une erreur est survenue.',
+      title,
+      tone: 'error',
+    });
+  }, [showBanner]);
+  const showSuccessBanner = useCallback((body, title = 'Succès', tone = 'success') => {
+    showBanner({
+      body: String(body || '').trim(),
+      title,
+      tone,
+    });
+  }, [showBanner]);
+  const showInfoBanner = useCallback((body, title = 'Information', tone = 'info') => {
+    showBanner({
+      body: String(body || '').trim(),
+      title,
+      tone,
+    });
+  }, [showBanner]);
   const formatDateForGoogleCalendar = (/** @type {string | number | Date} */ dateInput) => {
     const date = new Date(dateInput);
     if (Number.isNaN(date.getTime())) return null;
@@ -302,27 +333,32 @@ function Conversation({ navigation, route }) {
     const endParam = formatDateForGoogleCalendar(endDate);
     if (!startParam || !endParam) return;
 
-    Alert.alert(
-      'Match confirmé ?',
-      'Ajouter ce match à votre agenda ?',
-      [
-        { style: 'cancel', text: 'Plus tard' },
-        {
-          onPress: async () => {
-            const text = encodeURIComponent('Match FoundClub League');
-            const details = encodeURIComponent('Match confirmé depuis la messagerie League');
-            const location = encodeURIComponent(venue);
-            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
-            try {
-              await Linking.openURL(url);
-            } catch (error) {
-              conversationLogger.warn('Failed to open calendar URL', error);
-            }
-          },
-          text: 'Ajouter',
+    openConversationPrompt({
+      body: 'Ajouter ce match à votre agenda ?',
+      primaryAction: {
+        label: 'Ajouter',
+        onPress: async () => {
+          closeConversationPrompt();
+          const text = encodeURIComponent('Match FoundClub League');
+          const details = encodeURIComponent('Match confirmé depuis la messagerie League');
+          const location = encodeURIComponent(venue);
+          const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
+          try {
+            await Linking.openURL(url);
+          } catch (error) {
+            conversationLogger.warn('Failed to open calendar URL', error);
+            showErrorBanner("Impossible d'ouvrir votre agenda.", 'Agenda');
+          }
         },
-      ],
-    );
+      },
+      secondaryAction: {
+        label: 'Plus tard',
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: 'Match confirmé ?',
+      tone: 'league',
+    });
   };
 
   const {
@@ -618,8 +654,8 @@ function Conversation({ navigation, route }) {
   const safeBottomInset = Math.max(bottom, 10);
   const composerBottomInset = Platform.OS === 'ios' ? Math.max(bottom, 14) : 10;
   const giftedChatBottomOffset = Platform.OS === 'ios' ? 0 : safeBottomInset;
-  const apiBaseUrl = useMemo(() => toApiBaseUrl(process.env.API_URL), []);
-  const publicApiOrigin = useMemo(() => toPublicApiOrigin(process.env.API_URL), []);
+  const apiBaseUrl = useMemo(() => toApiBaseUrl(getApiBaseUrl()), []);
+  const publicApiOrigin = useMemo(() => toPublicApiOrigin(getPublicApiOrigin()), []);
   const HEADER_SIDE_WIDTH = 56;
   const resolveMediaUri = useCallback((rawUri) => {
     const uri = String(rawUri || '').trim();
@@ -756,9 +792,9 @@ function Conversation({ navigation, route }) {
     onSuccess: () => {
       setIsReportModalVisible(false);
       setSelectedMessage(undefined);
-      Alert.alert(
-        t('conversation.modals.reportSuccess.title'),
+      showSuccessBanner(
         t('conversation.modals.reportSuccess.description'),
+        t('conversation.modals.reportSuccess.title'),
       );
     },
   });
@@ -848,13 +884,13 @@ function Conversation({ navigation, route }) {
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onError: (error) => {
-      Alert.alert(t('common.error'), error.message || t('common.errorOccurred'));
+      showErrorBanner(error.message || t('common.errorOccurred'), t('common.error'));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
-      Alert.alert(t('common.success'), t('eventDetails.participationSuccess'));
+      showSuccessBanner(t('eventDetails.participationSuccess'), t('common.success'));
     },
   });
 
@@ -1275,7 +1311,7 @@ function Conversation({ navigation, route }) {
           asset: describeAsset(asset),
           chatId,
         });
-        Alert.alert('Erreur', "Aucune pièce jointe n'a pu être envoyée.");
+        showErrorBanner("Aucune pièce jointe n'a pu être envoyée.");
         return false;
       }
 
@@ -1301,7 +1337,7 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        Alert.alert('Erreur', 'Connexion messagerie indisponible. Réessayez dans quelques secondes.');
+        showErrorBanner('Connexion messagerie indisponible. Réessayez dans quelques secondes.');
         return false;
       }
 
@@ -1321,7 +1357,7 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Attachment upload failed', error);
-      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
+      showErrorBanner(buildAttachmentUploadErrorMessage(error));
       return false;
     } finally {
       uploadInFlightRef.current = false;
@@ -1373,7 +1409,7 @@ function Conversation({ navigation, route }) {
         if (safeOptimisticMessageId) {
           removeLocalPendingMessage(safeOptimisticMessageId);
         }
-        Alert.alert('Erreur', "Aucune pièce jointe n'a pu être envoyée.");
+        showErrorBanner("Aucune pièce jointe n'a pu être envoyée.");
         return false;
       }
 
@@ -1409,7 +1445,7 @@ function Conversation({ navigation, route }) {
         if (safeOptimisticMessageId) {
           removeLocalPendingMessage(safeOptimisticMessageId);
         }
-        Alert.alert('Erreur', 'Connexion messagerie indisponible. Réessayez dans quelques secondes.');
+        showErrorBanner('Connexion messagerie indisponible. Réessayez dans quelques secondes.');
         return false;
       }
 
@@ -1432,7 +1468,7 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Attachment upload failed', error);
-      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
+      showErrorBanner(buildAttachmentUploadErrorMessage(error));
       return false;
     } finally {
       uploadInFlightRef.current = false;
@@ -1472,7 +1508,7 @@ function Conversation({ navigation, route }) {
         chatId,
         reason: validationError.reason,
       });
-      Alert.alert('Erreur', validationError.userMessage);
+      showErrorBanner(validationError.userMessage);
       return;
     }
 
@@ -1522,7 +1558,7 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la selection');
+        showErrorBanner(response.errorMessage || 'Erreur lors de la selection');
         return;
       }
 
@@ -1543,7 +1579,7 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Media picker failed', error);
-      Alert.alert('Erreur', 'Impossible d\'ouvrir la galerie.');
+      showErrorBanner('Impossible d\'ouvrir la galerie.');
     }
   };
 
@@ -1571,19 +1607,19 @@ function Conversation({ navigation, route }) {
       );
 
       if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert(
-          t('common.error', 'Erreur'),
+        showErrorBanner(
           t('permissions.camera.denied', 'Permission caméra refusée'),
+          t('common.error', 'Erreur'),
         );
         return false;
       }
       return true;
     } catch (error) {
       conversationLogger.warn('Camera permission request failed', error);
-      Alert.alert('Erreur', 'Impossible de vérifier la permission caméra.');
+      showErrorBanner('Impossible de vérifier la permission caméra.');
       return false;
     }
-  }, [t]);
+  }, [showErrorBanner, t]);
 
   const handleTakePhoto = async () => {
     try {
@@ -1611,7 +1647,7 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        Alert.alert('Erreur', response.errorMessage || 'Impossible d\'ouvrir la camera');
+        showErrorBanner(response.errorMessage || 'Impossible d\'ouvrir la camera');
         return;
       }
 
@@ -1632,19 +1668,19 @@ function Conversation({ navigation, route }) {
         responseStatus: error?.response?.status,
       });
       conversationLogger.warn('Camera open failed', error);
-      Alert.alert('Erreur', 'Impossible de prendre la photo.');
+      showErrorBanner('Impossible de prendre la photo.');
     }
   };
 
   const handlePickFile = async () => {
     if (isDocumentPickerDisabled) {
-      Alert.alert('Fichier indisponible', 'Le sélecteur de fichier est temporairement desactive sur cette build.');
+      showInfoBanner('Le sélecteur de fichier est temporairement desactive sur cette build.', 'Fichier indisponible');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      Alert.alert('Erreur', 'Le sélecteur de fichier est indisponible sur cette build.');
+      showErrorBanner('Le sélecteur de fichier est indisponible sur cette build.');
       return;
     }
 
@@ -1671,7 +1707,7 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        Alert.alert('Erreur', 'Impossible de récupérer ce fichier.');
+        showErrorBanner('Impossible de récupérer ce fichier.');
         return;
       }
 
@@ -1684,7 +1720,7 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Document picker failed', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner un fichier.');
+      showErrorBanner('Impossible de sélectionner un fichier.');
     }
   };
 
@@ -1692,11 +1728,11 @@ function Conversation({ navigation, route }) {
     const normalizedAsset = normalizePickedAsset(selectedAsset || {});
     const validationError = validateAttachmentAsset(normalizedAsset);
     if (validationError) {
-      Alert.alert('Erreur', validationError.userMessage);
+      showErrorBanner(validationError.userMessage);
       return;
     }
     if (!normalizedAsset?.uri) {
-      Alert.alert('Erreur', 'Impossible de lire ce fichier.');
+      showErrorBanner('Impossible de lire ce fichier.');
       return;
     }
 
@@ -1704,7 +1740,7 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachmentAsset(normalizedAsset);
       if (!Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
-        Alert.alert('Erreur', "Impossible d'ajouter cette pièce jointe.");
+        showErrorBanner("Impossible d'ajouter cette pièce jointe.");
         return;
       }
 
@@ -1724,13 +1760,14 @@ function Conversation({ navigation, route }) {
       });
     } catch (error) {
       conversationLogger.warn('Edit attachment upload failed', error);
-      Alert.alert('Erreur', buildAttachmentUploadErrorMessage(error));
+      showErrorBanner(buildAttachmentUploadErrorMessage(error));
     } finally {
       setIsEditMessageUploadingAttachment(false);
     }
   }, [
     buildAttachmentUploadErrorMessage,
     normalizePickedAsset,
+    showErrorBanner,
     uploadAttachmentAsset,
     validateAttachmentAsset,
   ]);
@@ -1746,7 +1783,7 @@ function Conversation({ navigation, route }) {
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        Alert.alert('Erreur', response.errorMessage || 'Erreur lors de la selection');
+        showErrorBanner(response.errorMessage || 'Erreur lors de la selection');
         return;
       }
 
@@ -1755,9 +1792,9 @@ function Conversation({ navigation, route }) {
       await appendEditAttachmentsFromAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Edit media picker failed', error);
-      Alert.alert('Erreur', 'Impossible d\'ouvrir la galerie.');
+      showErrorBanner('Impossible d\'ouvrir la galerie.');
     }
-  }, [appendEditAttachmentsFromAsset]);
+  }, [appendEditAttachmentsFromAsset, showErrorBanner]);
 
   const handleEditTakePhoto = useCallback(async () => {
     try {
@@ -1774,7 +1811,7 @@ function Conversation({ navigation, route }) {
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        Alert.alert('Erreur', response.errorMessage || 'Impossible d\'ouvrir la camera');
+        showErrorBanner(response.errorMessage || 'Impossible d\'ouvrir la camera');
         return;
       }
 
@@ -1783,19 +1820,19 @@ function Conversation({ navigation, route }) {
       await appendEditAttachmentsFromAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Edit camera failed', error);
-      Alert.alert('Erreur', 'Impossible de prendre la photo.');
+      showErrorBanner('Impossible de prendre la photo.');
     }
-  }, [appendEditAttachmentsFromAsset, ensureCameraPermission]);
+  }, [appendEditAttachmentsFromAsset, ensureCameraPermission, showErrorBanner]);
 
   const handleEditPickFile = useCallback(async () => {
     if (isDocumentPickerDisabled) {
-      Alert.alert('Fichier indisponible', 'Le sélecteur de fichier est temporairement desactive sur cette build.');
+      showInfoBanner('Le sélecteur de fichier est temporairement desactive sur cette build.', 'Fichier indisponible');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      Alert.alert('Erreur', 'Le sélecteur de fichier est indisponible sur cette build.');
+      showErrorBanner('Le sélecteur de fichier est indisponible sur cette build.');
       return;
     }
 
@@ -1822,7 +1859,7 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        Alert.alert('Erreur', 'Impossible de récupérer ce fichier.');
+        showErrorBanner('Impossible de récupérer ce fichier.');
         return;
       }
 
@@ -1835,9 +1872,9 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Edit document picker failed', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner un fichier.');
+      showErrorBanner('Impossible de sélectionner un fichier.');
     }
-  }, [appendEditAttachmentsFromAsset]);
+  }, [appendEditAttachmentsFromAsset, showErrorBanner, showInfoBanner]);
 
   const handleSubmitEditMessage = async () => {
     if (!selectedMessageDocumentId || !canEditSelectedMessage) return;
@@ -1845,7 +1882,7 @@ function Conversation({ navigation, route }) {
     const payloadAttachments = toEditAttachmentPayload(editMessageAttachments);
     const normalizedMessage = String(editMessageText || '');
     if (!normalizedMessage.trim() && payloadAttachments.length === 0) {
-      Alert.alert('Erreur', 'Le message ne peut pas être vide.');
+      showErrorBanner('Le message ne peut pas être vide.');
       return;
     }
 
@@ -1866,7 +1903,7 @@ function Conversation({ navigation, route }) {
       resetEditMessageState();
     } catch (error) {
       conversationLogger.warn('Edit message failed', error);
-      Alert.alert('Erreur', 'Impossible de modifier ce message.');
+      showErrorBanner('Impossible de modifier ce message.');
     } finally {
       setIsEditMessageSubmitting(false);
     }
@@ -2202,7 +2239,7 @@ function Conversation({ navigation, route }) {
   const handleSaveGroupName = async () => {
     const nextGroupName = String(groupNameDraft || '').trim();
     if (!chatId || !nextGroupName) {
-      Alert.alert('Nom requis', 'Entrez un nom de groupe valide.');
+      showErrorBanner('Entrez un nom de groupe valide.', 'Nom requis');
       return;
     }
 
@@ -2212,10 +2249,10 @@ function Conversation({ navigation, route }) {
         chatId,
         data: { groupName: nextGroupName },
       });
-      Alert.alert('Succès', 'Nom du groupe mis à jour.');
+      showSuccessBanner('Nom du groupe mis à jour.', 'Succès');
     } catch (error) {
       conversationLogger.warn('Failed to update group name', error);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le nom du groupe.');
+      showErrorBanner('Impossible de mettre à jour le nom du groupe.');
     } finally {
       setIsGroupMutationLoading(false);
     }
@@ -2235,31 +2272,34 @@ function Conversation({ navigation, route }) {
     if (!chatId || !memberId) return;
 
     const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || 'ce membre';
-    Alert.alert(
-      'Retirer un membre',
-      `Retirer ${memberLabel} du groupe ?`,
-      [
-        { style: 'cancel', text: 'Annuler' },
-        {
-          onPress: async () => {
-            try {
-              setIsGroupMutationLoading(true);
-              await removeGroupMember({
-                chatId,
-                userId: memberId,
-              });
-            } catch (error) {
-              conversationLogger.warn('Failed to remove group member', error);
-              Alert.alert('Erreur', 'Impossible de retirer ce membre.');
-            } finally {
-              setIsGroupMutationLoading(false);
-            }
-          },
-          style: 'destructive',
-          text: 'Retirer',
+    openConversationPrompt({
+      body: `Retirer ${memberLabel} du groupe ?`,
+      primaryAction: {
+        label: 'Retirer',
+        onPress: async () => {
+          closeConversationPrompt();
+          try {
+            setIsGroupMutationLoading(true);
+            await removeGroupMember({
+              chatId,
+              userId: memberId,
+            });
+          } catch (error) {
+            conversationLogger.warn('Failed to remove group member', error);
+            showErrorBanner('Impossible de retirer ce membre.');
+          } finally {
+            setIsGroupMutationLoading(false);
+          }
         },
-      ],
-    );
+      },
+      secondaryAction: {
+        label: 'Annuler',
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: 'Retirer un membre',
+      tone: 'critical',
+    });
   };
 
   const resetVoiceRecordingState = useCallback(() => {
@@ -2276,9 +2316,9 @@ function Conversation({ navigation, route }) {
     }
 
     if (!canRecordVoiceNote || !chatId) {
-      Alert.alert(
-        t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+      showInfoBanner(
         t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
+        t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
       );
       return;
     }
@@ -2328,19 +2368,19 @@ function Conversation({ navigation, route }) {
       conversationLogger.warn('Failed to start voice recording', error);
       setVoiceRecordingState(VOICE_RECORDING_STATES.error);
       if (code === 'VOICE_MODULE_UNAVAILABLE') {
-        Alert.alert(
-          t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+        showInfoBanner(
           t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
+          t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
         );
       } else {
-        Alert.alert(
-          t('conversation.voice.permissionTitle', 'Micro requis'),
+        showErrorBanner(
           t('conversation.voice.permissionDescription', 'Autorisez le micro pour envoyer des notes vocales.'),
+          t('conversation.voice.permissionTitle', 'Micro requis'),
         );
       }
       resetVoiceRecordingState();
     }
-  }, [canRecordVoiceNote, chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, resetVoiceRecordingState, stopDraftVoicePlayback, t]);
+  }, [canRecordVoiceNote, chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, resetVoiceRecordingState, showErrorBanner, showInfoBanner, stopDraftVoicePlayback, t]);
 
   const handleCancelVoiceRecording = useCallback(async () => {
     if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.idle) return;
@@ -2442,9 +2482,9 @@ function Conversation({ navigation, route }) {
           'Aucun son exploitable n\'a été capturé. Réessayez.',
         );
       }
-      Alert.alert(
-        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+      showErrorBanner(
         errorMessage,
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
       resetVoiceRecordingState();
     }
@@ -2454,6 +2494,7 @@ function Conversation({ navigation, route }) {
     isVoiceRecording,
     logVoiceDiagnostic,
     resetVoiceRecordingState,
+    showErrorBanner,
     t,
     voiceRecordingWaveform,
   ]);
@@ -2665,10 +2706,10 @@ function Conversation({ navigation, route }) {
 
       setIsProposalModalVisible(false);
       setCounterProposalContext(null);
-      Alert.alert('Envoye', 'Votre proposition a ete envoyee !');
+      showSuccessBanner('Votre proposition a ete envoyee !', 'Envoye', 'league');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
-      Alert.alert('Erreur', "Impossible d'envoyer la proposition.");
+      showErrorBanner("Impossible d'envoyer la proposition.");
     }
   };
 
@@ -2692,7 +2733,7 @@ function Conversation({ navigation, route }) {
     if (!matchId && status === 'accepted') {
       // If matchId is missing in composition, try fallback to chat's match
       if (!chatData?.league_match) {
-        Alert.alert('Erreur', 'Impossible de retrouver le match associé.');
+        showErrorBanner('Impossible de retrouver le match associé.');
         return;
       }
     }
@@ -2724,7 +2765,7 @@ function Conversation({ navigation, route }) {
           String(message.documentId || message._id || message.id || ''),
           'accepted',
         );
-        Alert.alert('Match confirmé', 'Le match est validé !');
+        showSuccessBanner('Le match est validé !', 'Match confirmé', 'league');
         promptAddMatchToCalendar(message);
       } else {
         await respondToProposal(
@@ -2738,7 +2779,7 @@ function Conversation({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la réponse.');
+      showErrorBanner('Une erreur est survenue lors de la réponse.');
       // Rollback could go here
     }
   };
@@ -2763,33 +2804,36 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier votre équipe pour l'annulation.");
+      showErrorBanner("Impossible d'identifier votre équipe pour l'annulation.");
       return;
     }
 
-    Alert.alert(
-      'Annuler le match ?',
-      'Cette action annulera le match et supprimera la conversation.',
-      [
-        { style: 'cancel', text: 'Non' },
-        {
-          onPress: async () => {
-            try {
-              const resolvedTeamId = teamId;
-              if (!resolvedTeamId) return;
-              conversationLogger.debug('Cancelling match', { matchId, teamId: resolvedTeamId });
-              await cancelMatch(matchId, resolvedTeamId, 'Demande capitaine');
-              navigation.goBack();
-            } catch (error) {
-              conversationLogger.error('Cancel match failed', error);
-              Alert.alert('Erreur', "Impossible d'annuler le match.");
-            }
-          },
-          style: 'destructive',
-          text: 'Oui, annuler',
+    openConversationPrompt({
+      body: 'Cette action annulera le match et supprimera la conversation.',
+      primaryAction: {
+        label: 'Oui, annuler',
+        onPress: async () => {
+          closeConversationPrompt();
+          try {
+            const resolvedTeamId = teamId;
+            if (!resolvedTeamId) return;
+            conversationLogger.debug('Cancelling match', { matchId, teamId: resolvedTeamId });
+            await cancelMatch(matchId, resolvedTeamId, 'Demande capitaine');
+            navigation.goBack();
+          } catch (error) {
+            conversationLogger.error('Cancel match failed', error);
+            showErrorBanner("Impossible d'annuler le match.");
+          }
         },
-      ],
-    );
+      },
+      secondaryAction: {
+        label: 'Non',
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: 'Annuler le match ?',
+      tone: 'critical',
+    });
   };
 
   // Calculate title for Custom Header
@@ -3004,16 +3048,16 @@ function Conversation({ navigation, route }) {
     const proposalStatus = String(proposal?.status || '').trim().toLowerCase();
 
     let statusLabel = 'Negociation active';
-    let title = 'Organisation du match en cours';
+    let summaryTitle = 'Organisation du match en cours';
     if (proposalStatus === 'accepted') {
       statusLabel = 'Proposition acceptee';
-      title = 'Le match est en bonne voie';
+      summaryTitle = 'Le match est en bonne voie';
     } else if (proposalStatus === 'declined') {
       statusLabel = 'Proposition refusee';
-      title = 'Une nouvelle proposition est attendue';
+      summaryTitle = 'Une nouvelle proposition est attendue';
     } else if (proposalStatus === 'pending') {
       statusLabel = isLatestProposalFromMySquad ? 'Proposition envoyee' : 'Proposition recue';
-      title = isLatestProposalFromMySquad
+      summaryTitle = isLatestProposalFromMySquad
         ? 'Votre proposition attend une reponse'
         : 'Une proposition attend votre reponse';
     }
@@ -3074,7 +3118,7 @@ function Conversation({ navigation, route }) {
       helper,
       scheduleLabel,
       statusLabel,
-      title,
+      title: summaryTitle,
       venue: proposalVenue,
     };
   }, [isLatestProposalFromMySquad, latestProposalMessage?.composition, leagueConversationMatch]);
@@ -3155,9 +3199,9 @@ function Conversation({ navigation, route }) {
 
   const openAttachmentActionUrl = useCallback(async (resolvedUrl, attachmentLabel = '') => {
     if (!resolvedUrl) {
-      Alert.alert(
-        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
+      showInfoBanner(
         t('conversation.attachments.unavailableDescription', 'Ce document ne peut pas etre ouvert pour le moment.'),
+        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
       );
       return false;
     }
@@ -3172,13 +3216,13 @@ function Conversation({ navigation, route }) {
         resolvedUrl,
       });
       conversationLogger.warn('Failed to open attachment action URL', error);
-      Alert.alert(
-        t('conversation.attachments.openErrorTitle', 'Ouverture impossible'),
+      showErrorBanner(
         t('conversation.attachments.openErrorDescription', 'Le document n a pas pu etre ouvert.'),
+        t('conversation.attachments.openErrorTitle', 'Ouverture impossible'),
       );
       return false;
     }
-  }, [logAttachmentDebug, t]);
+  }, [logAttachmentDebug, showErrorBanner, showInfoBanner, t]);
 
   const toDocumentActionMessage = useCallback((message) => {
     const normalizedAttachments = normalizeMessageAttachments(message?.attachments);
@@ -3223,15 +3267,15 @@ function Conversation({ navigation, route }) {
     const resolvedUrl = await resolveAttachmentActionUrl(primaryDocumentAttachment);
     const attachmentLabel = getDocumentDisplayName(primaryDocumentAttachment);
     if (!resolvedUrl) {
-      Alert.alert(
-        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
+      showInfoBanner(
         t('conversation.attachments.shareUnavailableDescription', 'Ce document ne peut pas etre partage pour le moment.'),
+        t('conversation.attachments.unavailableTitle', 'Fichier indisponible'),
       );
       return false;
     }
 
     try {
-      await share({
+      await shareApi.share({
         message: `${attachmentLabel}\n${resolvedUrl}`,
         title: attachmentLabel,
         url: resolvedUrl,
@@ -3244,13 +3288,13 @@ function Conversation({ navigation, route }) {
         resolvedUrl,
       });
       conversationLogger.warn('Failed to share attachment URL', error);
-      Alert.alert(
-        t('conversation.attachments.shareErrorTitle', 'Partage impossible'),
+      showErrorBanner(
         t('conversation.attachments.shareErrorDescription', 'Le document n a pas pu etre partage.'),
+        t('conversation.attachments.shareErrorTitle', 'Partage impossible'),
       );
       return false;
     }
-  }, [logAttachmentDebug, resolveAttachmentActionUrl, t, toDocumentActionMessage]);
+  }, [logAttachmentDebug, resolveAttachmentActionUrl, showErrorBanner, showInfoBanner, t, toDocumentActionMessage]);
 
   const handleOpenSelectedDocumentAttachment = useCallback(async () => {
     const selectedDocumentMessage = selectedDocumentActionMessage;
@@ -3367,9 +3411,9 @@ function Conversation({ navigation, route }) {
         chatId,
         socketConnected: Boolean(isSocketConnected && socket),
       });
-      Alert.alert(
-        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+      showErrorBanner(
         'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
       return;
     }
@@ -3397,9 +3441,9 @@ function Conversation({ navigation, route }) {
         reason: voiceValidationError?.reason,
         userMessage: voiceValidationError?.userMessage,
       });
-      Alert.alert(
-        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+      showErrorBanner(
         voiceValidationError?.userMessage || 'Validation audio impossible.',
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
       return;
     }
@@ -3489,9 +3533,9 @@ function Conversation({ navigation, route }) {
         responseStatus: Number(error?.response?.status || 0) || 0,
       });
       const detailedMessage = buildAttachmentUploadErrorMessage(error);
-      Alert.alert(
-        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
+      showErrorBanner(
         detailedMessage || t('conversation.voice.sendErrorDescription', "Impossible d'envoyer la note vocale. Réessayez."),
+        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
     } finally {
       uploadInFlightRef.current = false;
@@ -3522,9 +3566,9 @@ function Conversation({ navigation, route }) {
         chatId,
         socketConnected: Boolean(isSocketConnected && socket),
       });
-      Alert.alert(
-        'Envoi impossible',
+      showErrorBanner(
         'Connexion messagerie indisponible. Réessayez quand la conversation est reconnectée.',
+        'Envoi impossible',
       );
       return;
     }
@@ -3645,9 +3689,9 @@ function Conversation({ navigation, route }) {
       await votePoll(String(messageId), optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
-      Alert.alert(
-        t('common.error', 'Erreur'),
+      showErrorBanner(
         t('conversation.poll.errors.voteSave', 'Impossible de sauvegarder ce vote.'),
+        t('common.error', 'Erreur'),
       );
     }
   };
@@ -3841,18 +3885,18 @@ function Conversation({ navigation, route }) {
     const clipboard = getClipboardModule();
     if (clipboard && typeof clipboard.setString === 'function') {
       clipboard.setString(selectedMessageTextValue);
-      Alert.alert(
-        t('conversation.actions.copySuccess.title', 'Copié'),
+      showSuccessBanner(
         t('conversation.actions.copySuccess.description', 'Le message a été copié.'),
+        t('conversation.actions.copySuccess.title', 'Copié'),
       );
     } else {
-      Alert.alert(
-        t('common.error', 'Erreur'),
+      showErrorBanner(
         t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+        t('common.error', 'Erreur'),
       );
     }
     setIsMessageActionsVisible(false);
-  }, [canCopySelectedMessage, selectedMessageTextValue, t]);
+  }, [canCopySelectedMessage, selectedMessageTextValue, showErrorBanner, showSuccessBanner, t]);
 
   const handleOpenReportForSelectedMessage = useCallback(() => {
     if (!selectedMessageDocumentId || isSelectedMessageOwn) return;
@@ -3918,35 +3962,35 @@ function Conversation({ navigation, route }) {
   const handleDeleteSelectedMessage = useCallback(() => {
     if (!selectedMessageDocumentId || !isSelectedMessageOwn) return;
 
-    Alert.alert(
-      t('conversation.actions.deleteConfirm.title', 'Supprimer le message'),
-      t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim? pour tous les participants.'),
-      [
-        {
-          style: 'cancel',
-          text: t('common.actions.cancel', 'Annuler'),
+    openConversationPrompt({
+      body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim? pour tous les participants.'),
+      primaryAction: {
+        label: t('common.actions.delete', 'Supprimer'),
+        onPress: async () => {
+          closeConversationPrompt();
+          try {
+            await deleteMessage(selectedMessageDocumentId);
+            setIsMessageActionsVisible(false);
+            setIsEditMessageModalVisible(false);
+            setSelectedMessage(undefined);
+            resetEditMessageState();
+          } catch (error) {
+            showErrorBanner(
+              t('conversation.actions.deleteError', 'Impossible de supprimer ce message.'),
+              t('common.error', 'Erreur'),
+            );
+          }
         },
-        {
-          onPress: async () => {
-            try {
-              await deleteMessage(selectedMessageDocumentId);
-              setIsMessageActionsVisible(false);
-              setIsEditMessageModalVisible(false);
-              setSelectedMessage(undefined);
-              resetEditMessageState();
-            } catch (error) {
-              Alert.alert(
-                t('common.error', 'Erreur'),
-                t('conversation.actions.deleteError', 'Impossible de supprimer ce message.'),
-              );
-            }
-          },
-          style: 'destructive',
-          text: t('common.actions.delete', 'Supprimer'),
-        },
-      ],
-    );
-  }, [deleteMessage, isSelectedMessageOwn, resetEditMessageState, selectedMessageDocumentId, t]);
+      },
+      secondaryAction: {
+        label: t('common.actions.cancel', 'Annuler'),
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: t('conversation.actions.deleteConfirm.title', 'Supprimer le message'),
+      tone: 'critical',
+    });
+  }, [closeConversationPrompt, deleteMessage, isSelectedMessageOwn, openConversationPrompt, resetEditMessageState, selectedMessageDocumentId, showErrorBanner, t]);
 
   const handleSubmitReport = () => {
     if (selectedMessage?.documentId) {
@@ -5356,7 +5400,10 @@ function Conversation({ navigation, route }) {
               onPress={() => {
                 setIsMenuVisible(false);
                 setTimeout(() => {
-                  Alert.alert('Signaler', 'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.');
+                  showInfoBanner(
+                    'Pour signaler ce match ou cet utilisateur, veuillez contacter le support via les paramètres.',
+                    'Signaler',
+                  );
                 }, 300);
               }}
               title={t('conversation.actions.report', 'Signaler')}
@@ -5370,6 +5417,16 @@ function Conversation({ navigation, route }) {
             />
           </View>
         </BottomModal>
+
+        <GlobalPromptModal
+          body={conversationPrompt?.body}
+          onRequestClose={closeConversationPrompt}
+          primaryAction={conversationPrompt?.primaryAction}
+          secondaryAction={conversationPrompt?.secondaryAction}
+          title={conversationPrompt?.title || ''}
+          tone={conversationPrompt?.tone || 'primary'}
+          visible={Boolean(conversationPrompt)}
+        />
 
         <BottomModal
           close={() => setIsGroupManagementVisible(false)}

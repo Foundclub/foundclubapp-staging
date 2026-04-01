@@ -92,7 +92,7 @@ export default function LeagueTabNavigator() {
           });
           const focusedRouteName = getFocusedRouteNameFromRoute(route) || RouteNames.LeagueDashboard;
           const hideTabBar = (
-            focusedRouteName === 'EndMatchScreen'
+            focusedRouteName === RouteNames.EndMatchScreen
             || focusedRouteName === RouteNames.SquadFilters
           );
           return {

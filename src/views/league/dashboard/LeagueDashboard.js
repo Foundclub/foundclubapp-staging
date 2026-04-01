@@ -929,7 +929,7 @@ function LeagueDashboard() {
             <MatchHistory
               matches={matchHistory}
               onMatchPress={handleMatchPress}
-              onViewAll={() => navigation.navigate('MatchHistoryScreen')}
+              onViewAll={() => navigation.navigate(RouteNames.MatchHistoryScreen)}
             />
 
             {/* Leaderboard */}
@@ -937,7 +937,7 @@ function LeagueDashboard() {
 
             {/* Squad shortcut */}
             <TouchableOpacity
-              onPress={() => navigation.navigate('LeagueSquadTab')}
+              onPress={() => navigation.navigate(RouteNames.LeagueSquadTab)}
               style={{ alignItems: 'center', marginTop: 16 }}
             >
               <Text style={[Fonts.p2, { color: Colors.neutral300, textDecorationLine: 'underline' }]}>

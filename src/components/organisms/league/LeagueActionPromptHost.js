@@ -3,7 +3,6 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert,
   AppState,
   Text,
   useWindowDimensions,
@@ -15,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStatus';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
@@ -35,9 +35,15 @@ import {
   updateMatch,
 } from '@/services/league/leagueMatchService';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
-const END_MATCH_ROUTE = 'EndMatchScreen';
+const END_MATCH_ROUTE = RouteNames.EndMatchScreen;
 
 const BLOCKED_ROUTES = new Set([
   END_MATCH_ROUTE,
@@ -96,10 +102,13 @@ function LeagueActionPromptHost() {
   const [postSlotLocalStep, setPostSlotLocalStep] = useState(/** @type {string | null} */ (null));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const appStateRef = useRef(AppState.currentState);
+  const shownActionPromptKeyRef = useRef(/** @type {string | null} */ (null));
+  const shownCounterProposalKeyRef = useRef(/** @type {string | null} */ (null));
   const { height, width } = useWindowDimensions();
   const {
     ApplicationStyle, Colors, Fonts,
   } = useTheme();
+  const { showBanner } = useAppFeedback();
 
   const {
     data: pendingActionPayload,
@@ -129,17 +138,33 @@ function LeagueActionPromptHost() {
     && ['post_slot_resolution', 'proposal_received', 'waiting_venue'].includes(String(nextAction?.state || ''))
     && (dismissedActionKey !== (nextAction?.key || null) || isForcedForCurrentAction),
   );
-  const canShowLeagueActionPrompt = useBlockingOverlayPrompt(
-    'league-action-prompt',
+  const leagueActionPopup = usePopupEligibility(
+    POPUP_IDS.LEAGUE_ACTION_PROMPT,
     shouldShowPrompt,
-    70,
+    {
+      cooldownKey: nextAction?.key || 'default',
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const counterProposalPopup = usePopupEligibility(
+    POPUP_IDS.LEAGUE_COUNTER_PROPOSAL,
+    Boolean(isCounterProposalVisible),
+    {
+      cooldownKey: `${nextAction?.key || 'default'}:counter-proposal`,
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const canShowLeagueActionPrompt = useBlockingOverlayPrompt(
+    leagueActionPopup.descriptor.id,
+    leagueActionPopup.canShow,
+    leagueActionPopup.descriptor.priority,
   );
   const canShowCounterProposalModal = useBlockingOverlayPrompt(
-    'league-counter-proposal',
-    isCounterProposalVisible,
-    75,
+    counterProposalPopup.descriptor.id,
+    counterProposalPopup.canShow,
+    counterProposalPopup.descriptor.priority,
   );
-  const isVisible = shouldShowPrompt && canShowLeagueActionPrompt;
+  const isVisible = Boolean(shouldShowPrompt && leagueActionPopup.canShow && canShowLeagueActionPrompt);
 
   const dismissForSession = useCallback(() => {
     if (currentForcedPromptKey) {
@@ -149,7 +174,29 @@ function LeagueActionPromptHost() {
       setDismissedActionKey(nextAction.key);
     }
     setPostSlotLocalStep(null);
-  }, [currentForcedPromptKey, nextAction?.key]);
+    leagueActionPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+  }, [currentForcedPromptKey, leagueActionPopup, nextAction?.key]);
+
+  useEffect(() => {
+    if (!isVisible || !nextAction?.key) {
+      shownActionPromptKeyRef.current = null;
+      return;
+    }
+    if (shownActionPromptKeyRef.current === nextAction.key) return;
+    shownActionPromptKeyRef.current = nextAction.key;
+    leagueActionPopup.markShown({ actionKey: nextAction.key });
+  }, [isVisible, leagueActionPopup, nextAction?.key]);
+
+  useEffect(() => {
+    const counterProposalKey = `${nextAction?.key || 'default'}:${isCounterProposalVisible ? 'visible' : 'hidden'}`;
+    if (!isCounterProposalVisible || !counterProposalPopup.canShow || !canShowCounterProposalModal) {
+      shownCounterProposalKeyRef.current = null;
+      return;
+    }
+    if (shownCounterProposalKeyRef.current === counterProposalKey) return;
+    shownCounterProposalKeyRef.current = counterProposalKey;
+    counterProposalPopup.markShown({ actionKey: nextAction?.key || 'default' });
+  }, [canShowCounterProposalModal, counterProposalPopup, isCounterProposalVisible, nextAction?.key]);
 
   const invalidateLeagueQueries = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['pendingLeagueAction'] });
@@ -218,11 +265,15 @@ function LeagueActionPromptHost() {
         await handleResolvedElsewhere();
         return;
       }
-      Alert.alert('Erreur', "Impossible d'accepter la proposition.");
+      showBanner({
+        body: "Impossible d'accepter la proposition.",
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.matchId, nextAction?.proposalMessageId]);
+  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.matchId, nextAction?.proposalMessageId, showBanner]);
 
   const handleDeclineProposal = useCallback(async () => {
     if (!nextAction?.proposalMessageId || isSubmitting) {
@@ -241,11 +292,15 @@ function LeagueActionPromptHost() {
         await handleResolvedElsewhere();
         return;
       }
-      Alert.alert('Erreur', 'Impossible de refuser la proposition.');
+      showBanner({
+        body: 'Impossible de refuser la proposition.',
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.proposalMessageId]);
+  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.proposalMessageId, showBanner]);
 
   const handleCounterProposalSend = useCallback(async (proposalData) => {
     if (!nextAction?.matchId || !nextAction?.chatId || isSubmitting) return;
@@ -268,11 +323,15 @@ function LeagueActionPromptHost() {
         leagueNegotiationFocusToken: String(Date.now()),
       });
     } catch (error) {
-      Alert.alert('Erreur', "Impossible d'envoyer la contre-proposition.");
+      showBanner({
+        body: "Impossible d'envoyer la contre-proposition.",
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId]);
+  }, [dismissForSession, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, showBanner]);
 
   const handleVenueReminder = useCallback(() => {
     if (!nextAction?.matchId) return;
@@ -330,14 +389,15 @@ function LeagueActionPromptHost() {
         || error?.message
         || '',
       ).trim();
-      Alert.alert(
-        'Erreur',
-        serverMessage || "Impossible d'enregistrer cette reponse.",
-      );
+      showBanner({
+        body: serverMessage || "Impossible d'enregistrer cette reponse.",
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, openLeagueScoreFlow]);
+  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.chatId, nextAction?.matchId, openLeagueScoreFlow, showBanner]);
 
   const openPostSlotNoMatchChoices = useCallback(() => {
     setPostSlotLocalStep('choose_not_played_action');
@@ -629,11 +689,11 @@ function LeagueActionPromptHost() {
         snapPoint={modalSnapPoint}
       >
         <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 12 : 20 }}>
-          <View style={{ gap: 8 }}>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Signal League</Text>
-            <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>{promptTitle}</Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral200, lineHeight: 24 }]}>{promptBody}</Text>
-          </View>
+          <LeagueModalHeader
+            align="left"
+            description={promptBody}
+            title={promptTitle}
+          />
 
           <View
             style={[
@@ -742,8 +802,9 @@ function LeagueActionPromptHost() {
         initialDate={proposalDefaults.date}
         initialEndTime={proposalDefaults.end}
         initialStartTime={proposalDefaults.start}
-        isVisible={isCounterProposalVisible && canShowCounterProposalModal}
+        isVisible={Boolean(isCounterProposalVisible && counterProposalPopup.canShow && canShowCounterProposalModal)}
         onClose={() => {
+          counterProposalPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
           setIsCounterProposalVisible(false);
           if (nextAction?.chatId) {
             navigate(RouteNames.Conversation, { chatId: nextAction.chatId });
@@ -751,6 +812,7 @@ function LeagueActionPromptHost() {
         }}
         onSend={handleCounterProposalSend}
         onSkip={() => {
+          counterProposalPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
           setIsCounterProposalVisible(false);
           if (nextAction?.chatId) {
             navigate(RouteNames.Conversation, { chatId: nextAction.chatId });

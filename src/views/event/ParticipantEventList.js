@@ -185,9 +185,9 @@ function ParticipantEventList({ navigation }) {
     }
     participantEventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
     // @ts-ignore
-    navigation.navigate('EventStack', {
+    navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
-      screen: 'EventDetails',
+      screen: RouteNames.EventDetails,
     });
   };
 
@@ -327,7 +327,7 @@ function ParticipantEventList({ navigation }) {
         >
           <TouchableOpacity
             // @ts-ignore
-            onPress={() => navigation.navigate('EventStack', { screen: 'EventWizardType' })}
+            onPress={() => navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType })}
             style={{
               alignItems: 'center',
               backgroundColor: Colors.primary500,

@@ -1,3 +1,5 @@
+import { getPublicApiOrigin } from '@/config/runtimeUrls';
+
 /**
  * Transform image URL from Strapi for web runtime.
  * @param {string | undefined} url - The image URL from Strapi
@@ -11,9 +13,7 @@ export const getImageUrl = (url) => {
   }
 
   if (url.startsWith('/')) {
-    const apiUrl = process.env.API_PUBLIC_URL || process.env.API_URL || 'http://localhost:1337/api';
-    const baseUrl = String(apiUrl).replace(/\/api\/?$/i, '');
-    return `${baseUrl}${url}`;
+    return `${getPublicApiOrigin()}${url}`;
   }
 
   return url;

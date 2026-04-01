@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 
 /**
  * PlayerGoalsModal
@@ -27,6 +29,7 @@ function PlayerGoalsModal({
   visible,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { showBanner } = useAppFeedback();
   const [goals, setGoals] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,10 +40,10 @@ function PlayerGoalsModal({
     }
   }, [visible]);
 
-  const getCurrentTotal = () => Object.values(goals).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+  const getCurrentTotal = () => Object.values(goals).reduce((sum, val) => sum + (parseInt(val, 10) || 0), 0);
 
   const handleGoalChange = (playerId, value) => {
-    const numValue = parseInt(value) || 0;
+    const numValue = parseInt(value, 10) || 0;
     setGoals((prev) => ({ ...prev, [playerId]: numValue }));
   };
 
@@ -48,10 +51,11 @@ function PlayerGoalsModal({
     const currentTotal = getCurrentTotal();
 
     if (currentTotal !== totalGoals) {
-      Alert.alert(
-        'Erreur',
-        `Le total des buts (${currentTotal}) ne correspond pas au score (${totalGoals}). Veuillez corriger.`,
-      );
+      showBanner({
+        body: `Le total des buts (${currentTotal}) ne correspond pas au score (${totalGoals}). Veuillez corriger.`,
+        title: 'Erreur',
+        tone: 'error',
+      });
       return;
     }
 
@@ -60,7 +64,11 @@ function PlayerGoalsModal({
       await onSubmit(goals);
       onClose();
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder les buteurs');
+      showBanner({
+        body: 'Impossible de sauvegarder les buteurs.',
+        title: 'Erreur',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }

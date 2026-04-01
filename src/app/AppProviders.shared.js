@@ -1,8 +1,10 @@
 import React from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 
+import { AppFeedbackProvider } from '@/context/AppFeedbackContext';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { BlockingOverlayProvider } from '@/context/BlockingOverlayContext';
+import { PopupManagerProvider } from '@/context/PopupManagerContext';
 import { SmartNotificationProvider } from '@/context/SmartNotificationContext';
 import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
@@ -25,12 +27,20 @@ function SharedAppProviders({ children, queryClient }) {
         AppModeProvider,
         null,
         React.createElement(
-          SmartNotificationProvider,
+          AppFeedbackProvider,
           null,
           React.createElement(
-            BlockingOverlayProvider,
+            PopupManagerProvider,
             null,
-            React.createElement(QueryClientProvider, { client: queryClient }, children),
+            React.createElement(
+              SmartNotificationProvider,
+              null,
+              React.createElement(
+                BlockingOverlayProvider,
+                null,
+                React.createElement(QueryClientProvider, { client: queryClient }, children),
+              ),
+            ),
           ),
         ),
       ),

@@ -6,7 +6,6 @@ import {
   useState,
 } from 'react';
 import {
-  Alert,
   Dimensions,
   Image,
   Modal,
@@ -34,6 +33,8 @@ import {
   getTacticalFieldImage,
 } from '@/utils/tacticalField';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
+// eslint-disable-next-line perfectionist/sort-imports
 import PlayerToken from './PlayerToken';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -171,7 +172,7 @@ function RemoveZone({ visible }) {
 
   return (
     <Animated.View pointerEvents="none" style={[styles.removeZone, animatedStyle]}>
-      <Text style={styles.removeZoneText}>↓ Retirer du terrain</Text>
+      <Text style={styles.removeZoneText}>Retirer du terrain</Text>
     </Animated.View>
   );
 }
@@ -185,13 +186,18 @@ function RemoveZone({ visible }) {
  */
 function AddPlayerModal({ onAdd, onClose, visible }) {
   const { Colors, Fonts } = useTheme();
+  const { showBanner } = useAppFeedback();
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [number, setNumber] = useState('');
 
   const handleSubmit = () => {
     if (!firstname.trim() || !lastname.trim()) {
-      Alert.alert('Erreur', 'Prénom et nom requis');
+      showBanner({
+        body: 'Prenom et nom requis.',
+        title: 'Erreur',
+        tone: 'error',
+      });
       return;
     }
     onAdd({
@@ -209,13 +215,13 @@ function AddPlayerModal({ onAdd, onClose, visible }) {
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
           <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
-            ➕ Ajouter un joueur
+            Ajouter un joueur
           </Text>
 
           <TextInput
             autoFocus
             onChangeText={setFirstname}
-            placeholder="Prénom"
+            placeholder="PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©nom"
             placeholderTextColor={Colors.neutral300}
             style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}50`, color: Colors.neutral00 }]}
             value={firstname}
@@ -233,7 +239,7 @@ function AddPlayerModal({ onAdd, onClose, visible }) {
             keyboardType="number-pad"
             maxLength={2}
             onChangeText={setNumber}
-            placeholder="Numéro (optionnel)"
+            placeholder="NumÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©ro (optionnel)"
             placeholderTextColor={Colors.neutral300}
             style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}50`, color: Colors.neutral00 }]}
             value={number}
@@ -442,7 +448,7 @@ function TacticalBoard({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>⚽ Composition</Text>
+          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>Composition</Text>
           <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
             <Text style={styles.countText}>
               {placedCount}
@@ -521,7 +527,7 @@ function TacticalBoard({
           <View style={styles.benchHeader}>
             <View style={styles.benchTitleRow}>
               <Text style={{ color: Colors.neutral00, fontSize: 14, fontWeight: '700' }}>
-                🪑 BANC
+                BANC
               </Text>
               <View style={[styles.benchCountBadge, { backgroundColor: Colors.neutral700 }]}>
                 <Text style={{ color: Colors.neutral200, fontSize: 11, fontWeight: '600' }}>
@@ -564,7 +570,7 @@ function TacticalBoard({
 
             {benchPlayers.length === 0 && (
               <View style={styles.emptyBench}>
-                <Text style={{ color: Colors.primary500, fontSize: 12 }}>✓ Tous placés !</Text>
+                <Text style={{ color: Colors.primary500, fontSize: 12 }}>Tous places !</Text>
               </View>
             )}
           </ScrollView>

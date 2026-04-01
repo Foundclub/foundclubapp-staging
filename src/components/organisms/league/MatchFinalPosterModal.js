@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
 
 import { clampLeagueDivision, isMaxDivision } from '@/utils/league/division';
 
@@ -39,13 +40,13 @@ const getStatusUi = (status, colors) => {
 };
 
 /**
- *
- * @param root0
- * @param root0.onClose
- * @param root0.onOpenDetails
- * @param root0.onRelaunchSearch
- * @param root0.payload
- * @param root0.visible
+ * @param {{
+ *  onClose?: () => void;
+ *  onOpenDetails?: () => void;
+ *  onRelaunchSearch?: () => void;
+ *  payload?: any;
+ *  visible: boolean;
+ * }} props
  */
 function MatchFinalPosterModal({
   onClose,
@@ -100,6 +101,15 @@ function MatchFinalPosterModal({
   const divisionAfter = parsedDivisionAfter !== null ? clampLeagueDivision(parsedDivisionAfter) : 5;
   const divisionChanged = Boolean(divisionBefore && divisionAfter && divisionBefore !== divisionAfter && recap?.divisionChanged !== false);
   const delta = formatDelta(recap?.eloDelta);
+  const divisionLabel = divisionChanged
+    ? `Division ${divisionBefore} -> ${divisionAfter}`
+    : `Division ${divisionAfter || 5}`;
+  let divisionStatusLabel = 'Maintien';
+  if (divisionChanged) {
+    divisionStatusLabel = divisionAfter < divisionBefore ? 'Promotion' : 'Relégation';
+  } else if (isMaxDivision(divisionAfter)) {
+    divisionStatusLabel = 'Division max atteinte';
+  }
 
   return (
     <Modal animationType="none" onRequestClose={onClose} transparent visible={visible}>
@@ -115,14 +125,16 @@ function MatchFinalPosterModal({
             },
           ]}
         >
+          <LeagueModalHeader title="Fin de match" />
+
           <View style={styles.headerRow}>
-            <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>Fin de match</Text>
+            <View />
             <View style={[styles.statusChip, { backgroundColor: `${statusUi.color}2A`, borderColor: statusUi.color }]}>
               <Text style={[Fonts.p3Bold, { color: statusUi.color }]}>{statusUi.chip}</Text>
             </View>
           </View>
 
-          <Text style={[Fonts.h1Bold, { color: Colors.gold500, marginTop: 8, textAlign: 'center' }]}>{scoreLabel}</Text>
+          <Text style={[Fonts.h1Bold, { color: Colors.gold500, marginTop: 12, textAlign: 'center' }]}>{scoreLabel}</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
             {recap?.resultLabel || recap?.result || 'Résultat enregistré'}
           </Text>
@@ -166,16 +178,8 @@ function MatchFinalPosterModal({
               size={72}
             />
             <View style={{ alignItems: 'center' }}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                {divisionChanged
-                  ? `Division ${divisionBefore} -> ${divisionAfter}`
-                  : `Division ${divisionAfter || 5}`}
-              </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
-                {divisionChanged
-                  ? (divisionAfter < divisionBefore ? 'Promotion' : 'Relegation')
-                  : (isMaxDivision(divisionAfter) ? 'Division max atteinte' : 'Maintien')}
-              </Text>
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{divisionLabel}</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>{divisionStatusLabel}</Text>
             </View>
           </View>
 
@@ -252,4 +256,3 @@ const styles = StyleSheet.create({
 });
 
 export default MatchFinalPosterModal;
-

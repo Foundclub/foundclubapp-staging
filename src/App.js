@@ -1,12 +1,14 @@
 import * as Sentry from '@sentry/react-native';
-import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { useEffect, useState } from 'react';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
 import LeagueActionPromptHost from '@/components/organisms/league/LeagueActionPromptHost';
 import MatchStatsPromptHost from '@/components/organisms/matchStats/MatchStatsPromptHost';
 import NotificationBootstrap from '@/components/organisms/notifications/NotificationBootstrap';
 import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
+import AppBannerHost from '@/components/organisms/popup/AppBannerHost';
+import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+import StartupPromptBoundary from '@/components/organisms/popup/StartupPromptBoundary';
 import ErrorScreen from '@/views/Error';
 
 import AppNavigator from '@/navigation/appNavigator';
@@ -21,8 +23,14 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 
 import AppProvidersNative from '@/app/AppProviders.native';
 import buildFoundClubQueryClient from '@/app/queryClient';
+import {
+  assertRuntimeEndpointsReady,
+  getRuntimeEndpointsLog,
+} from '@/config/runtimeUrls';
+import { POPUP_IDS } from '@/constants/popupRegistry';
 import { NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const isAxiosError = (error) => Boolean(
   error
@@ -56,6 +64,7 @@ const sentryTracesSampleRate = parseSampleRate(
   process.env.SENTRY_TRACES_SAMPLE_RATE,
   __DEV__ || isStaging ? 1 : 0.2,
 );
+assertRuntimeEndpointsReady();
 const navigationIntegration = /** @type {any} */ (isSentryEnabled
   ? Sentry.reactNavigationIntegration({
     enableTimeToInitialDisplay: true,
@@ -71,6 +80,7 @@ console.info('[BOOT] APP_ENV_RESOLVED', {
   isSentryEnabled,
   isStaging,
   notificationsRuntime: NOTIFICATIONS_RUNTIME_CONFIG,
+  runtimeEndpoints: getRuntimeEndpointsLog(),
   sentryTracesSampleRate,
 });
 
@@ -132,7 +142,10 @@ const queryClient = buildFoundClubQueryClient({
  */
 function BootErrorAlertHost() {
   const [pendingBootError, setPendingBootError] = useState(null);
-  const shownBootErrorKeyRef = useRef('');
+  const popup = usePopupEligibility(
+    POPUP_IDS.BOOT_ERROR_ALERT,
+    Boolean(pendingBootError),
+  );
 
   useEffect(() => {
     const previousBootError = readPersistedBootError();
@@ -148,43 +161,43 @@ function BootErrorAlertHost() {
     pendingBootError?.message,
   ].filter(Boolean).join(':');
   const canShowBootError = useBlockingOverlayPrompt(
-    'boot-error-alert',
-    Boolean(pendingBootError),
-    100,
+    popup.descriptor.id,
+    popup.canShow,
+    popup.descriptor.priority,
   );
+  const isVisible = popup.canShow && canShowBootError;
 
   useEffect(() => {
-    if (!pendingBootError || !canShowBootError) return;
-    if (shownBootErrorKeyRef.current === bootErrorPromptKey) return;
-    shownBootErrorKeyRef.current = bootErrorPromptKey;
+    if (!pendingBootError || !isVisible || !bootErrorPromptKey) return;
+    popup.markShown({ bootErrorPromptKey });
+  }, [bootErrorPromptKey, isVisible, pendingBootError, popup]);
 
-    const summary = [
-      pendingBootError.context,
-      pendingBootError.name,
-      pendingBootError.message,
-    ].filter(Boolean).join('\n');
+  const summary = [
+    pendingBootError?.context,
+    pendingBootError?.name,
+    pendingBootError?.message,
+  ].filter(Boolean).join('\n');
 
-    let dismissed = false;
-    const finalize = () => {
-      if (dismissed) return;
-      dismissed = true;
-      shownBootErrorKeyRef.current = '';
-      clearPersistedBootError();
-      setPendingBootError(null);
-    };
+  const finalize = () => {
+    popup.dismiss();
+    clearPersistedBootError();
+    setPendingBootError(null);
+  };
 
-    Alert.alert(
-      'Crash precedent detecte',
-      summary.slice(0, 500),
-      [{ onPress: finalize, text: 'OK' }],
-      {
-        cancelable: true,
-        onDismiss: finalize,
-      },
-    );
-  }, [bootErrorPromptKey, canShowBootError, pendingBootError]);
-
-  return null;
+  return (
+    <GlobalPromptModal
+      body={summary.slice(0, 500)}
+      eyebrow="Crash précédent"
+      onRequestClose={finalize}
+      primaryAction={{
+        label: 'OK',
+        onPress: finalize,
+      }}
+      title="FoundClub a détecté un crash précédent"
+      tone="critical"
+      visible={Boolean(summary && isVisible)}
+    />
+  );
 }
 
 /**
@@ -194,25 +207,28 @@ function BootErrorAlertHost() {
 function App() {
   return (
     <AppProvidersNative queryClient={queryClient}>
-      <BootErrorAlertHost />
-      <SessionManager />
-      {isSentryEnabled ? (
-        <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
-          <AppNavigator navigationIntegration={navigationIntegration} />
-          <MatchStatsPromptHost />
-          <LeagueActionPromptHost />
-          <NotificationBootstrap />
-          <SmartNotificationHost />
-        </Sentry.ErrorBoundary>
-      ) : (
-        <>
-          <AppNavigator navigationIntegration={navigationIntegration} />
-          <MatchStatsPromptHost />
-          <LeagueActionPromptHost />
-          <NotificationBootstrap />
-          <SmartNotificationHost />
-        </>
-      )}
+      <StartupPromptBoundary>
+        <BootErrorAlertHost />
+        <SessionManager />
+        <AppBannerHost />
+        {isSentryEnabled ? (
+          <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
+            <AppNavigator navigationIntegration={navigationIntegration} />
+            <MatchStatsPromptHost />
+            <LeagueActionPromptHost />
+            <NotificationBootstrap />
+            <SmartNotificationHost />
+          </Sentry.ErrorBoundary>
+        ) : (
+          <>
+            <AppNavigator navigationIntegration={navigationIntegration} />
+            <MatchStatsPromptHost />
+            <LeagueActionPromptHost />
+            <NotificationBootstrap />
+            <SmartNotificationHost />
+          </>
+        )}
+      </StartupPromptBoundary>
     </AppProvidersNative>
   );
 }

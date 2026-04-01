@@ -33,13 +33,24 @@ const SHARE_ICON = require('@/assets/icons/share2.png');
 /**
  * @typedef {{
  *   arrivedAt?: string | null,
+ *   attendanceStatus?: 'not_marked' | 'declared_late' | 'arrived_on_time' | 'arrived_late' | 'no_show' | null,
+ *   countsInTeamStats?: {
+ *     absence?: boolean,
+ *     attendance?: boolean,
+ *     late?: boolean,
+ *     rsvpYes?: boolean,
+ *   } | null,
  *   declaredAt?: string | null,
  *   declaredLateMinutes?: number | null,
  *   declarationSource?: string | null,
+ *   finalOperationalStatus?: 'present' | 'late' | 'absent' | 'pending' | null,
+ *   finalState?: 'declared_late' | 'arrived_on_time' | 'arrived_late' | 'no_show' | null,
+ *   finalizedAt?: string | null,
  *   lateMinutes?: number | null,
  *   source?: string | null,
  *   manualOverride?: boolean,
  *   note?: string | null,
+ *   rsvpStatus?: 'participating' | 'missing' | 'pending' | 'not_answered' | null,
  *   updatedBy?: { firstname?: string, lastname?: string } | null
  * }} AttendanceState
  */
@@ -115,6 +126,10 @@ const resolveAttendanceBadge = ({
   nowMs,
   statusKind = 'participating',
 }) => {
+  const normalizedAttendanceStatus = String(
+    attendance?.attendanceStatus || attendance?.finalState || '',
+  ).trim().toLowerCase();
+  const normalizedRsvpStatus = String(attendance?.rsvpStatus || '').trim().toLowerCase();
   const hasArrived = Boolean(attendance?.arrivedAt);
   const lateMinutes = Math.max(0, Number(attendance?.lateMinutes || 0));
   const declaredLateMinutes = Math.max(0, Number(attendance?.declaredLateMinutes || 0));
@@ -123,23 +138,32 @@ const resolveAttendanceBadge = ({
   if (!hasArrived && allowLiveLate && eventStartAt && typeof nowMs === 'number') {
     const eventStartMs = eventStartAt.getTime();
     if (!Number.isNaN(eventStartMs) && nowMs > eventStartMs) {
-      runningLateMinutes = Math.max(1, Math.ceil((nowMs - eventStartMs) / 60000));
+      runningLateMinutes = Math.max(0, Math.floor((nowMs - eventStartMs) / 60000));
     }
   }
 
-  if (statusKind === 'missing') {
+  if (normalizedAttendanceStatus === 'no_show') {
     return {
-      backgroundColor: '#EF444422',
-      textColor: '#fca5a5',
+      backgroundColor: 'rgba(239, 68, 68, 0.13)',
+      textColor: 'rgb(252, 165, 165)',
+      title: 'Non pointe',
+      value: null,
+    };
+  }
+
+  if (statusKind === 'missing' || normalizedRsvpStatus === 'missing') {
+    return {
+      backgroundColor: 'rgba(239, 68, 68, 0.13)',
+      textColor: 'rgb(252, 165, 165)',
       title: 'Absent',
       value: null,
     };
   }
 
-  if (statusKind === 'not_answered') {
+  if (statusKind === 'not_answered' || normalizedRsvpStatus === 'not_answered') {
     return {
-      backgroundColor: '#33415566',
-      textColor: '#cbd5e1',
+      backgroundColor: 'rgba(51, 65, 85, 0.4)',
+      textColor: 'rgb(203, 213, 225)',
       title: 'Sans reponse',
       value: null,
     };
@@ -148,25 +172,25 @@ const resolveAttendanceBadge = ({
   if (hasArrived) {
     if (lateMinutes > 0) {
       return {
-        backgroundColor: '#F59E0B22',
-        textColor: '#fbbf24',
+        backgroundColor: 'rgba(245, 158, 11, 0.13)',
+        textColor: 'rgb(251, 191, 36)',
         title: 'Arrive',
         value: `+${lateMinutes} min`,
       };
     }
 
     return {
-      backgroundColor: '#16A34A22',
-      textColor: '#4ade80',
+      backgroundColor: 'rgba(22, 163, 74, 0.13)',
+      textColor: 'rgb(74, 222, 128)',
       title: 'Arrive',
       value: null,
     };
   }
 
-  if (declaredLateMinutes > 0) {
+  if (normalizedAttendanceStatus === 'declared_late' || declaredLateMinutes > 0) {
     return {
-      backgroundColor: '#F9731622',
-      textColor: '#fdba74',
+      backgroundColor: 'rgba(249, 115, 22, 0.13)',
+      textColor: 'rgb(253, 186, 116)',
       title: 'Retard annonce',
       value: `+${declaredLateMinutes} min`,
     };
@@ -174,16 +198,16 @@ const resolveAttendanceBadge = ({
 
   if (runningLateMinutes > 0) {
     return {
-      backgroundColor: '#F59E0B22',
-      textColor: '#fbbf24',
+      backgroundColor: 'rgba(245, 158, 11, 0.13)',
+      textColor: 'rgb(251, 191, 36)',
       title: 'En attente',
       value: `+${runningLateMinutes} min`,
     };
   }
 
   return {
-    backgroundColor: '#33415566',
-    textColor: '#cbd5e1',
+    backgroundColor: 'rgba(51, 65, 85, 0.4)',
+    textColor: 'rgb(203, 213, 225)',
     title: 'En attente',
     value: null,
   };
@@ -653,7 +677,7 @@ function ParticipantItem({
       {hasStaffMeta ? (
         <View style={[Spaces.gap[4]]}>
           {attendance?.manualOverride ? (
-            <Text style={[Fonts.p4, Fonts.warning400]}>
+            <Text style={[Fonts.p4, Fonts.warning500]}>
               Correction manuelle staff
             </Text>
           ) : null}

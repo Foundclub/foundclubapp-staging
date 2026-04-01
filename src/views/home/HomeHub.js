@@ -9,9 +9,9 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Image,
   InteractionManager,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -25,6 +25,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { scrollTutorialTargetIntoViewOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
@@ -39,16 +40,22 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
+import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { tutorialDebugLog } from '@/utils/logger/tutorialDebug';
+import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 
+import { POPUP_IDS } from '@/constants/popupRegistry';
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useAppMode } from '@/context/AppModeContext';
+import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
+/* eslint-disable perfectionist/sort-modules */
 /**
  * @typedef {{
  *  id: string;
@@ -57,6 +64,7 @@ import { useOnboarding } from '@/context/OnboardingContext';
  *  description: string;
  *  nextAction?: 'default' | 'scrollDown';
  *  nextLabel?: string;
+ *  nextTargetStepId?: string;
  *  onNext?: () => void;
  * }} HomeCardTutorial
  */
@@ -86,14 +94,17 @@ import { useOnboarding } from '@/context/OnboardingContext';
  *  Alignments: import('@/theme/types').Alignments;
  * }} props
  */
+// eslint-disable-next-line perfectionist/sort-modules
 function HomeSection({
   Alignments,
   cards,
   Fonts,
+  registerTutorialTargetNode,
   Spaces,
   title,
 }) {
   const { width: screenWidth } = useWindowDimensions();
+  const tutorialTargetRefs = useRef({});
   if (!cards.length) return null;
   const isSingleCardSection = cards.length === 1;
   const isCompactScreen = screenWidth <= 340;
@@ -110,6 +121,12 @@ function HomeSection({
             maxWidth: isFullCard ? '100%' : '48.5%',
             width: isFullCard ? '100%' : '48.5%',
           };
+          const assignTutorialTargetRef = (node) => {
+            tutorialTargetRefs.current[card.key] = node;
+            if (typeof registerTutorialTargetNode === 'function' && card.tutorial?.id) {
+              registerTutorialTargetNode(card.tutorial.id, node);
+            }
+          };
 
           const body = (
             <HomeActionCard
@@ -121,6 +138,7 @@ function HomeSection({
               onPress={card.onPress}
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
+              tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
               title={card.title}
             />
           );
@@ -140,6 +158,7 @@ function HomeSection({
                 id={card.tutorial.id}
                 nextAction={card.tutorial.nextAction}
                 nextLabel={card.tutorial.nextLabel}
+                nextTargetStepId={card.tutorial.nextTargetStepId}
                 onNext={card.tutorial.onNext}
                 order={card.tutorial.order}
                 spotlight={{
@@ -148,7 +167,11 @@ function HomeSection({
                   paddingX: 0,
                   paddingY: 0,
                 }}
-                style={{ width: '100%' }}
+                style={{
+                  alignSelf: 'flex-start',
+                  width: '100%',
+                }}
+                targetNodeResolver={() => tutorialTargetRefs.current[card.key] || null}
                 title={card.tutorial.title}
               >
                 {body}
@@ -171,7 +194,6 @@ function HomeHubStateView({
   const {
     Alignments,
     ApplicationStyle,
-    Colors,
     Fonts,
     Spaces,
   } = useTheme();
@@ -179,11 +201,11 @@ function HomeHubStateView({
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentWidth="readable"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifyCenter,
       ]}
+      contentWidth="readable"
       responsivePadding
       withHeaderPadding={false}
     >
@@ -239,11 +261,13 @@ function HomeHubContent({ auth, navigation, route }) {
   const {
     currentStep,
     currentStepIndex,
+    getStepById,
     isActive: isOnboardingActive,
     refreshCurrentStep,
     startOnboarding,
   } = useOnboarding();
   const { logoutMutation, userData } = auth;
+  const { showBanner } = useAppFeedback();
 
   const homeHubTutorial = useFeatureTutorial({
     routeParams: route?.params,
@@ -252,11 +276,14 @@ function HomeHubContent({ auth, navigation, route }) {
   });
 
   const [activeTutorialModal, setActiveTutorialModal] = useState(/** @type {'center' | 'feature' | null} */ (null));
+  const [contextualPrompt, setContextualPrompt] = useState(/** @type {any | null} */ (null));
   const [isEntryGateVisible, setIsEntryGateVisible] = useState(false);
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const { height: viewportHeight } = useWindowDimensions();
   const isFocused = useIsFocused();
   const scrollRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
+  const tutorialTargetNodesRef = useRef({});
   const refreshCurrentStepRef = useRef(refreshCurrentStep);
   const pendingNavigationActionRef = useRef(/** @type {null | (() => void)} */ (null));
   const previousTutorialStepRef = useRef(/** @type {{ id?: string; index?: number } | null} */ (null));
@@ -268,6 +295,14 @@ function HomeHubContent({ auth, navigation, route }) {
     quick: { height: 0, y: 0 },
     search: { height: 0, y: 0 },
   });
+  const sectionViewRefs = useRef({
+    account: null,
+    league: null,
+    manage: null,
+    profile: null,
+    quick: null,
+    search: null,
+  });
 
   const roleName = userData?.role?.name;
   const roleKey = getUserRoleKey(roleName);
@@ -276,6 +311,11 @@ function HomeHubContent({ auth, navigation, route }) {
   const hasManageSection = isCoach || isPresident;
   const routeParams = route?.params;
   const scrollBottomPadding = tabBarHeight + insets.bottom + 16;
+  const entryGateTopInset = Math.max(insets.top, 20) + 16;
+  const entryGateBottomInset = Platform.OS === 'web'
+    ? Math.max(tabBarHeight + insets.bottom, 112)
+    : tabBarHeight + insets.bottom + 20;
+  const entryGateMaxHeight = Math.max(260, viewportHeight - entryGateTopInset - entryGateBottomInset);
 
   const trainedTeamIds = useMemo(
     () => (userData?.trainedTeams || []).map((team) => team?.documentId).filter(Boolean),
@@ -285,12 +325,35 @@ function HomeHubContent({ auth, navigation, route }) {
   const cmId = userData?.multisportClubs?.[0]?.documentId;
   const isTutorialCenterVisible = activeTutorialModal === 'center';
   const isFeatureTutorialPickerVisible = activeTutorialModal === 'feature';
+  const closeContextualPrompt = useCallback(() => {
+    setContextualPrompt(null);
+  }, []);
+  const openContextualPrompt = useCallback((promptConfig) => {
+    setContextualPrompt(promptConfig);
+  }, []);
+  const homeHubEntryPopup = usePopupEligibility(
+    POPUP_IDS.HOME_HUB_ENTRY_GATE,
+    Boolean(isFocused && isEntryGateVisible),
+    {
+      cooldownKey: userData?.documentId || 'anonymous',
+    },
+  );
+  const canShowEntryGatePrompt = useBlockingOverlayPrompt(
+    homeHubEntryPopup.descriptor.id,
+    homeHubEntryPopup.canShow,
+    homeHubEntryPopup.descriptor.priority,
+  );
+  const isHomeHubEntryGateVisible = Boolean(
+    isEntryGateVisible
+    && homeHubEntryPopup.canShow
+    && canShowEntryGatePrompt,
+  );
+  const shouldRenderLegacyEntryGate = false;
   const isExternalCompetitionPromptEnabled = isFocused
     && !isOnboardingActive
     && !homeHubTutorial.shouldForceStart
-    && homeHubTutorial.entryGateChoice !== 'pending'
     && activeTutorialModal === null
-    && !isEntryGateVisible;
+    && !isHomeHubEntryGateVisible;
 
   const legacySearchTarget = useMemo(() => resolveLegacySearchTarget(routeParams, userData), [routeParams, userData]);
 
@@ -358,6 +421,13 @@ function HomeHubContent({ auth, navigation, route }) {
     userData?.documentId,
   ]);
 
+  useEffect(() => {
+    if (!isHomeHubEntryGateVisible) return;
+    homeHubEntryPopup.markShown({
+      userId: userData?.documentId || 'anonymous',
+    });
+  }, [homeHubEntryPopup, isHomeHubEntryGateVisible, userData?.documentId]);
+
   const registerSectionAnchor = useCallback((sectionKey, event) => {
     const nextY = event?.nativeEvent?.layout?.y ?? 0;
     const nextHeight = event?.nativeEvent?.layout?.height ?? 0;
@@ -374,74 +444,280 @@ function HomeHubContent({ auth, navigation, route }) {
     };
   }, []);
 
-  const scrollToSection = useCallback((sectionKey) => {
-    const SECTION_TARGET_TOP = 170;
-    const REFRESH_DELAYS = [80, 180, 320];
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    const tryScroll = () => {
-      attempts += 1;
-      const sectionAnchor = sectionAnchorsRef.current[sectionKey];
-      if (!(sectionAnchor?.height > 0)) {
-        if (attempts < maxAttempts) {
-          setTimeout(tryScroll, 120);
-        }
-        return;
-      }
-
-      const targetY = Math.max(
-        0,
-        (sectionAnchor.y || 0) - SECTION_TARGET_TOP,
-      );
-
-      scrollRef.current?.scrollTo({
-        animated: true,
-        y: targetY,
-      });
-
-      REFRESH_DELAYS.forEach((delay) => {
-        setTimeout(() => {
-          refreshCurrentStepRef.current?.();
-        }, delay);
-      });
-    };
-
-    tryScroll();
+  const registerSectionViewRef = useCallback((sectionKey, node) => {
+    sectionViewRefs.current[sectionKey] = node;
   }, []);
 
-  const scrollToTop = useCallback(() => {
-    const REFRESH_DELAYS = [80, 180, 320];
-    scrollRef.current?.scrollTo({
-      animated: true,
-      y: 0,
-    });
-    REFRESH_DELAYS.forEach((delay) => {
+  const queueTutorialRefresh = useCallback((delays = [80, 180, 320]) => {
+    delays.forEach((delay) => {
       setTimeout(() => {
         refreshCurrentStepRef.current?.();
       }, delay);
     });
   }, []);
 
-  const scrollToSearchSection = useCallback(() => {
-    scrollToSection('search');
-  }, [scrollToSection]);
+  const registerTutorialTargetNode = useCallback((stepId, node) => {
+    if (!stepId) return;
+    if (node) {
+      tutorialTargetNodesRef.current[stepId] = node;
+      return;
+    }
+    delete tutorialTargetNodesRef.current[stepId];
+  }, []);
 
-  const scrollToLeagueSection = useCallback(() => {
-    scrollToSection('league');
-  }, [scrollToSection]);
+  const waitForWebScrollSettle = useCallback((targetTop) => new Promise((resolve) => {
+    if (Platform.OS !== 'web') {
+      resolve();
+      return;
+    }
 
-  const scrollToProfileSection = useCallback(() => {
-    scrollToSection('profile');
-  }, [scrollToSection]);
+    const startTime = Date.now();
+    const maxWaitMs = 1400;
+    let lastScrollY = window.scrollY;
+    let stableFrameCount = 0;
 
-  const scrollToQuickSection = useCallback(() => {
-    scrollToSection('quick');
-  }, [scrollToSection]);
+    const checkScroll = () => {
+      const currentScrollY = window.scrollY;
+      const hasReachedTarget = Math.abs(currentScrollY - targetTop) <= 2;
+      const isStable = Math.abs(currentScrollY - lastScrollY) <= 1;
 
-  const scrollToAccountSection = useCallback(() => {
-    scrollToSection('account');
-  }, [scrollToSection]);
+      if (hasReachedTarget && isStable) {
+        stableFrameCount += 1;
+      } else if (isStable) {
+        stableFrameCount += 0.5;
+      } else {
+        stableFrameCount = 0;
+      }
+
+      if (stableFrameCount >= 2 || (Date.now() - startTime) >= maxWaitMs) {
+        resolve();
+        return;
+      }
+
+      lastScrollY = currentScrollY;
+      requestAnimationFrame(checkScroll);
+    };
+
+    requestAnimationFrame(checkScroll);
+  }), []);
+
+  const scrollToSection = useCallback((sectionKey) => {
+    const SECTION_TARGET_TOP = 170;
+    const REFRESH_DELAYS = Platform.OS === 'web'
+      ? [140, 320, 560]
+      : [80, 180, 320];
+    const FINAL_REFRESH_DELAY = REFRESH_DELAYS[REFRESH_DELAYS.length - 1] || 0;
+
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      const resolveAfterRefresh = () => {
+        REFRESH_DELAYS.forEach((delay) => {
+          setTimeout(() => {
+            refreshCurrentStepRef.current?.();
+          }, delay);
+        });
+        setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+      };
+
+      const tryScroll = () => {
+        attempts += 1;
+        if (Platform.OS === 'web') {
+          const sectionView = sectionViewRefs.current[sectionKey];
+          if (typeof sectionView?.getBoundingClientRect === 'function') {
+            const rect = sectionView.getBoundingClientRect();
+            if (!rect.width || !rect.height) {
+              if (attempts < maxAttempts) {
+                setTimeout(tryScroll, 120);
+              } else {
+                resolve();
+              }
+              return;
+            }
+
+            const nextTop = Math.max(
+              0,
+              window.scrollY + rect.top - SECTION_TARGET_TOP,
+            );
+            window.scrollTo({
+              behavior: 'smooth',
+              top: nextTop,
+            });
+            waitForWebScrollSettle(nextTop).then(resolveAfterRefresh);
+            return;
+          }
+
+          if (typeof sectionView?.measureInWindow === 'function') {
+            sectionView.measureInWindow((_measuredX, measuredY, width, height) => {
+              if (!width || !height) {
+                if (attempts < maxAttempts) {
+                  setTimeout(tryScroll, 120);
+                } else {
+                  resolve();
+                }
+                return;
+              }
+
+              const nextTop = Math.max(
+                0,
+                window.scrollY + measuredY - SECTION_TARGET_TOP,
+              );
+              window.scrollTo({
+                behavior: 'smooth',
+                top: nextTop,
+              });
+              waitForWebScrollSettle(nextTop).then(resolveAfterRefresh);
+            });
+            return;
+          }
+        }
+
+        const sectionAnchor = sectionAnchorsRef.current[sectionKey];
+        if (!(sectionAnchor?.height > 0)) {
+          if (attempts < maxAttempts) {
+            setTimeout(tryScroll, 120);
+          } else {
+            resolve();
+          }
+          return;
+        }
+
+        const targetY = Math.max(
+          0,
+          (sectionAnchor.y || 0) - SECTION_TARGET_TOP,
+        );
+
+        scrollRef.current?.scrollTo({
+          animated: true,
+          y: targetY,
+        });
+
+        resolveAfterRefresh();
+      };
+
+      tryScroll();
+    });
+  }, [waitForWebScrollSettle]);
+
+  const scrollToTop = useCallback(() => {
+    const REFRESH_DELAYS = Platform.OS === 'web'
+      ? [140, 320, 560]
+      : [80, 180, 320];
+    const FINAL_REFRESH_DELAY = REFRESH_DELAYS[REFRESH_DELAYS.length - 1] || 0;
+
+    return new Promise((resolve) => {
+      if (Platform.OS === 'web') {
+        const targetTop = 0;
+        window.scrollTo({
+          behavior: 'smooth',
+          top: targetTop,
+        });
+        waitForWebScrollSettle(targetTop).then(() => {
+          REFRESH_DELAYS.forEach((delay) => {
+            setTimeout(() => {
+              refreshCurrentStepRef.current?.();
+            }, delay);
+          });
+          setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+        });
+        return;
+      } else {
+        scrollRef.current?.scrollTo({
+          animated: true,
+          y: 0,
+        });
+      }
+      REFRESH_DELAYS.forEach((delay) => {
+        setTimeout(() => {
+          refreshCurrentStepRef.current?.();
+        }, delay);
+      });
+      setTimeout(resolve, FINAL_REFRESH_DELAY + 40);
+    });
+  }, [waitForWebScrollSettle]);
+
+  const scrollToTutorialTarget = useCallback((targetStepId, fallbackSectionKey = null) => {
+    const runFallbackScroll = () => (
+      fallbackSectionKey ? scrollToSection(fallbackSectionKey) : Promise.resolve(null)
+    );
+
+    const targetStep = getStepById(targetStepId);
+    const getTargetNode = targetStep?.getTargetNode;
+    const resolveTargetNode = () => (
+      tutorialTargetNodesRef.current[targetStepId]
+      || (typeof getTargetNode === 'function' ? getTargetNode() : null)
+    );
+    const targetNode = resolveTargetNode();
+
+    tutorialDebugLog('homehub.scrollToTutorialTarget', {
+      fallbackSectionKey,
+      targetStepId,
+    });
+    setTutorialDebugState({
+      lastRequestedFallbackSection: fallbackSectionKey,
+      lastRequestedTargetId: targetStepId,
+      lastScrollMode: null,
+      targetNodeFound: Boolean(targetNode),
+      targetNodeSource: tutorialTargetNodesRef.current[targetStepId] ? 'homehub-registry' : 'step-registry',
+      targetStepFound: Boolean(targetStep),
+      windowScrollY: Platform.OS === 'web' && typeof window !== 'undefined' ? window.scrollY : null,
+    });
+
+    if (Platform.OS !== 'web' || typeof getTargetNode !== 'function') {
+      setTutorialDebugState({
+        lastFailureReason: 'homehub-scroll-target-missing',
+        lastScrollMode: 'fallback',
+      });
+      return runFallbackScroll();
+    }
+
+    return scrollTutorialTargetIntoViewOnWeb(resolveTargetNode, {
+      bottomInset: Math.max(tabBarHeight + insets.bottom, 112) + 16,
+      preferredPlacement: 'above',
+      topInset: Math.max(insets.top, 16) + 88,
+      tooltipGap: 24,
+      tooltipHeight: 220,
+    }).then((resolvedLayout) => {
+      if (!resolvedLayout) {
+        setTutorialDebugState({
+          lastFailureReason: 'homehub-scroll-target-unresolved',
+          lastScrollMode: 'fallback',
+          windowScrollY: Platform.OS === 'web' && typeof window !== 'undefined' ? window.scrollY : null,
+        });
+        return runFallbackScroll();
+      }
+
+      queueTutorialRefresh([60, 160, 300]);
+      setTutorialDebugState({
+        lastFailureReason: null,
+        lastResolvedTargetId: targetStepId,
+        lastScrollMode: 'target',
+        windowScrollY: Platform.OS === 'web' && typeof window !== 'undefined' ? window.scrollY : null,
+      });
+      return resolvedLayout;
+    });
+  }, [getStepById, insets.bottom, insets.top, queueTutorialRefresh, scrollToSection, tabBarHeight]);
+
+  const scrollToSearchSection = useCallback(() => (
+    scrollToTutorialTarget('homehub-searchEvents', 'search')
+  ), [scrollToTutorialTarget]);
+
+  const scrollToLeagueSection = useCallback(() => (
+    scrollToTutorialTarget('homehub-league', 'league')
+  ), [scrollToTutorialTarget]);
+
+  const scrollToProfileSection = useCallback(() => (
+    scrollToTutorialTarget('homehub-profileView', 'profile')
+  ), [scrollToTutorialTarget]);
+
+  const scrollToQuickSection = useCallback(() => (
+    scrollToTutorialTarget('homehub-quickPlanning', 'quick')
+  ), [scrollToTutorialTarget]);
+
+  const scrollToAccountSection = useCallback(() => (
+    scrollToTutorialTarget('homehub-accountSwitch', 'account')
+  ), [scrollToTutorialTarget]);
 
   const getHomeHubSectionForStepId = useCallback((stepId) => {
     if (!stepId || typeof stepId !== 'string') return null;
@@ -489,7 +765,7 @@ function HomeHubContent({ auth, navigation, route }) {
         if (currentSection === 'top') {
           scrollToTop();
         } else {
-          scrollToSection(currentSection);
+          scrollToTutorialTarget(currentId, currentSection);
         }
       }
     }
@@ -503,7 +779,7 @@ function HomeHubContent({ auth, navigation, route }) {
     currentStepIndex,
     getHomeHubSectionForStepId,
     isOnboardingActive,
-    scrollToSection,
+    scrollToTutorialTarget,
     scrollToTop,
   ]);
 
@@ -593,29 +869,33 @@ function HomeHubContent({ auth, navigation, route }) {
   const startHomeTutorial = useCallback(() => {
     closeTutorialModals();
     homeHubTutorial.resetTutorial();
-    scrollRef.current?.scrollTo({ animated: false, y: 0 });
-    InteractionManager.runAfterInteractions(() => {
-      launchHomeTutorialFlow();
+    scrollToTop().finally(() => {
+      InteractionManager.runAfterInteractions(() => {
+        launchHomeTutorialFlow();
+      });
     });
-  }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow]);
+  }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow, scrollToTop]);
 
   const handleEntryStartTutorial = useCallback(() => {
+    homeHubEntryPopup.trackEvent('accepted', { action: 'start_tutorial' });
     homeHubTutorial.setEntryChoice('start');
     homeHubTutorial.setAutoEnabled(true);
     setIsEntryGateVisible(false);
     closeTutorialModals();
     homeHubTutorial.resetTutorial();
-    scrollRef.current?.scrollTo({ animated: false, y: 0 });
-    InteractionManager.runAfterInteractions(() => {
-      launchHomeTutorialFlow();
+    scrollToTop().finally(() => {
+      InteractionManager.runAfterInteractions(() => {
+        launchHomeTutorialFlow();
+      });
     });
-  }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow]);
+  }, [closeTutorialModals, homeHubEntryPopup, homeHubTutorial, launchHomeTutorialFlow, scrollToTop]);
 
   const handleEntrySkipTutorial = useCallback(() => {
+    homeHubEntryPopup.dismiss();
     homeHubTutorial.skipAllAuto();
     setIsEntryGateVisible(false);
     closeTutorialModals();
-  }, [closeTutorialModals, homeHubTutorial]);
+  }, [closeTutorialModals, homeHubEntryPopup, homeHubTutorial]);
 
   const navigateToTutorial = useCallback((tutorialId) => {
     const tutorialParams = {
@@ -636,10 +916,11 @@ function HomeHubContent({ auth, navigation, route }) {
         return;
       case TutorialIds.CLUB_MEMBERSHIP_REQUESTS:
         if (!clubId) {
-          Alert.alert(
-            t('homeHub.alerts.noClub.title', 'Club introuvable'),
-            t('homeHub.alerts.noClub.description', 'Votre compte doit être rattaché à un club pour gérer ces demandes.'),
-          );
+          showBanner({
+            body: t('homeHub.alerts.noClub.description', 'Votre compte doit être rattaché à un club pour gérer ces demandes.'),
+            title: t('homeHub.alerts.noClub.title', 'Club introuvable'),
+            tone: 'error',
+          });
           return;
         }
         navigateAfterClosingModals(() => {
@@ -754,10 +1035,11 @@ function HomeHubContent({ auth, navigation, route }) {
         return;
       case TutorialIds.TEAM_MEMBERSHIP_REQUESTS:
         if (!trainedTeamIds.length) {
-          Alert.alert(
-            t('homeHub.alerts.noTrainedTeams.title', 'Aucune équipe disponible'),
-            t('homeHub.alerts.noTrainedTeams.description', 'Vous devez être entraîneur d\'au moins une équipe pour gérer les demandes d\'adhésion.'),
-          );
+          showBanner({
+            body: t('homeHub.alerts.noTrainedTeams.description', 'Vous devez être entraîneur d\'au moins une équipe pour gérer les demandes d\'adhésion.'),
+            title: t('homeHub.alerts.noTrainedTeams.title', 'Aucune équipe disponible'),
+            tone: 'error',
+          });
           return;
         }
         navigateAfterClosingModals(() => {
@@ -771,29 +1053,33 @@ function HomeHubContent({ auth, navigation, route }) {
 
       default:
     }
-  }, [clubId, cmId, navigateAfterClosingModals, navigation, t, trainedTeamIds, userData]);
+  }, [clubId, cmId, navigateAfterClosingModals, navigation, showBanner, t, trainedTeamIds, userData]);
 
   const handleResetAllTutorials = useCallback(() => {
-    Alert.alert(
-      t('homeHubTutorial.reset.title', 'Réinitialiser les tutoriels'),
-      t('homeHubTutorial.reset.description', 'Tous les tutoriels seront remis a zero pour ce compte.'),
-      [
-        { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
-        {
-          onPress: () => {
-            homeHubTutorial.resetAllTutorials();
-            closeTutorialModals();
-            scrollRef.current?.scrollTo({ animated: false, y: 0 });
-            InteractionManager.runAfterInteractions(() => {
-              launchHomeTutorialFlow();
-            });
-          },
-          style: 'destructive',
-          text: t('homeHubTutorial.reset.confirm', 'Réinitialiser'),
+    openContextualPrompt({
+      body: t('homeHubTutorial.reset.description', 'Tous les tutoriels seront remis a zero pour ce compte.'),
+      primaryAction: {
+        label: t('homeHubTutorial.reset.confirm', 'Réinitialiser'),
+        onPress: () => {
+          closeContextualPrompt();
+          homeHubTutorial.resetAllTutorials();
+          closeTutorialModals();
+          scrollRef.current?.scrollTo({ animated: false, y: 0 });
+          InteractionManager.runAfterInteractions(() => {
+            launchHomeTutorialFlow();
+          });
         },
-      ],
-    );
-  }, [closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow, t]);
+        variant: 'Primary',
+      },
+      secondaryAction: {
+        label: t('common.actions.cancel', 'Annuler'),
+        onPress: closeContextualPrompt,
+        variant: 'Secondary',
+      },
+      title: t('homeHubTutorial.reset.title', 'Réinitialiser les tutoriels'),
+      tone: 'critical',
+    });
+  }, [closeContextualPrompt, closeTutorialModals, homeHubTutorial, launchHomeTutorialFlow, openContextualPrompt, t]);
 
   const handleOpenLeague = useCallback(() => {
     const targetRoute = RouteNames.LeagueHomeTab;
@@ -832,10 +1118,11 @@ function HomeHubContent({ auth, navigation, route }) {
   const handleOpenRequestsHub = useCallback((initialFilter = 'all') => {
     const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
     if (!hasRequestsContext) {
-      Alert.alert(
-        t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
-        t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
-      );
+      showBanner({
+        body: t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
+        title: t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
+        tone: 'error',
+      });
       return;
     }
 
@@ -843,7 +1130,7 @@ function HomeHubContent({ auth, navigation, route }) {
       initialFilter,
       source: 'home',
     });
-  }, [clubId, cmId, navigation, t, trainedTeamIds.length]);
+  }, [clubId, cmId, navigation, showBanner, t, trainedTeamIds.length]);
 
   const handleOpenManageClub = useCallback(() => {
     if (clubId) {
@@ -859,11 +1146,12 @@ function HomeHubContent({ auth, navigation, route }) {
       return;
     }
 
-    Alert.alert(
-      t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
-      t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
-    );
-  }, [clubId, cmId, navigation, t]);
+    showBanner({
+      body: t('homeHub.alerts.missingContext.description', 'Aucun club disponible pour gérer les demandes à la une.'),
+      title: t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
+      tone: 'error',
+    });
+  }, [clubId, cmId, navigation, showBanner, t]);
 
   const handleOpenProfile = useCallback(() => {
     const currentUserId = userData?.documentId || userData?.id;
@@ -913,19 +1201,25 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [navigation]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert(
-      t('homeHub.account.logoutTitle', 'Déconnexion'),
-      t('homeHub.account.logoutDescription', 'Voulez-vous vous déconnecter de votre compte ?'),
-      [
-        { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
-        {
-          onPress: () => logoutMutation.mutate(fcmToken || ''),
-          style: 'destructive',
-          text: t('profile.actions.logout', 'Déconnexion'),
+    openContextualPrompt({
+      body: t('homeHub.account.logoutDescription', 'Voulez-vous vous déconnecter de votre compte ?'),
+      primaryAction: {
+        label: t('profile.actions.logout', 'Déconnexion'),
+        onPress: () => {
+          closeContextualPrompt();
+          logoutMutation.mutate(fcmToken || '');
         },
-      ],
-    );
-  }, [fcmToken, logoutMutation, t]);
+        variant: 'Primary',
+      },
+      secondaryAction: {
+        label: t('common.actions.cancel', 'Annuler'),
+        onPress: closeContextualPrompt,
+        variant: 'Secondary',
+      },
+      title: t('homeHub.account.logoutTitle', 'Déconnexion'),
+      tone: 'critical',
+    });
+  }, [closeContextualPrompt, fcmToken, logoutMutation, openContextualPrompt, t]);
 
   const roleLabel = useMemo(() => {
     if (isCoach) return t('homeHub.roles.coach', 'Entraîneur');
@@ -965,6 +1259,7 @@ function HomeHubContent({ auth, navigation, route }) {
     id: `homehub-${id}`,
     nextAction: options.nextAction,
     nextLabel: options.nextLabel,
+    nextTargetStepId: options.nextTargetStepId,
     onNext: options.onNext,
     order,
     title: t(`homeHubTutorial.steps.${id}.title`, fallbackTitle),
@@ -1030,6 +1325,7 @@ function HomeHubContent({ auth, navigation, route }) {
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
               onNext: scrollToSearchSection,
             },
           ),
@@ -1050,6 +1346,7 @@ function HomeHubContent({ auth, navigation, route }) {
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
               onNext: scrollToSearchSection,
             },
           ),
@@ -1110,6 +1407,7 @@ function HomeHubContent({ auth, navigation, route }) {
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
               onNext: scrollToSearchSection,
             },
           ),
@@ -1130,6 +1428,7 @@ function HomeHubContent({ auth, navigation, route }) {
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
+              nextTargetStepId: 'homehub-searchEvents',
               onNext: scrollToSearchSection,
             },
           ),
@@ -1206,6 +1505,7 @@ function HomeHubContent({ auth, navigation, route }) {
           {
             nextAction: 'scrollDown',
             nextLabel: scrollDownLabel,
+            nextTargetStepId: 'homehub-league',
             onNext: scrollToLeagueSection,
           },
         ),
@@ -1230,6 +1530,7 @@ function HomeHubContent({ auth, navigation, route }) {
           {
             nextAction: 'scrollDown',
             nextLabel: scrollDownLabel,
+            nextTargetStepId: 'homehub-league',
             onNext: scrollToLeagueSection,
           },
         ),
@@ -1257,6 +1558,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           nextAction: 'scrollDown',
           nextLabel: scrollDownLabel,
+          nextTargetStepId: 'homehub-profileView',
           onNext: scrollToProfileSection,
         },
       ),
@@ -1307,6 +1609,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           nextAction: 'scrollDown',
           nextLabel: scrollDownLabel,
+          nextTargetStepId: 'homehub-quickPlanning',
           onNext: scrollToQuickSection,
         },
       ),
@@ -1358,6 +1661,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {
           nextAction: 'scrollDown',
           nextLabel: scrollDownLabel,
+          nextTargetStepId: 'homehub-accountSwitch',
           onNext: scrollToAccountSection,
         },
       ),
@@ -1417,8 +1721,8 @@ function HomeHubContent({ auth, navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentWidth="wide"
       contentContainerStyle={[Spaces.paddingBottom[24], Alignments.column, Alignments.fill]}
+      contentWidth="wide"
       responsivePadding
     >
       <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
@@ -1439,6 +1743,7 @@ function HomeHubContent({ auth, navigation, route }) {
           id="homehub-header"
           nextAction={!hasManageSection ? 'scrollDown' : undefined}
           nextLabel={!hasManageSection ? scrollDownLabel : undefined}
+          nextTargetStepId={!hasManageSection ? 'homehub-searchEvents' : undefined}
           onNext={!hasManageSection ? scrollToSearchSection : undefined}
           order={1}
           spotlight={{
@@ -1454,23 +1759,23 @@ function HomeHubContent({ auth, navigation, route }) {
           </View>
         </OnboardingWrapper>
 
-        <View onLayout={(event) => registerSectionAnchor('manage', event)}>
-          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />
+        <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
+          <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.manageClub')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('search', event)}>
-          <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.search')} />
+        <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>
+          <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.search')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('league', event)}>
-          <HomeSection Alignments={Alignments} cards={leagueCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.league')} />
+        <View onLayout={(event) => registerSectionAnchor('league', event)} ref={(node) => registerSectionViewRef('league', node)}>
+          <HomeSection Alignments={Alignments} cards={leagueCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.league')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('profile', event)}>
-          <HomeSection Alignments={Alignments} cards={profileCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.profile')} />
+        <View onLayout={(event) => registerSectionAnchor('profile', event)} ref={(node) => registerSectionViewRef('profile', node)}>
+          <HomeSection Alignments={Alignments} cards={profileCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.profile')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('quick', event)}>
-          <HomeSection Alignments={Alignments} cards={quickNavCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.quickNav')} />
+        <View onLayout={(event) => registerSectionAnchor('quick', event)} ref={(node) => registerSectionViewRef('quick', node)}>
+          <HomeSection Alignments={Alignments} cards={quickNavCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.quickNav')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('account', event)}>
-          <HomeSection Alignments={Alignments} cards={accountCards} Fonts={Fonts} Spaces={Spaces} title={t('homeHub.sections.account')} />
+        <View onLayout={(event) => registerSectionAnchor('account', event)} ref={(node) => registerSectionViewRef('account', node)}>
+          <HomeSection Alignments={Alignments} cards={accountCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.account')} />
         </View>
       </ScrollView>
 
@@ -1506,10 +1811,10 @@ function HomeHubContent({ auth, navigation, route }) {
         </>
       ) : null}
 
-      {isEntryGateVisible ? (
+      {shouldRenderLegacyEntryGate ? (
         <View
           style={[
-            Alignments.absolute,
+            Platform.OS === 'web' ? null : Alignments.absolute,
             Alignments.justifyCenter,
             Alignments.alignCenter,
             Spaces.paddingHorizontal[24],
@@ -1517,6 +1822,9 @@ function HomeHubContent({ auth, navigation, route }) {
               backgroundColor: 'rgba(0, 18, 24, 0.88)',
               bottom: 0,
               left: 0,
+              paddingBottom: entryGateBottomInset,
+              paddingTop: entryGateTopInset,
+              position: Platform.OS === 'web' ? 'fixed' : 'absolute',
               right: 0,
               top: 0,
               zIndex: 60,
@@ -1533,6 +1841,7 @@ function HomeHubContent({ auth, navigation, route }) {
               {
                 alignSelf: 'center',
                 borderColor: `${Colors.primary500}66`,
+                maxHeight: entryGateMaxHeight,
                 maxWidth: 380,
                 width: '100%',
               },
@@ -1579,6 +1888,50 @@ function HomeHubContent({ auth, navigation, route }) {
           </View>
         </View>
       ) : null}
+
+      <GlobalPromptModal
+        body={t(
+          'homeHubTutorial.entry.subtitle',
+          'FoundClub est un outil conçu pour vous accompagner dans toute votre aventure sportive, peu importe votre sport.',
+        )}
+        headerContent={(
+          <Image
+            resizeMode="contain"
+            source={Images.logo}
+            style={{
+              alignSelf: 'center',
+              height: 20,
+              maxWidth: 186,
+              minWidth: 140,
+              width: '62%',
+            }}
+          />
+        )}
+        onRequestClose={handleEntrySkipTutorial}
+        primaryAction={{
+          label: t('homeHubTutorial.entry.actions.start', 'Lancer le tutoriel complet'),
+          onPress: handleEntryStartTutorial,
+        }}
+        secondaryAction={{
+          label: t('homeHubTutorial.entry.actions.skip', 'Plus tard'),
+          onPress: handleEntrySkipTutorial,
+        }}
+        supportingText={t(
+          'homeHubTutorial.entry.description',
+          "Vous pouvez lancer le tutoriel complet pour tout comprendre, ou explorer l'application par vous-même.",
+        )}
+        title={t('homeHubTutorial.entry.title', 'Bienvenue sur FoundClub')}
+        visible={isHomeHubEntryGateVisible}
+      />
+      <GlobalPromptModal
+        body={contextualPrompt?.body}
+        onRequestClose={closeContextualPrompt}
+        primaryAction={contextualPrompt?.primaryAction}
+        secondaryAction={contextualPrompt?.secondaryAction}
+        title={contextualPrompt?.title || ''}
+        tone={contextualPrompt?.tone || 'primary'}
+        visible={Boolean(contextualPrompt)}
+      />
 
       <ExternalCompetitionPromptGate
         enabled={isExternalCompetitionPromptEnabled}

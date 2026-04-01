@@ -176,32 +176,32 @@ function PrivateNavigator() {
 
       <Stack.Screen
         component={ProfileStack}
-        name="ProfileStack"
+        name={RouteNames.ProfileStack}
         options={{ headerShown: false }}
       />
 
       <Stack.Screen
         component={ClubStack}
-        name="ClubStack"
+        name={RouteNames.ClubStack}
         options={{ headerShown: false }}
       />
 
       <Stack.Screen
         component={TeamStack}
-        name="TeamStack"
+        name={RouteNames.TeamStack}
         options={{ headerShown: false }}
       />
 
       <Stack.Screen
         component={EventStack}
-        name="EventStack"
+        name={RouteNames.EventStack}
         options={{ headerShown: false }}
       />
 
       {userData?.role?.name === USER_ROLES.superAdmin ? (
         <Stack.Screen
           component={AdminStack}
-          name="AdminStack"
+          name={RouteNames.AdminStack}
           options={{ headerShown: false }}
         />
       ) : null}
@@ -233,7 +233,7 @@ function PrivateNavigator() {
       />
       <Stack.Screen
         component={AdWizardStack}
-        name="AdWizardStack"
+        name={RouteNames.AdWizardStack}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -286,7 +286,7 @@ function PrivateNavigator() {
       />
       <Stack.Screen
         component={CMDashboard}
-        name="CMDashboard"
+        name={RouteNames.CMDashboard}
         options={{
           ...commonOptions,
           headerTitle: 'Gestion CM',
@@ -370,7 +370,7 @@ function PrivateNavigator() {
       />
       <Stack.Screen
         component={NewConversation}
-        name="NewConversation"
+        name={RouteNames.NewConversation}
         options={{
           ...commonOptions,
           headerShown: false,

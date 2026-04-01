@@ -36,6 +36,7 @@ export const RouteNames = /** @type {const} */ ({
   EventDetails: 'EventDetails',
   EventEdit: 'EventEdit',
   EventFilters: 'EventFilters',
+  EndMatchScreen: 'EndMatchScreen',
   FacilityForm: 'FacilityForm',
   FacilityList: 'FacilityList',
   FeaturedRequests: 'FeaturedRequests',
@@ -44,6 +45,8 @@ export const RouteNames = /** @type {const} */ ({
   HomeTab: 'HomeTab',
   Login: 'Login',
   MatchStatsEditor: 'MatchStatsEditor',
+  MatchCenter: 'MatchCenter',
+  MatchHistoryScreen: 'MatchHistoryScreen',
   MercatoFilters: 'MercatoFilters',
   MissingPlayersView: 'MissingPlayersView',
   MultisportClubDetails: 'MultisportClubDetails',
@@ -51,6 +54,7 @@ export const RouteNames = /** @type {const} */ ({
   MyClubs: 'MyClubs',
   MyEventList: 'MyEventList',
   MyTeamList: 'MyTeamList',
+  NewConversation: 'NewConversation',
   NotificationDetails: 'NotificationDetails',
   NotificationList: 'NotificationList',
   PendingMatchStats: 'PendingMatchStats',
@@ -156,6 +160,7 @@ export const RouteNames = /** @type {const} */ ({
 
   // League Tabs (Gold Mode)
   LeagueDashboard: 'LeagueDashboard', // Dedicated screen name
+  LeagueHome: 'LeagueHome',
   LeagueHomeTab: 'LeagueHomeTab',
   LeagueMatchDetails: 'LeagueMatchDetails', // Standalone match details
   LeagueMatchTab: 'LeagueMatchTab',

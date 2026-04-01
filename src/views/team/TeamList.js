@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -13,12 +13,18 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
+import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 /**
  * Team list screen component
@@ -32,50 +38,37 @@ function TeamList({ navigation, route }) {
   const assignmentTrainerName = route?.params?.assignmentTrainerName;
   const assignmentTrainerId = route?.params?.assignmentTrainerId;
   const openAssignTrainerGuide = route?.params?.openAssignTrainerGuide;
-  const isTrainerGuideAlertOpenRef = useRef(false);
-  const canShowTrainerGuide = useBlockingOverlayPrompt(
-    'team-assign-trainer-guide',
+  const trainerGuidePopup = usePopupEligibility(
+    POPUP_IDS.TEAM_ASSIGN_TRAINER_GUIDE,
     Boolean(openAssignTrainerGuide),
-    35,
+    {
+      cooldownKey: assignmentTrainerId || assignmentTrainerName || clubId || 'default',
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
+  );
+  const canShowTrainerGuide = useBlockingOverlayPrompt(
+    trainerGuidePopup.descriptor.id,
+    trainerGuidePopup.canShow,
+    trainerGuidePopup.descriptor.priority,
+  );
+  const isTrainerGuideVisible = Boolean(
+    openAssignTrainerGuide
+    && trainerGuidePopup.canShow
+    && canShowTrainerGuide,
   );
 
-  // Effects
   useFocusEffect(() => {
     refetchUserData();
   });
 
   useEffect(() => {
-    if (
-      !openAssignTrainerGuide
-      || !canShowTrainerGuide
-      || isTrainerGuideAlertOpenRef.current
-    ) {
-      return;
-    }
+    if (!isTrainerGuideVisible) return;
+    trainerGuidePopup.markShown({
+      assignmentTrainerId,
+      assignmentTrainerName,
+    });
+  }, [assignmentTrainerId, assignmentTrainerName, isTrainerGuideVisible, trainerGuidePopup]);
 
-    isTrainerGuideAlertOpenRef.current = true;
-    let dismissed = false;
-    const finalize = () => {
-      if (dismissed) return;
-      dismissed = true;
-      isTrainerGuideAlertOpenRef.current = false;
-      navigation.setParams({
-        openAssignTrainerGuide: false,
-      });
-    };
-
-    Alert.alert(
-      'Assigner un entraîneur',
-      `${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1) Ouvrez une équipe.\n2) Appuyez sur "Modifier".\n3) Dans la section "Entraîneurs", ajoutez puis validez.`,
-      [{ onPress: finalize, text: t('common.actions.ok', 'OK') }],
-      {
-        cancelable: true,
-        onDismiss: finalize,
-      },
-    );
-  }, [assignmentTrainerName, canShowTrainerGuide, navigation, openAssignTrainerGuide, t]);
-
-  // hooks
   const {
     Alignments,
     Spaces,
@@ -85,6 +78,13 @@ function TeamList({ navigation, route }) {
     navigation.navigate(RouteNames.TeamStack, {
       params: { clubId },
       screen: RouteNames.TeamWizardName,
+    });
+  };
+
+  const dismissTrainerGuide = () => {
+    trainerGuidePopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+    navigation.setParams({
+      openAssignTrainerGuide: false,
     });
   };
 
@@ -112,12 +112,14 @@ function TeamList({ navigation, route }) {
         ]}
         responsiveHorizontalPadding
       >
-        <View style={[
-          Spaces.marginTop[16],
-          Spaces.marginBottom[24],
-          Alignments.row,
-          Alignments.alignCenter,
-          Alignments.justifySpaceBetween]}
+        <View
+          style={[
+            Spaces.marginTop[16],
+            Spaces.marginBottom[24],
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+          ]}
         >
           <LeagueHeaderSwitch />
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
@@ -125,6 +127,7 @@ function TeamList({ navigation, route }) {
             <ProfileButton />
           </View>
         </View>
+
         <OnboardingWrapper
           description="Consultez vos équipes, les demandes et ouvrez chaque fiche équipe."
           id="team-list-main-content"
@@ -145,16 +148,26 @@ function TeamList({ navigation, route }) {
             clubId={clubId}
           />
         </OnboardingWrapper>
-        {
-          canManageTeam ? (
-            <Button
-              onPress={handleAddTeam}
-              style={[Spaces.marginTop[16]]}
-              title={`+ ${t('teamList.actions.add')}`}
-              variant="Primary"
-            />
-          ) : null
-        }
+
+        {canManageTeam ? (
+          <Button
+            onPress={handleAddTeam}
+            style={[Spaces.marginTop[16]]}
+            title={`+ ${t('teamList.actions.add')}`}
+            variant="Primary"
+          />
+        ) : null}
+
+        <GlobalPromptModal
+          body={`${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans votre club.\n\n1. Ouvrez une équipe.\n2. Appuyez sur "Modifier".\n3. Dans la section "Entraîneurs", ajoutez-le puis validez.`}
+          onRequestClose={dismissTrainerGuide}
+          primaryAction={{
+            label: t('common.actions.ok', 'OK'),
+            onPress: dismissTrainerGuide,
+          }}
+          title="Assigner un entraîneur"
+          visible={isTrainerGuideVisible}
+        />
       </ScreenContainer>
     </TutorialFlowBoundary>
   );

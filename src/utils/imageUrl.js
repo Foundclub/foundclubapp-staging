@@ -1,3 +1,5 @@
+import { getPublicApiOrigin } from '@/config/runtimeUrls';
+
 /**
  * Transform image URL from Strapi to work with Android emulator
  * @param {string | undefined} url - The image URL from Strapi
@@ -17,9 +19,7 @@ export const getImageUrl = (url) => {
 
   // If it's a relative URL, prepend the API base URL
   if (url.startsWith('/')) {
-    const apiUrl = process.env.API_URL || 'http://10.0.2.2:1337/api';
-    const baseUrl = apiUrl.replace('/api', '');
-    return `${baseUrl}${url}`;
+    return `${getPublicApiOrigin()}${url}`;
   }
 
   // Otherwise return as is

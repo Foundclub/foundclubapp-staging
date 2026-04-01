@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
+import { getUploadEndpoint } from '@/config/runtimeUrls';
 import client from '../client';
 
 /**
@@ -509,12 +510,16 @@ export const uploadFile = async (file) => {
     const { getAuthTokens } = require('../../domains/auth/authUseCases');
     const auth = getAuthTokens();
     const token = auth?.token;
+    const uploadEndpoint = getUploadEndpoint();
+    if (!uploadEndpoint) {
+      throw new Error('Upload endpoint is missing');
+    }
 
-    console.log('[DEBUG] UPLOAD URL:', `${process.env.API_URL}/upload`);
+    console.log('[DEBUG] UPLOAD URL:', uploadEndpoint);
     console.log('[DEBUG] UPLOAD Headers:', JSON.stringify({ Authorization: token ? 'Bearer [HIDDEN]' : 'None' }));
 
     // Use native fetch to avoid Axios issues with FormData on Android
-    const response = await fetch(`${process.env.API_URL}/upload`, {
+    const response = await fetch(uploadEndpoint, {
       body: formData,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

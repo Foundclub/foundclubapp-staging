@@ -31,6 +31,8 @@ function Login({ navigation }) {
   const {
     cancelAddAccount, canShowCodeButton, confirm, isAddingAccount, isLoading, loginMutation, otpMutation,
   } = useAuth();
+  const authErrorMessage = loginMutation.error?.message || otpMutation.error?.message || '';
+  const isWebBypassEnabled = Platform.OS === 'web' && process.env.BYPASS_FIREBASE_AUTH === 'true';
 
   /**
    * Handle form submit
@@ -94,6 +96,16 @@ function Login({ navigation }) {
                 onSubmit={handleFormSubmit}
               />
             )}
+          {canShowCodeButton && isWebBypassEnabled ? (
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              Mode local actif : n importe quel code a 6 chiffres fonctionne.
+            </Text>
+          ) : null}
+          {authErrorMessage ? (
+            <Text style={[Fonts.p2, Fonts.error700]}>
+              {authErrorMessage}
+            </Text>
+          ) : null}
         </View>
         {canShowCodeButton ? null : (
           <View style={[Spaces.gap[16], Spaces.marginTop[16]]}>

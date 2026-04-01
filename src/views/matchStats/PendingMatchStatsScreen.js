@@ -151,6 +151,26 @@ function PendingMatchStatsScreen({ navigation }) {
     [promptItems],
   );
 
+  const handleOpenPrompt = useCallback((prompt) => {
+    if (!prompt) return;
+
+    const targetRoute = prompt?.actionType === 'player_self_report'
+      ? RouteNames.PlayerMatchResponse
+      : RouteNames.MatchStatsEditor;
+
+    navigation.navigate(targetRoute, {
+      ...(prompt?.sourceType === 'league' ? { matchId: prompt?.matchId } : { eventId: prompt?.eventId }),
+      actionType: prompt?.actionType || 'coach_team_review',
+      actorRole: prompt?.actorRole || 'player',
+      matchLabel: prompt?.label || 'Match',
+      sourceType: prompt?.sourceType === 'league' ? 'league' : 'event',
+      sport: prompt?.sport || 'football',
+      teamId: prompt?.team?.documentId || undefined,
+      teamName: prompt?.team?.name || null,
+      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
+    });
+  }, [navigation]);
+
   if (isLoading && !promptItems.length) {
     return (
       <ScreenContainer bgImage="bg2">
@@ -206,26 +226,6 @@ function PendingMatchStatsScreen({ navigation }) {
     );
   }
 
-  const handleOpenPrompt = useCallback((prompt) => {
-    if (!prompt) return;
-
-    const targetRoute = prompt?.actionType === 'player_self_report'
-      ? RouteNames.PlayerMatchResponse
-      : RouteNames.MatchStatsEditor;
-
-    navigation.navigate(targetRoute, {
-      ...(prompt?.sourceType === 'league' ? { matchId: prompt?.matchId } : { eventId: prompt?.eventId }),
-      actionType: prompt?.actionType || 'coach_team_review',
-      actorRole: prompt?.actorRole || 'player',
-      matchLabel: prompt?.label || 'Match',
-      sourceType: prompt?.sourceType === 'league' ? 'league' : 'event',
-      sport: prompt?.sport || 'football',
-      teamId: prompt?.team?.documentId || undefined,
-      teamName: prompt?.team?.name || null,
-      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan equipe',
-    });
-  }, [navigation]);
-
   const renderPromptCard = ({ item }) => {
     const statusMeta = getPromptStatusMeta(item, Colors);
 
@@ -242,7 +242,7 @@ function PendingMatchStatsScreen({ navigation }) {
           Spaces.gap[isCompactMobile ? 10 : 12],
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{item?.label || 'Match'}</Text>
             <Text style={[Fonts.p3, Fonts.primary100]}>
@@ -265,7 +265,7 @@ function PendingMatchStatsScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p4, Fonts.neutral300]}>Fin du match</Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>{formatPromptDate(item?.endedAt || item?.updatedAt)}</Text>
@@ -296,7 +296,7 @@ function PendingMatchStatsScreen({ navigation }) {
 
   return (
     <ScreenContainer bgImage="bg2">
-      <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.marginBottom[16]]}>
+      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[16]]}>
         <HeaderBackButton
           borderColor="primary500"
           color="primary500"

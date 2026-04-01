@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "eas-build-pre-install": "node ./scripts/secrets/prepare-eas-secrets.js",
+    "eas-build-pre-install": "node ./scripts/secrets/prepare-eas-secrets.js && node ./scripts/validate-runtime-env.js",
     "postinstall": "patch-package",
     "android": "react-native run-android",
     "android:staging": "cross-env APP_ENV=staging react-native run-android --mode=stagingDebug --appId com.foundclub.staging",

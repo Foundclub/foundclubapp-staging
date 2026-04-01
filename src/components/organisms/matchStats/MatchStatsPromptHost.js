@@ -24,7 +24,12 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStatsQueries';
 
+import {
+  POPUP_DISMISS_SCOPES,
+  POPUP_IDS,
+} from '@/constants/popupRegistry';
 import { useBlockingOverlayPrompt } from '@/context/BlockingOverlayContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 
 const BLOCKED_ROUTES = new Set([
   RouteNames.EventDetails,
@@ -155,6 +160,7 @@ function MatchStatsPromptHost() {
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
   const appStateRef = useRef(AppState.currentState);
+  const shownPromptKeyRef = useRef(/** @type {string | null} */ (null));
   const { height, width } = useWindowDimensions();
 
   const {
@@ -183,12 +189,20 @@ function MatchStatsPromptHost() {
     && !isBlockedRoute
     && (!dismissedPromptKey || dismissedPromptKey !== nextPrompt.key),
   );
-  const canShowPrompt = useBlockingOverlayPrompt(
-    'match-stats-prompt',
+  const matchStatsPopup = usePopupEligibility(
+    POPUP_IDS.MATCH_STATS_PROMPT,
     shouldShowPrompt,
-    65,
+    {
+      cooldownKey: nextPrompt?.key || 'default',
+      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+    },
   );
-  const isVisible = shouldShowPrompt && canShowPrompt;
+  const canShowPrompt = useBlockingOverlayPrompt(
+    matchStatsPopup.descriptor.id,
+    matchStatsPopup.canShow,
+    matchStatsPopup.descriptor.priority,
+  );
+  const isVisible = Boolean(shouldShowPrompt && matchStatsPopup.canShow && canShowPrompt);
   const sectionGap = isCompactMobile ? 16 : 24;
   const titleGap = isCompactMobile ? 12 : 16;
   const cardPadding = isCompactMobile ? 16 : 24;
@@ -263,7 +277,18 @@ function MatchStatsPromptHost() {
     if (nextPrompt?.key) {
       setDismissedPromptKey(nextPrompt.key);
     }
-  }, [nextPrompt?.key]);
+    matchStatsPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
+  }, [matchStatsPopup, nextPrompt?.key]);
+
+  useEffect(() => {
+    if (!isVisible || !nextPrompt?.key) {
+      shownPromptKeyRef.current = null;
+      return;
+    }
+    if (shownPromptKeyRef.current === nextPrompt.key) return;
+    shownPromptKeyRef.current = nextPrompt.key;
+    matchStatsPopup.markShown({ promptKey: nextPrompt.key });
+  }, [isVisible, matchStatsPopup, nextPrompt?.key]);
 
   const handleOpenEditor = useCallback(() => {
     if (!nextPrompt) return;
@@ -366,7 +391,7 @@ function MatchStatsPromptHost() {
               },
             ]}
           >
-            <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[16]]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>Match</Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nextPrompt?.label || 'Match'}</Text>
@@ -389,7 +414,7 @@ function MatchStatsPromptHost() {
               </View>
             </View>
 
-            <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[16]]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>Equipe</Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary100]}>
@@ -404,7 +429,7 @@ function MatchStatsPromptHost() {
               </View>
             </View>
 
-            <View style={[Alignments.row, Alignments.justifyBetween, Alignments.alignCenter, Spaces.gap[16]]}>
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>Fin du match</Text>
                 <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
@@ -426,7 +451,7 @@ function MatchStatsPromptHost() {
             <View
               style={[
                 ApplicationStyle.card,
-                ApplicationStyle.borderRadius20,
+                { borderRadius: 20 },
                 Spaces.paddingHorizontal[summaryBannerPaddingHorizontal],
                 Spaces.paddingVertical[summaryBannerPaddingVertical],
                 {

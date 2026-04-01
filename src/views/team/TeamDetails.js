@@ -66,6 +66,7 @@ import { getImageUrl } from '@/utils/imageUrl';
 
 /**
  * @typedef {{ externalTeamId?: string | null; externalTeamName: string }} ExternalTeamOption
+ * @typedef {{ externalTeamId?: string | null; externalTeamName: string; confidence?: string | null; reason?: string | null }} RecommendedExternalTeamOption
  * @typedef {{ message?: string; response?: { data?: { code?: string; remainingSeconds?: number } } }} ApiError
  */
 
@@ -157,6 +158,13 @@ function TeamDetails({ navigation, route }) {
   const [showExternalSyncReportModal, setShowExternalSyncReportModal] = useState(false);
   const [ffbbUrl, setFfbbUrl] = useState('');
   const [ffbbTeamsList, setFfbbTeamsList] = useState(/** @type {ExternalTeamOption[]} */ ([]));
+  const [recommendedExternalTeam, setRecommendedExternalTeam] = useState(
+    /** @type {RecommendedExternalTeamOption | null} */ (null),
+  );
+  const [selectedExternalTeam, setSelectedExternalTeam] = useState(
+    /** @type {ExternalTeamOption | null} */ (null),
+  );
+  const [externalPreviewContext, setExternalPreviewContext] = useState(null);
   const [latestExternalSyncReport, setLatestExternalSyncReport] = useState(null);
   const [externalCompetitionPhase, setExternalCompetitionPhase] = useState(
     /** @type {'idle' | 'previewing' | 'connecting' | 'refreshing' | 'reporting'} */ ('idle'),
@@ -676,6 +684,9 @@ function TeamDetails({ navigation, route }) {
       return;
     }
     setActiveTab('standings');
+    setRecommendedExternalTeam(null);
+    setSelectedExternalTeam(null);
+    setExternalPreviewContext(null);
     setShowFFBBUrlModal(true);
   }, [isExternalCompetitionFlowLocked, notifyExternalCompetitionFlowLocked]);
 
@@ -687,13 +698,39 @@ function TeamDetails({ navigation, route }) {
       const result = await previewExternalCompetition(teamId, ffbbUrl, 'team-candidates');
       const payload = result?.data || result || {};
       const candidates = Array.isArray(payload.teamCandidates) ? payload.teamCandidates : [];
+      const recommendedCandidate = payload?.recommendedTeamSelection
+        ? {
+          confidence: payload.recommendedTeamSelection.confidence || null,
+          externalTeamId: payload.recommendedTeamSelection.externalTeamId || null,
+          externalTeamName: payload.recommendedTeamSelection.externalTeamName || '',
+          reason: payload.recommendedTeamSelection.reason || null,
+        }
+        : null;
       const normalizedCandidates = candidates
         .map((candidate) => ({
           externalTeamId: candidate.externalTeamId || null,
           externalTeamName: candidate.externalTeamName || '',
         }))
         .filter((candidate) => candidate.externalTeamName)
-        .sort((a, b) => a.externalTeamName.localeCompare(b.externalTeamName, 'fr'));
+        .sort((a, b) => {
+          const aIsRecommended = recommendedCandidate
+            && (
+              (recommendedCandidate.externalTeamId && a.externalTeamId
+                ? recommendedCandidate.externalTeamId === a.externalTeamId
+                : false)
+              || recommendedCandidate.externalTeamName === a.externalTeamName
+            );
+          const bIsRecommended = recommendedCandidate
+            && (
+              (recommendedCandidate.externalTeamId && b.externalTeamId
+                ? recommendedCandidate.externalTeamId === b.externalTeamId
+                : false)
+              || recommendedCandidate.externalTeamName === b.externalTeamName
+            );
+          if (aIsRecommended && !bIsRecommended) return -1;
+          if (!aIsRecommended && bIsRecommended) return 1;
+          return a.externalTeamName.localeCompare(b.externalTeamName, 'fr');
+        });
 
       if (!normalizedCandidates.length) {
         Alert.alert(
@@ -704,6 +741,21 @@ function TeamDetails({ navigation, route }) {
       }
 
       setFfbbTeamsList(normalizedCandidates);
+      setRecommendedExternalTeam(recommendedCandidate);
+      setSelectedExternalTeam(recommendedCandidate
+        ? normalizedCandidates.find((candidate) => (
+          (recommendedCandidate.externalTeamId && candidate.externalTeamId
+            ? recommendedCandidate.externalTeamId === candidate.externalTeamId
+            : false)
+          || recommendedCandidate.externalTeamName === candidate.externalTeamName
+        )) || null
+        : null);
+      setExternalPreviewContext({
+        provider: payload?.provider || null,
+        requestedUrl: payload?.requestedUrl || ffbbUrl,
+        sourceResolution: payload?.sourceResolution || null,
+        sourceUrl: payload?.sourceUrl || ffbbUrl,
+      });
       setShowFFBBUrlModal(false);
       setShowFFBBTeamModal(true);
     } catch (caughtError) {
@@ -724,6 +776,9 @@ function TeamDetails({ navigation, route }) {
     try {
       const result = await connectExternalCompetition(teamId, ffbbUrl, selectedTeam);
       setShowFFBBTeamModal(false);
+      setSelectedExternalTeam(null);
+      setRecommendedExternalTeam(null);
+      setExternalPreviewContext(null);
       applyExternalSyncFeedback(result);
     } finally {
       setExternalCompetitionPhase('idle');
@@ -778,6 +833,11 @@ function TeamDetails({ navigation, route }) {
     } catch (caughtError) {
       Alert.alert(t('common.error'), getErrorMessage(caughtError));
     }
+  };
+
+  const handleConfirmSelectedExternalTeam = async () => {
+    if (!selectedExternalTeam || isExternalCompetitionPhaseActive) return;
+    await handleSelectFFBBTeam(selectedExternalTeam);
   };
 
   // Handler for FFBB error reporting
@@ -886,6 +946,80 @@ function TeamDetails({ navigation, route }) {
     () => String(externalSyncReport?.provider || team?.externalProvider || '').toUpperCase() || null,
     [externalSyncReport?.provider, team?.externalProvider],
   );
+  const externalSyncRequestedUrl = useMemo(
+    () => externalSyncReport?.competition?.requestedUrl
+      || team?.externalConfig?.requestedUrl
+      || team?.externalStandingUrl
+      || null,
+    [externalSyncReport?.competition?.requestedUrl, team?.externalConfig?.requestedUrl, team?.externalStandingUrl],
+  );
+  const externalSyncResolvedSourceUrl = useMemo(
+    () => externalSyncReport?.competition?.sourceUrl
+      || team?.externalConfig?.sourceUrl
+      || team?.externalStandingUrl
+      || null,
+    [externalSyncReport?.competition?.sourceUrl, team?.externalConfig?.sourceUrl, team?.externalStandingUrl],
+  );
+  const formatExternalSourceResolutionLabel = useCallback((value) => {
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    if (!normalizedValue) return null;
+
+    const labels = {
+      direct: 'Lien competition direct',
+      normalized_direct: 'Lien source normalise',
+      stored_source: 'Source configuree existante',
+      'team-page-html': 'Page equipe FFBB resolue via le contenu HTML',
+      'team-page-rewrite': 'Page equipe FFBB resolue via redirection',
+    };
+
+    return labels[normalizedValue] || value;
+  }, []);
+  const externalSyncSourceResolution = useMemo(
+    () => externalSyncReport?.competition?.sourceResolution
+      || team?.externalConfig?.sourceResolution
+      || team?.externalConfig?.providerMetadata?.ffbbSourceResolution
+      || null,
+    [
+      externalSyncReport?.competition?.sourceResolution,
+      team?.externalConfig?.providerMetadata?.ffbbSourceResolution,
+      team?.externalConfig?.sourceResolution,
+    ],
+  );
+  const externalSyncSourceResolutionLabel = useMemo(
+    () => formatExternalSourceResolutionLabel(externalSyncSourceResolution),
+    [externalSyncSourceResolution, formatExternalSourceResolutionLabel],
+  );
+  const externalSyncProviderMetadata = useMemo(
+    () => externalSyncReport?.providerMetadata
+      || team?.externalConfig?.providerMetadata
+      || team?.externalConfig?.metadata
+      || null,
+    [externalSyncReport?.providerMetadata, team?.externalConfig?.metadata, team?.externalConfig?.providerMetadata],
+  );
+  const externalSyncStrategyLabel = useMemo(() => {
+    const standingsStrategy = externalSyncProviderMetadata?.standingsStrategy;
+    const calendarStrategy = externalSyncProviderMetadata?.calendarStrategy;
+
+    const formatStrategy = (label, value) => {
+      if (!value) return null;
+      const normalizedValue = String(value || '').trim();
+      const labels = {
+        ng_state_fallback: 'fallback ng-state',
+        secured_api: 'API securisee',
+        secured_api_monthly: 'API securisee mensuelle',
+        secured_api_scoped: 'API securisee ciblee',
+        secured_api_team: 'API securisee equipe',
+        skipped_preview: 'non charge en preview',
+        unavailable: 'indisponible',
+      };
+      return `${label}: ${labels[normalizedValue] || normalizedValue}`;
+    };
+
+    return [
+      formatStrategy('Classement', standingsStrategy),
+      formatStrategy('Calendrier', calendarStrategy),
+    ].filter(Boolean).join('  •  ') || null;
+  }, [externalSyncProviderMetadata]);
   const externalCompetitionEligible = useMemo(
     () => Boolean(currentUserTeamSummary?.externalCompetitionEligible),
     [currentUserTeamSummary?.externalCompetitionEligible],
@@ -1762,6 +1896,11 @@ function TeamDetails({ navigation, route }) {
               {`Provider: ${externalSyncProviderLabel}`}
             </Text>
           ) : null}
+          {externalSyncSourceResolutionLabel ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.resolutionMode', 'Mode de resolution')}: {externalSyncSourceResolutionLabel}
+            </Text>
+          ) : null}
           {externalSyncSelectedTeamName ? (
             <Text style={[Fonts.p3, Fonts.neutral00]}>
               {t('teamDetails.external.followedTeam', 'Equipe suivie')}: {externalSyncSelectedTeamName}
@@ -1775,6 +1914,21 @@ function TeamDetails({ navigation, route }) {
           {externalSyncUpdatedLabel ? (
             <Text style={[Fonts.p3, Fonts.primary100]}>
               {t('teamDetails.external.lastSync', 'Derniere synchronisation')}: {externalSyncUpdatedLabel}
+            </Text>
+          ) : null}
+          {externalSyncRequestedUrl ? (
+            <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.requestedSource', 'Lien demande')}: {externalSyncRequestedUrl}
+            </Text>
+          ) : null}
+          {externalSyncResolvedSourceUrl && externalSyncResolvedSourceUrl !== externalSyncRequestedUrl ? (
+            <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
+              {t('teamDetails.external.resolvedSource', 'Source resolue')}: {externalSyncResolvedSourceUrl}
+            </Text>
+          ) : null}
+          {externalSyncStrategyLabel ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {externalSyncStrategyLabel}
             </Text>
           ) : null}
           {externalConfigUpdatedLabel ? (
@@ -1851,6 +2005,28 @@ function TeamDetails({ navigation, route }) {
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{stat.value}</Text>
               </View>
             ))}
+          </View>
+        ) : null}
+
+        {team?.externalSyncError ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.padding[12],
+              Spaces.gap[4],
+              {
+                backgroundColor: `${Colors.error500}16`,
+                borderColor: `${Colors.error500}44`,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+              {t('teamDetails.external.errorTitle', 'Probleme de synchronisation')}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral00]}>
+              {team.externalSyncError}
+            </Text>
           </View>
         ) : null}
 
@@ -3784,6 +3960,9 @@ function TeamDetails({ navigation, route }) {
             notifyExternalCompetitionFlowLocked();
             return;
           }
+          setSelectedExternalTeam(null);
+          setRecommendedExternalTeam(null);
+          setExternalPreviewContext(null);
           setShowFFBBTeamModal(false);
         }}
         transparent
@@ -3797,6 +3976,51 @@ function TeamDetails({ navigation, route }) {
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.selectTeam', 'Selectionnez votre equipe')}
             </Text>
+            {recommendedExternalTeam ? (
+              <View
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Spaces.padding[12],
+                  Spaces.marginBottom[12],
+                  Spaces.gap[4],
+                  {
+                    backgroundColor: `${Colors.primary500}16`,
+                    borderColor: `${Colors.primary500}44`,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('teamDetails.external.recommendedTeam', 'Equipe recommandee')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral00]}>
+                  {recommendedExternalTeam.externalTeamName}
+                </Text>
+                {recommendedExternalTeam.reason ? (
+                  <Text style={[Fonts.p4, Fonts.primary100]}>
+                    {recommendedExternalTeam.reason}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+            {externalPreviewContext?.requestedUrl ? (
+              <View style={[Spaces.gap[4], Spaces.marginBottom[12]]}>
+                <Text style={[Fonts.p4, Fonts.primary100]}>
+                  {t('teamDetails.external.requestedSource', 'Lien demande')}: {externalPreviewContext.requestedUrl}
+                </Text>
+                {externalPreviewContext?.sourceUrl
+                && externalPreviewContext.sourceUrl !== externalPreviewContext.requestedUrl ? (
+                  <Text style={[Fonts.p4, Fonts.primary100]}>
+                    {t('teamDetails.external.resolvedSource', 'Source resolue')}: {externalPreviewContext.sourceUrl}
+                  </Text>
+                  ) : null}
+                {externalPreviewContext?.sourceResolution ? (
+                  <Text style={[Fonts.p4, Fonts.primary100]}>
+                    {t('teamDetails.external.resolutionMode', 'Mode de resolution')}: {formatExternalSourceResolutionLabel(externalPreviewContext.sourceResolution)}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             <FlatList
               contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[4]]}
               data={ffbbTeamsList}
@@ -3805,34 +4029,85 @@ function TeamDetails({ navigation, route }) {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   disabled={isExternalCompetitionFlowLocked}
-                  onPress={() => handleSelectFFBBTeam(item)}
+                  onPress={() => setSelectedExternalTeam(item)}
                   style={[
                     Alignments.row,
                     Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
                     Spaces.padding[12],
                     ApplicationStyle.borderRadius12,
-                    { borderColor: `${Colors.primary500}33`, borderWidth: 1 },
+                    {
+                      backgroundColor: selectedExternalTeam?.externalTeamId === item.externalTeamId
+                        && selectedExternalTeam?.externalTeamName === item.externalTeamName
+                        ? `${Colors.primary500}18`
+                        : 'transparent',
+                      borderColor: selectedExternalTeam?.externalTeamId === item.externalTeamId
+                        && selectedExternalTeam?.externalTeamName === item.externalTeamName
+                        ? `${Colors.primary500}88`
+                        : `${Colors.primary500}33`,
+                      borderWidth: 1,
+                    },
                     isExternalCompetitionFlowLocked ? { opacity: 0.72 } : null,
                   ]}
                 >
                   <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item.externalTeamName}</Text>
+                  {recommendedExternalTeam
+                  && (
+                    (recommendedExternalTeam.externalTeamId && recommendedExternalTeam.externalTeamId === item.externalTeamId)
+                    || recommendedExternalTeam.externalTeamName === item.externalTeamName
+                  ) ? (
+                    <View
+                      style={[
+                        ApplicationStyle.borderRadius24,
+                        Spaces.paddingHorizontal[10],
+                        Spaces.paddingVertical[6],
+                        {
+                          backgroundColor: `${Colors.warning500}18`,
+                          borderColor: `${Colors.warning500}44`,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+                        {t('teamDetails.external.recommendedBadge', 'Recommandee')}
+                      </Text>
+                    </View>
+                    ) : null}
                 </TouchableOpacity>
               )}
               showsVerticalScrollIndicator={false}
               style={[Spaces.marginBottom[16], { maxHeight: 320 }]}
             />
-            <Button
-              disabled={isExternalCompetitionFlowLocked}
-              onPress={() => {
-                if (isExternalCompetitionFlowLocked) {
-                  notifyExternalCompetitionFlowLocked();
-                  return;
-                }
-                setShowFFBBTeamModal(false);
-              }}
-              title={t('common.cancel', 'Annuler')}
-              variant="Secondary"
-            />
+            <View style={[Alignments.row, Spaces.gap[12]]}>
+              <Button
+                disabled={isExternalCompetitionFlowLocked}
+                onPress={() => {
+                  if (isExternalCompetitionFlowLocked) {
+                    notifyExternalCompetitionFlowLocked();
+                    return;
+                  }
+                  setSelectedExternalTeam(null);
+                  setRecommendedExternalTeam(null);
+                  setExternalPreviewContext(null);
+                  setShowFFBBTeamModal(false);
+                }}
+                style={{ flex: 1 }}
+                title={t('common.cancel', 'Annuler')}
+                variant="Secondary"
+              />
+              <Button
+                disabled={!selectedExternalTeam || isExternalCompetitionPhaseActive}
+                isLoading={isExternalCompetitionConnecting}
+                onPress={() => {
+                  handleConfirmSelectedExternalTeam().catch((caughtError) => {
+                    Alert.alert(t('common.error'), getErrorMessage(caughtError));
+                  });
+                }}
+                style={{ flex: 1 }}
+                title={t('common.confirm', 'Valider')}
+                variant="Primary"
+              />
+            </View>
           </View>
         </View>
       </Modal>

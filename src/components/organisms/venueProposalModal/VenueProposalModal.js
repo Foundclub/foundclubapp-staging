@@ -2,7 +2,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  Alert, Text, TouchableOpacity, View,
+  Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
+import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
 import Input from '@/components/molecules/input/Input';
 
 import {
@@ -18,6 +19,8 @@ import {
   toParisIsoFromLocalSelection,
   toParisUtcDateFromLocalSelection,
 } from '@/utils/parisTime';
+
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 
 /**
  * @param {Date} [sourceDate]
@@ -100,6 +103,7 @@ function VenueProposalModal({
   onSkip,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { showBanner } = useAppFeedback();
 
   const [venueInput, setVenueInput] = useState('');
   const [date, setDate] = useState(getParisNowAsDeviceDate());
@@ -196,15 +200,20 @@ function VenueProposalModal({
     const startUtcDate = toParisUtcDateFromLocalSelection(finalStartDate);
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
-      Alert.alert('Erreur', 'Impossible de convertir le créneau sélectionné.');
+      showBanner({
+        body: 'Impossible de convertir le crÃ©neau sÃ©lectionnÃ©.',
+        title: 'Erreur',
+        tone: 'error',
+      });
       return;
     }
 
     if (startUtcDate <= new Date()) {
-      Alert.alert(
-        'Créneau passe',
-        'Ce créneau est déjà passe (heure de Paris). Choisis une date ou une heure future.',
-      );
+      showBanner({
+        body: 'Ce crÃ©neau est dÃ©jÃ  passe (heure de Paris). Choisis une date ou une heure future.',
+        title: 'CrÃ©neau passe',
+        tone: 'error',
+      });
       return;
     }
 
@@ -264,14 +273,10 @@ function VenueProposalModal({
       close={onClose}
       contentContainerStyle={{ gap: 20, paddingBottom: 32 }}
       headerComponent={(
-        <View>
-          <Text style={[Fonts.h3, { color: Colors.gold500, marginBottom: 4, textAlign: 'center' }]}>
-            Ou jouer ?
-          </Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16, textAlign: 'center' }]}>
-            Propose un terrain et un créneau a ton adversaire.
-          </Text>
-        </View>
+        <LeagueModalHeader
+          description="Propose un terrain et un creneau a ton adversaire."
+          title="Ou jouer ?"
+        />
       )}
       isVisible={isVisible}
       scrollViewRef={modalScrollRef}
@@ -292,7 +297,7 @@ function VenueProposalModal({
       </View>
 
       <View>
-        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>Créneau</Text>
+        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>CrÃ©neau</Text>
         <View
           style={{
             backgroundColor: 'rgba(1, 179, 244, 0.12)',
@@ -305,7 +310,7 @@ function VenueProposalModal({
           }}
         >
           <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            Créneau commun sélectionné automatiquement
+            CrÃ©neau commun sÃ©lectionnÃ© automatiquement
           </Text>
         </View>
 
@@ -367,7 +372,7 @@ function VenueProposalModal({
             <DateTimeSelector
               buttonStyle={glassPickerStyle}
               display="inline"
-              label="Début"
+              label="DÃ©but"
               mode="time"
               onChange={setStartTime}
               onOpen={() => handleSelectorOpen('time')}

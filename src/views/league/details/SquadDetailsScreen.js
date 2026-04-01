@@ -936,7 +936,7 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [handleScrollToSection]);
 
   const handleOpenFullHistory = useCallback(() => {
-    navigation.navigate('MatchHistoryScreen');
+    navigation.navigate(RouteNames.MatchHistoryScreen);
   }, [navigation]);
 
   useEffect(() => {
