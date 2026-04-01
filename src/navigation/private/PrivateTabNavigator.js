@@ -1,6 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, View } from 'react-native';
+import {
+  Image,
+  Platform,
+  Text,
+  View,
+} from 'react-native';
+
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
@@ -9,13 +15,17 @@ import MyEventsList from '@/views/event/MyEventList';
 import Messaging from '@/views/Messaging';
 import CMDashboard from '@/views/multisportClub/CMDashboard';
 import MyTeamList from '@/views/team/MyTeamList';
+import TeamList from '@/views/team/TeamList';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import TeamList from '@/views/team/TeamList';
-
+import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import useTheme from '../../theme/themeContext';
-import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
+import {
+  commonOptions,
+  getFloatingTabBarScenePaddingBottom,
+  getTabScreenCommonOptions,
+} from '../commonOptions';
 import { RouteNames } from '../routeNames';
 import SearchStack from './stacks/SearchStack';
 
@@ -32,6 +42,16 @@ function PrivateTabNavigator() {
   const { unreadCount } = useUnreadMessages();
   const { canManageTeam, userData } = useAuth();
   const insets = useSafeAreaInsets();
+  const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
+  let teamTabComponent = MyTeamList;
+  if (canManageTeam && userData?.multisportClubs?.length > 0) {
+    teamTabComponent = CMDashboard;
+  } else if (canManageTeam && userData?.club) {
+    teamTabComponent = TeamList;
+  }
+  const teamTabLabel = canManageTeam && userData?.multisportClubs?.length > 0
+    ? t('menu.myClub')
+    : t('menu.myTeams');
 
   /**
    * Render tab bar icon.
@@ -44,21 +64,31 @@ function PrivateTabNavigator() {
   const renderTabBarIcon = ({
     badge, color, source,
   }) => (
-    <View>
-      <Image source={source} style={{ height: 20, tintColor: color, width: 20 }} />
+    <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 24 }}>
+      <Image source={source} style={{ height: 20, width: 20 }} tintColor={color} />
       {badge > 0 ? (
         <View
           style={{
             alignItems: 'center',
             backgroundColor: Colors.error500,
-            borderRadius: 10,
-            height: 16,
+            borderColor: 'rgba(9, 24, 35, 0.94)',
+            borderRadius: 999,
+            borderWidth: 1.5,
+            height: 18,
             justifyContent: 'center',
-            minWidth: 16,
-            padding: 2,
+            minWidth: 18,
+            paddingHorizontal: 4,
             position: 'absolute',
             right: -6,
-            top: -4,
+            top: -3,
+            ...(Platform.OS === 'web'
+              ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.22)' }
+              : {
+                shadowColor: '#000',
+                shadowOffset: { height: 2, width: 0 },
+                shadowOpacity: 0.22,
+                shadowRadius: 4,
+              }),
           }}
         >
           <Text
@@ -81,9 +111,13 @@ function PrivateTabNavigator() {
       initialRouteName={RouteNames.Search}
       screenOptions={{
         ...commonOptions,
-        sceneContainerStyle: { backgroundColor: 'transparent' },
+        sceneContainerStyle: {
+          backgroundColor: 'transparent',
+          paddingBottom: floatingScenePaddingBottom,
+        },
         // tabBarBackground removed to eliminate gradient
       }}
+      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       <Tab.Screen
         component={SearchStack}
@@ -91,11 +125,13 @@ function PrivateTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: t('menu.home', 'Accueil'),
             activeColor: Colors.primary500,
             bottomInset: insets.bottom,
             icon: Images.search,
             label: t('menu.home', 'Accueil'),
             renderTabBarIcon,
+            visualLabel: t('menuDock.home', 'Accueil'),
           }),
         }}
       />
@@ -105,23 +141,19 @@ function PrivateTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: t('menu.planning', 'Mon planning'),
             activeColor: Colors.primary500,
             bottomInset: insets.bottom,
             icon: Images.stadium,
             label: t('menu.planning'),
             renderTabBarIcon,
+            visualLabel: t('menuDock.planning', 'Planning'),
           }),
         }}
       />
       {userData?.id ? (
         <Tab.Screen
-          component={
-            canManageTeam && userData?.multisportClubs?.length > 0
-              ? CMDashboard
-              : canManageTeam && userData?.club
-                ? TeamList
-                : MyTeamList
-          }
+          component={teamTabComponent}
           initialParams={{
             clubId: userData?.club?.documentId,
             cmId: userData?.multisportClubs?.[0]?.documentId,
@@ -131,13 +163,15 @@ function PrivateTabNavigator() {
           options={{
             headerShown: false,
             ...getTabScreenCommonOptions({
+              accessibilityLabel: teamTabLabel,
               activeColor: Colors.primary500,
               bottomInset: insets.bottom,
               icon: Images.strokeShield,
-              label: canManageTeam && userData?.multisportClubs?.length > 0
-                ? t('menu.myClub')
-                : t('menu.myTeams'),
+              label: teamTabLabel,
               renderTabBarIcon,
+              visualLabel: canManageTeam && userData?.multisportClubs?.length > 0
+                ? t('menuDock.myClub', 'Club')
+                : t('menuDock.myTeams', 'Équipes'),
             }),
           }}
         />
@@ -148,12 +182,14 @@ function PrivateTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: t('menu.chat', 'Messagerie'),
             activeColor: Colors.primary500,
             badge: unreadCount,
             bottomInset: insets.bottom,
             icon: Images.envelope,
             label: t('menu.chat'),
             renderTabBarIcon,
+            visualLabel: t('menuDock.chat', 'Messages'),
           }),
         }}
       />

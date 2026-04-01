@@ -182,11 +182,11 @@ function WizardStepLayout({
               </View>
             ) : null}
 
-            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[10]]}>
               {title}
             </Text>
             {subtitle ? (
-              <Text style={[Fonts.p1, Fonts.neutral100]}>
+              <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 28 }]}>
                 {subtitle}
               </Text>
             ) : null}

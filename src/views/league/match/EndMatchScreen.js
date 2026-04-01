@@ -24,6 +24,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { getMatchDerivedPhase } from '@/views/league/match/utils/matchStatus';
 
 import {
@@ -175,7 +176,13 @@ function EndMatchScreen() {
   const [disputeType, setDisputeType] = useState('score_mismatch');
   const [disputeComment, setDisputeComment] = useState('');
 
-  const { data: matchData, isLoading } = useQuery({
+  const {
+    data: matchData,
+    error: matchError,
+    isError: isMatchError,
+    isLoading,
+    refetch: refetchMatch,
+  } = useQuery({
     enabled: Boolean(matchId),
     queryFn: () => fetchMatch(matchId),
     queryKey: ['league-match', matchId],
@@ -584,13 +591,42 @@ function EndMatchScreen() {
     setter(String(next));
   };
 
-  if (isLoading || !match) {
+  if (!matchId) {
     return (
-      <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
-        <SafeAreaView style={[styles.container, styles.centered]}>
-          <ActivityIndicator color={Colors.primary500} size="large" />
-        </SafeAreaView>
-      </ScreenContainer>
+      <LeagueStateView
+        description="Aucun identifiant de match n'a été fourni pour ouvrir cette saisie de score."
+        title="Match introuvable"
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <LeagueStateView
+        description="Nous chargeons les données du match avant la saisie du score."
+        isLoading
+        title="Chargement du match"
+      />
+    );
+  }
+
+  if (isMatchError) {
+    return (
+      <LeagueStateView
+        actionLabel="Réessayer"
+        description={matchError?.message || "Impossible de charger ce match League."}
+        onAction={() => refetchMatch()}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (!match) {
+    return (
+      <LeagueStateView
+        description="Le match demandé est introuvable ou n'est plus accessible."
+        title="Match introuvable"
+      />
     );
   }
 

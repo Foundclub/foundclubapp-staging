@@ -22,7 +22,7 @@ function AppBannerHost() {
   if (!activeBanner) return null;
 
   return (
-    <View pointerEvents="box-none" style={styles.wrap}>
+    <View style={[styles.wrap, styles.pointerBoxNone]}>
       <GlobalBanner
         actionLabel={activeBanner.actionLabel}
         body={activeBanner.body}
@@ -50,6 +50,9 @@ const styles = StyleSheet.create({
     right: 16,
     top: 64,
     zIndex: 1180,
+  },
+  pointerBoxNone: {
+    pointerEvents: 'box-none',
   },
 });
 

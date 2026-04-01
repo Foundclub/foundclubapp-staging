@@ -73,7 +73,6 @@ import { buildLeagueProposalPayload } from '@/views/league/match/utils/proposalP
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 import {
   cancelRecording,
@@ -98,6 +97,7 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
 import { createLogger } from '@/utils/logger/logger';
 
+import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 import { EVENTS } from '@/hooks/useSocket';
@@ -4249,7 +4249,14 @@ function Conversation({ navigation, route }) {
       if (currentMessage.composition.type === 'voice_note') {
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View style={{ marginBottom, marginTop }}>
+            <View
+              style={{
+                alignItems: isLeft ? 'flex-start' : 'flex-end',
+                marginBottom,
+                marginTop,
+                width: '100%',
+              }}
+            >
               <VoiceNoteBubble
                 attachments={currentMessage.attachments || []}
                 composition={currentMessage.composition}
@@ -4343,9 +4350,16 @@ function Conversation({ navigation, route }) {
       return wrapWithMessageInteractions(
         currentMessage,
         (
-          <View style={{ opacity: isPending ? 0.5 : 1 }}>
+          <View style={{ opacity: isPending ? 0.5 : 1, width: '100%' }}>
             {replyPreviewNode}
-            <View style={{ marginBottom, marginTop: currentMessage.replyTo ? 2 : marginTop }}>
+            <View
+              style={{
+                alignItems: isLeft ? 'flex-start' : 'flex-end',
+                marginBottom,
+                marginTop: currentMessage.replyTo ? 2 : marginTop,
+                width: '100%',
+              }}
+            >
               <DocumentMessageBubble
                 attachments={normalizedCurrentAttachments}
                 caption={documentCaption}

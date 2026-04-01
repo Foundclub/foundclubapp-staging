@@ -24,6 +24,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvents } from '@/services/event/eventQueries';
@@ -239,8 +240,8 @@ function ParticipantEventList({ navigation }) {
     flatListRef.current?.scrollToOffset({ animated: true, offset: 500 });
   };
 
-  const floatingCtaBottom = Math.max(insets.bottom + 12, 20);
-  const listBottomPadding = canManageEvents ? insets.bottom + 140 : insets.bottom + 24;
+  const floatingCtaBottom = getFloatingActionBottomOffset(insets.bottom, 14);
+  const listBottomPadding = canManageEvents ? floatingCtaBottom + 84 : insets.bottom + 24;
 
   /**
    *

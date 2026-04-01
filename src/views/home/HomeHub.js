@@ -448,14 +448,6 @@ function HomeHubContent({ auth, navigation, route }) {
     sectionViewRefs.current[sectionKey] = node;
   }, []);
 
-  const queueTutorialRefresh = useCallback((delays = [80, 180, 320]) => {
-    delays.forEach((delay) => {
-      setTimeout(() => {
-        refreshCurrentStepRef.current?.();
-      }, delay);
-    });
-  }, []);
-
   const registerTutorialTargetNode = useCallback((stepId, node) => {
     if (!stepId) return;
     if (node) {
@@ -649,6 +641,9 @@ function HomeHubContent({ auth, navigation, route }) {
       || (typeof getTargetNode === 'function' ? getTargetNode() : null)
     );
     const targetNode = resolveTargetNode();
+    const targetNodeSource = tutorialTargetNodesRef.current[targetStepId]
+      ? 'homehub-registry'
+      : (typeof getTargetNode === 'function' ? 'step-registry' : 'unresolved');
 
     tutorialDebugLog('homehub.scrollToTutorialTarget', {
       fallbackSectionKey,
@@ -659,12 +654,20 @@ function HomeHubContent({ auth, navigation, route }) {
       lastRequestedTargetId: targetStepId,
       lastScrollMode: null,
       targetNodeFound: Boolean(targetNode),
-      targetNodeSource: tutorialTargetNodesRef.current[targetStepId] ? 'homehub-registry' : 'step-registry',
+      targetNodeSource,
       targetStepFound: Boolean(targetStep),
       windowScrollY: Platform.OS === 'web' && typeof window !== 'undefined' ? window.scrollY : null,
     });
 
-    if (Platform.OS !== 'web' || typeof getTargetNode !== 'function') {
+    if (Platform.OS !== 'web') {
+      setTutorialDebugState({
+        lastFailureReason: 'homehub-scroll-non-web',
+        lastScrollMode: 'fallback',
+      });
+      return runFallbackScroll();
+    }
+
+    if (!targetNode && typeof getTargetNode !== 'function') {
       setTutorialDebugState({
         lastFailureReason: 'homehub-scroll-target-missing',
         lastScrollMode: 'fallback',
@@ -688,16 +691,16 @@ function HomeHubContent({ auth, navigation, route }) {
         return runFallbackScroll();
       }
 
-      queueTutorialRefresh([60, 160, 300]);
       setTutorialDebugState({
         lastFailureReason: null,
+        lastResolvedStepId: targetStepId,
         lastResolvedTargetId: targetStepId,
         lastScrollMode: 'target',
         windowScrollY: Platform.OS === 'web' && typeof window !== 'undefined' ? window.scrollY : null,
       });
       return resolvedLayout;
     });
-  }, [getStepById, insets.bottom, insets.top, queueTutorialRefresh, scrollToSection, tabBarHeight]);
+  }, [getStepById, insets.bottom, insets.top, scrollToSection, tabBarHeight]);
 
   const scrollToSearchSection = useCallback(() => (
     scrollToTutorialTarget('homehub-searchEvents', 'search')
@@ -1781,7 +1784,13 @@ function HomeHubContent({ auth, navigation, route }) {
 
       {isFocused ? (
         <>
-          <BottomModal close={closeTutorialCenterModal} isVisible={isTutorialCenterVisible} snapPoints={['48%']}>
+          <BottomModal
+            close={closeTutorialCenterModal}
+            hideCloseButton={false}
+            isVisible={isTutorialCenterVisible}
+            scrollable={false}
+            webPresentation="dialog"
+          >
             <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('homeHubTutorial.center.title', 'Tutoriels et aide')}</Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.center.subtitle', 'Relancez un tutoriel ou réinitialisez tous les guides.')}</Text>
@@ -1791,7 +1800,12 @@ function HomeHubContent({ auth, navigation, route }) {
             </View>
           </BottomModal>
 
-          <BottomModal close={closeFeatureTutorialPicker} isVisible={isFeatureTutorialPickerVisible} snapPoints={['75%']}>
+          <BottomModal
+            close={closeFeatureTutorialPicker}
+            hideCloseButton={false}
+            isVisible={isFeatureTutorialPickerVisible}
+            webPresentation="dialog"
+          >
             <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('homeHubTutorial.featurePicker.title', 'Choisir un tutoriel')}</Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>{t('homeHubTutorial.featurePicker.subtitle', 'Sélectionnez une fonctionnalité à découvrir.')}</Text>

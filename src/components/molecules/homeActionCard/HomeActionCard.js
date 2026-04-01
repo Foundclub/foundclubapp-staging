@@ -105,7 +105,8 @@ function HomeActionCard({
           >
             <Image
               source={Images[icon]}
-              style={{ height: 18, tintColor: resolvedAccentColor, width: 18 }}
+              style={{ height: 18, width: 18 }}
+              tintColor={resolvedAccentColor}
             />
           </View>
           <View
@@ -122,7 +123,8 @@ function HomeActionCard({
           >
             <Image
               source={Images.arrowRight}
-              style={{ height: 12, tintColor: resolvedAccentColor, width: 12 }}
+              style={{ height: 12, width: 12 }}
+              tintColor={resolvedAccentColor}
             />
           </View>
         </View>

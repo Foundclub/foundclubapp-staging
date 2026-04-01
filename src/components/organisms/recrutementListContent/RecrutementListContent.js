@@ -474,89 +474,64 @@ function RecrutementListContent({ initialTab, timestamp }) {
     nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
   };
 
-  // Render Coach TopTabs - Centered with underline indicator
+  const renderSegmentedTab = (key, label) => {
+    const isActive = activeTab === key;
+
+    return (
+      <TouchableOpacity
+        key={key}
+        onPress={() => setActiveTab(key)}
+        style={[
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          {
+            backgroundColor: isActive ? recruitmentSurfaceStrong : 'rgba(255,255,255,0.02)',
+            borderColor: isActive ? recruitmentBorderSoft : 'transparent',
+            borderRadius: 12,
+            borderWidth: 1,
+            flex: 1,
+            minHeight: 42,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          },
+        ]}
+      >
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          numberOfLines={1}
+          style={[
+            Fonts.p3Bold,
+            {
+              color: isActive ? Colors.neutral100 : Colors.neutral500,
+              textAlign: 'center',
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render Coach TopTabs
   const renderCoachTabs = () => (
     <View style={[
       Alignments.row,
       Alignments.justifyCenter,
-      Spaces.marginBottom[16],
+      Spaces.gap[8],
       {
         backgroundColor: recruitmentSurfaceSoft,
         borderColor: recruitmentBorderSoft,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        padding: 4,
+        marginBottom: 32,
+        padding: 5,
       },
     ]}
     >
-      <TouchableOpacity
-        onPress={() => setActiveTab('profils')}
-        style={[
-          Alignments.alignCenter,
-          Spaces.paddingVertical[12],
-          Spaces.paddingHorizontal[24],
-          {
-            backgroundColor: activeTab === 'profils' ? recruitmentSurfaceStrong : 'transparent',
-            borderRadius: 10,
-            flex: 1,
-          },
-        ]}
-      >
-        <Text style={[
-          Fonts.p2Bold,
-          {
-            color: activeTab === 'profils' ? Colors.primary500 : Colors.neutral500,
-          },
-        ]}
-        >
-          Profils
-        </Text>
-        {activeTab === 'profils' && (
-          <View style={{
-            backgroundColor: Colors.primary500,
-            borderRadius: 2,
-            bottom: 4,
-            height: 3,
-            position: 'absolute',
-            width: 24,
-          }}
-          />
-        )}
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => setActiveTab('annonces')}
-        style={[
-          Alignments.alignCenter,
-          Spaces.paddingVertical[12],
-          Spaces.paddingHorizontal[24],
-          {
-            backgroundColor: activeTab === 'annonces' ? recruitmentSurfaceStrong : 'transparent',
-            borderRadius: 10,
-            flex: 1,
-          },
-        ]}
-      >
-        <Text style={[
-          Fonts.p2Bold,
-          {
-            color: activeTab === 'annonces' ? Colors.primary500 : Colors.neutral500,
-          },
-        ]}
-        >
-          Mes Annonces
-        </Text>
-        {activeTab === 'annonces' && (
-          <View style={{
-            backgroundColor: Colors.primary500,
-            borderRadius: 2,
-            bottom: 4,
-            height: 3,
-            position: 'absolute',
-            width: 24,
-          }}
-          />
-        )}
-      </TouchableOpacity>
+      {renderSegmentedTab('profils', 'Profils')}
+      {renderSegmentedTab('annonces', 'Mes annonces')}
     </View>
   );
 
@@ -570,14 +545,14 @@ function RecrutementListContent({ initialTab, timestamp }) {
           borderRadius: 16,
           borderWidth: 1,
           paddingHorizontal: 14,
-          paddingVertical: 12,
+          paddingVertical: 10,
         }}
         >
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
             Mes annonces
           </Text>
           <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Consultez et gérez les annonces publiées pour vos équipes.
+            Consultez et gÃƒÆ’Ã‚Â©rez les annonces publiÃƒÆ’Ã‚Â©es pour vos ÃƒÆ’Ã‚Â©quipes.
           </Text>
         </View>
         <TouchableOpacity
@@ -594,21 +569,23 @@ function RecrutementListContent({ initialTab, timestamp }) {
           ]}
         >
           <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + Créer une annonce
+            + CrÃƒÆ’Ã‚Â©er une annonce
           </Text>
         </TouchableOpacity>
-        <SearchComponent
-          filterNumber={adFiltersCount}
-          handleSearchField={setAdSearchValue}
-          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
-          placeholder="Rechercher dans mes annonces..."
-          searchDefaultValue={adSearchValue}
-        />
-        {adSearchValue?.trim()?.length >= 2 ? (
-          <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-            Trié par pertinence
-          </Text>
-        ) : null}
+        <View style={[Spaces.marginTop[14]]}>
+          <SearchComponent
+            filterNumber={adFiltersCount}
+            handleSearchField={setAdSearchValue}
+            openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
+            placeholder="Rechercher dans mes annonces..."
+            searchDefaultValue={adSearchValue}
+          />
+          {adSearchValue?.trim()?.length >= 2 ? (
+            <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
+              Trie par pertinence
+            </Text>
+          ) : null}
+        </View>
       </View>
     );
 
@@ -623,8 +600,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
         ListEmptyComponent={(
           <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
             {managedTeamIds.length > 0
-              ? 'Aucune annonce publiée pour vos équipes'
-              : 'Aucune annonce créée'}
+              ? 'Aucune annonce publiÃƒÆ’Ã‚Â©e pour vos ÃƒÆ’Ã‚Â©quipes'
+              : 'Aucune annonce crÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â©e'}
           </Text>
         )}
         ListHeaderComponent={annoncesHeader}
@@ -684,14 +661,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
-      return 'Complète ton profil pour activer un tri personnalisé.';
+      return 'Complete ton profil pour activer un tri personnalise.';
     }
-
     if (showProfileMatchesOnly) {
-      return 'Le flux affiche uniquement les annonces compatibles avec ton profil.';
+      return 'Le flux affiche uniquement les annonces compatibles.';
     }
-
-    return 'Les annonces compatibles restent déjà en tête. Active le filtre pour ne voir qu’elles.';
+    return 'Les annonces compatibles restent affichees en tete.';
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
@@ -708,13 +683,13 @@ function RecrutementListContent({ initialTab, timestamp }) {
         >
           <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Aucune annonce ne correspond exactement à ton profil pour le moment.'
-              : 'Complète ton profil pour activer le tri personnalisé des annonces.'}
+              ? 'Aucune annonce ne correspond exactement ÃƒÆ’Ã‚Â  ton profil pour le moment.'
+              : 'ComplÃƒÆ’Ã‚Â¨te ton profil pour activer le tri personnalisÃƒÆ’Ã‚Â© des annonces.'}
           </Text>
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Désactive le filtre pour afficher toutes les annonces disponibles.'
-              : "Tu peux déjà consulter toutes les annonces publiées sur l'application."}
+              ? 'DÃƒÆ’Ã‚Â©sactive le filtre pour afficher toutes les annonces disponibles.'
+              : "Tu peux dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  consulter toutes les annonces publiÃƒÆ’Ã‚Â©es sur l'application."}
           </Text>
         </View>
       );
@@ -793,14 +768,14 @@ function RecrutementListContent({ initialTab, timestamp }) {
   };
 
   const renderPlayerListHeader = () => (
-    <View style={[Spaces.gap[10], Spaces.marginBottom[4]]}>
+    <View style={[Spaces.gap[18], Spaces.marginBottom[14]]}>
       <View style={{
         backgroundColor: recruitmentSurfaceStrong,
         borderColor: recruitmentBorderSoft,
-        borderRadius: 16,
+        borderRadius: 18,
         borderWidth: 1,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingHorizontal: 18,
+        paddingVertical: 20,
       }}
       >
         <View style={{
@@ -809,11 +784,11 @@ function RecrutementListContent({ initialTab, timestamp }) {
           justifyContent: 'space-between',
         }}
         >
-          <View style={{ flex: 1, paddingRight: 12 }}>
+          <View style={{ flex: 1, paddingRight: 14 }}>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-              Afficher seulement les annonces compatibles
+              Compatibles avec mon profil
             </Text>
-            <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 4 }]}>
+            <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
               {playerFilterHelperText}
             </Text>
           </View>
@@ -823,19 +798,19 @@ function RecrutementListContent({ initialTab, timestamp }) {
             onPress={() => setShowProfileMatchesOnly(!showProfileMatchesOnly)}
             style={{
               backgroundColor: showProfileMatchesOnly ? Colors.primary500 : recruitmentToggleOff,
-              borderRadius: 12,
-              height: 24,
+              borderRadius: 14,
+              height: 28,
               justifyContent: 'center',
               paddingHorizontal: 2,
-              width: 44,
+              width: 50,
             }}
           >
             <View style={{
               alignSelf: showProfileMatchesOnly ? 'flex-end' : 'flex-start',
               backgroundColor: Colors.neutral00,
-              borderRadius: 10,
-              height: 20,
-              width: 20,
+              borderRadius: 12,
+              height: 24,
+              width: 24,
             }}
             />
           </TouchableOpacity>
@@ -849,19 +824,19 @@ function RecrutementListContent({ initialTab, timestamp }) {
           style={{
             backgroundColor: recruitmentSurfaceSoft,
             borderColor: recruitmentBorder,
-            borderRadius: 14,
+            borderRadius: 16,
             borderWidth: 1,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
+            paddingHorizontal: 18,
+            paddingVertical: 16,
           }}
         >
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                Compléter mon profil
+                ComplÃƒÆ’Ã‚Â©ter mon profil
               </Text>
-              <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 4 }]}>
-                Sport, section, catégorie, niveau.
+              <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
+                Sport, section, catÃƒÆ’Ã‚Â©gorie, niveau.
               </Text>
             </View>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
@@ -870,18 +845,20 @@ function RecrutementListContent({ initialTab, timestamp }) {
           </View>
         </TouchableOpacity>
       ) : null}
-      <SearchComponent
-        filterNumber={adFiltersCount}
-        handleSearchField={setAdSearchValue}
-        openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
-        placeholder="Rechercher une annonce..."
-        searchDefaultValue={adSearchValue}
-      />
-      {adSearchValue?.trim()?.length >= 2 ? (
-        <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-          Trié par pertinence
-        </Text>
-      ) : null}
+      <View style={[Spaces.marginTop[14]]}>
+        <SearchComponent
+          filterNumber={adFiltersCount}
+          handleSearchField={setAdSearchValue}
+          openFilters={() => nav.navigate(RouteNames.RecruitmentAdFilters)}
+          placeholder="Rechercher une annonce..."
+          searchDefaultValue={adSearchValue}
+        />
+        {adSearchValue?.trim()?.length >= 2 ? (
+          <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
+            Trie par pertinence
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -891,7 +868,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
       <Loader />
     ) : (
       <FlatList
-        contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[140], { flexGrow: 1 }]}
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[140], { flexGrow: 1 }]}
         data={playerFeedItems}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.key}
@@ -954,84 +931,19 @@ function RecrutementListContent({ initialTab, timestamp }) {
     <View style={[
       Alignments.row,
       Alignments.justifyCenter,
-      Spaces.marginBottom[16],
+      Spaces.marginBottom[20],
+      Spaces.gap[8],
       {
         backgroundColor: recruitmentSurfaceSoft,
         borderColor: recruitmentBorderSoft,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        padding: 4,
+        padding: 5,
       },
     ]}
     >
-      <TouchableOpacity
-        onPress={() => setActiveTab('annonces')}
-        style={[
-          Alignments.alignCenter,
-          Spaces.paddingVertical[10],
-          Spaces.paddingHorizontal[20],
-          {
-            backgroundColor: activeTab === 'annonces' ? recruitmentSurfaceStrong : 'transparent',
-            borderRadius: 10,
-            flex: 1,
-          },
-        ]}
-      >
-        <Text style={[
-          Fonts.p2Bold,
-          {
-            color: activeTab === 'annonces' ? Colors.primary500 : Colors.neutral500,
-          },
-        ]}
-        >
-          Annonces
-        </Text>
-        {activeTab === 'annonces' && (
-          <View style={{
-            backgroundColor: Colors.primary500,
-            borderRadius: 2,
-            bottom: 4,
-            height: 3,
-            position: 'absolute',
-            width: 24,
-          }}
-          />
-        )}
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => setActiveTab('candidatures')}
-        style={[
-          Alignments.alignCenter,
-          Spaces.paddingVertical[10],
-          Spaces.paddingHorizontal[20],
-          {
-            backgroundColor: activeTab === 'candidatures' ? recruitmentSurfaceStrong : 'transparent',
-            borderRadius: 10,
-            flex: 1,
-          },
-        ]}
-      >
-        <Text style={[
-          Fonts.p2Bold,
-          {
-            color: activeTab === 'candidatures' ? Colors.primary500 : Colors.neutral500,
-          },
-        ]}
-        >
-          Mes Candidatures
-        </Text>
-        {activeTab === 'candidatures' && (
-          <View style={{
-            backgroundColor: Colors.primary500,
-            borderRadius: 2,
-            bottom: 4,
-            height: 3,
-            position: 'absolute',
-            width: 24,
-          }}
-          />
-        )}
-      </TouchableOpacity>
+      {renderSegmentedTab('annonces', 'Annonces')}
+      {renderSegmentedTab('candidatures', 'Mes candidatures')}
     </View>
   );
 

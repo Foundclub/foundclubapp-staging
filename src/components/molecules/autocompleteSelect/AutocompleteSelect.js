@@ -3,7 +3,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Keyboard, Text, TouchableOpacity, View,
+  Image,
+  Keyboard,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -44,6 +48,8 @@ import Input from '../input/Input';
  * @property {string} [modalTitle] - Optional modal title override.
  * @property {(string|number)[]} [modalSnapPoints] - Optional modal snap points override.
  * @property {string} [displayValue] - Optional custom display value for the closed state.
+ * @property {'default' | 'card'} [displayVariant] - Optional closed state variant.
+ * @property {string} [description] - Optional helper copy displayed under the label.
  */
 
 /**
@@ -65,10 +71,16 @@ const AutocompleteSelect = forwardRef(
   (props, ref) => {
     // hooks
     const {
-      Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
+      Alignments,
+      ApplicationStyle,
+      Colors,
+      Fonts,
+      Images,
+      Spaces,
     } = useTheme();
     const { t } = useTranslation();
     const hasLabel = Boolean(props.label);
+    const isCardVariant = props.displayVariant === 'card';
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
@@ -301,49 +313,133 @@ const AutocompleteSelect = forwardRef(
       });
     }, [props.options]);
 
+    const displayValue = getDisplayValue();
+    const hasValue = props.isMulti
+      ? Array.isArray(props.value) && props.value.length > 0
+      : Boolean(String(displayValue || '').trim().length);
+    let cardBorderColor = 'rgba(1, 179, 244, 0.24)';
+    if (props.error) {
+      cardBorderColor = Colors.error500;
+    } else if (areValuesVisible || hasValue) {
+      cardBorderColor = Colors.primary500;
+    }
+    const cardSurfaceColor = props.lightMode ? Colors.neutral00 : 'rgba(4, 31, 44, 0.82)';
+
     return (
-      <View style={[Alignments.relative]}>
-        <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
+      <View style={[Alignments.relative, isCardVariant ? props.wrapperStyle : null]}>
+        {isCardVariant ? (
           <TouchableOpacity
+            accessibilityHint={props.description}
+            accessibilityRole="button"
+            activeOpacity={0.92}
             disabled={props.disabled}
             onPress={handleFocus}
             style={[
-              Alignments.absolute,
-              Alignments.fullSize,
-              Spaces.padding[12],
-              hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
-              { zIndex: 1 },
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[16],
+              {
+                backgroundColor: cardSurfaceColor,
+                borderColor: cardBorderColor,
+                borderRadius: 20,
+                borderWidth: areValuesVisible ? 1.5 : 1,
+                minHeight: props.description ? 132 : 112,
+                opacity: props.disabled ? 0.5 : 1,
+              },
             ]}
           >
-            {props.value && (!Array.isArray(props.value) || props.value.length > 0) ? (
-              <Text
-                ellipsizeMode="tail"
-                numberOfLines={1}
-                style={[Fonts.p1, Fonts.neutral00]}
+            <View style={[Spaces.gap[8]]}>
+              {hasLabel ? (
+                <Text style={[Fonts.p3Bold, props.error ? Fonts.error500 : Fonts.primary500]}>
+                  {props.label}
+                </Text>
+              ) : null}
+              {props.description ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {props.description}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={[Alignments.fill, Spaces.gap[8]]}>
+                <Text
+                  numberOfLines={2}
+                  style={hasValue ? [Fonts.p1Bold, Fonts.neutral00] : [Fonts.p2, Fonts.neutral300]}
+                >
+                  {hasValue ? displayValue : props.placeholder}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    height: 36,
+                    width: 36,
+                  },
+                ]}
               >
-                {getDisplayValue()}
-              </Text>
-            ) : (
-              <Text style={[Fonts.p1, Fonts.neutral500]}>
-                {props.placeholder}
-              </Text>
-            )}
+                <Image
+                  source={Images.chevronDown}
+                  style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary500]}
+                />
+              </View>
+            </View>
           </TouchableOpacity>
-          <Input
-            editable={false}
-            error={props.error}
-            label={props.label}
-            lightMode={props.lightMode}
-            readOnly
-            ref={ref}
-            wrapperStyle={props.wrapperStyle}
-          />
-        </View>
+        ) : (
+          <View style={[Alignments.relative, { opacity: props.disabled ? 0.5 : 1 }]}>
+            <TouchableOpacity
+              disabled={props.disabled}
+              onPress={handleFocus}
+              style={[
+                Alignments.absolute,
+                Alignments.fullSize,
+                Spaces.padding[12],
+                hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
+                { zIndex: 1 },
+              ]}
+            >
+              {props.value && (!Array.isArray(props.value) || props.value.length > 0) ? (
+                <Text
+                  ellipsizeMode="tail"
+                  numberOfLines={1}
+                  style={[Fonts.p1, Fonts.neutral00]}
+                >
+                  {displayValue}
+                </Text>
+              ) : (
+                <Text style={[Fonts.p1, Fonts.neutral500]}>
+                  {props.placeholder}
+                </Text>
+              )}
+            </TouchableOpacity>
+            <Input
+              editable={false}
+              error={props.error}
+              label={props.label}
+              lightMode={props.lightMode}
+              readOnly
+              ref={ref}
+              wrapperStyle={props.wrapperStyle}
+            />
+          </View>
+        )}
+        {isCardVariant && props.error && props.error !== ' ' ? (
+          <Text style={[Fonts.p2, Fonts.error700, Spaces.marginTop[8]]}>
+            {props.error}
+          </Text>
+        ) : null}
         <BottomModal
           close={handleCloseModal}
           footerComponent={modalFooter}
           headerComponent={(
-            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <View style={[Alignments.row, Alignments.alignCenter]}>
               <Text
                 numberOfLines={1}
                 style={[
@@ -355,21 +451,6 @@ const AutocompleteSelect = forwardRef(
               >
                 {modalTitle}
               </Text>
-              <TouchableOpacity
-                accessibilityLabel={t('common.close', 'Fermer')}
-                hitSlop={{
-                  bottom: 8, left: 8, right: 8, top: 8,
-                }}
-                onPress={handleCloseModal}
-              >
-                <Image
-                  source={Images.close}
-                  style={[
-                    ApplicationStyle.icon28,
-                    { tintColor: Colors.primary200 },
-                  ]}
-                />
-              </TouchableOpacity>
             </View>
           )}
           hideCloseButton

@@ -41,6 +41,7 @@ import useTheme from '@/theme/themeContext';
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
  * @param {boolean} [props.useSafeAreaBottomInset] - Apply safe area bottom inset to the sheet container
+ * @param {'sheet' | 'dialog'} [props.webPresentation] - Web-only presentation hint (ignored on native).
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({
@@ -55,7 +56,7 @@ function BottomModal({
   enablePanDownToClose = true,
   footerComponent,
   headerComponent,
-  hideCloseButton = false,
+  hideCloseButton = true,
   isVisible,
   keyboardBehavior = 'interactive',
   onDismissed,

@@ -1,17 +1,28 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { Image, View } from 'react-native';
+import {
+  Image,
+  Platform,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Home from '@/views/Home';
 
-import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
+import {
+  commonOptions,
+  getFloatingTabBarScenePaddingBottom,
+  getTabScreenCommonOptions,
+} from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { createLogger } from '@/utils/logger/logger';
 
+import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import AuthStackNavigator from './AuthStackNavigator';
 
 const publicTabLogger = createLogger('public-tab-navigator');
@@ -26,6 +37,8 @@ function PublicTabNavigator() {
   const { Colors, Images } = useTheme();
   const { t } = useTranslation();
   const [{ isAddingAccount }] = useAppContext();
+  const insets = useSafeAreaInsets();
+  const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
   publicTabLogger.debug('Rendering', {
     initialRoute: isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search,
     isAddingAccount,
@@ -42,15 +55,43 @@ function PublicTabNavigator() {
   const renderTabBarIcon = ({
     badge, color, source,
   }) => (
-    <View>
-      <Image source={source} style={{ height: 20, tintColor: color, width: 20 }} />
+    <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 24 }}>
+      <Image source={source} style={{ height: 20, width: 20 }} tintColor={color} />
       {badge ? (
-        <View style={{
-          paddingLeft: 21,
-          position: 'absolute',
-          top: 7,
-        }}
-        />
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.error500,
+            borderColor: 'rgba(9, 24, 35, 0.94)',
+            borderRadius: 999,
+            borderWidth: 1.5,
+            height: 18,
+            justifyContent: 'center',
+            minWidth: 18,
+            paddingHorizontal: 4,
+            position: 'absolute',
+            right: -6,
+            top: -3,
+            ...(Platform.OS === 'web'
+              ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.22)' }
+              : {
+                shadowColor: '#000',
+                shadowOffset: { height: 2, width: 0 },
+                shadowOpacity: 0.22,
+                shadowRadius: 4,
+              }),
+          }}
+        >
+          <Text
+            style={{
+              color: Colors.neutral00,
+              fontFamily: 'Montserrat-Bold',
+              fontSize: 10,
+            }}
+          >
+            {badge}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -59,7 +100,14 @@ function PublicTabNavigator() {
     <Tab.Navigator
       id={undefined}
       initialRouteName={isAddingAccount ? RouteNames.AuthStackAccount : RouteNames.Search}
-      screenOptions={commonOptions}
+      screenOptions={{
+        ...commonOptions,
+        sceneContainerStyle: {
+          backgroundColor: 'transparent',
+          paddingBottom: floatingScenePaddingBottom,
+        },
+      }}
+      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       <Tab.Screen
         component={Home}
@@ -68,10 +116,13 @@ function PublicTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions(
             {
+              accessibilityLabel: t('menu.search', 'Rechercher'),
               activeColor: Colors.primary500,
+              bottomInset: insets.bottom,
               icon: Images.search,
               label: t('menu.search'),
               renderTabBarIcon,
+              visualLabel: t('menuDock.search', 'Recherche'),
             },
           ),
         }}
@@ -83,10 +134,13 @@ function PublicTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions(
             {
+              accessibilityLabel: t('menu.planning', 'Mon planning'),
               activeColor: Colors.primary500,
+              bottomInset: insets.bottom,
               icon: Images.stadium,
               label: t('menu.planning'),
               renderTabBarIcon,
+              visualLabel: t('menuDock.planning', 'Planning'),
             },
           ),
         })}
@@ -98,10 +152,13 @@ function PublicTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions(
             {
+              accessibilityLabel: t('menu.myTeams', 'Mes équipes'),
               activeColor: Colors.primary500,
+              bottomInset: insets.bottom,
               icon: Images.strokeShield,
               label: t('menu.myTeams'),
               renderTabBarIcon,
+              visualLabel: t('menuDock.myTeams', 'Équipes'),
             },
           ),
         })}
@@ -113,10 +170,13 @@ function PublicTabNavigator() {
           headerShown: false,
           ...getTabScreenCommonOptions(
             {
+              accessibilityLabel: t('menu.chat', 'Messagerie'),
               activeColor: Colors.primary500,
+              bottomInset: insets.bottom,
               icon: Images.envelope,
               label: t('menu.chat'),
               renderTabBarIcon,
+              visualLabel: t('menuDock.chat', 'Messages'),
             },
           ),
         })}

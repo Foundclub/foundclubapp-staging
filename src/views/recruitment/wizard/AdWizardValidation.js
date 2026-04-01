@@ -1,8 +1,4 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  StyleSheet, Text, TouchableOpacity, View,
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -15,29 +11,36 @@ import { getAdWizardStepCount } from './adWizardStepUtils';
 
 const VALIDATION_MODES = [
   {
-    description: 'Les joueurs sont automatiquement acceptés',
-    icon: '⚡',
+    eyebrow: 'Fluide',
+    helper: 'Id\u00E9al si vos crit\u00E8res sont d\u00E9j\u00E0 tr\u00E8s pr\u00E9cis.',
+    highlights: ['R\u00E9ponse imm\u00E9diate', 'Parcours plus rapide'],
     label: 'Automatique',
+    summary: 'Les joueurs compatibles sont accept\u00E9s sans attendre une validation manuelle.',
     value: 'auto',
   },
   {
-    description: 'Vous validez chaque inscription manuellement',
-    icon: '✋',
+    eyebrow: 'Contr\u00F4le',
+    helper: 'Recommand\u00E9 si vous souhaitez valider chaque profil.',
+    highlights: ['Validation capitaine', 'Tri avant confirmation'],
     label: 'Manuelle',
+    summary: "Vous confirmez chaque candidature avant qu'elle ne rejoigne l'\u00E9v\u00E9nement.",
     value: 'manual',
   },
 ];
 
 /**
- *
- * @param root0
- * @param root0.navigation
+ * Wizard step for choosing auto or manual validation.
+ * @param {{ navigation: any }} props
+ * @returns {import('react').ReactElement}
  */
 function AdWizardValidation({ navigation }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
   } = useTheme();
-  const { t } = useTranslation();
   const { dispatch, state } = useAdWizard();
 
   const handleSelectMode = (mode) => {
@@ -48,6 +51,11 @@ function AdWizardValidation({ navigation }) {
     navigation.navigate(RouteNames.AdWizardDescription);
   };
 
+  const cardSurfaceStyle = {
+    backgroundColor: 'rgba(4, 31, 44, 0.82)',
+    borderColor: 'rgba(1, 179, 244, 0.24)',
+  };
+
   return (
     <WizardStepLayout
       nextLabel="Suivant"
@@ -55,87 +63,126 @@ function AdWizardValidation({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={4}
-      subtitle="Comment valider les inscriptions à l'événement ?"
+      subtitle={'Choisissez comment les candidatures li\u00E9es \u00E0 cette d\u00E9tection seront trait\u00E9es.'}
       title="Mode de validation"
     >
       <View style={[Spaces.gap[16]]}>
+        {state.event ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {'Annonce li\u00E9e \u00E0 une d\u00E9tection'}
+            </Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {'Ce r\u00E9glage d\u00E9termine la mani\u00E8re dont les candidatures seront accept\u00E9es sur cette annonce.'}
+            </Text>
+          </View>
+        ) : null}
+
         {VALIDATION_MODES.map((mode) => {
           const isSelected = state.validationMode === mode.value;
 
           return (
             <TouchableOpacity
+              activeOpacity={0.92}
               key={mode.value}
               onPress={() => handleSelectMode(mode.value)}
               style={[
                 ApplicationStyle.card,
-                Spaces.padding[24],
+                Spaces.padding[18],
+                Spaces.gap[14],
                 {
-                  backgroundColor: isSelected ? `${Colors.primary500}20` : Colors.neutral800,
-                  borderColor: isSelected ? Colors.primary500 : Colors.neutral700,
-                  borderWidth: isSelected ? 2 : 1,
+                  backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
+                  borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
+                  borderWidth: isSelected ? 1.5 : 1,
                 },
               ]}
             >
-              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-                {/* Icon */}
-                <View style={[
-                  styles.iconContainer,
-                  { backgroundColor: isSelected ? Colors.primary500 : Colors.neutral700 },
-                ]}
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View
+                  style={[
+                    Spaces.paddingHorizontal[10],
+                    Spaces.paddingVertical[6],
+                    {
+                      backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.20)' : 'rgba(255, 255, 255, 0.06)',
+                      borderColor: isSelected ? 'rgba(1, 179, 244, 0.36)' : 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: 999,
+                      borderWidth: 1,
+                    },
+                  ]}
                 >
-                  <Text style={{ fontSize: 24 }}>{mode.icon}</Text>
-                </View>
-
-                {/* Text */}
-                <View style={[Alignments.fill]}>
-                  <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{mode.label}</Text>
-                  <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 4 }]}>
-                    {mode.description}
+                  <Text style={[Fonts.p4Bold, isSelected ? Fonts.primary500 : Fonts.neutral300]}>
+                    {mode.eyebrow}
                   </Text>
                 </View>
 
-                {/* Checkmark */}
-                {isSelected && (
-                  <View style={[styles.checkmark, { backgroundColor: Colors.primary500 }]}>
-                    <Text style={{ color: Colors.neutral00, fontWeight: 'bold' }}>✓</Text>
+                <View
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: isSelected ? Colors.primary500 : 'transparent',
+                    borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.32)',
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    height: 28,
+                    justifyContent: 'center',
+                    width: 28,
+                  }}
+                >
+                  {isSelected ? (
+                    <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>OK</Text>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={[Spaces.gap[6]]}>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>{mode.label}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>{mode.summary}</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>{mode.helper}</Text>
+              </View>
+
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+                {mode.highlights.map((highlight) => (
+                  <View
+                    key={highlight}
+                    style={[
+                      ApplicationStyle.card,
+                      Spaces.paddingHorizontal[10],
+                      Spaces.paddingVertical[8],
+                      {
+                        backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                        borderColor: 'rgba(1, 179, 244, 0.20)',
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.neutral100]}>{highlight}</Text>
                   </View>
-                )}
+                ))}
               </View>
             </TouchableOpacity>
           );
         })}
-      </View>
 
-      {/* Event info reminder */}
-      {state.event && (
-        <View style={[Spaces.marginTop[24], Spaces.padding[16], { backgroundColor: Colors.neutral800, borderRadius: 12 }]}>
-          <Text style={[Fonts.p2, { color: Colors.neutral400 }]}>
-            Cette annonce est liée à l'événement :
-          </Text>
-          <Text style={[Fonts.p1Bold, { color: Colors.primary500, marginTop: 4 }]}>
-            {state.event.name || state.event.type?.name || 'Événement'}
+        <View
+          style={[
+            ApplicationStyle.card,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              backgroundColor: 'rgba(255, 219, 102, 0.08)',
+              borderColor: 'rgba(255, 219, 102, 0.24)',
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.gold500]}>{'\u00C0 retenir'}</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {"Vous pourrez toujours consulter les profils re\u00E7us ensuite dans le d\u00E9tail de l'annonce."}
           </Text>
         </View>
-      )}
+      </View>
     </WizardStepLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  checkmark: {
-    alignItems: 'center',
-    borderRadius: 14,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    borderRadius: 28,
-    height: 56,
-    justifyContent: 'center',
-    width: 56,
-  },
-});
 
 export default AdWizardValidation;

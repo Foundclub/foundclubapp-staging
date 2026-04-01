@@ -28,7 +28,7 @@ function LeagueModalHeader({
     <View style={styles.container}>
       <View style={[styles.brandBlock, isCentered ? styles.brandCentered : styles.brandLeft]}>
         <View style={styles.brandRow}>
-          <Image source={Images.logo} style={styles.logo} />
+          <Image resizeMode="contain" source={Images.logo} style={styles.logo} />
           <Text style={[Fonts.h1Bold, styles.leagueTitle, { color: Colors.gold500 }]}>
             LEAGUE
           </Text>
@@ -98,7 +98,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     height: 20,
-    resizeMode: 'contain',
     width: 122,
   },
   title: {

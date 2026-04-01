@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -55,7 +54,7 @@ function CreateAdModal({
   event = null, onClose, onSuccess, team, visible,
 }) {
   const {
-    Alignments, Colors, Fonts, Images, Spaces,
+    Colors, Fonts,
   } = useTheme();
 
   // Form state
@@ -150,9 +149,6 @@ function CreateAdModal({
             <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
               {event ? 'Recruter pour l\'événement' : 'Créer une annonce'}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Text style={[Fonts.h3, { color: Colors.neutral300 }]}>✕</Text>
-            </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -349,7 +345,7 @@ function CreateAdModal({
               {loading ? (
                 <ActivityIndicator color={Colors.neutral900} size="small" />
               ) : (
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>Créer l'annonce</Text>
+                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>Créer l&apos;annonce</Text>
               )}
             </TouchableOpacity>
           </View>

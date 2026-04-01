@@ -7,6 +7,7 @@ import {
   Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
@@ -70,8 +71,13 @@ function Messaging({ navigation, route }) {
     archiveChatAsync, getConversationName, getUnreadStatus,
     joinChat, pinChatAsync, unpinChatAsync,
   } = useMessaging();
+  const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
-
+  const canCreateConversation = userData?.role?.name === 'EntraÃƒÂ®neur'
+    || userData?.role?.name === 'Dirigeant'
+    || userData?.role?.name === 'SuperAdmin';
+  const floatingButtonBottom = isWeb ? 24 : 108 + Math.max(insets.bottom, 8);
+  const chatListBottomInset = canCreateConversation ? floatingButtonBottom + 72 : 16;
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
@@ -174,7 +180,7 @@ function Messaging({ navigation, route }) {
             width: 48,
           }}
           >
-            <Text style={{ fontSize: 20 }}>🏆</Text>
+            <Text style={{ fontSize: 20 }}>ðŸ†</Text>
           </View>
         );
       case 'multisport':
@@ -311,7 +317,7 @@ function Messaging({ navigation, route }) {
         }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-          {isPinned ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler')}
+          {isPinned ? t('messaging.unpin', 'DÃ©sÃ©pingler') : t('messaging.pin', 'Ã‰pingler')}
         </Text>
       </TouchableOpacity>
     );
@@ -382,6 +388,13 @@ function Messaging({ navigation, route }) {
     const isPendingAction = pendingChatAction.chatId === chatId;
     const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
     const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
+    let pinActionLabel = t('messaging.pin', 'Epingler');
+    if (isPinned) {
+      pinActionLabel = t('messaging.unpin', 'Desepingler');
+    }
+    if (isPinPending) {
+      pinActionLabel = t('common.loading', 'Chargement...');
+    }
 
     return (
       <View
@@ -407,9 +420,7 @@ function Messaging({ navigation, route }) {
           ]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {isPinPending
-              ? t('common.loading', 'Chargement...')
-              : (isPinned ? t('messaging.unpin', 'Desepingler') : t('messaging.pin', 'Epingler'))}
+            {pinActionLabel}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -549,7 +560,7 @@ function Messaging({ navigation, route }) {
                   backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
                 }}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÉ</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÃ‰</Text>
                 </View>
                 )}
               </View>
@@ -653,7 +664,7 @@ function Messaging({ navigation, route }) {
         >
           <View style={[Alignments.fill]}>
             {renderSearch()}
-            {isLoading ? (
+            {isLoading && (
               <WithDataWrapper
                 isLoading
                 wrapperStyle={[Alignments.fill]}
@@ -663,6 +674,7 @@ function Messaging({ navigation, route }) {
                   ApplicationStyle.borderRadius2]}
                 >
                   <FlashList
+                    contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                     data={filteredChats}
                     keyExtractor={(item) => item.documentId}
                     ListEmptyComponent={renderEmptyList}
@@ -675,14 +687,15 @@ function Messaging({ navigation, route }) {
                   />
                 </View>
               </WithDataWrapper>
-            ) : error ? (
-              renderErrorState()
-            ) : (
+            )}
+            {!isLoading && error && renderErrorState()}
+            {!isLoading && !error && (
               <View style={[
                 Alignments.fill,
                 ApplicationStyle.borderRadius2]}
               >
                 <FlashList
+                  contentContainerStyle={{ paddingBottom: chatListBottomInset }}
                   data={filteredChats}
                   keyExtractor={(item) => item.documentId}
                   ListEmptyComponent={renderEmptyList}
@@ -698,40 +711,53 @@ function Messaging({ navigation, route }) {
           </View>
         </OnboardingWrapper>
 
-        {(userData?.role?.name === 'Entraîneur' || userData?.role?.name === 'Dirigeant' || userData?.role?.name === 'SuperAdmin') && (
-          <View style={{
-            bottom: 20,
-            left: 20,
-            position: 'absolute',
-            right: 20,
-          }}
+        {canCreateConversation ? (
+          <View
+            pointerEvents="box-none"
+            style={{
+              bottom: floatingButtonBottom,
+              position: 'absolute',
+              right: 20,
+            }}
           >
             <TouchableOpacity
+              accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
+              activeOpacity={0.85}
               onPress={() => navigation.navigate(RouteNames.NewConversation)}
-              style={{
-                alignItems: 'center',
-                backgroundColor: Colors.primary500,
-                borderRadius: 25,
-                elevation: 5,
-                justifyContent: 'center',
-                paddingVertical: 16,
-                shadowColor: '#000',
-                shadowOffset: {
-                  height: 2,
-                  width: 0,
+              style={[
+                ApplicationStyle.shadow200,
+                {
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary700,
+                  borderColor: Colors.primary500,
+                  borderRadius: 28,
+                  borderWidth: 1.5,
+                  elevation: 8,
+                  height: 56,
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    height: 6,
+                    width: 0,
+                  },
+                  shadowOpacity: 0.28,
+                  shadowRadius: 10,
+                  width: 56,
                 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-              }}
+              ]}
             >
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                +
-                {' '}
-                {t('messaging.newConversation', 'Nouvelle conversation')}
-              </Text>
+              <Image
+                resizeMode="contain"
+                source={Images.envelope}
+                style={{
+                  height: 22,
+                  tintColor: Colors.primary500,
+                  width: 22,
+                }}
+              />
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
       </ScreenContainer>
     </TutorialFlowBoundary>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -22,7 +22,7 @@ import Input from '@/components/molecules/input/Input';
  * @param {Function} props.onAdd - Add handler with player data
  */
 function AddManualPlayerModal({ onAdd, onClose, visible }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const { Colors } = useTheme();
 
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
@@ -120,7 +120,7 @@ function AddManualPlayerModal({ onAdd, onClose, visible }) {
     header: {
       alignItems: 'center',
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-start',
       marginBottom: 20,
     },
     modal: {
@@ -166,9 +166,6 @@ function AddManualPlayerModal({ onAdd, onClose, visible }) {
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Ajouter un joueur</Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>×</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.badge}>
@@ -176,12 +173,12 @@ function AddManualPlayerModal({ onAdd, onClose, visible }) {
               <Text style={styles.badgeIconText}>+</Text>
             </View>
             <Text style={styles.badgeText}>
-              Ce joueur sera ajouté manuellement et n'apparaîtra pas dans les statistiques de l'équipe.
+              Ce joueur sera ajouté manuellement et n&apos;apparaîtra pas dans les statistiques de l&apos;équipe.
             </Text>
           </View>
 
           <Text style={styles.description}>
-            Ajoutez un joueur qui n'est pas encore inscrit sur l'application.
+            Ajoutez un joueur qui n&apos;est pas encore inscrit sur l&apos;application.
           </Text>
 
           <View style={styles.form}>

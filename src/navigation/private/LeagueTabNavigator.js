@@ -1,7 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, View } from 'react-native';
+import {
+  Image,
+  Platform,
+  Text,
+  View,
+} from 'react-native';
+
 // hooks
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
@@ -17,8 +23,13 @@ import LeagueNavigator from '@/navigation/LeagueNavigator';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import useTheme from '../../theme/themeContext';
-import { commonOptions, getTabScreenCommonOptions } from '../commonOptions';
+import {
+  commonOptions,
+  getFloatingTabBarScenePaddingBottom,
+  getTabScreenCommonOptions,
+} from '../commonOptions';
 import { RouteNames } from '../routeNames';
 
 const Tab = createBottomTabNavigator();
@@ -26,6 +37,7 @@ const Tab = createBottomTabNavigator();
 /**
  * LeagueTabs component - "Gold Mode"
  * Mirrored structure from PrivateTabNavigator but focused on League features.
+ * @returns {React.ReactElement} LeagueTabNavigator component.
  */
 export default function LeagueTabNavigator() {
   const { t } = useTranslation();
@@ -33,6 +45,7 @@ export default function LeagueTabNavigator() {
   const { userData } = useAuth();
   const { unreadCount } = useUnreadMessages();
   const insets = useSafeAreaInsets();
+  const floatingScenePaddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom);
   const { data: myLeagueTeams } = useGetMyLeagueTeam(userData?.documentId || '', {
     enabled: Boolean(userData?.documentId),
     staleTime: 30_000,
@@ -40,30 +53,50 @@ export default function LeagueTabNavigator() {
 
   const squadRequestsBadge = Array.isArray(myLeagueTeams)
     ? myLeagueTeams.reduce((total, squad) => {
-      const isCaptain = String(squad?.captain?.documentId || '') === String(userData?.documentId || '');
+      const isCaptain = String(squad?.captain?.documentId || '')
+        === String(userData?.documentId || '');
       if (!isCaptain) return total;
       return total + Number(squad?.join_requests?.length || 0);
     }, 0)
     : 0;
 
   // Gold badge renderer (reused logic, updated style)
-  const renderTabBarIcon = ({ badge, color, source }) => (
-    <View>
-      <Image source={source} style={{ height: 20, tintColor: color, width: 20 }} />
+  const renderTabBarIcon = ({
+    badge,
+    color,
+    source,
+  }) => (
+    <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 24 }}>
+      <Image source={source} style={{ height: 20, width: 20 }} tintColor={color} />
       {badge > 0 ? (
         <View style={{
           alignItems: 'center',
           backgroundColor: Colors.error500,
-          borderRadius: 10,
-          height: 16,
+          borderColor: 'rgba(9, 24, 35, 0.94)',
+          borderRadius: 999,
+          borderWidth: 1.5,
+          height: 18,
           justifyContent: 'center',
-          minWidth: 16,
+          minWidth: 18,
+          paddingHorizontal: 4,
           position: 'absolute',
           right: -6,
-          top: -4,
+          top: -3,
+          ...(Platform.OS === 'web'
+            ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.22)' }
+            : {
+              shadowColor: '#000',
+              shadowOffset: { height: 2, width: 0 },
+              shadowOpacity: 0.22,
+              shadowRadius: 4,
+            }),
         }}
         >
-          <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>{badge}</Text>
+          <Text
+            style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}
+          >
+            {badge}
+          </Text>
         </View>
       ) : null}
     </View>
@@ -75,8 +108,13 @@ export default function LeagueTabNavigator() {
       initialRouteName={RouteNames.LeagueDashboard}
       screenOptions={{
         ...commonOptions,
+        sceneContainerStyle: {
+          backgroundColor: 'transparent',
+          paddingBottom: floatingScenePaddingBottom,
+        },
         // tabBarBackground removed to eliminate gradient
       }}
+      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       {/* 1. Home / Dashboard */}
       <Tab.Screen
@@ -84,13 +122,16 @@ export default function LeagueTabNavigator() {
         name={RouteNames.LeagueDashboard}
         options={({ route }) => {
           const baseOptions = getTabScreenCommonOptions({
+            accessibilityLabel: 'League',
             activeColor: Colors.gold500, // GOLD ACCENT
             bottomInset: insets.bottom,
             icon: Images.trophy, // Reuse Trophy or similar
             label: 'League', // TODO: Translate keys
             renderTabBarIcon,
+            visualLabel: 'League',
           });
-          const focusedRouteName = getFocusedRouteNameFromRoute(route) || RouteNames.LeagueDashboard;
+          const focusedRouteName = getFocusedRouteNameFromRoute(route)
+            || RouteNames.LeagueDashboard;
           const hideTabBar = (
             focusedRouteName === RouteNames.EndMatchScreen
             || focusedRouteName === RouteNames.SquadFilters
@@ -114,12 +155,14 @@ export default function LeagueTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: 'Squad',
             activeColor: Colors.gold500,
             badge: squadRequestsBadge,
             bottomInset: insets.bottom,
             icon: Images.strokeShield,
             label: 'Squad',
             renderTabBarIcon,
+            visualLabel: 'Squad',
           }),
         }}
       />
@@ -131,11 +174,13 @@ export default function LeagueTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: 'Matchs',
             activeColor: Colors.gold500,
             bottomInset: insets.bottom,
             icon: Images.whistle, // Reuse Whistle or similar
             label: 'Matchs',
             renderTabBarIcon,
+            visualLabel: 'Matchs',
           }),
         }}
       />
@@ -147,12 +192,14 @@ export default function LeagueTabNavigator() {
         options={{
           headerShown: false,
           ...getTabScreenCommonOptions({
+            accessibilityLabel: t('menu.chat', 'Messagerie'),
             activeColor: Colors.gold500,
             badge: unreadCount,
             bottomInset: insets.bottom,
             icon: Images.envelope,
             label: t('menu.chat'), // "Messagerie"
             renderTabBarIcon,
+            visualLabel: t('menuDock.chat', 'Messages'),
           }),
         }}
       />

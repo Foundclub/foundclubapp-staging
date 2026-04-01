@@ -54,6 +54,7 @@ function LeagueHeaderSwitch() {
       <View style={styles.logoContainer}>
         <View style={[styles.brandSection, { width: logoWidth }]}>
           <Image
+            resizeMode="contain"
             source={Images.logo}
             style={[
               styles.logo,
@@ -125,7 +126,6 @@ const styles = StyleSheet.create({
     transform: [{ translateY: 1 }],
   },
   logo: {
-    resizeMode: 'contain',
   },
   logoContainer: {
     alignItems: 'center',

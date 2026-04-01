@@ -1,5 +1,6 @@
 import ButtonStyle from '@/theme/components/buttonStyle';
 import NavigationStyle from '@/theme/components/navigationStyle';
+import { Platform } from 'react-native';
 
 /**
  * Generate classes defining background color for every colors defined : [colorName]Background
@@ -73,6 +74,21 @@ export const resizeModes = /** @type {const} */ ({
   contain: 'contain',
   cover: 'cover',
 });
+
+const buildShadowStyle = ({ elevation, opacity }) => (
+  Platform.OS === 'web'
+    ? { boxShadow: `0 5px 20px rgba(0, 0, 0, ${opacity})` }
+    : {
+      elevation,
+      shadowColor: '#000000',
+      shadowOffset: {
+        height: 5,
+        width: 5,
+      },
+      shadowOpacity: opacity,
+      shadowRadius: 20,
+    }
+);
 
 const borderStyles = /** @type {const} */ ({
   dashed: 'dashed',
@@ -149,78 +165,38 @@ export const staticStyle = {
   // icons
   icon16: {
     height: 16,
-    resizeMode: resizeModes.contain,
     width: 16,
   },
   icon20: {
     height: 20,
-    resizeMode: resizeModes.contain,
     width: 20,
   },
   icon24: {
     height: 24,
-    resizeMode: resizeModes.contain,
     width: 24,
   },
   icon28: {
     height: 28,
-    resizeMode: resizeModes.contain,
     width: 28,
   },
   icon48: {
     height: 48,
-    resizeMode: resizeModes.contain,
     width: 48,
   },
   roundIcon40: {
     borderRadius: 40,
     height: 40,
-    resizeMode: resizeModes.cover,
     width: 40,
   },
   roundIcon55: {
     borderRadius: 55,
     height: 55,
-    resizeMode: resizeModes.cover,
     width: 55,
   },
   // Shadows
-  shadow100: {
-    // iOS shadow
-    shadowColor: '#000000',
-    shadowOffset: {
-      height: 5,
-      width: 5,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    // Android shadow
-    elevation: 5,
-  },
-  shadow200: {
-    // iOS shadow
-    shadowColor: '#000000',
-    shadowOffset: {
-      height: 5,
-      width: 5,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    // Android shadow
-    elevation: 10,
-  },
-  shadow300: {
-    // iOS shadow
-    shadowColor: '#000000',
-    shadowOffset: {
-      height: 5,
-      width: 5,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    // Android shadow
-    elevation: 20,
-  },
+  shadow100: buildShadowStyle({ elevation: 5, opacity: 0.05 }),
+  shadow200: buildShadowStyle({ elevation: 10, opacity: 0.25 }),
+  shadow300: buildShadowStyle({ elevation: 20, opacity: 0.5 }),
 };
 
 /**

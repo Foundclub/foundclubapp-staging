@@ -1,15 +1,18 @@
-import React, { useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Text,
+  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
+import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import StrapiImage from '@/components/atoms/strapiImage/StrapiImage';
+import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -20,13 +23,17 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
+
+/* eslint-disable import/order, perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
 import { getAdWizardStepCount } from './adWizardStepUtils';
+/* eslint-enable import/order, perfectionist/sort-imports */
 
 /**
- *
- * @param root0
- * @param root0.navigation
+ * Wizard step dedicated to editable ad metadata.
+ * @param {{ navigation: any }} props
+ * @returns {import('react').ReactElement}
  */
 function AdWizardInfo({ navigation }) {
   const {
@@ -36,8 +43,10 @@ function AdWizardInfo({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
-  const { t } = useTranslation();
+  const { getClubInitials } = useClub();
+  const { showBanner } = useAppFeedback();
   const { dispatch, state } = useAdWizard();
+  const { width } = useWindowDimensions();
 
   const levelsQuery = useGetLevels();
   const categoriesQuery = useGetCategories();
@@ -50,37 +59,81 @@ function AdWizardInfo({ navigation }) {
   const isTaxonomyLoading = levelsQuery.isLoading || categoriesQuery.isLoading || sectionsQuery.isLoading;
   const hasTaxonomyError = Boolean(levelsQuery.error || categoriesQuery.error || sectionsQuery.error);
 
-  const levels = useMemo(() => allLevels?.map(({ documentId, name }) => ({
-    label: name,
-    value: documentId || '',
-  })) || [], [allLevels]);
+  const levels = useMemo(() => (
+    allLevels?.map(({ documentId, name }) => ({
+      label: name,
+      value: documentId || '',
+    })) || []
+  ), [allLevels]);
 
-  const categories = useMemo(() => allCategories?.map(({ documentId, name }) => ({
-    label: name,
-    value: documentId || '',
-  })) || [], [allCategories]);
+  const categories = useMemo(() => (
+    allCategories?.map(({ documentId, name }) => ({
+      label: name,
+      value: documentId || '',
+    })) || []
+  ), [allCategories]);
 
-  const sections = useMemo(() => allSections?.map(({ documentId, name }) => ({
-    label: name,
-    value: documentId || '',
-  })) || [], [allSections]);
+  const sections = useMemo(() => (
+    allSections?.map(({ documentId, name }) => ({
+      label: name,
+      value: documentId || '',
+    })) || []
+  ), [allSections]);
 
   const handleNext = () => {
     if (!state.address) {
-      Alert.alert(
-        t('common.errors.title', 'Erreur'),
-        t('adWizard.errors.missingAddress', 'Veuillez renseigner un lieu pour l\'annonce.'),
-      );
+      showBanner({
+        body: 'Ajoutez un lieu précis pour que les joueurs comprennent où se déroule le recrutement.',
+        title: 'Lieu requis',
+        tone: 'error',
+      });
       return;
     }
 
     navigation.navigate(RouteNames.AdWizardPositions);
   };
 
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non defini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
   const currentSectionValue = state.section?.name || '';
   const currentCategoryValue = state.category?.name || '';
   const currentLevelValue = state.minLevel?.name || '';
+  const teamSummaryMeta = [
+    { label: 'Section', value: currentSectionValue },
+    { label: 'Catégorie', value: currentCategoryValue },
+    { label: 'Niveau', value: currentLevelValue },
+  ].filter((item) => String(item.value || '').trim().length > 0).slice(0, 3);
+  const cardSurfaceStyle = {
+    backgroundColor: 'rgba(4, 31, 44, 0.82)',
+    borderColor: 'rgba(1, 179, 244, 0.24)',
+  };
+  const shouldUseSingleColumnFields = width <= 430;
+  const compactFieldWidth = shouldUseSingleColumnFields ? '100%' : '48%';
+  const teamIdentityNode = state.team?.club?.logo?.url ? (
+    <View
+      style={{
+        alignItems: 'center',
+        backgroundColor: Colors.neutral00,
+        borderColor: Colors.primary500,
+        borderRadius: 28,
+        borderWidth: 1.5,
+        height: 56,
+        justifyContent: 'center',
+        overflow: 'hidden',
+        width: 56,
+      }}
+    >
+      <StrapiImage
+        resizeMode="contain"
+        source={{ uri: state.team.club.logo.url }}
+        style={{ backgroundColor: Colors.neutral00, height: 44, width: 44 }}
+      />
+    </View>
+  ) : (
+    <TeamShield
+      initials={getClubInitials(state.team?.club?.name || state.team?.name || '')}
+      isSmall
+    />
+  );
 
   const handleSectionChange = useCallback((option) => {
     if (option && !Array.isArray(option)) {
@@ -104,9 +157,9 @@ function AdWizardInfo({ navigation }) {
   }, [allLevels, dispatch]);
 
   const handleRetryTaxonomy = useCallback(() => {
-    void levelsQuery.refetch();
-    void categoriesQuery.refetch();
-    void sectionsQuery.refetch();
+    levelsQuery.refetch();
+    categoriesQuery.refetch();
+    sectionsQuery.refetch();
   }, [categoriesQuery, levelsQuery, sectionsQuery]);
 
   return (
@@ -117,137 +170,229 @@ function AdWizardInfo({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={2}
-      subtitle="Verifiez et completez les details"
+      subtitle="Affinez le profil recherché et le lieu de publication."
       title="Informations de l'annonce"
     >
-      {isTaxonomyLoading ? (
-        <View style={[Spaces.marginBottom[24], Spaces.padding[16], {
-          alignItems: 'center',
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.neutral700,
-          borderRadius: 16,
-          borderWidth: 1,
-          flexDirection: 'row',
-          gap: 12,
-        }]}
-        >
-          <ActivityIndicator color={Colors.primary500} size="small" />
-          <Text style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}>
-            Chargement des sections, categories et niveaux disponibles.
-          </Text>
-        </View>
-      ) : null}
-
-      {hasTaxonomyError ? (
-        <View style={[Spaces.marginBottom[24], Spaces.padding[16], {
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.error500,
-          borderRadius: 16,
-          borderWidth: 1,
-        }]}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-            Certaines options n'ont pas pu etre chargees
-          </Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
-            Vous pouvez reessayer pour recuperer tous les referentiels, ou continuer avec les informations deja preremplies.
-          </Text>
-          <Button onPress={handleRetryTaxonomy} title="R\u00E9essayer" variant="Secondary" />
-        </View>
-      ) : null}
-
-      <View style={{
-        backgroundColor: `${Colors.primary500}15`,
-        borderColor: Colors.primary500,
-        borderRadius: 16,
-        borderWidth: 1,
-        marginBottom: 24,
-        padding: 16,
-      }}
-      >
-        <Text style={[Fonts.p3, { color: Colors.primary500, marginBottom: 2 }]}>
-          Equipe selectionnee
-        </Text>
-        <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-          {state.team?.name || 'Non definie'}
-        </Text>
-        {state.team?.club?.name ? (
-          <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
-            {state.team.club.name}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={[Spaces.marginBottom[24]]}>
-        <Text style={[Fonts.p1Bold, Fonts.neutral00, Spaces.marginBottom[8]]}>Sport</Text>
-        <View style={[
-          ApplicationStyle.input,
-          Alignments.row,
-          Alignments.alignCenter,
-          { opacity: 0.7 },
-        ]}
-        >
-          <Text style={[Fonts.p1, { color: Colors.primary500 }]}>{sportName}</Text>
-        </View>
-      </View>
-
-      <View style={[Spaces.marginBottom[24]]}>
-        <AutocompleteSelect
-          label="Section"
-          options={sections}
-          placeholder="Selectionner une section"
-          setValue={handleSectionChange}
-          value={currentSectionValue}
-        />
-      </View>
-
-      <View style={[Spaces.marginBottom[24]]}>
-        <AutocompleteSelect
-          label="Categorie"
-          options={categories}
-          placeholder="Selectionner une categorie"
-          setValue={handleCategoryChange}
-          value={currentCategoryValue}
-        />
-      </View>
-
-      <View style={[Spaces.marginBottom[24]]}>
-        <AutocompleteSelect
-          label="Niveau minimum recherche"
-          options={levels}
-          placeholder="Selectionner un niveau"
-          setValue={handleLevelChange}
-          value={currentLevelValue}
-        />
-      </View>
-
-      <View style={[Spaces.marginBottom[24]]}>
-        <AutocompleteAddressInput
-          address={state.address}
-          label={(
-            <Text>
-              Lieu (Stade, Ville...)
-              {' '}
-              <Text style={{ color: Colors.error500 }}>*</Text>
+      <View style={[Spaces.gap[24], Spaces.paddingBottom[24]]}>
+        {isTaxonomyLoading ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[16],
+              cardSurfaceStyle,
+            ]}
+          >
+            <ActivityIndicator color={Colors.primary500} size="small" />
+            <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill]}>
+              Chargement des sections, catégories et niveaux disponibles.
             </Text>
-          )}
-          placeholder="Rechercher une adresse"
-          setAddress={(address) => dispatch({ payload: address, type: 'SET_ADDRESS' })}
-        />
-      </View>
+          </View>
+        ) : null}
 
-      <View style={{
-        alignItems: 'center',
-        backgroundColor: Colors.neutral800,
-        borderRadius: 12,
-        flexDirection: 'row',
-        padding: 14,
-      }}
-      >
-        <Text style={{ fontSize: 16, marginRight: 10 }}>i</Text>
-        <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
-          Ces informations aident les joueurs a trouver votre annonce. Le lieu est obligatoire pour continuer.
-        </Text>
+        {hasTaxonomyError ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[16],
+              {
+                backgroundColor: 'rgba(53, 19, 24, 0.88)',
+                borderColor: 'rgba(239, 68, 68, 0.45)',
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              Certaines options n&apos;ont pas pu être chargées
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Vous pouvez réessayer pour récupérer toutes les références, ou continuer avec les informations déjà préremplies depuis l&apos;équipe.
+            </Text>
+            <Button onPress={handleRetryTaxonomy} title="Réessayer" variant="Secondary" />
+          </View>
+        ) : null}
+
+        {state.team ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[20],
+              cardSurfaceStyle,
+            ]}
+          >
+            <View style={[Spaces.gap[16]]}>
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], { flex: 1 }]}>
+                {teamIdentityNode}
+                <View style={[Spaces.gap[8], { flex: 1 }]}>
+                  <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
+                    {state.team?.name || '-'}
+                  </Text>
+                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral100]}>
+                    {state.team?.club?.name || 'Club non renseigné'}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                accessibilityRole="button"
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  Spaces.paddingHorizontal[16],
+                  Spaces.paddingVertical[12],
+                  {
+                    alignSelf: 'flex-start',
+                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                    borderColor: 'rgba(1, 179, 244, 0.28)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    minWidth: 144,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Changer l&apos;équipe</Text>
+              </TouchableOpacity>
+            </View>
+
+            {teamSummaryMeta.length > 0 ? (
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                {teamSummaryMeta.map((item) => (
+                  <View
+                    key={item.label}
+                    style={[
+                      Spaces.paddingHorizontal[14],
+                      Spaces.paddingVertical[10],
+                      {
+                        backgroundColor: 'rgba(1, 179, 244, 0.10)',
+                        borderColor: 'rgba(1, 179, 244, 0.18)',
+                        borderRadius: 999,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                      {`${item.label} : ${item.value}`}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
+          <View style={[Spaces.gap[12]]}>
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>Profil recherché</Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                Affinez la cible de votre annonce avec les bons repères sportifs.
+              </Text>
+            </View>
+            <View
+              style={[
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
+                {
+                  alignSelf: 'flex-start',
+                  backgroundColor: 'rgba(1, 179, 244, 0.14)',
+                  borderColor: 'rgba(1, 179, 244, 0.32)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, Fonts.primary500]}>{sportName}</Text>
+            </View>
+          </View>
+
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16]]}>
+            <AutocompleteSelect
+              displayVariant="card"
+              label="Section"
+              options={sections}
+              placeholder="Sélectionner une section"
+              setValue={handleSectionChange}
+              value={currentSectionValue}
+              wrapperStyle={{ width: compactFieldWidth }}
+            />
+
+            <AutocompleteSelect
+              displayVariant="card"
+              label="Catégorie"
+              options={categories}
+              placeholder="Sélectionner une catégorie"
+              setValue={handleCategoryChange}
+              value={currentCategoryValue}
+              wrapperStyle={{ width: compactFieldWidth }}
+            />
+
+            <AutocompleteSelect
+              description="Définissez le niveau minimum attendu pour candidater."
+              displayVariant="card"
+              label="Niveau minimum recherché"
+              options={levels}
+              placeholder="Sélectionner un niveau"
+              setValue={handleLevelChange}
+              value={currentLevelValue}
+              wrapperStyle={{ width: '100%' }}
+            />
+          </View>
+        </View>
+
+        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>Lieu de l&apos;annonce</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              Ajoutez un lieu clair pour situer rapidement votre recrutement.
+            </Text>
+          </View>
+
+          <AutocompleteAddressInput
+            address={state.address}
+            label={(
+              <Text>
+                Lieu (stade, ville, gymnase...)
+                {' '}
+                <Text style={{ color: Colors.error500 }}>*</Text>
+              </Text>
+            )}
+            placeholder="Rechercher une adresse"
+            setAddress={(address) => dispatch({ payload: address, type: 'SET_ADDRESS' })}
+          />
+
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[12],
+              Spaces.paddingHorizontal[16],
+              Spaces.paddingVertical[12],
+              {
+                backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                borderColor: 'rgba(1, 179, 244, 0.16)',
+                borderRadius: 16,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <View
+              style={{
+                backgroundColor: Colors.primary500,
+                borderRadius: 999,
+                height: 8,
+                width: 8,
+              }}
+            />
+            <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
+              Conseil publication : gardez un lieu précis et un niveau cohérent pour attirer les bons profils dès les premiers résultats.
+            </Text>
+          </View>
+        </View>
       </View>
     </WizardStepLayout>
   );

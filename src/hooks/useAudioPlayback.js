@@ -131,26 +131,38 @@ const toMs = (value) => {
 
 const removePlaybackListeners = (player) => {
   if (!player) return;
-  if (typeof player.removePlayBackListener === 'function') {
-    player.removePlayBackListener();
-  }
-  if (typeof player.removePlaybackEndListener === 'function') {
-    player.removePlaybackEndListener();
-  }
+  safeCall(
+    safeRead(() => player.removePlayBackListener, 'Audio player removePlayBackListener unavailable'),
+    player,
+    [],
+    'Audio player removePlayBackListener failed',
+  );
+  safeCall(
+    safeRead(() => player.removePlaybackEndListener, 'Audio player removePlaybackEndListener unavailable'),
+    player,
+    [],
+    'Audio player removePlaybackEndListener failed',
+  );
 };
 
 const addPlaybackListener = (player, listener) => {
   if (!player || typeof listener !== 'function') return;
-  if (typeof player.addPlayBackListener === 'function') {
-    player.addPlayBackListener(listener);
-  }
+  safeCall(
+    safeRead(() => player.addPlayBackListener, 'Audio player addPlayBackListener unavailable'),
+    player,
+    [listener],
+    'Audio player addPlayBackListener failed',
+  );
 };
 
 const addPlaybackEndListener = (player, listener) => {
   if (!player || typeof listener !== 'function') return;
-  if (typeof player.addPlaybackEndListener === 'function') {
-    player.addPlaybackEndListener(listener);
-  }
+  safeCall(
+    safeRead(() => player.addPlaybackEndListener, 'Audio player addPlaybackEndListener unavailable'),
+    player,
+    [listener],
+    'Audio player addPlaybackEndListener failed',
+  );
 };
 
 const setPlayerSpeed = (player, speed) => {
@@ -327,6 +339,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const stopPlaybackRef = useRef(/** @type {() => Promise<void>} */ (async () => {}));
   const downloadedSourceRef = useRef('');
   const downloadedPathRef = useRef('');
+  const teardownChainRef = useRef(Promise.resolve());
   const playbackSessionRef = useRef({
     durationMs: 0,
     lastPositionMs: 0,
@@ -504,13 +517,17 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     return withFileScheme(downloadedPath);
   }, [cleanupDownloadedSource, headers, normalizedSourceUrl]);
 
-  const stopPlayback = useCallback(async (options = {}) => {
+  const runPlayerTeardown = useCallback(async (options = {}) => {
     const {
+      cleanupSource = false,
+      disposePlayer = false,
       releaseSlot = true,
       resetPosition = true,
     } = options;
 
     const player = playerRef.current;
+    removePlaybackListeners(player);
+
     try {
       if (player && typeof player.stopPlayer === 'function') {
         await player.stopPlayer();
@@ -519,7 +536,21 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       // Best effort stop.
     }
 
-    removePlaybackListeners(player);
+    if (disposePlayer && player && typeof player.dispose === 'function') {
+      try {
+        player.dispose();
+      } catch (_error) {
+        // Best effort dispose.
+      }
+      if (playerRef.current === player) {
+        playerRef.current = null;
+      }
+    }
+
+    if (cleanupSource) {
+      await cleanupDownloadedSource();
+    }
+
     if (releaseSlot) {
       releasePlaybackSlot(ownerIdRef.current);
     }
@@ -528,7 +559,20 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     if (resetPosition) {
       safeSetState(setPositionMs, 0);
     }
-  }, [safeSetState]);
+  }, [cleanupDownloadedSource, safeSetState]);
+
+  const enqueuePlayerTeardown = useCallback(async (options = {}) => {
+    const scheduledTeardown = teardownChainRef.current
+      .catch(() => {})
+      .then(() => runPlayerTeardown(options));
+
+    teardownChainRef.current = scheduledTeardown.catch(() => {});
+    await scheduledTeardown;
+  }, [runPlayerTeardown]);
+
+  const stopPlayback = useCallback(async (options = {}) => {
+    await enqueuePlayerTeardown(options);
+  }, [enqueuePlayerTeardown]);
 
   const openExternalFallback = useCallback(async () => {
     if (!allowExternalFallback) {
@@ -790,32 +834,30 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   }, [stopPlayback]);
 
   useEffect(() => {
-    stopPlayback().catch(() => {});
-    cleanupDownloadedSource().catch(() => {});
+    enqueuePlayerTeardown({
+      cleanupSource: true,
+      disposePlayer: false,
+      releaseSlot: true,
+      resetPosition: true,
+    }).catch(() => {});
     safeSetState(setDurationMs, 0);
     safeSetState(setPositionMs, 0);
     safeSetState(setIsPlaying, false);
     safeSetState(setLastError, '');
-  }, [cleanupDownloadedSource, normalizedSourceUrl, safeSetState, stopPlayback]);
+  }, [enqueuePlayerTeardown, normalizedSourceUrl, safeSetState]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      stopPlayback().catch(() => {});
-      cleanupDownloadedSource().catch(() => {});
-
-      const player = playerRef.current;
-      if (player && typeof player.dispose === 'function') {
-        try {
-          player.dispose();
-        } catch (_error) {
-          // Best effort dispose.
-        }
-      }
-      playerRef.current = null;
+      enqueuePlayerTeardown({
+        cleanupSource: true,
+        disposePlayer: true,
+        releaseSlot: true,
+        resetPosition: true,
+      }).catch(() => {});
     };
-  }, [cleanupDownloadedSource, stopPlayback]);
+  }, [enqueuePlayerTeardown]);
 
   return {
     cycleSpeed,

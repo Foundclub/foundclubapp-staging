@@ -52,9 +52,16 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
   );
 
   return (
-    <View style={[Spaces.marginBottom[16]]}>
+    <View style={[Spaces.marginBottom[24]]}>
       <ScrollView
-        contentContainerStyle={[Alignments.row, Spaces.gap[8], Spaces.paddingRight[24]]}
+        contentContainerStyle={[
+          Alignments.row,
+          Spaces.gap[8],
+          {
+            flexGrow: 1,
+            paddingRight: 4,
+          },
+        ]}
         horizontal
         showsHorizontalScrollIndicator={false}
       >
@@ -66,16 +73,30 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
               key={option.key}
               onPress={() => onTypeChange(/** @type {SearchType} */ (option.key))}
               style={{
+                alignItems: 'center',
                 backgroundColor: isActive ? Colors.primary500 : `${Colors.primary900}F0`,
                 borderColor: isActive ? Colors.primary500 : `${Colors.primary500}30`,
                 borderRadius: 999,
                 borderWidth: 1,
+                justifyContent: 'center',
                 minHeight: 40,
-                paddingHorizontal: 16,
-                paddingVertical: 9,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
               }}
             >
-              <Text style={[Fonts.p3Bold, isActive ? Fonts.neutral900 : Fonts.neutral100]}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  Fonts.p4Bold,
+                  isActive ? Fonts.neutral900 : Fonts.neutral100,
+                  {
+                    includeFontPadding: false,
+                    lineHeight: 16,
+                    textAlign: 'center',
+                    textAlignVertical: 'center',
+                  },
+                ]}
+              >
                 {option.label}
               </Text>
             </TouchableOpacity>

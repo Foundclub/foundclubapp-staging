@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { createPortal } from 'react-dom';
 
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +23,7 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} [props.closeOnBackdropPress]
  * @param {(string|number)[]} [props.snapPoints]
  * @param {import('react-native').ViewStyle} [props.style]
+ * @param {'sheet' | 'dialog'} [props.webPresentation]
  * @returns {import('react').ReactElement | null}
  */
 function BottomModal({
@@ -31,11 +33,12 @@ function BottomModal({
   contentContainerStyle,
   footerComponent,
   headerComponent,
-  hideCloseButton = false,
+  hideCloseButton = true,
   isVisible,
   scrollable = true,
   snapPoints,
   style,
+  webPresentation = 'sheet',
 }) {
   const {
     Alignments,
@@ -49,16 +52,24 @@ function BottomModal({
     return null;
   }
 
+  const isDialog = webPresentation === 'dialog';
   const firstSnapPoint = Array.isArray(snapPoints) && snapPoints.length > 0 ? snapPoints[0] : undefined;
-  const sheetSizeStyle = firstSnapPoint !== undefined
+  const sheetSizeStyle = isDialog
     ? {
-      height: typeof firstSnapPoint === 'number' ? firstSnapPoint : firstSnapPoint,
-      maxHeight: '92%',
+      maxHeight: 'calc(100vh - 48px)',
+      maxWidth: 680,
+      minHeight: 0,
+      width: 'calc(100vw - 32px)',
     }
-    : {
-      maxHeight: '86%',
-      minHeight: 220,
-    };
+    : firstSnapPoint !== undefined
+      ? {
+        height: typeof firstSnapPoint === 'number' ? firstSnapPoint : firstSnapPoint,
+        maxHeight: '92%',
+      }
+      : {
+        maxHeight: '86%',
+        minHeight: 220,
+      };
 
   const content = scrollable ? (
     <ScrollView
@@ -69,7 +80,7 @@ function BottomModal({
         contentContainerStyle,
       ]}
       keyboardShouldPersistTaps="handled"
-      style={[Alignments.fill, { maxHeight: 420 }]}
+      style={[Alignments.fill, { maxHeight: isDialog ? 520 : 420 }]}
     >
       {children}
     </ScrollView>
@@ -86,10 +97,11 @@ function BottomModal({
     </View>
   );
 
-  return (
+  const modalContent = (
     <View
       style={[
-        Alignments.justifyEnd,
+        isDialog ? Alignments.justifyCenter : Alignments.justifyEnd,
+        isDialog ? Alignments.alignCenter : null,
         {
           bottom: 0,
           left: 0,
@@ -115,11 +127,14 @@ function BottomModal({
           ApplicationStyle.backgroundColor.primary700,
           ApplicationStyle.borderRadius32,
           {
+            borderBottomLeftRadius: isDialog ? 32 : 0,
+            borderBottomRightRadius: isDialog ? 32 : 0,
             borderTopLeftRadius: 32,
             borderTopRightRadius: 32,
+            boxShadow: '0 28px 60px rgba(3, 9, 16, 0.45)',
             overflow: 'hidden',
-            paddingTop: hideCloseButton ? 20 : 28,
-            width: '100%',
+            paddingTop: hideCloseButton ? (isDialog ? 24 : 20) : 28,
+            width: isDialog ? undefined : '100%',
           },
           sheetSizeStyle,
           style,
@@ -178,6 +193,12 @@ function BottomModal({
       </View>
     </View>
   );
+
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 }
 
 export default BottomModal;

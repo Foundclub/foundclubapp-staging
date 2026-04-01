@@ -181,7 +181,7 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     const details = duplicates
       .map(([order, ids]) => `order=${order} ids=[${ids.join(', ')}]`)
       .join(' | ');
-    console.warn(`[OnboardingProvider] Duplicate step orders détectéd in flow "${flowId}": ${details}`);
+    console.warn(`[OnboardingProvider] Duplicate step orders detected in flow "${flowId}": ${details}`);
   }, [flowId, orderedSteps]);
 
   const persistCompletedSteps = useCallback((nextCompletedStepIds) => {
@@ -402,24 +402,30 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         stopOnboarding();
       } else {
         const nextStep = orderedSteps[nextPendingIndex];
+        const matchedPrefetchedLayout = (
+          prefetchedLayout
+          && nextStep?.id
+          && currentStep?.nextTargetStepId === nextStep.id
+        )
+          ? prefetchedLayout
+          : null;
         setTutorialDebugState({
           lastAdvanceFromStepId: currentStep?.id || null,
           lastAdvancePhase: 'finalize',
           lastAdvanceToStepId: nextStep?.id || null,
         });
         prefetchedStepLayoutRef.current = (
-          prefetchedLayout
+          matchedPrefetchedLayout
           && nextStep?.id
-          && currentStep?.nextTargetStepId === nextStep.id
         )
           ? {
-            layout: prefetchedLayout,
+            layout: matchedPrefetchedLayout,
             stepId: nextStep.id,
           }
           : null;
-        setCurrentStepLayout(null);
-        setIsStepReady(false);
-        setIsTransitioning(true);
+        setCurrentStepLayout(matchedPrefetchedLayout);
+        setIsStepReady(Boolean(matchedPrefetchedLayout));
+        setIsTransitioning(!matchedPrefetchedLayout);
         setCurrentStepIndex(nextPendingIndex);
       }
 
@@ -566,14 +572,16 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
       ? prefetchedStepLayoutRef.current.layout
       : null;
 
-    setIsTransitioning(true);
-    setIsStepReady(false);
+    if (!prefetchedLayout) {
+      setIsTransitioning(true);
+      setIsStepReady(false);
+    }
     setTutorialDebugState({
       currentStepId: activeStep.id,
       currentStepIndex,
-      currentStepLayout: null,
-      isStepReady: false,
-      isTransitioning: true,
+      currentStepLayout: prefetchedLayout,
+      isStepReady: Boolean(prefetchedLayout),
+      isTransitioning: !prefetchedLayout,
       lastFailureReason: null,
       lastResolvedStepId: null,
       lastResolvedTargetId: activeStep.nextTargetStepId || null,

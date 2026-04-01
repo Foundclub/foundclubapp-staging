@@ -27,6 +27,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
+import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -321,9 +322,14 @@ function TeamListContent({
     });
   }, [isLeagueMode, navigation]);
 
+  const floatingActionBottom = useMemo(
+    () => getFloatingActionBottomOffset(insets.bottom, 14),
+    [insets.bottom],
+  );
+
   const listBottomPadding = useMemo(
-    () => (isLeagueMode ? 180 : 120) + insets.bottom,
-    [insets.bottom, isLeagueMode],
+    () => (isLeagueMode ? floatingActionBottom + 92 : 120 + insets.bottom),
+    [floatingActionBottom, insets.bottom, isLeagueMode],
   );
 
   const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {
@@ -808,7 +814,11 @@ function TeamListContent({
 
         {isLeagueMode ? (
           <View style={{
-            alignItems: 'center', bottom: 20, position: 'absolute', width: '100%', zIndex: 100,
+            alignItems: 'center',
+            bottom: floatingActionBottom,
+            position: 'absolute',
+            width: '100%',
+            zIndex: 100,
           }}
           >
             <Button

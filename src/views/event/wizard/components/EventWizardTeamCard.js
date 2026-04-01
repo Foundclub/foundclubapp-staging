@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -18,11 +19,15 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
  * @param {object} props
  * @param {any} props.team
  * @param {() => void} props.onPress
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.isLoading]
  * @param {boolean} [props.isSelected]
  * @param {boolean} [props.showSelectionIndicator]
  * @returns {import('react').ReactElement}
  */
 function EventWizardTeamCard({
+  disabled = false,
+  isLoading = false,
   isSelected = false,
   onPress,
   showSelectionIndicator = false,
@@ -73,6 +78,7 @@ function EventWizardTeamCard({
   const sponsors = allSponsors.slice(0, 2);
   const logoFrameSize = 60;
   const logoImageSize = 48;
+  let selectionIndicatorNode = null;
   const logoFrameStyle = {
     alignItems: 'center',
     backgroundColor: Colors.neutral00,
@@ -104,14 +110,31 @@ function EventWizardTeamCard({
     />
   );
 
+  if (isLoading) {
+    selectionIndicatorNode = (
+      <ActivityIndicator
+        color={isSelected ? Colors.neutral900 : Colors.primary500}
+        size="small"
+      />
+    );
+  } else if (isSelected) {
+    selectionIndicatorNode = (
+      <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>OK</Text>
+    );
+  }
+
   return (
     <View style={{ position: 'relative' }}>
       <TouchableOpacity
         activeOpacity={0.92}
+        disabled={disabled}
         onPress={onPress}
         style={[
           Spaces.marginVertical[12],
-          { borderRadius: 24 },
+          {
+            borderRadius: 24,
+            opacity: disabled && !isLoading ? 0.5 : 1,
+          },
         ]}
       >
         <View
@@ -175,9 +198,7 @@ function EventWizardTeamCard({
                     width: 24,
                   }}
                 >
-                  {isSelected ? (
-                    <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>OK</Text>
-                  ) : null}
+                  {selectionIndicatorNode}
                 </View>
               ) : null}
             </View>

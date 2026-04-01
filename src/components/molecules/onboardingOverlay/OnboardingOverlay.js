@@ -267,6 +267,15 @@ function OnboardingOverlay({ onVisible } = {}) {
   );
   const isLastStep = currentStepIndex >= totalSteps - 1;
   const isScrollStep = currentStep?.nextAction === 'scrollDown';
+  const tooltipShadowStyle = Platform.OS === 'web'
+    ? { boxShadow: '0 12px 32px rgba(0, 0, 0, 0.24)' }
+    : {
+      elevation: 20,
+      shadowColor: Colors.neutral900,
+      shadowOffset: { height: 2, width: 0 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    };
   const nextButtonLabel = isLastStep
     ? t('common.finish')
     : (currentStep?.nextLabel || (isScrollStep ? t('homeHubTutorial.actions.scrollDown', 'Descendre') : t('common.next')));
@@ -300,36 +309,32 @@ function OnboardingOverlay({ onVisible } = {}) {
   }
 
   const overlayContent = (
-    <View pointerEvents="box-none" style={styles.container}>
+    <View style={[styles.container, styles.pointerBoxNone]}>
       <View
-        pointerEvents="none"
-        style={[styles.overlayPart, overlayStyle, {
+        style={[styles.overlayPart, styles.pointerNone, overlayStyle, {
           height: topHeight, left: 0, right: 0, top: 0,
         }]}
       />
       <View
-        pointerEvents="none"
-        style={[styles.overlayPart, overlayStyle, {
+        style={[styles.overlayPart, styles.pointerNone, overlayStyle, {
           bottom: 0, left: 0, right: 0, top: topHeight + focusLayout.height,
         }]}
       />
       <View
-        pointerEvents="none"
-        style={[styles.overlayPart, overlayStyle, {
+        style={[styles.overlayPart, styles.pointerNone, overlayStyle, {
           height: focusLayout.height, left: 0, top: topHeight, width: leftWidth,
         }]}
       />
       <View
-        pointerEvents="none"
-        style={[styles.overlayPart, overlayStyle, {
+        style={[styles.overlayPart, styles.pointerNone, overlayStyle, {
           height: focusLayout.height, right: 0, top: topHeight, width: rightWidth,
         }]}
       />
 
       <View
-        pointerEvents="none"
         style={[
           styles.spotlightFrame,
+          styles.pointerNone,
           {
             borderColor: Colors.primary500,
             borderRadius: focusLayout.borderRadius,
@@ -347,14 +352,14 @@ function OnboardingOverlay({ onVisible } = {}) {
           if (!nextTooltipHeight || nextTooltipHeight === tooltipMeasuredHeight) return;
           setTooltipMeasuredHeight(nextTooltipHeight);
         }}
-        pointerEvents="auto"
         style={[
           styles.tooltip,
+          styles.pointerAuto,
+          tooltipShadowStyle,
           {
             backgroundColor: Colors.neutral00,
             left: tooltipLeft,
             maxHeight: availableTooltipHeight,
-            shadowColor: Colors.neutral900,
             top: tooltipTop,
             width: tooltipWidth,
           },
@@ -434,7 +439,7 @@ function OnboardingOverlay({ onVisible } = {}) {
               >
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[6]]}>
                   {isScrollStep && !isLastStep ? (
-                    <Image source={Images.chevronDown} style={{ height: 12, tintColor: Colors.neutral00, width: 12 }} />
+                    <Image source={Images.chevronDown} style={{ height: 12, width: 12 }} tintColor={Colors.neutral00} />
                   ) : null}
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {nextButtonLabel}
@@ -491,6 +496,15 @@ const styles = StyleSheet.create({
   overlayPart: {
     position: 'absolute',
   },
+  pointerAuto: {
+    pointerEvents: 'auto',
+  },
+  pointerBoxNone: {
+    pointerEvents: 'box-none',
+  },
+  pointerNone: {
+    pointerEvents: 'none',
+  },
   spotlightFrame: {
     backgroundColor: 'transparent',
     borderWidth: 2,
@@ -498,11 +512,7 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     borderRadius: 12,
-    elevation: 20,
     position: 'absolute',
-    shadowOffset: { height: 2, width: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
     zIndex: 1000,
   },
   tooltipArrow: {

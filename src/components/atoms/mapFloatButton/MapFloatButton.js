@@ -1,10 +1,12 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+
+import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 
 /**
  * Floating button to toggle between Map and List views
@@ -19,13 +21,15 @@ function MapFloatButton({ isMapView, onPress, type = 'event' }) {
     ApplicationStyle, Colors, Fonts, Images,
   } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const listIcon = type === 'club' ? Images.stadium : Images.calendar;
   const icon = isMapView ? listIcon : Images.pin;
   const label = isMapView ? t('common.list', 'Liste') : t('common.map', 'Carte');
+  const bottomOffset = getFloatingActionBottomOffset(insets.bottom, 12);
 
   return (
-    <View pointerEvents="box-none" style={styles.container}>
+    <View pointerEvents="box-none" style={[styles.container, { bottom: bottomOffset }]}>
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={onPress}
@@ -58,7 +62,6 @@ const styles = StyleSheet.create({
   },
   container: {
     alignItems: 'center',
-    bottom: 40,
     justifyContent: 'center',
     left: 0,
     position: 'absolute',

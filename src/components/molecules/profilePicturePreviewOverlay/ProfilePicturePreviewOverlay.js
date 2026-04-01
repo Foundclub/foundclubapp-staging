@@ -1,16 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
-  Image,
   Modal,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import useTheme from '@/theme/themeContext';
 
 const { height, width } = Dimensions.get('window');
 
@@ -24,9 +20,6 @@ const { height, width } = Dimensions.get('window');
  * @returns {import('react').ReactElement} ProfilePicturePreviewOverlay component
  */
 function ProfilePicturePreviewOverlay({ imageUrl, isVisible, onClose }) {
-  const { ApplicationStyle, Colors, Images } = useTheme();
-  const insets = useSafeAreaInsets();
-
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -76,23 +69,6 @@ function ProfilePicturePreviewOverlay({ imageUrl, isVisible, onClose }) {
           />
         </TouchableOpacity>
 
-        {/* Close Button */}
-        <TouchableOpacity
-          onPress={onClose}
-          style={[
-            styles.closeButton,
-            { top: insets.top + 16 },
-          ]}
-        >
-          <Image
-            source={Images.close}
-            style={[
-              ApplicationStyle.icon24,
-              { tintColor: Colors.neutral00 },
-            ]}
-          />
-        </TouchableOpacity>
-
         {/* Image Container */}
         <View pointerEvents="box-none" style={styles.contentContainer}>
           <Animated.Image
@@ -119,14 +95,6 @@ const styles = StyleSheet.create({
   backdropLayer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
-  },
-  closeButton: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-    padding: 8,
-    position: 'absolute',
-    right: 20,
-    zIndex: 10,
   },
   container: {
     alignItems: 'center',

@@ -179,7 +179,7 @@ function DocumentMessageBubble({
             paddingVertical: 10,
           }}
         >
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <TouchableOpacity
               activeOpacity={0.88}
               disabled={pending}
@@ -190,7 +190,8 @@ function DocumentMessageBubble({
                 borderColor: failed ? Colors.error500 : Colors.primary500,
                 borderRadius: 10,
                 borderWidth: 1,
-                flex: 1,
+                flexBasis: 92,
+                flexGrow: 1,
                 minWidth: 0,
                 opacity: pending ? 0.6 : 1,
                 paddingHorizontal: 8,
@@ -218,7 +219,8 @@ function DocumentMessageBubble({
                     borderColor: 'rgba(255,255,255,0.08)',
                     borderRadius: 10,
                     borderWidth: 1,
-                    flex: 1,
+                    flexBasis: 92,
+                    flexGrow: 1,
                     minWidth: 0,
                     paddingHorizontal: 8,
                     paddingVertical: 11,
@@ -242,7 +244,8 @@ function DocumentMessageBubble({
                     borderColor: 'rgba(255,255,255,0.08)',
                     borderRadius: 10,
                     borderWidth: 1,
-                    flex: 1,
+                    flexBasis: 92,
+                    flexGrow: 1,
                     minWidth: 0,
                     paddingHorizontal: 8,
                     paddingVertical: 11,

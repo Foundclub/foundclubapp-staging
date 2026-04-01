@@ -2,15 +2,15 @@ import { CommonActions } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
-  Alert,
-  ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -18,71 +18,125 @@ import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 import { getShortAddress } from '@/utils/location';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
+
+/* eslint-disable import/order, perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardRecapStepIndex,
   getAdWizardStepCount,
 } from './adWizardStepUtils';
+/* eslint-enable import/order, perfectionist/sort-imports */
 
 /**
- *
- * @param root0
- * @param root0.Colors
- * @param root0.Fonts
- * @param root0.icon
- * @param root0.label
- * @param root0.value
+ * Compact recap metric card.
+ * @param {object} props
+ * @param {any} props.ApplicationStyle
+ * @param {boolean} props.complete
+ * @param {any} props.Fonts
+ * @param {string} props.label
+ * @param {any} props.Spaces
+ * @param {string} props.value
+ * @returns {import('react').ReactElement}
  */
-function GridItem({
-  Colors,
+function OverviewMetric({
+  ApplicationStyle,
+  complete,
   Fonts,
-  icon,
   label,
+  Spaces,
   value,
 }) {
   return (
-    <View style={{ marginBottom: 24, paddingRight: 8, width: '50%' }}>
-      <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-        {label}
+    <View
+      style={[
+        ApplicationStyle.card,
+        Spaces.paddingHorizontal[10],
+        Spaces.paddingVertical[10],
+        Spaces.gap[4],
+        {
+          backgroundColor: 'rgba(1, 179, 244, 0.08)',
+          borderColor: complete ? 'rgba(1, 179, 244, 0.22)' : 'rgba(255, 219, 102, 0.26)',
+          flexBasis: '48%',
+        },
+      ]}
+    >
+      <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{label}</Text>
+      <Text numberOfLines={2} style={[Fonts.p3Bold, complete ? Fonts.neutral00 : Fonts.gold500]}>
+        {value}
       </Text>
-      <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-        {icon ? (
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 8,
-            height: 24,
-            justifyContent: 'center',
-            marginRight: 10,
-            width: 24,
-          }}
-          >
-            <Text style={{ fontSize: 13 }}>{icon}</Text>
-          </View>
-        ) : null}
-        <Text numberOfLines={1} style={[Fonts.p1Bold, {
-          color: Colors.neutral00,
-          flex: 1,
-          fontSize: 15,
-        }]}
-        >
-          {value || 'Non defini'}
-        </Text>
-      </View>
     </View>
   );
 }
 
 /**
- *
- * @param root0
- * @param root0.navigation
+ * Shared section shell for the recap step.
+ * @param {object} props
+ * @param {import('react').ReactNode} props.children
+ * @param {string} [props.eyebrow]
+ * @param {() => void} [props.onEdit]
+ * @param {string} props.title
+ * @returns {import('react').ReactElement}
+ */
+function RecapSection({
+  children,
+  eyebrow,
+  onEdit,
+  title,
+}) {
+  const {
+    Alignments,
+    ApplicationStyle,
+    Fonts,
+    Spaces,
+  } = useTheme();
+
+  return (
+    <View
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        Spaces.gap[12],
+        {
+          backgroundColor: 'rgba(4, 31, 44, 0.82)',
+          borderColor: 'rgba(1, 179, 244, 0.24)',
+        },
+      ]}
+    >
+      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+        <View style={[Spaces.gap[4], { flex: 1 }]}>
+          {eyebrow ? <Text style={[Fonts.p4Bold, Fonts.primary500]}>{eyebrow}</Text> : null}
+          <Text style={[Fonts.h4, Fonts.neutral00]}>{title}</Text>
+        </View>
+        {onEdit ? (
+          <TouchableOpacity onPress={onEdit}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Modifier</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * Final step before publication.
+ * @param {{ navigation: any }} props
+ * @returns {import('react').ReactElement}
  */
 function AdWizardRecap({ navigation }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
+  const { showBanner } = useAppFeedback();
   const { dispatch, state } = useAdWizard();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState('');
 
   const createAdMutation = useMutation({
     mutationFn: createRecruitmentAd,
@@ -100,7 +154,7 @@ function AdWizardRecap({ navigation }) {
   const missingRequiredItems = useMemo(() => {
     const items = [];
 
-    if (!state.team) items.push('une equipe');
+    if (!state.team) items.push('une \u00E9quipe');
     if (!displayAddress) items.push('un lieu');
     if (!state.positions?.length) items.push('au moins un poste');
 
@@ -108,6 +162,47 @@ function AdWizardRecap({ navigation }) {
   }, [displayAddress, state.positions, state.team]);
 
   const isReadyToSubmit = missingRequiredItems.length === 0;
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
+  const profileLabel = [
+    state.section?.name,
+    state.category?.name,
+    state.minLevel?.name,
+  ].filter(Boolean).join(' \u00B7 ');
+  const positionsLabel = state.positions.length > 0
+    ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} \u00B7 ${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`
+    : '\u00C0 compl\u00E9ter';
+  const adTypeLabel = state.event ? 'Annonce li\u00E9e \u00E0 une d\u00E9tection' : 'Annonce saisonni\u00E8re';
+  let validationLabel = 'Publication directe';
+
+  if (state.event) {
+    validationLabel = state.validationMode === 'manual'
+      ? 'Validation manuelle'
+      : 'Validation automatique';
+  }
+
+  const quickOverviewItems = [
+    {
+      complete: Boolean(state.team),
+      label: '\u00C9quipe',
+      value: state.team?.name || '\u00C0 compl\u00E9ter',
+    },
+    {
+      complete: Boolean(profileLabel),
+      label: 'Profil',
+      value: profileLabel || '\u00C0 pr\u00E9ciser',
+    },
+    {
+      complete: Boolean(displayAddress),
+      label: 'Lieu',
+      value: displayAddress || '\u00C0 compl\u00E9ter',
+    },
+    {
+      complete: state.positions.length > 0,
+      label: 'Postes',
+      value: positionsLabel,
+    },
+  ];
+  const completedQuickOverviewCount = quickOverviewItems.filter((item) => item.complete).length;
 
   const resetToHome = () => {
     const parentNavigation = navigation.getParent?.();
@@ -125,12 +220,17 @@ function AdWizardRecap({ navigation }) {
 
   const handleSubmit = async () => {
     if (!isReadyToSubmit) {
-      Alert.alert('Erreur', 'Le recapitulatif est incomplet.');
+      showBanner({
+        body: `Il manque encore ${missingRequiredItems.join(', ')} avant de publier cette annonce.`,
+        title: 'R\u00E9capitulatif incomplet',
+        tone: 'error',
+      });
       return;
     }
 
     try {
       setIsSubmitting(true);
+      setSubmitErrorMessage('');
       createAdMutation.reset();
 
       await Promise.all(state.positions.map((position) => {
@@ -148,10 +248,6 @@ function AdWizardRecap({ navigation }) {
           validationMode: state.event ? state.validationMode : 'auto',
         };
 
-        if (!adData.team) {
-          console.warn('[AdWizardRecap] Missing team ID', state.team);
-        }
-
         return createAdMutation.mutateAsync(adData);
       }));
 
@@ -163,40 +259,45 @@ function AdWizardRecap({ navigation }) {
       dispatch({ type: 'RESET' });
       resetToHome();
     } catch (error) {
-      console.error('[AdWizardRecap] Creation error:', error);
-      Alert.alert('Erreur', 'Impossible de creer l annonce. Veuillez reessayer.');
+      const nextMessage = error?.message || "Impossible de cr\u00E9er l'annonce. V\u00E9rifiez les informations puis r\u00E9essayez.";
+      setSubmitErrorMessage(nextMessage);
+      showBanner({
+        body: nextMessage,
+        title: 'Publication impossible',
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non defini';
-
   return (
     <WizardStepLayout
       isNextDisabled={!isReadyToSubmit || isSubmitting}
       isNextLoading={isSubmitting}
-      nextLabel="Creer l'annonce"
+      nextLabel="Publier l'annonce"
       onBack={() => navigation.goBack()}
       onNext={handleSubmit}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardRecapStepIndex(state)}
-      subtitle="Verifiez les details avant de publier"
-      title="Tout est bon ?"
+      subtitle={"V\u00E9rifiez l'ensemble du brief avant de publier votre annonce."}
+      title={'R\u00E9capitulatif'}
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <View style={[Spaces.gap[16]]}>
         {!isReadyToSubmit ? (
-          <View style={[Spaces.marginBottom[20], Spaces.padding[16], {
-            backgroundColor: '#2A1A1A',
-            borderColor: Colors.error500,
-            borderRadius: 16,
-            borderWidth: 1,
-          }]}
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Spaces.gap[8],
+              {
+                backgroundColor: 'rgba(53, 19, 24, 0.88)',
+                borderColor: 'rgba(239, 68, 68, 0.45)',
+              },
+            ]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-              Resume incomplet
-            </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{'R\u00E9capitulatif incomplet'}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
               Il manque encore
               {' '}
               {missingRequiredItems.join(', ')}
@@ -206,216 +307,230 @@ function AdWizardRecap({ navigation }) {
           </View>
         ) : null}
 
-        {createAdMutation.isError ? (
-          <View style={[Spaces.marginBottom[20], Spaces.padding[16], {
-            backgroundColor: '#2A1A1A',
-            borderColor: Colors.error500,
-            borderRadius: 16,
-            borderWidth: 1,
-          }]}
+        {submitErrorMessage ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              Spaces.gap[8],
+              {
+                backgroundColor: 'rgba(53, 19, 24, 0.88)',
+                borderColor: 'rgba(239, 68, 68, 0.45)',
+              },
+            ]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-              Publication impossible
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {'La publication n\'a pas abouti'}
             </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-              {createAdMutation.error?.message || 'La creation de l annonce a echoue. Verifiez les informations puis reessayez.'}
-            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>{submitErrorMessage}</Text>
           </View>
         ) : null}
 
-        <View style={[
-          Spaces.padding[24],
-          {
-            backgroundColor: '#1A1A1A',
-            borderColor: Colors.neutral700,
-            borderRadius: 24,
-            borderWidth: 1,
-          },
-        ]}
+        <View
+          style={[
+            ApplicationStyle.card,
+            Spaces.padding[16],
+            Spaces.gap[12],
+            {
+              backgroundColor: 'rgba(4, 31, 44, 0.82)',
+              borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(255, 219, 102, 0.26)',
+            },
+          ]}
         >
-          <View style={{ marginBottom: 24 }}>
-            <Text style={[Fonts.p3, { color: Colors.primary500, marginBottom: 4 }]}>
-              Equipe qui recrute
-            </Text>
-            <Text style={[Fonts.h2, { color: Colors.neutral00, fontSize: 22, fontWeight: '700' }]}>
-              {state.team?.name || 'Non definie'}
-            </Text>
-            {state.team?.club?.name ? (
-              <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 4 }]}>
-                {state.team.club.name}
+          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+            <View style={[Spaces.gap[4], { flex: 1 }]}>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {'Vue d\'ensemble'}
               </Text>
-            ) : null}
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {completedQuickOverviewCount}
+                {' '}
+                / 4 informations cl\u00E9s pr\u00EAtes \u00E0 publier
+              </Text>
+            </View>
+            <View
+              style={[
+                Spaces.paddingHorizontal[10],
+                Spaces.paddingVertical[6],
+                {
+                  backgroundColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 219, 102, 0.16)',
+                  borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.28)' : 'rgba(255, 219, 102, 0.30)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.gold500]}>
+                {isReadyToSubmit ? 'Pr\u00EAt \u00E0 publier' : '\u00C0 compl\u00E9ter'}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ backgroundColor: Colors.neutral700, height: 1, marginBottom: 24 }} />
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+            {quickOverviewItems.map((item) => (
+              <OverviewMetric
+                ApplicationStyle={ApplicationStyle}
+                complete={item.complete}
+                Fonts={Fonts}
+                key={item.label}
+                label={item.label}
+                Spaces={Spaces}
+                value={item.value}
+              />
+            ))}
+          </View>
+        </View>
 
-          <View style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            marginBottom: 8,
-          }}
-          >
-            <GridItem
-              Colors={Colors}
+        <RecapSection
+          eyebrow={'\u00C9quipe qui recrute'}
+          onEdit={() => navigation.navigate(RouteNames.AdWizardTeam)}
+          title="Structure"
+        >
+          {state.team ? (
+            <EventWizardTeamCard
+              onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
+              team={state.team}
+            />
+          ) : (
+            <Text style={[Fonts.p2, Fonts.gold500]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
+          )}
+
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+            <OverviewMetric
+              ApplicationStyle={ApplicationStyle}
+              complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
               Fonts={Fonts}
-              icon="S"
               label="Sport"
+              Spaces={Spaces}
               value={sportName}
             />
-            <GridItem
-              Colors={Colors}
+            <OverviewMetric
+              ApplicationStyle={ApplicationStyle}
+              complete={Boolean(profileLabel)}
               Fonts={Fonts}
-              icon="Se"
-              label="Section"
-              value={state.section?.name}
-            />
-            <GridItem
-              Colors={Colors}
-              Fonts={Fonts}
-              icon="C"
-              label="Categorie"
-              value={state.category?.name}
-            />
-            <GridItem
-              Colors={Colors}
-              Fonts={Fonts}
-              icon="N"
-              label="Niveau"
-              value={state.minLevel?.name}
-            />
-            <GridItem
-              Colors={Colors}
-              Fonts={Fonts}
-              icon="L"
-              label="Lieu"
-              value={displayAddress}
+              label="Profil"
+              Spaces={Spaces}
+              value={profileLabel || '\u00C0 pr\u00E9ciser'}
             />
           </View>
+        </RecapSection>
 
-          <View style={{
-            backgroundColor: '#252525',
-            borderRadius: 16,
-            marginTop: 8,
-            padding: 16,
-          }}
-          >
-            <View style={{
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-            >
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                Postes recherches
-              </Text>
-              <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                Total :
-                {' '}
-                {totalPlayers}
-              </Text>
-            </View>
+        <RecapSection
+          eyebrow="Besoins"
+          onEdit={() => navigation.navigate(RouteNames.AdWizardPositions)}
+          title={'Postes recherch\u00E9s'}
+        >
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {state.positions.length > 0
+              ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherch\u00E9${totalPlayers > 1 ? 's' : ''} sur ${state.positions.length} poste${state.positions.length > 1 ? 's' : ''}.`
+              : "Aucun poste n'a encore \u00E9t\u00E9 ajout\u00E9."}
+          </Text>
 
-            <View style={[Spaces.gap[10]]}>
-              {state.positions.map((position) => (
+          <View style={[Spaces.gap[8]]}>
+            {state.positions.length > 0 ? state.positions.map((position) => (
+              <View
+                key={`${position.name}-${position.quantity}`}
+                style={[
+                  ApplicationStyle.card,
+                  Alignments.row,
+                  Alignments.justifySpaceBetween,
+                  Alignments.alignCenter,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[12],
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{position.name}</Text>
                 <View
-                  key={`${position.name}-${position.quantity}`}
-                  style={{
-                    alignItems: 'center',
-                    backgroundColor: '#333333',
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                  }}
+                  style={[
+                    Spaces.paddingHorizontal[10],
+                    Spaces.paddingVertical[6],
+                    {
+                      backgroundColor: Colors.primary500,
+                      borderRadius: 999,
+                    },
+                  ]}
                 >
-                  <Text style={[Fonts.p1Bold, { color: Colors.neutral00, fontSize: 15 }]}>
-                    {position.name}
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
+                    x
+                    {position.quantity}
                   </Text>
-                  <View style={{
-                    backgroundColor: Colors.primary500,
-                    borderRadius: 8,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                  }}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-                      x
-                      {position.quantity}
-                    </Text>
-                  </View>
                 </View>
-              ))}
-            </View>
+              </View>
+            )) : (
+              <Text style={[Fonts.p2, Fonts.gold500]}>
+                {'Ajoutez au moins un poste pour publier l\'annonce.'}
+              </Text>
+            )}
           </View>
+        </RecapSection>
 
-          {state.event ? (
-            <View style={{
-              borderTopColor: Colors.neutral700,
-              borderTopWidth: 1,
-              marginTop: 24,
-              paddingTop: 20,
-            }}
-            >
-              <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 12 }}>
-                <Text style={{ fontSize: 18, marginRight: 8 }}>i</Text>
-                <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-                  Lie a l evenement
+        <RecapSection
+          eyebrow="Publication"
+          onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
+          title={'Informations cl\u00E9s'}
+        >
+          <View style={[Spaces.gap[10]]}>
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {'Type d\'annonce'}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{adTypeLabel}</Text>
+            </View>
+
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>Lieu</Text>
+              <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.gold500]}>
+                {displayAddress || '\u00C0 compl\u00E9ter'}
+              </Text>
+            </View>
+
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
+            </View>
+
+            {state.event ? (
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
                 </Text>
               </View>
-              <Text style={[Fonts.h4, { color: Colors.neutral00, marginLeft: 30 }]}>
-                {state.event.name || state.event.type?.name || 'Evenement'}
-              </Text>
-            </View>
-          ) : null}
-
-          {state.description ? (
-            <View style={{
-              borderTopColor: Colors.neutral700,
-              borderTopWidth: 1,
-              marginTop: 24,
-              paddingTop: 20,
-            }}
-            >
-              <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-                Description
-              </Text>
-              <Text style={[Fonts.p2, { color: Colors.neutral200, lineHeight: 22 }]}>
-                {state.description}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={{
-          alignItems: 'center',
-          backgroundColor: '#0F292E',
-          borderColor: Colors.primary900,
-          borderRadius: 16,
-          borderWidth: 1,
-          flexDirection: 'row',
-          marginTop: 20,
-          padding: 16,
-        }}
-        >
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral400,
-            borderRadius: 4,
-            height: 24,
-            justifyContent: 'center',
-            marginRight: 12,
-            width: 24,
-          }}
-          >
-            <Text style={{ color: Colors.neutral900, fontSize: 14, fontWeight: 'bold' }}>i</Text>
+            ) : null}
           </View>
-          <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1, lineHeight: 18 }]}>
-            L'annonce sera visible par tous les joueurs correspondant a ce profil.
+        </RecapSection>
+
+        <RecapSection
+          eyebrow="Texte de l'annonce"
+          onEdit={() => navigation.navigate(RouteNames.AdWizardDescription)}
+          title="Description"
+        >
+          <Text style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.neutral300]}>
+            {state.description || "Aucune description personnalis\u00E9e n'a \u00E9t\u00E9 ajout\u00E9e."}
+          </Text>
+        </RecapSection>
+
+        <View
+          style={[
+            ApplicationStyle.card,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              backgroundColor: 'rgba(1, 179, 244, 0.10)',
+              borderColor: 'rgba(1, 179, 244, 0.24)',
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Avant publication</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {"L'annonce sera visible par les joueurs correspondant au profil recherch\u00E9. Plus vos informations sont pr\u00E9cises, plus la mise en relation sera pertinente."}
           </Text>
         </View>
-      </ScrollView>
+      </View>
     </WizardStepLayout>
   );
 }

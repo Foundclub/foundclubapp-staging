@@ -1996,22 +1996,10 @@ function ClubDetails({ navigation, route }) {
         close={handleCloseAddActivityModal}
         footerComponent={addActivitiesModalFooter}
         headerComponent={(
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
               {t('clubDetails.titles.activities')}
             </Text>
-            <TouchableOpacity
-              accessibilityLabel={t('common.close', 'Fermer')}
-              hitSlop={{
-                bottom: 8, left: 8, right: 8, top: 8,
-              }}
-              onPress={handleCloseAddActivityModal}
-            >
-              <Image
-                source={Images.close}
-                style={[ApplicationStyle.icon28, { tintColor: Colors.primary200 }]}
-              />
-            </TouchableOpacity>
           </View>
         )}
         hideCloseButton
@@ -2068,22 +2056,10 @@ function ClubDetails({ navigation, route }) {
       <BottomModal
         close={handleCloseClubPartnerRequest}
         headerComponent={(
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
               {t('clubDetails.clubPartnerRequest.title', "C'est mon club")}
             </Text>
-            <TouchableOpacity
-              accessibilityLabel={t('common.close', 'Fermer')}
-              hitSlop={{
-                bottom: 8, left: 8, right: 8, top: 8,
-              }}
-              onPress={handleCloseClubPartnerRequest}
-            >
-              <Image
-                source={Images.close}
-                style={[ApplicationStyle.icon28, { tintColor: Colors.primary200 }]}
-              />
-            </TouchableOpacity>
           </View>
         )}
         hideCloseButton
@@ -2157,22 +2133,10 @@ function ClubDetails({ navigation, route }) {
       <BottomModal
         close={handleClosePlayerTeamPicker}
         headerComponent={(
-          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
               {t('clubDetails.playerTeamPicker.title', 'Choisir mon équipe')}
             </Text>
-            <TouchableOpacity
-              accessibilityLabel={t('common.close', 'Fermer')}
-              hitSlop={{
-                bottom: 8, left: 8, right: 8, top: 8,
-              }}
-              onPress={handleClosePlayerTeamPicker}
-            >
-              <Image
-                source={Images.close}
-                style={[ApplicationStyle.icon28, { tintColor: Colors.primary200 }]}
-              />
-            </TouchableOpacity>
           </View>
         )}
         hideCloseButton

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
@@ -23,19 +24,6 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
-/**
- * RecruitmentAdCard component - Fully aligned with EventCardNew.js design
- * @param {object} props
- * @param {object} props.ad - The recruitment ad data
- * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
- * @param {Function} [props.onPress] - Callback when card is pressed
- * @param {boolean} [props.isOwner] - If true, shows owner actions
- */
-import useAuth from '@/domains/auth/useAuth';
-
-import MatchIndicator from '@/components/atoms/matchIndicator/MatchIndicator';
-
-// Asset: Same as EventCardNew (fallback/other)
 const CARD_BACKGROUND = require('@/assets/background-card-event/card-autre.png');
 
 const normalizeTypeLabel = (value = '') => String(value || '')
@@ -44,15 +32,14 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
-// ... (imports)
-
 /**
- *
- * @param {object} root0
- * @param {object} root0.ad
- * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [root0.detectionApplicationStatusByEvent]
- * @param {boolean} [root0.isOwner]
- * @param {Function} [root0.onPress]
+ * RecruitmentAdCard component.
+ * @param {object} props
+ * @param {object} props.ad
+ * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
+ * @param {boolean} [props.isOwner]
+ * @param {(ad: object) => void} [props.onPress]
+ * @returns {import('react').ReactElement}
  */
 function RecruitmentAdCard({
   ad,
@@ -65,436 +52,393 @@ function RecruitmentAdCard({
     Colors, Fonts, Images,
   } = useTheme();
   const { getClubInitials } = useClub();
-  const { userData } = useAuth(); // Get user data for match calculation
+  const { userData } = useAuth();
 
-  // Animation State
   const scale = useSharedValue(1);
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const onPressIn = () => {
-    scale.value = withTiming(0.98, { duration: 100 });
+  const handlePressIn = () => {
+    scale.value = withTiming(0.985, { duration: 100 });
   };
 
-  const onPressOut = () => {
+  const handlePressOut = () => {
     scale.value = withTiming(1, { duration: 100 });
   };
 
-  // Data Extraction
   const { team } = ad;
   const club = team?.club;
   const clubName = club?.name || team?.name || 'Club inconnu';
   const clubLogo = getImageUrl(club?.logo?.url);
-
-  // Position
-  const positionLabel = ad.position || 'Poste non spécifié';
-
-  // Level & Category
+  const positionLabel = ad.position || 'Poste non specifie';
   const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
-  const categoryName = ad.category?.name || ad.category || 'Catégorie ?';
-
-  // Location
+  const categoryName = ad.category?.name || ad.category || 'Categorie ?';
+  const sectionName = ad.section?.name || ad.section || '';
+  const sportName = ad.sport || team?.sport || 'Football';
   const address = getShortAddress(ad.city || club?.city || '');
-
-  // Section
-  const sectionName = ad.section?.name || ad.section;
+  const locationLabel = (
+    typeof ad.address === 'object' ? ad.address?.label : ad.address
+  ) || address || 'Lieu non precise';
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))
     : '';
-  const applicationState = resolveRecruitmentAdApplicationState(ad, userData, detectionApplicationStatusByEvent);
+  const applicationState = resolveRecruitmentAdApplicationState(
+    ad,
+    userData,
+    detectionApplicationStatusByEvent,
+  );
+
   let playerCtaBackgroundColor = Colors.primary500;
   let playerCtaBorderColor = 'transparent';
-  let playerCtaTextColor = Colors.neutral900;
+  let playerCtaTextColor = Colors.neutral00;
+  let playerCtaBorderWidth = 0;
   let playerCtaLabel = 'Postuler';
+
   if (!ad.isActive) {
     playerCtaLabel = 'Annonce inactive';
+    playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
+    playerCtaBorderColor = 'rgba(255,255,255,0.12)';
+    playerCtaTextColor = Colors.neutral300;
+    playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'accepted') {
     playerCtaLabel = 'Je participe';
-    playerCtaBackgroundColor = `${Colors.success500}18`;
-    playerCtaBorderColor = `${Colors.success500}35`;
-    playerCtaTextColor = Colors.success500;
+    playerCtaBackgroundColor = `${Colors.primary500}18`;
+    playerCtaBorderColor = `${Colors.primary500}45`;
+    playerCtaTextColor = Colors.primary500;
+    playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'pending') {
     playerCtaLabel = 'Demande en attente';
-    playerCtaBackgroundColor = `${Colors.warning500}18`;
+    playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
     playerCtaBorderColor = `${Colors.warning500}35`;
     playerCtaTextColor = Colors.warning500;
+    playerCtaBorderWidth = 1;
   }
 
-  // Sponsors
-  // Owner specifics
   const candidatesCount = ad.candidates?.length || 0;
   const statusInfo = ad.isActive
     ? { color: Colors.primary500, text: 'En ligne' }
-    : { color: Colors.neutral500, text: 'Inactif' };
+    : { color: Colors.neutral500, text: 'Inactive' };
+  const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
 
-  // Match Score Calculation
-  const calculateMatchScore = () => {
-    if (isOwner || !userData) return 0;
-
-    let score = 50; // Base score (Sport match assumed)
-
-    // Level Match (+25%)
-    const userLevelId = userData.bestLevel?.documentId || userData.bestLevel?.id;
-    const adLevelId = ad.level?.documentId || ad.level?.id;
-    if (userLevelId && adLevelId && userLevelId === adLevelId) {
-      score += 25;
-    } else if (userData.bestLevel?.name === ad.level?.name) {
-      score += 25;
+  const handlePress = () => {
+    if (onPress) {
+      onPress(ad);
+      return;
     }
 
-    // Location Match (+15%)
-    // Simple string match on City or Geohash prefix
-    if (ad.city && userData.city && ad.city.toLowerCase() === userData.city.toLowerCase()) {
-      score += 15;
-    }
-
-    // Position Match (+10%)
-    // Check if user has this position in their profile
-    if (userData.position && ad.position && userData.position.toLowerCase() === ad.position.toLowerCase()) {
-      score += 10;
-    }
-
-    return Math.min(100, score);
+    navigation.navigate(RouteNames.RecruitmentAdDetails, { ad });
   };
-
-  const matchScore = calculateMatchScore();
-
-  // ... (rest of code)
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
+      <ImageBackground
+        imageStyle={styles.backgroundImage}
+        resizeMode="cover"
+        source={CARD_BACKGROUND}
+        style={StyleSheet.absoluteFill}
+      />
+
       <Pressable
-        onPress={() => {
-          if (onPress) {
-            onPress(ad);
-          } else {
-            navigation.navigate(RouteNames.RecruitmentAdDetails, { ad });
-          }
-        }}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        style={{ flex: 1 }}
-      >
-        <ImageBackground
-          resizeMode="cover"
-          source={CARD_BACKGROUND}
-          style={[styles.backgroundImage, StyleSheet.absoluteFill]}
-        />
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={StyleSheet.absoluteFill}
+      />
 
-        <View pointerEvents="box-none" style={styles.contentContainer}>
-
-          {/* Match Indicator (Top Right) - Only for Players */}
-          {!isOwner && matchScore > 0 && (
-          <View style={{
-            position: 'absolute', right: 10, top: 10, zIndex: 10,
-          }}
-          >
-            <MatchIndicator score={matchScore} />
+      <View pointerEvents="box-none" style={styles.contentContainer}>
+        <View pointerEvents="none">
+          <View style={styles.headerContainer}>
+            <Text numberOfLines={1} style={styles.headerText}>
+              {positionLabel.toUpperCase()}
+            </Text>
           </View>
-          )}
 
-          <View pointerEvents="none">
-            {/* Header: Position */}
-            <View style={styles.headerContainer}>
-              <Text numberOfLines={1} style={styles.headerText}>
-                {positionLabel.toUpperCase()}
+          <View style={styles.clubInfoContainer}>
+            <View style={styles.clubLogoContainer}>
+              {clubLogo ? (
+                <ProfileAvatar
+                  imageStyle={{ borderRadius: 24 }}
+                  imageUrl={clubLogo}
+                  size={48}
+                  style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
+                  variant="logo"
+                />
+              ) : (
+                <TeamShield
+                  initials={clubName ? getClubInitials(clubName) : ''}
+                  isSmall
+                  size={48}
+                />
+              )}
+            </View>
+
+            <View style={styles.clubTextContainer}>
+              <Text numberOfLines={1} style={styles.clubName}>
+                {clubName}
+              </Text>
+
+              <View style={styles.subHeaderRow}>
+                {team?.name ? (
+                  <Text numberOfLines={1} style={styles.category}>
+                    {team.name}
+                  </Text>
+                ) : null}
+
+                <View style={styles.sportBadge}>
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p4Bold, styles.sportBadgeText]}
+                  >
+                    {sportName}
+                  </Text>
+                </View>
+              </View>
+
+              {isDetectionLinked ? (
+                <View style={styles.detectionChip}>
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                    DÃƒÂ©tection
+                  </Text>
+                  {detectionDateLabel ? (
+                    <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                      {detectionDateLabel}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
+                <Text numberOfLines={1} style={styles.detailText}>
+                  {levelName}
+                </Text>
+              </View>
+
+              <View style={[styles.detailItem, styles.detailItemRight]}>
+                <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
+                <Text numberOfLines={1} style={[styles.detailText, styles.detailTextRight]}>
+                  {rightMetaLabel || 'Categorie libre'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={[styles.detailItem, { width: '100%' }]}>
+                <Image source={Images.pin} style={[styles.icon, { tintColor: Colors.primary500 }]} />
+                <Text numberOfLines={2} style={[styles.detailText, { flex: 1 }]}>
+                  {locationLabel}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
+          {isOwner ? (
+            <View style={styles.ownerStatusContainer}>
+              <View style={styles.ownerStatusLeft}>
+                <View style={[styles.ownerStatusDot, { backgroundColor: statusInfo.color }]} />
+                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{statusInfo.text}</Text>
+              </View>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                {candidatesCount}
+                {' '}
+                candidat
+                {candidatesCount > 1 ? 's' : ''}
               </Text>
             </View>
-
-            {/* Club Info */}
-            <View style={styles.clubInfoContainer}>
-              <View style={styles.clubLogoContainer}>
-                {clubLogo ? (
-                  <ProfileAvatar
-                    imageStyle={{ borderRadius: 24 }}
-                    imageUrl={clubLogo}
-                    size={48}
-                    style={{ borderColor: Colors.neutral200, borderRadius: 24, borderWidth: 1 }}
-                    variant="logo"
-                  />
-                ) : (
-                  <TeamShield
-                    initials={clubName ? getClubInitials(clubName) : ''}
-                    isSmall
-                    size={48}
-                  />
-                )}
-              </View>
-              <View style={styles.clubTextContainer}>
-                <Text numberOfLines={1} style={styles.clubName}>{clubName}</Text>
-                <View style={{ alignItems: 'center', flexDirection: 'row', gap: 6 }}>
-                  {team?.name ? <Text numberOfLines={1} style={styles.category}>{team.name}</Text> : null}
-                  {/* Sport Badge if available */}
-                  <View style={{
-                    backgroundColor: `${Colors.primary500}20`, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
-                  }}
-                  >
-                    <Text style={[Fonts.p4Bold, { color: Colors.primary500, fontSize: 10, textTransform: 'uppercase' }]}>
-                      {ad.sport || team?.sport || 'Football'}
-                    </Text>
-                  </View>
-                </View>
-                {isDetectionLinked ? (
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      alignSelf: 'flex-start',
-                      backgroundColor: 'rgba(255,255,255,0.08)',
-                      borderColor: `${Colors.primary500}55`,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      flexDirection: 'row',
-                      gap: 6,
-                      marginTop: 6,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                    }}
-                  >
-                    <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Detection</Text>
-                    {detectionDateLabel ? (
-                      <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{detectionDateLabel}</Text>
-                    ) : null}
-                  </View>
-                ) : null}
-              </View>
+          ) : (
+            <View
+              style={[
+                styles.ctaBadge,
+                {
+                  backgroundColor: playerCtaBackgroundColor,
+                  borderColor: playerCtaBorderColor,
+                  borderWidth: playerCtaBorderWidth,
+                },
+              ]}
+            >
+              <Text style={[styles.ctaBadgeText, { color: playerCtaTextColor }]}>
+                {playerCtaLabel}
+              </Text>
             </View>
-
-            {/* Details Grid */}
-            <View style={styles.detailsContainer}>
-
-              {/* Row 1: Level & Category/Section */}
-              <View style={styles.detailRow}>
-                {/* Level (Left) */}
-                <View style={styles.detailItem}>
-                  <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
-                  <Text numberOfLines={1} style={styles.detailText}>
-                    {levelName}
-                  </Text>
-                </View>
-                {/* Category + Section (Right) */}
-                <View style={[styles.detailItem, { justifyContent: 'flex-end' }]}>
-                  <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
-                  <Text numberOfLines={1} style={[styles.detailText, { flex: 0, textAlign: 'right' }]}>
-                    {categoryName}
-                    {' '}
-                    {sectionName ? `• ${sectionName}` : ''}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Row 2: Address (Full Width) */}
-              <View style={styles.detailRow}>
-                <View style={[styles.detailItem, { width: '100%' }]}>
-                  <Image source={Images.pin} style={[styles.icon, { tintColor: Colors.primary500 }]} />
-                  <Text numberOfLines={2} style={[styles.detailText, { flex: 1 }]}>
-                    {(typeof ad.address === 'object' ? ad.address?.label : ad.address) || address || 'Lieu non précisé'}
-                  </Text>
-                </View>
-              </View>
-
-            </View>
-          </View>
-
-          {/* Footer / CTA */}
-          <View pointerEvents="auto" style={[styles.ctaContainer, { elevation: 999, zIndex: 999 }]}>
-            {isOwner ? (
-              <View style={{
-                alignItems: 'center',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                borderRadius: 12,
-                flexDirection: 'row',
-                height: 40,
-                justifyContent: 'space-between',
-                padding: 8, // Reduced padding to fit height better
-              }}
-              >
-                <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-                  <View style={{
-                    backgroundColor: statusInfo.color, borderRadius: 4, height: 8, width: 8,
-                  }}
-                  />
-                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{statusInfo.text}</Text>
-                </View>
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-                  {candidatesCount}
-                  {' '}
-                  candidat
-                  {candidatesCount > 1 ? 's' : ''}
-                </Text>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.reservationButton,
-                  {
-                    backgroundColor: playerCtaBackgroundColor,
-                    borderColor: playerCtaBorderColor,
-                    borderWidth: applicationState.status ? 1 : 0,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.reservationButtonText,
-                    { color: playerCtaTextColor },
-                  ]}
-                >
-                  {playerCtaLabel}
-                </Text>
-              </View>
-            )}
-          </View>
-
+          )}
         </View>
-      </Pressable>
+      </View>
     </Animated.View>
   );
 }
 
-// Styles copied from EventCardNew.js
 const styles = StyleSheet.create({
   backgroundImage: {
     borderRadius: 24,
     opacity: 1,
   },
   category: {
-    color: '#E0E0E0',
+    color: '#BFD5E2',
     fontFamily: 'Montserrat-Medium',
-    fontSize: 14,
+    fontSize: 13,
+    marginTop: 2,
   },
   clubInfoContainer: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 8, // Added a bit of spacing
+    marginBottom: 2,
   },
   clubLogoContainer: {},
   clubName: {
     color: '#FFFFFF',
     fontFamily: 'Montserrat-Bold',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
+    lineHeight: 22,
   },
   clubTextContainer: {
     flex: 1,
     justifyContent: 'center',
+    marginRight: 6,
   },
   container: {
     backgroundColor: '#173844',
-    borderColor: '#01B3F4', // Electric Blue
+    borderColor: 'rgba(255,255,255,0.12)',
     borderRadius: 24,
-    borderWidth: 1.5,
-    marginVertical: 8,
+    borderWidth: 1,
     minHeight: 200,
     overflow: 'hidden',
     width: '100%',
   },
   contentContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.56)',
     flex: 1,
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  ctaBadge: {
+    alignItems: 'center',
+    borderRadius: 19,
+    height: 42,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  ctaBadgeText: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   ctaContainer: {
-    marginTop: 12,
+    marginTop: 14,
     width: '100%',
   },
   detailItem: {
-    alignItems: 'center', // Icon center with first line of text
+    alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
     gap: 8,
   },
+  detailItemRight: {
+    justifyContent: 'flex-end',
+  },
   detailRow: {
-    alignItems: 'flex-start', // Top align for address wrapping
+    alignItems: 'flex-start',
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'space-between',
     width: '100%',
   },
   detailsContainer: {
-    gap: 4,
+    gap: 8,
+    marginTop: 2,
   },
   detailText: {
-    color: '#E0E0E0',
+    color: '#D6E7EE',
     fontFamily: 'Montserrat-Medium',
     fontSize: 13,
   },
+  detailTextRight: {
+    flex: 0,
+    textAlign: 'right',
+  },
+  detectionChip: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(1,179,244,0.35)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   headerContainer: {
     alignItems: 'center',
-    backgroundColor: '#01B3F4',
-    borderRadius: 7,
+    backgroundColor: 'rgba(1, 179, 244, 0.10)',
+    borderColor: '#01B3F4',
+    borderRadius: 8,
+    borderWidth: 2,
     justifyContent: 'center',
     marginBottom: 8,
-    paddingVertical: 6,
+    paddingVertical: 3,
     width: '100%',
   },
   headerText: {
-    color: '#FFFFFF', // Colors.neutral00
+    color: '#01B3F4',
     fontFamily: 'Montserrat-Bold',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
   icon: {
     height: 16,
-    marginTop: 1, // Visual adjustment for text alignment
     resizeMode: 'contain',
     width: 16,
   },
-  reservationButton: {
+  ownerStatusContainer: {
     alignItems: 'center',
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.30)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    height: 42,
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
   },
-  reservationButtonText: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 13,
-    fontWeight: 'bold',
+  ownerStatusDot: {
+    borderRadius: 999,
+    height: 8,
+    width: 8,
   },
-  sponsorInitial: {
-    color: '#173844',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  sponsorItem: {
+  ownerStatusLeft: {
     alignItems: 'center',
-    gap: 4,
-    width: 48,
+    flexDirection: 'row',
+    gap: 8,
   },
-  sponsorLogo: {
-    height: 24,
-    resizeMode: 'contain',
-    width: 24,
+  sportBadge: {
+    backgroundColor: 'rgba(1, 179, 244, 0.16)',
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  sponsorLogoWrapper: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    height: 32,
-    justifyContent: 'center',
-    overflow: 'hidden',
-    width: 32,
-  },
-  sponsorName: {
-    color: '#FFFFFF',
+  sportBadgeText: {
+    color: '#01B3F4',
     fontSize: 10,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    width: '100%',
+    textTransform: 'uppercase',
   },
-  sponsorsContainer: {
-    marginTop: 8,
-  },
-  sponsorsScroll: {
+  subHeaderRow: {
     alignItems: 'center',
-    gap: 20,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 2,
   },
 });
 

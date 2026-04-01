@@ -1,5 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import {
   FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -7,8 +11,8 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
-import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -27,47 +31,56 @@ function MatchHistoryScreen() {
 
   const [matches, setMatches] = useState(/** @type {MatchHistoryEntry[]} */ ([]));
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [teamId, setTeamId] = useState(/** @type {string | null} */ (null));
+
+  const resolveLeagueTeam = useCallback(async () => {
+    if (!userData) return;
+
+    setLoading(true);
+    setLoadError('');
+    try {
+      const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
+      if (teams && teams.length > 0) {
+        setTeamId(getEntityDocumentId(teams[0]) || null);
+      } else {
+        setTeamId(null);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.log(error);
+      setTeamId(null);
+      setLoadError(error?.message || "Impossible de charger votre squad League.");
+      setLoading(false);
+    }
+  }, [userData]);
 
   // Initial Load
   useEffect(() => {
-    const init = async () => {
-      if (userData) {
-        try {
-          const teams = await getMyLeagueTeam(getEntityDocumentId(userData));
-          if (teams && teams.length > 0) {
-            setTeamId(getEntityDocumentId(teams[0]) || null);
-          } else {
-            setLoading(false);
-          }
-        } catch (e) {
-          console.log(e);
-          setLoading(false);
-        }
-      }
-    };
-    init();
-  }, [userData]);
+    void resolveLeagueTeam();
+  }, [resolveLeagueTeam]);
 
   // Load Matches
-  const loadMatches = async () => {
+  const loadMatches = useCallback(async () => {
     if (!teamId) return;
     setLoading(true);
+    setLoadError('');
     try {
       const history = await getMatchHistory(teamId, 50); // Fetch up to 50 matches
       setMatches(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error(error);
+      setLoadError(error?.message || "Impossible de charger l'historique des matchs.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [teamId]);
 
   useEffect(() => {
     if (teamId) {
-      loadMatches();
+      void loadMatches();
     }
-  }, [teamId]);
+  }, [loadMatches, teamId]);
 
   const getResultStyle = (/** @type {'win' | 'loss' | 'draw' | 'pending' | undefined} */ result) => {
     switch (result) {
@@ -128,6 +141,43 @@ function MatchHistoryScreen() {
       </TouchableOpacity>
     );
   };
+
+  if (loading) {
+    return (
+      <LeagueStateView
+        description="Nous chargeons l'historique de vos matchs League."
+        isLoading
+        title="Chargement de l'historique"
+      />
+    );
+  }
+
+  if (loadError) {
+    return (
+      <LeagueStateView
+        actionLabel="Réessayer"
+        description={loadError}
+        onAction={() => {
+          if (teamId) {
+            void loadMatches();
+            return;
+          }
+
+          void resolveLeagueTeam();
+        }}
+        title="Chargement impossible"
+      />
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <LeagueStateView
+        description="Aucune squad League n'est reliée à ce compte pour afficher un historique."
+        title="Historique indisponible"
+      />
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2">

@@ -124,9 +124,6 @@ function PlayerGoalsModal({
               {' '}
               {teamName}
             </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={{ color: Colors.neutral400, fontSize: 24 }}>✕</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Score Summary */}

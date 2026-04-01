@@ -26,6 +26,7 @@ const DEFAULT_TUTORIAL_DEBUG_STATE = {
   lastResolvedTargetId: null,
   lastScrollMode: null,
   targetNodeFound: false,
+  targetNodeSource: null,
   targetStepFound: false,
   windowScrollY: null,
 };

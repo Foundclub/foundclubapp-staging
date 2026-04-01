@@ -865,7 +865,7 @@ export default {
   },
   eventWizard: {
     common: {
-      stepCounter: '?tape {{current}}/{{total}}',
+      stepCounter: 'Étape {{current}}/{{total}}',
     },
     errors: {
       datePast: "La date ou l'heure de début doit être dans le futur.",
@@ -1384,6 +1384,14 @@ export default {
     planning: 'Mon planning',
     requests: 'Demandes',
     search: 'Rechercher',
+  },
+  menuDock: {
+    chat: 'Messages',
+    home: 'Accueil',
+    myClub: 'Club',
+    myTeams: '\u00c9quipes',
+    planning: 'Planning',
+    search: 'Recherche',
   },
   messaging: {
     noData: 'Aucune conversation trouv\u00E9e.',
