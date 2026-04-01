@@ -194,7 +194,7 @@ function CreateSectionScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.createSection.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.createSection.userErrorTitle', 'Creation indisponible')}
@@ -224,7 +224,7 @@ function CreateSectionScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.createSection.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
         title={t('multisport.createSection.errorTitle', 'Creation indisponible')}
@@ -289,7 +289,7 @@ function CreateSectionScreen({ navigation, route }) {
               </Text>
               <Button
                 onPress={() => refetchActivities()}
-                title={t('common.retry', 'Reessayer')}
+                title={t('common.retry', 'R\u00E9essayer')}
                 variant="Secondary"
               />
             </View>

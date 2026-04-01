@@ -180,7 +180,7 @@ function AddCoach({ navigation, route }) {
   if (isLoadingClub && !clubData) {
     return (
       <ClubStateView
-        description="Nous recuperons les informations du club pour preparer l'ajout du coach."
+        description="Nous r\u00E9cup\u00E9rons les informations du club pour preparer l'ajout du coach."
         isLoading
         title="Chargement du club"
       />
@@ -190,7 +190,7 @@ function AddCoach({ navigation, route }) {
   if (clubError && !clubData) {
     return (
       <ClubStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description="Impossible de charger ce club pour le moment."
         onAction={() => refetchClub()}
         title="Ajout indisponible"

@@ -60,7 +60,7 @@ function HistoryWizardLevel({ navigation }) {
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-              Reessayer
+              R\u00E9essayer
             </Text>
           </TouchableOpacity>
         </View>

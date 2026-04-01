@@ -88,7 +88,7 @@ const getStatusConfig = (status, Colors) => {
       actionLabel: 'Voir ma squad',
       badgeLabel: 'MEMBRE',
       badgeTextColor: successColor,
-      helperLabel: 'Vous faites deja partie de cette squad.',
+      helperLabel: 'Vous faites d\u00E9j\u00E0 partie de cette squad.',
       surfaceColor: `${successColor}14`,
     };
   }
@@ -246,7 +246,7 @@ function SquadSearchScreen() {
     }));
 
     const parts = [];
-    if (counts.joined > 0) parts.push(`${counts.joined} deja membre${counts.joined > 1 ? 's' : ''}`);
+    if (counts.joined > 0) parts.push(`${counts.joined} d\u00E9j\u00E0 membre${counts.joined > 1 ? 's' : ''}`);
     if (counts.invited > 0) parts.push(`${counts.invited} invitation${counts.invited > 1 ? 's' : ''}`);
     if (counts.pending > 0) parts.push(`${counts.pending} demande${counts.pending > 1 ? 's' : ''} en attente`);
 
@@ -598,7 +598,7 @@ function SquadSearchScreen() {
               }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.gold500, textDecorationLine: 'underline' }]}>
-                Reessayer
+                R\u00E9essayer
               </Text>
             </TouchableOpacity>
           </View>

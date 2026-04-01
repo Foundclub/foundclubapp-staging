@@ -33,21 +33,6 @@ function LeagueModalHeader({
             LEAGUE
           </Text>
         </View>
-        <View style={styles.dotRow}>
-          <View
-            style={[
-              styles.modeDot,
-              { backgroundColor: Colors.primary500, borderColor: Colors.primary500 },
-            ]}
-          />
-          <View style={styles.dotSpacer} />
-          <View
-            style={[
-              styles.modeDot,
-              { backgroundColor: 'transparent', borderColor: Colors.gold500 },
-            ]}
-          />
-        </View>
       </View>
 
       {title ? (
@@ -81,7 +66,7 @@ function LeagueModalHeader({
 
 const styles = StyleSheet.create({
   brandBlock: {
-    gap: 8,
+    gap: 4,
   },
   brandCentered: {
     alignItems: 'center',
@@ -97,40 +82,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   container: {
-    gap: 10,
+    gap: 8,
   },
   description: {
-    lineHeight: 24,
-  },
-  dotRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  dotSpacer: {
-    width: 40,
+    lineHeight: 22,
   },
   leagueTitle: {
-    fontSize: 16,
-    letterSpacing: 1.6,
-    marginLeft: 10,
+    fontSize: 15,
+    letterSpacing: 1.2,
+    marginLeft: 8,
     opacity: 0.95,
   },
   leftText: {
     textAlign: 'left',
   },
   logo: {
-    height: 24,
+    height: 20,
     resizeMode: 'contain',
-    width: 136,
-  },
-  modeDot: {
-    borderRadius: 6,
-    borderWidth: 1.5,
-    height: 12,
-    width: 12,
+    width: 122,
   },
   title: {
-    marginTop: 2,
+    marginTop: 0,
   },
 });
 

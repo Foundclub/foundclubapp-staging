@@ -825,7 +825,7 @@ function Conversation({ navigation, route }) {
           }}
           type="button"
         >
-          {actionLabel || 'Reessayer'}
+          {actionLabel || 'R\u00E9essayer'}
         </button>
       ) : null}
     </section>
@@ -1289,7 +1289,7 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'Reessayer',
+          actionLabel: 'R\u00E9essayer',
           description: getErrorMessage(chatError, 'Impossible de charger cette conversation.'),
           onAction: retryConversationLoad,
           title: 'Conversation indisponible',
@@ -1429,7 +1429,7 @@ function Conversation({ navigation, route }) {
                   }}
                   type="button"
                 >
-                  Reessayer
+                  R\u00E9essayer
                 </button>
               </div>
             ) : null}

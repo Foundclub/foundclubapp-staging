@@ -69,7 +69,7 @@ const computeTeamForm = (team) => {
 };
 
 const formatLeagueDashboardDate = (value) => {
-  if (!value) return 'Date a definir';
+  if (!value) return 'Date \u00E0 d\u00E9finir';
   try {
     return new Date(value).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -78,21 +78,21 @@ const formatLeagueDashboardDate = (value) => {
       month: 'short',
     });
   } catch (_error) {
-    return 'Date a definir';
+    return 'Date \u00E0 d\u00E9finir';
   }
 };
 
 const LEAGUE_ACTION_META = {
-  confirmed_upcoming: {
+  confirm\u00E9d_upcoming: {
     accent: 'success',
     actionLabel: 'Voir le match',
-    helper: 'Le match est confirme. Retrouvez les informations de preparation dans votre espace Match.',
-    title: 'Match confirme',
+    helper: 'Le match est confirm\u00E9. Retrouvez les informations de preparation dans votre espace Match.',
+    title: 'Match confirm\u00E9',
   },
   idle: {
     accent: 'neutral',
     actionLabel: 'Trouver un match',
-    helper: 'Lancez une recherche pour trouver un adversaire compatible avec les creneaux de votre squad.',
+    helper: 'Lancez une recherche pour trouver un adversaire compatible avec les cr\u00E9neaux de votre squad.',
     title: 'Aucun match actif',
   },
   opponent_found: {
@@ -104,14 +104,14 @@ const LEAGUE_ACTION_META = {
   proposal_received: {
     accent: 'warning',
     actionLabel: 'Repondre',
-    helper: 'Une proposition attend votre reponse. Repondez depuis le popup, la conversation ou la fiche match.',
+    helper: 'Une proposition attend votre r\u00E9ponse. R\u00E9pondez depuis le popup, la conversation ou la fiche match.',
     title: 'Nouvelle proposition recue',
   },
   proposal_sent_waiting: {
     accent: 'gold',
     actionLabel: 'Repondre',
-    helper: "Votre proposition a ete envoyee. Continuez l'echange dans la conversation avec l'adversaire.",
-    title: 'Proposition envoyee',
+    helper: "Votre proposition a \u00E9t\u00E9 envoy\u00E9e. Continuez l'echange dans la conversation avec l'adversaire.",
+    title: 'Proposition envoy\u00E9e',
   },
   searching: {
     accent: 'gold',
@@ -122,8 +122,8 @@ const LEAGUE_ACTION_META = {
   waiting_venue: {
     accent: 'warning',
     actionLabel: 'Reserver le terrain',
-    helper: "Le match est confirme, mais le terrain n'est pas encore reserve. Finalisez l'organisation des que possible.",
-    title: 'Terrain a reserver',
+    helper: "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Finalisez l'organisation d\u00E8s que possible.",
+    title: 'Terrain \u00E0 r\u00E9server',
   },
 };
 
@@ -311,7 +311,7 @@ function LeagueDashboard() {
       return;
     }
 
-    if (['confirmed_upcoming', 'opponent_found', 'proposal_sent_waiting'].includes(state)) {
+    if (['confirm\u00E9d_upcoming', 'opponent_found', 'proposal_sent_waiting'].includes(state)) {
       if (state === 'proposal_sent_waiting') {
         openLeagueConversation({
           chatId: leagueActionState?.chatId,
@@ -371,8 +371,8 @@ function LeagueDashboard() {
     const accentColor = isInvitation ? Colors.gold500 : (Colors.warning500 || Colors.gold500);
     const statusLabel = isInvitation ? 'INVITATION' : 'EN ATTENTE';
     const helperLabel = isInvitation
-      ? 'Une squad vous attend deja. Repondez pour rejoindre la competition.'
-      : 'Votre demande a bien ete envoyee. Le capitaine doit encore repondre.';
+      ? 'Une squad vous attend d\u00E9j\u00E0. R\u00E9pondez pour rejoindre la comp\u00E9tition.'
+      : 'Votre demande a bien \u00E9t\u00E9 envoy\u00E9e. Le capitaine doit encore r\u00E9pondre.';
     const ctaLabel = isInvitation ? 'Voir l invitation' : 'Voir la demande';
     const squadName = squad?.name || 'Squad League';
     const divisionLabel = `Division ${clampLeagueDivision(squad?.division)}`;
@@ -567,7 +567,7 @@ function LeagueDashboard() {
           demande
           {dashboardPendingRequestsCount > 1 ? 's' : ''}
           {' '}
-          attendent votre reponse
+          attendent votre r\u00E9ponse
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16 }]}>
           Ouvrez les demandes de votre squad pour accepter ou refuser les joueurs en attente.
@@ -883,7 +883,7 @@ function LeagueDashboard() {
   if (loadError && !userTeam) {
     return (
       <LeagueStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={loadError}
         onAction={() => loadDashboard()}
         title="Dashboard indisponible"

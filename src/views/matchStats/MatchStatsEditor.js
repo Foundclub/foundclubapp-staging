@@ -960,7 +960,7 @@ function MatchStatsEditor({ navigation, route }) {
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {String(statsQuery.error?.message || 'Une erreur est survenue.')}
             </Text>
-            <Button onPress={() => statsQuery.refetch()} title="Reessayer" variant="Secondary" />
+            <Button onPress={() => statsQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
           </View>
         ) : null}
 

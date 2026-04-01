@@ -1220,7 +1220,7 @@ function ClubDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {error?.message || 'Reessayez dans quelques instants.'}
           </Text>
-          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
         </View>
       </ScreenContainer>
@@ -1249,7 +1249,7 @@ function ClubDetails({ navigation, route }) {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingClubId ? (
-            <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+            <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>

@@ -56,7 +56,7 @@ function UserSection({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant de choisir ta section."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant de choisir ta section."
         isLoading
         title="Chargement du profil"
       />
@@ -66,7 +66,7 @@ function UserSection({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"
@@ -87,7 +87,7 @@ function UserSection({ navigation }) {
   if (sectionsError && !sections?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={sectionsError?.message || 'Impossible de charger les sections.'}
         onAction={refetchSections}
         title="Chargement impossible"

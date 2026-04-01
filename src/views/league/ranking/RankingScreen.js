@@ -145,7 +145,7 @@ function RankingScreen() {
   if (loadError && ranking.length === 0) {
     return (
       <LeagueStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={loadError}
         onAction={() => loadData()}
         title="Classement indisponible"

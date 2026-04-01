@@ -54,7 +54,7 @@ function AdminUserList() {
   if (error && !users.length) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={error?.message || 'Impossible de charger les utilisateurs.'}
         onAction={refetch}
         title="Chargement impossible"

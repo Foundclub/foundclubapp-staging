@@ -167,7 +167,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.edit.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.edit.userErrorTitle', 'Edition indisponible')}
@@ -197,7 +197,7 @@ function MultisportClubEditDetails({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.edit.error', "Impossible de charger cette fiche multisport pour le moment.")}
         onAction={() => refetch()}
         title={t('multisport.edit.errorTitle', 'Edition indisponible')}

@@ -105,7 +105,7 @@ function UserAffiliationGuideContent({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant de lancer l'affiliation."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant de lancer l'affiliation."
         isLoading
         title="Chargement du profil"
       />
@@ -115,7 +115,7 @@ function UserAffiliationGuideContent({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"
@@ -182,10 +182,10 @@ function UserAffiliationGuideContent({ navigation }) {
       setRequestedName('');
       setComment('');
       Alert.alert(
-        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoyee'),
+        t('onboardingAffiliation.feedback.requestSentTitle', 'Demande envoy\u00E9e'),
         t(
           'onboardingAffiliation.feedback.requestSentDescription',
-          'Votre demande a ete envoyee aux superadmins. Vous recevrez une notification.',
+          'Votre demande a \u00E9t\u00E9 envoy\u00E9e aux superadmins. Vous recevrez une notification.',
         ),
         [{
           onPress: handleContinueLater,

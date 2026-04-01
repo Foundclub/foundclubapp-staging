@@ -292,7 +292,7 @@ function TeamDetails({ navigation, route }) {
       return {
         description: t(
           'teamDetails.external.loading.connectingDescription',
-          'Nous recuperons le classement, le calendrier et les donnees associees.',
+          'Nous r\u00E9cup\u00E9rons le classement, le calendrier et les donnees associees.',
         ),
         title: t('teamDetails.external.loading.connectingTitle', 'Connexion de votre equipe'),
       };
@@ -301,7 +301,7 @@ function TeamDetails({ navigation, route }) {
     return {
       description: t(
         'teamDetails.external.loading.previewingDescription',
-        'Nous recuperons la liste des equipes disponibles.',
+        'Nous r\u00E9cup\u00E9rons la liste des equipes disponibles.',
       ),
       title: t('teamDetails.external.loading.previewingTitle', 'Analyse de la competition'),
     };
@@ -2203,7 +2203,7 @@ function TeamDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {error?.message || 'Reessayez dans quelques instants.'}
           </Text>
-          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
         </View>
       </ScreenContainer>
@@ -2233,7 +2233,7 @@ function TeamDetails({ navigation, route }) {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux equipes" variant="Secondary" />
           {!isMissingTeamId ? (
-            <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+            <Button onPress={() => refetch()} title="R\u00E9essayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>

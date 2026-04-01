@@ -479,7 +479,7 @@ function NewConversation({ navigation, route }) {
             </Text>
             <Button
               onPress={() => refetch()}
-              title={t('common.retry', 'Reessayer')}
+              title={t('common.retry', 'R\u00E9essayer')}
               variant="Primary"
             />
           </View>

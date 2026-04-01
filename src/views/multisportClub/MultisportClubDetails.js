@@ -211,7 +211,7 @@ function MultisportClubDetails({ navigation, route }) {
   if (error && !cm) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.details.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetch()}
         title={t('multisport.details.errorTitle', 'Club indisponible')}

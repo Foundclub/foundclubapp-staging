@@ -498,7 +498,7 @@ function FacilityList() {
           </Text>
           <Button
             onPress={() => refetchFacilities()}
-            title="Reessayer"
+            title="R\u00E9essayer"
             variant="Secondary"
           />
         </View>

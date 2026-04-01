@@ -183,9 +183,26 @@ export const usePopupManager = () => useContext(PopupManagerContext);
  * }} [options]
  */
 export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
-  const descriptor = getPopupDescriptor(
-    typeof descriptorOrId === 'string' ? descriptorOrId : descriptorOrId?.id,
-  );
+  const descriptor = useMemo(() => {
+    const baseDescriptor = getPopupDescriptor(
+      typeof descriptorOrId === 'string' ? descriptorOrId : descriptorOrId?.id,
+    );
+
+    if (typeof descriptorOrId === 'string') {
+      return baseDescriptor;
+    }
+
+    return {
+      ...baseDescriptor,
+      ...descriptorOrId,
+      allowedRoutes: Array.isArray(descriptorOrId?.allowedRoutes)
+        ? descriptorOrId.allowedRoutes
+        : baseDescriptor.allowedRoutes,
+      blockedRoutes: Array.isArray(descriptorOrId?.blockedRoutes)
+        ? descriptorOrId.blockedRoutes
+        : baseDescriptor.blockedRoutes,
+    };
+  }, [descriptorOrId]);
   const {
     clearDismissal,
     dismissPopup,
@@ -204,6 +221,10 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     || descriptor.allowedRoutes.length === 0
     || !routeName
     || descriptor.allowedRoutes.includes(routeName);
+  const isRouteBlocked = Array.isArray(descriptor.blockedRoutes)
+    && descriptor.blockedRoutes.length > 0
+    && Boolean(routeName)
+    && descriptor.blockedRoutes.includes(routeName);
   const isDismissed = isPopupDismissed(descriptor.id, {
     cooldownKey: normalizedCooldownKey,
     dismissScope,
@@ -214,7 +235,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     isStartupWindowActive,
     shownStartupBlockingPopupId,
   });
-  const canShow = Boolean(enabled && isRouteAllowed && !isDismissed && !isDeferred);
+  const canShow = Boolean(enabled && isRouteAllowed && !isRouteBlocked && !isDismissed && !isDeferred);
 
   useEffect(() => {
     if (!enabled) {
@@ -227,6 +248,8 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
       nextState = 'eligible';
     } else if (isDeferred) {
       nextState = 'skipped_due_to_priority';
+    } else if (isRouteBlocked) {
+      nextState = 'blocked_by_route';
     } else if (isDismissed) {
       nextState = 'dismissed';
     }
@@ -254,6 +277,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     enabled,
     isDeferred,
     isDismissed,
+    isRouteBlocked,
     normalizedCooldownKey,
     options.stateKey,
     popupStateVersion,
@@ -272,6 +296,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     }),
     isDeferred,
     isDismissed,
+    isRouteBlocked,
     isStartupWindowActive,
     markShown: (meta = undefined) => markPopupShown(descriptor.id, meta),
     trackEvent: (eventName, meta = undefined) => recordPopupEvent(descriptor.id, eventName, meta),
@@ -283,6 +308,7 @@ export const usePopupEligibility = (descriptorOrId, enabled, options = {}) => {
     dismissScope,
     isDeferred,
     isDismissed,
+    isRouteBlocked,
     isStartupWindowActive,
     markPopupShown,
     normalizedCooldownKey,

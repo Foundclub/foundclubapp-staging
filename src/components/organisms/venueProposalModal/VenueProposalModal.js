@@ -201,7 +201,7 @@ function VenueProposalModal({
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
       showBanner({
-        body: 'Impossible de convertir le crÃ©neau sÃ©lectionnÃ©.',
+        body: 'Impossible de convertir le créneau sélectionné.',
         title: 'Erreur',
         tone: 'error',
       });
@@ -210,8 +210,8 @@ function VenueProposalModal({
 
     if (startUtcDate <= new Date()) {
       showBanner({
-        body: 'Ce crÃ©neau est dÃ©jÃ  passe (heure de Paris). Choisis une date ou une heure future.',
-        title: 'CrÃ©neau passe',
+        body: 'Ce créneau est déjà passé (heure de Paris). Choisis une date ou une heure future.',
+        title: 'Créneau passé',
         tone: 'error',
       });
       return;
@@ -274,8 +274,8 @@ function VenueProposalModal({
       contentContainerStyle={{ gap: 20, paddingBottom: 32 }}
       headerComponent={(
         <LeagueModalHeader
-          description="Propose un terrain et un creneau a ton adversaire."
-          title="Ou jouer ?"
+          description="Propose un terrain et un créneau à ton adversaire."
+          title="Où jouer ?"
         />
       )}
       isVisible={isVisible}
@@ -297,7 +297,7 @@ function VenueProposalModal({
       </View>
 
       <View>
-        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>CrÃ©neau</Text>
+        <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 12 }]}>Créneau</Text>
         <View
           style={{
             backgroundColor: 'rgba(1, 179, 244, 0.12)',
@@ -310,7 +310,7 @@ function VenueProposalModal({
           }}
         >
           <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            CrÃ©neau commun sÃ©lectionnÃ© automatiquement
+            Créneau commun sélectionné automatiquement
           </Text>
         </View>
 
@@ -372,7 +372,7 @@ function VenueProposalModal({
             <DateTimeSelector
               buttonStyle={glassPickerStyle}
               display="inline"
-              label="DÃ©but"
+              label="Début"
               mode="time"
               onChange={setStartTime}
               onOpen={() => handleSelectorOpen('time')}
@@ -396,7 +396,7 @@ function VenueProposalModal({
               </Text>
             </View>
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-              Duree fixe: 60 min
+              Durée fixe : 60 min
             </Text>
           </View>
         </View>
@@ -450,7 +450,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-              Passer et acc?der au chat
+              Passer et accéder au chat
             </Text>
           </TouchableOpacity>
         )}

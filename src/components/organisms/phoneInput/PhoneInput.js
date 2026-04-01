@@ -10,7 +10,6 @@ import useTheme from '@/theme/themeContext';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 
-import { getDeviceLocaleCountry } from '@/utils/device/deviceInfo';
 import { DIAL_CODES } from '@/utils/dial_codes';
 
 // Default to France (+33) for all users
@@ -21,7 +20,7 @@ const DIALCODE_WIDTH = 72;
 const repairCountryLabel = (label) => {
   const normalizedLabel = String(label || '');
 
-  if (!/[Ãð]/.test(normalizedLabel)) {
+  if (!/[\u00C3\u00C2\u00E2\u00F0]/.test(normalizedLabel)) {
     return normalizedLabel;
   }
 
@@ -73,15 +72,15 @@ const PhoneInput = forwardRef(
     const [searchDialCode, setSearchDialCode] = useState('');
 
     // @ts-ignore
-      const dialOptions = useMemo(() => {
+    const dialOptions = useMemo(() => {
       if (searchDialCode) {
         return DIAL_CODES
           .map((option) => ({
             ...option,
             label: repairCountryLabel(option.label),
           }))
-          .filter(({ label, value: codeValue }) => (
-            label.toLowerCase().includes(searchDialCode.toLowerCase())
+          .filter(({ label: optionLabel, value: codeValue }) => (
+            optionLabel.toLowerCase().includes(searchDialCode.toLowerCase())
             || String(codeValue || '').includes(searchDialCode.trim())
           ));
       }

@@ -341,7 +341,7 @@ function FacilityForm() {
           <Text style={[Fonts.p2, Fonts.primary100]}>
             {facilityError?.message || 'Reessayez dans quelques instants.'}
           </Text>
-          <Button onPress={() => refetchFacility()} title="Reessayer" variant="Primary" />
+          <Button onPress={() => refetchFacility()} title="R\u00E9essayer" variant="Primary" />
           <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
         </View>
       </ScreenContainer>
@@ -365,7 +365,7 @@ function FacilityForm() {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
           {isFacilityNotFound ? (
-            <Button onPress={() => refetchFacility()} title="Reessayer" variant="Primary" />
+            <Button onPress={() => refetchFacility()} title="R\u00E9essayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>

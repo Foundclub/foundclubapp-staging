@@ -152,7 +152,7 @@ function AdWizardInfo({ navigation }) {
           <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
             Vous pouvez reessayer pour recuperer tous les referentiels, ou continuer avec les informations deja preremplies.
           </Text>
-          <Button onPress={handleRetryTaxonomy} title="Reessayer" variant="Secondary" />
+          <Button onPress={handleRetryTaxonomy} title="R\u00E9essayer" variant="Secondary" />
         </View>
       ) : null}
 

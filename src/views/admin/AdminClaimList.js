@@ -60,7 +60,7 @@ function AdminClaimList() {
   if (error && !requests.length) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={error?.message || 'Impossible de charger les demandes admin.'}
         onAction={refetch}
         title="Chargement impossible"

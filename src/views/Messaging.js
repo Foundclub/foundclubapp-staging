@@ -461,7 +461,7 @@ function Messaging({ navigation, route }) {
         ]}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-          {t('common.retry', 'Reessayer')}
+          {t('common.retry', 'R\u00E9essayer')}
         </Text>
       </TouchableOpacity>
     </View>

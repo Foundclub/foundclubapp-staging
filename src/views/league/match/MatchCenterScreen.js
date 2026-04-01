@@ -231,7 +231,7 @@ function MatchCenterScreen() {
 
   const promptCaptainSearchRequirements = useCallback(() => {
     Alert.alert(
-      'Recherche reservee au capitaine',
+      'Recherche r\u00E9serv\u00E9e au capitaine',
       'Seul le capitaine peut lancer une recherche manuelle. La recherche demarre aussi automatiquement quand 5 membres sont prêts sur un créneau.',
       [
         {
@@ -473,7 +473,7 @@ function MatchCenterScreen() {
         const coordinates = getLocationCoordinates(normalizedLocation);
         if (!coordinates) {
           Alert.alert(
-            'Localisation invalide',
+            'Localisation invalid\u00E9',
             'Impossible de lire les coordonnées de votre localisation.',
           );
           setViewState('lobby');
@@ -991,7 +991,7 @@ function MatchCenterScreen() {
       return renderMissionState({
         accentColor: Colors.primary500,
         eyebrow: 'SCAN MATCHMAKING',
-        helper: 'Nous analysons votre zone, vos creneaux et les disponibilites compatibles.',
+        helper: 'Nous analysons votre zone, vos cr\u00E9neaux et les disponibilit\u00E9s compatibles.',
         renderIcon: () => <ActivityIndicator color={Colors.primary500} size="large" />,
         subtitle: 'Analyse reseau',
         title: 'Lancement du scan',
@@ -1059,7 +1059,7 @@ function MatchCenterScreen() {
           </>
         ),
         eyebrow: 'RADAR ACTIF',
-        helper: 'Nous cherchons une equipe compatible dans votre zone et sur vos plages partagees.',
+        helper: 'Nous cherchons une \u00E9quipe compatible dans votre zone et sur vos plages partag\u00E9es.',
         renderIcon: () => <Text style={{ color: leagueGold, fontSize: 28 }}>{radarIcon}</Text>,
         subtitle: 'Balayage en cours',
         title: 'Recherche active',
@@ -1267,7 +1267,7 @@ function MatchCenterScreen() {
                 >
                   {swordsIcon}
                   {' '}
-                  Duel confirme
+                  Duel confirm\u00E9
                 </Text>
                 <Text style={[Fonts.h2, {
                   color: Colors.neutral00,
@@ -1275,7 +1275,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Equipe adverse
+                  \u00C9quipe adverse
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
                   {sportLabel}
@@ -1350,7 +1350,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Creneau phare
+                  Cr\u00E9neau phare
                 </Text>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{recurringDayLabel}</Text>
                 <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
@@ -1370,7 +1370,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Creneaux en commun
+                  Cr\u00E9neaux en commun
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
                   {commonSlotsSummary.slice(0, 6).map((slotLabel) => (
@@ -1414,7 +1414,7 @@ function MatchCenterScreen() {
                 Prochaine etape
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
-                Le match correspond a vos criteres. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
+                Le match correspond \u00E0 vos crit\u00E8res. Ouvrez le chat pour verrouiller le terrain, l&apos;horaire et le protocole de rencontre.
               </Text>
             </View>
           </View>
@@ -1454,7 +1454,7 @@ function MatchCenterScreen() {
               onPress={() => {
                 Alert.alert(
                   'Annuler le match ?',
-                  'Etes-vous sur de vouloir annuler ce match ? Votre equipe reviendra en mode recherche.',
+                  '\u00CAtes-vous s\u00FBr de vouloir annuler ce match ? Votre \u00E9quipe reviendra en mode recherche.',
                   [
                     { style: 'cancel', text: 'Non' },
                     {
@@ -1473,7 +1473,7 @@ function MatchCenterScreen() {
                                   ? selectedSlotIds
                                   : toDocumentIdList(squadSlots);
                                 if (fallbackSlotIds.length === 0) {
-                                  throw new Error('Ajoutez puis selectionnez au moins un creneau pour relancer la recherche.');
+                                  throw new Error('Ajoutez puis s\u00E9lectionnez au moins un cr\u00E9neau pour relancer la recherche.');
                                 }
                                 await MatchmakingService.triggerSearch(
                                   getEntityDocumentId(mySquad),
@@ -1963,7 +1963,7 @@ function MatchCenterScreen() {
               <View style={{ width: slotCardWidth }}>
                 <View>
                   <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau reserve</Text>
+                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau réservé</Text>
                 </View>
                 <View style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -2424,7 +2424,7 @@ function MatchCenterScreen() {
     };
 
     // Display Label
-    let displayLabel = 'Zone indefinie';
+    let displayLabel = 'Zone ind\u00E9finie';
     const tempAddr = getSafeLabel(tempSearchLocation?.address);
     const tempCity = getSafeLabel(tempSearchLocation?.city);
     const homeAddr = getSafeLabel(homeBase?.address);
@@ -2527,7 +2527,7 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
-              Vos disponibilites (
+              Vos disponibilit\u00E9s (
               {selectedSlotIds.length}
               /
               {squadSlots.length || 0}
@@ -2665,7 +2665,7 @@ function MatchCenterScreen() {
           })}
           {!isAddingSearchSlot && (!squadSlots || squadSlots.length === 0) && (
           <Text style={[Fonts.p2, { color: Colors.neutral500, padding: 16, textAlign: 'center' }]}>
-            Aucun créneau defini. Ajoutez-en directement ici.
+            Aucun créneau défini. Ajoutez-en directement ici.
           </Text>
           )}
         </View>
@@ -2840,7 +2840,7 @@ function MatchCenterScreen() {
   if (loadError && !mySquad && viewState !== 'no_squad') {
     return (
       <LeagueStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={loadError}
         onAction={() => loadMatchCenter()}
         title="Match Center indisponible"

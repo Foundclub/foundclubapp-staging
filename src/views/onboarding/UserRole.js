@@ -88,7 +88,7 @@ function UserRole({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant de choisir ton role."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant de choisir ton r\u00F4le."
         isLoading
         title="Chargement du profil"
       />
@@ -98,7 +98,7 @@ function UserRole({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"
@@ -109,9 +109,9 @@ function UserRole({ navigation }) {
   if (rolesLoading && !roles?.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons les roles disponibles."
+        description="Nous chargeons les r\u00F4les disponibles."
         isLoading
-        title="Chargement des roles"
+        title="Chargement des r\u00F4les"
       />
     );
   }
@@ -119,8 +119,8 @@ function UserRole({ navigation }) {
   if (rolesError && !roles?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
-        description={rolesError?.message || 'Impossible de charger les roles.'}
+        actionLabel="R\u00E9essayer"
+        description={rolesError?.message || 'Impossible de charger les r\u00F4les.'}
         onAction={refetchRoles}
         title="Chargement impossible"
       />

@@ -38,7 +38,7 @@ function CMPlanningScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.planning.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.planning.userErrorTitle', 'Planning indisponible')}
@@ -68,7 +68,7 @@ function CMPlanningScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.planning.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
         title={t('multisport.planning.errorTitle', 'Planning indisponible')}

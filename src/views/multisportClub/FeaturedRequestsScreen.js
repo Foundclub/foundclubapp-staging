@@ -189,7 +189,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (userDataError && !resolvedCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.featured.userError', "Impossible de retrouver votre structure multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.featured.userErrorTitle', 'Demandes indisponibles')}
@@ -219,7 +219,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
   if (cmError && !cmData) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.featured.error', "Impossible de charger cette structure multisport pour le moment.")}
         onAction={() => refetchCm()}
         title={t('multisport.featured.errorTitle', 'Demandes indisponibles')}

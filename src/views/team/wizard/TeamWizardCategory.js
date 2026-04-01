@@ -73,7 +73,7 @@ function TeamWizardCategory({ navigation }) {
             <Text style={{ marginBottom: 12 }}>
               Impossible de charger les categories. Reessayez pour continuer.
             </Text>
-            <Button onPress={() => categoriesQuery.refetch()} title="Reessayer" variant="Secondary" />
+            <Button onPress={() => categoriesQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
           </View>
         ) : null}
 

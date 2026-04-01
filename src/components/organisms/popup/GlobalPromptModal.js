@@ -129,7 +129,7 @@ function GlobalPromptModal({
             {children}
           </ScrollView>
 
-          <View style={[Spaces.gap[10], { marginTop: 20 }]}>
+          <View style={[Spaces.gap[16], Spaces.marginTop[16]]}>
             {primaryAction ? (
               <Button
                 onPress={primaryAction.onPress}

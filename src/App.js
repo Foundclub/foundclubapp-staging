@@ -8,6 +8,7 @@ import NotificationBootstrap from '@/components/organisms/notifications/Notifica
 import SmartNotificationHost from '@/components/organisms/notifications/SmartNotificationHost';
 import AppBannerHost from '@/components/organisms/popup/AppBannerHost';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+import RemotePopupCampaignHost from '@/components/organisms/popup/RemotePopupCampaignHost';
 import StartupPromptBoundary from '@/components/organisms/popup/StartupPromptBoundary';
 import ErrorScreen from '@/views/Error';
 
@@ -211,6 +212,7 @@ function App() {
         <BootErrorAlertHost />
         <SessionManager />
         <AppBannerHost />
+        <RemotePopupCampaignHost />
         {isSentryEnabled ? (
           <Sentry.ErrorBoundary fallback={<ErrorScreen />} showDialog>
             <AppNavigator navigationIntegration={navigationIntegration} />

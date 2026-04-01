@@ -8,6 +8,9 @@ import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
+import AdminPopupCampaignDetail from '@/views/admin/AdminPopupCampaignDetail';
+import AdminPopupCampaignForm from '@/views/admin/AdminPopupCampaignForm';
+import AdminPopupCampaignList from '@/views/admin/AdminPopupCampaignList';
 import AdminReports from '@/views/admin/AdminReports';
 import AdminRevenue from '@/views/admin/AdminRevenue';
 import AdminUserDetail from '@/views/admin/AdminUserDetail';
@@ -136,6 +139,30 @@ function AdminStack() {
         options={{
           ...commonOptions,
           headerTitle: 'Litiges League',
+        }}
+      />
+      <Stack.Screen
+        component={AdminPopupCampaignList}
+        name={RouteNames.AdminPopupCampaignList}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Campagnes pop-up',
+        }}
+      />
+      <Stack.Screen
+        component={AdminPopupCampaignDetail}
+        name={RouteNames.AdminPopupCampaignDetail}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Détail campagne',
+        }}
+      />
+      <Stack.Screen
+        component={AdminPopupCampaignForm}
+        name={RouteNames.AdminPopupCampaignForm}
+        options={{
+          ...commonOptions,
+          headerTitle: 'Éditer campagne',
         }}
       />
       <Stack.Screen

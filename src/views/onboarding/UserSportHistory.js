@@ -37,7 +37,7 @@ function UserSportHistory({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant d'afficher ton historique."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant d'afficher ton historique."
         isLoading
         title="Chargement du profil"
       />
@@ -47,7 +47,7 @@ function UserSportHistory({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"

@@ -141,7 +141,7 @@ function AdminUserDetail() {
   if ((userError || rolesError) && !user) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userError?.message || rolesError?.message || 'Impossible de charger cet utilisateur.'}
         onAction={refetch}
         title="Chargement impossible"

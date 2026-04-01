@@ -73,7 +73,7 @@ function TeamWizardLevel({ navigation }) {
             <Text style={{ marginBottom: 12 }}>
               Impossible de charger les niveaux. Reessayez pour continuer.
             </Text>
-            <Button onPress={() => levelsQuery.refetch()} title="Reessayer" variant="Secondary" />
+            <Button onPress={() => levelsQuery.refetch()} title="R\u00E9essayer" variant="Secondary" />
           </View>
         ) : null}
 

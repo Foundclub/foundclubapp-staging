@@ -93,7 +93,7 @@ function SuperAdminContentExplorer({ navigation }) {
   if (error && !contentTypes.length) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={error?.message || 'Impossible de charger les content-types superadmin.'}
         onAction={refetch}
         title="Chargement impossible"

@@ -69,7 +69,7 @@ function UserClubSearch({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant de regler la visibilite."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant de r\u00E9gler la visibilit\u00E9."
         isLoading
         title="Chargement du profil"
       />
@@ -79,7 +79,7 @@ function UserClubSearch({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"

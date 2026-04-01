@@ -23,6 +23,7 @@ import useTheme from '@/theme/themeContext';
  * @param {React.ReactNode} props.children - Content to render inside the modal
  * @param {() => void} props.close - Function to close the modal
  * @param {import('@/theme/types').ColorNames} [props.closeIconTintColor]
+ * @param {number} [props.contentBottomPaddingOverride] - Optional explicit bottom padding for scroll content
  * @param {import('react-native').ViewStyle} [props.contentContainerStyle]
  * @param {React.ReactNode} [props.headerComponent] - Fixed header component
  * @param {React.ReactNode} [props.footerComponent] - Fixed footer component
@@ -48,6 +49,7 @@ function BottomModal({
   close,
   closeIconTintColor = 'primary200',
   closeOnBackdropPress = true,
+  contentBottomPaddingOverride,
   contentContainerStyle,
   enableContentPanningGesture = Platform.OS === 'ios',
   enablePanDownToClose = true,
@@ -175,11 +177,21 @@ function BottomModal({
   const sheetBottomInset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
   const contentBottomPadding = useMemo(
     () => {
+      if (Number.isFinite(contentBottomPaddingOverride)) {
+        return Math.max(0, Number(contentBottomPaddingOverride));
+      }
       const keyboardOffset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
       const safeAreaOffset = useSafeAreaBottomInset ? insets.bottom : 0;
       return (footerComponent ? 16 : 40) + keyboardOffset + safeAreaOffset;
     },
-    [footerComponent, insets.bottom, keyboardBehavior, keyboardHeight, useSafeAreaBottomInset],
+    [
+      contentBottomPaddingOverride,
+      footerComponent,
+      insets.bottom,
+      keyboardBehavior,
+      keyboardHeight,
+      useSafeAreaBottomInset,
+    ],
   );
 
   return (

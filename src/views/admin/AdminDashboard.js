@@ -7,9 +7,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
-import AdminStateView from '@/views/admin/components/AdminStateView';
-
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -20,6 +19,7 @@ import {
   useGetPendingClubOnboardingRequests,
 } from '@/services/admin/adminQueries';
 import { getPendingFeaturedRequests } from '@/services/event/eventService';
+import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 // We might need a useGetClubs hook. I'll assume it exists or I can use a generic fetch.
 // Checking imports in other files... useClub hook exists but it's for the user's club.
 // I'll check if there is a query for all clubs.
@@ -93,6 +93,16 @@ function AdminDashboard() {
   } = useGetLeagueDisputes(disputeCountParams);
 
   const leagueDisputesCount = leagueDisputesData?.meta?.pagination?.total || 0;
+  const {
+    data: popupCampaignsData,
+    error: popupCampaignsError,
+    isLoading: isPopupCampaignsLoading,
+    refetch: refetchPopupCampaigns,
+  } = useGetInAppPopupCampaigns({
+    page: 1,
+    pageSize: 1,
+  });
+  const popupCampaignCount = popupCampaignsData?.meta?.total || 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -101,7 +111,8 @@ function AdminDashboard() {
       refetchClaims();
       refetchClubOnboarding();
       refetchLeagueDisputes();
-    }, [refetchClaims, refetchClubOnboarding, refetchFeatured, refetchLeagueDisputes, refetchStats]),
+      refetchPopupCampaigns();
+    }, [refetchClaims, refetchClubOnboarding, refetchFeatured, refetchLeagueDisputes, refetchPopupCampaigns, refetchStats]),
   );
 
   const dashboardError = (
@@ -110,6 +121,7 @@ function AdminDashboard() {
     || claimsError
     || clubOnboardingError
     || leagueDisputesError
+    || popupCampaignsError
   );
   const isBootstrapping = (
     isFeaturedRequestsLoading
@@ -117,6 +129,7 @@ function AdminDashboard() {
     || isClaimsLoading
     || isClubOnboardingLoading
     || isLeagueDisputesLoading
+    || isPopupCampaignsLoading
   );
 
   if (isBootstrapping) {
@@ -132,7 +145,7 @@ function AdminDashboard() {
   if (dashboardError) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={dashboardError?.message || 'Impossible de charger les indicateurs admin.'}
         onAction={() => {
           refetchFeatured();
@@ -140,6 +153,7 @@ function AdminDashboard() {
           refetchClaims();
           refetchClubOnboarding();
           refetchLeagueDisputes();
+          refetchPopupCampaigns();
         }}
         title="Chargement impossible"
       />
@@ -235,6 +249,13 @@ function AdminDashboard() {
             onPress={() => navigation.navigate(RouteNames.AdminClubOnboardingList)}
             title="Clubs a onboarder"
             value={clubOnboardingCount}
+          />
+
+          <DashboardCard
+            color={Colors.primary200}
+            onPress={() => navigation.navigate(RouteNames.AdminPopupCampaignList)}
+            title="Campagnes pop-up"
+            value={popupCampaignCount}
           />
 
           <DashboardCard

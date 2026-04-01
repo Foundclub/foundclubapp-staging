@@ -110,7 +110,7 @@ function UserSport({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons ton profil avant de choisir ton sport."
+        description="Nous r\u00E9cup\u00E9rons ton profil avant de choisir ton sport."
         isLoading
         title="Chargement du profil"
       />
@@ -120,7 +120,7 @@ function UserSport({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={userDataError?.message || 'Impossible de charger ton profil.'}
         onAction={refetchUserData}
         title="Chargement impossible"
@@ -141,7 +141,7 @@ function UserSport({ navigation }) {
   if (activitiesError && !activities?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={activitiesError?.message || 'Impossible de charger les sports.'}
         onAction={refetchActivities}
         title="Chargement impossible"

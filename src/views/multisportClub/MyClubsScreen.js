@@ -34,7 +34,7 @@ function MyClubsScreen({ navigation, route }) {
   if (userDataError && !fallbackCmId) {
     return (
       <MultisportStateView
-        actionLabel={t('common.retry', 'Reessayer')}
+        actionLabel={t('common.retry', 'R\u00E9essayer')}
         description={t('multisport.fallback.error', "Impossible de charger vos informations multisport pour le moment.")}
         onAction={() => refetchUserData()}
         title={t('multisport.fallback.errorTitle', 'Club indisponible')}

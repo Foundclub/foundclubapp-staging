@@ -90,7 +90,7 @@ function AdminReports() {
   if (isLoading && !reports.length) {
     return (
       <AdminStateView
-        description="Nous recuperons les signalements evenements et messages."
+        description="Nous r\u00E9cup\u00E9rons les signalements evenements et messages."
         isLoading
         title="Chargement des signalements"
       />
@@ -100,7 +100,7 @@ function AdminReports() {
   if (error && !reports.length) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={error?.message || 'Impossible de charger les signalements admin.'}
         onAction={refetch}
         title="Chargement impossible"

@@ -289,7 +289,7 @@ function CMDashboard({ navigation, route }) {
           </Text>
           <Button onPress={() => navigation.navigate(RouteNames.MyClubs)} title="Retour aux clubs" variant="Secondary" />
           {!isMissingCmId ? (
-            <Button onPress={refetch} title="Reessayer" variant="Primary" />
+            <Button onPress={refetch} title="R\u00E9essayer" variant="Primary" />
           ) : null}
         </View>
       </ScreenContainer>

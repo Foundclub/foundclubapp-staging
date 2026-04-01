@@ -494,7 +494,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (metadataQuery.error || (isEditMode && entryQuery.error)) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={metadataQuery.error?.message || entryQuery.error?.message || 'Impossible de charger ce formulaire.'}
         onAction={() => {
           metadataQuery.refetch();

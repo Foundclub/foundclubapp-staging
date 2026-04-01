@@ -447,7 +447,7 @@ function ClubMembershipRequestList({ navigation, route }) {
         <View style={[Alignments.fullWidth, Spaces.gap[12], { maxWidth: 320 }]}>
           <Button
             onPress={() => refetch()}
-            title={t('common.actions.retry', 'Reessayer')}
+            title={t('common.actions.retry', 'R\u00E9essayer')}
             variant="Primary"
           />
           <Button

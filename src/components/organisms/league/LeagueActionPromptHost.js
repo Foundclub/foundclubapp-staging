@@ -55,7 +55,7 @@ const BLOCKED_ROUTES = new Set([
 ]);
 
 const formatActionDate = (value) => {
-  if (!value) return 'Date a definir';
+  if (!value) return 'Date \u00E0 d\u00E9finir';
   try {
     return new Date(value).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -64,7 +64,7 @@ const formatActionDate = (value) => {
       month: 'long',
     });
   } catch (_error) {
-    return 'Date a definir';
+    return 'Date \u00E0 d\u00E9finir';
   }
 };
 
@@ -76,15 +76,15 @@ const isAlreadyResolvedError = (error) => {
 
 const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
   if (opponentResponse === 'played') {
-    return 'Match joue';
+    return 'Match jou\u00E9';
   }
   if (opponentNextAction === 'cancel') {
-    return 'Match non joue - annulation proposee';
+    return 'Match non jou\u00E9 - annulation propos\u00E9e';
   }
   if (opponentNextAction === 'reschedule') {
-    return 'Match non joue - replanification proposee';
+    return 'Match non jou\u00E9 - replanification propos\u00E9e';
   }
-  return 'Match non joue';
+  return 'Match non jou\u00E9';
 };
 
 /**
@@ -122,8 +122,8 @@ function LeagueActionPromptHost() {
   const nextAction = pendingActionPayload?.nextAction || null;
   const isBlockedRoute = currentRouteName ? BLOCKED_ROUTES.has(currentRouteName) : false;
   const isCompactMobile = width < 390 || height < 760;
-  const modalSnapPoint = isCompactMobile ? '86%' : '78%';
-  const sectionGap = isCompactMobile ? 16 : 20;
+  const modalSnapPoint = isCompactMobile ? '90%' : '84%';
+  const sectionGap = isCompactMobile ? 12 : 16;
   const currentForcedPromptKey = nextAction?.key && forcePromptToken
     ? `${nextAction.key}:${forcePromptToken}`
     : null;
@@ -224,7 +224,7 @@ function LeagueActionPromptHost() {
       focusLatestProposal: true,
       focusProposalMessageId: nextAction?.proposalMessageId || undefined,
       leagueNegotiationFocusToken: String(Date.now()),
-      subTitle: 'Negociation du match en cours',
+      subTitle: 'N\u00E9gociation du match en cours',
     });
   }, [dismissForSession, nextAction?.chatId, nextAction?.proposalMessageId]);
 
@@ -390,7 +390,7 @@ function LeagueActionPromptHost() {
         || '',
       ).trim();
       showBanner({
-        body: serverMessage || "Impossible d'enregistrer cette reponse.",
+        body: serverMessage || "Impossible d'enregistrer cette r\u00E9ponse.",
         title: 'Erreur',
         tone: 'error',
       });
@@ -469,30 +469,30 @@ function LeagueActionPromptHost() {
   const isWaitingVenue = nextAction?.state === 'waiting_venue';
   const isPostSlotResolution = nextAction?.state === 'post_slot_resolution';
   const effectivePostSlotStep = postSlotLocalStep || nextAction?.step || 'ask_happened';
-  let promptTitle = isWaitingVenue ? 'Terrain a reserver' : 'Nouvelle proposition League';
+  let promptTitle = isWaitingVenue ? 'Terrain \u00E0 r\u00E9server' : 'Nouvelle proposition League';
   let promptBody = isWaitingVenue
-    ? "Le match est confirme, mais le terrain n'est pas encore reserve. Pensez a finaliser l'organisation."
-    : "Une proposition de match attend une reponse de votre squad. Consultez les details avant d'accepter ou de refuser.";
+    ? "Le match est confirm\u00E9, mais le terrain n'est pas encore r\u00E9serv\u00E9. Pensez \u00E0 finaliser l'organisation."
+    : "Une proposition de match attend une r\u00E9ponse de votre squad. Consultez les d\u00E9tails avant d'accepter ou de refuser.";
   if (isPostSlotResolution) {
     if (effectivePostSlotStep === 'confirm_reschedule') {
       promptTitle = 'Confirmer la replanification ?';
-      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce meme match.";
+      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce m\u00EAme match.";
     } else if (effectivePostSlotStep === 'confirm_cancel') {
       promptTitle = 'Confirmer l annulation ?';
-      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans penalite.";
+      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans p\u00E9nalit\u00E9.";
     } else if (effectivePostSlotStep === 'choose_not_played_action') {
       promptTitle = 'Le match n a pas eu lieu';
-      promptBody = 'Choisissez la suite a donner a ce match : replanifier avec le meme adversaire ou annuler sans penalite.';
+      promptBody = 'Choisissez la suite \u00E0 donner a ce match : replanifier avec le meme adversaire ou annuler sans p\u00E9nalit\u00E9.';
     } else {
       promptTitle = 'Le match a-t-il eu lieu ?';
-      promptBody = 'Le creneau est depasse sans terrain confirme. Les capitaines doivent confirmer si le match a eu lieu.';
+      promptBody = 'Le cr\u00E9neau est d\u00E9pass\u00E9 sans terrain confirm\u00E9. Les capitaines doivent confirmer si le match a eu lieu.';
     }
   }
   let homeAwayLabel = 'Match League';
   if (nextAction?.homeAway === 'home') {
     homeAwayLabel = 'Domicile';
   } else if (nextAction?.homeAway === 'away') {
-    homeAwayLabel = 'Exterieur';
+    homeAwayLabel = 'Ext\u00E9rieur';
   }
   const proposalDefaults = useMemo(
     () => buildProposalDefaultsFromMatch(nextAction?.match || null),
@@ -630,7 +630,7 @@ function LeagueActionPromptHost() {
           <Button
             onPress={() => openMatchDetails('negotiation')}
             style={ApplicationStyle.borderRadius24}
-            title="Voir tous les details"
+            title="Voir tous les d\u00E9tails"
             variant="Secondary"
           />
           <Button
@@ -684,11 +684,12 @@ function LeagueActionPromptHost() {
   return (
     <>
       <BottomModal
+        contentBottomPaddingOverride={6}
         isVisible={isVisible}
         onClose={dismissForSession}
         snapPoint={modalSnapPoint}
       >
-        <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 12 : 20 }}>
+        <View style={{ gap: sectionGap, paddingBottom: isCompactMobile ? 4 : 8 }}>
           <LeagueModalHeader
             align="left"
             description={promptBody}
@@ -754,7 +755,7 @@ function LeagueActionPromptHost() {
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 Terrain
                 {' : '}
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{nextAction?.venue || 'A definir'}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{nextAction?.venue || '\u00C0 d\u00E9finir'}</Text>
               </Text>
               {nextAction?.currentProposal?.status ? (
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
@@ -787,11 +788,11 @@ function LeagueActionPromptHost() {
               borderColor: `${Colors.primary500}28`,
               borderRadius: 18,
               borderWidth: 1,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
             }}
           >
-            <Text style={[Fonts.p3, { color: Colors.neutral200, textAlign: 'center' }]}>
+            <Text style={[Fonts.p4, { color: Colors.neutral200, textAlign: 'center' }]}>
               Si vous fermez ce rappel sans agir, il reviendra a la prochaine ouverture de l&apos;app tant que cet etat reste actif.
             </Text>
           </View>

@@ -462,14 +462,14 @@ function TeamEdit({ navigation, route }) {
           {isClubNotFound ? (
             <View style={Spaces.gap[12]}>
               <Text>Club introuvable pour cette equipe. Reessaye ou reviens a la fiche equipe.</Text>
-              <Button onPress={handleRetryBootstrap} title="Reessayer" variant="Secondary" />
+              <Button onPress={handleRetryBootstrap} title="R\u00E9essayer" variant="Secondary" />
             </View>
           ) : null}
 
           {bootstrapError && !isBootstrapLoading ? (
             <View style={Spaces.gap[12]}>
               <Text>{bootstrapError?.message || 'Impossible de charger les informations de l equipe.'}</Text>
-              <Button onPress={handleRetryBootstrap} title="Reessayer" variant="Secondary" />
+              <Button onPress={handleRetryBootstrap} title="R\u00E9essayer" variant="Secondary" />
             </View>
           ) : null}
         </View>

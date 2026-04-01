@@ -247,7 +247,7 @@ function TeamFilters({ navigation }) {
             </Text>
             <Button
               onPress={handleRetryReferences}
-              title={t('common.retry', 'Reessayer')}
+              title={t('common.retry', 'R\u00E9essayer')}
               variant="Secondary"
             />
           </View>

@@ -336,7 +336,7 @@ function SuperAdminEntryList({ navigation, route }) {
   if ((metadataQuery.error || entriesError) && !entries.length) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={metadataQuery.error?.message || entriesError?.message || 'Impossible de charger cette liste superadmin.'}
         onAction={() => {
           metadataQuery.refetch();

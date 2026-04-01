@@ -256,7 +256,7 @@ function SquadRequestsScreen({ navigation, route }) {
   if (error) {
     return (
       <LeagueStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description="Impossible de charger les demandes d'adhesion pour cette squad. Verifiez la connexion puis relancez."
         onAction={() => refetch()}
         title="Chargement impossible"

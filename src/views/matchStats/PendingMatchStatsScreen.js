@@ -189,7 +189,7 @@ function PendingMatchStatsScreen({ navigation }) {
         >
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Chargement des matchs en attente</Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-            Nous recuperons tes retours post-match disponibles.
+            Nous r\u00E9cup\u00E9rons tes retours post-match disponibles.
           </Text>
         </View>
       </ScreenContainer>
@@ -218,7 +218,7 @@ function PendingMatchStatsScreen({ navigation }) {
           </Text>
           <Button
             onPress={() => refetch()}
-            title="Reessayer"
+            title="R\u00E9essayer"
             variant="Primary"
           />
         </View>

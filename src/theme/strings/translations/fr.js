@@ -70,7 +70,7 @@ export default {
   },
   APIerrors: {
     // Authentication errors
-    AUTHENTICATION_FAILED: "Échec d'authentification.",
+    AUTHENTICATION_FAILED: "?chec d'authentification.",
     INVALID_TOKEN: "Jeton d'authentification invalide.",
     MISSING_TOKEN: "Jeton d'authentification manquant.",
     OTP_ERROR: 'Une erreur est survenue lors de la connexion OTP',
@@ -130,7 +130,7 @@ export default {
     DEPARTMENT_REQUIRED: 'Le département est requis.',
 
     // Event errors
-    EVENT_ALREADY_MISSING: 'Vous avez déjà répondu absent a cet événement.',
+    EVENT_ALREADY_MISSING: 'Vous avez déjà répondu absent à cet événement.',
     EVENT_CANCEL_ERROR: "Erreur lors de l'annulation de l'événement.",
     EVENT_CAPACITY_ERROR: "La capacité maximale de l'événement est atteinte.",
     EVENT_CREATE_ERROR: "Erreur lors de la création de l'événement.",
@@ -142,12 +142,12 @@ export default {
     EVENT_LOCATION_REQUIRED: 'Un lieu est requis pour créer un événement.',
     EVENT_MISSING_ERROR: "Erreur lors de la réponse à l'événement.",
     EVENT_PARTICIPATION_ACCEPT_ERROR: "Erreur lors de l'acceptation de la participation.",
-    EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitee.',
+    EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
     EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
     EVENT_PARTICIPATION_REFUSE_ERROR: 'Erreur lors du refus de la participation.',
     EVENT_SLOT_CONFLICT: 'Un conflit de créneau a été détecté pour ce lieu.',
     EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
-    EVENT_USER_ALREADY_IN_EVENT_ERROR: "L'utilisateur est déjà inscrit a cet événement.",
+    EVENT_USER_ALREADY_IN_EVENT_ERROR: "L'utilisateur est déjà inscrit à cet événement.",
     EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: "L'utilisateur n'est pas joueur de l'équipe.",
 
     // Event participation request errors
@@ -244,7 +244,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
-        description: 'Êtes-vous sûr·e de vouloir continuer ?',
+        description: '?tes-vous sûr·e de vouloir continuer ?',
         title: 'Vous êtes sur le point de supprimer le partenaire {{sponsorName}}.',
       },
       deleteTrainer: {
@@ -252,7 +252,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
-        description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club. Êtes-vous sûr·e de vouloir continuer ?',
+        description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club. ?tes-vous sûr·e de vouloir continuer ?',
         title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e.',
       },
       inviteTrainer: {
@@ -274,7 +274,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Quitter le club',
         },
-        description: 'Vous ne serez plus lié·e à ce club ni à ses équipes en tant qu’encadrant·e. Êtes-vous sûr·e de vouloir continuer ?',
+        description: 'Vous ne serez plus lié·e à ce club ni à ses équipes en tant qu’encadrant·e. ?tes-vous sûr·e de vouloir continuer ?',
         error: 'Impossible de quitter ce club pour le moment.',
         title: 'Quitter le club ?',
       },
@@ -385,23 +385,23 @@ export default {
       copyUnavailable: 'Le presse-papiers est indisponible sur cette build.',
       delete: 'Supprimer',
       deleteConfirm: {
-        description: 'Ce message sera supprim? pour tous les participants.',
+        description: 'Ce message sera supprimé pour tous les participants.',
         title: 'Supprimer le message',
       },
       deleteError: 'Impossible de supprimer ce message.',
       edit: 'Modifier',
       editModal: {
         addFile: 'Ajouter un fichier',
-        addMedia: 'Ajouter un m?dia',
+        addMedia: 'Ajouter un média',
         attachmentFallback: 'Pièce jointe',
-        attachments: 'Pieces jointes',
+        attachments: 'Pièces jointes',
         noAttachments: 'Aucune pièce jointe',
         placeholder: 'Modifier le texte...',
         takePhoto: 'Prendre une photo',
         title: 'Modifier le message',
       },
       modalTitle: 'Actions du message',
-      reply: 'Repondre',
+      reply: 'Répondre',
       report: 'Signaler',
     },
     attachments: {
@@ -414,7 +414,7 @@ export default {
       noContact: 'Aucun contact partageable',
       photos: 'Photos',
       pickFile: 'Envoyer un fichier',
-      pickMedia: 'Envoyer un m?dia',
+      pickMedia: 'Envoyer un média',
       poll: 'Sondage',
       subtitle: 'Partagez du contenu dans cette conversation',
       takePhoto: 'Prendre une photo',
@@ -588,21 +588,21 @@ export default {
       remind: 'Relancer',
     },
     fields: {
-      description: 'À propos',
+      description: '? propos',
       participationRequests: 'Demandes de participation',
       participations: 'Participants',
     },
     invitedTeams: {
-      externalBadge: 'Ouvert a tous',
+      externalBadge: 'Ouvert à tous',
       externalHistoricalTitle: 'Historique participants externes',
       historicalPending: '{{count}} réponse(s) en attente',
       historicalTitle: 'Historique équipe retirée',
-      homeTeamBadge: 'Équipe organisatrice',
+      homeTeamBadge: '?quipe organisatrice',
       invitedTeamBadge: 'équipe invitée',
     },
     modals: {
       accept: {
-        title: 'Êtes-vous sûr·e de vouloir accepter cette demande ?',
+        title: '?tes-vous sûr·e de vouloir accepter cette demande ?',
       },
       actions: {
         cancel: 'Annuler',
@@ -611,14 +611,14 @@ export default {
       },
       cancelEvent: {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
-        title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
+        title: '?tes-vous sûr·e de vouloir annuler cet évènement ?',
       },
       deleteParticipation: {
         actions: {
           cancel: 'Non, retour',
           confirm: 'Oui, annuler',
         },
-        description: 'Êtes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
+        description: '?tes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
         title: 'Annuler ma participation',
       },
       editResponse: {
@@ -642,7 +642,7 @@ export default {
             placeholder: 'Il faut avoir plus de 16 ans.',
           },
         },
-        title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
+        title: '?tes-vous sûr·e de vouloir refuser cette demande ?',
       },
       remindSuccess: {
         description: 'Les joueur·se·s vont recevoir une notification pour leur rappeler de répondre à l\'évènement.',
@@ -688,7 +688,7 @@ export default {
       },
       description: {
         label: 'Description',
-        placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
+        placeholder: '?vènement de détection ouvert à tous·tes les joueur·se·s.',
       },
       endTime: {
         label: 'Heure de fin',
@@ -701,7 +701,7 @@ export default {
         placeholder: 'Sélectionner des équipes',
       },
       isRecurrent: {
-        label: 'Évènement récurrent',
+        label: '?vènement récurrent',
       },
       location: {
         label: 'Lieu',
@@ -741,7 +741,7 @@ export default {
         placeholder: 'HH:mm',
       },
       team: {
-        label: 'Équipe',
+        label: '?quipe',
         placeholder: 'Sélectionner une équipe',
       },
       time: {
@@ -803,7 +803,7 @@ export default {
         placeholder: 'Sélectionner un statut',
       },
       team: {
-        label: 'Équipe',
+        label: '?quipe',
         placeholder: 'Sélectionner une équipe',
         selectClubFirst: 'Sélectionner un club avant l\'équipe',
       },
@@ -821,7 +821,7 @@ export default {
   },
   eventList: {
     actions: {
-      about: 'À propos',
+      about: '? propos',
       absent: 'Absent·e',
       add: 'Ajouter un évènement',
       findEvent: 'Trouver un événement',
@@ -857,7 +857,7 @@ export default {
         + '\nJe m\'engage (ou j\'engage le mineur) à respecter le règlement, les consignes de sécurité et les instructions des encadrants ; l\'organisateur peut refuser ou interrompre la participation en cas de non-respect.'
         + '\n\nUrgence médicale :'
         + '\nJ\'autorise l\'organisateur à prévenir les secours en cas d\'urgence ; pour un mineur, j\'autorise l\'organisateur à accompagner l\'enfant si nécessaire et je m\'engage à rester joignable.',
-      title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
+      title: 'D?CLARATION DE RESPONSABILIT? ET ACCEPTATION DES RISQUES',
       validation: 'En cochant les cases et en validant mon inscription, je confirmé avoir lu, compris et accepté la présente déclaration et j\'accepte de participer à l\'événement dans ces conditions.',
     },
     noData: 'Aucun évènement trouvé.',
@@ -865,7 +865,7 @@ export default {
   },
   eventWizard: {
     common: {
-      stepCounter: 'Étape {{current}}/{{total}}',
+      stepCounter: '?tape {{current}}/{{total}}',
     },
     errors: {
       datePast: "La date ou l'heure de début doit être dans le futur.",
@@ -920,7 +920,7 @@ export default {
         logistics: 'Logistique',
         participants: 'Participants',
         reservation: 'Réservation',
-        team: 'Équipe',
+        team: '?quipe',
         type: 'Type',
         validation: 'Validation',
         visibility: 'Visibilité',
@@ -939,8 +939,8 @@ export default {
         title: 'Description',
       },
       invites: {
-        myTeams: 'MES Équipes',
-        otherTeams: 'AUTRES Équipes',
+        myTeams: 'MES ?quipes',
+        otherTeams: 'AUTRES ?quipes',
         subtitle: 'Invite des équipes, ou passe cette étape.',
         title: 'Invitations',
       },
@@ -982,7 +982,7 @@ export default {
         previewTotalPlayers: 'Joueurs attendus: {{value}}',
         quickPresets: 'Valeurs rapides',
         subtitle: 'Choisis une capacité max, ou laisse l événement en accès illimité.',
-        summaryTitle: 'Resume',
+        summaryTitle: 'Résumé',
         title: 'Participants',
         totalPlayersExceedsCapacity: 'Le nombre de joueurs attendus ne peut pas depasser la capacité max.',
         unlimited: 'Illimité',
@@ -995,7 +995,7 @@ export default {
       },
       team: {
         subtitle: "Sélectionne l'équipe organisatrice.",
-        title: 'Équipe organisatrice',
+        title: '?quipe organisatrice',
       },
       type: {
         subtitle: "Sélectionne le type d'événement.",
@@ -1020,7 +1020,7 @@ export default {
         public: 'Public',
         publicDesc: 'Visible pour tous les profils qui y ont accès.',
         subtitle: "Définis qui peut voir l'événement.",
-        team: 'Équipe',
+        team: '?quipe',
         teamDesc: "Visibilité uniquement pour les membres de l'équipe créatrice de l'événement.",
         title: 'Visibilité',
       },
@@ -1385,25 +1385,17 @@ export default {
     requests: 'Demandes',
     search: 'Rechercher',
   },
-  planning: {
-    fullscreen: {
-      club: 'Planning club',
-      clubShared: 'Planning partage',
-      cm: 'Planning omnisport',
-      personal: 'Mon planning',
-    },
-  },
   messaging: {
-    noData: 'Aucune conversation trouvée.',
-    title: 'Messages privés',
+    noData: 'Aucune conversation trouv\u00E9e.',
+    title: 'Messages priv\u00E9s',
   },
   modals: {
     actions: {
       search: 'Rechercher...',
-      select: 'Sélectionner',
+      select: 'S\u00E9lectionner',
     },
     phone: {
-      title: 'Sélectionner un pays',
+      title: 'S\u00E9lectionner un pays',
     },
   },
   multisport: {
@@ -1472,18 +1464,18 @@ export default {
     edit: {
       fields: {
         phone: {
-          label: 'T?l?phone',
-          placeholder: 'T?l?phone',
+          label: 'Téléphone',
+          placeholder: 'Téléphone',
         },
       },
     },
     empty: {
-      admins: 'Aucun dirigeant rattach?.',
-      partners: 'Aucun partenaire ajout?.',
+      admins: 'Aucun dirigeant rattaché.',
+      partners: 'Aucun partenaire ajouté.',
       sections: 'Aucune section disponible pour le moment.',
     },
     fallback: {
-      noClub: 'Aucun club multisport associe a ce compte.',
+      noClub: 'Aucun club multisport associé à ce compte.',
     },
     formErrors: {
       addressRequired: "L'adresse est obligatoire.",
@@ -1505,7 +1497,7 @@ export default {
       admins: 'Dirigeants',
       members: 'Membres',
       sections: 'Sections',
-      teams: 'Équipes',
+      teams: '?quipes',
     },
     titles: {
       admins: 'Dirigeants omnisport',
@@ -1687,7 +1679,7 @@ export default {
       },
     },
     subtitle: 'Entre le code reçu par SMS.',
-    title: 'Confirmé ton numéro',
+    title: 'Confirme ton numéro',
   },
   permissions: {
     camera: {
@@ -1696,9 +1688,17 @@ export default {
       title: 'Permission Caméra',
     },
   },
+  planning: {
+    fullscreen: {
+      club: 'Planning club',
+      clubShared: 'Planning partag\u00E9',
+      cm: 'Planning omnisport',
+      personal: 'Mon planning',
+    },
+  },
   profile: {
     actions: {
-      confirmDeleteAvatar: 'Êtes-vous sûr de vouloir supprimer cette image ?',
+      confirmDeleteAvatar: '?tes-vous sûr de vouloir supprimer cette image ?',
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
@@ -1811,8 +1811,8 @@ export default {
       all: 'Toutes',
       club: 'Club',
       event: 'Événement',
-      featured: 'À la une',
-      team: 'Équipe',
+      featured: '? la une',
+      team: '?quipe',
     },
     forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
     migratedBannerAction: "Ouvrir l'onglet Demandes",
@@ -1826,8 +1826,8 @@ export default {
     types: {
       club: 'Club',
       event: 'Événement',
-      featured: 'À la une',
-      team: 'Équipe',
+      featured: '? la une',
+      team: '?quipe',
       unknown: 'Demande',
     },
   },
@@ -1947,11 +1947,11 @@ export default {
         audit: 'Audit recent',
         keyFields: 'Champs clés',
         rawJson: 'JSON complet',
-        relationsMedia: 'Relations / M?dias',
-        summary: 'Resume',
+        relationsMedia: 'Relations / Médias',
+        summary: 'Résumé',
       },
       shortId: 'ID court',
-      updatedAt: 'Modifie le',
+      updatedAt: 'Modifié le',
     },
     empty: {
       explorerDescription: 'Ajustez la recherche ou vérifiez les permissions Super Admin.',
@@ -1976,28 +1976,28 @@ export default {
       idCopied: 'ID copié',
     },
     form: {
-      allowedTypes: 'Types autoris?s',
-      documentIdToAdd: 'documentId ? ajouter',
-      editableFields: 'Champs ?ditables',
-      mediaMultipleAllowed: 'M?dia multiple autoris?',
-      mediaSingle: 'M?dia unique',
+      allowedTypes: 'Types autorisés',
+      documentIdToAdd: 'documentId à ajouter',
+      editableFields: 'Champs éditables',
+      mediaMultipleAllowed: 'Média multiple autorisé',
+      mediaSingle: 'Média unique',
       no: 'Non',
       noEditableFields: 'Aucun champ détecté',
       noMediaSelected: 'Aucun média sélectionné.',
       none: 'Aucun',
-      rawFallbackHint: 'Champs non totalement supportes en mode guide:',
-      rawFallbackTitle: 'Fallback JSON avanc?',
+      rawFallbackHint: 'Champs non totalement supportés en mode guide:',
+      rawFallbackTitle: 'Fallback JSON avancé',
       reasonLabel: 'Raison (optionnelle sauf regles sensibles)',
       reasonPlaceholder: 'Ajouter un contexte d\'audit',
       relationDocumentId: 'documentId relation',
       relationTo: 'Relation vers',
       searchRelationPlaceholder: 'Rechercher une relation...',
       sections: {
-        advanced: 'Avance',
+        advanced: 'Avancé',
         advancedHint: 'JSON, rich text et champs complexes.',
-        booleanEnum: 'Booleens / Enums',
-        booleanEnumHint: 'Valeurs a choix rapide.',
-        media: 'M?dias',
+        booleanEnum: 'Booléens / Enums',
+        booleanEnumHint: 'Valeurs à choix rapide.',
+        media: 'Médias',
         mediaHint: 'Ajoutez images ou fichiers.',
         relations: 'Relations',
         relationsHint: 'Associez des entrées liées.',
@@ -2023,7 +2023,7 @@ export default {
       gallery: 'Galerie',
     },
   },
-  // eslint-disable-next-line perfectionist/sort-objects
+
   /* eslint-disable perfectionist/sort-objects */
   reservationFilters: {
     fields: {
@@ -2032,12 +2032,12 @@ export default {
         placeholder: 'Ex: 20',
       },
       startTime: {
-        label: 'ì partir de',
+        label: '? partir de',
         placeholder: 'Heure de début',
       },
     },
   },
-  // eslint-disable-next-line perfectionist/sort-objects
+
   reservation: {
     actions: {
       cancelRequest: 'Annuler la demande',
@@ -2049,7 +2049,7 @@ export default {
       missingPlayers_plural: 'Il manque {{count}} joueurs',
       pricePerPerson: '{{price}}€/pers',
     },
-    featured: 'ì la une :',
+    featured: '? la une :',
     featuredRequest: {
       approved: 'Approuvée',
       cancelError: 'Erreur lors de l\'annulation',
@@ -2075,7 +2075,7 @@ export default {
       tooManyPlayers: 'Le nombre doit être inférieur au total',
     },
     noData: 'Aucune réservation trouvée.',
-    title: 'Évènements :',
+    title: '?vènements :',
   },
   searchTypeSwitcher: {
     recruitment: 'Recrutement',
@@ -2109,7 +2109,7 @@ export default {
       openPanel: 'Ouvrir',
       panelTitle: "Actions d'équipe",
       stats: 'Statistiques',
-      teamChat: 'Équipe',
+      teamChat: '?quipe',
     },
     alerts: {
       deleteTrainer: {
@@ -2144,7 +2144,7 @@ export default {
           confirm: "Quitter l'équipe",
         },
         description: 'Vous êtes sur le point de quitter l\'équipe. Une fois cette action validée vous ne pourrez plus participer aux entraînements et matchs.',
-        title: 'Êtes-vous sûr·e de vouloir quitter cette équipe ?',
+        title: '?tes-vous sûr·e de vouloir quitter cette équipe ?',
       },
     },
     external: {
@@ -2171,7 +2171,7 @@ export default {
       standings: 'Classement',
       stats: 'Statistiques',
     },
-    title: 'Équipe',
+    title: '?quipe',
   },
   /* eslint-enable perfectionist/sort-objects */
   teamEdit: {
@@ -2189,7 +2189,7 @@ export default {
       },
       description: {
         label: 'Description',
-        placeholder: 'Équipe senior évoluant en championnat régional depuis 2015.',
+        placeholder: '?quipe senior évoluant en championnat régional depuis 2015.',
       },
       level: {
         label: 'Niveau',
@@ -2295,7 +2295,7 @@ export default {
       email: 'Email',
       height: 'Taille (m)',
       history: 'Historique sportif',
-      phone: 'T?l?phone',
+      phone: 'Téléphone',
       position: 'Poste',
       section: 'Section',
       sport: 'Sport',
@@ -2311,12 +2311,12 @@ export default {
       sport: 'Profil sportif',
     },
     teamGroups: {
-      coach: 'Équipes entraînées',
-      player: 'Équipes joueur',
+      coach: '?quipes entraînées',
+      player: '?quipes joueur',
     },
     title: 'Infos profil',
     titles: {
-      teams: 'Équipes',
+      teams: '?quipes',
     },
   },
   welcome: {

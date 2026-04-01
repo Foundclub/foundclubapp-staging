@@ -335,7 +335,7 @@ function ClubFiltersContent({ navigation, route }) {
                     </Text>
                     <Button
                       onPress={() => refetchActivities()}
-                      title={t('common.actions.retry', 'Reessayer')}
+                      title={t('common.actions.retry', 'R\u00E9essayer')}
                       variant="Secondary"
                     />
                   </View>

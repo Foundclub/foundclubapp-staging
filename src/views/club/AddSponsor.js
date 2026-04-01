@@ -149,8 +149,8 @@ function AddSponsor({ navigation, route }) {
     return (
       <ClubStateView
         description={isMultisportFlow
-          ? 'Nous recuperons les informations de votre structure multisport.'
-          : 'Nous recuperons les informations du club.'}
+          ? 'Nous r\u00E9cup\u00E9rons les informations de votre structure multisport.'
+          : 'Nous r\u00E9cup\u00E9rons les informations du club.'}
         isLoading
         title="Chargement du contexte"
       />
@@ -160,7 +160,7 @@ function AddSponsor({ navigation, route }) {
   if (currentTargetError && !currentTarget) {
     return (
       <ClubStateView
-        actionLabel="Reessayer"
+        actionLabel="R\u00E9essayer"
         description={isMultisportFlow
           ? "Impossible de charger cette structure multisport pour le moment."
           : "Impossible de charger ce club pour le moment."}

@@ -46,7 +46,7 @@ const normalizeComparableText = (value) => String(value || '')
  * @param {LeagueMatch | null} match
  * @returns {string}
  */
-const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu a definir';
+const resolveVenueLabel = (match) => match?.venue || match?.proposed_venue || 'Lieu \u00E0 d\u00E9finir';
 
 /**
  * @param {LeagueMatch | null} match
@@ -207,7 +207,7 @@ function PastMatchDetails() {
   const resultSummaryText = useMemo(() => {
     if (myScoreValue > oppScoreValue) return 'Tu remportes ce duel League.';
     if (myScoreValue < oppScoreValue) return 'Le match a bascule du cote adverse.';
-    return 'Les deux equipes repartent dos a dos.';
+    return 'Les deux \u00E9quipes repartent dos \u00E0 dos.';
   }, [myScoreValue, oppScoreValue]);
 
   const canRematch = useMemo(() => {
@@ -234,7 +234,7 @@ function PastMatchDetails() {
 
     Alert.alert(
       'Demander une revanche',
-      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette equipe'} ?`,
+      `Voulez-vous demander une revanche contre ${opponent?.name || 'cette \u00E9quipe'} ?`,
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -243,8 +243,8 @@ function PastMatchDetails() {
             try {
               const result = await requestRematch(myTeamDocId, opponentDocId, matchId);
               Alert.alert(
-                result?.matched ? 'Match cree' : 'Demande envoyee',
-                result?.message || 'Votre demande a bien ete envoyee.',
+                result?.matched ? 'Match cr\u00E9\u00E9' : 'Demande envoy\u00E9e',
+                result?.message || 'Votre demande a bien \u00E9t\u00E9 envoy\u00E9e.',
               );
               if (result?.matched) {
                 navigation.goBack();
@@ -357,7 +357,7 @@ function PastMatchDetails() {
               <View style={styles.teamBlock}>
                 <TeamShield initials={teamA?.name?.substring(0, 2) || 'A'} isGold size={62} />
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamA?.name || 'Equipe A'}
+                  {teamA?.name || '\u00C9quipe A'}
                 </Text>
               </View>
 
@@ -398,7 +398,7 @@ function PastMatchDetails() {
                   <TeamShield initials={teamB?.name?.substring(0, 2) || 'B'} isGold size={62} />
                 )}
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamB?.name || 'Equipe B'}
+                  {teamB?.name || '\u00C9quipe B'}
                 </Text>
               </View>
             </View>

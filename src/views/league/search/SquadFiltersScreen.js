@@ -393,7 +393,7 @@ function SquadFiltersScreen({ navigation }) {
                     style={{ alignSelf: 'flex-start', marginTop: 8 }}
                   >
                     <Text style={[Fonts.p3Bold, { color: Colors.error500, textDecorationLine: 'underline' }]}>
-                      Reessayer
+                      R\u00E9essayer
                     </Text>
                   </TouchableOpacity>
                 </View>
