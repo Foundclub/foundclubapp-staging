@@ -22,7 +22,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { createLogger } from '@/utils/logger/logger';
 
-import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import AuthStackNavigator from './AuthStackNavigator';
 
 const publicTabLogger = createLogger('public-tab-navigator');
@@ -107,7 +106,6 @@ function PublicTabNavigator() {
           paddingBottom: floatingScenePaddingBottom,
         },
       }}
-      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       <Tab.Screen
         component={Home}

@@ -19,7 +19,6 @@ import TeamList from '@/views/team/TeamList';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import useTheme from '../../theme/themeContext';
 import {
   commonOptions,
@@ -117,7 +116,6 @@ function PrivateTabNavigator() {
         },
         // tabBarBackground removed to eliminate gradient
       }}
-      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       <Tab.Screen
         component={SearchStack}

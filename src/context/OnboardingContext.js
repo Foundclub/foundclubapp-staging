@@ -424,8 +424,8 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
           }
           : null;
         setCurrentStepLayout(matchedPrefetchedLayout);
-        setIsStepReady(Boolean(matchedPrefetchedLayout));
-        setIsTransitioning(!matchedPrefetchedLayout);
+        setIsStepReady(false);
+        setIsTransitioning(true);
         setCurrentStepIndex(nextPendingIndex);
       }
 
@@ -590,21 +590,38 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
     if (prefetchedLayout) {
       prefetchedStepLayoutRef.current = null;
       setCurrentStepLayout(prefetchedLayout);
-      setIsStepReady(true);
-      setIsTransitioning(false);
+      setIsStepReady(false);
+      setIsTransitioning(true);
       setTutorialDebugState({
         currentStepId: activeStep.id,
         currentStepIndex,
         currentStepLayout: prefetchedLayout,
-        isStepReady: true,
-        isTransitioning: false,
+        isStepReady: false,
+        isTransitioning: true,
         lastFailureReason: null,
         lastResolvedStepId: activeStep.id,
         lastResolvedTargetId: activeStep.nextTargetStepId || null,
       });
     }
 
-    resolveStepLayout(activeStep, 'activate')
+    const resolveActiveStepLayout = async () => {
+      const firstLayout = await resolveStepLayout(activeStep, 'activate');
+      if (firstLayout || !prefetchedLayout) {
+        return firstLayout;
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 120);
+      });
+
+      if (cancelled || requestId !== activeMeasureRequestRef.current) {
+        return null;
+      }
+
+      return resolveStepLayout(activeStep, 'activate-retry');
+    };
+
+    resolveActiveStepLayout()
       .then((nextLayout) => {
         if (cancelled || requestId !== activeMeasureRequestRef.current) {
           return;

@@ -23,7 +23,6 @@ import LeagueNavigator from '@/navigation/LeagueNavigator';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import FloatingAnimatedTabBar from '../../components/molecules/floatingAnimatedTabBar/FloatingAnimatedTabBar';
 import useTheme from '../../theme/themeContext';
 import {
   commonOptions,
@@ -114,7 +113,6 @@ export default function LeagueTabNavigator() {
         },
         // tabBarBackground removed to eliminate gradient
       }}
-      tabBar={Platform.OS === 'web' ? undefined : FloatingAnimatedTabBar}
     >
       {/* 1. Home / Dashboard */}
       <Tab.Screen
