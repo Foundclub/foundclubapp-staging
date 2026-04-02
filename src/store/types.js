@@ -16,6 +16,7 @@
  * @property {boolean} [isAddingAccount] - Indicates add-account flow state.
  * @property {string} [returnSessionDocumentId] - Session to restore if add-account is cancelled.
  * @property {{ type?: string } | null} [pendingNotification] - Notification waiting for navigation readiness.
+ * @property {{ events?: boolean, clubs?: boolean, reservations?: boolean }} [searchMapModes] - Session-only map/list mode per search tab.
  */
 
 /**
@@ -32,7 +33,8 @@
  * | 'SET_FCM_TOKEN' | 'SET_THEME' | 'SET_ONBOARDING_VIEWS'
  * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RECRUITMENT_AD_FILTERS'
  * | 'SET_RESERVATION_FILTERS' | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'
- * | 'PREPARE_ADD_ACCOUNT' | 'CANCEL_ADD_ACCOUNT' | 'UPDATE_USER_DATA' | 'SET_PENDING_NOTIFICATION'} AppContextTypes
+ * | 'PREPARE_ADD_ACCOUNT' | 'CANCEL_ADD_ACCOUNT' | 'UPDATE_USER_DATA' | 'SET_PENDING_NOTIFICATION'
+ * | 'SET_SEARCH_MAP_MODES'} AppContextTypes
  */
 
 /**

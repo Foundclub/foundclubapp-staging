@@ -61,7 +61,7 @@ function SearchReservationsScreen({ navigation, route }) {
           }}
           title="Liste des réservations"
         >
-          <ReservationListContent showFilters />
+          <ReservationListContent enableMapMode showFilters />
         </OnboardingWrapper>
       </SearchScreenShell>
     </TutorialFlowBoundary>

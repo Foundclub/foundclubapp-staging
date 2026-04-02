@@ -1381,7 +1381,7 @@ function SuperAdminEntryForm({ navigation, route }) {
 
         {renderSection(
           'media',
-          t('superAdminContentManager.form.sections.media', 'M?dias'),
+          t('superAdminContentManager.form.sections.media', 'Médias'),
           t('superAdminContentManager.form.sections.mediaHint', 'Ajoutez images ou fichiers.'),
         )}
 

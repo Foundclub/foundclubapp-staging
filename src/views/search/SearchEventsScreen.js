@@ -292,6 +292,7 @@ function SearchEventsScreen({ navigation, route }) {
       >
         <EventListContent
           additionalFilters={eventFiltersProps}
+          enableMapMode
           onTutorialLayout={handleTutorialLayout}
           showFilters
         />

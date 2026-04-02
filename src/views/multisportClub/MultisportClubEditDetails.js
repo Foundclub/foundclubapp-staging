@@ -303,10 +303,10 @@ function MultisportClubEditDetails({ navigation, route }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   inputMode="tel"
                   keyboardType="phone-pad"
-                  label={t('multisport.edit.fields.phone.label', 'T?l?phone')}
+                  label={t('multisport.edit.fields.phone.label', 'Téléphone')}
                   onBlur={onBlur}
                   onChangeText={onChange}
-                  placeholder={t('multisport.edit.fields.phone.placeholder', 'T?l?phone')}
+                  placeholder={t('multisport.edit.fields.phone.placeholder', 'Téléphone')}
                   ref={ref}
                   value={value}
                 />

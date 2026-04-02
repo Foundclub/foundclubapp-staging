@@ -51,9 +51,9 @@ function OverviewMetric({
     <View
       style={[
         ApplicationStyle.card,
-        Spaces.paddingHorizontal[10],
-        Spaces.paddingVertical[10],
-        Spaces.gap[4],
+        Spaces.paddingHorizontal[12],
+        Spaces.paddingVertical[12],
+        Spaces.gap[8],
         {
           backgroundColor: 'rgba(1, 179, 244, 0.08)',
           borderColor: complete ? 'rgba(1, 179, 244, 0.22)' : 'rgba(255, 219, 102, 0.26)',
@@ -95,8 +95,8 @@ function RecapSection({
     <View
       style={[
         ApplicationStyle.card,
-        Spaces.padding[16],
-        Spaces.gap[12],
+        Spaces.padding[20],
+        Spaces.gap[16],
         {
           backgroundColor: 'rgba(4, 31, 44, 0.82)',
           borderColor: 'rgba(1, 179, 244, 0.24)',
@@ -104,7 +104,7 @@ function RecapSection({
       ]}
     >
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-        <View style={[Spaces.gap[4], { flex: 1 }]}>
+        <View style={[Spaces.gap[8], { flex: 1 }]}>
           {eyebrow ? <Text style={[Fonts.p4Bold, Fonts.primary500]}>{eyebrow}</Text> : null}
           <Text style={[Fonts.h4, Fonts.neutral00]}>{title}</Text>
         </View>
@@ -283,13 +283,13 @@ function AdWizardRecap({ navigation }) {
       subtitle={"V\u00E9rifiez l'ensemble du brief avant de publier votre annonce."}
       title={'R\u00E9capitulatif'}
     >
-      <View style={[Spaces.gap[16]]}>
+      <View style={[Spaces.gap[20]]}>
         {!isReadyToSubmit ? (
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[16],
-              Spaces.gap[8],
+              Spaces.padding[20],
+              Spaces.gap[12],
               {
                 backgroundColor: 'rgba(53, 19, 24, 0.88)',
                 borderColor: 'rgba(239, 68, 68, 0.45)',
@@ -311,8 +311,8 @@ function AdWizardRecap({ navigation }) {
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[16],
-              Spaces.gap[8],
+              Spaces.padding[20],
+              Spaces.gap[12],
               {
                 backgroundColor: 'rgba(53, 19, 24, 0.88)',
                 borderColor: 'rgba(239, 68, 68, 0.45)',
@@ -329,8 +329,8 @@ function AdWizardRecap({ navigation }) {
         <View
           style={[
             ApplicationStyle.card,
-            Spaces.padding[16],
-            Spaces.gap[12],
+            Spaces.padding[20],
+            Spaces.gap[16],
             {
               backgroundColor: 'rgba(4, 31, 44, 0.82)',
               borderColor: isReadyToSubmit ? 'rgba(1, 179, 244, 0.30)' : 'rgba(255, 219, 102, 0.26)',
@@ -338,7 +338,7 @@ function AdWizardRecap({ navigation }) {
           ]}
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-            <View style={[Spaces.gap[4], { flex: 1 }]}>
+            <View style={[Spaces.gap[8], { flex: 1 }]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>
                 {'Vue d\'ensemble'}
               </Text>
@@ -366,7 +366,7 @@ function AdWizardRecap({ navigation }) {
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
             {quickOverviewItems.map((item) => (
               <OverviewMetric
                 ApplicationStyle={ApplicationStyle}
@@ -395,7 +395,7 @@ function AdWizardRecap({ navigation }) {
             <Text style={[Fonts.p2, Fonts.gold500]}>{'Aucune \u00E9quipe s\u00E9lectionn\u00E9e'}</Text>
           )}
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
             <OverviewMetric
               ApplicationStyle={ApplicationStyle}
               complete={Boolean(sportName && sportName !== 'Non d\u00E9fini')}
@@ -473,28 +473,28 @@ function AdWizardRecap({ navigation }) {
           onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
           title={'Informations cl\u00E9s'}
         >
-          <View style={[Spaces.gap[10]]}>
-            <View style={[Spaces.gap[4]]}>
+          <View style={[Spaces.gap[12]]}>
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {'Type d\'annonce'}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral00]}>{adTypeLabel}</Text>
             </View>
 
-            <View style={[Spaces.gap[4]]}>
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>Lieu</Text>
               <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.gold500]}>
                 {displayAddress || '\u00C0 compl\u00E9ter'}
               </Text>
             </View>
 
-            <View style={[Spaces.gap[4]]}>
+            <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
             </View>
 
             {state.event ? (
-              <View style={[Spaces.gap[4]]}>
+              <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{'D\u00E9tection li\u00E9e'}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>
                   {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
@@ -517,8 +517,8 @@ function AdWizardRecap({ navigation }) {
         <View
           style={[
             ApplicationStyle.card,
-            Spaces.padding[16],
-            Spaces.gap[8],
+            Spaces.padding[20],
+            Spaces.gap[12],
             {
               backgroundColor: 'rgba(1, 179, 244, 0.10)',
               borderColor: 'rgba(1, 179, 244, 0.24)',

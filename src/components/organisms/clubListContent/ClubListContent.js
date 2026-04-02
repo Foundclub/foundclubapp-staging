@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -9,7 +9,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
-import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
+import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -21,6 +21,8 @@ import { useGetClubs } from '@/services/club/clubQueries';
 import { useSearchClubs } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
+import { toSearchMapItems } from '@/utils/searchMap';
+
 import SearchComponent from '../searchComponent/searchComponent';
 
 function ClubsListSeparator() {
@@ -29,16 +31,17 @@ function ClubsListSeparator() {
 
 /**
  * Club list element to inject on home page or a dedicate one
+ * @param {{ enableMapMode?: boolean }} [props]
  * @returns {import('react').ReactElement} ClubListContent component
  */
-function ClubListContent() {
+function ClubListContent({ enableMapMode = false }) {
   // hooks
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
-  const [isMapView, setIsMapView] = useState(false);
-  const [{ clubFilters }, appDispatch] = useAppContext();
+  const [{ clubFilters, searchMapModes }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
+  const isMapView = Boolean(enableMapMode && searchMapModes?.clubs);
   const activeSearchText = useMemo(
     () => (typeof clubFilters?.name === 'string' ? clubFilters.name.trim() : ''),
     [clubFilters?.name],
@@ -92,10 +95,11 @@ function ClubListContent() {
     }, [])
     || [], [smartClubPages]);
   const displayedClubs = isSmartSearchEnabled ? smartClubs : clubs;
+  const mapItems = useMemo(() => toSearchMapItems(displayedClubs, 'clubs'), [displayedClubs]);
   const activeError = isSmartSearchEnabled ? smartError : error;
   const activeIsLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeIsFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
-  const shouldShowMapToggle = isMapView || displayedClubs.length > 0;
+  const shouldShowMapToggle = enableMapMode && (isMapView || mapItems.length > 0);
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -246,9 +250,16 @@ function ClubListContent() {
       </View>
       {isMapView ? (
         <SearchMap
-          items={displayedClubs}
-          onMarkerPress={handleClubMapMarkerPress}
-          type="club"
+          items={mapItems}
+          onOpenItem={(item) => handleClubMapMarkerPress(item.raw)}
+          onShowList={() => {
+            appDispatch({
+              payload: { clubs: false },
+              type: 'SET_SEARCH_MAP_MODES',
+            });
+          }}
+          scope="clubs"
+          totalCount={displayedClubs.length}
         />
       ) : (
         <WithDataWrapper
@@ -281,10 +292,15 @@ function ClubListContent() {
         </WithDataWrapper>
       )}
       {shouldShowMapToggle ? (
-        <MapFloatButton
-          isMapView={isMapView}
-          onPress={() => setIsMapView((previousValue) => !previousValue)}
-          type="club"
+        <SearchMapFab
+          mode={isMapView ? 'map' : 'list'}
+          onPress={() => {
+            appDispatch({
+              payload: { clubs: !isMapView },
+              type: 'SET_SEARCH_MAP_MODES',
+            });
+          }}
+          scope="clubs"
         />
       ) : null}
     </View>

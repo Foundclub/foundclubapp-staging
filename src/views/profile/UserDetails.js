@@ -1055,7 +1055,7 @@ function UserDetails({ navigation, route }) {
                 Fonts={Fonts}
                 fullWidth
                 icon={Images.phone}
-                label={t('userDetails.fields.phone', 'T?l?phone')}
+                label={t('userDetails.fields.phone', 'Téléphone')}
                 Spaces={Spaces}
                 value={
                   isSelfProfile

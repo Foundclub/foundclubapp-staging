@@ -5,7 +5,7 @@ import React, {
   useCallback, useMemo, useRef, useState,
 } from 'react';
 import {
-  FlatList, Text, TouchableOpacity, View,
+  FlatList, Image, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,8 +41,10 @@ const participantEventListLogger = createLogger('participant-event-list');
 function ParticipantEventList({ navigation }) {
   const {
     Alignments,
+    ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
   const { canManageEvents, userData } = useAuth();
@@ -317,35 +319,74 @@ function ParticipantEventList({ navigation }) {
         onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
-
       {canManageEvents && (
         <View style={{
           bottom: floatingCtaBottom,
-          left: 20,
           position: 'absolute',
           right: 20,
         }}
         >
           <TouchableOpacity
+            accessibilityLabel="Ajouter un evenement"
+            activeOpacity={0.85}
             // @ts-ignore
             onPress={() => navigation.navigate(RouteNames.EventStack, { screen: RouteNames.EventWizardType })}
-            style={{
-              alignItems: 'center',
-              backgroundColor: Colors.primary500,
-              borderRadius: 25,
-              elevation: 5,
-              justifyContent: 'center',
-              paddingVertical: 16,
-              shadowColor: '#000',
-              shadowOffset: {
-                height: 2,
-                width: 0,
+            style={[
+              ApplicationStyle.shadow200,
+              {
+                alignItems: 'center',
+                backgroundColor: Colors.primary500,
+                borderColor: 'rgba(255,255,255,0.18)',
+                borderRadius: 32,
+                borderWidth: 1,
+                elevation: 8,
+                height: 64,
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: {
+                  height: 6,
+                  width: 0,
+                },
+                shadowOpacity: 0.32,
+                shadowRadius: 12,
+                width: 64,
               },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-            }}
+            ]}
           >
-            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>+ Ajouter un évènement</Text>
+            <Image
+              resizeMode="contain"
+              source={Images.calendar}
+              style={{
+                height: 24,
+                tintColor: Colors.neutral00,
+                width: 24,
+              }}
+            />
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: Colors.primary200,
+                borderColor: 'rgba(255,255,255,0.36)',
+                borderRadius: 999,
+                borderWidth: 1,
+                height: 20,
+                justifyContent: 'center',
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                width: 20,
+              }}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.plus}
+                style={{
+                  height: 10,
+                  tintColor: Colors.primary900,
+                  width: 10,
+                }}
+              />
+            </View>
           </TouchableOpacity>
         </View>
       )}

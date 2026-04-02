@@ -66,9 +66,9 @@ function AdWizardValidation({ navigation }) {
       subtitle={'Choisissez comment les candidatures li\u00E9es \u00E0 cette d\u00E9tection seront trait\u00E9es.'}
       title="Mode de validation"
     >
-      <View style={[Spaces.gap[16]]}>
+      <View style={[Spaces.gap[20]]}>
         {state.event ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[12], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
               {'Annonce li\u00E9e \u00E0 une d\u00E9tection'}
             </Text>
@@ -91,8 +91,8 @@ function AdWizardValidation({ navigation }) {
               onPress={() => handleSelectMode(mode.value)}
               style={[
                 ApplicationStyle.card,
-                Spaces.padding[18],
-                Spaces.gap[14],
+                Spaces.padding[20],
+                Spaces.gap[16],
                 {
                   backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
                   borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
@@ -136,7 +136,7 @@ function AdWizardValidation({ navigation }) {
                 </View>
               </View>
 
-              <View style={[Spaces.gap[6]]}>
+              <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.h4, Fonts.neutral00]}>{mode.label}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>{mode.summary}</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{mode.helper}</Text>
@@ -167,8 +167,8 @@ function AdWizardValidation({ navigation }) {
         <View
           style={[
             ApplicationStyle.card,
-            Spaces.padding[16],
-            Spaces.gap[8],
+            Spaces.padding[20],
+            Spaces.gap[12],
             {
               backgroundColor: 'rgba(255, 219, 102, 0.08)',
               borderColor: 'rgba(255, 219, 102, 0.24)',

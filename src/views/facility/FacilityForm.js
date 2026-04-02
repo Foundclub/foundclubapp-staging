@@ -239,7 +239,7 @@ function FacilityForm() {
       setError('address', {
         message: t(
           'facilityForm.errors.addressGeocodeRequired',
-          'S?lectionnez une adresse g?olocalis?e dans la liste.',
+          'Sélectionnez une adresse géolocalisée dans la liste.',
         ),
         type: 'manual',
       });

@@ -552,7 +552,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
             Mes annonces
           </Text>
           <Text style={[Fonts.p3, { color: recruitmentMutedText, marginTop: 4 }]}>
-            Consultez et gÃƒÆ’Ã‚Â©rez les annonces publiÃƒÆ’Ã‚Â©es pour vos ÃƒÆ’Ã‚Â©quipes.
+            Consultez et gérez les annonces publiées pour vos équipes.
           </Text>
         </View>
         <TouchableOpacity
@@ -569,7 +569,7 @@ function RecrutementListContent({ initialTab, timestamp }) {
           ]}
         >
           <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + CrÃƒÆ’Ã‚Â©er une annonce
+            + Créer une annonce
           </Text>
         </TouchableOpacity>
         <View style={[Spaces.marginTop[14]]}>
@@ -600,8 +600,8 @@ function RecrutementListContent({ initialTab, timestamp }) {
         ListEmptyComponent={(
           <Text style={[Fonts.p1, Fonts.neutral500, { textAlign: 'center' }, Spaces.marginTop[24]]}>
             {managedTeamIds.length > 0
-              ? 'Aucune annonce publiÃƒÆ’Ã‚Â©e pour vos ÃƒÆ’Ã‚Â©quipes'
-              : 'Aucune annonce crÃƒÆ’Ã‚Â©ÃƒÆ’Ã‚Â©e'}
+              ? 'Aucune annonce publiée pour vos équipes'
+              : 'Aucune annonce créée'}
           </Text>
         )}
         ListHeaderComponent={annoncesHeader}
@@ -661,12 +661,12 @@ function RecrutementListContent({ initialTab, timestamp }) {
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
-      return 'Complete ton profil pour activer un tri personnalise.';
+      return 'Complète ton profil pour activer un tri personnalisé.';
     }
     if (showProfileMatchesOnly) {
       return 'Le flux affiche uniquement les annonces compatibles.';
     }
-    return 'Les annonces compatibles restent affichees en tete.';
+    return 'Les annonces compatibles restent affichées en tête.';
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
@@ -683,13 +683,13 @@ function RecrutementListContent({ initialTab, timestamp }) {
         >
           <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Aucune annonce ne correspond exactement ÃƒÆ’Ã‚Â  ton profil pour le moment.'
-              : 'ComplÃƒÆ’Ã‚Â¨te ton profil pour activer le tri personnalisÃƒÆ’Ã‚Â© des annonces.'}
+              ? 'Aucune annonce ne correspond exactement à ton profil pour le moment.'
+              : 'Complète ton profil pour activer le tri personnalisé des annonces.'}
           </Text>
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'DÃƒÆ’Ã‚Â©sactive le filtre pour afficher toutes les annonces disponibles.'
-              : "Tu peux dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  consulter toutes les annonces publiÃƒÆ’Ã‚Â©es sur l'application."}
+              ? 'Désactive le filtre pour afficher toutes les annonces disponibles.'
+              : "Tu peux déjà consulter toutes les annonces publiées sur l'application."}
           </Text>
         </View>
       );
@@ -833,10 +833,10 @@ function RecrutementListContent({ initialTab, timestamp }) {
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                ComplÃƒÆ’Ã‚Â©ter mon profil
+                Compléter mon profil
               </Text>
               <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
-                Sport, section, catÃƒÆ’Ã‚Â©gorie, niveau.
+                Sport, section, catégorie, niveau.
               </Text>
             </View>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>

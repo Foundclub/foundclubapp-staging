@@ -71,9 +71,9 @@ function RecruitmentAdCard({
   const club = team?.club;
   const clubName = club?.name || team?.name || 'Club inconnu';
   const clubLogo = getImageUrl(club?.logo?.url);
-  const positionLabel = ad.position || 'Poste non specifie';
+  const positionLabel = ad.position || 'Poste non spécifié';
   const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
-  const categoryName = ad.category?.name || ad.category || 'Categorie ?';
+  const categoryName = ad.category?.name || ad.category || 'Catégorie ?';
   const sectionName = ad.section?.name || ad.section || '';
   const sportName = ad.sport || team?.sport || 'Football';
   const address = getShortAddress(ad.city || club?.city || '');
@@ -199,7 +199,7 @@ function RecruitmentAdCard({
               {isDetectionLinked ? (
                 <View style={styles.detectionChip}>
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    DÃƒÂ©tection
+                    Détection
                   </Text>
                   {detectionDateLabel ? (
                     <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>

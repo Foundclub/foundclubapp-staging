@@ -61,7 +61,7 @@ function SearchClubsScreen({ navigation, route }) {
           }}
           title="Liste des clubs"
         >
-          <ClubListContent />
+          <ClubListContent enableMapMode />
         </OnboardingWrapper>
       </SearchScreenShell>
     </TutorialFlowBoundary>

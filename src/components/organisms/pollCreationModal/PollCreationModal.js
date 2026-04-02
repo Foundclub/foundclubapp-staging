@@ -169,7 +169,7 @@ const OptionInputRow = memo(({
       </View>
       {hasDuplicate ? (
         <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-          Cette option est d?j? utilis?e.
+          Cette option est déjà utilisée.
         </Text>
       ) : null}
     </View>

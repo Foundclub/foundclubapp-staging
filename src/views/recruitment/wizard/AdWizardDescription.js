@@ -24,6 +24,7 @@ import {
  */
 function AdWizardDescription({ navigation }) {
   const {
+    Alignments,
     ApplicationStyle,
     Colors,
     Fonts,
@@ -74,9 +75,9 @@ function AdWizardDescription({ navigation }) {
       subtitle={'Ajoutez quelques d\u00E9tails pour rendre votre annonce plus claire et plus attractive.'}
       title="Description"
     >
-      <View style={[Spaces.gap[18]]}>
+      <View style={[Spaces.gap[20]]}>
         {contextualHighlights.length > 0 ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[10], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[12], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
               {'Contexte de l\'annonce'}
             </Text>
@@ -90,9 +91,9 @@ function AdWizardDescription({ navigation }) {
           </View>
         ) : null}
 
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[14], cardSurfaceStyle]}>
-          <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-            <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[16], cardSurfaceStyle]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+            <View style={[Spaces.gap[8], { flex: 1 }]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>{'Pr\u00E9sentez votre besoin'}</Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 Quelques lignes suffisent pour donner envie aux bons profils de candidater.
@@ -134,7 +135,7 @@ function AdWizardDescription({ navigation }) {
             value={state.description}
           />
 
-          <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {state.description.length > 0
                 ? 'Votre description est pr\u00EAte \u00E0 \u00EAtre publi\u00E9e.'
@@ -153,17 +154,16 @@ function AdWizardDescription({ navigation }) {
           </View>
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[12], cardSurfaceStyle]}>
           <Text style={[Fonts.h4, Fonts.neutral00]}>{'Id\u00E9es \u00E0 inclure'}</Text>
-          <View style={[Spaces.gap[10]]}>
+          <View style={[Spaces.gap[12]]}>
             {descriptionTips.map((tip) => (
-              <View key={tip} style={{ alignItems: 'flex-start', flexDirection: 'row' }}>
+              <View key={tip} style={[Alignments.row, Spaces.gap[12]]}>
                 <View
                   style={{
                     backgroundColor: Colors.primary500,
                     borderRadius: 999,
                     height: 8,
-                    marginRight: 10,
                     marginTop: 8,
                     width: 8,
                   }}
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     lineHeight: 22,
     minHeight: 170,
-    padding: 16,
+    padding: 20,
   },
 });
 

@@ -1,12 +1,13 @@
 import React, { useContext, useEffect, useReducer } from 'react';
 import { Platform } from 'react-native';
 
-import { getStorageBackend } from '@/platform/storage';
 import appReducer from '@/store/appReducer';
 import {
   registerAuthRuntimeDispatch,
   syncAuthRuntimeState,
 } from '@/store/authRuntime';
+
+import { getStorageBackend } from '@/platform/storage';
 
 const AppStateContext = React.createContext(/** @type {Store} */({}));
 const AppDispatchContext = React
@@ -226,6 +227,11 @@ const initStore = {
   recruitmentAdFilters: undefined,
   reservationFilters: undefined,
   returnSessionDocumentId: undefined,
+  searchMapModes: {
+    clubs: false,
+    events: false,
+    reservations: false,
+  },
   squadFilters: undefined,
   teamFilters: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,

@@ -405,7 +405,7 @@ function SuperAdminEntryDetail({ navigation, route }) {
           style={sectionCardStyle}
         >
           <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[8]]}>
-            {t('superAdminContentManager.detail.sections.relationsMedia', 'Relations / M?dias')}
+            {t('superAdminContentManager.detail.sections.relationsMedia', 'Relations / Médias')}
           </Text>
           {viewModel.complexFields.length > 0 ? (
             <View style={Spaces.gap[8]}>

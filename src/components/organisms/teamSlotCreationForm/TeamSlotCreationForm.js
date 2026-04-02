@@ -217,7 +217,7 @@ function TeamSlotCreationForm({
 
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>D?but</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Début</Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <WheelPicker
               data={hours}

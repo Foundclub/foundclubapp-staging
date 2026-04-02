@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Image,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -70,6 +71,7 @@ function TeamListContent({
     ApplicationStyle,
     Colors,
     Fonts,
+    Images,
     Spaces,
   } = useTheme();
 
@@ -813,31 +815,79 @@ function TeamListContent({
         </View>
 
         {isLeagueMode ? (
-          <View style={{
-            alignItems: 'center',
-            bottom: floatingActionBottom,
-            position: 'absolute',
-            width: '100%',
-            zIndex: 100,
-          }}
+          <View
+            pointerEvents="box-none"
+            style={{
+              bottom: floatingActionBottom,
+              position: 'absolute',
+              right: 20,
+              zIndex: 100,
+            }}
           >
-            <Button
-              icon="plus"
-              onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, { screen: RouteNames.CreateSquad })}
-              style={{
-                backgroundColor: Colors.gold500,
-                borderRadius: 30,
-                elevation: 5,
-                shadowColor: Colors.gold500,
-                shadowOffset: { height: 4, width: 0 },
-                shadowOpacity: 0.3,
-                shadowRadius: 5,
-                width: '90%',
-              }}
-              textStyle={{ color: Colors.neutral900 }}
-              title="Créer UNE SQUAD"
-              variant="Primary"
-            />
+            <TouchableOpacity
+              accessibilityLabel="Creer une squad"
+              activeOpacity={0.85}
+              onPress={() => /** @type {any} */ (navigation).navigate(
+                RouteNames.TeamStack,
+                { screen: RouteNames.CreateSquad },
+              )}
+              style={[
+                ApplicationStyle.shadow200,
+                {
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary500,
+                  borderColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 32,
+                  borderWidth: 1,
+                  elevation: 8,
+                  height: 64,
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    height: 6,
+                    width: 0,
+                  },
+                  shadowOpacity: 0.32,
+                  shadowRadius: 12,
+                  width: 64,
+                },
+              ]}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.strokeShield}
+                style={{
+                  height: 24,
+                  tintColor: Colors.neutral00,
+                  width: 24,
+                }}
+              />
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary200,
+                  borderColor: 'rgba(255,255,255,0.36)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 20,
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                  width: 20,
+                }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.plus}
+                  style={{
+                    height: 10,
+                    tintColor: Colors.primary900,
+                    width: 10,
+                  }}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         ) : null}
       </WithDataWrapper>

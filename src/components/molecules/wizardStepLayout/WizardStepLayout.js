@@ -77,11 +77,15 @@ function WizardStepLayout({
         return;
       }
 
-      const target = event.target;
-      const isElement = typeof HTMLElement !== 'undefined' && target instanceof HTMLElement;
+      const { target } = event;
+      const htmlElementCtor = typeof window !== 'undefined' ? window.HTMLElement : undefined;
+      const htmlInputCtor = typeof window !== 'undefined' ? window.HTMLInputElement : undefined;
+      const isElement = typeof htmlElementCtor !== 'undefined'
+        && target instanceof htmlElementCtor;
       const tagName = isElement ? target.tagName.toLowerCase() : '';
       const isEditable = isElement && target.isContentEditable;
-      const inputType = typeof HTMLInputElement !== 'undefined' && target instanceof HTMLInputElement
+      const inputType = typeof htmlInputCtor !== 'undefined'
+        && target instanceof htmlInputCtor
         ? target.type
         : '';
 
@@ -91,7 +95,8 @@ function WizardStepLayout({
         || tagName === 'button'
         || tagName === 'a'
         || tagName === 'select'
-        || (tagName === 'input' && ['button', 'submit', 'checkbox', 'radio', 'file'].includes(inputType))
+        || (tagName === 'input'
+          && ['button', 'checkbox', 'file', 'radio', 'submit'].includes(inputType))
       ) {
         return;
       }
@@ -110,12 +115,12 @@ function WizardStepLayout({
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentWidth="readable"
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
-        { paddingBottom: insets.bottom + 16 },
+        { paddingBottom: insets.bottom + 24 },
       ]}
+      contentWidth="readable"
       responsivePadding
     >
       <KeyboardAvoidingView
@@ -124,7 +129,7 @@ function WizardStepLayout({
         style={[Alignments.fill]}
       >
         <View style={[Alignments.fill]}>
-          <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], { position: 'relative' }]}>
+          <View style={[Spaces.marginTop[20], Spaces.marginBottom[24], { position: 'relative' }]}>
             {onClose ? (
               <TouchableOpacity
                 accessibilityLabel={t('common.close', 'Fermer')}
@@ -182,7 +187,7 @@ function WizardStepLayout({
               </View>
             ) : null}
 
-            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[10]]}>
+            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[12]]}>
               {title}
             </Text>
             {subtitle ? (
@@ -194,7 +199,7 @@ function WizardStepLayout({
 
           <ScrollView
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={[Spaces.paddingBottom[24]]}
+            contentContainerStyle={[Spaces.paddingBottom[32]]}
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -203,7 +208,7 @@ function WizardStepLayout({
           </ScrollView>
         </View>
 
-        <View style={[Spaces.gap[16]]}>
+        <View style={[Spaces.gap[16], Spaces.marginTop[16]]}>
           {showSkip ? (
             <Button
               onPress={onSkip}

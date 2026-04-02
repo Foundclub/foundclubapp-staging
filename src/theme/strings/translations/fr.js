@@ -70,7 +70,7 @@ export default {
   },
   APIerrors: {
     // Authentication errors
-    AUTHENTICATION_FAILED: "?chec d'authentification.",
+    AUTHENTICATION_FAILED: "Échec d'authentification.",
     INVALID_TOKEN: "Jeton d'authentification invalide.",
     MISSING_TOKEN: "Jeton d'authentification manquant.",
     OTP_ERROR: 'Une erreur est survenue lors de la connexion OTP',
@@ -244,7 +244,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
-        description: '?tes-vous sûr·e de vouloir continuer ?',
+        description: 'Êtes-vous sûr·e de vouloir continuer ?',
         title: 'Vous êtes sur le point de supprimer le partenaire {{sponsorName}}.',
       },
       deleteTrainer: {
@@ -252,7 +252,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Supprimer',
         },
-        description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club. ?tes-vous sûr·e de vouloir continuer ?',
+        description: 'Le compte ne sera pas supprim\u00e9, mais l\'entra\u00eeneur\u00b7e ne sera plus li\u00e9\u00b7e au club. \u00cates-vous s\u00fbr\u00b7e de vouloir continuer ?',
         title: 'Vous êtes sur le point de supprimer cet·te entraîneur·e.',
       },
       inviteTrainer: {
@@ -274,7 +274,7 @@ export default {
           cancel: 'Annuler',
           confirm: 'Quitter le club',
         },
-        description: 'Vous ne serez plus lié·e à ce club ni à ses équipes en tant qu’encadrant·e. ?tes-vous sûr·e de vouloir continuer ?',
+        description: 'Vous ne serez plus lié·e à ce club ni à ses équipes en tant qu’encadrant·e. Êtes-vous sûr·e de vouloir continuer ?',
         error: 'Impossible de quitter ce club pour le moment.',
         title: 'Quitter le club ?',
       },
@@ -588,7 +588,7 @@ export default {
       remind: 'Relancer',
     },
     fields: {
-      description: '? propos',
+      description: 'À propos',
       participationRequests: 'Demandes de participation',
       participations: 'Participants',
     },
@@ -597,12 +597,12 @@ export default {
       externalHistoricalTitle: 'Historique participants externes',
       historicalPending: '{{count}} réponse(s) en attente',
       historicalTitle: 'Historique équipe retirée',
-      homeTeamBadge: '?quipe organisatrice',
+      homeTeamBadge: 'Équipe organisatrice',
       invitedTeamBadge: 'équipe invitée',
     },
     modals: {
       accept: {
-        title: '?tes-vous sûr·e de vouloir accepter cette demande ?',
+        title: 'Êtes-vous sûr·e de vouloir accepter cette demande ?',
       },
       actions: {
         cancel: 'Annuler',
@@ -611,14 +611,14 @@ export default {
       },
       cancelEvent: {
         description: 'Une fois annulé, l\'évènement ne sera plus visible par les participant·e·s.',
-        title: '?tes-vous sûr·e de vouloir annuler cet évènement ?',
+        title: 'Êtes-vous sûr·e de vouloir annuler cet évènement ?',
       },
       deleteParticipation: {
         actions: {
           cancel: 'Non, retour',
           confirm: 'Oui, annuler',
         },
-        description: '?tes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
+        description: 'Êtes-vous sûr·e de vouloir annuler votre participation à cet évènement ?',
         title: 'Annuler ma participation',
       },
       editResponse: {
@@ -642,7 +642,7 @@ export default {
             placeholder: 'Il faut avoir plus de 16 ans.',
           },
         },
-        title: '?tes-vous sûr·e de vouloir refuser cette demande ?',
+        title: 'Êtes-vous sûr·e de vouloir refuser cette demande ?',
       },
       remindSuccess: {
         description: 'Les joueur·se·s vont recevoir une notification pour leur rappeler de répondre à l\'évènement.',
@@ -688,7 +688,7 @@ export default {
       },
       description: {
         label: 'Description',
-        placeholder: '?vènement de détection ouvert à tous·tes les joueur·se·s.',
+        placeholder: 'Évènement de détection ouvert à tous·tes les joueur·se·s.',
       },
       endTime: {
         label: 'Heure de fin',
@@ -701,7 +701,7 @@ export default {
         placeholder: 'Sélectionner des équipes',
       },
       isRecurrent: {
-        label: '?vènement récurrent',
+        label: 'Évènement récurrent',
       },
       location: {
         label: 'Lieu',
@@ -741,7 +741,7 @@ export default {
         placeholder: 'HH:mm',
       },
       team: {
-        label: '?quipe',
+        label: 'Équipe',
         placeholder: 'Sélectionner une équipe',
       },
       time: {
@@ -803,7 +803,7 @@ export default {
         placeholder: 'Sélectionner un statut',
       },
       team: {
-        label: '?quipe',
+        label: 'Équipe',
         placeholder: 'Sélectionner une équipe',
         selectClubFirst: 'Sélectionner un club avant l\'équipe',
       },
@@ -821,7 +821,7 @@ export default {
   },
   eventList: {
     actions: {
-      about: '? propos',
+      about: 'À propos',
       absent: 'Absent·e',
       add: 'Ajouter un évènement',
       findEvent: 'Trouver un événement',
@@ -857,7 +857,7 @@ export default {
         + '\nJe m\'engage (ou j\'engage le mineur) à respecter le règlement, les consignes de sécurité et les instructions des encadrants ; l\'organisateur peut refuser ou interrompre la participation en cas de non-respect.'
         + '\n\nUrgence médicale :'
         + '\nJ\'autorise l\'organisateur à prévenir les secours en cas d\'urgence ; pour un mineur, j\'autorise l\'organisateur à accompagner l\'enfant si nécessaire et je m\'engage à rester joignable.',
-      title: 'D?CLARATION DE RESPONSABILIT? ET ACCEPTATION DES RISQUES',
+      title: 'DÉCLARATION DE RESPONSABILITÉ ET ACCEPTATION DES RISQUES',
       validation: 'En cochant les cases et en validant mon inscription, je confirmé avoir lu, compris et accepté la présente déclaration et j\'accepte de participer à l\'événement dans ces conditions.',
     },
     noData: 'Aucun évènement trouvé.',
@@ -920,7 +920,7 @@ export default {
         logistics: 'Logistique',
         participants: 'Participants',
         reservation: 'Réservation',
-        team: '?quipe',
+        team: 'Équipe',
         type: 'Type',
         validation: 'Validation',
         visibility: 'Visibilité',
@@ -939,8 +939,8 @@ export default {
         title: 'Description',
       },
       invites: {
-        myTeams: 'MES ?quipes',
-        otherTeams: 'AUTRES ?quipes',
+        myTeams: 'MES ÉQUIPES',
+        otherTeams: 'AUTRES ÉQUIPES',
         subtitle: 'Invite des équipes, ou passe cette étape.',
         title: 'Invitations',
       },
@@ -995,7 +995,7 @@ export default {
       },
       team: {
         subtitle: "Sélectionne l'équipe organisatrice.",
-        title: '?quipe organisatrice',
+        title: 'Équipe organisatrice',
       },
       type: {
         subtitle: "Sélectionne le type d'événement.",
@@ -1020,7 +1020,7 @@ export default {
         public: 'Public',
         publicDesc: 'Visible pour tous les profils qui y ont accès.',
         subtitle: "Définis qui peut voir l'événement.",
-        team: '?quipe',
+        team: 'Équipe',
         teamDesc: "Visibilité uniquement pour les membres de l'équipe créatrice de l'événement.",
         title: 'Visibilité',
       },
@@ -1505,7 +1505,7 @@ export default {
       admins: 'Dirigeants',
       members: 'Membres',
       sections: 'Sections',
-      teams: '?quipes',
+      teams: 'Équipes',
     },
     titles: {
       admins: 'Dirigeants omnisport',
@@ -1706,7 +1706,7 @@ export default {
   },
   profile: {
     actions: {
-      confirmDeleteAvatar: '?tes-vous sûr de vouloir supprimer cette image ?',
+      confirmDeleteAvatar: 'Êtes-vous sûr de vouloir supprimer cette image ?',
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
@@ -1819,8 +1819,8 @@ export default {
       all: 'Toutes',
       club: 'Club',
       event: 'Événement',
-      featured: '? la une',
-      team: '?quipe',
+      featured: 'À la une',
+      team: 'Équipe',
     },
     forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
     migratedBannerAction: "Ouvrir l'onglet Demandes",
@@ -1834,8 +1834,8 @@ export default {
     types: {
       club: 'Club',
       event: 'Événement',
-      featured: '? la une',
-      team: '?quipe',
+      featured: 'À la une',
+      team: 'Équipe',
       unknown: 'Demande',
     },
   },
@@ -2057,7 +2057,7 @@ export default {
       missingPlayers_plural: 'Il manque {{count}} joueurs',
       pricePerPerson: '{{price}}€/pers',
     },
-    featured: '? la une :',
+    featured: 'À la une :',
     featuredRequest: {
       approved: 'Approuvée',
       cancelError: 'Erreur lors de l\'annulation',
@@ -2083,7 +2083,7 @@ export default {
       tooManyPlayers: 'Le nombre doit être inférieur au total',
     },
     noData: 'Aucune réservation trouvée.',
-    title: '?vènements :',
+    title: 'Évènements :',
   },
   searchTypeSwitcher: {
     recruitment: 'Recrutement',
@@ -2117,7 +2117,7 @@ export default {
       openPanel: 'Ouvrir',
       panelTitle: "Actions d'équipe",
       stats: 'Statistiques',
-      teamChat: '?quipe',
+      teamChat: 'Équipe',
     },
     alerts: {
       deleteTrainer: {
@@ -2152,7 +2152,7 @@ export default {
           confirm: "Quitter l'équipe",
         },
         description: 'Vous êtes sur le point de quitter l\'équipe. Une fois cette action validée vous ne pourrez plus participer aux entraînements et matchs.',
-        title: '?tes-vous sûr·e de vouloir quitter cette équipe ?',
+        title: 'Êtes-vous sûr·e de vouloir quitter cette équipe ?',
       },
     },
     external: {
@@ -2179,7 +2179,7 @@ export default {
       standings: 'Classement',
       stats: 'Statistiques',
     },
-    title: '?quipe',
+    title: 'Équipe',
   },
   /* eslint-enable perfectionist/sort-objects */
   teamEdit: {
@@ -2197,7 +2197,7 @@ export default {
       },
       description: {
         label: 'Description',
-        placeholder: '?quipe senior évoluant en championnat régional depuis 2015.',
+        placeholder: 'Équipe senior évoluant en championnat régional depuis 2015.',
       },
       level: {
         label: 'Niveau',
@@ -2319,12 +2319,12 @@ export default {
       sport: 'Profil sportif',
     },
     teamGroups: {
-      coach: '?quipes entraînées',
-      player: '?quipes joueur',
+      coach: 'Équipes entraînées',
+      player: 'Équipes joueur',
     },
     title: 'Infos profil',
     titles: {
-      teams: '?quipes',
+      teams: 'Équipes',
     },
   },
   welcome: {

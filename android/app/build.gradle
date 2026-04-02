@@ -3,9 +3,59 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services'
 
+def MAPS_API_KEY_PLACEHOLDER = "CLE_TEMPORAIRE_A_REMPLACER"
 def productionGoogleServicesFile = file("src/production/google-services.json")
 def hasProductionGoogleServices = productionGoogleServicesFile.exists()
 def debuggableVariantNames = ["stagingDebug"]
+
+def normalizeSecretValue = { value ->
+    def normalized = (value ?: '').toString().trim()
+    return normalized ? normalized : null
+}
+
+def resolveBuildSecret = { envName, propertyNames = [] ->
+    def envValue = normalizeSecretValue(System.getenv(envName))
+    if (envValue) {
+        return envValue
+    }
+
+    for (def propertyName : ([envName] + propertyNames).findAll { it }) {
+        if (!project.hasProperty(propertyName)) {
+            continue
+        }
+
+        def propertyValue = normalizeSecretValue(project.findProperty(propertyName))
+        if (propertyValue) {
+            return propertyValue
+        }
+    }
+
+    return null
+}
+
+def productionMapsApiKey = resolveBuildSecret(
+    'GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION',
+    ['googleMapsApiKeyProduction']
+)
+def stagingMapsApiKey = resolveBuildSecret(
+    'GOOGLE_MAPS_ANDROID_API_KEY_STAGING',
+    ['googleMapsApiKeyStaging']
+)
+
+def requestedTaskNames = gradle.startParameter.taskNames
+    .collect { it.toString().toLowerCase() }
+    .join(' ')
+
+def assertMapsApiKeyForFlavor = { flavorName, apiKey, envName ->
+    if (apiKey && apiKey != MAPS_API_KEY_PLACEHOLDER) {
+        return
+    }
+
+    throw new GradleException(
+        "Missing Google Maps Android API key for ${flavorName}. " +
+        "Set ${envName} in the shell/EAS environment or ${envName} in gradle.properties before building."
+    )
+}
 
 if (hasProductionGoogleServices) {
     debuggableVariantNames << "productionDebug"
@@ -99,11 +149,13 @@ android {
     productFlavors {
         production {
             dimension "env"
+            manifestPlaceholders = [googleMapsApiKey: productionMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
             resValue "string", "app_name", "FoundClub"
         }
         staging {
             dimension "env"
             applicationIdSuffix ".staging"
+            manifestPlaceholders = [googleMapsApiKey: stagingMapsApiKey ?: MAPS_API_KEY_PLACEHOLDER]
             versionNameSuffix "-staging"
             resValue "string", "app_name", "FoundClub Staging"
         }
@@ -147,6 +199,14 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+}
+
+if (requestedTaskNames.contains('staging')) {
+    assertMapsApiKeyForFlavor('staging', stagingMapsApiKey, 'GOOGLE_MAPS_ANDROID_API_KEY_STAGING')
+}
+
+if (requestedTaskNames.contains('production')) {
+    assertMapsApiKeyForFlavor('production', productionMapsApiKey, 'GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION')
 }
 
 dependencies {

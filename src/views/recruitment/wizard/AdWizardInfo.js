@@ -23,12 +23,12 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 
+/* eslint-disable perfectionist/sort-imports */
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 
-/* eslint-disable import/order, perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
 import { getAdWizardStepCount } from './adWizardStepUtils';
-/* eslint-enable import/order, perfectionist/sort-imports */
+/* eslint-enable perfectionist/sort-imports */
 
 /**
  * Wizard step dedicated to editable ad metadata.
@@ -56,8 +56,16 @@ function AdWizardInfo({ navigation }) {
   const allCategories = categoriesQuery.data;
   const allSections = sectionsQuery.data;
 
-  const isTaxonomyLoading = levelsQuery.isLoading || categoriesQuery.isLoading || sectionsQuery.isLoading;
-  const hasTaxonomyError = Boolean(levelsQuery.error || categoriesQuery.error || sectionsQuery.error);
+  const isTaxonomyLoading = (
+    levelsQuery.isLoading
+    || categoriesQuery.isLoading
+    || sectionsQuery.isLoading
+  );
+  const hasTaxonomyError = Boolean(
+    levelsQuery.error
+    || categoriesQuery.error
+    || sectionsQuery.error,
+  );
 
   const levels = useMemo(() => (
     allLevels?.map(({ documentId, name }) => ({
@@ -83,7 +91,7 @@ function AdWizardInfo({ navigation }) {
   const handleNext = () => {
     if (!state.address) {
       showBanner({
-        body: 'Ajoutez un lieu précis pour que les joueurs comprennent où se déroule le recrutement.',
+        body: 'Ajoutez un lieu pr\u00E9cis pour que les joueurs comprennent o\u00F9 se d\u00E9roule le recrutement.',
         title: 'Lieu requis',
         tone: 'error',
       });
@@ -93,21 +101,23 @@ function AdWizardInfo({ navigation }) {
     navigation.navigate(RouteNames.AdWizardPositions);
   };
 
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
   const currentSectionValue = state.section?.name || '';
   const currentCategoryValue = state.category?.name || '';
   const currentLevelValue = state.minLevel?.name || '';
   const teamSummaryMeta = [
     { label: 'Section', value: currentSectionValue },
-    { label: 'Catégorie', value: currentCategoryValue },
+    { label: 'Cat\u00E9gorie', value: currentCategoryValue },
     { label: 'Niveau', value: currentLevelValue },
   ].filter((item) => String(item.value || '').trim().length > 0).slice(0, 3);
+
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
   };
   const shouldUseSingleColumnFields = width <= 430;
   const compactFieldWidth = shouldUseSingleColumnFields ? '100%' : '48%';
+
   const teamIdentityNode = state.team?.club?.logo?.url ? (
     <View
       style={{
@@ -170,7 +180,7 @@ function AdWizardInfo({ navigation }) {
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={2}
-      subtitle="Affinez le profil recherché et le lieu de publication."
+      subtitle={'Affinez le profil recherch\u00E9 et le lieu de publication.'}
       title="Informations de l'annonce"
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[24]]}>
@@ -178,7 +188,7 @@ function AdWizardInfo({ navigation }) {
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[24],
+              Spaces.padding[20],
               Alignments.row,
               Alignments.alignCenter,
               Spaces.gap[16],
@@ -187,7 +197,7 @@ function AdWizardInfo({ navigation }) {
           >
             <ActivityIndicator color={Colors.primary500} size="small" />
             <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill]}>
-              Chargement des sections, catégories et niveaux disponibles.
+              {'Chargement des sections, cat\u00E9gories et niveaux disponibles.'}
             </Text>
           </View>
         ) : null}
@@ -196,7 +206,7 @@ function AdWizardInfo({ navigation }) {
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[24],
+              Spaces.padding[20],
               Spaces.gap[16],
               {
                 backgroundColor: 'rgba(53, 19, 24, 0.88)',
@@ -205,12 +215,16 @@ function AdWizardInfo({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              Certaines options n&apos;ont pas pu être chargées
+              {'Certaines options n\'ont pas pu \u00EAtre charg\u00E9es'}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Vous pouvez réessayer pour récupérer toutes les références, ou continuer avec les informations déjà préremplies depuis l&apos;équipe.
+              {'Vous pouvez r\u00E9essayer pour r\u00E9cup\u00E9rer toutes les r\u00E9f\u00E9rences, ou continuer avec les informations d\u00E9j\u00E0 pr\u00E9remplies depuis l\'\u00E9quipe.'}
             </Text>
-            <Button onPress={handleRetryTaxonomy} title="Réessayer" variant="Secondary" />
+            <Button
+              onPress={handleRetryTaxonomy}
+              title={'R\u00E9essayer'}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
@@ -219,80 +233,103 @@ function AdWizardInfo({ navigation }) {
             style={[
               ApplicationStyle.card,
               Spaces.padding[24],
-              Spaces.gap[20],
+              Spaces.gap[24],
               cardSurfaceStyle,
             ]}
           >
-            <View style={[Spaces.gap[16]]}>
-              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], { flex: 1 }]}>
-                {teamIdentityNode}
-                <View style={[Spaces.gap[8], { flex: 1 }]}>
-                  <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
-                    {state.team?.name || '-'}
-                  </Text>
-                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral100]}>
-                    {state.team?.club?.name || 'Club non renseigné'}
-                  </Text>
+            <View style={[Spaces.gap[24]]}>
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                  {'\u00C9quipe s\u00E9lectionn\u00E9e'}
+                </Text>
+
+                <View
+                  style={[
+                    Alignments.row,
+                    Spaces.gap[24],
+                    { alignItems: 'flex-start', flex: 1 },
+                  ]}
+                >
+                  {teamIdentityNode}
+
+                  <View style={[Spaces.gap[12], { flex: 1 }]}>
+                    <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
+                      {state.team?.name || '-'}
+                    </Text>
+                    <Text
+                      numberOfLines={2}
+                      style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}
+                    >
+                      {state.team?.club?.name || 'Club non renseign\u00E9'}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.9}
-                onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
-                style={[
-                  Alignments.alignCenter,
-                  Alignments.justifyCenter,
-                  Spaces.paddingHorizontal[16],
-                  Spaces.paddingVertical[12],
-                  {
-                    alignSelf: 'flex-start',
-                    backgroundColor: 'rgba(1, 179, 244, 0.12)',
-                    borderColor: 'rgba(1, 179, 244, 0.28)',
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    minWidth: 144,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Changer l&apos;équipe</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={[Spaces.gap[16]]}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  activeOpacity={0.9}
+                  onPress={() => navigation.navigate(RouteNames.AdWizardTeam)}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    Spaces.paddingHorizontal[16],
+                    Spaces.paddingVertical[12],
+                    {
+                      alignSelf: 'flex-start',
+                      backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                      borderColor: 'rgba(1, 179, 244, 0.28)',
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      minWidth: 168,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {'Choisir une autre \u00E9quipe'}
+                  </Text>
+                </TouchableOpacity>
 
-            {teamSummaryMeta.length > 0 ? (
-              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
-                {teamSummaryMeta.map((item) => (
-                  <View
-                    key={item.label}
-                    style={[
-                      Spaces.paddingHorizontal[14],
-                      Spaces.paddingVertical[10],
-                      {
-                        backgroundColor: 'rgba(1, 179, 244, 0.10)',
-                        borderColor: 'rgba(1, 179, 244, 0.18)',
-                        borderRadius: 999,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                      {`${item.label} : ${item.value}`}
-                    </Text>
+                {teamSummaryMeta.length > 0 ? (
+                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                    {teamSummaryMeta.map((item) => (
+                      <View
+                        key={item.label}
+                        style={[
+                          Spaces.paddingHorizontal[14],
+                          Spaces.paddingVertical[10],
+                          {
+                            backgroundColor: 'rgba(1, 179, 244, 0.10)',
+                            borderColor: 'rgba(1, 179, 244, 0.18)',
+                            borderRadius: 999,
+                            borderWidth: 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                          {`${item.label} : ${item.value}`}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                ) : null}
               </View>
-            ) : null}
+            </View>
           </View>
         ) : null}
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[12]]}>
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>Profil recherché</Text>
+          <View style={[Spaces.gap[16]]}>
+            <View style={[Spaces.gap[10]]}>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {'Profil recherch\u00E9'}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Affinez la cible de votre annonce avec les bons repères sportifs.
+                {'Affinez la cible de votre annonce avec les bons rep\u00E8res sportifs.'}
               </Text>
             </View>
+
             <View
               style={[
                 Spaces.paddingHorizontal[12],
@@ -310,12 +347,12 @@ function AdWizardInfo({ navigation }) {
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16], Spaces.marginTop[8]]}>
             <AutocompleteSelect
               displayVariant="card"
               label="Section"
               options={sections}
-              placeholder="Sélectionner une section"
+              placeholder={'S\u00E9lectionner une section'}
               setValue={handleSectionChange}
               value={currentSectionValue}
               wrapperStyle={{ width: compactFieldWidth }}
@@ -323,20 +360,20 @@ function AdWizardInfo({ navigation }) {
 
             <AutocompleteSelect
               displayVariant="card"
-              label="Catégorie"
+              label={'Cat\u00E9gorie'}
               options={categories}
-              placeholder="Sélectionner une catégorie"
+              placeholder={'S\u00E9lectionner une cat\u00E9gorie'}
               setValue={handleCategoryChange}
               value={currentCategoryValue}
               wrapperStyle={{ width: compactFieldWidth }}
             />
 
             <AutocompleteSelect
-              description="Définissez le niveau minimum attendu pour candidater."
+              description={'D\u00E9finissez le niveau minimum attendu pour candidater.'}
               displayVariant="card"
-              label="Niveau minimum recherché"
+              label={'Niveau minimum recherch\u00E9'}
               options={levels}
-              placeholder="Sélectionner un niveau"
+              placeholder={'S\u00E9lectionner un niveau'}
               setValue={handleLevelChange}
               value={currentLevelValue}
               wrapperStyle={{ width: '100%' }}
@@ -345,8 +382,10 @@ function AdWizardInfo({ navigation }) {
         </View>
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Lieu de l&apos;annonce</Text>
+          <View style={[Spaces.gap[16]]}>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              Lieu de l&apos;annonce
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               Ajoutez un lieu clair pour situer rapidement votre recrutement.
             </Text>
@@ -389,7 +428,7 @@ function AdWizardInfo({ navigation }) {
               }}
             />
             <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
-              Conseil publication : gardez un lieu précis et un niveau cohérent pour attirer les bons profils dès les premiers résultats.
+              {'Conseil publication : gardez un lieu pr\u00E9cis et un niveau coh\u00E9rent pour attirer les bons profils d\u00E8s les premiers r\u00E9sultats.'}
             </Text>
           </View>
         </View>

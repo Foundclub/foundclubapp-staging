@@ -26,6 +26,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
@@ -73,11 +74,11 @@ function Messaging({ navigation, route }) {
   } = useMessaging();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
-  const canCreateConversation = userData?.role?.name === 'EntraÃƒÂ®neur'
+  const canCreateConversation = userData?.role?.name === 'Entraîneur'
     || userData?.role?.name === 'Dirigeant'
     || userData?.role?.name === 'SuperAdmin';
-  const floatingButtonBottom = isWeb ? 24 : 108 + Math.max(insets.bottom, 8);
-  const chatListBottomInset = canCreateConversation ? floatingButtonBottom + 72 : 16;
+  const floatingButtonBottom = isWeb ? 24 : getFloatingActionBottomOffset(insets.bottom, 14);
+  const chatListBottomInset = canCreateConversation ? floatingButtonBottom + 84 : 16;
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
@@ -299,11 +300,11 @@ function Messaging({ navigation, route }) {
         onPress={() => {
           if (isPinned) {
             unpinChatAsync(chat.documentId).catch((actionError) => {
-              showMessagingAlert(actionError?.message || t('messaging.unpinError', 'Impossible de desepingler cette conversation.'));
+              showMessagingAlert(actionError?.message || t('messaging.unpinError', 'Impossible de désépingler cette conversation.'));
             });
           } else {
             pinChatAsync(chat.documentId).catch((actionError) => {
-              showMessagingAlert(actionError?.message || t('messaging.pinError', 'Impossible d epingler cette conversation.'));
+              showMessagingAlert(actionError?.message || t('messaging.pinError', "Impossible d'épingler cette conversation."));
             });
           }
         }}
@@ -317,7 +318,7 @@ function Messaging({ navigation, route }) {
         }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
-          {isPinned ? t('messaging.unpin', 'DÃ©sÃ©pingler') : t('messaging.pin', 'Ã‰pingler')}
+          {isPinned ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler')}
         </Text>
       </TouchableOpacity>
     );
@@ -326,7 +327,7 @@ function Messaging({ navigation, route }) {
   const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
     <TouchableOpacity
       onPress={() => archiveChatAsync(chat.documentId).catch((actionError) => {
-        showMessagingAlert(actionError?.message || t('messaging.archiveError', 'Impossible d archiver cette conversation.'));
+        showMessagingAlert(actionError?.message || t('messaging.archiveError', "Impossible d'archiver cette conversation."));
       })}
       style={{
         alignItems: 'center',
@@ -358,8 +359,8 @@ function Messaging({ navigation, route }) {
       }
     } catch (actionError) {
       showMessagingAlert(actionError?.message || (isPinned
-        ? t('messaging.unpinError', 'Impossible de desepingler cette conversation.')
-        : t('messaging.pinError', 'Impossible d epingler cette conversation.')));
+        ? t('messaging.unpinError', 'Impossible de désépingler cette conversation.')
+        : t('messaging.pinError', "Impossible d'épingler cette conversation.")));
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -374,7 +375,7 @@ function Messaging({ navigation, route }) {
     try {
       await archiveChatAsync(chatId);
     } catch (actionError) {
-      showMessagingAlert(actionError?.message || t('messaging.archiveError', 'Impossible d archiver cette conversation.'));
+      showMessagingAlert(actionError?.message || t('messaging.archiveError', "Impossible d'archiver cette conversation."));
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -560,7 +561,7 @@ function Messaging({ navigation, route }) {
                   backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
                 }}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>EPINGLÃ‰</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>ÉPINGLÉ</Text>
                 </View>
                 )}
               </View>
@@ -728,21 +729,21 @@ function Messaging({ navigation, route }) {
                 ApplicationStyle.shadow200,
                 {
                   alignItems: 'center',
-                  backgroundColor: Colors.primary700,
-                  borderColor: Colors.primary500,
-                  borderRadius: 28,
-                  borderWidth: 1.5,
+                  backgroundColor: Colors.primary500,
+                  borderColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 32,
+                  borderWidth: 1,
                   elevation: 8,
-                  height: 56,
+                  height: 64,
                   justifyContent: 'center',
                   shadowColor: '#000',
                   shadowOffset: {
                     height: 6,
                     width: 0,
                   },
-                  shadowOpacity: 0.28,
-                  shadowRadius: 10,
-                  width: 56,
+                  shadowOpacity: 0.32,
+                  shadowRadius: 12,
+                  width: 64,
                 },
               ]}
             >
@@ -750,11 +751,36 @@ function Messaging({ navigation, route }) {
                 resizeMode="contain"
                 source={Images.envelope}
                 style={{
-                  height: 22,
-                  tintColor: Colors.primary500,
-                  width: 22,
+                  height: 24,
+                  tintColor: Colors.neutral00,
+                  width: 24,
                 }}
               />
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary200,
+                  borderColor: 'rgba(255,255,255,0.36)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 20,
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                  width: 20,
+                }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.plus}
+                  style={{
+                    height: 10,
+                    tintColor: Colors.primary900,
+                    width: 10,
+                  }}
+                />
+              </View>
             </TouchableOpacity>
           </View>
         ) : null}

@@ -1,13 +1,17 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import {
+  Image,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -17,6 +21,7 @@ import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -35,6 +40,7 @@ function TeamList({ navigation, route }) {
   const { t } = useTranslation();
   const { canManageTeam, refetchUserData, userData } = useAuth();
   const clubId = route?.params?.clubId ? route?.params.clubId : userData?.club?.documentId;
+  const insets = useSafeAreaInsets();
   const assignmentTrainerName = route?.params?.assignmentTrainerName;
   const assignmentTrainerId = route?.params?.assignmentTrainerId;
   const openAssignTrainerGuide = route?.params?.openAssignTrainerGuide;
@@ -71,8 +77,13 @@ function TeamList({ navigation, route }) {
 
   const {
     Alignments,
+    ApplicationStyle,
+    Colors,
+    Images,
     Spaces,
   } = useTheme();
+
+  const floatingButtonBottom = getFloatingActionBottomOffset(insets.bottom, 14);
 
   const handleAddTeam = () => {
     navigation.navigate(RouteNames.TeamStack, {
@@ -150,12 +161,77 @@ function TeamList({ navigation, route }) {
         </OnboardingWrapper>
 
         {canManageTeam ? (
-          <Button
-            onPress={handleAddTeam}
-            style={[Spaces.marginTop[16]]}
-            title={`+ ${t('teamList.actions.add')}`}
-            variant="Primary"
-          />
+          <View
+            pointerEvents="box-none"
+            style={{
+              bottom: floatingButtonBottom,
+              position: 'absolute',
+              right: 20,
+              zIndex: 100,
+            }}
+          >
+            <TouchableOpacity
+              accessibilityLabel={t('teamList.actions.add', 'Ajouter une equipe')}
+              activeOpacity={0.85}
+              onPress={handleAddTeam}
+              style={[
+                ApplicationStyle.shadow200,
+                {
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary500,
+                  borderColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 32,
+                  borderWidth: 1,
+                  elevation: 8,
+                  height: 64,
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    height: 6,
+                    width: 0,
+                  },
+                  shadowOpacity: 0.32,
+                  shadowRadius: 12,
+                  width: 64,
+                },
+              ]}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.strokeShield}
+                style={{
+                  height: 24,
+                  tintColor: Colors.neutral00,
+                  width: 24,
+                }}
+              />
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary200,
+                  borderColor: 'rgba(255,255,255,0.36)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 20,
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                  width: 20,
+                }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.plus}
+                  style={{
+                    height: 10,
+                    tintColor: Colors.primary900,
+                    width: 10,
+                  }}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
         ) : null}
 
         <GlobalPromptModal

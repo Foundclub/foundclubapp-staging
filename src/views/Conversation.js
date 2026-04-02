@@ -3963,7 +3963,7 @@ function Conversation({ navigation, route }) {
     if (!selectedMessageDocumentId || !isSelectedMessageOwn) return;
 
     openConversationPrompt({
-      body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim? pour tous les participants.'),
+      body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprim\u00e9 pour tous les participants.'),
       primaryAction: {
         label: t('common.actions.delete', 'Supprimer'),
         onPress: async () => {

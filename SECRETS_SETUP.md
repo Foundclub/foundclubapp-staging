@@ -1,4 +1,4 @@
-# Mobile Secrets Setup (Local Only)
+# Mobile Secrets Setup
 
 This repository does not store mobile secret files in git.
 
@@ -6,15 +6,15 @@ This repository does not store mobile secret files in git.
 
 Store secrets outside the workspace in:
 
-- Default: `%USERPROFILE%\\.foundclub-secrets\\mobile`
+- Default: `%USERPROFILE%\.foundclub-secrets\mobile`
 - Or custom path via env var: `FOUNDCLUB_SECRETS_DIR`
 
 Expected files:
 
-- `android\\google-services.json`
-- `android\\google-services.staging.json` (optional)
-- `ios\\GoogleService-Info.plist`
-- `android\\keystore` (optional, release signing)
+- `android\google-services.json`
+- `android\google-services.staging.json` (optional)
+- `ios\GoogleService-Info.plist`
+- `android\keystore` (optional, release signing)
 
 ## 2) Sync into app workspace
 
@@ -31,45 +31,88 @@ This copies local secret files to:
 - `ios/GoogleService-Info.plist`
 - `android/app/keystore` (if provided)
 
-## 3) Important
+## 3) Google Maps Android keys
 
-1. Never commit secret files.
+Google Maps Android uses build-time secrets, not tracked files.
+
+Required variables:
+
+- `GOOGLE_MAPS_ANDROID_API_KEY_STAGING`
+- `GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION`
+
+Supported sources:
+
+- shell environment variables
+- CI / EAS environment variables
+- `gradle.properties` with the same names
+- fallback property names:
+  - `googleMapsApiKeyStaging`
+  - `googleMapsApiKeyProduction`
+
+Recommended local setup:
+
+File: `%USERPROFILE%\.gradle\gradle.properties`
+
+```properties
+GOOGLE_MAPS_ANDROID_API_KEY_STAGING=votre-cle-staging
+GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION=votre-cle-production
+```
+
+Android builds fail explicitly if the matching Maps key is missing or still equals the placeholder.
+
+## 4) Important
+
+1. Never commit secret files or keys.
 2. Keep `app/.gitignore` rules unchanged.
-3. Use CI secret variables for pipelines.
+3. Use CI / EAS secret variables for pipelines.
 
-## 4) EAS Build (remote iOS/Android)
+## 5) EAS Build (remote iOS/Android)
 
-Le build EAS ne voit pas vos fichiers locaux `%USERPROFILE%\\.foundclub-secrets\\mobile`.
-Le projet execute automatiquement ce hook avant installation:
+Le build EAS ne voit pas vos fichiers locaux `%USERPROFILE%\.foundclub-secrets\mobile`.
+Le projet exécute automatiquement ce hook avant installation :
 
 - `npm run eas-build-pre-install`
 - script: `scripts/secrets/prepare-eas-secrets.js`
 
-Ce script cree les fichiers manquants depuis les variables d'environnement EAS.
+Ce script crée les fichiers Firebase manquants depuis les variables d'environnement EAS.
 
-### Variables supportees
+### Variables supportées pour Firebase
 
-- iOS plist (au moins une):
-  - `IOS_GOOGLE_SERVICE_INFO_PLIST` (contenu XML direct ou chemin fichier secret EAS)
+- iOS plist (au moins une) :
+  - `IOS_GOOGLE_SERVICE_INFO_PLIST`
   - `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64`
   - `GOOGLE_SERVICE_INFO_PLIST`
   - `GOOGLE_SERVICE_INFO_PLIST_BASE64`
 
-- Android prod JSON (au moins une pour build Android):
+- Android prod JSON (au moins une pour build Android) :
   - `ANDROID_GOOGLE_SERVICES_JSON`
   - `ANDROID_GOOGLE_SERVICES_JSON_BASE64`
   - `GOOGLE_SERVICES_JSON`
   - `GOOGLE_SERVICES_JSON_BASE64`
 
-- Android staging JSON (optionnel):
+- Android staging JSON (optionnel) :
   - `ANDROID_GOOGLE_SERVICES_STAGING_JSON`
   - `ANDROID_GOOGLE_SERVICES_STAGING_JSON_BASE64`
   - `GOOGLE_SERVICES_STAGING_JSON`
   - `GOOGLE_SERVICES_STAGING_JSON_BASE64`
 
-### Exemple (secrets type file, recommande)
+### Variables supportées pour Google Maps Android
+
+- `GOOGLE_MAPS_ANDROID_API_KEY_STAGING`
+- `GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION`
+
+### Exemple EAS
+
+Firebase files:
 
 ```bash
 eas secret:create --scope project --type file --name IOS_GOOGLE_SERVICE_INFO_PLIST --value ./ios/GoogleService-Info.plist
 eas secret:create --scope project --type file --name ANDROID_GOOGLE_SERVICES_JSON --value ./android/app/google-services.json
+```
+
+Google Maps keys:
+
+```bash
+eas secret:create --scope project --type string --name GOOGLE_MAPS_ANDROID_API_KEY_STAGING --value "votre-cle-staging"
+eas secret:create --scope project --type string --name GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION --value "votre-cle-production"
 ```

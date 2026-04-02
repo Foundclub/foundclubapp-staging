@@ -66,6 +66,36 @@ export const POSITIONS_BY_SPORT = {
   ],
 };
 
+export const POSITION_GROUPS_BY_SPORT = {
+  basketball: [
+    { label: 'Base arriere', positions: ['Meneur', 'Arrière'] },
+    { label: 'Ailes', positions: ['Ailier', 'Ailier fort'] },
+    { label: 'Interieur', positions: ['Pivot'] },
+  ],
+  football: [
+    { label: 'Gardien', positions: ['Gardien'] },
+    { label: 'Defense', positions: ['Défenseur central', 'Latéral droit', 'Latéral gauche'] },
+    { label: 'Milieu', positions: ['Milieu défensif', 'Milieu central', 'Milieu offensif'] },
+    { label: 'Attaque', positions: ['Ailier droit', 'Ailier gauche', 'Attaquant', 'Avant-centre'] },
+  ],
+  handball: [
+    { label: 'Gardien', positions: ['Gardien'] },
+    { label: 'Base arriere', positions: ['Arrière gauche', 'Arrière droit', 'Demi-centre'] },
+    { label: 'Ailes', positions: ['Ailier gauche', 'Ailier droit'] },
+    { label: 'Pivot', positions: ['Pivot'] },
+  ],
+  rugby: [
+    { label: 'Avants', positions: ['Pilier', 'Talonneur', 'Deuxième ligne', 'Troisième ligne aile', 'Troisième ligne centre'] },
+    { label: 'Charniere', positions: ['Demi de mêlée', "Demi d'ouverture"] },
+    { label: 'Ligne arriere', positions: ['Centre', 'Ailier', 'Arrière'] },
+  ],
+  volleyball: [
+    { label: 'Distribution', positions: ['Passeur', 'Libéro'] },
+    { label: 'Attaque', positions: ['Pointu', 'Réceptionneur-attaquant'] },
+    { label: 'Centre', positions: ['Central'] },
+  ],
+};
+
 /**
  * Obtient les postes pour un sport donné
  * @param {string} sportName - Nom du sport (peut être capitalisé ou non)
@@ -94,4 +124,44 @@ export function sportHasPositions(sportName) {
  */
 export function getPositionValuesForSport(sportName) {
   return getPositionsForSport(sportName).map((p) => p.value);
+}
+
+/**
+ * Obtient des familles de postes pour un sport donné.
+ * @param {string} sportName
+ * @param {string[]} [availablePositions]
+ * @returns {Array<{label: string, positions: string[]}>}
+ */
+export function getPositionGroupsForSport(sportName, availablePositions = []) {
+  const positions = Array.isArray(availablePositions)
+    ? availablePositions.filter(Boolean)
+    : getPositionValuesForSport(sportName);
+
+  if (positions.length === 0) return [];
+
+  const normalized = String(sportName || '').toLowerCase();
+  const groups = POSITION_GROUPS_BY_SPORT[normalized] || [];
+  const usedPositions = new Set();
+
+  const resolvedGroups = groups
+    .map((group) => ({
+      ...group,
+      positions: group.positions.filter((position) => positions.includes(position)),
+    }))
+    .filter((group) => group.positions.length > 0);
+
+  resolvedGroups.forEach((group) => {
+    group.positions.forEach((position) => usedPositions.add(position));
+  });
+
+  const remainingPositions = positions.filter((position) => !usedPositions.has(position));
+
+  if (remainingPositions.length > 0) {
+    resolvedGroups.push({
+      label: 'Autres postes',
+      positions: remainingPositions,
+    });
+  }
+
+  return resolvedGroups;
 }

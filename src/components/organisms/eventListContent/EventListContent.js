@@ -22,7 +22,7 @@ import { createLogger } from '@/utils/logger/logger';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
-import MapFloatButton from '@/components/atoms/mapFloatButton/MapFloatButton';
+import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -42,6 +42,7 @@ import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useSearchEvents } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
+import { toSearchMapItems } from '@/utils/searchMap';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
@@ -71,10 +72,12 @@ const eventListLogger = createLogger('event-list');
  * @param {boolean} [props.isLoading] - External loading state (optional)
  * @param {boolean} [props.isPlanning] - Whether the list is displayed in planning mode (optional)
  * @param {(key: 'filters' | 'card', layout: { x: number; y: number; width: number; height: number }) => void} [props.onTutorialLayout]
+ * @param {boolean} [props.enableMapMode]
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
   additionalFilters,
+  enableMapMode = false,
   events: propEvents,
   isLoading: propIsLoading,
   isPlanning = false,
@@ -84,7 +87,6 @@ function EventListContent({
 }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
-  const [isMapView, setIsMapView] = useState(false);
   const filtersTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   const firstCardTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
 
@@ -103,10 +105,11 @@ function EventListContent({
   } = useTheme();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const [{ eventFilters }, appDispatch] = useAppContext();
+  const [{ eventFilters, searchMapModes }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
+  const isMapView = Boolean(enableMapMode && searchMapModes?.events);
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -257,11 +260,12 @@ function EventListContent({
     || [], [featuredPages]);
 
   const events = propEvents || (isSmartSearchEnabled ? smartEvents : internalEvents);
+  const mapItems = useMemo(() => toSearchMapItems(events, 'events'), [events]);
   const activeError = isSmartSearchEnabled ? searchError : error;
   const isLoading = propIsLoading !== undefined
     ? propIsLoading
     : (isSmartSearchEnabled ? isSearchLoading : isInternalLoading);
-  const shouldShowMapToggle = showFilters && (isMapView || events.length > 0);
+  const shouldShowMapToggle = enableMapMode && (isMapView || mapItems.length > 0);
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -486,9 +490,16 @@ function EventListContent({
     <View style={[Spaces.gap[24], Alignments.fill]}>
       {isMapView ? (
         <SearchMap
-          items={events}
-          onMarkerPress={handleEventSelect}
-          type="event"
+          items={mapItems}
+          onOpenItem={(item) => handleEventSelect(item.raw)}
+          onShowList={() => {
+            appDispatch({
+              payload: { events: false },
+              type: 'SET_SEARCH_MAP_MODES',
+            });
+          }}
+          scope="events"
+          totalCount={events.length}
         />
       ) : (
         <WithDataWrapper
@@ -501,6 +512,7 @@ function EventListContent({
             ApplicationStyle.borderRadius2]}
           >
             <FlashList
+              contentContainerStyle={{ paddingBottom: 120 }}
               data={/** @type {FCEvent[]} */ (events)}
               estimatedItemSize={200}
               ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
@@ -571,10 +583,15 @@ function EventListContent({
         onClose={handleCloseJoinModal}
       />
       {shouldShowMapToggle ? (
-        <MapFloatButton
-          isMapView={isMapView}
-          onPress={() => setIsMapView((previousValue) => !previousValue)}
-          type="event"
+        <SearchMapFab
+          mode={isMapView ? 'map' : 'list'}
+          onPress={() => {
+            appDispatch({
+              payload: { events: !isMapView },
+              type: 'SET_SEARCH_MAP_MODES',
+            });
+          }}
+          scope="events"
         />
       ) : null}
     </View>
