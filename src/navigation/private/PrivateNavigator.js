@@ -48,10 +48,12 @@ import RecruitmentAdDetails from '@/views/recruitment/RecruitmentAdDetails';
 import RecruitmentAdEdit from '@/views/recruitment/RecruitmentAdEdit';
 import RecruitmentAdFilters from '@/views/recruitment/RecruitmentAdFilters';
 import RequestsHub from '@/views/requests/RequestsHub';
+import ReservationDetails from '@/views/reservation/ReservationDetails';
 import MissingPlayersView from '@/views/reservation/MissingPlayersView';
 import ReservationFilters from '@/views/reservation/ReservationFilters';
 import SearchAlerts from '@/views/search/SearchAlerts';
 import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
+import SearchMapScreen from '@/views/search/SearchMapScreen';
 import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -237,6 +239,14 @@ function PrivateNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        component={ReservationDetails}
+        name={RouteNames.ReservationDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
         component={ReservationFilters}
         name={RouteNames.ReservationFilters}
         options={{
@@ -339,6 +349,11 @@ function PrivateNavigator() {
           ...commonOptions,
           headerTitle: '',
         }}
+      />
+      <Stack.Screen
+        component={SearchMapScreen}
+        name={RouteNames.SearchMapScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         component={Conversation}

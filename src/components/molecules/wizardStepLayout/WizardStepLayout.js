@@ -118,7 +118,7 @@ function WizardStepLayout({
       contentContainerStyle={[
         Alignments.fill,
         Alignments.justifySpaceBetween,
-        { paddingBottom: insets.bottom + 24 },
+        { paddingBottom: insets.bottom + 32 },
       ]}
       contentWidth="readable"
       responsivePadding
@@ -129,7 +129,7 @@ function WizardStepLayout({
         style={[Alignments.fill]}
       >
         <View style={[Alignments.fill]}>
-          <View style={[Spaces.marginTop[20], Spaces.marginBottom[24], { position: 'relative' }]}>
+          <View style={[Spaces.marginTop[24], Spaces.marginBottom[32], { position: 'relative' }]}>
             {onClose ? (
               <TouchableOpacity
                 accessibilityLabel={t('common.close', 'Fermer')}
@@ -155,8 +155,8 @@ function WizardStepLayout({
               </TouchableOpacity>
             ) : null}
             {hasProgress ? (
-              <View style={[Spaces.marginBottom[16], { paddingRight: onClose ? 40 : 0 }]}>
-                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[8]]}>
+              <View style={[Spaces.marginBottom[24], { paddingRight: onClose ? 40 : 0 }]}>
+                <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[12]]}>
                   {t('eventWizard.common.stepCounter', {
                     current: stepIndex,
                     defaultValue: `Étape ${stepIndex}/${stepCount}`,
@@ -187,11 +187,11 @@ function WizardStepLayout({
               </View>
             ) : null}
 
-            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[12]]}>
+            <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[20]]}>
               {title}
             </Text>
             {subtitle ? (
-              <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 28 }]}>
+              <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 30, maxWidth: 720 }]}>
                 {subtitle}
               </Text>
             ) : null}
@@ -199,7 +199,7 @@ function WizardStepLayout({
 
           <ScrollView
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={[Spaces.paddingBottom[32]]}
+            contentContainerStyle={[Spaces.paddingBottom[48]]}
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -208,7 +208,7 @@ function WizardStepLayout({
           </ScrollView>
         </View>
 
-        <View style={[Spaces.gap[16], Spaces.marginTop[16]]}>
+        <View style={[Spaces.gap[24], Spaces.marginTop[24]]}>
           {showSkip ? (
             <Button
               onPress={onSkip}

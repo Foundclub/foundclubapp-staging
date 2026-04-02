@@ -3,6 +3,8 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 export const STAFF_RECRUITMENT_TABS = /** @type {const} */ ([
   'profils',
   'annonces',
+  'opportunites',
+  'candidatures',
 ]);
 
 export const PLAYER_RECRUITMENT_TABS = /** @type {const} */ ([
@@ -46,9 +48,9 @@ export const sanitizeRecruitmentTabForRole = (tab, userOrRole, fallbackTab = und
   const allowedTabs = getAllowedRecruitmentTabs(userOrRole);
   const normalizedTab = typeof tab === 'string' ? tab.trim().toLowerCase() : '';
   if (allowedTabs.includes(
-    /** @type {'annonces' | 'candidatures' | 'profils'} */ (normalizedTab),
+    /** @type {'annonces' | 'candidatures' | 'opportunites' | 'profils'} */ (normalizedTab),
   )) {
-    return /** @type {'annonces' | 'candidatures' | 'profils'} */ (normalizedTab);
+    return /** @type {'annonces' | 'candidatures' | 'opportunites' | 'profils'} */ (normalizedTab);
   }
 
   if (fallbackTab && allowedTabs.includes(fallbackTab)) {

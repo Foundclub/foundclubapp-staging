@@ -15,7 +15,9 @@ const toFiniteNumber = (value) => {
 };
 
 const extractCoordinatesFromObject = (value) => {
-  if (!value || typeof value !== 'object') return null;
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
 
   const latitude = toFiniteNumber(
     value.lat
@@ -50,7 +52,9 @@ const extractCoordinatesFromObject = (value) => {
 };
 
 const getCoordinatesFromCandidates = (candidates = []) => candidates.reduce((found, candidate) => {
-  if (found) return found;
+  if (found) {
+    return found;
+  }
 
   const directCoordinates = extractCoordinatesFromObject(candidate);
   if (directCoordinates) {
@@ -73,7 +77,9 @@ const getCoordinatesFromCandidates = (candidates = []) => candidates.reduce((fou
 }, null);
 
 const pickFirstString = (...candidates) => candidates.reduce((found, candidate) => {
-  if (found) return found;
+  if (found) {
+    return found;
+  }
 
   if (typeof candidate === 'string') {
     const trimmed = candidate.trim();
@@ -105,7 +111,9 @@ const buildActivityBadge = (activities = []) => activities
 
 const formatDistanceLabel = (distanceKm) => {
   const parsed = Number(distanceKm);
-  if (!Number.isFinite(parsed) || parsed < 0) return '';
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return '';
+  }
   if (parsed < 1) {
     return `${Math.round(parsed * 1000)} m`;
   }
@@ -129,8 +137,12 @@ const formatPriceLabel = (pricePerPerson) => {
   }
 
   const parsed = Number(pricePerPerson);
-  if (!Number.isFinite(parsed)) return '';
-  if (parsed === 0) return 'Gratuit';
+  if (!Number.isFinite(parsed)) {
+    return '';
+  }
+  if (parsed === 0) {
+    return 'Gratuit';
+  }
   return `${parsed}€ / pers`;
 };
 
@@ -144,10 +156,14 @@ const resolveClubBadge = (club) => {
 
 const resolveEventBadge = (item, scope) => {
   if (scope === 'reservations') {
-    return buildActivityBadge(item?.team?.activities) || pickFirstString(item?.type?.name) || 'Réservation';
+    return buildActivityBadge(item?.team?.activities)
+      || pickFirstString(item?.type?.name)
+      || 'Réservation';
   }
 
-  return pickFirstString(item?.type?.name) || buildActivityBadge(item?.team?.activities) || 'Événement';
+  return pickFirstString(item?.type?.name)
+    || buildActivityBadge(item?.team?.activities)
+    || 'Événement';
 };
 
 const resolveSubtitle = (item, scope) => {
@@ -231,7 +247,9 @@ const resolveMapItemId = (item, scope, coordinates) => (
  * @returns {SearchMapItem | null}
  */
 export const toSearchMapItem = (rawItem, scope) => {
-  if (!rawItem || typeof rawItem !== 'object') return null;
+  if (!rawItem || typeof rawItem !== 'object') {
+    return null;
+  }
 
   const coordinates = getCoordinatesFromCandidates([
     rawItem,
@@ -246,10 +264,10 @@ export const toSearchMapItem = (rawItem, scope) => {
     return null;
   }
 
-  const type = scope;
-
   return {
-    badge: scope === 'clubs' ? resolveClubBadge(rawItem) : resolveEventBadge(rawItem, scope),
+    badge: scope === 'clubs'
+      ? resolveClubBadge(rawItem)
+      : resolveEventBadge(rawItem, scope),
     dateLabel: scope === 'clubs' ? '' : formatDateWithDayPrefix(rawItem?.date),
     distanceLabel: formatDistanceLabel(Reflect.get(rawItem || {}, '__search')?.distanceKm),
     id: resolveMapItemId(rawItem, scope, coordinates),
@@ -261,7 +279,7 @@ export const toSearchMapItem = (rawItem, scope) => {
     subtitle: resolveSubtitle(rawItem, scope),
     timeLabel: scope === 'clubs' ? '' : formatTimeLabel(rawItem?.startTime, rawItem?.endTime),
     title: resolveTitle(rawItem, scope),
-    type,
+    type: scope,
   };
 };
 
@@ -327,16 +345,53 @@ export const getSearchMapEmptyMessage = (scope) => {
 
 /**
  * @param {SearchMapScope} scope
+ * @param {number} totalCount
  * @returns {string}
  */
-export const getSearchMapResultLabel = (scope) => {
+export const getSearchMapNoCoordinatesMessage = (scope, totalCount = 0) => {
+  const safeCount = Number.isFinite(totalCount) ? Math.max(0, Number(totalCount)) : 0;
+
   switch (scope) {
     case 'clubs':
-      return 'clubs';
+      return safeCount > 0
+        ? `${safeCount} club${safeCount > 1 ? 's' : ''} trouvé${safeCount > 1 ? 's' : ''}, mais aucun n'a de position exploitable sur la carte.`
+        : 'Aucun club géolocalisable pour le moment.';
     case 'reservations':
-      return 'réservations';
+      return safeCount > 0
+        ? `${safeCount} réservation${safeCount > 1 ? 's' : ''} trouvée${safeCount > 1 ? 's' : ''}, mais aucune n'a de position exploitable sur la carte.`
+        : 'Aucune réservation géolocalisable pour le moment.';
     case 'events':
     default:
-      return 'événements';
+      return safeCount > 0
+        ? `${safeCount} événement${safeCount > 1 ? 's' : ''} trouvé${safeCount > 1 ? 's' : ''}, mais aucun n'a de position exploitable sur la carte.`
+        : 'Aucun événement géolocalisable pour le moment.';
   }
+};
+
+/**
+ * @param {SearchMapScope} scope
+ * @param {number} [count]
+ * @returns {string}
+ */
+export const getSearchMapResultLabel = (scope, count = 2) => {
+  const isPlural = Number(count) > 1;
+
+  switch (scope) {
+    case 'clubs':
+      return isPlural ? 'clubs' : 'club';
+    case 'reservations':
+      return isPlural ? 'réservations' : 'réservation';
+    case 'events':
+    default:
+      return isPlural ? 'événements' : 'événement';
+  }
+};
+
+export default {
+  buildSearchMapRegion,
+  getSearchMapEmptyMessage,
+  getSearchMapNoCoordinatesMessage,
+  getSearchMapResultLabel,
+  toSearchMapItem,
+  toSearchMapItems,
 };

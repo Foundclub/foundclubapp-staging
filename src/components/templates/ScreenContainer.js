@@ -41,6 +41,10 @@ function ScreenContainer({
   const { width } = useWindowDimensions();
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
   const horizontalPadding = isResponsivePaddingEnabled && width <= 375 ? 16 : 24;
+  const safeStyle = Array.isArray(style) ? style : [style];
+  const safeContentContainerStyle = Array.isArray(contentContainerStyle)
+    ? contentContainerStyle
+    : [contentContainerStyle];
 
   void contentWidth;
   void desktopAlignment;
@@ -58,7 +62,7 @@ function ScreenContainer({
   if (gradient) {
     const LinearGradient = require('react-native-linear-gradient').default;
     return (
-      <View style={[Alignments.fill, ...style]}>
+      <View style={[Alignments.fill, ...safeStyle]}>
 
         <LinearGradient
           colors={gradient}
@@ -70,7 +74,7 @@ function ScreenContainer({
             containerSpaces,
           ]}
         >
-          <View style={[Alignments.grow1, ...contentContainerStyle]}>
+          <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
             {children}
           </View>
         </LinearGradient>
@@ -86,11 +90,11 @@ function ScreenContainer({
         Alignments.fill,
         { paddingHorizontal: horizontalPadding },
         containerSpaces,
-        ...style,
+        ...safeStyle,
       ]}
       {...props}
     >
-      <View style={[Alignments.grow1, ...contentContainerStyle]}>
+      <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
         {children}
       </View>
     </ImageBackground>

@@ -77,6 +77,7 @@ export const RouteNames = /** @type {const} */ ({
   SearchClubs: 'SearchClubs',
   SearchEvents: 'SearchEvents',
   SearchHub: 'SearchHub',
+  SearchMapScreen: 'SearchMapScreen',
   SearchRecruitment: 'SearchRecruitment',
   SearchReservations: 'SearchReservations',
   SquadDetails: 'SquadDetails', // New route for League Squad Details
@@ -150,6 +151,8 @@ export const RouteNames = /** @type {const} */ ({
   TacticalSelectionV2: 'TacticalSelectionV2',
 
   // Recruitment Wizard
+  AdWizardAudienceType: 'AdWizardAudienceType',
+  AdWizardCoachProfile: 'AdWizardCoachProfile',
   AdWizardDescription: 'AdWizardDescription',
   AdWizardInfo: 'AdWizardInfo',
   AdWizardPositions: 'AdWizardPositions',

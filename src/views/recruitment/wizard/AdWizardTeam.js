@@ -21,7 +21,11 @@ import { RouteNames } from '@/navigation/routeNames';
 import { getTeamById } from '@/services/team/teamService';
 
 import { useAdWizard } from './AdWizardContext';
-import { getAdWizardStepCount } from './adWizardStepUtils';
+import {
+  getAdWizardStepCount,
+  getAdWizardTeamStepIndex,
+  isCoachAdWizard,
+} from './adWizardStepUtils';
 
 const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
 
@@ -129,27 +133,29 @@ function AdWizardTeam({ navigation, route }) {
       const fullTeam = nextTeamId ? await getTeamById(nextTeamId) : team;
 
       dispatch({ payload: fullTeam || team, type: 'SET_TEAM' });
-      navigation.navigate(RouteNames.AdWizardInfo);
+      navigation.navigate(isCoachAdWizard(state) ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions);
     } catch (error) {
       console.error('[AdWizardTeam] Error fetching team:', error);
       dispatch({ payload: team, type: 'SET_TEAM' });
-      navigation.navigate(RouteNames.AdWizardInfo);
+      navigation.navigate(isCoachAdWizard(state) ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions);
     } finally {
       if (isFocused) {
         setLoading(false);
         setLoadingTeamId(null);
       }
     }
-  }, [dispatch, isFocused, navigation]);
+  }, [dispatch, isFocused, navigation, state]);
 
   useEffect(() => {
-    if (route.params?.event && !state.event && !loading && isFocused) {
-      dispatch({ payload: route.params.event, type: 'SET_EVENT' });
-      if (route.params.event.team) {
+    if (route.params?.event && !loading && isFocused) {
+      if (!state.event) {
+        dispatch({ payload: route.params.event, type: 'SET_EVENT' });
+      }
+      if (!state.team && route.params.event.team) {
         handleSelectTeam(route.params.event.team);
       }
     }
-  }, [dispatch, handleSelectTeam, isFocused, loading, route.params?.event, state.event]);
+  }, [dispatch, handleSelectTeam, isFocused, loading, route.params?.event, state.event, state.team]);
 
   const userTeams = useMemo(() => dedupeTeams([
     ...(userData?.myTeams || []),
@@ -167,7 +173,7 @@ function AdWizardTeam({ navigation, route }) {
       <WizardStepLayout
         onBack={() => navigation.goBack()}
         stepCount={getAdWizardStepCount(state)}
-        stepIndex={1}
+        stepIndex={getAdWizardTeamStepIndex(state)}
         subtitle="Vous n'avez pas d'équipe associée"
         title="Créer une annonce"
       >
@@ -194,11 +200,11 @@ function AdWizardTeam({ navigation, route }) {
     <WizardStepLayout
       onBack={() => navigation.goBack()}
       stepCount={getAdWizardStepCount(state)}
-      stepIndex={1}
+      stepIndex={getAdWizardTeamStepIndex(state)}
       subtitle="Sélectionnez l'équipe qui recrute"
       title="Pour quelle équipe ?"
     >
-      <View style={[Spaces.gap[16]]}>
+      <View style={[Spaces.gap[20], Spaces.paddingBottom[8]]}>
         {userTeams.map((team) => {
           const teamKey = getTeamKey(team) || `${team.name}-${team.club?.name || 'team'}`;
           const teamId = String(team?.documentId || '').trim();
@@ -219,7 +225,7 @@ function AdWizardTeam({ navigation, route }) {
         })}
       </View>
 
-      <View style={[Spaces.marginTop[16]]}>
+      <View style={[Spaces.marginTop[20]]}>
         <Text style={[Fonts.p2, { color: Colors.neutral400, textAlign: 'center' }]}>
           {userTeams.length}
           {' '}

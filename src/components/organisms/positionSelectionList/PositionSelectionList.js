@@ -70,8 +70,8 @@ function PositionSelectionList({
         onPress={() => onToggle(position)}
         style={[
           ApplicationStyle.card,
-          Spaces.padding[16],
-          selected ? Spaces.gap[12] : null,
+          Spaces.padding[24],
+          selected ? Spaces.gap[16] : Spaces.gap[12],
           {
             backgroundColor: selected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
             borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.20)',
@@ -79,8 +79,8 @@ function PositionSelectionList({
           },
         ]}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], { flex: 1 }]}>
             <View
               style={[
                 Alignments.alignCenter,
@@ -100,7 +100,7 @@ function PositionSelectionList({
               ) : null}
             </View>
 
-            <View style={[Spaces.gap[6], { flex: 1 }]}>
+            <View style={[Spaces.gap[10], { flex: 1 }]}>
               <Text style={[Fonts.h4, selected ? Fonts.neutral00 : Fonts.neutral100]}>
                 {position}
               </Text>
@@ -113,7 +113,7 @@ function PositionSelectionList({
           </View>
 
           {selected ? (
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
               <TouchableOpacity
                 activeOpacity={0.8}
                 disabled={quantity <= 1}
@@ -174,7 +174,7 @@ function PositionSelectionList({
                   borderColor: 'rgba(1, 179, 244, 0.24)',
                   borderRadius: 999,
                   borderWidth: 1,
-                  minWidth: 116,
+                  minWidth: 124,
                 },
               ]}
             >
@@ -189,24 +189,24 @@ function PositionSelectionList({
   };
 
   return (
-    <View style={[Spaces.gap[16]]}>
+    <View style={[Spaces.gap[24]]}>
       {selectedPositions.length > 0 ? (
-        <View style={[Spaces.gap[12]]}>
+        <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.p4Bold, Fonts.neutral300]}>
             {selectedSectionTitle}
           </Text>
-          <View style={[Spaces.gap[8]]}>
+          <View style={[Spaces.gap[12]]}>
             {selectedPositions.map(renderPositionRow)}
           </View>
         </View>
       ) : null}
 
       {unselectedGroups.map((group) => (
-        <View key={group.label} style={[Spaces.gap[12]]}>
+        <View key={group.label} style={[Spaces.gap[16]]}>
           <Text style={[Fonts.p4Bold, Fonts.neutral300]}>
             {group.label}
           </Text>
-          <View style={[Spaces.gap[8]]}>
+          <View style={[Spaces.gap[12]]}>
             {group.positions.map(renderPositionRow)}
           </View>
         </View>

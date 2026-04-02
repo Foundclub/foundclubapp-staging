@@ -4,6 +4,8 @@ import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
+import ReservationDetails from '@/views/reservation/ReservationDetails';
+import SearchMapScreen from '@/views/search/SearchMapScreen';
 import TeamDetails from '@/views/team/TeamDetails';
 
 import { commonOptions } from '@/navigation/commonOptions';
@@ -70,6 +72,19 @@ function PublicNavigator() {
           ...commonOptions,
           headerTitle: '',
         }}
+      />
+      <Stack.Screen
+        component={ReservationDetails}
+        name={RouteNames.ReservationDetails}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
+        }}
+      />
+      <Stack.Screen
+        component={SearchMapScreen}
+        name={RouteNames.SearchMapScreen}
+        options={{ headerShown: false }}
       />
 
     </Stack.Navigator>

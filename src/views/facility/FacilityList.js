@@ -111,10 +111,10 @@ function FacilityList() {
             try {
               await deleteFacility(id);
               refetchFacilities();
-            } catch (error) {
+            } catch (deleteError) {
               Alert.alert(
                 t('common.error', 'Erreur'),
-                error?.message || t(
+                deleteError?.message || t(
                   'facilityList.alerts.delete.error',
                   "Impossible de supprimer l'installation pour le moment.",
                 ),
@@ -320,6 +320,12 @@ function FacilityList() {
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8]]}>
             {renderMetaChip(capacityLabel, 'primary')}
             {renderMetaChip(item?.type || t('facilityList.defaults.unknownType', 'Type inconnu'), 'neutral')}
+            {renderMetaChip(
+              item?.allowOverflowRequests !== false
+                ? t('facilityList.badges.overflowAllowed', 'Exceptions autorisees')
+                : t('facilityList.badges.overflowBlocked', 'Capacite stricte'),
+              item?.allowOverflowRequests !== false ? 'warning' : 'neutral',
+            )}
             {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagee'), 'primary') : null}
           </View>
 
@@ -436,6 +442,77 @@ function FacilityList() {
     ) : null
   ), [Fonts.p2Bold, Fonts.primary200, Spaces.marginBottom, Spaces.marginTop, hasMultipleSections]);
 
+  let content = (
+    <SectionList
+      contentContainerStyle={[
+        Spaces.paddingBottom[120],
+        facilities.length === 0 && Alignments.fill,
+        facilities.length === 0 && Alignments.mainCenter,
+      ]}
+      keyExtractor={getFacilityKey}
+      ListEmptyComponent={(
+        <EmptyState
+          actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+          description={t(
+            'facilityList.empty.description',
+            'Ajoutez les terrains, gymnases ou salles de votre club.',
+          )}
+          onAction={handleCreate}
+          title={t('facilityList.empty.title', 'Aucune installation')}
+        />
+      )}
+      refreshControl={(
+        <RefreshControl
+          colors={[Colors.primary500]}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          tintColor={Colors.primary500}
+        />
+      )}
+      renderItem={renderItem}
+      renderSectionHeader={renderSectionHeader}
+      sections={sections}
+      showsVerticalScrollIndicator={false}
+      stickySectionHeadersEnabled={false}
+    />
+  );
+
+  if (isMissingContext) {
+    content = (
+      <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
+        <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+          Club introuvable
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary100]}>
+          Impossible de determiner pour quel club afficher les installations.
+        </Text>
+        <Button
+          onPress={() => navigation.navigate(RouteNames.TeamList)}
+          title="Retour aux equipes"
+          variant="Secondary"
+        />
+      </View>
+    );
+  } else if (loading && !refreshing) {
+    content = <Loader />;
+  } else if (error) {
+    content = (
+      <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
+        <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+          Impossible de charger les installations
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary100]}>
+          {error?.message || 'Reessayez dans quelques instants.'}
+        </Text>
+        <Button
+          onPress={() => refetchFacilities()}
+          title="R\u00E9essayer"
+          variant="Secondary"
+        />
+      </View>
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -472,70 +549,7 @@ function FacilityList() {
         />
       </View>
 
-      {isMissingContext ? (
-        <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-            Club introuvable
-          </Text>
-          <Text style={[Fonts.p2, Fonts.primary100]}>
-            Impossible de determiner pour quel club afficher les installations.
-          </Text>
-          <Button
-            onPress={() => navigation.navigate(RouteNames.TeamList)}
-            title="Retour aux equipes"
-            variant="Secondary"
-          />
-        </View>
-      ) : loading && !refreshing ? (
-        <Loader />
-      ) : error ? (
-        <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-            Impossible de charger les installations
-          </Text>
-          <Text style={[Fonts.p2, Fonts.primary100]}>
-            {error?.message || 'Reessayez dans quelques instants.'}
-          </Text>
-          <Button
-            onPress={() => refetchFacilities()}
-            title="R\u00E9essayer"
-            variant="Secondary"
-          />
-        </View>
-      ) : (
-        <SectionList
-          contentContainerStyle={[
-            Spaces.paddingBottom[120],
-            facilities.length === 0 && Alignments.fill,
-            facilities.length === 0 && Alignments.mainCenter,
-          ]}
-          keyExtractor={getFacilityKey}
-          ListEmptyComponent={(
-            <EmptyState
-              actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-              description={t(
-                'facilityList.empty.description',
-                'Ajoutez les terrains, gymnases ou salles de votre club.',
-              )}
-              onAction={handleCreate}
-              title={t('facilityList.empty.title', 'Aucune installation')}
-            />
-          )}
-          refreshControl={(
-            <RefreshControl
-              colors={[Colors.primary500]}
-              onRefresh={onRefresh}
-              refreshing={refreshing}
-              tintColor={Colors.primary500}
-            />
-          )}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          sections={sections}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-        />
-      )}
+      {content}
     </ScreenContainer>
   );
 }

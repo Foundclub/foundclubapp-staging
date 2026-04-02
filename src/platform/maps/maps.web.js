@@ -4,152 +4,289 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-const DEFAULT_CENTER = {
-  lat: 43.2965,
-  lng: 5.3698,
-};
+import {
+  getSearchMapLoadingCopy,
+  getSearchMapProviderErrorMessage,
+  SEARCH_MAP_ERROR_REASONS,
+} from '@/platform/maps/searchMapCopy';
+import {
+  getSearchMapProvider,
+  getTomTomApiKey,
+  SEARCH_MAP_PROVIDERS,
+} from '@/platform/maps/searchMapProvider';
+import {
+  buildSearchMapHostMessage,
+  buildSearchMapRuntimeHtml,
+  buildTomTomProbeUrl,
+  buildTomTomTileUrl,
+  LEGACY_TILE_PROVIDER,
+  parseSearchMapBridgeMessage,
+  resolveSearchMapMarkerColor,
+  SEARCH_MAP_BRIDGE_TYPES,
+  TOMTOM_TILE_PROVIDER,
+} from '@/platform/maps/searchMapRuntime';
 
-const TILE_LAYER_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const TILE_LAYER_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const MAP_LOAD_TIMEOUT_MS = 6500;
 
-const createMarkerIcon = (leaflet, color, isSelected) => leaflet.divIcon({
-  className: '',
-  html: `<span style="align-items:center;background:${isSelected ? color : `${color}CC`};border:${isSelected ? 3 : 2}px solid rgba(255,255,255,0.92);border-radius:999px;display:flex;height:${isSelected ? 22 : 18}px;justify-content:center;transform:${isSelected ? 'scale(1.08)' : 'scale(1)'};transition:transform .15s ease;width:${isSelected ? 22 : 18}px;"><span style="background:${isSelected ? '#ffffff' : 'rgba(5,28,42,0.96)'};border-radius:999px;display:block;height:8px;width:8px;"></span></span>`,
-  iconAnchor: [isSelected ? 11 : 9, isSelected ? 11 : 9],
-  iconSize: [isSelected ? 22 : 18, isSelected ? 22 : 18],
-});
-
-const resolveMarkerColor = (scope) => (scope === 'clubs' ? '#ffd700' : '#01b3f4');
-
-function LeafletRuntimeMap({
+/**
+ * @param {object} props
+ * @param {any} [props.command]
+ * @param {string} props.errorMessage
+ * @param {'results' | 'selected' | 'user' | 'region'} [props.focusMode]
+ * @param {number} [props.height]
+ * @param {any[]} [props.items]
+ * @param {string} [props.markerColor]
+ * @param {string} [props.message]
+ * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {{ lat: number; lng: number; zoom?: number } | null} [props.regionHint]
+ * @param {string} [props.selectedItemId]
+ * @param {string} props.tileAttribution
+ * @param {string} props.tileUrl
+ * @param {string} [props.tileProbeUrl]
+ * @param {{ lat: number; lng: number } | null} [props.userLocation]
+ * @returns {import('react').ReactElement}
+ */
+function SearchMapIframeRuntime({
+  command = null,
+  errorMessage,
   focusMode = 'results',
   height = 240,
   items = [],
-  message = 'Carte web indisponible.',
+  markerColor = '#01b3f4',
+  message = 'Carte indisponible.',
+  onRegionChangeComplete,
   onSelectItem,
-  scope = 'events',
+  regionHint = null,
   selectedItemId = '',
+  tileAttribution,
+  tileProbeUrl = '',
+  tileUrl,
   userLocation = null,
 }) {
-  const mapNodeRef = useRef(null);
-  const [isReady, setIsReady] = useState(false);
-  const mapEntries = useMemo(() => items.filter(Boolean), [items]);
+  const iframeRef = useRef(/** @type {HTMLIFrameElement | null} */ (null));
+  const [frameLoaded, setFrameLoaded] = useState(false);
+  const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [mapStatus, setMapStatus] = useState(
+    tileUrl ? /** @type {'loading' | 'ready' | 'error'} */ ('loading') : 'error',
+  );
+  const mapId = useMemo(() => `search-map-web-${mapRenderKey}`, [mapRenderKey]);
+  const loadingCopy = useMemo(() => getSearchMapLoadingCopy(), []);
+  const runtimeState = useMemo(() => ({
+    command,
+    focusMode,
+    items,
+    regionHint,
+    selectedItemId,
+    userLocation,
+  }), [command, focusMode, items, regionHint, selectedItemId, userLocation]);
+  const html = useMemo(() => buildSearchMapRuntimeHtml({
+    initialState: runtimeState,
+    mapId,
+    markerColor,
+    tileAttribution,
+    tileProbeUrl,
+    tileUrl: tileUrl || LEGACY_TILE_PROVIDER.url,
+  }), [mapId, markerColor, runtimeState, tileAttribution, tileProbeUrl, tileUrl]);
 
   useEffect(() => {
-    let isDisposed = false;
-    let cleanup = () => {};
+    setFrameLoaded(false);
+    setMapStatus(tileUrl ? 'loading' : 'error');
+  }, [mapRenderKey, tileUrl]);
 
-    setIsReady(false);
+  useEffect(() => {
+    if (!frameLoaded || !iframeRef.current?.contentWindow || !tileUrl) {
+      return;
+    }
 
-    (async () => {
-      if (!mapNodeRef.current || typeof window === 'undefined') return;
+    iframeRef.current.contentWindow.postMessage(
+      buildSearchMapHostMessage(mapId, runtimeState),
+      '*',
+    );
+  }, [frameLoaded, mapId, runtimeState, tileUrl]);
 
-      // eslint-disable-next-line import/no-unresolved
-      const leafletModule = await import('leaflet');
-      if (isDisposed) return;
+  useEffect(() => {
+    if (mapStatus !== 'loading' || !tileUrl) {
+      return undefined;
+    }
 
-      const leaflet = leafletModule.default || leafletModule;
-      const mapInstance = leaflet.map(mapNodeRef.current, {
-        attributionControl: true,
-        scrollWheelZoom: true,
-        zoomControl: true,
-      });
+    const timeout = window.setTimeout(() => {
+      setMapStatus('error');
+    }, MAP_LOAD_TIMEOUT_MS);
 
-      leaflet.tileLayer(TILE_LAYER_URL, {
-        attribution: TILE_LAYER_ATTRIBUTION,
-      }).addTo(mapInstance);
+    return () => window.clearTimeout(timeout);
+  }, [mapStatus, tileUrl]);
 
-      const markersLayer = leaflet.featureGroup().addTo(mapInstance);
-      const markerColor = resolveMarkerColor(scope);
-      let selectedMarker = null;
+  useEffect(() => {
+    const handleWindowMessage = (event) => {
+      const bridgeMessage = parseSearchMapBridgeMessage(event?.data);
+      if (!bridgeMessage || bridgeMessage.mapId !== mapId) {
+        return;
+      }
 
-      mapEntries.forEach((entry) => {
-        const isSelected = entry.id === selectedItemId;
-        const marker = leaflet.marker([entry.lat, entry.lng], {
-          icon: createMarkerIcon(leaflet, markerColor, isSelected),
-        });
-
-        marker.bindPopup(
-          entry.subtitle
-            ? `<strong>${entry.title}</strong><br/>${entry.subtitle}`
-            : `<strong>${entry.title}</strong>`,
-        );
-
-        marker.on('click', () => {
-          if (typeof onSelectItem === 'function') {
-            onSelectItem(entry.id);
+      switch (bridgeMessage.type) {
+        case SEARCH_MAP_BRIDGE_TYPES.MAP_ERROR:
+          console.warn(
+            '[search-map-web] map error',
+            bridgeMessage.payload?.reason,
+            bridgeMessage.payload?.status,
+            bridgeMessage.payload?.message,
+            bridgeMessage.payload?.url,
+          );
+          setMapStatus((currentStatus) => (
+            currentStatus === 'ready' ? currentStatus : 'error'
+          ));
+          break;
+        case SEARCH_MAP_BRIDGE_TYPES.MAP_READY:
+          setMapStatus('ready');
+          break;
+        case SEARCH_MAP_BRIDGE_TYPES.MAP_REGION_CHANGE:
+          if (bridgeMessage.payload) {
+            onRegionChangeComplete?.(bridgeMessage.payload);
           }
-        });
-
-        marker.addTo(markersLayer);
-
-        if (isSelected) {
-          selectedMarker = marker;
-        }
-      });
-
-      if (focusMode === 'user' && userLocation) {
-        mapInstance.setView([userLocation.lat, userLocation.lng], 14);
-      } else if (selectedMarker) {
-        mapInstance.setView(selectedMarker.getLatLng(), 13);
-        selectedMarker.openPopup();
-      } else if (mapEntries.length > 1) {
-        mapInstance.fitBounds(markersLayer.getBounds(), {
-          maxZoom: 13,
-          padding: [28, 28],
-        });
-      } else if (mapEntries.length === 1) {
-        mapInstance.setView([mapEntries[0].lat, mapEntries[0].lng], 13);
-      } else {
-        mapInstance.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 6);
+          break;
+        case SEARCH_MAP_BRIDGE_TYPES.MARKER_SELECT:
+          if (bridgeMessage.payload?.itemId) {
+            onSelectItem?.(bridgeMessage.payload.itemId);
+          }
+          break;
+        case SEARCH_MAP_BRIDGE_TYPES.FIT_RESULTS_DONE:
+        default:
+          break;
       }
-
-      setIsReady(true);
-
-      cleanup = () => {
-        mapInstance.remove();
-      };
-    })().catch(() => {
-      if (!isDisposed) {
-        setIsReady(true);
-      }
-    });
-
-    return () => {
-      isDisposed = true;
-      cleanup();
     };
-  }, [focusMode, mapEntries, onSelectItem, scope, selectedItemId, userLocation]);
+
+    window.addEventListener('message', handleWindowMessage);
+    return () => window.removeEventListener('message', handleWindowMessage);
+  }, [mapId, onRegionChangeComplete, onSelectItem]);
 
   return (
     <View
       style={{
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: '#061822',
         borderColor: 'rgba(255,255,255,0.08)',
-        borderRadius: 18,
+        borderRadius: 24,
         borderWidth: 1,
         height,
         overflow: 'hidden',
         position: 'relative',
       }}
     >
-      <div ref={mapNodeRef} style={{ height: '100%', width: '100%' }} />
-      {!isReady ? (
+      <iframe
+        key={mapId}
+        onLoad={() => setFrameLoaded(true)}
+        ref={iframeRef}
+        sandbox="allow-scripts allow-same-origin"
+        srcDoc={html}
+        style={{
+          border: 0,
+          display: 'block',
+          height: '100%',
+          opacity: mapStatus === 'ready' ? 1 : 0.04,
+          width: '100%',
+        }}
+        title="FoundClub map"
+      />
+
+      {mapStatus === 'loading' ? (
         <View
           style={{
             alignItems: 'center',
-            backgroundColor: 'rgba(7, 24, 35, 0.28)',
+            backgroundColor: 'rgba(6, 24, 34, 0.72)',
             inset: 0,
             justifyContent: 'center',
+            paddingHorizontal: 22,
             position: 'absolute',
           }}
         >
-          <Text style={{ color: '#e9f2ff', textAlign: 'center' }}>Chargement de la carte...</Text>
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'rgba(7, 24, 35, 0.94)',
+              borderColor: 'rgba(1, 179, 244, 0.2)',
+              borderRadius: 22,
+              borderWidth: 1,
+              gap: 12,
+              maxWidth: 320,
+              paddingHorizontal: 18,
+              paddingVertical: 18,
+              width: '100%',
+            }}
+          >
+            <ActivityIndicator color="#01b3f4" size="small" />
+            <Text style={{ color: '#ffffff', fontWeight: '700', textAlign: 'center' }}>
+              {loadingCopy.title}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.72)', textAlign: 'center' }}>
+              {loadingCopy.body}
+            </Text>
+          </View>
         </View>
       ) : null}
-      {isReady && mapEntries.length === 0 ? (
+
+      {mapStatus === 'error' ? (
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: 'rgba(6, 24, 34, 0.76)',
+            inset: 0,
+            justifyContent: 'center',
+            paddingHorizontal: 22,
+            position: 'absolute',
+          }}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'rgba(7, 24, 35, 0.95)',
+              borderColor: 'rgba(255, 84, 89, 0.18)',
+              borderRadius: 22,
+              borderWidth: 1,
+              gap: 12,
+              maxWidth: 320,
+              paddingHorizontal: 18,
+              paddingVertical: 18,
+              width: '100%',
+            }}
+          >
+            <Text style={{ color: '#ffffff', fontWeight: '700', textAlign: 'center' }}>
+              Impossible de charger la carte
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.72)', textAlign: 'center' }}>
+              {errorMessage}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setMapRenderKey((current) => current + 1)}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: '#01b3f4',
+                  borderColor: '#01b3f4',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  flex: 1,
+                  justifyContent: 'center',
+                  minHeight: 44,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                }}
+              >
+                <Text style={{ color: '#061822', fontWeight: '700' }}>Réessayer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {mapStatus === 'ready' && items.length === 0 ? (
         <View
           style={{
             alignItems: 'center',
@@ -170,32 +307,94 @@ function LeafletRuntimeMap({
   );
 }
 
+/**
+ * @param {object} props
+ * @param {'results' | 'selected' | 'user' | 'region'} [props.focusMode]
+ * @param {number} [props.height]
+ * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
+ * @param {string} [props.message]
+ * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
+ * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {string} [props.selectedItemId]
+ * @param {{ lat: number; lng: number } | null} [props.userLocation]
+ * @param {any} [props.command]
+ * @returns {import('react').ReactElement}
+ */
 export const renderMap = ({
+  command = null,
   focusMode = 'results',
   height = 240,
   items = [],
   message = 'Carte web indisponible.',
+  onRegionChangeComplete,
   onSelectItem,
+  regionHint = null,
   scope = 'events',
   selectedItemId = '',
   userLocation = null,
-} = {}) => (
-  <LeafletRuntimeMap
-    focusMode={focusMode}
-    height={height}
-    items={items}
-    message={message}
-    onSelectItem={onSelectItem}
-    scope={scope}
-    selectedItemId={selectedItemId}
-    userLocation={userLocation}
-  />
-);
+} = {}) => {
+  const provider = getSearchMapProvider();
+  const tomTomApiKey = getTomTomApiKey();
+  const markerColor = resolveSearchMapMarkerColor(scope);
+
+  if (provider === SEARCH_MAP_PROVIDERS.tomtom) {
+    return (
+      <SearchMapIframeRuntime
+        command={command}
+        errorMessage={tomTomApiKey
+          ? getSearchMapProviderErrorMessage(SEARCH_MAP_ERROR_REASONS.tilesUnavailable)
+          : getSearchMapProviderErrorMessage(SEARCH_MAP_ERROR_REASONS.missingApiKey)}
+        focusMode={focusMode}
+        height={height}
+        items={items}
+        markerColor={markerColor}
+        message={message}
+        onRegionChangeComplete={onRegionChangeComplete}
+        onSelectItem={onSelectItem}
+        regionHint={regionHint}
+        selectedItemId={selectedItemId}
+        tileAttribution={TOMTOM_TILE_PROVIDER.attribution}
+        tileProbeUrl={tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : ''}
+        tileUrl={tomTomApiKey ? buildTomTomTileUrl(tomTomApiKey) : ''}
+        userLocation={userLocation}
+      />
+    );
+  }
+
+  return (
+    <SearchMapIframeRuntime
+      command={command}
+      errorMessage="Les tuiles de la carte legacy ne répondent pas pour le moment."
+      focusMode={focusMode}
+      height={height}
+      items={items}
+      markerColor={markerColor}
+      message={message}
+      onRegionChangeComplete={onRegionChangeComplete}
+      onSelectItem={onSelectItem}
+      regionHint={regionHint}
+      selectedItemId={selectedItemId}
+      tileAttribution={LEGACY_TILE_PROVIDER.attribution}
+      tileProbeUrl=""
+      tileUrl={LEGACY_TILE_PROVIDER.url}
+      userLocation={userLocation}
+    />
+  );
+};
 
 export const openExternalMap = async ({ label, latitude, longitude }) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   const query = encodeURIComponent(label || `${latitude},${longitude}`);
-  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank', 'noopener,noreferrer');
+  window.open(
+    `https://www.google.com/maps/search/?api=1&query=${query}`,
+    '_blank',
+    'noopener,noreferrer',
+  );
 };
 
 export default {

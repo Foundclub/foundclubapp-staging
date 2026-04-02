@@ -394,6 +394,7 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
   const recruitmentTypes = new Set([
     NOTIFICATION_TYPES.RECRUITMENT_APPLICATION,
     NOTIFICATION_TYPES.RECRUITMENT_APPLICATION_AUTO,
+    NOTIFICATION_TYPES.RECRUITMENT_APPLICATION_STATUS,
   ]);
 
   if (recruitmentTypes.has(type)) {

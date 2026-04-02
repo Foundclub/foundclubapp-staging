@@ -10,7 +10,9 @@ import { getFloatingActionBottomOffset } from '@/navigation/commonOptions';
  * @returns {'calendar' | 'stadium'}
  */
 const getScopeListIcon = (scope) => {
-  if (scope === 'clubs') return /** @type {import('../../../theme/types').AllImages} */ ('stadium');
+  if (scope === 'clubs') {
+    return /** @type {import('../../../theme/types').AllImages} */ ('stadium');
+  }
   return /** @type {import('../../../theme/types').AllImages} */ ('calendar');
 };
 
@@ -30,11 +32,15 @@ function SearchMapFab({
   visible = true,
 }) {
   const {
-    ApplicationStyle, Colors, Images,
+    ApplicationStyle,
+    Colors,
+    Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   const listIconKey = getScopeListIcon(scope);
   const mainIconKey = mode === 'map' ? listIconKey : 'pin';
@@ -89,6 +95,7 @@ function SearchMapFab({
             width: 24,
           }}
         />
+
         <View
           style={{
             alignItems: 'center',

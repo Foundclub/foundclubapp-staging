@@ -5,6 +5,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -32,19 +33,35 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
+const humanizeEnumLabel = (value, fallback = '') => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return fallback;
+
+  return normalizedValue
+    .replace(/_/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 /**
  * RecruitmentAdCard component.
  * @param {object} props
  * @param {object} props.ad
  * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
  * @param {boolean} [props.isOwner]
+ * @param {boolean} [props.isApplying]
+ * @param {(ad: object) => void} [props.onApply]
  * @param {(ad: object) => void} [props.onPress]
  * @returns {import('react').ReactElement}
  */
 function RecruitmentAdCard({
   ad,
   detectionApplicationStatusByEvent = {},
+  isApplying = false,
   isOwner = false,
+  onApply,
   onPress,
 }) {
   const navigation = useNavigation();
@@ -71,7 +88,10 @@ function RecruitmentAdCard({
   const club = team?.club;
   const clubName = club?.name || team?.name || 'Club inconnu';
   const clubLogo = getImageUrl(club?.logo?.url);
-  const positionLabel = ad.position || 'Poste non spécifié';
+  const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
+  const positionLabel = isCoachAd
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Role entraineur')
+    : (ad.position || 'Poste non spécifié');
   const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
   const categoryName = ad.category?.name || ad.category || 'Catégorie ?';
   const sectionName = ad.section?.name || ad.section || '';
@@ -94,7 +114,7 @@ function RecruitmentAdCard({
   let playerCtaBorderColor = 'transparent';
   let playerCtaTextColor = Colors.neutral00;
   let playerCtaBorderWidth = 0;
-  let playerCtaLabel = 'Postuler';
+  let playerCtaLabel = isCoachAd ? 'Candidater' : 'Postuler';
 
   if (!ad.isActive) {
     playerCtaLabel = 'Annonce inactive';
@@ -103,7 +123,7 @@ function RecruitmentAdCard({
     playerCtaTextColor = Colors.neutral300;
     playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'accepted') {
-    playerCtaLabel = 'Je participe';
+    playerCtaLabel = isCoachAd ? 'Candidature acceptee' : 'Je participe';
     playerCtaBackgroundColor = `${Colors.primary500}18`;
     playerCtaBorderColor = `${Colors.primary500}45`;
     playerCtaTextColor = Colors.primary500;
@@ -114,13 +134,16 @@ function RecruitmentAdCard({
     playerCtaBorderColor = `${Colors.warning500}35`;
     playerCtaTextColor = Colors.warning500;
     playerCtaBorderWidth = 1;
+  } else if (isApplying) {
+    playerCtaLabel = 'Envoi...';
   }
 
-  const candidatesCount = ad.candidates?.length || 0;
+  const candidatesCount = ad.applicationsCount || ad.candidatesCount || ad.candidates?.length || 0;
   const statusInfo = ad.isActive
     ? { color: Colors.primary500, text: 'En ligne' }
     : { color: Colors.neutral500, text: 'Inactive' };
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
+  const audienceTypeLabel = isCoachAd ? 'ENTRAINEUR' : 'JOUEUR';
 
   const handlePress = () => {
     if (onPress) {
@@ -130,6 +153,43 @@ function RecruitmentAdCard({
 
     navigation.navigate(RouteNames.RecruitmentAdDetails, { ad });
   };
+
+  const handleApplyPress = () => {
+    if (!onApply) return;
+    onApply(ad);
+  };
+
+  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying;
+  const shouldRenderInteractiveCta = Boolean(onApply) && !isPlayerCtaDisabled;
+  const playerCtaStyles = [
+    styles.ctaBadge,
+    !shouldRenderInteractiveCta && styles.ctaBadgeDisabled,
+    {
+      backgroundColor: playerCtaBackgroundColor,
+      borderColor: playerCtaBorderColor,
+      borderWidth: playerCtaBorderWidth,
+    },
+  ];
+
+  const playerCtaContent = (
+    <Text style={[styles.ctaBadgeText, { color: playerCtaTextColor }]}>
+      {playerCtaLabel}
+    </Text>
+  );
+  const playerCtaNode = shouldRenderInteractiveCta ? (
+    <TouchableOpacity
+      accessibilityHint="Postuler a cette annonce"
+      accessibilityLabel={playerCtaLabel}
+      accessibilityRole="button"
+      activeOpacity={0.9}
+      onPress={handleApplyPress}
+      style={playerCtaStyles}
+    >
+      {playerCtaContent}
+    </TouchableOpacity>
+  ) : (
+    <View style={playerCtaStyles}>{playerCtaContent}</View>
+  );
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
@@ -186,6 +246,15 @@ function RecruitmentAdCard({
                   </Text>
                 ) : null}
 
+                <View style={styles.typeBadge}>
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p4Bold, styles.typeBadgeText]}
+                  >
+                    {audienceTypeLabel}
+                  </Text>
+                </View>
+
                 <View style={styles.sportBadge}>
                   <Text
                     numberOfLines={1}
@@ -216,14 +285,14 @@ function RecruitmentAdCard({
               <View style={styles.detailItem}>
                 <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
                 <Text numberOfLines={1} style={styles.detailText}>
-                  {levelName}
+                  {isCoachAd ? (ad?.engagementType || levelName) : levelName}
                 </Text>
               </View>
 
               <View style={[styles.detailItem, styles.detailItemRight]}>
                 <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
                 <Text numberOfLines={1} style={[styles.detailText, styles.detailTextRight]}>
-                  {rightMetaLabel || 'Categorie libre'}
+                  {rightMetaLabel || (isCoachAd ? 'Cadre a preciser' : 'Categorie libre')}
                 </Text>
               </View>
             </View>
@@ -253,22 +322,7 @@ function RecruitmentAdCard({
                 {candidatesCount > 1 ? 's' : ''}
               </Text>
             </View>
-          ) : (
-            <View
-              style={[
-                styles.ctaBadge,
-                {
-                  backgroundColor: playerCtaBackgroundColor,
-                  borderColor: playerCtaBorderColor,
-                  borderWidth: playerCtaBorderWidth,
-                },
-              ]}
-            >
-              <Text style={[styles.ctaBadgeText, { color: playerCtaTextColor }]}>
-                {playerCtaLabel}
-              </Text>
-            </View>
-          )}
+          ) : playerCtaNode}
         </View>
       </View>
     </Animated.View>
@@ -327,6 +381,9 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     width: '100%',
+  },
+  ctaBadgeDisabled: {
+    opacity: 0.98,
   },
   ctaBadgeText: {
     fontFamily: 'Montserrat-Bold',
@@ -440,6 +497,16 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 2,
   },
+  typeBadge: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  typeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
 });
-
 export default RecruitmentAdCard;

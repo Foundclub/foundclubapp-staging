@@ -1,5 +1,10 @@
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -21,6 +26,8 @@ import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import { getPositionsForSport } from '@/constants/positions';
+
 const WEB_FILTER_SURFACE_PROPS = {
   contentWidth: 720,
   responsivePadding: true,
@@ -33,6 +40,7 @@ const filtersSchema = Joi.object({
   category: Joi.string().allow(''),
   city: Joi.string().allow(''),
   level: Joi.string().allow(''),
+  position: Joi.string().allow(''),
   section: Joi.string().allow(''),
   sport: Joi.string().allow(''),
 });
@@ -51,6 +59,7 @@ function RecruitmentAdFilters({ navigation }) {
   const [sectionSearch, setSectionSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
+  const [positionSearch, setPositionSearch] = useState('');
 
   const { data: activities } = useGetActivities();
   const { data: sections } = useGetSections();
@@ -71,12 +80,16 @@ function RecruitmentAdFilters({ navigation }) {
     level: Array.isArray(recruitmentAdFilters?.level) && recruitmentAdFilters.level.length
       ? recruitmentAdFilters.level[0]
       : '',
+    position: Array.isArray(recruitmentAdFilters?.position) && recruitmentAdFilters.position.length
+      ? recruitmentAdFilters.position[0]
+      : recruitmentAdFilters?.position || '',
     section: recruitmentAdFilters?.section || '',
     sport: recruitmentAdFilters?.sport || '',
   }), [
     recruitmentAdFilters?.category,
     recruitmentAdFilters?.city,
     recruitmentAdFilters?.level,
+    recruitmentAdFilters?.position,
     recruitmentAdFilters?.section,
     recruitmentAdFilters?.sport,
   ]);
@@ -85,11 +98,16 @@ function RecruitmentAdFilters({ navigation }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
+    setValue,
+    watch,
   } = useForm({
     defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(filtersSchema),
   });
+
+  const selectedSport = watch('sport');
+  const selectedPosition = watch('position');
 
   const sportOptions = useMemo(() => {
     const options = activities?.map((activity) => ({
@@ -131,6 +149,34 @@ function RecruitmentAdFilters({ navigation }) {
     return options.filter((option) => option.label.toLowerCase().includes(levelSearch.toLowerCase()));
   }, [levels, levelSearch]);
 
+  const positionBaseOptions = useMemo(() => (
+    getPositionsForSport(selectedSport).map((position) => ({
+      label: position.label,
+      value: position.value,
+    }))
+  ), [selectedSport]);
+
+  const positionOptions = useMemo(() => {
+    if (!positionSearch.trim()) return positionBaseOptions;
+    return positionBaseOptions.filter((option) => option.label.toLowerCase().includes(positionSearch.toLowerCase()));
+  }, [positionBaseOptions, positionSearch]);
+
+  useEffect(() => {
+    setPositionSearch('');
+  }, [selectedSport]);
+
+  useEffect(() => {
+    if (!selectedPosition || positionBaseOptions.length === 0) return;
+
+    const isSelectedPositionAvailable = positionBaseOptions.some(
+      (option) => option.value === selectedPosition,
+    );
+
+    if (!isSelectedPositionAvailable) {
+      setValue('position', '');
+    }
+  }, [positionBaseOptions, selectedPosition, setValue]);
+
   const getOptionLabel = (options, value) => options.find((option) => option.value === value)?.label || '';
 
   const handleApplyFilters = (data) => {
@@ -139,6 +185,7 @@ function RecruitmentAdFilters({ navigation }) {
         category: data.category ? [data.category] : [],
         city: data.city?.trim() || '',
         level: data.level ? [data.level] : [],
+        position: data.position?.trim() || '',
         section: data.section || '',
         sport: data.sport || '',
       },
@@ -164,7 +211,9 @@ function RecruitmentAdFilters({ navigation }) {
         Spaces.paddingVertical[24],
         { paddingBottom: insets.bottom + 16 },
       ]}
-      {...WEB_FILTER_SURFACE_PROPS}
+      contentWidth={WEB_FILTER_SURFACE_PROPS.contentWidth}
+      responsivePadding={WEB_FILTER_SURFACE_PROPS.responsivePadding}
+      surface={WEB_FILTER_SURFACE_PROPS.surface}
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[24]]}
@@ -173,9 +222,15 @@ function RecruitmentAdFilters({ navigation }) {
         <Controller
           control={control}
           name="sport"
-          render={({ field: {
-            name, onBlur, onChange, ref, value,
-          } }) => (
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -194,10 +249,56 @@ function RecruitmentAdFilters({ navigation }) {
 
         <Controller
           control={control}
+          name="position"
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
+            positionBaseOptions.length > 0 ? (
+              <AutocompleteSelect
+                error={getFieldError({ errors: formErrors, fieldName: name })}
+                isSearchable
+                label={t('recruitmentAdFilters.fields.position.label', 'Poste')}
+                onBlur={onBlur}
+                options={positionOptions}
+                placeholder={t('recruitmentAdFilters.fields.position.placeholder', 'Selectionner un poste')}
+                ref={ref}
+                searchValue={positionSearch}
+                setSearchValue={setPositionSearch}
+                setValue={(option) => onChange(option?.value || '')}
+                value={getOptionLabel(positionBaseOptions, value)}
+              />
+            ) : (
+              <Input
+                error={getFieldError({ errors: formErrors, fieldName: name })}
+                label={t('recruitmentAdFilters.fields.position.label', 'Poste')}
+                onBlur={onBlur}
+                onChangeText={onChange}
+                placeholder={t('recruitmentAdFilters.fields.position.placeholderFallback', 'Ex: Avant-centre')}
+                ref={ref}
+                value={value}
+              />
+            )
+          )}
+        />
+
+        <Controller
+          control={control}
           name="city"
-          render={({ field: {
-            name, onBlur, onChange, ref, value,
-          } }) => (
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
             <Input
               error={getFieldError({ errors: formErrors, fieldName: name })}
               label={t('recruitmentAdFilters.fields.city.label', 'Ville')}
@@ -213,9 +314,15 @@ function RecruitmentAdFilters({ navigation }) {
         <Controller
           control={control}
           name="section"
-          render={({ field: {
-            name, onBlur, onChange, ref, value,
-          } }) => (
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -235,9 +342,15 @@ function RecruitmentAdFilters({ navigation }) {
         <Controller
           control={control}
           name="category"
-          render={({ field: {
-            name, onBlur, onChange, ref, value,
-          } }) => (
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable
@@ -257,9 +370,15 @@ function RecruitmentAdFilters({ navigation }) {
         <Controller
           control={control}
           name="level"
-          render={({ field: {
-            name, onBlur, onChange, ref, value,
-          } }) => (
+          render={({
+            field: {
+              name,
+              onBlur,
+              onChange,
+              ref,
+              value,
+            },
+          }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: name })}
               isSearchable

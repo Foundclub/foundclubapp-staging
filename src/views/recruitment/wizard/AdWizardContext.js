@@ -6,6 +6,8 @@ const AdWizardContext = createContext();
 const AD_WIZARD_STORAGE_KEY = 'fc:web:ad-wizard';
 
 const createInitialState = () => ({
+  audienceType: 'player',
+
   // Source
   event: null, // Event object (null = classic ad)
   team: null, // Team object
@@ -19,6 +21,16 @@ const createInitialState = () => ({
 
   // Positions with quantities: [{ name: 'Gardien', quantity: 1 }, ...]
   positions: [],
+
+  // Coach profile
+  coachRole: '',
+  coachRoleOther: '',
+  coachExperienceLevel: '',
+  engagementType: '',
+  certificationsWanted: [],
+  availabilityText: '',
+  missions: '',
+  coachQuantity: 1,
 
   // Options
   description: '',
@@ -66,14 +78,44 @@ function adWizardReducer(state, action) {
       return createInitialState();
     case 'SET_ADDRESS':
       return { ...state, address: action.payload };
+    case 'SET_AUDIENCE_TYPE':
+      return {
+        ...state,
+        audienceType: action.payload === 'coach' ? 'coach' : 'player',
+        coachRole: action.payload === 'coach' ? state.coachRole : '',
+        coachRoleOther: action.payload === 'coach' ? state.coachRoleOther : '',
+        coachExperienceLevel: action.payload === 'coach' ? state.coachExperienceLevel : '',
+        coachQuantity: action.payload === 'coach' ? state.coachQuantity : 1,
+        engagementType: action.payload === 'coach' ? state.engagementType : '',
+        event: action.payload === 'coach' ? null : state.event,
+        missions: action.payload === 'coach' ? state.missions : '',
+        positions: action.payload === 'coach' ? [] : state.positions,
+        validationMode: action.payload === 'coach' ? 'manual' : state.validationMode,
+      };
     case 'SET_CATEGORY':
       return { ...state, category: action.payload };
+    case 'SET_COACH_EXPERIENCE_LEVEL':
+      return { ...state, coachExperienceLevel: action.payload };
+    case 'SET_COACH_QUANTITY':
+      return { ...state, coachQuantity: Math.max(1, Math.min(10, Number(action.payload || 1))) };
+    case 'SET_COACH_ROLE':
+      return { ...state, coachRole: action.payload };
+    case 'SET_COACH_ROLE_OTHER':
+      return { ...state, coachRoleOther: action.payload };
+    case 'SET_CERTIFICATIONS_WANTED':
+      return { ...state, certificationsWanted: Array.isArray(action.payload) ? action.payload : [] };
     case 'SET_DESCRIPTION':
       return { ...state, description: action.payload };
+    case 'SET_ENGAGEMENT_TYPE':
+      return { ...state, engagementType: action.payload };
     case 'SET_EVENT':
-      return { ...state, event: action.payload };
+      return { ...state, audienceType: 'player', event: action.payload };
+    case 'SET_AVAILABILITY_TEXT':
+      return { ...state, availabilityText: action.payload };
     case 'SET_MIN_LEVEL':
       return { ...state, minLevel: action.payload };
+    case 'SET_MISSIONS':
+      return { ...state, missions: action.payload };
     case 'SET_POSITION_QUANTITY': {
       const { name, quantity } = action.payload;
       return {

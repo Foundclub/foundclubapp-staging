@@ -27,7 +27,11 @@ import { useGetSections } from '@/services/section/sectionQueries';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 
 import { useAdWizard } from './AdWizardContext';
-import { getAdWizardStepCount } from './adWizardStepUtils';
+import {
+  getAdWizardInfoStepIndex,
+  getAdWizardStepCount,
+  isCoachAdWizard,
+} from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
 
 /**
@@ -98,7 +102,12 @@ function AdWizardInfo({ navigation }) {
       return;
     }
 
-    navigation.navigate(RouteNames.AdWizardPositions);
+    if (state.event && !isCoachAdWizard(state)) {
+      navigation.navigate(RouteNames.AdWizardValidation);
+      return;
+    }
+
+    navigation.navigate(RouteNames.AdWizardDescription);
   };
 
   const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non d\u00E9fini';
@@ -179,24 +188,26 @@ function AdWizardInfo({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
-      stepIndex={2}
-      subtitle={'Affinez le profil recherch\u00E9 et le lieu de publication.'}
+      stepIndex={getAdWizardInfoStepIndex(state)}
+      subtitle={isCoachAdWizard(state)
+        ? 'Affinez le contexte de votre annonce coach et le lieu de publication.'
+        : 'Affinez le profil recherch\u00E9 et le lieu de publication.'}
       title="Informations de l'annonce"
     >
-      <View style={[Spaces.gap[24], Spaces.paddingBottom[24]]}>
+      <View style={[Spaces.gap[24], Spaces.paddingBottom[40]]}>
         {isTaxonomyLoading ? (
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[20],
+              Spaces.padding[24],
               Alignments.row,
               Alignments.alignCenter,
-              Spaces.gap[16],
+              Spaces.gap[24],
               cardSurfaceStyle,
             ]}
           >
             <ActivityIndicator color={Colors.primary500} size="small" />
-            <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill]}>
+            <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill, { lineHeight: 24 }]}>
               {'Chargement des sections, cat\u00E9gories et niveaux disponibles.'}
             </Text>
           </View>
@@ -206,8 +217,8 @@ function AdWizardInfo({ navigation }) {
           <View
             style={[
               ApplicationStyle.card,
-              Spaces.padding[20],
-              Spaces.gap[16],
+              Spaces.padding[24],
+              Spaces.gap[24],
               {
                 backgroundColor: 'rgba(53, 19, 24, 0.88)',
                 borderColor: 'rgba(239, 68, 68, 0.45)',
@@ -217,7 +228,7 @@ function AdWizardInfo({ navigation }) {
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {'Certaines options n\'ont pas pu \u00EAtre charg\u00E9es'}
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
+            <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
               {'Vous pouvez r\u00E9essayer pour r\u00E9cup\u00E9rer toutes les r\u00E9f\u00E9rences, ou continuer avec les informations d\u00E9j\u00E0 pr\u00E9remplies depuis l\'\u00E9quipe.'}
             </Text>
             <Button
@@ -238,7 +249,7 @@ function AdWizardInfo({ navigation }) {
             ]}
           >
             <View style={[Spaces.gap[24]]}>
-              <View style={[Spaces.gap[12]]}>
+              <View style={[Spaces.gap[16]]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
                   {'\u00C9quipe s\u00E9lectionn\u00E9e'}
                 </Text>
@@ -252,7 +263,7 @@ function AdWizardInfo({ navigation }) {
                 >
                   {teamIdentityNode}
 
-                  <View style={[Spaces.gap[12], { flex: 1 }]}>
+                  <View style={[Spaces.gap[16], { flex: 1 }]}>
                     <Text numberOfLines={1} style={[Fonts.h4, Fonts.neutral00]}>
                       {state.team?.name || '-'}
                     </Text>
@@ -266,7 +277,7 @@ function AdWizardInfo({ navigation }) {
                 </View>
               </View>
 
-              <View style={[Spaces.gap[16]]}>
+              <View style={[Spaces.gap[24]]}>
                 <TouchableOpacity
                   accessibilityRole="button"
                   activeOpacity={0.9}
@@ -292,7 +303,7 @@ function AdWizardInfo({ navigation }) {
                 </TouchableOpacity>
 
                 {teamSummaryMeta.length > 0 ? (
-                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
+                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[14], Spaces.marginTop[8]]}>
                     {teamSummaryMeta.map((item) => (
                       <View
                         key={item.label}
@@ -319,14 +330,16 @@ function AdWizardInfo({ navigation }) {
           </View>
         ) : null}
 
-        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[16]]}>
-            <View style={[Spaces.gap[10]]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
+          <View style={[Spaces.gap[20]]}>
+            <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {'Profil recherch\u00E9'}
+                {isCoachAdWizard(state) ? 'Contexte du role recherche' : 'Profil recherche'}
               </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {'Affinez la cible de votre annonce avec les bons rep\u00E8res sportifs.'}
+              <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
+                {isCoachAdWizard(state)
+                  ? 'Precisez le sport, la section, la categorie et le niveau de reference de votre besoin staff.'
+                  : 'Affinez la cible de votre annonce avec les bons reperes sportifs.'}
               </Text>
             </View>
 
@@ -347,7 +360,7 @@ function AdWizardInfo({ navigation }) {
             </View>
           </View>
 
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[16], Spaces.marginTop[8]]}>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[20], Spaces.marginTop[20]]}>
             <AutocompleteSelect
               displayVariant="card"
               label="Section"
@@ -381,12 +394,12 @@ function AdWizardInfo({ navigation }) {
           </View>
         </View>
 
-        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
-          <View style={[Spaces.gap[16]]}>
+        <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
+          <View style={[Spaces.gap[20]]}>
             <Text style={[Fonts.h4, Fonts.neutral00]}>
               Lieu de l&apos;annonce
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
+            <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
               Ajoutez un lieu clair pour situer rapidement votre recrutement.
             </Text>
           </View>
@@ -408,7 +421,7 @@ function AdWizardInfo({ navigation }) {
             style={[
               Alignments.row,
               Alignments.alignCenter,
-              Spaces.gap[12],
+              Spaces.gap[14],
               Spaces.paddingHorizontal[16],
               Spaces.paddingVertical[12],
               {
@@ -427,7 +440,7 @@ function AdWizardInfo({ navigation }) {
                 width: 8,
               }}
             />
-            <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
+            <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1, lineHeight: 22 }]}>
               {'Conseil publication : gardez un lieu pr\u00E9cis et un niveau coh\u00E9rent pour attirer les bons profils d\u00E8s les premiers r\u00E9sultats.'}
             </Text>
           </View>

@@ -1,0 +1,577 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+
+import useTheme from '@/theme/themeContext';
+
+import SearchMapPreviewCard from '@/components/molecules/searchMapPreviewCard/SearchMapPreviewCard';
+import SearchMapHud from '@/components/organisms/searchMap/SearchMapHud';
+
+import { createLogger } from '@/utils/logger/logger';
+import {
+  getSearchMapEmptyMessage,
+  getSearchMapNoCoordinatesMessage,
+} from '@/utils/searchMap';
+
+import {
+  getSearchMapLoadingCopy,
+  getSearchMapProviderErrorMessage,
+  SEARCH_MAP_ERROR_REASONS,
+} from '@/platform/maps/searchMapCopy';
+import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
+import { getTomTomApiKey } from '@/platform/maps/searchMapProvider';
+import {
+  buildSearchMapRuntimeHtml,
+  buildSearchMapSyncScript,
+  buildTomTomProbeUrl,
+  buildTomTomTileUrl,
+  parseSearchMapBridgeMessage,
+  resolveSearchMapMarkerColor,
+  SEARCH_MAP_BRIDGE_TYPES,
+  TOMTOM_TILE_PROVIDER,
+} from '@/platform/maps/searchMapRuntime';
+
+const MAP_LOAD_TIMEOUT_MS = 6500;
+const searchMapLogger = createLogger('search-map-tomtom');
+
+const CRITICAL_ERROR_REASONS = new Set([
+  SEARCH_MAP_ERROR_REASONS.invalidApiKey,
+  SEARCH_MAP_ERROR_REASONS.invalidTileRequest,
+  SEARCH_MAP_ERROR_REASONS.leafletUnavailable,
+  SEARCH_MAP_ERROR_REASONS.missingApiKey,
+  SEARCH_MAP_ERROR_REASONS.runtimeError,
+  SEARCH_MAP_ERROR_REASONS.webViewError,
+]);
+
+const buildRuntimeState = (
+  command,
+  focusMode,
+  items,
+  regionHint,
+  selectedItemId,
+  userLocation,
+) => ({
+  command,
+  focusMode,
+  items,
+  regionHint,
+  selectedItemId,
+  userLocation,
+});
+
+/**
+ * @param {object} props
+ * @param {number} [props.height]
+ * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
+ * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
+ * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {() => void} [props.onShowList]
+ * @param {number} [props.previewBottomOffset]
+ * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
+ * @param {string} [props.selectedItemId]
+ * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {number} [props.topMargin]
+ * @param {number} [props.totalCount]
+ * @returns {import('react').ReactElement}
+ */
+function TomTomSearchMapNative({
+  height = 360,
+  items = [],
+  onOpenItem,
+  onRegionChangeComplete,
+  onSelectItem,
+  onShowList,
+  previewBottomOffset = 12,
+  regionHint = null,
+  scope = 'events',
+  selectedItemId,
+  topMargin = 12,
+  totalCount = 0,
+}) {
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
+
+  const tomTomApiKey = getTomTomApiKey();
+  const webViewRef = useRef(/** @type {import('react-native-webview').WebView | null} */ (null));
+  const mapLoadStartedAtRef = useRef(Date.now());
+  const [focusMode, setFocusMode] = useState(
+    /** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'),
+  );
+  const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
+  const [mapCommand, setMapCommand] = useState(null);
+  const [mapErrorReason, setMapErrorReason] = useState('');
+  const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [mapStatus, setMapStatus] = useState(
+    /** @type {'loading' | 'ready' | 'error'} */ ('loading'),
+  );
+  const [userLocation, setUserLocation] = useState(
+    /** @type {{ lat: number; lng: number } | null} */ (null),
+  );
+  const [webViewLoaded, setWebViewLoaded] = useState(false);
+  const [focusedRegion, setFocusedRegion] = useState(regionHint);
+
+  const mapId = useMemo(
+    () => `search-map-${scope}-${mapRenderKey}`,
+    [mapRenderKey, scope],
+  );
+  const markerColor = useMemo(() => resolveSearchMapMarkerColor(scope), [scope]);
+  const activeSelectedItemId = selectedItemId ?? internalSelectedItemId;
+  const selectedItem = useMemo(
+    () => items.find((item) => item.id === activeSelectedItemId) || null,
+    [activeSelectedItemId, items],
+  );
+  const totalResults = Number.isFinite(totalCount) && totalCount > 0
+    ? totalCount
+    : items.length;
+  const isMapReady = mapStatus === 'ready';
+  const areControlsDisabled = !isMapReady;
+  const runtimeState = useMemo(
+    () => buildRuntimeState(
+      mapCommand,
+      focusMode,
+      items,
+      focusedRegion,
+      activeSelectedItemId,
+      userLocation,
+    ),
+    [activeSelectedItemId, focusMode, focusedRegion, items, mapCommand, userLocation],
+  );
+  const htmlSource = useMemo(
+    () => buildSearchMapRuntimeHtml({
+      initialState: runtimeState,
+      mapId,
+      markerColor,
+      tileAttribution: TOMTOM_TILE_PROVIDER.attribution,
+      tileProbeUrl: buildTomTomProbeUrl(tomTomApiKey || 'missing-key'),
+      tileUrl: buildTomTomTileUrl(tomTomApiKey || 'missing-key'),
+    }),
+    [mapId, markerColor, runtimeState, tomTomApiKey],
+  );
+  const logContext = useMemo(
+    () => ({
+      geolocatableCount: items.length,
+      provider: 'tomtom',
+      scope,
+      totalResults,
+    }),
+    [items.length, scope, totalResults],
+  );
+  const emptyMessage = totalResults > 0 && items.length === 0
+    ? getSearchMapNoCoordinatesMessage(scope, totalResults)
+    : getSearchMapEmptyMessage(scope);
+  const loadingCopy = useMemo(() => getSearchMapLoadingCopy(), []);
+
+  useEffect(() => {
+    if (!regionHint || !Number.isFinite(regionHint.lat) || !Number.isFinite(regionHint.lng)) {
+      return;
+    }
+
+    setFocusedRegion(regionHint);
+    setFocusMode('region');
+  }, [regionHint]);
+
+  useEffect(() => {
+    mapLoadStartedAtRef.current = Date.now();
+    setWebViewLoaded(false);
+    setMapStatus(tomTomApiKey ? 'loading' : 'error');
+    setMapErrorReason(tomTomApiKey ? '' : 'missing_api_key');
+    searchMapLogger.info('map cycle started', {
+      ...logContext,
+      retryCycle: mapRenderKey,
+    });
+  }, [logContext, mapRenderKey, tomTomApiKey]);
+
+  useEffect(() => {
+    if (selectedItemId !== undefined) {
+      setFocusMode(selectedItemId ? 'selected' : 'results');
+      return;
+    }
+
+    if (!internalSelectedItemId) {
+      return;
+    }
+
+    if (!items.some((item) => item.id === internalSelectedItemId)) {
+      setInternalSelectedItemId('');
+      setFocusMode('results');
+    }
+  }, [internalSelectedItemId, items, selectedItemId]);
+
+  useEffect(() => {
+    if (!webViewLoaded || !tomTomApiKey) {
+      return;
+    }
+
+    webViewRef.current?.injectJavaScript(buildSearchMapSyncScript(mapId, runtimeState));
+  }, [mapId, runtimeState, tomTomApiKey, webViewLoaded]);
+
+  useEffect(() => {
+    if (mapStatus !== 'loading' || !tomTomApiKey) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      searchMapLogger.warn('map load timeout', {
+        ...logContext,
+        elapsedMs: Date.now() - mapLoadStartedAtRef.current,
+      });
+      setMapErrorReason((currentReason) => (
+        currentReason || SEARCH_MAP_ERROR_REASONS.tilesUnavailable
+      ));
+      setMapStatus('error');
+    }, MAP_LOAD_TIMEOUT_MS);
+
+    return () => clearTimeout(timeout);
+  }, [logContext, mapStatus, tomTomApiKey]);
+
+  const handleMarkerSelect = useCallback((itemId) => {
+    if (selectedItemId === undefined) {
+      setInternalSelectedItemId(itemId);
+    }
+
+    setFocusMode('selected');
+    searchMapLogger.info('map marker selected', {
+      ...logContext,
+      itemId,
+    });
+    onSelectItem?.(itemId);
+  }, [logContext, onSelectItem, selectedItemId]);
+
+  const handleRetryMap = useCallback(() => {
+    setFocusMode('results');
+    setMapRenderKey((current) => current + 1);
+  }, []);
+
+  const issueCommand = useCallback((type) => {
+    setMapCommand({
+      id: `${type}-${Date.now()}`,
+      type,
+    });
+  }, []);
+
+  const requestUserLocation = useCallback(async () => {
+    if (areControlsDisabled) {
+      return;
+    }
+
+    const coordinates = await requestCurrentSearchMapLocation();
+    if (!coordinates) {
+      searchMapLogger.warn('user location unavailable', logContext);
+      return;
+    }
+
+    setUserLocation(coordinates);
+    setFocusMode('user');
+    searchMapLogger.info('map user location acquired', {
+      ...logContext,
+      lat: coordinates.lat,
+      lng: coordinates.lng,
+    });
+  }, [areControlsDisabled, logContext]);
+
+  const handleMessage = useCallback((event) => {
+    const bridgeMessage = parseSearchMapBridgeMessage(event?.nativeEvent?.data);
+    if (!bridgeMessage || bridgeMessage.mapId !== mapId) {
+      return;
+    }
+
+    switch (bridgeMessage.type) {
+      case SEARCH_MAP_BRIDGE_TYPES.MAP_ERROR: {
+        const payload = bridgeMessage.payload || {};
+        const nextReason = String(payload.reason || SEARCH_MAP_ERROR_REASONS.tileError);
+        searchMapLogger.warn(
+          `tomtom map error reason=${nextReason} `
+          + `status=${String(payload.status || '')} `
+          + `message=${String(payload.message || '')} `
+          + `url=${String(payload.url || '')}`,
+          {
+            ...logContext,
+            elapsedMs: Date.now() - mapLoadStartedAtRef.current,
+          },
+        );
+
+        setMapErrorReason(nextReason);
+
+        if (mapStatus !== 'ready' && CRITICAL_ERROR_REASONS.has(nextReason)) {
+          setMapStatus('error');
+        }
+        break;
+      }
+      case SEARCH_MAP_BRIDGE_TYPES.MAP_READY:
+        searchMapLogger.info('tomtom map ready', {
+          ...logContext,
+          elapsedMs: Date.now() - mapLoadStartedAtRef.current,
+        });
+        setMapErrorReason('');
+        setMapStatus('ready');
+        break;
+      case SEARCH_MAP_BRIDGE_TYPES.MAP_REGION_CHANGE:
+        if (bridgeMessage.payload) {
+          onRegionChangeComplete?.(bridgeMessage.payload);
+        }
+        break;
+      case SEARCH_MAP_BRIDGE_TYPES.MARKER_SELECT:
+        if (bridgeMessage.payload?.itemId) {
+          handleMarkerSelect(String(bridgeMessage.payload.itemId));
+        }
+        break;
+      case SEARCH_MAP_BRIDGE_TYPES.FIT_RESULTS_DONE:
+      default:
+        break;
+    }
+  }, [handleMarkerSelect, logContext, mapId, mapStatus, onRegionChangeComplete]);
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: Colors.primary900,
+          height,
+          marginTop: topMargin,
+        },
+      ]}
+    >
+      <WebView
+        domStorageEnabled
+        geolocationEnabled
+        javaScriptEnabled
+        key={`search-map-${scope}-${mapRenderKey}`}
+        onError={() => {
+          searchMapLogger.warn('tomtom webview error', logContext);
+          setMapErrorReason(SEARCH_MAP_ERROR_REASONS.webViewError);
+          setMapStatus('error');
+        }}
+        onLoadEnd={() => {
+          setWebViewLoaded(true);
+        }}
+        onMessage={handleMessage}
+        originWhitelist={['*']}
+        ref={webViewRef}
+        setSupportMultipleWindows={false}
+        source={{ html: htmlSource }}
+        style={[styles.map, !isMapReady && styles.mapHidden]}
+      />
+
+      <View
+        pointerEvents="box-none"
+        style={[styles.overlay, { paddingHorizontal: 14, paddingTop: 14 }]}
+      >
+        <SearchMapHud
+          disabled={areControlsDisabled}
+          geolocatableCount={items.length}
+          onLocateMe={requestUserLocation}
+          onRecenter={() => setFocusMode('results')}
+          onZoomIn={() => issueCommand('zoom_in')}
+          onZoomOut={() => issueCommand('zoom_out')}
+          scope={scope}
+          totalCount={totalResults}
+        />
+      </View>
+
+      {mapStatus === 'loading' ? (
+        <View style={styles.statusOverlay}>
+          <View
+            style={[
+              styles.statusCard,
+              ApplicationStyle.shadow200,
+              {
+                backgroundColor: 'rgba(7, 24, 35, 0.94)',
+                borderColor: `${Colors.primary500}33`,
+              },
+            ]}
+          >
+            <ActivityIndicator color={Colors.primary500} size="small" />
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+              {loadingCopy.title}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
+              {loadingCopy.body}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {mapStatus === 'error' ? (
+        <View style={styles.statusOverlay}>
+          <View
+            style={[
+              styles.statusCard,
+              ApplicationStyle.shadow200,
+              {
+                backgroundColor: 'rgba(7, 24, 35, 0.95)',
+                borderColor: `${Colors.error500}26`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+              Impossible de charger la carte
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
+              {getSearchMapProviderErrorMessage(mapErrorReason)}
+            </Text>
+            <View
+              style={[
+                Alignments.row,
+                Alignments.justifyCenter,
+                Alignments.wrap,
+                Spaces.gap[12],
+                { width: '100%' },
+              ]}
+            >
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleRetryMap}
+                style={[
+                  styles.statusActionButton,
+                  {
+                    backgroundColor: Colors.primary500,
+                    borderColor: Colors.primary500,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
+                  Réessayer
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => onShowList?.()}
+                style={[
+                  styles.statusActionButton,
+                  {
+                    backgroundColor: 'rgba(6, 24, 34, 0.86)',
+                    borderColor: `${Colors.primary500}40`,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                  Voir la liste
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {isMapReady && items.length === 0 ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.emptyState,
+            {
+              backgroundColor: 'rgba(7, 24, 35, 0.7)',
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3, Fonts.neutral00, Fonts.textCenter]}>
+            {emptyMessage}
+          </Text>
+        </View>
+      ) : null}
+
+      {isMapReady ? (
+        <SearchMapPreviewCard
+          bottomOffset={previewBottomOffset}
+          item={selectedItem}
+          onOpen={(item) => {
+            searchMapLogger.info('map detail opened', {
+              ...logContext,
+              itemId: item?.id,
+            });
+            onOpenItem?.(item);
+          }}
+          onShowList={() => onShowList?.()}
+          scope={scope}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 28,
+    flex: 1,
+    minHeight: 360,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  emptyState: {
+    alignItems: 'center',
+    borderRadius: 18,
+    bottom: 132,
+    justifyContent: 'center',
+    left: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    position: 'absolute',
+    right: 20,
+  },
+  map: {
+    backgroundColor: '#061822',
+    height: '100%',
+    width: '100%',
+  },
+  mapHidden: {
+    opacity: 0.01,
+  },
+  overlay: {
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  statusActionButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+    minWidth: 132,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+  statusCard: {
+    alignItems: 'center',
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 12,
+    maxWidth: 340,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    width: '100%',
+  },
+  statusOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(6, 24, 34, 0.72)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    paddingHorizontal: 22,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+});
+
+export default TomTomSearchMapNative;

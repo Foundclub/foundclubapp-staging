@@ -413,6 +413,7 @@ export const NOTIFICATION_TYPES = {
   LEAGUE_VENUE_BOOKED: 'leagueVenueBooked',
   RECRUITMENT_APPLICATION: 'recruitment_application',
   RECRUITMENT_APPLICATION_AUTO: 'recruitment_application_auto',
+  RECRUITMENT_APPLICATION_STATUS: 'recruitment_application_status',
   REMATCH_REQUEST: 'REMATCH_REQUEST',
   RSVP_ALERT: 'RSVP_ALERT',
   // Legacy alias kept for backward compatibility

@@ -7,7 +7,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdWizard } from './AdWizardContext';
-import { getAdWizardStepCount } from './adWizardStepUtils';
+import {
+  getAdWizardStepCount,
+  getAdWizardValidationStepIndex,
+} from './adWizardStepUtils';
 
 const VALIDATION_MODES = [
   {
@@ -62,20 +65,20 @@ function AdWizardValidation({ navigation }) {
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
-      stepIndex={4}
+      stepIndex={getAdWizardValidationStepIndex(state)}
       subtitle={'Choisissez comment les candidatures li\u00E9es \u00E0 cette d\u00E9tection seront trait\u00E9es.'}
       title="Mode de validation"
     >
-      <View style={[Spaces.gap[20]]}>
+      <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {state.event ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[12], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[20], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
               {'Annonce li\u00E9e \u00E0 une d\u00E9tection'}
             </Text>
             <Text style={[Fonts.h4, Fonts.neutral00]}>
               {state.event.name || state.event.type?.name || '\u00C9v\u00E9nement'}
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
+            <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
               {'Ce r\u00E9glage d\u00E9termine la mani\u00E8re dont les candidatures seront accept\u00E9es sur cette annonce.'}
             </Text>
           </View>
@@ -91,8 +94,8 @@ function AdWizardValidation({ navigation }) {
               onPress={() => handleSelectMode(mode.value)}
               style={[
                 ApplicationStyle.card,
-                Spaces.padding[20],
-                Spaces.gap[16],
+                Spaces.padding[24],
+                Spaces.gap[24],
                 {
                   backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.16)' : 'rgba(4, 31, 44, 0.82)',
                   borderColor: isSelected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
@@ -100,7 +103,7 @@ function AdWizardValidation({ navigation }) {
                 },
               ]}
             >
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
                 <View
                   style={[
                     Spaces.paddingHorizontal[10],
@@ -136,13 +139,13 @@ function AdWizardValidation({ navigation }) {
                 </View>
               </View>
 
-              <View style={[Spaces.gap[8]]}>
+              <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.h4, Fonts.neutral00]}>{mode.label}</Text>
-                <Text style={[Fonts.p2, Fonts.neutral100]}>{mode.summary}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>{mode.summary}</Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{mode.helper}</Text>
               </View>
 
-              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+              <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
                 {mode.highlights.map((highlight) => (
                   <View
                     key={highlight}
@@ -167,8 +170,8 @@ function AdWizardValidation({ navigation }) {
         <View
           style={[
             ApplicationStyle.card,
-            Spaces.padding[20],
-            Spaces.gap[12],
+            Spaces.padding[24],
+            Spaces.gap[20],
             {
               backgroundColor: 'rgba(255, 219, 102, 0.08)',
               borderColor: 'rgba(255, 219, 102, 0.24)',
@@ -176,7 +179,7 @@ function AdWizardValidation({ navigation }) {
           ]}
         >
           <Text style={[Fonts.p3Bold, Fonts.gold500]}>{'\u00C0 retenir'}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
+          <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
             {"Vous pourrez toujours consulter les profils re\u00E7us ensuite dans le d\u00E9tail de l'annonce."}
           </Text>
         </View>

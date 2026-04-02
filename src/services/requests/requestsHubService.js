@@ -2,6 +2,7 @@ import {
   buildRequestHubCounts,
   mapClubMembershipRequestToHubItem,
   mapEventParticipationRequestToHubItem,
+  mapFacilityOverrideRequestToHubItem,
   mapFeaturedRequestToHubItem,
   mapTeamMembershipRequestToHubItem,
   sortRequestHubItems,
@@ -9,6 +10,7 @@ import {
 
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
+import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
 import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 const toUniqueIds = (values = []) => (
@@ -129,6 +131,12 @@ const fetchFeaturedRequests = async ({ clubId, cmId }) => {
   return Array.isArray(response?.data) ? response.data : [];
 };
 
+const fetchFacilityRequests = async (clubId) => {
+  if (!clubId) return [];
+  const response = await getPendingFacilityOverrideRequests(clubId);
+  return Array.isArray(response?.data) ? response.data : [];
+};
+
 const getPendingParticipationRequests = (event) => (
   Array.isArray(event?.participationRequests)
     ? event.participationRequests.filter(
@@ -170,6 +178,11 @@ export const getRequestsHubData = async (rawContext = {}) => {
       enabled: Boolean(context.clubId || context.cmId),
       fetcher: () => fetchFeaturedRequests({ clubId: context.clubId, cmId: context.cmId }),
       key: 'featured',
+    },
+    {
+      enabled: Boolean(context.clubId),
+      fetcher: () => fetchFacilityRequests(context.clubId),
+      key: 'installation',
     },
   ];
 
@@ -223,6 +236,10 @@ export const getRequestsHubData = async (rawContext = {}) => {
 
     if (source.key === 'featured') {
       items.push(...entries.map(mapFeaturedRequestToHubItem));
+    }
+
+    if (source.key === 'installation') {
+      items.push(...entries.map(mapFacilityOverrideRequestToHubItem));
     }
   });
 

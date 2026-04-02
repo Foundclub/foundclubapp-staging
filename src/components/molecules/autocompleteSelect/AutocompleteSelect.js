@@ -337,25 +337,25 @@ const AutocompleteSelect = forwardRef(
             style={[
               ApplicationStyle.card,
               Spaces.padding[24],
-              Spaces.gap[16],
+              Spaces.gap[20],
               {
                 backgroundColor: cardSurfaceColor,
                 borderColor: cardBorderColor,
                 borderRadius: 20,
                 borderWidth: areValuesVisible ? 1.5 : 1,
-                minHeight: props.description ? 132 : 112,
+                minHeight: props.description ? 140 : 120,
                 opacity: props.disabled ? 0.5 : 1,
               },
             ]}
           >
-            <View style={[Spaces.gap[8]]}>
+            <View style={[Spaces.gap[10]]}>
               {hasLabel ? (
                 <Text style={[Fonts.p3Bold, props.error ? Fonts.error500 : Fonts.primary500]}>
                   {props.label}
                 </Text>
               ) : null}
               {props.description ? (
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 22 }]}>
                   {props.description}
                 </Text>
               ) : null}

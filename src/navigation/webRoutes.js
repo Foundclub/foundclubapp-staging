@@ -80,6 +80,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.Search]: '/search',
   [RouteNames.SearchEvents]: '/search/events',
   [RouteNames.SearchClubs]: '/search/clubs',
+  [RouteNames.SearchMapScreen]: '/search/map/:scope',
   [RouteNames.SearchReservations]: '/search/reservations',
   [RouteNames.SearchRecruitment]: '/search/recruitment',
   [RouteNames.SearchAlerts]: '/search/alerts',

@@ -37,6 +37,10 @@ import {
   declineEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import {
+  approveFacilityOverrideRequest,
+  refuseFacilityOverrideRequest,
+} from '@/services/facility/facilityService';
+import {
   getRequestsHubQueryKey,
   useRequestsHubData,
 } from '@/services/requests/requestsHubQueries';
@@ -60,6 +64,8 @@ const getSourceErrorLabel = (source, t) => {
       return t('requestsHub.types.event', 'Événement');
     case 'featured':
       return t('requestsHub.types.featured', 'À la une');
+    case 'installation':
+      return t('requestsHub.types.installation', 'Installation');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
     default:
@@ -108,11 +114,12 @@ function RequestsHub({ navigation, route }) {
   });
 
   const availableFilters = useMemo(() => {
-    /** @type {('all' | 'team' | 'club' | 'event' | 'featured')[]} */
+    /** @type {('all' | 'team' | 'club' | 'event' | 'featured' | 'installation')[]} */
     const filters = ['all'];
     if (trainedTeamIds.length || clubId) filters.push('team');
     if (clubId) filters.push('club', 'event');
     if (clubId || cmId) filters.push('featured');
+    if (clubId) filters.push('installation');
     return filters;
   }, [clubId, cmId, trainedTeamIds.length]);
 
@@ -139,6 +146,7 @@ function RequestsHub({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['clubMembershipRequests'] }),
       queryClient.invalidateQueries({ queryKey: ['pendingEvents'] }),
       queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] }),
+      queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
       queryClient.invalidateQueries({ queryKey: ['events'] }),
     ]);
   }, [context, queryClient]);
@@ -277,6 +285,20 @@ function RequestsHub({ navigation, route }) {
         if (action === 'reject') await rejectFeatured({ requestId: featuredRequestId });
       }
 
+      if (item?.type === 'installation') {
+        if (!requestId) throw new Error('Missing installation request identifier');
+        if (action === 'accept') await approveFacilityOverrideRequest(requestId);
+        if (action === 'reject') {
+          await refuseFacilityOverrideRequest(
+            requestId,
+            t(
+              'requestsHub.installation.defaultRefusalReason',
+              'Créneau complet, dépassement refusé par le dirigeant.',
+            ),
+          );
+        }
+      }
+
       await invalidateRequests();
     } catch (actionError) {
       Alert.alert(
@@ -317,6 +339,7 @@ function RequestsHub({ navigation, route }) {
     { key: 'club', label: t('requestsHub.filters.club', 'Club') },
     { key: 'event', label: t('requestsHub.filters.event', 'Événement') },
     { key: 'featured', label: t('requestsHub.filters.featured', 'À la une') },
+    { key: 'installation', label: t('requestsHub.filters.installation', 'Installation') },
   ]).filter((chip) => availableFilters.includes(chip.key)), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];

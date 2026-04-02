@@ -49,6 +49,7 @@
     "firebase": "^12.11.0",
     "i18next": "25.4.1",
     "joi": "^17.13.3",
+    "leaflet": "^1.9.4",
     "libphonenumber-js": "^1.12.6",
     "mitt": "^3.0.1",
     "mutationobserver-shim": "^0.3.7",
@@ -77,6 +78,7 @@
     "react-native-screens": "^4.9.2",
     "react-native-svg": "^15.11.2",
     "react-native-view-shot": "^4.0.3",
+    "react-native-webview": "^13.16.1",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {

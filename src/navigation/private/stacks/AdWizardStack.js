@@ -2,6 +2,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
 import { AdWizardProvider } from '@/views/recruitment/wizard/AdWizardContext';
+import AdWizardAudienceType from '@/views/recruitment/wizard/AdWizardAudienceType';
+import AdWizardCoachProfile from '@/views/recruitment/wizard/AdWizardCoachProfile';
 import AdWizardDescription from '@/views/recruitment/wizard/AdWizardDescription';
 import AdWizardInfo from '@/views/recruitment/wizard/AdWizardInfo';
 import AdWizardPositions from '@/views/recruitment/wizard/AdWizardPositions';
@@ -24,12 +26,22 @@ function AdWizardStack() {
     <AdWizardProvider>
       <Stack.Navigator
         id={undefined}
-        initialRouteName={RouteNames.AdWizardTeam}
+        initialRouteName={RouteNames.AdWizardAudienceType}
         screenOptions={commonOptions}
       >
         <Stack.Screen
+          component={AdWizardAudienceType}
+          name={RouteNames.AdWizardAudienceType}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           component={AdWizardTeam}
           name={RouteNames.AdWizardTeam}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdWizardCoachProfile}
+          name={RouteNames.AdWizardCoachProfile}
           options={{ headerShown: false }}
         />
         <Stack.Screen

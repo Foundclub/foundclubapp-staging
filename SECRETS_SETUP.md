@@ -31,34 +31,29 @@ This copies local secret files to:
 - `ios/GoogleService-Info.plist`
 - `android/app/keystore` (if provided)
 
-## 3) Google Maps Android keys
+## 3) TomTom map key
 
-Google Maps Android uses build-time secrets, not tracked files.
+Le mode carte recherche utilise désormais TomTom côté app.
 
 Required variables:
 
-- `GOOGLE_MAPS_ANDROID_API_KEY_STAGING`
-- `GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION`
+- `FC_SEARCH_MAP_PROVIDER=tomtom`
+- `TOMTOM_API_KEY`
 
 Supported sources:
 
 - shell environment variables
 - CI / EAS environment variables
-- `gradle.properties` with the same names
-- fallback property names:
-  - `googleMapsApiKeyStaging`
-  - `googleMapsApiKeyProduction`
+- `.env.local`, `.env.staging`, `.env.production`
 
 Recommended local setup:
 
-File: `%USERPROFILE%\.gradle\gradle.properties`
-
-```properties
-GOOGLE_MAPS_ANDROID_API_KEY_STAGING=votre-cle-staging
-GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION=votre-cle-production
+```dotenv
+FC_SEARCH_MAP_PROVIDER=tomtom
+TOMTOM_API_KEY=votre-cle-tomtom
 ```
 
-Android builds fail explicitly if the matching Maps key is missing or still equals the placeholder.
+Le fallback `legacy` existe encore pour rollback, mais il n’est plus le chemin recommandé.
 
 ## 4) Important
 
@@ -96,10 +91,10 @@ Ce script crée les fichiers Firebase manquants depuis les variables d'environne
   - `GOOGLE_SERVICES_STAGING_JSON`
   - `GOOGLE_SERVICES_STAGING_JSON_BASE64`
 
-### Variables supportées pour Google Maps Android
+### Variables supportées pour TomTom
 
-- `GOOGLE_MAPS_ANDROID_API_KEY_STAGING`
-- `GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION`
+- `FC_SEARCH_MAP_PROVIDER`
+- `TOMTOM_API_KEY`
 
 ### Exemple EAS
 
@@ -110,9 +105,9 @@ eas secret:create --scope project --type file --name IOS_GOOGLE_SERVICE_INFO_PLI
 eas secret:create --scope project --type file --name ANDROID_GOOGLE_SERVICES_JSON --value ./android/app/google-services.json
 ```
 
-Google Maps keys:
+TomTom:
 
 ```bash
-eas secret:create --scope project --type string --name GOOGLE_MAPS_ANDROID_API_KEY_STAGING --value "votre-cle-staging"
-eas secret:create --scope project --type string --name GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION --value "votre-cle-production"
+eas secret:create --scope project --type string --name FC_SEARCH_MAP_PROVIDER --value "tomtom"
+eas secret:create --scope project --type string --name TOMTOM_API_KEY --value "votre-cle-tomtom"
 ```

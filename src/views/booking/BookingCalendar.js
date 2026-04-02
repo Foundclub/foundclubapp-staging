@@ -1,7 +1,6 @@
 import { addDays, format, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Pressable,
@@ -27,7 +26,6 @@ import { useGetFacility, useGetFacilityAvailability } from '@/services/facility/
  */
 function BookingCalendar({ navigation, route }) {
   const { facilityId } = route.params || {};
-  const { t } = useTranslation();
   const {
     Alignments,
     Colors,
@@ -54,7 +52,7 @@ function BookingCalendar({ navigation, route }) {
   // Generate date options (next 14 days)
   const dateOptions = useMemo(() => {
     const dates = [];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 14; i += 1) {
       dates.push(addDays(startOfDay(new Date()), i));
     }
     return dates;
@@ -67,7 +65,7 @@ function BookingCalendar({ navigation, route }) {
   }, []);
 
   const handleSlotPress = useCallback((slot) => {
-    if (slot.remaining > 0) {
+    if (slot.remaining > 0 || slot.canRequestOverflow) {
       setSelectedSlot(slot);
       setIsModalVisible(true);
     }
@@ -123,34 +121,46 @@ function BookingCalendar({ navigation, route }) {
   // Render time slot chip
   const renderSlotChip = (slot) => {
     const isAvailable = slot.remaining > 0;
+    const canRequestOverflow = Boolean(slot.canRequestOverflow);
+    const canOpenSlot = isAvailable || canRequestOverflow;
+    let borderColor = 'rgba(255,255,255,0.1)';
+    let availabilityLabel = 'Complet';
+
+    if (isAvailable) {
+      borderColor = Colors.primary500;
+      availabilityLabel = `${slot.remaining} dispo`;
+    } else if (canRequestOverflow) {
+      borderColor = Colors.warning500;
+      availabilityLabel = 'Demande possible';
+    }
 
     return (
       <Pressable
-        disabled={!isAvailable}
+        disabled={!canOpenSlot}
         key={slot.time}
         onPress={() => handleSlotPress(slot)}
         style={[
           styles.slotChip,
-          !isAvailable && styles.slotChipDisabled,
-          { borderColor: isAvailable ? Colors.primary500 : 'rgba(255,255,255,0.1)' },
+          !canOpenSlot && styles.slotChipDisabled,
+          {
+            borderColor,
+          },
         ]}
       >
         <Text style={[
           styles.slotTime,
-          !isAvailable && styles.slotTimeDisabled,
+          !canOpenSlot && styles.slotTimeDisabled,
         ]}
         >
           {slot.time}
         </Text>
         {isAvailable ? (
           <Text style={[styles.slotRemaining, { color: Colors.success500 }]}>
-            {slot.remaining}
-            {' '}
-            dispo
+            {availabilityLabel}
           </Text>
         ) : (
           <Text style={[styles.slotRemaining, styles.slotTimeDisabled]}>
-            Complet
+            {availabilityLabel}
           </Text>
         )}
       </Pressable>
@@ -169,6 +179,27 @@ function BookingCalendar({ navigation, route }) {
   }
 
   const facilityData = facility?.data || facility;
+  let slotsContent = (
+    <View style={[styles.emptyState, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+      <Text style={[Fonts.p1, Fonts.neutral300, Fonts.textCenter]}>
+        Aucun créneau disponible pour cette date
+      </Text>
+    </View>
+  );
+
+  if (availabilityLoading) {
+    slotsContent = (
+      <View style={[Alignments.alignCenter, Spaces.padding[32]]}>
+        <ActivityIndicator color={Colors.primary500} size="large" />
+      </View>
+    );
+  } else if (availability?.slots?.length > 0) {
+    slotsContent = (
+      <View style={styles.slotsGrid}>
+        {availability.slots.map(renderSlotChip)}
+      </View>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" title={facilityData?.name || 'Réservation'}>
@@ -217,21 +248,7 @@ function BookingCalendar({ navigation, route }) {
             {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
           </Text>
 
-          {availabilityLoading ? (
-            <View style={[Alignments.alignCenter, Spaces.padding[32]]}>
-              <ActivityIndicator color={Colors.primary500} size="large" />
-            </View>
-          ) : availability?.slots?.length > 0 ? (
-            <View style={styles.slotsGrid}>
-              {availability.slots.map(renderSlotChip)}
-            </View>
-          ) : (
-            <View style={[styles.emptyState, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-              <Text style={[Fonts.p1, Fonts.neutral300, Fonts.textCenter]}>
-                Aucun créneau disponible pour cette date
-              </Text>
-            </View>
-          )}
+          {slotsContent}
         </View>
       </ScrollView>
 

@@ -66,6 +66,31 @@ const defaultValues = {
   validationMode: 'auto',
 };
 
+const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
+  if (!dateValue || !startTime || !endTime || typeof getDateFromDateInput !== 'function') {
+    return null;
+  }
+
+  const baseDate = getDateFromDateInput(dateValue);
+  if (!baseDate || Number.isNaN(baseDate.getTime())) {
+    return null;
+  }
+
+  const toIso = (timeValue) => {
+    const [hours, minutes] = String(timeValue || '').split(':').map((part) => Number(part));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const combined = new Date(baseDate);
+    combined.setHours(hours, minutes, 0, 0);
+    return combined.toISOString();
+  };
+
+  const start = toIso(startTime);
+  const end = toIso(endTime);
+  if (!start || !end) return null;
+
+  return { end, start };
+};
+
 const eventSchema = Joi.object({
   capacity: Joi.number().allow(null, '').optional(),
   date: Joi.string()
@@ -235,6 +260,10 @@ function EventEdit({ navigation, route }) {
   const selectedEndTime = watch('endTime');
   const selectedFacilityId = watch('facility');
   const isRecurrent = watch('isRecurrent');
+  const occupancyWindow = useMemo(
+    () => buildOccupancyWindow(selectedDate, selectedStartTime, selectedEndTime, getDateFromDateInput),
+    [getDateFromDateInput, selectedDate, selectedEndTime, selectedStartTime],
+  );
 
   useEffect(() => {
     if (isRecurrent && selectedDate) {
@@ -641,6 +670,12 @@ function EventEdit({ navigation, route }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   facilityId={watch('facility')}
                   location={value}
+                  occupancyWindow={occupancyWindow
+                    ? {
+                      ...occupancyWindow,
+                      excludeEventId: eventId || undefined,
+                    }
+                    : null}
                   onChange={(/** @type {{ location: string; facilityId?: string }} */ { facilityId: newFacilityId, location: newLocation }) => {
                     onChange(newLocation);
                     setValue('facility', newFacilityId || '');

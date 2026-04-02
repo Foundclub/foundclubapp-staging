@@ -1,55 +1,64 @@
-import { useMemo, useState } from 'react';
 import {
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import SearchMapPreviewCard from '@/components/molecules/searchMapPreviewCard/SearchMapPreviewCard';
+import SearchMapHud from '@/components/organisms/searchMap/SearchMapHud';
 
 import {
   getSearchMapEmptyMessage,
-  getSearchMapResultLabel,
+  getSearchMapNoCoordinatesMessage,
 } from '@/utils/searchMap';
 
 import mapsPlatform from '@/platform/maps';
+import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeolocation';
 
 /**
  * Web map explorer aligned with the shared mobile props.
  * @param {object} props
+ * @param {number} [props.height]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
- * @param {() => void} [props.onShowList]
+ * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
- * @param {() => void} [props.onLocateMe]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {() => void} [props.onShowList]
+ * @param {number} [props.previewBottomOffset]
+ * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
+ * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
  * @returns {import('react').ReactElement}
  */
 function SearchMap({
+  height = 360,
   items = [],
-  onLocateMe,
   onOpenItem,
+  onRegionChangeComplete,
   onSelectItem,
   onShowList,
+  previewBottomOffset = 12,
+  regionHint = null,
   scope = 'events',
   selectedItemId,
+  topMargin = 12,
   totalCount = 0,
 }) {
   const { renderMap } = mapsPlatform;
   const {
     Alignments,
-    ApplicationStyle,
-    Colors,
-    Fonts,
     Spaces,
   } = useTheme();
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
-  const [focusMode, setFocusMode] = useState('results');
+  const [mapCommand, setMapCommand] = useState(null);
+  const [focusMode, setFocusMode] = useState(/** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'));
   const [userLocation, setUserLocation] = useState(null);
+  const [focusedRegion, setFocusedRegion] = useState(regionHint);
 
   const activeSelectedItemId = selectedItemId ?? internalSelectedItemId;
   const selectedItem = useMemo(
@@ -57,6 +66,30 @@ function SearchMap({
     [activeSelectedItemId, items],
   );
   const totalResults = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length;
+  const emptyMessage = totalResults > 0 && items.length === 0
+    ? getSearchMapNoCoordinatesMessage(scope, totalResults)
+    : getSearchMapEmptyMessage(scope);
+
+  useEffect(() => {
+    if (selectedItemId === undefined) {
+      if (internalSelectedItemId && !items.some((item) => item.id === internalSelectedItemId)) {
+        setInternalSelectedItemId('');
+        setFocusMode('results');
+      }
+      return;
+    }
+
+    setFocusMode(selectedItemId ? 'selected' : 'results');
+  }, [internalSelectedItemId, items, selectedItemId]);
+
+  useEffect(() => {
+    if (!regionHint || !Number.isFinite(regionHint.lat) || !Number.isFinite(regionHint.lng)) {
+      return;
+    }
+
+    setFocusedRegion(regionHint);
+    setFocusMode('region');
+  }, [regionHint]);
 
   const handleSelectItem = (itemId) => {
     if (selectedItemId === undefined) {
@@ -66,30 +99,32 @@ function SearchMap({
     onSelectItem?.(itemId);
   };
 
-  const handleLocateMe = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      return;
-    }
+  const handleLocateMe = async () => {
+    const coordinates = await requestCurrentSearchMapLocation();
+    if (!coordinates) return;
 
-    navigator.geolocation.getCurrentPosition((position) => {
-      const coordinates = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      };
-      setUserLocation(coordinates);
-      setFocusMode('user');
-      onLocateMe?.();
+    setUserLocation(coordinates);
+    setFocusMode('user');
+  };
+
+  const issueCommand = (type) => {
+    setMapCommand({
+      id: `${type}-${Date.now()}`,
+      type,
     });
   };
 
   return (
-    <View style={[Spaces.marginTop[12], { minHeight: 360, position: 'relative' }]}>
+    <View style={{ height, marginTop: topMargin, position: 'relative' }}>
       {renderMap({
+        command: mapCommand,
         focusMode,
-        height: 360,
+        height,
         items,
-        message: getSearchMapEmptyMessage(scope),
+        message: emptyMessage,
+        onRegionChangeComplete,
         onSelectItem: handleSelectItem,
+        regionHint: focusedRegion,
         scope,
         selectedItemId: activeSelectedItemId,
         userLocation,
@@ -106,84 +141,26 @@ function SearchMap({
           top: 0,
         }}
       >
-        <View style={[Alignments.row, Alignments.alignStart, Alignments.justifySpaceBetween]}>
-          <View
-            style={[
-              ApplicationStyle.shadow200,
-              {
-                backgroundColor: 'rgba(6, 24, 34, 0.84)',
-                borderColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 18,
-                borderWidth: 1,
-                maxWidth: '72%',
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-              {`${totalResults} ${getSearchMapResultLabel(scope)}`}
-            </Text>
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {`${items.length} affichables sur la carte`}
-            </Text>
-          </View>
-
-          <View style={[Alignments.column, { gap: 10 }]}>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setFocusMode('results')}
-              style={[
-                {
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  justifyContent: 'center',
-                  minHeight: 40,
-                  minWidth: 108,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Recentrer
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={handleLocateMe}
-              style={[
-                {
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(6, 24, 34, 0.9)',
-                  borderColor: `${Colors.primary500}33`,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  justifyContent: 'center',
-                  minHeight: 40,
-                  minWidth: 108,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Me localiser
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <SearchMapHud
+          geolocatableCount={items.length}
+          onLocateMe={handleLocateMe}
+          onRecenter={() => setFocusMode('results')}
+          onZoomIn={() => issueCommand('zoom_in')}
+          onZoomOut={() => issueCommand('zoom_out')}
+          scope={scope}
+          totalCount={totalResults}
+        />
       </View>
 
-      <SearchMapPreviewCard
-        item={selectedItem}
-        onOpen={(item) => onOpenItem?.(item)}
-        onShowList={() => onShowList?.()}
-        scope={scope}
-      />
+      <View pointerEvents="box-none" style={[Alignments.fill, Spaces.gap[12]]}>
+        <SearchMapPreviewCard
+          bottomOffset={previewBottomOffset}
+          item={selectedItem}
+          onOpen={(item) => onOpenItem?.(item)}
+          onShowList={() => onShowList?.()}
+          scope={scope}
+        />
+      </View>
     </View>
   );
 }

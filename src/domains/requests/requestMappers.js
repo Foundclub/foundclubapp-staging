@@ -1,6 +1,6 @@
 /**
- * @typedef {'all' | 'team' | 'club' | 'event' | 'featured'} RequestHubFilter
- * @typedef {'team' | 'club' | 'event' | 'featured'} RequestHubType
+ * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation'} RequestHubFilter
+ * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation'} RequestHubType
  * @typedef {'pending'} RequestHubStatus
  * @typedef {'accept' | 'reject' | 'validate'} RequestHubAction
  * @typedef {object} RequestHubItem
@@ -14,7 +14,7 @@
  * @property {Record<string, any>} meta
  */
 
-export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured']);
+export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation']);
 
 const fallbackRequesterName = 'Utilisateur';
 
@@ -225,11 +225,11 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
   const eventId = String(eventEntity?.documentId || eventEntity?.id || '');
   const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || 'Evenement';
   const clubName = normalizeString(eventEntity?.team?.club?.name) || 'Club';
-  const scopeLabel = requestKind === 'PUBLIC'
-    ? 'Public'
-    : requestKind === 'CM'
-      ? 'Multisport'
-      : 'Club';
+  const scopeLabelByKind = {
+    CM: 'Multisport',
+    PUBLIC: 'Public',
+  };
+  const scopeLabel = scopeLabelByKind[requestKind] || 'Club';
   const targetName = normalizeString(event?.targetClub?.name || event?.multisportClub?.name || clubName);
   const requester = event?.requester || {};
   const requesterName = resolveRequesterName(requester);
@@ -244,10 +244,10 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
       eventId,
       eventName,
       raw: eventEntity,
-      requestId,
       requesterAvatarUrl,
       requesterId: normalizeString(requester?.documentId),
       requesterName,
+      requestId,
       scope: requestKind,
       scopeLabel,
       targetName,
@@ -256,6 +256,43 @@ export const mapFeaturedRequestToHubItem = (event = {}) => {
     subtitle: `${requesterName} demande une mise à la une ${scopeLabel.toLowerCase()}${targetName ? ` pour ${targetName}` : ''}.`,
     title: `Mise a la une ${scopeLabel} - ${eventName}`,
     type: 'featured',
+  };
+};
+
+export const mapFacilityOverrideRequestToHubItem = (request = {}) => {
+  const requestId = String(request?.documentId || request?.id || '');
+  const requester = request?.requestedBy || {};
+  const requesterName = resolveRequesterName(requester);
+  const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
+  const facilityName = normalizeString(request?.facility?.name) || 'Installation';
+  const teamName = normalizeString(request?.team?.name) || 'Equipe';
+  const overlapCount = Number(request?.overlapCount || 0);
+  const maxSlots = Number(request?.maxSlots || 1);
+  const startDate = toIsoString(request?.requestedStart || request?.createdAt);
+
+  return {
+    actions: { primary: 'accept', secondary: 'reject' },
+    createdAt: startDate,
+    id: `installation:${requestId}`,
+    meta: {
+      clubId: normalizeString(request?.club?.documentId),
+      facilityName,
+      maxSlots,
+      overlapCount,
+      raw: request,
+      requesterAvatarUrl,
+      requesterId: normalizeString(requester?.documentId),
+      requesterName,
+      requestId,
+      teamId: normalizeString(request?.team?.documentId),
+      teamName,
+      windowEnd: toIsoString(request?.requestedEnd),
+      windowStart: startDate,
+    },
+    status: 'pending',
+    subtitle: `${teamName} demande une place supplementaire sur ${facilityName} (${overlapCount}/${maxSlots} slots deja pris).`,
+    title: 'Exception installation',
+    type: 'installation',
   };
 };
 
@@ -281,6 +318,7 @@ export const buildRequestHubCounts = (items = []) => {
     club: 0,
     event: 0,
     featured: 0,
+    installation: 0,
     team: 0,
     total: 0,
   };

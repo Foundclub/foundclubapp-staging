@@ -33,7 +33,6 @@ import Input from '@/components/molecules/input/Input';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
-import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -42,7 +41,6 @@ import { missingEvent } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { useSearchEvents } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
-import { toSearchMapItems } from '@/utils/searchMap';
 
 import JoinEventModal from '../joinEventModal/JoinEventModal';
 
@@ -105,11 +103,10 @@ function EventListContent({
   } = useTheme();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const [{ eventFilters, searchMapModes }, appDispatch] = useAppContext();
+  const [{ eventFilters }, appDispatch] = useAppContext();
   const { getClubInitials } = useClub();
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
-  const isMapView = Boolean(enableMapMode && searchMapModes?.events);
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -260,12 +257,11 @@ function EventListContent({
     || [], [featuredPages]);
 
   const events = propEvents || (isSmartSearchEnabled ? smartEvents : internalEvents);
-  const mapItems = useMemo(() => toSearchMapItems(events, 'events'), [events]);
   const activeError = isSmartSearchEnabled ? searchError : error;
   const isLoading = propIsLoading !== undefined
     ? propIsLoading
     : (isSmartSearchEnabled ? isSearchLoading : isInternalLoading);
-  const shouldShowMapToggle = enableMapMode && (isMapView || mapItems.length > 0);
+  const shouldShowMapToggle = enableMapMode && events.length > 0;
 
   const filterCount = useMemo(() => {
     if (!eventFilters) return 0;
@@ -488,21 +484,7 @@ function EventListContent({
 
   return (
     <View style={[Spaces.gap[24], Alignments.fill]}>
-      {isMapView ? (
-        <SearchMap
-          items={mapItems}
-          onOpenItem={(item) => handleEventSelect(item.raw)}
-          onShowList={() => {
-            appDispatch({
-              payload: { events: false },
-              type: 'SET_SEARCH_MAP_MODES',
-            });
-          }}
-          scope="events"
-          totalCount={events.length}
-        />
-      ) : (
-        <WithDataWrapper
+      <WithDataWrapper
           error={activeError?.message}
           isLoading={isLoading && !(isSmartSearchEnabled ? isFetchingSearchNextPage : isFetchingNextPage)}
           wrapperStyle={[Alignments.fill]}
@@ -574,7 +556,6 @@ function EventListContent({
             />
           </View>
         </WithDataWrapper>
-      )}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}
@@ -584,13 +565,8 @@ function EventListContent({
       />
       {shouldShowMapToggle ? (
         <SearchMapFab
-          mode={isMapView ? 'map' : 'list'}
-          onPress={() => {
-            appDispatch({
-              payload: { events: !isMapView },
-              type: 'SET_SEARCH_MAP_MODES',
-            });
-          }}
+          mode="list"
+          onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'events' })}
           scope="events"
         />
       ) : null}

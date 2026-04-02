@@ -10,6 +10,7 @@ const normalizeAppEnv = (value) => {
 };
 
 const appEnv = normalizeAppEnv(process.env.APP_ENV || process.env.ENV);
+const searchMapProvider = normalizeText(process.env.FC_SEARCH_MAP_PROVIDER).toLowerCase();
 const requiredKeys = ['API_URL', 'SOCKET_URL'];
 const errors = [];
 const warnings = [];
@@ -28,12 +29,17 @@ if (appEnv === 'staging' || appEnv === 'production') {
   if (apiUrl && !/\/api\/?$/i.test(apiUrl)) {
     warnings.push('API_URL does not end with /api. Verify the mobile base URL before shipping this build.');
   }
+
+  if (searchMapProvider === 'tomtom' && !normalizeText(process.env.TOMTOM_API_KEY)) {
+    errors.push('TOMTOM_API_KEY is required when FC_SEARCH_MAP_PROVIDER=tomtom for staging/production builds.');
+  }
 }
 
 console.info('[RUNTIME_ENV_CHECK]', {
   apiUrlConfigured: Boolean(normalizeText(process.env.API_URL)),
   appEnv,
   errors,
+  searchMapProvider: searchMapProvider || 'auto',
   socketUrlConfigured: Boolean(normalizeText(process.env.SOCKET_URL)),
   warnings,
 });

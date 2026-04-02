@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
+import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
 import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
@@ -30,6 +31,8 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
  * @param {Function} props.onChange - Callback({ location, facilityId })
  * @param {string} props.error - Error message
  * @param {Function} [props.onAddFacility] - Optional callback when pressing "add facility"
+ * @param {Function} [props.onOccupancyResolved] - Optional callback with occupancy payload
+ * @param {{ start?: string | null, end?: string | null, excludeEventId?: string | null }} [props.occupancyWindow]
  */
 function FacilitySelector({
   clubId,
@@ -37,8 +40,10 @@ function FacilitySelector({
   error,
   facilityId,
   location,
+  occupancyWindow,
   onAddFacility,
   onChange,
+  onOccupancyResolved,
 }) {
   const { t } = useTranslation();
   const {
@@ -124,6 +129,12 @@ function FacilitySelector({
     return allFacilities;
   }, [clubFacilitiesData, cmFacilitiesData]);
   const isFocused = useIsFocused();
+  const {
+    data: occupancyData,
+    isFetching: isFetchingOccupancy,
+  } = useGetFacilityOccupancy(facilityId, occupancyWindow, {
+    enabled: mode === 'club' && Boolean(facilityId && occupancyWindow?.start && occupancyWindow?.end),
+  });
 
   const getFacilityAddressLabel = (address) => {
     if (!address) return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignee');
@@ -178,6 +189,48 @@ function FacilitySelector({
   const handleAddressChange = (newLocation) => {
     onChange({ facilityId: null, location: newLocation });
   };
+
+  const occupancySummary = occupancyData?.data || occupancyData || null;
+  const selectedFacility = facilities.find(
+    (facility) => (facility.documentId || facility.id) === facilityId,
+  );
+  const isSaturated = Boolean(occupancySummary?.saturated);
+  const canRequestOverflow = Boolean(occupancySummary?.canRequestOverflow);
+  let occupancyCardBackground = 'rgba(1, 179, 244, 0.08)';
+  let occupancyCardBorder = `${Colors.primary500}55`;
+  let occupancyTone = Fonts.primary200;
+  let occupancyMessage = t(
+    'eventWizard.steps.location.overflowAvailable',
+    'Cette installation a encore de la capacite pour ce creneau.',
+  );
+
+  if (isSaturated && canRequestOverflow) {
+    occupancyCardBackground = 'rgba(245, 158, 11, 0.12)';
+    occupancyCardBorder = `${Colors.warning500}88`;
+    occupancyTone = Fonts.warning500;
+    occupancyMessage = t(
+      'eventWizard.steps.location.overflowPossible',
+      "Ce creneau est complet. La creation enverra une demande d'exception dirigeant.",
+    );
+  } else if (isSaturated) {
+    occupancyCardBackground = 'rgba(239, 68, 68, 0.12)';
+    occupancyCardBorder = `${Colors.error500}88`;
+    occupancyTone = Fonts.error500;
+    occupancyMessage = t(
+      'eventWizard.steps.location.overflowBlocked',
+      'Ce creneau est complet sur cette installation. Choisissez un autre horaire ou une autre installation.',
+    );
+  }
+
+  useEffect(() => {
+    if (!onOccupancyResolved) return;
+    if (mode !== 'club' || !facilityId || !occupancyWindow?.start || !occupancyWindow?.end) {
+      onOccupancyResolved(null);
+      return;
+    }
+
+    onOccupancyResolved(occupancySummary || null);
+  }, [facilityId, mode, occupancySummary, occupancyWindow?.end, occupancyWindow?.start, onOccupancyResolved]);
 
   return (
     <View style={[Spaces.gap[16]]}>
@@ -389,6 +442,49 @@ function FacilitySelector({
               </ScrollView>
             ) : null}
           </View>
+
+          {selectedFacility && occupancyWindow?.start && occupancyWindow?.end ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius16,
+                Spaces.padding[14],
+                Spaces.gap[8],
+                {
+                  backgroundColor: occupancyCardBackground,
+                  borderColor: occupancyCardBorder,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                  {selectedFacility?.name || t('eventEdit.fields.facility.label', 'Installation')}
+                </Text>
+                {isFetchingOccupancy ? (
+                  <ActivityIndicator color={Colors.primary500} size="small" />
+                ) : null}
+              </View>
+
+              {!isFetchingOccupancy && occupancySummary ? (
+                <>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {`${occupancySummary.overlapCount || 0}/${occupancySummary.maxSlots || 1} slots occupes`}
+                    {Number.isFinite(occupancySummary.remaining)
+                      ? ` • ${Math.max(0, Number(occupancySummary.remaining || 0))} restant(s)`
+                      : ''}
+                  </Text>
+                  <Text
+                    style={[
+                      Fonts.p3,
+                      occupancyTone,
+                    ]}
+                  >
+                    {occupancyMessage}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+          ) : null}
 
           {onAddFacility ? (
             <Button

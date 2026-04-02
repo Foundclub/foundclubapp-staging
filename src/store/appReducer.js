@@ -230,6 +230,23 @@ export default function appReducer(state, action) {
         },
       };
     }
+    case 'SET_SEARCH_MAP_SESSION_STATE': {
+      const scope = action.payload?.scope;
+      if (scope !== 'events' && scope !== 'clubs' && scope !== 'reservations') {
+        return state;
+      }
+
+      return {
+        ...state,
+        searchMapSessions: {
+          ...(state.searchMapSessions || {}),
+          [scope]: {
+            ...(state.searchMapSessions?.[scope] || {}),
+            ...(action.payload?.state || {}),
+          },
+        },
+      };
+    }
     case 'SET_SQUAD_FILTERS': {
       return { ...state, squadFilters: action.payload };
     }

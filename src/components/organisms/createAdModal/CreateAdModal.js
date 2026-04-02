@@ -98,6 +98,7 @@ function CreateAdModal({
     try {
       const teamId = team.documentId || '';
       await createRecruitmentAd({
+        audienceType: 'player',
         position: selectedPosition,
         team: teamId,
         ...(selectedLevel ? { minLevel: selectedLevel } : {}),

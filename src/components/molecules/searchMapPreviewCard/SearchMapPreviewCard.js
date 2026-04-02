@@ -25,12 +25,14 @@ const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 3);
 /**
  * @param {object} props
  * @param {import('@/utils/searchMap').SearchMapItem | null | undefined} props.item
+ * @param {number} [props.bottomOffset]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} props.onOpen
  * @param {() => void} props.onShowList
  * @param {'events' | 'clubs' | 'reservations'} props.scope
  * @returns {import('react').ReactElement | null}
  */
 function SearchMapPreviewCard({
+  bottomOffset = 12,
   item,
   onOpen,
   onShowList,
@@ -57,36 +59,36 @@ function SearchMapPreviewCard({
     <View
       pointerEvents="box-none"
       style={{
-        bottom: 12,
-        left: 12,
+        bottom: bottomOffset,
+        left: 14,
         position: 'absolute',
-        right: 12,
+        right: 14,
       }}
     >
       <View
         style={[
           ApplicationStyle.shadow200,
+          ApplicationStyle.borderRadius24,
           {
-            backgroundColor: 'rgba(5, 28, 42, 0.96)',
-            borderColor: `${Colors.primary500}44`,
-            borderRadius: 22,
+            backgroundColor: 'rgba(5, 28, 42, 0.98)',
+            borderColor: `${Colors.primary500}30`,
             borderWidth: 1,
             overflow: 'hidden',
           },
         ]}
       >
-        <View style={[Spaces.padding[16], Spaces.gap[14]]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+        <View style={[Spaces.padding[16], Spaces.gap[16], { paddingTop: 18 }]}>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[14]]}>
             {item.imageUrl ? (
               <Image
                 source={{ uri: item.imageUrl }}
                 style={{
                   backgroundColor: `${Colors.primary500}18`,
-                  borderColor: `${Colors.primary500}4A`,
-                  borderRadius: 22,
+                  borderColor: `${Colors.primary500}40`,
+                  borderRadius: 28,
                   borderWidth: 1,
-                  height: 44,
-                  width: 44,
+                  height: 56,
+                  width: 56,
                 }}
               />
             ) : (
@@ -94,12 +96,12 @@ function SearchMapPreviewCard({
                 style={{
                   alignItems: 'center',
                   backgroundColor: `${Colors.primary500}18`,
-                  borderColor: `${Colors.primary500}4A`,
-                  borderRadius: 22,
+                  borderColor: `${Colors.primary500}40`,
+                  borderRadius: 28,
                   borderWidth: 1,
-                  height: 44,
+                  height: 56,
                   justifyContent: 'center',
-                  width: 44,
+                  width: 56,
                 }}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
@@ -108,7 +110,7 @@ function SearchMapPreviewCard({
               </View>
             )}
 
-            <View style={[Alignments.grow1, Spaces.gap[4]]}>
+            <View style={[Alignments.grow1, Spaces.gap[6]]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                 <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
                   {item.title}
@@ -117,14 +119,15 @@ function SearchMapPreviewCard({
                   <View
                     style={{
                       backgroundColor: `${Colors.primary500}16`,
-                      borderColor: `${Colors.primary500}55`,
+                      borderColor: `${Colors.primary500}44`,
                       borderRadius: 999,
                       borderWidth: 1,
+                      maxWidth: '42%',
                       paddingHorizontal: 10,
                       paddingVertical: 5,
                     }}
                   >
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                    <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary500]}>
                       {item.badge}
                     </Text>
                   </View>
@@ -144,9 +147,11 @@ function SearchMapPreviewCard({
                       key={entry}
                       style={{
                         backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderColor: 'rgba(255,255,255,0.08)',
                         borderRadius: 999,
+                        borderWidth: 1,
                         paddingHorizontal: 10,
-                        paddingVertical: 5,
+                        paddingVertical: 6,
                       }}
                     >
                       <Text style={[Fonts.p4, Fonts.neutral200]}>
@@ -171,18 +176,20 @@ function SearchMapPreviewCard({
         >
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => onShowList()}
-            style={{
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              borderColor: 'rgba(255,255,255,0.12)',
-              borderRadius: 16,
-              borderWidth: 1,
-              flex: 1,
-              justifyContent: 'center',
-              minHeight: 44,
-              paddingHorizontal: 14,
-            }}
+            onPress={onShowList}
+            style={[
+              ApplicationStyle.borderRadius16,
+              {
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderColor: 'rgba(255,255,255,0.12)',
+                borderWidth: 1,
+                flex: 1,
+                justifyContent: 'center',
+                minHeight: 48,
+                paddingHorizontal: 14,
+              },
+            ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
               Voir la liste
@@ -191,15 +198,20 @@ function SearchMapPreviewCard({
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => onOpen(item)}
-            style={{
-              alignItems: 'center',
-              backgroundColor: Colors.primary500,
-              borderRadius: 16,
-              flex: 1.1,
-              justifyContent: 'center',
-              minHeight: 44,
-              paddingHorizontal: 14,
-            }}
+            style={[
+              ApplicationStyle.shadow200,
+              ApplicationStyle.borderRadius16,
+              {
+                alignItems: 'center',
+                backgroundColor: Colors.primary500,
+                borderColor: Colors.primary500,
+                borderWidth: 1,
+                flex: 1.08,
+                justifyContent: 'center',
+                minHeight: 48,
+                paddingHorizontal: 14,
+              },
+            ]}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
               Ouvrir

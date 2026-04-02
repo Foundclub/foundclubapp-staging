@@ -29,39 +29,28 @@ L'app utilise des product flavors pour séparer production et staging :
 - **Production** : `android/app/src/production/google-services.json`
 - **Staging** : `android/app/src/staging/google-services.json`
 
-### Clés Google Maps Android
+### Clé TomTom
 
-Les builds Android exigent maintenant une vraie clé Google Maps par environnement :
+Le mode carte recherche utilise TomTom via Leaflet/WebView.
 
-- `GOOGLE_MAPS_ANDROID_API_KEY_STAGING`
-- `GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION`
+Variables requises pour le rollout staging :
 
-Sources supportées par Gradle :
+- `FC_SEARCH_MAP_PROVIDER=tomtom`
+- `TOMTOM_API_KEY`
 
-- variables d'environnement shell / CI / EAS
-- `gradle.properties` avec les mêmes noms
-- fallback accepté :
-  - `googleMapsApiKeyStaging`
-  - `googleMapsApiKeyProduction`
-
-Un build `staging` ou `production` échoue explicitement si la clé est absente ou reste au placeholder.
-
-### Configuration Google Cloud Console
+### Configuration TomTom
 
 Pour **staging** :
 
-- activer `Maps SDK for Android`
-- activer la facturation
-- restreindre la clé au package `com.foundclub.staging`
-- ajouter le SHA du debug keystore local
-- ajouter le SHA réellement utilisé pour les builds internes/staging
+- créer une clé TomTom dédiée staging
+- la fournir dans `.env.staging` ou via secret EAS
+- vérifier le quota gratuit TomTom avant distribution interne
 
 Pour **production** :
 
-- activer `Maps SDK for Android`
-- activer la facturation
-- restreindre la clé au package `com.foundclub`
-- ajouter le SHA release/prod correspondant
+- créer une clé TomTom dédiée production
+- la fournir dans `.env.production` ou via secret EAS
+- prévoir une rotation séparée des clés
 
 ### Build staging
 
@@ -69,25 +58,18 @@ Pour **production** :
 # Redémarrer Metro si nécessaire
 taskkill /F /IM node.exe
 $env:APP_ENV="staging"
-$env:GOOGLE_MAPS_ANDROID_API_KEY_STAGING="votre-cle-staging"
+$env:FC_SEARCH_MAP_PROVIDER="tomtom"
+$env:TOMTOM_API_KEY="votre-cle-tomtom"
 npm run start:staging
 
 # Build Android staging
 npm run android:staging
 # ou
 $env:APP_ENV="staging"
-$env:GOOGLE_MAPS_ANDROID_API_KEY_STAGING="votre-cle-staging"
+$env:FC_SEARCH_MAP_PROVIDER="tomtom"
+$env:TOMTOM_API_KEY="votre-cle-tomtom"
 cd android
 ./gradlew assembleStagingDebug
-```
-
-### Exemple gradle.properties local
-
-Fichier : `%USERPROFILE%\.gradle\gradle.properties`
-
-```properties
-GOOGLE_MAPS_ANDROID_API_KEY_STAGING=votre-cle-staging
-GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION=votre-cle-production
 ```
 
 ## Configuration iOS

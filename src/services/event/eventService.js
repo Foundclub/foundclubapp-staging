@@ -2,12 +2,13 @@ import Joi from 'joi';
 import { Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { getApiBaseUrl } from '@/config/runtimeUrls';
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+
+import client from '@/services/client';
 
 import { createLogger } from '@/utils/logger/logger';
 
-import client from '../client';
+import { getApiBaseUrl } from '@/config/runtimeUrls';
 
 const eventServiceLogger = createLogger('event-service');
 
@@ -34,6 +35,10 @@ export const eventSchema = Joi.object({
     documentId: Joi.string().allow(null).optional(),
     name: Joi.string().allow(null).optional(),
   }).allow(null).optional(),
+  facilityOverrideRequest: Joi.object({
+    documentId: Joi.string().allow(null).optional(),
+    status: Joi.string().allow(null).optional(),
+  }).allow(null).optional(),
   featuredRequestStatus: Joi.string().valid('none', 'pending', 'approved', 'rejected').allow(null).optional(),
   geohash: Joi.string().allow('', null).optional(),
   invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
@@ -42,6 +47,7 @@ export const eventSchema = Joi.object({
     lat: Joi.number().allow(null).optional(),
     lng: Joi.number().allow(null).optional(),
   }).allow(null).optional(),
+  pendingReason: Joi.string().allow('', null).optional(),
   recurrenceGroupId: Joi.string().allow(null).optional(),
   sessionStatus: Joi.string().valid('open', 'closed').allow(null).optional(),
   team: Joi.object({
@@ -174,6 +180,7 @@ export const getEventById = async (documentId) => {
         'recruitmentAds.event',
         'recruitmentAds.event.type',
         'facility',
+        'facilityOverrideRequest',
         'team.club.sponsor',
         'team.club.sponsor.logo'],
     },

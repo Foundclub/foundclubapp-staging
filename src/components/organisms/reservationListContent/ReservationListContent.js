@@ -20,7 +20,6 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
-import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -29,10 +28,12 @@ import { useGetFeaturedReservations, useGetReservations } from '@/services/reser
 import { useSearchReservations } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
 
-import { toSearchMapItems } from '@/utils/searchMap';
-
 /** @typedef {import('@/domains/event/types').FCEvent} FCEvent */
 /** @typedef {{ pages?: Array<{ data?: FCEvent[] }> }} ReservationPages */
+
+function ReservationsListSeparator() {
+  return <View style={{ height: 16 }} />;
+}
 
 /**
  * @param {{ enableMapMode?: boolean; showFilters?: boolean }} props
@@ -48,43 +49,27 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     Fonts,
     Spaces,
   } = useTheme();
-
   const { userData } = useAuth();
 
-  // State for JoinEventModal - SAME as EventListContent
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */ (undefined));
-
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedActivity, setSelectedActivity] = useState(/** @type {string | null} */ (null)); // Activity quick filter
-  const [{ reservationFilters, searchMapModes }, appDispatch] = useAppContext();
-  const isMapView = Boolean(enableMapMode && showFilters && searchMapModes?.reservations);
+  const [{ reservationFilters }, appDispatch] = useAppContext();
+  const selectedActivity = reservationFilters?.activitySlug || null;
   const activeSearchText = useMemo(
     () => (typeof reservationFilters?.q === 'string' ? reservationFilters.q.trim() : ''),
     [reservationFilters?.q],
   );
   const isSmartSearchEnabled = activeSearchText.length >= 2;
 
-  // Activity options for quick filters
   const activityOptions = [
-    {
-      emoji: '🎯', id: 'all', label: 'Tous', slug: null,
-    },
-    {
-      emoji: '🎾', id: 'padel', label: 'Padel', slug: 'padel',
-    },
-    {
-      emoji: '⚽', id: 'foot', label: 'Foot 5', slug: 'foot',
-    },
-    {
-      emoji: '🎾', id: 'tennis', label: 'Tennis', slug: 'tennis',
-    },
-    {
-      emoji: '🏀', id: 'basket', label: 'Basket', slug: 'basket',
-    },
+    { id: 'all', label: 'Tous', slug: null },
+    { id: 'padel', label: 'Padel', slug: 'padel' },
+    { id: 'foot', label: 'Foot 5', slug: 'foot' },
+    { id: 'tennis', label: 'Tennis', slug: 'tennis' },
+    { id: 'basket', label: 'Basket', slug: 'basket' },
   ];
 
-  // SAME mutation as EventListContent
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onSuccess: () => {
@@ -101,48 +86,17 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     },
   });
 
-  // Handlers - SAME as EventListContent
-  const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
-    if (item?.documentId) {
-      navigation.navigate(RouteNames.EventStack, {
-        params: { eventId: item.documentId },
-        screen: RouteNames.EventDetails,
-      });
-    }
-  }, [navigation]);
-
-  // SAME as handleJoinEvent in EventListContent - opens the modal
-  const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
-    setSelectedEvent(event);
-    setIsJoinModalVisible(true);
-  }, []);
-
-  const handleCloseJoinModal = useCallback(() => {
-    setIsJoinModalVisible(false);
-    setSelectedEvent(undefined);
-  }, []);
-
-  const filterCount = useMemo(() => {
-    if (!reservationFilters) return 0;
-    return Object.entries(reservationFilters).reduce((/** @type {number} */ acc, [, value]) => {
-      if (!value || (Array.isArray(value) && value.length === 0)) {
-        return acc;
-      }
-      return acc + 1;
-    }, 0);
-  }, [reservationFilters]);
-
   const activeFilters = useMemo(() => {
-    const filters = { ...reservationFilters };
-    if (!filters.startDateAfter) {
-      filters.startDateAfter = startOfDay(new Date()).toISOString();
+    const nextFilters = {
+      ...(reservationFilters || {}),
+    };
+
+    if (!nextFilters.startDateAfter) {
+      nextFilters.startDateAfter = startOfDay(new Date()).toISOString();
     }
-    // Apply activity filter if selected
-    if (selectedActivity && selectedActivity !== 'all') {
-      filters.activitySlug = selectedActivity;
-    }
-    return filters;
-  }, [reservationFilters, selectedActivity]);
+
+    return nextFilters;
+  }, [reservationFilters]);
 
   const {
     data: requestPages,
@@ -191,59 +145,58 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   const featuredReservations = useMemo(() => {
     const typedFeaturedData = /** @type {{ data?: any[] }} */ (featuredData || {});
     if (featuredError || !typedFeaturedData.data) return [];
+
     try {
       const items = typedFeaturedData.data;
       if (!Array.isArray(items)) return [];
 
-      let events = [];
-      if (items.length > 0 && items[0]?.event) {
-        events = items.map((item) => item.event);
-      } else {
-        events = items;
-      }
+      const events = items.length > 0 && items[0]?.event
+        ? items.map((item) => item.event)
+        : items;
 
-      const validEvents = events.filter((/** @type {FCEvent} */ event) => event && typeof event === 'object' && (event.documentId || event.id));
-
-      const futureEvents = validEvents.filter((/** @type {FCEvent} */ event) => {
-        if (!event.date) return false;
-        return !isBefore(new Date(event.date), startOfDay(new Date()));
-      });
-
-      return futureEvents;
-    } catch (err) {
-      console.error('Error parsing featured reservations:', err);
+      return events
+        .filter((/** @type {FCEvent} */ event) => event && typeof event === 'object' && (event.documentId || event.id))
+        .filter((/** @type {FCEvent} */ event) => {
+          if (!event.date) return false;
+          return !isBefore(new Date(event.date), startOfDay(new Date()));
+        });
+    } catch (parseError) {
+      console.error('Error parsing featured reservations:', parseError);
       return [];
     }
   }, [featuredData, featuredError]);
 
   const reservations = useMemo(() => {
     const pages = /** @type {ReservationPages} */ (requestPages || {});
-    const allReservations = pages?.pages
-      ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
-        const items = page?.data || [];
-        return acc.concat(items);
-      }, [])
-      || [];
-    return allReservations;
+    return pages?.pages?.reduce((/** @type {FCEvent[]} */ acc, page) => {
+      const items = page?.data || [];
+      return acc.concat(items);
+    }, []) || [];
   }, [requestPages]);
+
   const smartReservations = useMemo(() => {
     const pages = /** @type {ReservationPages} */ (smartPages || {});
-    return pages?.pages
-      ?.reduce((/** @type {FCEvent[]} */ acc, page) => {
-        const items = mapSearchPayload(page);
-        return acc.concat(items);
-      }, [])
-      || [];
+    return pages?.pages?.reduce((/** @type {FCEvent[]} */ acc, page) => {
+      const items = mapSearchPayload(page);
+      return acc.concat(items);
+    }, []) || [];
   }, [smartPages]);
+
   const displayedReservations = isSmartSearchEnabled ? smartReservations : reservations;
-  const mapItems = useMemo(
-    () => toSearchMapItems(displayedReservations, 'reservations'),
-    [displayedReservations],
-  );
   const activeError = isSmartSearchEnabled ? smartError : error;
   const activeLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
-  const shouldShowMapToggle = enableMapMode && showFilters && (isMapView || mapItems.length > 0);
+  const shouldShowMapToggle = enableMapMode && showFilters && displayedReservations.length > 0;
+
+  const filterCount = useMemo(() => {
+    if (!reservationFilters) return 0;
+    return Object.entries(reservationFilters).reduce((acc, [, value]) => {
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        return acc;
+      }
+      return acc + 1;
+    }, 0);
+  }, [reservationFilters]);
 
   const handleEndReached = useCallback(() => {
     if (isSmartSearchEnabled) {
@@ -252,6 +205,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
       }
       return;
     }
+
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
@@ -264,6 +218,25 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     isFetchingSmartNextPage,
     isSmartSearchEnabled,
   ]);
+
+  const handleCardPress = useCallback((/** @type {FCEvent} */ item) => {
+    if (!item?.documentId) return;
+
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: item.documentId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
+  const handleJoinEvent = useCallback((/** @type {FCEvent} */ event) => {
+    setSelectedEvent(event);
+    setIsJoinModalVisible(true);
+  }, []);
+
+  const handleCloseJoinModal = useCallback(() => {
+    setIsJoinModalVisible(false);
+    setSelectedEvent(undefined);
+  }, []);
 
   const handleFilterPress = useCallback(() => {
     navigation.navigate(RouteNames.ReservationFilters);
@@ -295,15 +268,23 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
   }, [isSmartSearchEnabled, refetch, refetchFeatured, refetchSmart]);
 
   const handleActivitySelect = useCallback((/** @type {string | null} */ activitySlug) => {
-    setSelectedActivity(activitySlug);
-  }, []);
+    appDispatch({
+      payload: {
+        ...(reservationFilters || {}),
+        activitySlug: activitySlug || null,
+      },
+      type: 'SET_RESERVATION_FILTERS',
+    });
+  }, [appDispatch, reservationFilters]);
 
   /**
    * @param {{ item: FCEvent }} param
    */
   const renderItem = useCallback(({ item }) => {
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
-    const primaryReasonLabel = getMatchReasonLabel(item?.__search?.matchReasons?.[0]);
+    const primaryReasonLabel = getMatchReasonLabel(
+      Reflect.get(item || {}, '__search')?.matchReasons?.[0],
+    );
 
     return (
       <View style={[Spaces.gap[8]]}>
@@ -325,7 +306,6 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     );
   }, [Fonts, Spaces, handleCardPress, handleJoinEvent, t, userData?.role?.name]);
 
-  // Loading state
   if (activeLoading && !(isSmartSearchEnabled ? smartPages : requestPages)) {
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
@@ -336,7 +316,6 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
     );
   }
 
-  // Error state
   if (activeError && !(isSmartSearchEnabled ? smartPages : requestPages)) {
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
@@ -354,7 +333,8 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
       Alignments.alignCenter,
       Spaces.gap[32],
       Spaces.padding[24],
-      Spaces.marginVertical[24]]}
+      Spaces.marginVertical[24],
+    ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
         {t('reservation.noData')}
@@ -364,8 +344,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
 
   const renderHeader = () => (
     <View style={[Spaces.gap[24], Spaces.marginBottom[24]]}>
-      {/* Featured Section */}
-      {!isFeaturedLoading && !featuredError && featuredReservations.length > 0 && (
+      {!isFeaturedLoading && !featuredError && featuredReservations.length > 0 ? (
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
             {t('reservation.featured')}
@@ -378,6 +357,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
             {featuredReservations.map((item) => {
               const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
               const cardWidth = Dimensions.get('window').width - horizontalScale(48);
+
               return (
                 <View key={item?.documentId || Math.random()} style={{ width: cardWidth }}>
                   <EventCardNew
@@ -394,12 +374,11 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
             })}
           </ScrollView>
         </View>
-      )}
+      ) : null}
 
-      {/* Date Header */}
       <View>
         <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Réservation à partir de
+          R\u00e9servations \u00e0 partir de
         </Text>
         <DateSlider
           onDateSelected={handleDateSelected}
@@ -407,10 +386,9 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         />
       </View>
 
-      {/* Activity Quick Filters */}
       <View>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Filtrer par activité
+          Filtrer par activit\u00e9
         </Text>
         <ScrollView
           contentContainerStyle={{ gap: 8 }}
@@ -420,6 +398,7 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
           {activityOptions.map((activity) => {
             const isSelected = selectedActivity === activity.slug
               || (activity.slug === null && selectedActivity === null);
+
             return (
               <Pressable
                 key={activity.id}
@@ -429,13 +408,12 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
                   isSelected && { backgroundColor: Colors.primary500 },
                 ]}
               >
-                <Text style={[
-                  localStyles.activityChipText,
-                  isSelected && { color: Colors.neutral900 },
-                ]}
+                <Text
+                  style={[
+                    localStyles.activityChipText,
+                    isSelected && { color: Colors.neutral900 },
+                  ]}
                 >
-                  {activity.emoji}
-                  {' '}
                   {activity.label}
                 </Text>
               </Pressable>
@@ -444,7 +422,6 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         </ScrollView>
       </View>
 
-      {/* Search + Filters */}
       <View style={[Alignments.alignCenter]}>
         <SearchComponent
           filterNumber={filterCount}
@@ -453,9 +430,10 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
           searchDefaultValue={reservationFilters?.q}
         />
       </View>
+
       {isSmartSearchEnabled ? (
         <Text style={[Fonts.p3, Fonts.primary500]}>
-          Trie par pertinence
+          Tri par pertinence
         </Text>
       ) : null}
     </View>
@@ -468,48 +446,30 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         isLoading={(activeLoading && !activeFetchingNext) || createEventParticipationMutation.isPending}
         wrapperStyle={[Alignments.fill]}
       >
-        <View style={[Alignments.fill]}>
-          {isMapView ? (
-            <SearchMap
-              items={mapItems}
-              onOpenItem={(item) => handleCardPress(item.raw)}
-              onShowList={() => {
-                appDispatch({
-                  payload: { reservations: false },
-                  type: 'SET_SEARCH_MAP_MODES',
-                });
-              }}
-              scope="reservations"
-              totalCount={displayedReservations.length}
+        <FlashList
+          contentContainerStyle={{ paddingBottom: 120 }}
+          data={displayedReservations}
+          estimatedItemSize={200}
+          ItemSeparatorComponent={ReservationsListSeparator}
+          keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
+          ListEmptyComponent={renderEmptyList}
+          ListFooterComponent={activeFetchingNext ? (
+            <ActivityIndicator
+              color={Colors.primary500}
+              size="large"
+              style={Spaces.marginVertical[16]}
             />
-          ) : (
-            <FlashList
-              contentContainerStyle={{ paddingBottom: 120 }}
-              data={displayedReservations}
-              estimatedItemSize={200}
-              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-              keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
-              ListEmptyComponent={renderEmptyList}
-              ListFooterComponent={activeFetchingNext ? (
-                <ActivityIndicator
-                  color={Colors.primary500}
-                  size="large"
-                  style={Spaces.marginVertical[16]}
-                />
-              ) : null}
-              ListHeaderComponent={renderHeader}
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={0.5}
-              onRefresh={handleRefresh}
-              refreshing={activeLoading && !activeFetchingNext}
-              renderItem={renderItem}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
+          ) : null}
+          ListHeaderComponent={renderHeader}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          onRefresh={handleRefresh}
+          refreshing={activeLoading && !activeFetchingNext}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+        />
       </WithDataWrapper>
 
-      {/* JoinEventModal - SAME as EventListContent */}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || selectedEvent?.club?.name || ''}
         createEventParticipationMutation={createEventParticipationMutation}
@@ -517,15 +477,11 @@ function ReservationListContent({ enableMapMode = false, showFilters = false }) 
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
       />
+
       {shouldShowMapToggle ? (
         <SearchMapFab
-          mode={isMapView ? 'map' : 'list'}
-          onPress={() => {
-            appDispatch({
-              payload: { reservations: !isMapView },
-              type: 'SET_SEARCH_MAP_MODES',
-            });
-          }}
+          mode="list"
+          onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'reservations' })}
           scope="reservations"
         />
       ) : null}

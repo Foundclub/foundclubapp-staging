@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -28,6 +29,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetFacility } from '@/services/facility/facilityQueries';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
+
 import {
   FACILITY_PLANNING_PALETTE,
   isValidFacilityPlanningColor,
@@ -39,6 +41,7 @@ const schema = Joi.object({
     Joi.string().allow('').optional(),
     Joi.object().optional(),
   ),
+  allowOverflowRequests: Joi.boolean().required(),
   maxSlots: Joi.number().min(1).required().messages({
     'any.required': 'La capacité est requise',
     'number.min': 'La capacité doit être d\'au moins 1',
@@ -176,6 +179,7 @@ function FacilityForm() {
   } = useForm({
     defaultValues: {
       address: null,
+      allowOverflowRequests: true,
       maxSlots: 1,
       name: '',
       planningColor: FACILITY_PLANNING_PALETTE[0],
@@ -191,6 +195,7 @@ function FacilityForm() {
   const watchedAddress = watch('address');
   const watchedMaxSlots = watch('maxSlots');
   const watchedPlanningColor = watch('planningColor');
+  const watchedAllowOverflowRequests = watch('allowOverflowRequests');
   const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId;
   const isFacilityNotFound = isEdit && !facilityLoading && !facilityError && !facility;
 
@@ -198,6 +203,7 @@ function FacilityForm() {
     if (facility) {
       reset({
         address: facility?.address || null,
+        allowOverflowRequests: facility?.allowOverflowRequests !== false,
         maxSlots: Number(facility?.maxSlots || 1),
         name: facility?.name || '',
         planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
@@ -209,6 +215,7 @@ function FacilityForm() {
     if (!isEdit) {
       reset({
         address: null,
+        allowOverflowRequests: true,
         maxSlots: 1,
         name: '',
         planningColor: FACILITY_PLANNING_PALETTE[0],
@@ -488,8 +495,8 @@ function FacilityForm() {
                         const isSelected = selectedColor === color;
                         return (
                           <TouchableOpacity
-                            key={color}
                             activeOpacity={0.85}
+                            key={color}
                             onPress={() => onChange(color)}
                             style={{
                               alignItems: 'center',
@@ -572,6 +579,43 @@ function FacilityForm() {
 
             <Controller
               control={control}
+              name="allowOverflowRequests"
+              render={({ field: { onChange, value } }) => (
+                <View
+                  style={[
+                    ApplicationStyle.backgroundColor.primary900,
+                    ApplicationStyle.borderRadius16,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    Spaces.padding[12],
+                    Spaces.gap[12],
+                    { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('facilityForm.fields.allowOverflowRequests', 'Autoriser les demandes d\'exception')}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral300]}>
+                      {t(
+                        'facilityForm.hints.allowOverflowRequests',
+                        'Quand les slots sont pleins, les equipes pourront envoyer une demande au dirigeant.',
+                      )}
+                    </Text>
+                  </View>
+                  <Switch
+                    onValueChange={onChange}
+                    thumbColor={value ? Colors.primary500 : Colors.neutral200}
+                    trackColor={{ false: `${Colors.neutral500}88`, true: `${Colors.primary500}66` }}
+                    value={Boolean(value)}
+                  />
+                </View>
+              )}
+            />
+
+            <Controller
+              control={control}
               name="maxSlots"
               render={({ field: { onChange, value } }) => {
                 const safeValue = Number(value || 1);
@@ -638,6 +682,12 @@ function FacilityForm() {
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
               {renderMetaChip(getCapacityLabel(watchedMaxSlots, t), 'primary')}
               {renderMetaChip(watchedType || t('facilityForm.defaults.type', 'Type inconnu'), 'neutral')}
+              {renderMetaChip(
+                watchedAllowOverflowRequests
+                  ? t('facilityForm.preview.overflowAllowed', 'Exception possible')
+                  : t('facilityForm.preview.overflowBlocked', 'Capacite stricte'),
+                watchedAllowOverflowRequests ? 'warning' : 'neutral',
+              )}
             </View>
 
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>

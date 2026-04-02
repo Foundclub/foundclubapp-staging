@@ -14,6 +14,8 @@ const getTypeLabel = (type, t) => {
       return t('requestsHub.types.event', 'Événement');
     case 'featured':
       return t('requestsHub.types.featured', 'À la une');
+    case 'installation':
+      return t('requestsHub.types.installation', 'Installation');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
     default:

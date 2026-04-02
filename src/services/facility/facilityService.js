@@ -170,6 +170,70 @@ const getAvailability = async (facilityId, date) => {
 };
 
 /**
+ * Get occupancy snapshot for a facility on a specific time window.
+ * @param {string} facilityId
+ * @param {{ start: string, end: string, excludeEventId?: string | null }} params
+ * @returns {Promise<any>}
+ */
+const getOccupancy = async (facilityId, { end, excludeEventId, start }) => {
+  try {
+    const response = await client.get(`/facilities/${facilityId}/occupancy`, {
+      params: {
+        end,
+        excludeEventId: excludeEventId || undefined,
+        start,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching facility occupancy:', error);
+    throw error;
+  }
+};
+
+const getPendingFacilityOverrideRequests = async (clubId) => {
+  try {
+    const response = await client.get('/facility-override-requests/pending', {
+      params: {
+        clubId,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching facility override requests:', error);
+    throw error;
+  }
+};
+
+const approveFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+  try {
+    const response = await client.post(`/facility-override-requests/${requestId}/approve`, {
+      data: {
+        decisionReason,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error approving facility override request:', error);
+    throw error;
+  }
+};
+
+const refuseFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+  try {
+    const response = await client.post(`/facility-override-requests/${requestId}/refuse`, {
+      data: {
+        decisionReason,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error refusing facility override request:', error);
+    throw error;
+  }
+};
+
+/**
  * Create a booking from the Smart Slots system
  * @param {object} data - Booking data
  * @param {string} data.facilityId - Facility document ID
@@ -206,6 +270,7 @@ const getBookableFacilities = async () => {
 };
 
 export {
+  approveFacilityOverrideRequest,
   createBooking,
   createFacility,
   deleteFacility,
@@ -216,5 +281,8 @@ export {
   getFacilities,
   getFacility,
   getFacilitySections,
+  getOccupancy,
+  getPendingFacilityOverrideRequests,
+  refuseFacilityOverrideRequest,
   updateFacility,
 };

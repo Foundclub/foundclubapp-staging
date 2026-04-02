@@ -17,6 +17,11 @@
  * @property {string} [returnSessionDocumentId] - Session to restore if add-account is cancelled.
  * @property {{ type?: string } | null} [pendingNotification] - Notification waiting for navigation readiness.
  * @property {{ events?: boolean, clubs?: boolean, reservations?: boolean }} [searchMapModes] - Session-only map/list mode per search tab.
+ * @property {{
+ *   events?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string },
+ *   clubs?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string },
+ *   reservations?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string }
+ * }} [searchMapSessions] - Session-only map viewport and selection state per search scope.
  */
 
 /**
@@ -34,7 +39,7 @@
  * | 'SET_CLUB_FILTERS' | 'SET_TEAM_FILTERS' | 'SET_MERCATO_FILTERS' | 'SET_RECRUITMENT_AD_FILTERS'
  * | 'SET_RESERVATION_FILTERS' | 'SET_EVENT_FILTERS' | 'SET_SQUAD_FILTERS' | 'SWITCH_ACCOUNT'
  * | 'PREPARE_ADD_ACCOUNT' | 'CANCEL_ADD_ACCOUNT' | 'UPDATE_USER_DATA' | 'SET_PENDING_NOTIFICATION'
- * | 'SET_SEARCH_MAP_MODES'} AppContextTypes
+ * | 'SET_SEARCH_MAP_MODES' | 'SET_SEARCH_MAP_SESSION_STATE'} AppContextTypes
  */
 
 /**
@@ -102,6 +107,7 @@
  * @property {string} [section]
  * @property {string[]} [category]
  * @property {string[]} [level]
+ * @property {string | string[]} [position]
  */
 
 /**

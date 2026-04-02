@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -18,6 +19,8 @@ import { useAdWizard } from './AdWizardContext';
 import { getAdWizardStepCount } from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
 
+const MAX_POSITION_QUANTITY = 10;
+
 /**
  * Wizard step for selecting positions and quantities.
  * @param {{ navigation: any }} props
@@ -27,6 +30,7 @@ function AdWizardPositions({ navigation }) {
   const {
     Alignments,
     ApplicationStyle,
+    Colors,
     Fonts,
     Spaces,
   } = useTheme();
@@ -39,9 +43,22 @@ function AdWizardPositions({ navigation }) {
     [state.positions],
   );
   const selectedCount = state.positions.length;
+  const bulkQuantity = useMemo(() => {
+    if (state.positions.length === 0 || state.positions.length !== positions.length) {
+      return 0;
+    }
+
+    const firstQuantity = Number(state.positions[0]?.quantity || 0);
+    const sameQuantity = state.positions.every(
+      (position) => Number(position?.quantity || 0) === firstQuantity,
+    );
+
+    return sameQuantity ? firstQuantity : 0;
+  }, [positions.length, state.positions]);
   const cardSurfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
+    borderWidth: 1,
   };
 
   const isPositionSelected = (positionName) => state.positions.some((position) => position.name === positionName);
@@ -63,13 +80,25 @@ function AdWizardPositions({ navigation }) {
     });
   };
 
-  const handleNext = () => {
-    if (state.event) {
-      navigation.navigate(RouteNames.AdWizardValidation);
+  const handleBulkQuantityChange = (delta) => {
+    const nextQuantity = Math.max(0, Math.min(MAX_POSITION_QUANTITY, bulkQuantity + delta));
+
+    if (nextQuantity === 0) {
+      dispatch({ payload: [], type: 'SET_POSITIONS' });
       return;
     }
 
-    navigation.navigate(RouteNames.AdWizardDescription);
+    dispatch({
+      payload: positions.map((position) => ({
+        name: position,
+        quantity: nextQuantity,
+      })),
+      type: 'SET_POSITIONS',
+    });
+  };
+
+  const handleNext = () => {
+    navigation.navigate(RouteNames.AdWizardInfo);
   };
 
   return (
@@ -83,83 +112,183 @@ function AdWizardPositions({ navigation }) {
       subtitle={'D\u00E9finissez les postes \u00E0 ouvrir et le volume de recrutement associ\u00E9.'}
       title={'Postes recherch\u00E9s'}
     >
-      <View style={[Spaces.gap[20]]}>
-        <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.gap[16], cardSurfaceStyle]}>
-          <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-            <View style={[Spaces.gap[8], { flex: 1 }]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>Besoins de recrutement</Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {'Choisissez les postes \u00E0 ouvrir, puis ajustez le nombre de joueurs recherch\u00E9s.'}
+      <View style={[Spaces.gap[24], Spaces.paddingBottom[48]]}>
+        <View
+          style={[
+            ApplicationStyle.card,
+            Spaces.padding[24],
+            Spaces.gap[24],
+            cardSurfaceStyle,
+            {
+              backgroundColor: 'rgba(1, 179, 244, 0.08)',
+            },
+          ]}
+        >
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+            <View style={[Spaces.gap[12], { flex: 1, minWidth: 180 }]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {selectedCount > 0
+                  ? `${selectedCount} poste${selectedCount > 1 ? 's' : ''} configur\u00E9${selectedCount > 1 ? 's' : ''}`
+                  : 'Aucun poste s\u00E9lectionn\u00E9'}
+              </Text>
+              <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
+                {selectedCount > 0
+                  ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherch\u00E9${totalPlayers > 1 ? 's' : ''} sur cette annonce.`
+                  : 'Active des postes ci-dessous ou applique un volume \u00E0 tous les postes.'}
               </Text>
             </View>
 
-            <View
-              style={[
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[8],
-                {
-                  backgroundColor: 'rgba(1, 179, 244, 0.14)',
-                  borderColor: 'rgba(1, 179, 244, 0.32)',
-                  borderRadius: 999,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.primary500]}>{sportName}</Text>
-            </View>
-          </View>
-
-          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
             <View
               style={[
                 Spaces.paddingHorizontal[12],
                 Spaces.paddingVertical[8],
                 {
                   backgroundColor: 'rgba(1, 179, 244, 0.18)',
-                  borderColor: 'rgba(1, 179, 244, 0.34)',
+                  borderColor: 'rgba(1, 179, 244, 0.40)',
                   borderRadius: 999,
                   borderWidth: 1,
                 },
               ]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>{sportName}</Text>
+            </View>
+          </View>
+
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[14]]}>
+            <View
+              style={[
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
+                {
+                  backgroundColor: 'rgba(1, 179, 244, 0.18)',
+                  borderColor: 'rgba(1, 179, 244, 0.55)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                 {`${selectedCount} poste${selectedCount > 1 ? 's' : ''}`}
               </Text>
             </View>
 
             <View
               style={[
-                ApplicationStyle.card,
                 Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[10],
+                Spaces.paddingVertical[8],
                 {
-                  backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                  borderColor: 'rgba(1, 179, 244, 0.20)',
-                  flexBasis: '48%',
+                  backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                  borderColor: 'rgba(1, 179, 244, 0.40)',
+                  borderRadius: 999,
+                  borderWidth: 1,
                 },
               ]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{'Postes s\u00E9lectionn\u00E9s'}</Text>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{selectedCount || 0}</Text>
-            </View>
-
-            <View
-              style={[
-                ApplicationStyle.card,
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[10],
-                {
-                  backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                  borderColor: 'rgba(1, 179, 244, 0.20)',
-                  flexBasis: '48%',
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{'Joueurs recherch\u00E9s'}</Text>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{totalPlayers || 0}</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {`${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`}
+              </Text>
             </View>
           </View>
         </View>
+
+        {positions.length > 0 ? (
+          <View
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[24],
+              Spaces.gap[20],
+              cardSurfaceStyle,
+            ]}
+          >
+            <View style={[Spaces.gap[10]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {'Appliquer \u00E0 tous les postes'}
+              </Text>
+              <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
+                {'Le compteur met \u00E0 jour toute la liste instantan\u00E9ment. 0 r\u00E9initialise la s\u00E9lection globale.'}
+              </Text>
+            </View>
+
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, { columnGap: 12, flexWrap: 'wrap', rowGap: 12 }]}>
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[12],
+                  {
+                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                    borderColor: 'rgba(1, 179, 244, 0.18)',
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    columnGap: 12,
+                    minWidth: 244,
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={bulkQuantity <= 0}
+                  onPress={() => handleBulkQuantityChange(-1)}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: bulkQuantity <= 0 ? 'rgba(1, 179, 244, 0.08)' : 'rgba(1, 179, 244, 0.14)',
+                      borderColor: `${Colors.primary500}40`,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      height: 40,
+                      opacity: bulkQuantity <= 0 ? 0.5 : 1,
+                      width: 40,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h4, Fonts.primary500]}>-</Text>
+                </TouchableOpacity>
+
+                <View
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      minWidth: 96,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h2, Fonts.primary500, { textAlign: 'center' }]}>
+                    {bulkQuantity}
+                  </Text>
+                  <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 18, textAlign: 'center' }]}>
+                    joueurs par poste
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={bulkQuantity >= MAX_POSITION_QUANTITY}
+                  onPress={() => handleBulkQuantityChange(1)}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: bulkQuantity >= MAX_POSITION_QUANTITY ? 'rgba(1, 179, 244, 0.08)' : Colors.primary500,
+                      borderColor: Colors.primary500,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      height: 40,
+                      opacity: bulkQuantity >= MAX_POSITION_QUANTITY ? 0.5 : 1,
+                      width: 40,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.h4, bulkQuantity >= MAX_POSITION_QUANTITY ? Fonts.neutral500 : Fonts.neutral00]}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         <PositionSelectionList
           getQuantity={getPositionQuantity}
@@ -168,13 +297,13 @@ function AdWizardPositions({ navigation }) {
           onToggle={handleTogglePosition}
           positions={positions}
           selectedQuantityLabel={(quantity) => `${quantity} joueur${quantity > 1 ? 's' : ''} recherch\u00E9${quantity > 1 ? 's' : ''}`}
-          selectedSectionTitle="Selection actuelle"
+          selectedSectionTitle="Postes actifs"
           sportName={sportName}
-          unselectedActionLabel="Selectionner"
+          unselectedActionLabel="Activer"
         />
 
         {positions.length === 0 ? (
-          <View style={[ApplicationStyle.card, Spaces.padding[20], cardSurfaceStyle]}>
+          <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
               {"Aucun poste n'est actuellement d\u00E9fini pour ce sport."}
             </Text>

@@ -232,6 +232,11 @@ const initStore = {
     events: false,
     reservations: false,
   },
+  searchMapSessions: {
+    clubs: {},
+    events: {},
+    reservations: {},
+  },
   squadFilters: undefined,
   teamFilters: undefined,
   theme: storage.contains('theme') ? storage.getString('theme') : undefined,

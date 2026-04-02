@@ -232,10 +232,13 @@ export const searchReservations = async (params = {}, options = {}) => {
  *  lon?: number;
  *  radius?: number;
  *  sport?: string;
+ *  audienceType?: string;
+ *  coachRole?: string;
  *  city?: string | { value?: string };
  *  section?: string | { value?: string };
  *  category?: string | string[];
  *  level?: string | string[];
+ *  position?: string | string[];
  *  includeInactive?: boolean;
  *  authorDocumentId?: string;
  *  teamIds?: string | string[];
@@ -249,10 +252,13 @@ export const searchRecruitment = async (params = {}, options = {}) => {
   return requestSearch('/search/recruitment', {
     ...baseParams,
     authorDocumentId: toStringOrUndefined(params.authorDocumentId),
+    audienceType: toStringOrUndefined(params.audienceType),
     category: normalizeCategoryOrLevel(params.category),
     city: extractDocumentId(params.city) || toStringOrUndefined(params.city),
+    coachRole: toStringOrUndefined(params.coachRole),
     includeInactive: Boolean(params.includeInactive),
     level: normalizeCategoryOrLevel(params.level),
+    position: normalizeCategoryOrLevel(params.position),
     section: extractDocumentId(params.section) || toStringOrUndefined(params.section),
     sport: toStringOrUndefined(params.sport),
     teamIds: normalizeArrayIds(params.teamIds),

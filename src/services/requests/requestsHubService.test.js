@@ -1,5 +1,6 @@
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
+import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
 import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { getRequestsHubData } from './requestsHubService';
@@ -11,6 +12,10 @@ jest.mock('@/services/clubMembershipRequest/clubMembershipRequestService', () =>
 jest.mock('@/services/event/eventService', () => ({
   getEvents: jest.fn(),
   getPendingFeaturedRequests: jest.fn(),
+}));
+
+jest.mock('@/services/facility/facilityService', () => ({
+  getPendingFacilityOverrideRequests: jest.fn(),
 }));
 
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
@@ -34,6 +39,7 @@ describe('requestsHubService', () => {
     getClubMembershipRequests.mockResolvedValue(emptyPaginatedResponse);
     getEvents.mockResolvedValue(emptyPaginatedResponse);
     getPendingFeaturedRequests.mockResolvedValue({ data: [] });
+    getPendingFacilityOverrideRequests.mockResolvedValue({ data: [] });
     getTeamMembershipRequests.mockResolvedValue(emptyPaginatedResponse);
   });
 
@@ -97,6 +103,7 @@ describe('requestsHubService', () => {
       club: 0,
       event: 0,
       featured: 0,
+      installation: 0,
       team: 0,
       total: 0,
     });

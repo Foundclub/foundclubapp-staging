@@ -13,15 +13,12 @@ import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import SearchMap from '@/components/organisms/searchMap/SearchMap';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClubs } from '@/services/club/clubQueries';
 import { useSearchClubs } from '@/services/search/searchQueries';
 import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
-
-import { toSearchMapItems } from '@/utils/searchMap';
 
 import SearchComponent from '../searchComponent/searchComponent';
 
@@ -39,9 +36,8 @@ function ClubListContent({ enableMapMode = false }) {
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
-  const [{ clubFilters, searchMapModes }, appDispatch] = useAppContext();
+  const [{ clubFilters }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
-  const isMapView = Boolean(enableMapMode && searchMapModes?.clubs);
   const activeSearchText = useMemo(
     () => (typeof clubFilters?.name === 'string' ? clubFilters.name.trim() : ''),
     [clubFilters?.name],
@@ -95,11 +91,10 @@ function ClubListContent({ enableMapMode = false }) {
     }, [])
     || [], [smartClubPages]);
   const displayedClubs = isSmartSearchEnabled ? smartClubs : clubs;
-  const mapItems = useMemo(() => toSearchMapItems(displayedClubs, 'clubs'), [displayedClubs]);
   const activeError = isSmartSearchEnabled ? smartError : error;
   const activeIsLoading = isSmartSearchEnabled ? isSmartLoading : isLoading;
   const activeIsFetchingNext = isSmartSearchEnabled ? isFetchingSmartNextPage : isFetchingNextPage;
-  const shouldShowMapToggle = enableMapMode && (isMapView || mapItems.length > 0);
+  const shouldShowMapToggle = enableMapMode && displayedClubs.length > 0;
 
   // handlers
   const handleEndReached = useCallback(() => {
@@ -170,18 +165,6 @@ function ClubListContent({ enableMapMode = false }) {
     }
   }, [navigation]);
 
-  const handleClubMapMarkerPress = useCallback((item) => {
-    const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
-    const documentId = item?.documentId;
-
-    if (isMultisport) {
-      handleMultisportSelection(documentId);
-      return;
-    }
-
-    handleClubSelection(documentId);
-  }, [handleClubSelection, handleMultisportSelection]);
-
   /**
    * Render the club item
    * @param {object} param
@@ -248,58 +231,38 @@ function ClubListContent({ enableMapMode = false }) {
           />
         </View>
       </View>
-      {isMapView ? (
-        <SearchMap
-          items={mapItems}
-          onOpenItem={(item) => handleClubMapMarkerPress(item.raw)}
-          onShowList={() => {
-            appDispatch({
-              payload: { clubs: false },
-              type: 'SET_SEARCH_MAP_MODES',
-            });
-          }}
-          scope="clubs"
-          totalCount={displayedClubs.length}
+      <WithDataWrapper
+        error={activeError?.message}
+        isLoading={activeIsLoading && !activeIsFetchingNext}
+        wrapperStyle={[Alignments.fill]}
+      >
+        <FlashList
+          contentContainerStyle={[
+            Spaces.paddingBottom[96],
+            displayedClubs.length === 0 ? Alignments.fill : null,
+          ]}
+          data={displayedClubs}
+          estimatedItemSize={112}
+          ItemSeparatorComponent={ClubsListSeparator}
+          keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
+          ListEmptyComponent={renderEmptyList}
+          ListHeaderComponent={isSmartSearchEnabled ? (
+            <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
+              Trie par pertinence
+            </Text>
+          ) : null}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
+          refreshing={activeIsLoading && !activeIsFetchingNext}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
         />
-      ) : (
-        <WithDataWrapper
-          error={activeError?.message}
-          isLoading={activeIsLoading && !activeIsFetchingNext}
-          wrapperStyle={[Alignments.fill]}
-        >
-          <FlashList
-            contentContainerStyle={[
-              Spaces.paddingBottom[96],
-              displayedClubs.length === 0 ? Alignments.fill : null,
-            ]}
-            data={displayedClubs}
-            estimatedItemSize={112}
-            ItemSeparatorComponent={ClubsListSeparator}
-            keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
-            ListEmptyComponent={renderEmptyList}
-            ListHeaderComponent={isSmartSearchEnabled ? (
-              <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
-                Trie par pertinence
-              </Text>
-            ) : null}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            onRefresh={isSmartSearchEnabled ? refetchSmart : refetch}
-            refreshing={activeIsLoading && !activeIsFetchingNext}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
-        </WithDataWrapper>
-      )}
+      </WithDataWrapper>
       {shouldShowMapToggle ? (
         <SearchMapFab
-          mode={isMapView ? 'map' : 'list'}
-          onPress={() => {
-            appDispatch({
-              payload: { clubs: !isMapView },
-              type: 'SET_SEARCH_MAP_MODES',
-            });
-          }}
+          mode="list"
+          onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'clubs' })}
           scope="clubs"
         />
       ) : null}

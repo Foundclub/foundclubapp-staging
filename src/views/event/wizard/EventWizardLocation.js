@@ -12,6 +12,20 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useEventWizard } from './EventWizardContext';
 import { getEventWizardStepCount } from './eventWizardDetectionUtils';
 
+const buildDateTimeIso = (baseDate, timeValue) => {
+  if (!baseDate || !timeValue) return null;
+
+  const date = new Date(baseDate);
+  const time = new Date(timeValue);
+  if (Number.isNaN(date.getTime()) || Number.isNaN(time.getTime())) {
+    return null;
+  }
+
+  const combined = new Date(date);
+  combined.setHours(time.getHours(), time.getMinutes(), 0, 0);
+  return combined.toISOString();
+};
+
 /**
  *
  * @param root0
@@ -24,11 +38,21 @@ function EventWizardLocation({ navigation }) {
 
   const [location, setLocation] = useState(state.location);
   const [facilityId, setFacilityId] = useState(state.facility);
+  const [selectedOccupancy, setSelectedOccupancy] = useState(null);
 
   const clubId = state.team?.club?.documentId;
   const cmId = state.team?.club?.parentMultisport?.documentId;
+  const occupancyWindow = {
+    end: buildDateTimeIso(state.date, state.endTime),
+    start: buildDateTimeIso(state.date, state.startTime),
+  };
 
-  const canGoNext = Boolean(location || facilityId);
+  const isStrictlySaturated = Boolean(
+    facilityId
+    && selectedOccupancy?.saturated
+    && selectedOccupancy?.canRequestOverflow === false,
+  );
+  const canGoNext = Boolean(location || facilityId) && !isStrictlySaturated;
 
   const handleNext = () => {
     dispatch({
@@ -61,17 +85,30 @@ function EventWizardLocation({ navigation }) {
           cmId={cmId}
           facilityId={facilityId}
           location={location}
+          occupancyWindow={occupancyWindow}
           onAddFacility={handleAddFacility}
           onChange={({ facilityId: nextFacilityId, location: nextLocation }) => {
             setLocation(nextLocation || null);
             setFacilityId(nextFacilityId || null);
+            if (!nextFacilityId) {
+              setSelectedOccupancy(null);
+            }
           }}
+          onOccupancyResolved={setSelectedOccupancy}
         />
-        {!canGoNext ? (
+        {!canGoNext && !isStrictlySaturated ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.disabledNextHint',
               'Sélectionné une installation du club ou saisis une adresse exterieure pour continuer.',
+            )}
+          </Text>
+        ) : null}
+        {isStrictlySaturated ? (
+          <Text style={[Fonts.p3, Fonts.error500]}>
+            {t(
+              'eventWizard.steps.location.strictCapacityHint',
+              "Cette installation est complete sur ce creneau et n'autorise pas de depassement. Choisissez un autre lieu ou un autre horaire.",
             )}
           </Text>
         ) : null}

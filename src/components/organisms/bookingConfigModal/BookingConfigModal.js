@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,7 +35,6 @@ import { useCreateBooking } from '@/services/facility/facilityQueries';
  * @property {{ documentId?: string; slotDuration?: number; pricePerSlot?: number } | undefined} [facility]
  * @property {string | Date} date
  * @property {{ time: string; maxDuration?: number } | undefined} [selectedSlot]
- * @property {any} [availability]
  */
 
 /**
@@ -44,7 +44,6 @@ import { useCreateBooking } from '@/services/facility/facilityQueries';
  * @param {BookingConfigModalProps} props
  */
 function BookingConfigModal({
-  availability,
   date,
   facility,
   isVisible,
@@ -54,7 +53,7 @@ function BookingConfigModal({
 }) {
   const { t } = useTranslation();
   const {
-    Alignments, Colors, Fonts, Spaces,
+    Colors, Fonts, Spaces,
   } = useTheme();
 
   // State
@@ -128,7 +127,7 @@ function BookingConfigModal({
     if (!facility || !selectedSlot || !selectedDuration || !endTime) return;
 
     try {
-      await createBookingMutation.mutateAsync({
+      const bookingResponse = await createBookingMutation.mutateAsync({
         currentPlayers: mode === 'shared' ? currentPlayers : undefined,
         date,
         endTime,
@@ -137,13 +136,23 @@ function BookingConfigModal({
         startTime: selectedSlot.time,
         targetPlayers: mode === 'shared' ? targetPlayers : undefined,
       });
+      const bookingData = bookingResponse?.data || bookingResponse;
+      if (bookingData?.pendingReason === 'facility_overbooking') {
+        Alert.alert(
+          t('bookingModal.overflowRequestCreatedTitle', 'Demande d\'exception envoyee'),
+          t(
+            'bookingModal.overflowRequestCreatedMessage',
+            'Le creneau est deja complet. Votre reservation a ete envoyee aux dirigeants pour arbitrage.',
+          ),
+        );
+      }
 
       handleClose();
       onSuccess?.();
     } catch (error) {
       console.error('Booking error:', error);
     }
-  }, [facility, selectedSlot, selectedDuration, date, endTime, mode, targetPlayers, currentPlayers, createBookingMutation, handleClose, onSuccess]);
+  }, [createBookingMutation, currentPlayers, date, endTime, facility, handleClose, mode, onSuccess, selectedDuration, selectedSlot, t, targetPlayers]);
 
   // Stepper handlers
   const incrementPlayers = useCallback(() => {

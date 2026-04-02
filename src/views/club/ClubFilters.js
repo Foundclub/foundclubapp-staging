@@ -49,10 +49,11 @@ const WEB_FILTER_SURFACE_PROPS = {
 function ClubFilters(props) {
   const { userData } = useAuth();
   const flowId = `${AFFILIATION_TUTORIAL_FLOW_PREFIX}:${userData?.documentId || 'anonymous'}`;
+  const { navigation, route } = props;
 
   return (
     <OnboardingProvider flowId={flowId}>
-      <ClubFiltersContent {...props} />
+      <ClubFiltersContent navigation={navigation} route={route} />
     </OnboardingProvider>
   );
 }
@@ -138,13 +139,21 @@ function ClubFiltersContent({ navigation, route }) {
    */
   const handleApplyFilters = (data) => {
     const coordinates = data.city?.value?.split('|');
+    const lat = coordinates ? parseFloat(coordinates[1]) : undefined;
+    const lon = coordinates ? parseFloat(coordinates[0]) : undefined;
     const geohash = coordinates ? getGeohashForPointAndRadius(
-      parseFloat(coordinates[1]),
-      parseFloat(coordinates[0]),
+      lat,
+      lon,
       data.radius,
     ) : undefined;
 
-    appDispatch({ payload: Object.assign(data, { geohash }), type: 'SET_CLUB_FILTERS' });
+    const payload = {
+      ...data,
+      ...(geohash ? { geohash } : {}),
+      ...(Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon, radius: data.radius } : {}),
+    };
+
+    appDispatch({ payload, type: 'SET_CLUB_FILTERS' });
     navigation.goBack();
   };
 
@@ -188,7 +197,9 @@ function ClubFiltersContent({ navigation, route }) {
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
-      {...WEB_FILTER_SURFACE_PROPS}
+      contentWidth={WEB_FILTER_SURFACE_PROPS.contentWidth}
+      responsivePadding={WEB_FILTER_SURFACE_PROPS.responsivePadding}
+      surface={WEB_FILTER_SURFACE_PROPS.surface}
     >
       <ScrollView
         contentContainerStyle={[Spaces.gap[40]]}

@@ -123,15 +123,18 @@ function ReservationFilters({ navigation }) {
   const handleApplyFilters = (data) => {
     // Format place params
     const coordinates = data.city?.value?.split('|');
+    const lat = coordinates ? parseFloat(coordinates[1]) : undefined;
+    const lon = coordinates ? parseFloat(coordinates[0]) : undefined;
     const geohash = (coordinates && data.city?.value) ? getGeohashForPointAndRadius(
-      parseFloat(coordinates[1]),
-      parseFloat(coordinates[0]),
+      lat,
+      lon,
       data.radius,
     ) : undefined;
 
     const payload = {
       ...data,
       ...(geohash && { geohash }),
+      ...(Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon, radius: data.radius } : {}),
     };
 
     appDispatch({
@@ -189,7 +192,9 @@ function ReservationFilters({ navigation }) {
         Alignments.fill,
         { paddingBottom: insets.bottom },
       ]}
-      {...WEB_FILTER_SURFACE_PROPS}
+      contentWidth={WEB_FILTER_SURFACE_PROPS.contentWidth}
+      responsivePadding={WEB_FILTER_SURFACE_PROPS.responsivePadding}
+      surface={WEB_FILTER_SURFACE_PROPS.surface}
     >
       {/* Info Modal */}
       <BottomModal

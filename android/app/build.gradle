@@ -42,21 +42,6 @@ def stagingMapsApiKey = resolveBuildSecret(
     ['googleMapsApiKeyStaging']
 )
 
-def requestedTaskNames = gradle.startParameter.taskNames
-    .collect { it.toString().toLowerCase() }
-    .join(' ')
-
-def assertMapsApiKeyForFlavor = { flavorName, apiKey, envName ->
-    if (apiKey && apiKey != MAPS_API_KEY_PLACEHOLDER) {
-        return
-    }
-
-    throw new GradleException(
-        "Missing Google Maps Android API key for ${flavorName}. " +
-        "Set ${envName} in the shell/EAS environment or ${envName} in gradle.properties before building."
-    )
-}
-
 if (hasProductionGoogleServices) {
     debuggableVariantNames << "productionDebug"
 }
@@ -199,14 +184,6 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
-}
-
-if (requestedTaskNames.contains('staging')) {
-    assertMapsApiKeyForFlavor('staging', stagingMapsApiKey, 'GOOGLE_MAPS_ANDROID_API_KEY_STAGING')
-}
-
-if (requestedTaskNames.contains('production')) {
-    assertMapsApiKeyForFlavor('production', productionMapsApiKey, 'GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION')
 }
 
 dependencies {

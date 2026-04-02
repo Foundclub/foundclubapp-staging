@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  approveFacilityOverrideRequest,
   createBooking,
   getAvailability,
   getBookableFacilities,
   getClubFacilityContext,
   getFacilities,
   getFacility,
+  getOccupancy,
+  getPendingFacilityOverrideRequests,
+  refuseFacilityOverrideRequest,
 } from './facilityService';
 
 /**
@@ -22,6 +26,20 @@ export const useGetFacilityAvailability = (facilityId, date, options = {}) => us
   staleTime: 1000 * 60, // 1 minute - slots can change
   ...options,
 });
+
+export const useGetFacilityOccupancy = (facilityId, window, options = {}) => {
+  const start = window?.start || null;
+  const end = window?.end || null;
+  const excludeEventId = window?.excludeEventId || null;
+
+  return useQuery({
+    enabled: Boolean(facilityId && start && end),
+    queryFn: () => getOccupancy(facilityId, { end, excludeEventId, start }),
+    queryKey: ['facility-occupancy', facilityId, start, end, excludeEventId || 'none'],
+    staleTime: 30_000,
+    ...options,
+  });
+};
 
 /**
  * Hook to get all bookable facilities
@@ -90,9 +108,52 @@ export const useCreateBooking = (options = {}) => {
       queryClient.invalidateQueries({
         queryKey: ['facility-availability', variables.facilityId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ['facility-occupancy', variables.facilityId],
+      });
       // Invalidate events/reservations
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    },
+    ...options,
+  });
+};
+
+export const useGetPendingFacilityOverrideRequests = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: () => getPendingFacilityOverrideRequests(clubId),
+  queryKey: ['facility-override-requests', clubId],
+  staleTime: 15_000,
+  ...options,
+});
+
+export const useApproveFacilityOverrideRequest = (options = {}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ decisionReason, requestId }) => approveFacilityOverrideRequest(requestId, decisionReason),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['requestsHub'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+      ]);
+    },
+    ...options,
+  });
+};
+
+export const useRefuseFacilityOverrideRequest = (options = {}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ decisionReason, requestId }) => refuseFacilityOverrideRequest(requestId, decisionReason),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['requestsHub'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+      ]);
     },
     ...options,
   });
