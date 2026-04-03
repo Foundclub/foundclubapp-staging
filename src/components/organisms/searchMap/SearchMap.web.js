@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -22,32 +23,40 @@ import { requestCurrentSearchMapLocation } from '@/platform/maps/searchMapGeoloc
  * Web map explorer aligned with the shared mobile props.
  * @param {object} props
  * @param {number} [props.height]
+ * @param {boolean} [props.isLoadingResults]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {() => void} [props.onShowList]
+ * @param {(stats: { renderableCount?: number, markerCount?: number, clusterCount?: number }) => void} [props.onRenderStats]
+ * @param {{ top?: number, right?: number, bottom?: number, left?: number }} [props.overlayInsets]
  * @param {number} [props.previewBottomOffset]
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
+ * @param {boolean} [props.truncated]
  * @returns {import('react').ReactElement}
  */
 function SearchMap({
   height = 360,
+  isLoadingResults = false,
   items = [],
   onOpenItem,
   onRegionChangeComplete,
+  onRenderStats,
   onSelectItem,
   onShowList,
+  overlayInsets = null,
   previewBottomOffset = 12,
   regionHint = null,
   scope = 'events',
   selectedItemId,
   topMargin = 12,
   totalCount = 0,
+  truncated = false,
 }) {
   const { renderMap } = mapsPlatform;
   const {
@@ -57,8 +66,14 @@ function SearchMap({
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
   const [mapCommand, setMapCommand] = useState(null);
   const [focusMode, setFocusMode] = useState(/** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'));
+  const [renderStats, setRenderStats] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [focusedRegion, setFocusedRegion] = useState(regionHint);
+  const hasValidRegionHint = useCallback((value) => (
+    !!value
+    && Number.isFinite(Number(value.lat))
+    && Number.isFinite(Number(value.lng))
+  ), []);
 
   const activeSelectedItemId = selectedItemId ?? internalSelectedItemId;
   const selectedItem = useMemo(
@@ -71,16 +86,30 @@ function SearchMap({
     : getSearchMapEmptyMessage(scope);
 
   useEffect(() => {
+    onRenderStats?.(renderStats || null);
+  }, [onRenderStats, renderStats]);
+
+  useEffect(() => {
     if (selectedItemId === undefined) {
       if (internalSelectedItemId && !items.some((item) => item.id === internalSelectedItemId)) {
         setInternalSelectedItemId('');
-        setFocusMode('results');
+        setFocusMode(hasValidRegionHint(regionHint) ? 'region' : 'results');
       }
       return;
     }
 
-    setFocusMode(selectedItemId ? 'selected' : 'results');
-  }, [internalSelectedItemId, items, selectedItemId]);
+    setFocusMode((current) => {
+      if (selectedItemId) {
+        return 'selected';
+      }
+
+      if (current === 'user') {
+        return current;
+      }
+
+      return hasValidRegionHint(regionHint) ? 'region' : 'results';
+    });
+  }, [hasValidRegionHint, internalSelectedItemId, items, regionHint, selectedItemId]);
 
   useEffect(() => {
     if (!regionHint || !Number.isFinite(regionHint.lat) || !Number.isFinite(regionHint.lng)) {
@@ -103,7 +132,7 @@ function SearchMap({
     if (selectedItemId === undefined) {
       setInternalSelectedItemId('');
     }
-    setFocusMode('results');
+    setFocusMode(hasValidRegionHint(focusedRegion) ? 'region' : 'results');
     onSelectItem?.('');
   };
 
@@ -122,6 +151,10 @@ function SearchMap({
     });
   };
 
+  const handleRenderStats = useCallback((stats) => {
+    setRenderStats(stats || null);
+  }, []);
+
   return (
     <View style={{ height, position: 'relative' }}>
       {renderMap({
@@ -131,7 +164,9 @@ function SearchMap({
         items,
         message: emptyMessage,
         onRegionChangeComplete,
+        onRenderStats: handleRenderStats,
         onSelectItem: handleSelectItem,
+        overlayInsets,
         regionHint: focusedRegion,
         scope,
         selectedItemId: activeSelectedItemId,
@@ -151,15 +186,19 @@ function SearchMap({
       >
         <SearchMapHud
           geolocatableCount={items.length}
+          isLoadingResults={isLoadingResults}
           onLocateMe={handleLocateMe}
           onRecenter={() => {
-            setFocusMode('results');
-            issueCommand('focus_results');
+            const shouldFocusRegion = scope === 'clubs' && hasValidRegionHint(focusedRegion);
+            setFocusMode(shouldFocusRegion ? 'region' : 'results');
+            issueCommand(shouldFocusRegion ? 'focus_region' : 'focus_results');
           }}
           onZoomIn={() => issueCommand('zoom_in')}
           onZoomOut={() => issueCommand('zoom_out')}
+          renderStats={renderStats}
           scope={scope}
           totalCount={totalResults}
+          truncated={truncated}
         />
       </View>
 

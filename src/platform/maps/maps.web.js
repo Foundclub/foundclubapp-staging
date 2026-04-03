@@ -45,7 +45,9 @@ const MAP_LOAD_TIMEOUT_MS = 6500;
  * @param {string} [props.markerColor]
  * @param {string} [props.message]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(stats: { renderableCount?: number; markerCount?: number; clusterCount?: number }) => void} [props.onRenderStats]
  * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {{ top?: number; right?: number; bottom?: number; left?: number } | null} [props.overlayInsets]
  * @param {{ lat: number; lng: number; zoom?: number } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
  * @param {string} props.tileAttribution
@@ -63,7 +65,9 @@ function SearchMapIframeRuntime({
   markerColor = '#01b3f4',
   message = 'Carte indisponible.',
   onRegionChangeComplete,
+  onRenderStats,
   onSelectItem,
+  overlayInsets = null,
   regionHint = null,
   selectedItemId = '',
   tileAttribution,
@@ -83,10 +87,11 @@ function SearchMapIframeRuntime({
     command,
     focusMode,
     items,
+    overlayInsets,
     regionHint,
     selectedItemId,
     userLocation,
-  }), [command, focusMode, items, regionHint, selectedItemId, userLocation]);
+  }), [command, focusMode, items, overlayInsets, regionHint, selectedItemId, userLocation]);
   const html = useMemo(() => buildSearchMapRuntimeHtml({
     initialState: runtimeState,
     mapId,
@@ -152,6 +157,11 @@ function SearchMapIframeRuntime({
             onRegionChangeComplete?.(bridgeMessage.payload);
           }
           break;
+        case SEARCH_MAP_BRIDGE_TYPES.MAP_RENDER_STATS:
+          if (bridgeMessage.payload) {
+            onRenderStats?.(bridgeMessage.payload);
+          }
+          break;
         case SEARCH_MAP_BRIDGE_TYPES.MARKER_SELECT:
           if (bridgeMessage.payload?.itemId) {
             onSelectItem?.(bridgeMessage.payload.itemId);
@@ -165,7 +175,7 @@ function SearchMapIframeRuntime({
 
     window.addEventListener('message', handleWindowMessage);
     return () => window.removeEventListener('message', handleWindowMessage);
-  }, [mapId, onRegionChangeComplete, onSelectItem]);
+  }, [mapId, onRegionChangeComplete, onRenderStats, onSelectItem]);
 
   return (
     <View
@@ -314,7 +324,9 @@ function SearchMapIframeRuntime({
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {string} [props.message]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(stats: { renderableCount?: number; markerCount?: number; clusterCount?: number }) => void} [props.onRenderStats]
  * @param {(itemId: string) => void} [props.onSelectItem]
+ * @param {{ top?: number; right?: number; bottom?: number; left?: number } | null} [props.overlayInsets]
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {string} [props.selectedItemId]
@@ -329,7 +341,9 @@ export const renderMap = ({
   items = [],
   message = 'Carte web indisponible.',
   onRegionChangeComplete,
+  onRenderStats,
   onSelectItem,
+  overlayInsets = null,
   regionHint = null,
   scope = 'events',
   selectedItemId = '',
@@ -352,7 +366,9 @@ export const renderMap = ({
         markerColor={markerColor}
         message={message}
         onRegionChangeComplete={onRegionChangeComplete}
+        onRenderStats={onRenderStats}
         onSelectItem={onSelectItem}
+        overlayInsets={overlayInsets}
         regionHint={regionHint}
         selectedItemId={selectedItemId}
         tileAttribution={TOMTOM_TILE_PROVIDER.attribution}
@@ -373,7 +389,9 @@ export const renderMap = ({
       markerColor={markerColor}
       message={message}
       onRegionChangeComplete={onRegionChangeComplete}
+      onRenderStats={onRenderStats}
       onSelectItem={onSelectItem}
+      overlayInsets={overlayInsets}
       regionHint={regionHint}
       selectedItemId={selectedItemId}
       tileAttribution={LEGACY_TILE_PROVIDER.attribution}

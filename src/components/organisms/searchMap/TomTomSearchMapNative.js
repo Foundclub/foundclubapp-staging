@@ -110,15 +110,23 @@ const areRegionsEquivalent = (left, right) => {
   );
 };
 
+const hasValidRegionHint = (value) => (
+  !!value
+  && Number.isFinite(Number(value.lat))
+  && Number.isFinite(Number(value.lng))
+);
+
 const buildRuntimeState = (
   focusMode,
   items,
+  overlayInsets,
   regionHint,
   selectedItemId,
   userLocation,
 ) => ({
   focusMode,
   items,
+  overlayInsets,
   regionHint,
   selectedItemId,
   userLocation,
@@ -127,6 +135,7 @@ const buildRuntimeState = (
 /**
  * @param {object} props
  * @param {number} [props.height]
+ * @param {boolean} [props.isLoadingResults]
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
  * @param {(region: {
@@ -142,6 +151,8 @@ const buildRuntimeState = (
  * }) => void} [props.onRegionChangeComplete]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {() => void} [props.onShowList]
+ * @param {(stats: { renderableCount?: number, markerCount?: number, clusterCount?: number }) => void} [props.onRenderStats]
+ * @param {{ top?: number, right?: number, bottom?: number, left?: number } | null} [props.overlayInsets]
  * @param {number} [props.previewBottomOffset]
  * @param {{
  *  lat: number;
@@ -158,21 +169,26 @@ const buildRuntimeState = (
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
+ * @param {boolean} [props.truncated]
  * @returns {import('react').ReactElement}
  */
 function TomTomSearchMapNative({
   height = 360,
+  isLoadingResults = false,
   items = [],
   onOpenItem,
   onRegionChangeComplete,
+  onRenderStats,
   onSelectItem,
   onShowList,
+  overlayInsets = null,
   previewBottomOffset = 12,
   regionHint = null,
   scope = 'events',
   selectedItemId,
   topMargin = 12,
   totalCount = 0,
+  truncated = false,
 }) {
   const {
     Alignments,
@@ -191,6 +207,7 @@ function TomTomSearchMapNative({
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
   const [mapErrorReason, setMapErrorReason] = useState('');
   const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [renderStats, setRenderStats] = useState(null);
   const [mapStatus, setMapStatus] = useState(
     /** @type {'loading' | 'ready' | 'error'} */ ('loading'),
   );
@@ -220,11 +237,12 @@ function TomTomSearchMapNative({
     () => buildRuntimeState(
       focusMode,
       items,
+      overlayInsets,
       focusedRegion,
       activeSelectedItemId,
       userLocation,
     ),
-    [activeSelectedItemId, focusMode, focusedRegion, items, userLocation],
+    [activeSelectedItemId, focusMode, focusedRegion, items, overlayInsets, userLocation],
   );
   const bootstrapHtmlRef = useRef({ html: '', mapId: '' });
   if (bootstrapHtmlRef.current.mapId !== mapId) {
@@ -271,11 +289,21 @@ function TomTomSearchMapNative({
   }, [focusedRegion, regionHint]);
 
   useEffect(() => {
+    logDevDiagnostic('FOCUS_MODE_CHANGED', {
+      ...logContext,
+      focusMode,
+      hasRegionHint: hasValidRegionHint(focusedRegion),
+      selectedItemId: activeSelectedItemId || '',
+    });
+  }, [activeSelectedItemId, focusMode, focusedRegion, logContext]);
+
+  useEffect(() => {
     mapLoadStartedAtRef.current = Date.now();
     setWebViewLoaded(false);
     setDiagnosticTrail([]);
     setMapStatus(tomTomApiKey ? 'loading' : 'error');
     setMapErrorReason(tomTomApiKey ? '' : 'missing_api_key');
+    setRenderStats(null);
     searchMapLogger.info('map cycle started', {
       ...logContext,
       retryCycle: mapRenderKey,
@@ -330,7 +358,17 @@ function TomTomSearchMapNative({
 
   useEffect(() => {
     if (selectedItemId !== undefined) {
-      setFocusMode(selectedItemId ? 'selected' : 'results');
+      setFocusMode((current) => {
+        if (selectedItemId) {
+          return 'selected';
+        }
+
+        if (current === 'user') {
+          return current;
+        }
+
+        return hasValidRegionHint(regionHint) ? 'region' : 'results';
+      });
       return;
     }
 
@@ -340,9 +378,9 @@ function TomTomSearchMapNative({
 
     if (!items.some((item) => item.id === internalSelectedItemId)) {
       setInternalSelectedItemId('');
-      setFocusMode('results');
+      setFocusMode(hasValidRegionHint(regionHint) ? 'region' : 'results');
     }
-  }, [internalSelectedItemId, items, selectedItemId]);
+  }, [internalSelectedItemId, items, regionHint, selectedItemId]);
 
   useEffect(() => {
     if (!webViewLoaded || !tomTomApiKey) {
@@ -351,6 +389,10 @@ function TomTomSearchMapNative({
 
     webViewRef.current?.injectJavaScript(buildSearchMapSyncScript(mapId, runtimeState));
   }, [mapId, runtimeState, tomTomApiKey, webViewLoaded]);
+
+  useEffect(() => {
+    onRenderStats?.(renderStats || null);
+  }, [onRenderStats, renderStats]);
 
   useEffect(() => {
     if (mapStatus !== 'loading' || !tomTomApiKey) {
@@ -402,14 +444,14 @@ function TomTomSearchMapNative({
       setInternalSelectedItemId('');
     }
 
-    setFocusMode('results');
+    setFocusMode(hasValidRegionHint(focusedRegion) ? 'region' : 'results');
     onSelectItem?.('');
-  }, [onSelectItem, selectedItemId]);
+  }, [focusedRegion, onSelectItem, selectedItemId]);
 
   const handleRetryMap = useCallback(() => {
-    setFocusMode('results');
+    setFocusMode(hasValidRegionHint(focusedRegion) ? 'region' : 'results');
     setMapRenderKey((current) => current + 1);
-  }, []);
+  }, [focusedRegion]);
 
   const issueCommand = useCallback((type) => {
     const nextCommand = {
@@ -563,6 +605,9 @@ function TomTomSearchMapNative({
           onRegionChangeComplete?.(bridgeMessage.payload);
         }
         break;
+      case SEARCH_MAP_BRIDGE_TYPES.MAP_RENDER_STATS:
+        setRenderStats(bridgeMessage.payload || null);
+        break;
       case SEARCH_MAP_BRIDGE_TYPES.MARKER_OPEN:
         if (bridgeMessage.payload?.itemId) {
           handleMarkerOpen(String(bridgeMessage.payload.itemId));
@@ -619,15 +664,19 @@ function TomTomSearchMapNative({
         <SearchMapHud
           disabled={areControlsDisabled}
           geolocatableCount={items.length}
+          isLoadingResults={isLoadingResults}
           onLocateMe={requestUserLocation}
           onRecenter={() => {
-            setFocusMode('results');
-            issueCommand('focus_results');
+            const shouldFocusRegion = scope === 'clubs' && hasValidRegionHint(focusedRegion);
+            setFocusMode(shouldFocusRegion ? 'region' : 'results');
+            issueCommand(shouldFocusRegion ? 'focus_region' : 'focus_results');
           }}
           onZoomIn={() => issueCommand('zoom_in')}
           onZoomOut={() => issueCommand('zoom_out')}
+          renderStats={renderStats}
           scope={scope}
           totalCount={totalResults}
+          truncated={truncated}
         />
       </View>
 

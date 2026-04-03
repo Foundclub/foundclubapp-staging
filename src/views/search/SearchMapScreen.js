@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -55,7 +56,9 @@ import { navigateToSearchMapDetail } from '@/platform/maps/searchMapDetailNaviga
 
 const logger = createLogger('search-map-screen');
 const DEFAULT_RADIUS = 20;
+const MIN_CLUB_MAP_QUERY_ZOOM = 9;
 const MOVE_THRESHOLD = 0.005;
+const DEFAULT_MAP_ASPECT_RATIO = 0.58;
 
 const sanitizeScope = (value) => (
   value === 'clubs' || value === 'reservations' ? value : 'events'
@@ -114,8 +117,11 @@ const parseAddressBbox = (address) => {
 
 const getAddressZoomHeuristic = (address) => {
   const type = String(address?.type || '').trim().toLowerCase();
+  const postcode = String(address?.postcode || '').trim();
   if (type === 'housenumber') return 16;
   if (type === 'street') return 14;
+  if (/^\d{5}$/.test(postcode)) return 13;
+  if (type === 'municipality' || type === 'city' || type === 'locality') return 12;
   return 11;
 };
 
@@ -224,6 +230,61 @@ const resolveViewportZoom = (viewport) => {
   return 11;
 };
 
+const canSearchClubViewport = (viewport) => (
+  hasFiniteViewportBounds(viewport)
+  && resolveViewportZoom(viewport) >= MIN_CLUB_MAP_QUERY_ZOOM
+);
+
+const buildViewportFromRegionCandidate = (region, aspectRatio = DEFAULT_MAP_ASPECT_RATIO) => {
+  if (!region) {
+    return null;
+  }
+
+  const lat = Number(region.lat);
+  const lng = Number(region.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  const north = Number(region.north);
+  const south = Number(region.south);
+  const east = Number(region.east);
+  const west = Number(region.west);
+  const zoom = Number.isFinite(Number(region.zoom)) ? Number(region.zoom) : 11;
+
+  if ([north, south, east, west].every((value) => Number.isFinite(value))) {
+    return {
+      east,
+      lat,
+      latitudeDelta: Math.max(Math.abs(north - south), 0.02),
+      lng,
+      longitudeDelta: Math.max(Math.abs(east - west), 0.02),
+      north,
+      south,
+      west,
+      zoom,
+    };
+  }
+
+  const safeAspectRatio = Number.isFinite(aspectRatio) && aspectRatio > 0
+    ? aspectRatio
+    : DEFAULT_MAP_ASPECT_RATIO;
+  const longitudeDelta = Math.max(360 / (2 ** zoom), 0.02);
+  const latitudeDelta = Math.max(longitudeDelta / safeAspectRatio, 0.02);
+
+  return {
+    east: lng + (longitudeDelta / 2),
+    lat,
+    latitudeDelta,
+    lng,
+    longitudeDelta,
+    north: lat + (latitudeDelta / 2),
+    south: lat - (latitudeDelta / 2),
+    west: lng - (longitudeDelta / 2),
+    zoom,
+  };
+};
+
 const areViewportsEquivalent = (left, right) => {
   if (!left && !right) return true;
   if (!left || !right) return false;
@@ -282,7 +343,7 @@ const getFilterActionType = (isClubScope, isReservationScope) => {
 };
 
 const buildClubMapViewportQuery = (filters, viewport, view = 'map') => {
-  if (!viewport || !hasFiniteViewportBounds(viewport)) {
+  if (!viewport || !canSearchClubViewport(viewport)) {
     return null;
   }
 
@@ -323,6 +384,36 @@ const buildClubMapFilterSignature = (filters) => JSON.stringify({
     ? filters.name.trim()
     : '',
 });
+
+const buildStableSignature = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => buildStableSignature(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        const nextValue = buildStableSignature(value[key]);
+        if (nextValue !== undefined) {
+          acc[key] = nextValue;
+        }
+        return acc;
+      }, {});
+  }
+
+  return value;
+};
+
+const toStableJson = (value) => JSON.stringify(buildStableSignature(value));
+
+const logClubMapLifecycle = (event, payload = {}) => {
+  if (!__DEV__) {
+    return;
+  }
+
+  logger.info(`[clubs-map] ${event}`, payload);
+};
 
 const getActiveQueryItems = (
   isSmartSearchEnabled,
@@ -449,7 +540,7 @@ const buildChips = (scope, filters) => {
  */
 function SearchMapScreen({ navigation, route }) {
   const { t } = useTranslation();
-  const { height: viewportHeight } = useWindowDimensions();
+  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const {
     Alignments,
@@ -469,12 +560,18 @@ function SearchMapScreen({ navigation, route }) {
   }, appDispatch] = useAppContext();
 
   const [topOverlayHeight, setTopOverlayHeight] = useState(156);
+  const [topBannerHeight, setTopBannerHeight] = useState(0);
   const [addressSelection, setAddressSelection] = useState(undefined);
   const [appliedCenter, setAppliedCenter] = useState(null);
+  const [isAddressSearchActive, setIsAddressSearchActive] = useState(false);
+  const [renderStats, setRenderStats] = useState(null);
+  // currentViewport: visible viewport currently displayed by the map runtime
   const [currentViewport, setCurrentViewport] = useState(null);
+  // executedViewport: last viewport explicitly searched against /search/clubs/map
   const [executedViewport, setExecutedViewport] = useState(null);
   const [executedClubMapQuery, setExecutedClubMapQuery] = useState(null);
   const [clubMapLastResultMeta, setClubMapLastResultMeta] = useState(null);
+  // pendingRegion: viewport moved by the user but not yet committed via "Rechercher dans cette zone"
   const [pendingRegion, setPendingRegion] = useState(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
   const [isSubmittingRegionSearch, setIsSubmittingRegionSearch] = useState(false);
@@ -498,15 +595,42 @@ function SearchMapScreen({ navigation, route }) {
   const hydratedScopeRef = useRef(null);
   const isBootstrappingClubViewportRef = useRef(false);
   const shouldAutoSubmitViewportRef = useRef(false);
+  const pendingAddressViewportTimeoutRef = useRef(null);
+  const pendingVisibleViewportTimeoutRef = useRef(null);
   const clubMapFilterSignatureRef = useRef(null);
   const persistedRegionTimeoutRef = useRef(null);
+  const focusMetricsRef = useRef({ geolocatableCount: 0, totalCount: 0 });
+  const focusRefreshConfigRef = useRef({
+    hasClubQuery: false,
+    isClubScope: false,
+    isEventSmartSearchEnabled: false,
+    isReservationScope: false,
+    isReservationSmartSearchEnabled: false,
+    shouldRefetchClubMap: false,
+  });
+  const clubMapRefetchRef = useRef(() => Promise.resolve());
+  const eventRefetchRef = useRef(() => Promise.resolve());
+  const searchedEventRefetchRef = useRef(() => Promise.resolve());
+  const reservationRefetchRef = useRef(() => Promise.resolve());
+  const searchedReservationRefetchRef = useRef(() => Promise.resolve());
+  const clubMapHasResolvedRef = useRef(false);
+  const lastCommittedClubMapQuerySignatureRef = useRef('');
+  const lastPersistedRegionMetaSignatureRef = useRef('');
+  const lastPersistedRenderStatsSignatureRef = useRef('');
   const lastPersistedRegionRef = useRef(initialViewportRegion);
+  const lastPersistedVisibleViewportRef = useRef(null);
   const [selectedMapItemId, setSelectedMapItemId] = useState(
     persistedSession?.selectedItemId || '',
   );
   const [regionHint, setRegionHint] = useState(initialViewportRegion);
-  const persistedExecutedViewport = persistedSession?.executedViewport || null;
+  const persistedExecutedViewport = persistedSession?.searchedViewport
+    || persistedSession?.executedViewport
+    || null;
+  const persistedVisibleViewport = persistedSession?.visibleViewport
+    || persistedExecutedViewport
+    || null;
   const persistedLastResultMeta = persistedSession?.lastResultMeta || null;
+  const persistedLastRenderStats = persistedSession?.lastRenderStats || null;
 
   const persistSessionState = useCallback((state) => {
     appDispatch({
@@ -532,21 +656,26 @@ function SearchMapScreen({ navigation, route }) {
       && hasFiniteViewportBounds(persistedExecutedViewport)
       ? persistedExecutedViewport
       : null;
+    const restoredVisibleViewport = isClubScope
+      && persistedVisibleViewport
+      && hasFiniteViewportBounds(persistedVisibleViewport)
+      ? persistedVisibleViewport
+      : restoredViewport;
     const nextRestoredRegion = resolvePreferredRegion(
       activeFilters,
       persistedSession?.region || null,
     );
+    const restoredQuery = restoredViewport
+      ? buildClubMapViewportQuery(activeFilters, restoredViewport, 'map')
+      : null;
 
     setAddressSelection(activeFilters?.city || undefined);
     setAppliedCenter(nextRestoredRegion);
-    setCurrentViewport(restoredViewport);
+    setCurrentViewport(restoredVisibleViewport);
     setExecutedViewport(restoredViewport);
-    setExecutedClubMapQuery(
-      restoredViewport
-        ? buildClubMapViewportQuery(activeFilters, restoredViewport, 'map')
-        : null,
-    );
+    setExecutedClubMapQuery(restoredQuery);
     setClubMapLastResultMeta(isClubScope ? persistedLastResultMeta : null);
+    setRenderStats(isClubScope ? persistedLastRenderStats : null);
     setPendingRegion(null);
     setRegionHint(nextRestoredRegion);
     setSelectedMapItemId(persistedSession?.selectedItemId || '');
@@ -554,13 +683,20 @@ function SearchMapScreen({ navigation, route }) {
     isBootstrappingClubViewportRef.current = isClubScope && !restoredViewport;
     shouldAutoSubmitViewportRef.current = false;
     clubMapFilterSignatureRef.current = buildClubMapFilterSignature(activeFilters);
+    clubMapHasResolvedRef.current = false;
+    lastCommittedClubMapQuerySignatureRef.current = restoredQuery ? toStableJson(restoredQuery) : '';
+    lastPersistedRegionMetaSignatureRef.current = toStableJson(isClubScope ? persistedLastResultMeta : null);
+    lastPersistedRenderStatsSignatureRef.current = toStableJson(isClubScope ? persistedLastRenderStats : null);
     hydratedScopeRef.current = scope;
     lastPersistedRegionRef.current = nextRestoredRegion;
+    lastPersistedVisibleViewportRef.current = restoredVisibleViewport;
   }, [
     activeFilters,
     isClubScope,
     persistedExecutedViewport,
+    persistedVisibleViewport,
     persistedLastResultMeta,
+    persistedLastRenderStats,
     persistedSession?.region,
     persistedSession?.selectedItemId,
     scope,
@@ -583,6 +719,12 @@ function SearchMapScreen({ navigation, route }) {
   }, [activeFilters]);
 
   useEffect(() => () => {
+    if (pendingAddressViewportTimeoutRef.current) {
+      clearTimeout(pendingAddressViewportTimeoutRef.current);
+    }
+    if (pendingVisibleViewportTimeoutRef.current) {
+      clearTimeout(pendingVisibleViewportTimeoutRef.current);
+    }
     if (persistedRegionTimeoutRef.current) {
       clearTimeout(persistedRegionTimeoutRef.current);
     }
@@ -609,9 +751,35 @@ function SearchMapScreen({ navigation, route }) {
     }, 180);
   }, [persistSessionState]);
 
+  const persistVisibleViewport = useCallback((nextViewport) => {
+    if (!isClubScope || !nextViewport || !hasFiniteViewportBounds(nextViewport)) {
+      return;
+    }
+
+    if (pendingVisibleViewportTimeoutRef.current) {
+      clearTimeout(pendingVisibleViewportTimeoutRef.current);
+    }
+
+    pendingVisibleViewportTimeoutRef.current = setTimeout(() => {
+      if (areViewportsEquivalent(lastPersistedVisibleViewportRef.current, nextViewport)) {
+        pendingVisibleViewportTimeoutRef.current = null;
+        return;
+      }
+
+      persistSessionState({ visibleViewport: nextViewport });
+      lastPersistedVisibleViewportRef.current = nextViewport;
+      pendingVisibleViewportTimeoutRef.current = null;
+    }, 180);
+  }, [isClubScope, persistSessionState]);
+
   const executeClubViewportSearch = useCallback((viewport, view = 'map') => {
     if (!isClubScope || !viewport || !hasFiniteViewportBounds(viewport)) {
       return;
+    }
+
+    if (pendingAddressViewportTimeoutRef.current) {
+      clearTimeout(pendingAddressViewportTimeoutRef.current);
+      pendingAddressViewportTimeoutRef.current = null;
     }
 
     const normalizedViewport = {
@@ -629,33 +797,95 @@ function SearchMapScreen({ navigation, route }) {
       west: Number(viewport.west),
       zoom: resolveViewportZoom(viewport),
     };
-    const nextQuery = buildClubMapViewportQuery(activeFilters, normalizedViewport, view);
-    if (!nextQuery) {
-      return;
-    }
-
     const nextRegion = {
       lat: normalizedViewport.lat,
       lng: normalizedViewport.lng,
       zoom: normalizedViewport.zoom,
     };
+    const nextQuery = buildClubMapViewportQuery(activeFilters, normalizedViewport, view);
+    const nextQuerySignature = nextQuery ? toStableJson(nextQuery) : '';
+
+    logClubMapLifecycle('SEARCH_VIEWPORT_COMMITTED', {
+      hasBounds: hasFiniteViewportBounds(normalizedViewport),
+      lat: normalizedViewport.lat,
+      lng: normalizedViewport.lng,
+      view,
+      zoom: normalizedViewport.zoom,
+    });
+
+    if (!nextQuery) {
+      setAppliedCenter(nextRegion);
+      setCurrentViewport(normalizedViewport);
+      setExecutedViewport(null);
+      setExecutedClubMapQuery(null);
+      setClubMapLastResultMeta(null);
+      setPendingRegion(null);
+      setShowSearchThisArea(false);
+      setIsSubmittingRegionSearch(false);
+      clubMapHasResolvedRef.current = false;
+      lastCommittedClubMapQuerySignatureRef.current = '';
+      persistSessionState({
+        executedClubMapQuery: null,
+        executedViewport: null,
+        lastResultMeta: null,
+        region: nextRegion,
+        searchedViewport: null,
+        selectedItemId: '',
+        visibleViewport: normalizedViewport,
+      });
+      lastPersistedRegionRef.current = nextRegion;
+      lastPersistedVisibleViewportRef.current = normalizedViewport;
+      return;
+    }
+
+    if (
+      nextQuerySignature
+      && lastCommittedClubMapQuerySignatureRef.current === nextQuerySignature
+      && areViewportsEquivalent(normalizedViewport, executedViewport)
+    ) {
+      setAppliedCenter(nextRegion);
+      setCurrentViewport(normalizedViewport);
+      setPendingRegion(null);
+      setShowSearchThisArea(false);
+      setIsSubmittingRegionSearch(false);
+      persistSessionState({
+        region: nextRegion,
+        visibleViewport: normalizedViewport,
+      });
+      lastPersistedRegionRef.current = nextRegion;
+      lastPersistedVisibleViewportRef.current = normalizedViewport;
+      return;
+    }
 
     setAppliedCenter(nextRegion);
     setCurrentViewport(normalizedViewport);
     setExecutedViewport(normalizedViewport);
     setExecutedClubMapQuery(nextQuery);
+    setRenderStats(null);
     setSelectedMapItemId('');
     setPendingRegion(null);
     setShowSearchThisArea(false);
     setIsSubmittingRegionSearch(true);
+    clubMapHasResolvedRef.current = false;
+    lastCommittedClubMapQuerySignatureRef.current = nextQuerySignature;
+    logClubMapLifecycle('CLUB_MAP_QUERY_STARTED', {
+      north: nextQuery.north,
+      q: nextQuery.q || '',
+      south: nextQuery.south,
+      view,
+      zoom: nextQuery.zoom,
+    });
     persistSessionState({
       executedClubMapQuery: nextQuery,
       executedViewport: normalizedViewport,
       region: nextRegion,
+      searchedViewport: normalizedViewport,
       selectedItemId: '',
+      visibleViewport: normalizedViewport,
     });
     lastPersistedRegionRef.current = nextRegion;
-  }, [activeFilters, isClubScope, persistSessionState]);
+    lastPersistedVisibleViewportRef.current = normalizedViewport;
+  }, [activeFilters, executedViewport, isClubScope, persistSessionState]);
 
   const eventConfig = useMemo(() => ({
     ...(eventFilters || {}),
@@ -749,6 +979,7 @@ function SearchMapScreen({ navigation, route }) {
     ) || [],
     [clubMapQuery.data?.pages],
   );
+  const clubMapMeta = clubMapQuery?.data?.pages?.[0]?.meta || null;
 
   const reservationItems = useMemo(
     () => getActiveQueryItems(
@@ -772,8 +1003,8 @@ function SearchMapScreen({ navigation, route }) {
     searchedEventQuery,
   );
   if (isClubScope) {
-    const clubTotalInBounds = Number(clubMapQuery?.data?.pages?.[0]?.meta?.totalInBounds);
-    const clubPagedTotal = Number(clubMapQuery?.data?.pages?.[0]?.meta?.pagination?.total);
+    const clubTotalInBounds = Number(clubMapMeta?.totalInBounds);
+    const clubPagedTotal = Number(clubMapMeta?.pagination?.total);
     if (Number.isFinite(clubTotalInBounds) && clubTotalInBounds > 0) {
       totalCount = clubTotalInBounds;
     } else if (Number.isFinite(clubPagedTotal) && clubPagedTotal > 0) {
@@ -822,6 +1053,51 @@ function SearchMapScreen({ navigation, route }) {
   }
 
   useEffect(() => {
+    focusMetricsRef.current = {
+      geolocatableCount: mapItems.length,
+      totalCount,
+    };
+  }, [mapItems.length, totalCount]);
+
+  useEffect(() => {
+    clubMapRefetchRef.current = clubMapQuery.refetch;
+  }, [clubMapQuery.refetch]);
+
+  useEffect(() => {
+    eventRefetchRef.current = eventQuery.refetch;
+  }, [eventQuery.refetch]);
+
+  useEffect(() => {
+    searchedEventRefetchRef.current = searchedEventQuery.refetch;
+  }, [searchedEventQuery.refetch]);
+
+  useEffect(() => {
+    reservationRefetchRef.current = reservationQuery.refetch;
+  }, [reservationQuery.refetch]);
+
+  useEffect(() => {
+    searchedReservationRefetchRef.current = searchedReservationQuery.refetch;
+  }, [searchedReservationQuery.refetch]);
+
+  useEffect(() => {
+    focusRefreshConfigRef.current = {
+      hasClubQuery: Boolean(executedClubMapQuery),
+      isClubScope,
+      isEventSmartSearchEnabled,
+      isReservationScope,
+      isReservationSmartSearchEnabled,
+      shouldRefetchClubMap: Boolean(executedClubMapQuery) && !clubMapQuery.isFetched,
+    };
+  }, [
+    clubMapQuery.isFetched,
+    executedClubMapQuery,
+    isClubScope,
+    isEventSmartSearchEnabled,
+    isReservationScope,
+    isReservationSmartSearchEnabled,
+  ]);
+
+  useEffect(() => {
     if (!selectedMapItemId || mapItems.some((item) => item.id === selectedMapItemId)) {
       return;
     }
@@ -841,10 +1117,78 @@ function SearchMapScreen({ navigation, route }) {
       return;
     }
 
-    const nextMeta = clubMapQuery.data?.pages?.[0]?.meta || null;
+    if (clubMapQuery.isFetched && executedClubMapQuery) {
+      clubMapHasResolvedRef.current = true;
+    }
+
+    const nextMeta = clubMapMeta;
     setClubMapLastResultMeta(nextMeta);
-    persistSessionState({ lastResultMeta: nextMeta });
-  }, [clubMapQuery.data?.pages, isClubScope, persistSessionState]);
+    const nextSignature = toStableJson(nextMeta || null);
+    if (lastPersistedRegionMetaSignatureRef.current !== nextSignature) {
+      persistSessionState({ lastResultMeta: nextMeta });
+      lastPersistedRegionMetaSignatureRef.current = nextSignature;
+    }
+
+    if (nextMeta) {
+      logClubMapLifecycle('CLUB_MAP_QUERY_RESOLVED', {
+        queryMode: nextMeta.queryMode,
+        returnedCount: nextMeta.returnedCount,
+        totalInBounds: nextMeta.totalInBounds,
+        truncated: nextMeta.truncated,
+      });
+    }
+  }, [clubMapMeta, clubMapQuery.isFetched, executedClubMapQuery, isClubScope, persistSessionState]);
+
+  useEffect(() => {
+    if (!isClubScope) {
+      return;
+    }
+
+    const nextSignature = toStableJson(renderStats || null);
+    if (lastPersistedRenderStatsSignatureRef.current === nextSignature) {
+      return;
+    }
+
+    persistSessionState({ lastRenderStats: renderStats || null });
+    lastPersistedRenderStatsSignatureRef.current = nextSignature;
+    logClubMapLifecycle('MAP_RENDER_STATS', renderStats || {});
+  }, [isClubScope, persistSessionState, renderStats]);
+
+  useEffect(() => {
+    if (!isClubScope) {
+      return;
+    }
+
+    logClubMapLifecycle('MAP_ITEMS_BUILT', {
+      geolocatableCount: mapItems.length,
+      totalCount,
+    });
+  }, [isClubScope, mapItems.length, totalCount]);
+
+  useEffect(() => {
+    if (!isClubScope || totalCount <= 0) {
+      return undefined;
+    }
+
+    const visibleMarkerCount = Math.max(
+      0,
+      Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
+    );
+
+    if (visibleMarkerCount > 0 || isLoading) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      logClubMapLifecycle('MAP_RENDER_STALLED', {
+        geolocatableCount: mapItems.length,
+        totalCount,
+        visibleMarkerCount,
+      });
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [isClubScope, isLoading, mapItems.length, renderStats, totalCount]);
 
   useEffect(() => {
     if (!isClubScope) {
@@ -868,7 +1212,7 @@ function SearchMapScreen({ navigation, route }) {
       return;
     }
 
-    const viewport = currentViewport || executedViewport;
+    const viewport = executedViewport || currentViewport;
     if (!viewport || !hasFiniteViewportBounds(viewport)) {
       return;
     }
@@ -897,36 +1241,39 @@ function SearchMapScreen({ navigation, route }) {
   }, [mapItems, persistSessionState, selectedMapItemId]);
 
   useFocusEffect(useCallback(() => {
+    const { geolocatableCount, totalCount: loggedTotalCount } = focusMetricsRef.current;
     logger.info('search map opened', {
-      geolocatableCount: mapItems.length,
+      geolocatableCount,
       scope,
-      totalCount,
+      totalCount: loggedTotalCount,
     });
 
     let isCancelled = false;
 
     const refetchOnFocus = async () => {
+      const focusRefreshConfig = focusRefreshConfigRef.current;
+
       try {
-        if (isClubScope) {
-          if (executedClubMapQuery) {
-            await clubMapQuery.refetch();
+        if (focusRefreshConfig.isClubScope) {
+          if (focusRefreshConfig.shouldRefetchClubMap && focusRefreshConfig.hasClubQuery) {
+            await clubMapRefetchRef.current?.();
           }
           return;
         }
 
-        if (isReservationScope) {
+        if (focusRefreshConfig.isReservationScope) {
           await (
-            isReservationSmartSearchEnabled
-              ? searchedReservationQuery.refetch()
-              : reservationQuery.refetch()
+            focusRefreshConfig.isReservationSmartSearchEnabled
+              ? searchedReservationRefetchRef.current?.()
+              : reservationRefetchRef.current?.()
           );
           return;
         }
 
         await (
-          isEventSmartSearchEnabled
-            ? searchedEventQuery.refetch()
-            : eventQuery.refetch()
+          focusRefreshConfig.isEventSmartSearchEnabled
+            ? searchedEventRefetchRef.current?.()
+            : eventRefetchRef.current?.()
         );
       } catch (error) {
         if (!isCancelled) {
@@ -943,21 +1290,7 @@ function SearchMapScreen({ navigation, route }) {
     return () => {
       isCancelled = true;
     };
-  }, [
-    clubMapQuery,
-    executedClubMapQuery,
-    eventQuery,
-    isClubScope,
-    isEventSmartSearchEnabled,
-    isReservationScope,
-    isReservationSmartSearchEnabled,
-    mapItems.length,
-    reservationQuery,
-    scope,
-    searchedEventQuery,
-    searchedReservationQuery,
-    totalCount,
-  ]));
+  }, [scope]));
 
   const handleCloseMap = useCallback(() => {
     if (navigation.canGoBack()) {
@@ -991,7 +1324,9 @@ function SearchMapScreen({ navigation, route }) {
           lng: viewport.lng,
           zoom: viewport.zoom,
         },
+        searchedViewport: viewport,
         selectedItemId: selectedMapItemId || '',
+        visibleViewport: viewport,
       });
     }
 
@@ -1035,6 +1370,16 @@ function SearchMapScreen({ navigation, route }) {
         lng: coordinates.lng,
         zoom: getAddressZoomHeuristic(nextAddress),
       };
+      const derivedViewport = buildViewportFromRegionCandidate(nextRegion, mapAspectRatio);
+
+      logClubMapLifecycle('ADDRESS_SELECTED', {
+        bbox: parseAddressBbox(nextAddress),
+        label: readLabel(nextAddress),
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        type: nextAddress?.type,
+        zoom: nextRegion.zoom,
+      });
 
       dispatchFilters({
         ...activeFilters,
@@ -1052,6 +1397,21 @@ function SearchMapScreen({ navigation, route }) {
       });
       lastPersistedRegionRef.current = nextRegion;
       shouldAutoSubmitViewportRef.current = true;
+      if (pendingAddressViewportTimeoutRef.current) {
+        clearTimeout(pendingAddressViewportTimeoutRef.current);
+      }
+      pendingAddressViewportTimeoutRef.current = setTimeout(() => {
+        if (!shouldAutoSubmitViewportRef.current) {
+          pendingAddressViewportTimeoutRef.current = null;
+          return;
+        }
+
+        shouldAutoSubmitViewportRef.current = false;
+        if (derivedViewport && canSearchClubViewport(derivedViewport)) {
+          executeClubViewportSearch(derivedViewport, 'map');
+        }
+        pendingAddressViewportTimeoutRef.current = null;
+      }, 300);
       return;
     }
 
@@ -1090,8 +1450,10 @@ function SearchMapScreen({ navigation, route }) {
   }, [
     activeFilters,
     dispatchFilters,
+    executeClubViewportSearch,
     getGeohashForPointAndRadius,
     isClubScope,
+    mapAspectRatio,
     persistSessionState,
   ]);
 
@@ -1124,20 +1486,43 @@ function SearchMapScreen({ navigation, route }) {
       };
 
       setCurrentViewport(nextViewport);
+      persistVisibleViewport(nextViewport);
+      logClubMapLifecycle('MAP_REGION_APPLIED', {
+        lat: nextViewport.lat,
+        lng: nextViewport.lng,
+        zoom: nextViewport.zoom,
+      });
 
       if (shouldAutoSubmitViewportRef.current) {
         shouldAutoSubmitViewportRef.current = false;
-        executeClubViewportSearch(nextViewport, 'map');
+        if (pendingAddressViewportTimeoutRef.current) {
+          clearTimeout(pendingAddressViewportTimeoutRef.current);
+          pendingAddressViewportTimeoutRef.current = null;
+        }
+        if (canSearchClubViewport(nextViewport)) {
+          executeClubViewportSearch(nextViewport, 'map');
+        } else {
+          setPendingRegion(null);
+          setShowSearchThisArea(false);
+        }
         return;
       }
 
       if (isBootstrappingClubViewportRef.current && !executedViewport) {
         isBootstrappingClubViewportRef.current = false;
-        executeClubViewportSearch(nextViewport, 'map');
+        if (canSearchClubViewport(nextViewport)) {
+          executeClubViewportSearch(nextViewport, 'map');
+        }
         return;
       }
 
       if (!executedViewport) {
+        setPendingRegion(null);
+        setShowSearchThisArea(false);
+        return;
+      }
+
+      if (!canSearchClubViewport(nextViewport)) {
         setPendingRegion(null);
         setShowSearchThisArea(false);
         return;
@@ -1168,6 +1553,7 @@ function SearchMapScreen({ navigation, route }) {
     executedViewport,
     isClubScope,
     persistViewportRegion,
+    persistVisibleViewport,
   ]);
 
   const handleSearchThisArea = useCallback(() => {
@@ -1176,6 +1562,11 @@ function SearchMapScreen({ navigation, route }) {
     }
 
     if (isClubScope) {
+      logClubMapLifecycle('SEARCH_THIS_AREA_TRIGGERED', {
+        lat: pendingRegion.lat,
+        lng: pendingRegion.lng,
+        zoom: pendingRegion.zoom,
+      });
       executeClubViewportSearch(pendingRegion, 'map');
       return;
     }
@@ -1241,12 +1632,37 @@ function SearchMapScreen({ navigation, route }) {
     persistSessionState({ selectedItemId: itemId });
   }, [persistSessionState]);
 
+  const handleMapRenderStats = useCallback((nextStats) => {
+    setRenderStats(nextStats || null);
+  }, []);
+
   const filterChips = useMemo(() => buildChips(scope, activeFilters), [activeFilters, scope]);
   const hasActiveFilters = filterChips.length > 0;
   const title = t(`search.map.heading.${scope}`, getMapHeading(scope));
   const mapHeight = Math.max(480, viewportHeight - insets.top - insets.bottom - 24);
-  const overlayStackTop = topOverlayHeight + 12;
-  const searchAreaTop = overlayStackTop + 2;
+  const mapAspectRatio = Math.max(0.42, Math.min(1.15, viewportWidth / mapHeight));
+  const searchAreaTop = topOverlayHeight + 14;
+  const mapHudTop = topOverlayHeight + topBannerHeight + 24;
+  const overlayInsets = useMemo(() => ({
+    bottom: Math.max(156, insets.bottom + 142),
+    left: 28,
+    right: 156,
+    top: Math.max(120, mapHudTop + 74),
+  }), [insets.bottom, mapHudTop]);
+  const shouldSuspendMapForSearch = Platform.OS === 'android' && isAddressSearchActive;
+  const shouldDisableGlassBlur = Platform.OS === 'android';
+  const shouldShowClubZoomHint = isClubScope
+    && currentViewport
+    && !canSearchClubViewport(currentViewport)
+    && !showSearchThisArea
+    && !isLoading
+    && !activeError;
+  const shouldShowClubTruncatedHint = isClubScope
+    && Boolean(clubMapMeta?.truncated)
+    && !showSearchThisArea
+    && !isLoading
+    && !activeError
+    && !shouldShowClubZoomHint;
 
   return (
     <ScreenContainer
@@ -1261,20 +1677,30 @@ function SearchMapScreen({ navigation, route }) {
     >
       <View style={styles.mapStage}>
         <View style={[styles.mapFrame, { paddingBottom: insets.bottom + 8 }]}>
-          <SearchMap
-            height={mapHeight}
-            items={mapItems}
-            onOpenItem={handleOpenItem}
-            onRegionChangeComplete={handleRegionChangeComplete}
-            onSelectItem={handleSelectMapItem}
-            onShowList={handleShowList}
-            previewBottomOffset={insets.bottom + 12}
-            regionHint={regionHint}
-            scope={scope}
-            selectedItemId={selectedMapItemId}
-            topMargin={overlayStackTop}
-            totalCount={totalCount}
-          />
+          {shouldSuspendMapForSearch ? (
+            <View style={[styles.mapPausePlaceholder, { height: mapHeight }]}>
+              <View style={styles.mapPauseVeil} />
+            </View>
+          ) : (
+            <SearchMap
+              height={mapHeight}
+              isLoadingResults={Boolean(isLoading || isSubmittingRegionSearch)}
+              items={mapItems}
+              onOpenItem={handleOpenItem}
+              onRegionChangeComplete={handleRegionChangeComplete}
+              onRenderStats={handleMapRenderStats}
+              onSelectItem={handleSelectMapItem}
+              onShowList={handleShowList}
+              overlayInsets={overlayInsets}
+              previewBottomOffset={insets.bottom + 12}
+              regionHint={regionHint}
+              scope={scope}
+              selectedItemId={selectedMapItemId}
+              topMargin={mapHudTop}
+              totalCount={totalCount}
+              truncated={Boolean(clubMapMeta?.truncated)}
+            />
+          )}
         </View>
 
         <View
@@ -1287,6 +1713,7 @@ function SearchMapScreen({ navigation, route }) {
               blurAmount={18}
               borderColor="rgba(255,255,255,0.08)"
               borderRadius={24}
+              disableBlur={shouldDisableGlassBlur}
               fallbackColor="rgba(7, 22, 33, 0.76)"
               style={ApplicationStyle.shadow200}
               tintColor="rgba(7, 26, 37, 0.24)"
@@ -1322,7 +1749,7 @@ function SearchMapScreen({ navigation, route }) {
 
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={handleCloseMap}
+                    onPress={handleShowList}
                     style={[styles.headerAction, {
                       borderColor: `${Colors.primary500}36`,
                     }]}
@@ -1339,6 +1766,7 @@ function SearchMapScreen({ navigation, route }) {
               blurAmount={16}
               borderColor="rgba(255,255,255,0.07)"
               borderRadius={22}
+              disableBlur={shouldDisableGlassBlur}
               fallbackColor="rgba(7, 22, 33, 0.72)"
               style={ApplicationStyle.shadow200}
               tintColor="rgba(7, 26, 37, 0.22)"
@@ -1358,6 +1786,8 @@ function SearchMapScreen({ navigation, route }) {
                       address={addressSelection}
                       label=""
                       lightMode
+                      onBlur={() => setIsAddressSearchActive(false)}
+                      onFocus={() => setIsAddressSearchActive(true)}
                       placeholder={t('search.map.addressPlaceholder', 'Tapez une adresse ou une ville')}
                       setAddress={handleAddressSelect}
                       wrapperStyle={styles.searchInputWrapper}
@@ -1409,7 +1839,11 @@ function SearchMapScreen({ navigation, route }) {
           </View>
         </View>
 
-        <View pointerEvents="box-none" style={[styles.mapTopBannerHost, { top: searchAreaTop }]}>
+        <View
+          onLayout={(event) => setTopBannerHeight(event.nativeEvent.layout.height)}
+          pointerEvents="box-none"
+          style={[styles.mapTopBannerHost, { top: searchAreaTop }]}
+        >
           {showSearchThisArea ? (
             <TouchableOpacity
               activeOpacity={0.9}
@@ -1431,13 +1865,35 @@ function SearchMapScreen({ navigation, route }) {
             </TouchableOpacity>
           ) : null}
 
-          {isLoading && !activeError ? (
+          {isLoading && !activeError && !showSearchThisArea ? (
             <View
               pointerEvents="none"
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
                 {getSearchMapUpdatingResultsCopy()}
+              </Text>
+            </View>
+          ) : null}
+
+          {shouldShowClubZoomHint ? (
+            <View
+              pointerEvents="none"
+              style={[styles.statusPill, ApplicationStyle.shadow200]}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral00]}>
+                Zoomez ou recherchez une ville pour afficher les clubs.
+              </Text>
+            </View>
+          ) : null}
+
+          {shouldShowClubTruncatedHint ? (
+            <View
+              pointerEvents="none"
+              style={[styles.statusPill, ApplicationStyle.shadow200]}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral00]}>
+                Zoomez pour afficher tous les clubs de cette zone.
               </Text>
             </View>
           ) : null}
@@ -1535,12 +1991,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  mapPausePlaceholder: {
+    backgroundColor: '#071621',
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  mapPauseVeil: {
+    backgroundColor: 'rgba(6, 24, 34, 0.92)',
+    flex: 1,
+  },
   mapStage: {
     flex: 1,
     position: 'relative',
   },
   mapTopBannerHost: {
     alignItems: 'center',
+    gap: 12,
     left: 16,
     position: 'absolute',
     right: 16,
@@ -1598,6 +2064,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     marginTop: 12,
+    maxWidth: 260,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },

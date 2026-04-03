@@ -66,8 +66,12 @@ export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery
     && Number.isFinite(Number(params?.zoom))
   ),
   getNextPageParam,
+  placeholderData: options.placeholderData ?? ((previousData) => previousData),
   queryFn: ({ pageParam = 1, signal }) => searchClubsMap({ ...params, page: pageParam }, { signal }),
   queryKey: buildNormalizedQueryKey(['search', 'clubs', 'map'], params),
+  refetchOnMount: options.refetchOnMount ?? false,
+  refetchOnReconnect: options.refetchOnReconnect ?? false,
+  retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
 });

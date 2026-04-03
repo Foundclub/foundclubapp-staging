@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
  * @param {string} [props.tintColor]
  * @param {string} [props.topHighlightColor]
  * @param {number} [props.topHighlightHeight]
+ * @param {boolean} [props.disableBlur]
  * @returns {import('react').ReactElement}
  */
 function GlassSurface({
@@ -24,6 +25,7 @@ function GlassSurface({
   borderColor,
   borderRadius = 16,
   children,
+  disableBlur = false,
   fallbackColor,
   style,
   tintColor = 'rgba(0, 18, 28, 0.46)',
@@ -47,12 +49,14 @@ function GlassSurface({
         style,
       ]}
     >
-      <BlurView
-        blurAmount={blurAmount}
-        blurType={Platform.OS === 'ios' ? blurType : 'dark'}
-        reducedTransparencyFallbackColor={resolvedFallbackColor}
-        style={StyleSheet.absoluteFillObject}
-      />
+      {disableBlur ? null : (
+        <BlurView
+          blurAmount={blurAmount}
+          blurType={Platform.OS === 'ios' ? blurType : 'dark'}
+          reducedTransparencyFallbackColor={resolvedFallbackColor}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       <View
         pointerEvents="none"
         style={[

@@ -73,7 +73,9 @@ function ClubListContent({ enableMapMode = false }) {
   const [{ clubFilters, searchMapSessions }, appDispatch] = useAppContext();
   const { getClubFiltersNumber } = useClub();
   const viewportSession = searchMapSessions?.clubs || {};
-  const viewportRegion = viewportSession?.executedViewport || null;
+  const viewportRegion = viewportSession?.searchedViewport
+    || viewportSession?.executedViewport
+    || null;
   const isViewportListMode = viewportSession?.executedClubMapQuery?.view === 'list'
     && hasFiniteViewportBounds(viewportRegion);
   const viewportListParams = useMemo(
@@ -277,6 +279,8 @@ function ClubListContent({ enableMapMode = false }) {
           executedClubMapQuery: null,
           executedViewport: null,
           lastResultMeta: null,
+          searchedViewport: null,
+          visibleViewport: null,
         },
       },
       type: 'SET_SEARCH_MAP_SESSION_STATE',

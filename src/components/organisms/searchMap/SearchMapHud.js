@@ -9,23 +9,29 @@ import { getSearchMapResultLabel } from '@/utils/searchMap';
  * @param {object} props
  * @param {boolean} [props.disabled]
  * @param {number} [props.geolocatableCount]
+ * @param {boolean} [props.isLoadingResults]
  * @param {() => void} [props.onLocateMe]
  * @param {() => void} [props.onRecenter]
  * @param {() => void} [props.onZoomIn]
  * @param {() => void} [props.onZoomOut]
+ * @param {{ renderableCount?: number, markerCount?: number, clusterCount?: number } | null} [props.renderStats]
  * @param {'events' | 'clubs' | 'reservations'} [props.scope]
  * @param {number} [props.totalCount]
+ * @param {boolean} [props.truncated]
  * @returns {import('react').ReactElement}
  */
 function SearchMapHud({
   disabled = false,
   geolocatableCount = 0,
+  isLoadingResults = false,
   onLocateMe,
   onRecenter,
   onZoomIn,
   onZoomOut,
+  renderStats = null,
   scope = 'events',
   totalCount = 0,
+  truncated = false,
 }) {
   const {
     Alignments,
@@ -42,9 +48,24 @@ function SearchMapHud({
   const isPartialDataset = safeAvailableCount > geolocatableCount;
   const resultLabel = getSearchMapResultLabel(scope, safeAvailableCount);
   const titleLabel = `${safeAvailableCount} ${resultLabel}`;
+  const visibleMarkerCount = Math.max(
+    0,
+    Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
+  );
+
   let geolocatableLabel = 'Aucun repere';
-  if (scope === 'clubs' && geolocatableCount > 0 && isPartialDataset) {
-    geolocatableLabel = 'Zoomez pour tout voir';
+  if (scope === 'clubs') {
+    if (visibleMarkerCount > 0) {
+      geolocatableLabel = `${visibleMarkerCount} reperes visibles`;
+    } else if (safeAvailableCount > 0 && truncated) {
+      geolocatableLabel = 'Zoomez pour tout voir';
+    } else if (safeAvailableCount > 0 && isLoadingResults) {
+      geolocatableLabel = 'Mise a jour des reperes...';
+    } else if (geolocatableCount > 0) {
+      geolocatableLabel = `${geolocatableCount} geolocalisables`;
+    } else if (safeAvailableCount > 0) {
+      geolocatableLabel = 'Aucun repere visible';
+    }
   } else if (geolocatableCount > 0 && isPartialDataset) {
     geolocatableLabel = `${geolocatableCount} visibles`;
   } else if (geolocatableCount > 0) {
@@ -105,7 +126,7 @@ function SearchMapHud({
             borderColor: 'rgba(255,255,255,0.08)',
             borderRadius: 20,
             borderWidth: 1,
-            maxWidth: '52%',
+            maxWidth: '56%',
             paddingHorizontal: 11,
             paddingVertical: 9,
           },

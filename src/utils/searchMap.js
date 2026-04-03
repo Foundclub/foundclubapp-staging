@@ -255,6 +255,28 @@ const resolveMapItemId = (item, scope, coordinates) => (
  */
 
 /**
+ * @typedef {{
+ *  lat: number;
+ *  lng: number;
+ *  zoom?: number;
+ *  north?: number;
+ *  south?: number;
+ *  east?: number;
+ *  west?: number;
+ *  latitudeDelta?: number;
+ *  longitudeDelta?: number;
+ * }} SearchMapViewport
+ */
+
+/**
+ * @typedef {{
+ *  renderableCount?: number;
+ *  markerCount?: number;
+ *  clusterCount?: number;
+ * }} SearchMapRenderStats
+ */
+
+/**
  * @param {any} rawItem
  * @param {SearchMapScope} scope
  * @returns {SearchMapItem | null}

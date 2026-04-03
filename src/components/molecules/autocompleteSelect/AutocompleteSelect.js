@@ -214,6 +214,9 @@ const AutocompleteSelect = forwardRef(
       if (props.setSearchValue) {
         props.setSearchValue('');
       }
+      if (props.onBlur) {
+        props.onBlur();
+      }
     };
 
     const handleValidation = () => {

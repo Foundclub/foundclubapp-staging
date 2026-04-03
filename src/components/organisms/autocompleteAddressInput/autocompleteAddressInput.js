@@ -34,6 +34,8 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @param {boolean} [props.lightMode] - Remove the default underline input chrome.
  * @param {number} [props.minChars] - Minimum query length before fetching.
  * @param {string} [props.type] - Optional BAN type hint.
+ * @param {() => void} [props.onFocus] - Optional callback when the search modal opens.
+ * @param {() => void} [props.onBlur] - Optional callback when the search modal closes.
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.wrapperStyle]
  * @param {object} [props.styles] - Optional compatibility style prop.
  * @returns {import('react').ReactElement}
@@ -45,6 +47,8 @@ function AutocompleteAddressInput({
   label,
   lightMode = false,
   minChars = 3,
+  onBlur,
+  onFocus,
   onSelect,
   placeholder,
   setAddress,
@@ -177,6 +181,8 @@ function AutocompleteAddressInput({
       isSearchable
       label={label || ''}
       lightMode={lightMode}
+      onBlur={onBlur}
+      onFocus={onFocus}
       options={placesOptions}
       placeholder={placeholder}
       ref={selectRef}

@@ -65,13 +65,22 @@ const estimateZoomFromRegion = (region) => {
   return Math.max(1, Math.min(20, Math.round(Math.log2(360 / longitudeDelta))));
 };
 
+const resolveOverlayInsets = (overlayInsets, previewBottomOffset) => ({
+  bottom: Math.max(130, Number(overlayInsets?.bottom) || (previewBottomOffset + 120)),
+  left: Math.max(40, Number(overlayInsets?.left) || 56),
+  right: Math.max(40, Number(overlayInsets?.right) || 56),
+  top: Math.max(72, Number(overlayInsets?.top) || 84),
+});
+
 /**
  * @param {object} props
  * @param {import('@/utils/searchMap').SearchMapItem[]} [props.items]
+ * @param {boolean} [props.isLoadingResults]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} [props.onOpenItem]
  * @param {() => void} [props.onShowList]
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {() => void} [props.onLocateMe]
+ * @param {(stats: { renderableCount?: number, markerCount?: number, clusterCount?: number }) => void} [props.onRenderStats]
  * @param {(region: {
  *  lat: number;
  *  lng: number;
@@ -83,6 +92,7 @@ const estimateZoomFromRegion = (region) => {
  *  west?: number;
  *  zoom?: number;
  * }) => void} [props.onRegionChangeComplete]
+ * @param {{ top?: number, right?: number, bottom?: number, left?: number } | null} [props.overlayInsets]
  * @param {{
  *  lat: number;
  *  lng: number;
@@ -100,22 +110,27 @@ const estimateZoomFromRegion = (region) => {
  * @param {number} [props.previewBottomOffset]
  * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
+ * @param {boolean} [props.truncated]
  * @returns {import('react').ReactElement}
  */
 function LegacySearchMapNative({
   height = 360,
+  isLoadingResults = false,
   items = [],
   onLocateMe,
   onOpenItem,
   onRegionChangeComplete,
+  onRenderStats,
   onSelectItem,
   onShowList,
+  overlayInsets = null,
   previewBottomOffset = 12,
   regionHint = null,
   scope = 'events',
   selectedItemId,
   topMargin = 12,
   totalCount = 0,
+  truncated = false,
 }) {
   const {
     Alignments,
@@ -141,6 +156,10 @@ function LegacySearchMapNative({
   const selectedItem = useMemo(
     () => items.find((item) => item.id === activeSelectedItemId) || null,
     [activeSelectedItemId, items],
+  );
+  const resolvedOverlayInsets = useMemo(
+    () => resolveOverlayInsets(overlayInsets, previewBottomOffset),
+    [overlayInsets, previewBottomOffset],
   );
   const totalResults = Number.isFinite(totalCount) && totalCount > 0 ? totalCount : items.length;
   const logContext = useMemo(() => ({
@@ -173,14 +192,14 @@ function LegacySearchMapNative({
       {
         animated,
         edgePadding: {
-          bottom: 130,
-          left: 56,
-          right: 56,
-          top: 84,
+          bottom: resolvedOverlayInsets.bottom,
+          left: resolvedOverlayInsets.left,
+          right: resolvedOverlayInsets.right,
+          top: resolvedOverlayInsets.top,
         },
       },
     );
-  }, [items]);
+  }, [items, resolvedOverlayInsets.bottom, resolvedOverlayInsets.left, resolvedOverlayInsets.right, resolvedOverlayInsets.top]);
 
   useEffect(() => {
     mapLoadStartedAtRef.current = Date.now();
@@ -270,10 +289,10 @@ function LegacySearchMapNative({
       ], {
         animated: true,
         edgePadding: {
-          bottom: 130,
-          left: 56,
-          right: 56,
-          top: 84,
+          bottom: resolvedOverlayInsets.bottom,
+          left: resolvedOverlayInsets.left,
+          right: resolvedOverlayInsets.right,
+          top: resolvedOverlayInsets.top,
         },
       });
       return;
@@ -282,7 +301,15 @@ function LegacySearchMapNative({
     const nextRegion = buildFocusedRegion(regionHint.lat, regionHint.lng);
     setRegion(nextRegion);
     mapRef.current?.animateToRegion(nextRegion, 280);
-  }, [mapStatus, regionHint]);
+  }, [mapStatus, regionHint, resolvedOverlayInsets.bottom, resolvedOverlayInsets.left, resolvedOverlayInsets.right, resolvedOverlayInsets.top]);
+
+  useEffect(() => {
+    onRenderStats?.({
+      clusterCount: 0,
+      markerCount: items.length,
+      renderableCount: items.length,
+    });
+  }, [items.length, onRenderStats]);
 
   const handleMarkerSelect = useCallback((item) => {
     if (selectedItemId === undefined) {
@@ -420,12 +447,32 @@ function LegacySearchMapNative({
           <SearchMapHud
             disabled={areControlsDisabled}
             geolocatableCount={items.length}
+            isLoadingResults={isLoadingResults}
             onLocateMe={requestUserLocation}
-            onRecenter={() => fitToResults(true)}
+            onRecenter={() => {
+              if (
+                isClubScope
+                && regionHint
+                && Number.isFinite(regionHint.lat)
+                && Number.isFinite(regionHint.lng)
+              ) {
+                const nextRegion = buildFocusedRegion(regionHint.lat, regionHint.lng);
+                setRegion(nextRegion);
+                mapRef.current?.animateToRegion(nextRegion, 280);
+                return;
+              }
+              fitToResults(true);
+            }}
             onZoomIn={() => handleZoom(0.65)}
             onZoomOut={() => handleZoom(1.45)}
+            renderStats={{
+              clusterCount: 0,
+              markerCount: items.length,
+              renderableCount: items.length,
+            }}
             scope={scope}
             totalCount={totalResults}
+            truncated={truncated}
           />
         </View>
       </View>

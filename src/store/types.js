@@ -19,7 +19,16 @@
  * @property {{ events?: boolean, clubs?: boolean, reservations?: boolean }} [searchMapModes] - Session-only map/list mode per search tab.
  * @property {{
  *   events?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string },
- *   clubs?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string },
+ *   clubs?: {
+ *     region?: { lat: number, lng: number, zoom?: number },
+ *     selectedItemId?: string,
+ *     searchedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     visibleViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     executedViewport?: { lat: number, lng: number, zoom?: number, north?: number, south?: number, east?: number, west?: number, latitudeDelta?: number, longitudeDelta?: number },
+ *     executedClubMapQuery?: Record<string, any> | null,
+ *     lastResultMeta?: Record<string, any> | null,
+ *     lastRenderStats?: { renderableCount?: number, markerCount?: number, clusterCount?: number } | null
+ *   },
  *   reservations?: { region?: { lat: number, lng: number, zoom?: number }, selectedItemId?: string }
  * }} [searchMapSessions] - Session-only map viewport and selection state per search scope.
  */

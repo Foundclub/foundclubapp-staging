@@ -32,6 +32,7 @@ export const SEARCH_MAP_BRIDGE_TYPES = Object.freeze({
   MAP_ERROR: 'MAP_ERROR',
   MAP_READY: 'MAP_READY',
   MAP_REGION_CHANGE: 'MAP_REGION_CHANGE',
+  MAP_RENDER_STATS: 'MAP_RENDER_STATS',
   MARKER_OPEN: 'MARKER_OPEN',
   MARKER_SELECT: 'MARKER_SELECT',
   SYNC_STATE: 'SYNC_STATE',
@@ -242,6 +243,7 @@ export const buildSearchMapRuntimeHtml = ({
         var lastClusterSignature = '';
         var lastItemsSignature = '';
         var lastAppliedFocusSignature = '';
+        var lastRenderStatsSignature = '';
         var lastRenderedZoom = null;
         var lastSelectedItemId = '';
         var map = null;
@@ -380,9 +382,9 @@ export const buildSearchMapRuntimeHtml = ({
         var createMarkerIcon = function (entry, isSelected, showSequenceLabel) {
           var isEventMarker = entry && entry.item && entry.item.type === 'events';
           var markerSize = isSelected
-            ? (isEventMarker ? 38 : 34)
-            : (isEventMarker ? 31 : 27);
-          var haloSize = markerSize + (isEventMarker ? 18 : 14);
+            ? (isEventMarker ? 40 : 42)
+            : (isEventMarker ? 34 : 36);
+          var haloSize = markerSize + (isEventMarker ? 18 : 18);
           var borderSize = isSelected ? 3 : 2;
           var markerLabel = showSequenceLabel && entry && Number.isFinite(entry.order)
             ? String(entry.order)
@@ -391,7 +393,7 @@ export const buildSearchMapRuntimeHtml = ({
           var borderColor = isSelected ? MARKER_COLOR : 'rgba(255,255,255,0.86)';
           var haloColor = isSelected
             ? 'rgba(1, 179, 244, 0.36)'
-            : (isEventMarker ? 'rgba(1, 179, 244, 0.24)' : 'rgba(255, 215, 0, 0.22)');
+            : (isEventMarker ? 'rgba(1, 179, 244, 0.24)' : 'rgba(255, 215, 0, 0.32)');
           var shadow = isSelected
             ? '0 16px 30px rgba(0,0,0,0.34)'
             : '0 12px 24px rgba(0,0,0,0.28)';
@@ -451,15 +453,15 @@ export const buildSearchMapRuntimeHtml = ({
         };
 
         var createClusterIcon = function (count) {
-          var clusterSize = count >= 10 ? 40 : 36;
+          var clusterSize = count >= 100 ? 56 : (count >= 10 ? 50 : 46);
           return window.L.divIcon({
             className: '',
             html: '<span class="fc-marker" style="' +
               'background:' + MARKER_COLOR + ';' +
               'border:3px solid rgba(255,255,255,0.84);' +
-              'box-shadow:0 0 0 6px rgba(255,255,255,0.14), 0 14px 24px rgba(0,0,0,0.28);' +
+              'box-shadow:0 0 0 7px rgba(255,255,255,0.16), 0 16px 28px rgba(0,0,0,0.32);' +
               'color:#061822;' +
-              'font:700 12px/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
+              'font:700 ' + (count >= 100 ? '13px' : '12px') + '/1 -apple-system, BlinkMacSystemFont, \\"Segoe UI\\", sans-serif;' +
               'height:' + clusterSize + 'px;' +
               'width:' + clusterSize + 'px;' +
             '">' +
@@ -476,24 +478,40 @@ export const buildSearchMapRuntimeHtml = ({
           }).join('|');
         };
 
-        var getClusterPrecision = function () {
+        var getOverlayInsets = function () {
+          var insets = currentState && currentState.overlayInsets ? currentState.overlayInsets : {};
+          return {
+            bottom: isFinite(insets.bottom) ? Math.max(96, insets.bottom) : 208,
+            left: isFinite(insets.left) ? Math.max(24, insets.left) : 48,
+            right: isFinite(insets.right) ? Math.max(24, insets.right) : 48,
+            top: isFinite(insets.top) ? Math.max(72, insets.top) : 132,
+          };
+        };
+
+        var getFocusYOffset = function () {
+          var insets = getOverlayInsets();
+          return Math.max(0, Math.min(168, Math.round((insets.bottom - insets.top) * 0.26)));
+        };
+
+        var getClusterCellSize = function () {
           if (!map) return null;
           var currentZoom = map.getZoom();
-          if (currentZoom >= 13) return null;
-          if (currentZoom >= 11) return 3;
-          if (currentZoom >= 9) return 2;
-          return 1;
+          if (currentZoom >= 16) return null;
+          if (currentZoom >= 14) return 54;
+          if (currentZoom >= 12) return 62;
+          if (currentZoom >= 10) return 74;
+          return 88;
         };
 
         var buildRenderableEntries = function (items) {
-          var precision = getClusterPrecision();
+          var cellSize = getClusterCellSize();
           var indexedItems = items.map(function (item, index) {
             return Object.assign({
               __fcOrder: index + 1,
             }, item);
           });
 
-          if (!precision || indexedItems.length < 12) {
+          if (!cellSize || indexedItems.length < 10 || !map || typeof map.project !== 'function') {
             return indexedItems.map(function (item) {
               return {
                 isCluster: false,
@@ -508,7 +526,8 @@ export const buildSearchMapRuntimeHtml = ({
 
           var groups = {};
           indexedItems.forEach(function (item) {
-            var key = item.lat.toFixed(precision) + ':' + item.lng.toFixed(precision);
+            var projected = map.project(window.L.latLng(item.lat, item.lng), map.getZoom());
+            var key = Math.floor(projected.x / cellSize) + ':' + Math.floor(projected.y / cellSize);
             groups[key] = groups[key] || [];
             groups[key].push(item);
           });
@@ -586,6 +605,7 @@ export const buildSearchMapRuntimeHtml = ({
 
         var fitToResults = function () {
           var items = Array.isArray(currentState.items) ? currentState.items : [];
+          var overlayInsets = getOverlayInsets();
           postDiagnostic('focus_results', {
             itemsCount: items.length,
           });
@@ -600,10 +620,10 @@ export const buildSearchMapRuntimeHtml = ({
             postDiagnostic('focus_results_single', {
               lat: items[0].lat,
               lng: items[0].lng,
-              zoom: 12,
-              yOffset: 0,
+              zoom: 13,
+              yOffset: getFocusYOffset(),
             });
-            setFocusedView(items[0].lat, items[0].lng, 12, 0);
+            setFocusedView(items[0].lat, items[0].lng, 13, getFocusYOffset());
             postBridgeMessage('FIT_RESULTS_DONE', { reason: 'single' });
             return;
           }
@@ -616,8 +636,8 @@ export const buildSearchMapRuntimeHtml = ({
 
           map.fitBounds(bounds, {
             maxZoom: 13,
-            paddingBottomRight: [48, 208],
-            paddingTopLeft: [48, 132],
+            paddingBottomRight: [overlayInsets.right, overlayInsets.bottom],
+            paddingTopLeft: [overlayInsets.left, overlayInsets.top],
           });
           postBridgeMessage('FIT_RESULTS_DONE', { reason: 'results' });
         };
@@ -635,10 +655,10 @@ export const buildSearchMapRuntimeHtml = ({
             lat: selectedLatLng.lat,
             lng: selectedLatLng.lng,
             selectedItemId: currentState.selectedItemId,
-            zoom: 12,
-            yOffset: 0,
+            zoom: 13,
+            yOffset: getFocusYOffset(),
           });
-          setFocusedView(selectedLatLng.lat, selectedLatLng.lng, 12, 0);
+          setFocusedView(selectedLatLng.lat, selectedLatLng.lng, 13, getFocusYOffset());
           postBridgeMessage('FIT_RESULTS_DONE', { reason: 'selected' });
         };
 
@@ -652,7 +672,7 @@ export const buildSearchMapRuntimeHtml = ({
             lat: currentState.userLocation.lat,
             lng: currentState.userLocation.lng,
           });
-          setFocusedView(currentState.userLocation.lat, currentState.userLocation.lng, 14, 88);
+          setFocusedView(currentState.userLocation.lat, currentState.userLocation.lng, 14, getFocusYOffset());
           postBridgeMessage('FIT_RESULTS_DONE', { reason: 'user' });
         };
 
@@ -683,8 +703,8 @@ export const buildSearchMapRuntimeHtml = ({
 
             map.fitBounds(hintedBounds, {
               maxZoom: isFinite(currentState.regionHint.zoom) ? currentState.regionHint.zoom : 13,
-              paddingBottomRight: [48, 208],
-              paddingTopLeft: [48, 132],
+              paddingBottomRight: [getOverlayInsets().right, getOverlayInsets().bottom],
+              paddingTopLeft: [getOverlayInsets().left, getOverlayInsets().top],
             });
             postBridgeMessage('FIT_RESULTS_DONE', { reason: 'region' });
             return;
@@ -760,6 +780,15 @@ export const buildSearchMapRuntimeHtml = ({
               zoomBefore: map.getZoom(),
             });
             fitToResults();
+            return;
+          }
+
+          if (currentState.command.type === 'focus_region') {
+            postDiagnostic('command_applied', {
+              type: currentState.command.type,
+              zoomBefore: map.getZoom(),
+            });
+            focusRegionHint();
           }
         };
 
@@ -767,13 +796,24 @@ export const buildSearchMapRuntimeHtml = ({
           var items = Array.isArray(currentState.items) ? currentState.items : [];
           var regionHint = currentState.regionHint || null;
           var userLocation = currentState.userLocation || null;
-          return [
-            currentState.focusMode || 'results',
-            currentState.selectedItemId || '',
-            items.map(function (item) {
+          var focusMode = currentState.focusMode || 'results';
+          var selectedItem = currentState.selectedItemId
+            ? items.find(function (item) { return item.id === currentState.selectedItemId; })
+            : null;
+          var focusTargetSignature = '';
+
+          if (focusMode === 'results') {
+            focusTargetSignature = items.map(function (item) {
               return item.id + ':' + item.lat.toFixed(5) + ':' + item.lng.toFixed(5);
-            }).join('|'),
-            regionHint ? [
+            }).join('|');
+          } else if (focusMode === 'selected') {
+            focusTargetSignature = [
+              currentState.selectedItemId || '',
+              selectedItem ? selectedItem.lat.toFixed(5) : '',
+              selectedItem ? selectedItem.lng.toFixed(5) : '',
+            ].join(':');
+          } else if (focusMode === 'region' && regionHint) {
+            focusTargetSignature = [
               regionHint.lat,
               regionHint.lng,
               regionHint.zoom || '',
@@ -781,8 +821,14 @@ export const buildSearchMapRuntimeHtml = ({
               regionHint.south || '',
               regionHint.east || '',
               regionHint.west || '',
-            ].join(':') : '',
-            userLocation ? [userLocation.lat, userLocation.lng].join(':') : '',
+            ].join(':');
+          } else if (focusMode === 'user' && userLocation) {
+            focusTargetSignature = [userLocation.lat, userLocation.lng].join(':');
+          }
+
+          return [
+            focusMode,
+            focusTargetSignature,
           ].join('||');
         };
 
@@ -812,6 +858,13 @@ export const buildSearchMapRuntimeHtml = ({
             var items = Array.isArray(currentState.items) ? currentState.items : [];
             var itemsSignature = buildItemsSignature(items);
             var renderableEntries = buildRenderableEntries(items);
+            var markerCount = renderableEntries.filter(function (entry) { return !entry.isCluster; }).length;
+            var clusterCount = renderableEntries.filter(function (entry) { return entry.isCluster; }).length;
+            var renderStatsSignature = [
+              renderableEntries.length,
+              markerCount,
+              clusterCount,
+            ].join(':');
             var clusterSignature = renderableEntries.map(function (entry) {
               return entry.key + ':' + entry.lat.toFixed(5) + ':' + entry.lng.toFixed(5) + ':' + (entry.count || 1);
             }).join('|');
@@ -842,6 +895,14 @@ export const buildSearchMapRuntimeHtml = ({
                 ));
               });
               lastSelectedItemId = currentState.selectedItemId;
+              if (lastRenderStatsSignature !== renderStatsSignature) {
+                lastRenderStatsSignature = renderStatsSignature;
+                postBridgeMessage('MAP_RENDER_STATS', {
+                  clusterCount: clusterCount,
+                  markerCount: markerCount,
+                  renderableCount: renderableEntries.length,
+                });
+              }
               return;
             }
 
@@ -888,6 +949,14 @@ export const buildSearchMapRuntimeHtml = ({
             lastClusterSignature = clusterSignature;
             lastRenderedZoom = map.getZoom();
             lastSelectedItemId = currentState.selectedItemId;
+            if (lastRenderStatsSignature !== renderStatsSignature) {
+              lastRenderStatsSignature = renderStatsSignature;
+              postBridgeMessage('MAP_RENDER_STATS', {
+                clusterCount: clusterCount,
+                markerCount: markerCount,
+                renderableCount: renderableEntries.length,
+              });
+            }
           });
         };
 
